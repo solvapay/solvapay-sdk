@@ -1,9 +1,11 @@
 name: Publish Preview to NPM
 
+# Auto-publish disabled - trigger manually via GitHub Actions UI when ready
 on:
-  push:
-    branches:
-      - dev
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - dev
 
 jobs:
   publish-preview:
