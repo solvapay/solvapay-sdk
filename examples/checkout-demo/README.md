@@ -33,9 +33,15 @@ Before running this demo, you need:
    - Get your secret API key from the dashboard
    - Create at least one agent and plan
 
-2. **Environment Variables**
+2. **Supabase Account** (for authentication)
+   - Sign up at https://supabase.com
+   - Create a new project
+   - Get your project URL and anon key from Settings → API
+   - Get your JWT secret from Settings → API → JWT Secret
+
+3. **Environment Variables**
    - Copy `env.example` to `.env.local`
-   - Fill in your SolvaPay credentials
+   - Fill in your SolvaPay and Supabase credentials
 
 ## Setup
 
@@ -49,9 +55,9 @@ cd examples/checkout-demo
 # Copy environment variables
 cp env.example .env.local
 
-# Edit .env.local with your SolvaPay credentials
-# Required: SOLVAPAY_SECRET_KEY
-# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_AGENT_REF, plan references
+# Edit .env.local with your SolvaPay and Supabase credentials
+# Required: SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_AGENT_REF
 ```
 
 ## Running the Demo
@@ -115,7 +121,84 @@ import { SolvaPayProvider } from '@solvapay/react';
 </SolvaPayProvider>
 ```
 
-### 2. Locked Content with SubscriptionGate
+### 2. Authentication Setup
+
+This demo uses Supabase for authentication with Next.js middleware as the default approach:
+
+**Middleware Approach (Default):**
+
+The `middleware.ts` file extracts user IDs from Supabase JWT tokens and sets them as headers for all API routes:
+
+```tsx
+// middleware.ts
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+
+const auth = new SupabaseAuthAdapter({
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!
+});
+
+export async function middleware(request: NextRequest) {
+  const userId = await auth.getUserIdFromRequest(request);
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Set userId header for downstream routes
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-id', userId);
+  
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+```
+
+**Route-Level Approach (Alternative):**
+
+You can also use SupabaseAuthAdapter directly in individual routes if you prefer:
+
+```tsx
+// app/api/create-payment-intent/route.ts
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+
+const auth = new SupabaseAuthAdapter({
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!
+});
+
+export async function POST(request: NextRequest) {
+  const userId = await auth.getUserIdFromRequest(request);
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Use userId as customerRef
+  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! });
+  const customer = await solvaPay.getCustomer({ customerRef: userId });
+  // ...
+}
+```
+
+The frontend sends the Supabase access token in the Authorization header:
+
+```tsx
+// app/layout.tsx
+import { getAccessToken } from './lib/supabase';
+
+const handleCreatePayment = async ({ planRef }) => {
+  const accessToken = await getAccessToken();
+  const res = await fetch('/api/create-payment-intent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+    },
+    body: JSON.stringify({ planRef, agentRef })
+  });
+  return res.json();
+};
+```
+
+### 3. Locked Content with SubscriptionGate
 
 ```tsx
 // app/page.tsx
@@ -145,7 +228,7 @@ import { SubscriptionGate, UpgradeButton } from '@solvapay/react';
 </SubscriptionGate>
 ```
 
-### 3. Navigation with Plan Badge
+### 4. Navigation with Plan Badge
 
 ```tsx
 // app/components/Navigation.tsx
@@ -174,22 +257,27 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
 </UpgradeButton>
 ```
 
-### 4. Backend API Routes
+### 5. Backend API Routes
 
 **Check Subscription:**
 ```typescript
 // app/api/check-subscription/route.ts
 import { createSolvaPay } from '@solvapay/server';
+// Middleware handles authentication and sets x-user-id header
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const customerRef = searchParams.get('customerRef');
+export async function GET(request: NextRequest) {
+  // Get userId from middleware header
+  const userId = request.headers.get('x-user-id');
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   
   const solvapay = createSolvaPay({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY
+    apiKey: process.env.SOLVAPAY_SECRET_KEY!
   });
   
-  const customer = await solvapay.getCustomer({ customerRef });
+  const customer = await solvapay.getCustomer({ customerRef: userId });
   
   return NextResponse.json({
     customerRef: customer.customerRef,
@@ -203,25 +291,36 @@ export async function GET(request: Request) {
 **Create Payment Intent:**
 ```typescript
 // app/api/create-payment-intent/route.ts
-const { planRef, agentRef, customerRef } = await request.json();
+// Middleware handles authentication and sets x-user-id header
 
-const solvapay = createSolvaPay({
-  apiKey: process.env.SOLVAPAY_SECRET_KEY
-});
-
-await solvapay.ensureCustomer(customerRef);
-
-const paymentIntent = await solvapay.createPaymentIntent({
-  agentRef,
-  planRef,
-  customerRef
-});
-
-return NextResponse.json({
-  clientSecret: paymentIntent.clientSecret,
-  publishableKey: paymentIntent.publishableKey,
-  accountId: paymentIntent.accountId
-});
+export async function POST(request: NextRequest) {
+  // Get userId from middleware header
+  const userId = request.headers.get('x-user-id');
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  const { planRef, agentRef } = await request.json();
+  
+  const solvapay = createSolvaPay({
+    apiKey: process.env.SOLVAPAY_SECRET_KEY!
+  });
+  
+  await solvapay.ensureCustomer(userId);
+  
+  const paymentIntent = await solvapay.createPaymentIntent({
+    agentRef,
+    planRef,
+    customerRef: userId
+  });
+  
+  return NextResponse.json({
+    clientSecret: paymentIntent.clientSecret,
+    publishableKey: paymentIntent.publishableKey,
+    accountId: paymentIntent.accountId
+  });
+}
 ```
 
 ## Project Structure
@@ -237,11 +336,13 @@ checkout-demo/
 │   ├── components/
 │   │   └── Navigation.tsx        # Nav with PlanBadge and UpgradeButton
 │   ├── lib/
-│   │   └── customer.ts           # Customer ID management (localStorage)
+│   │   ├── customer.ts           # Customer ID management (Supabase auth)
+│   │   └── supabase.ts           # Supabase client setup
 │   ├── checkout/
 │   │   └── page.tsx              # Checkout page with plan selection
 │   ├── layout.tsx                # Root layout with SolvaPayProvider
 │   └── page.tsx                  # Home with locked content
+├── middleware.ts                 # Authentication middleware (extracts userId)
 ├── package.json
 ├── next.config.mjs
 ├── tsconfig.json
@@ -277,13 +378,15 @@ The provider automatically:
 - Exposes helper methods (`hasActiveSubscription`, `hasPlan`)
 - Manages loading states
 
-### Customer Simulation
+### Authentication
 
-For demo purposes, customer IDs are stored in localStorage:
-- Generated on first visit
-- Persists across refreshes
-- Simulates authenticated user state
-- Replace with real auth in production
+This demo uses Supabase for authentication with Next.js middleware as the default approach:
+- Middleware extracts user IDs from Supabase JWT tokens on all `/api/*` routes
+- User IDs are set as `x-user-id` header for downstream routes
+- Middleware returns 401 if authentication fails
+- The frontend sends access tokens in Authorization headers
+- User IDs are used directly as customerRef (Supabase user IDs are stable UUIDs)
+- Individual routes can optionally use SupabaseAuthAdapter directly (see route comments)
 
 ## Environment Variables
 
@@ -292,8 +395,9 @@ For demo purposes, customer IDs are stored in localStorage:
 | `SOLVAPAY_SECRET_KEY` | Your SolvaPay secret key | Yes |
 | `SOLVAPAY_API_BASE_URL` | Backend URL (defaults to prod) | No |
 | `NEXT_PUBLIC_AGENT_REF` | Agent reference | No |
-| `NEXT_PUBLIC_BASIC_PLAN_REF` | Basic plan reference | No |
-| `NEXT_PUBLIC_PRO_PLAN_REF` | Pro plan reference | No |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | Yes |
+| `SUPABASE_JWT_SECRET` | Supabase JWT secret (for server verification) | Yes |
 
 ## Customization
 

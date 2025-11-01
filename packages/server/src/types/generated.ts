@@ -71,7 +71,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get customer by reference or externalRef
+         * @description Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomerByQuery"];
         put?: never;
         /**
          * Create a new customer
@@ -402,6 +406,11 @@ export interface components {
              * @example https://checkout.solvapay.com/pay_1a2b3c4d
              */
             checkoutUrl?: string;
+            /**
+             * @description Optional checkout session ID if payment is required
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutSessionId?: string;
         };
         UsageEvent: {
             /**
@@ -452,6 +461,11 @@ export interface components {
              * @example John Doe
              */
             name?: string;
+            /**
+             * @description External reference ID from your auth system to map this customer to an auth user (optional)
+             * @example auth_user_12345
+             */
+            externalRef?: string;
         };
         SubscriptionInfo: {
             /**
@@ -496,6 +510,11 @@ export interface components {
              * @example customer@example.com
              */
             email: string;
+            /**
+             * @description External reference ID from your auth system (if set during creation or update)
+             * @example auth_user_12345
+             */
+            externalRef?: string;
             /** @description Active subscriptions */
             subscriptions?: components["schemas"]["SubscriptionInfo"][];
         };
@@ -765,6 +784,49 @@ export interface operations {
             };
             /** @description Invalid bulk usage data */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_getCustomerByQuery: {
+        parameters: {
+            query?: {
+                /** @description Customer reference identifier (use this OR externalRef, not both) */
+                reference?: string;
+                /** @description External reference ID from your auth system (use this OR reference, not both) */
+                externalRef?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Invalid request - must provide exactly one of reference or externalRef */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

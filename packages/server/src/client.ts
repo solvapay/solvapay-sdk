@@ -160,7 +160,50 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       
       const result = await res.json();
       log(`✅ API Response:`, JSON.stringify(result, null, 2));
-      return result;
+      
+      // Map response fields to expected format
+      return {
+        customerRef: result.reference || result.customerRef,
+        email: result.email,
+        name: result.name,
+        externalRef: result.externalRef,
+        subscriptions: result.subscriptions,
+      };
+    },
+
+    // GET: /v1/sdk/customers?externalRef={externalRef}
+    async getCustomerByExternalRef(params) {
+      const url = `${base}/v1/sdk/customers?externalRef=${encodeURIComponent(params.externalRef)}`;
+      log(`📡 API Request: GET ${url}`);
+      
+      const res = await fetch(url, {
+        method: "GET",
+        headers,
+      });
+      
+      if (!res.ok) {
+        const error = await res.text();
+        log(`❌ API Error: ${res.status} - ${error}`);
+        if (res.status === 404) {
+          log(`🔍 Customer not found by externalRef: ${params.externalRef}`);
+        }
+        throw new SolvaPayError(`Get customer by externalRef failed (${res.status}): ${error}`);
+      }
+      
+      const result = await res.json();
+      log(`✅ API Response:`, JSON.stringify(result, null, 2));
+      
+      // Handle array response (if backend returns array)
+      const customer = Array.isArray(result) ? result[0] : result;
+      
+      // Map response fields to expected format
+      return {
+        customerRef: customer.reference || customer.customerRef,
+        email: customer.email,
+        name: customer.name,
+        externalRef: customer.externalRef,
+        subscriptions: customer.subscriptions,
+      };
     },
 
     // Management methods (primarily for integration tests)

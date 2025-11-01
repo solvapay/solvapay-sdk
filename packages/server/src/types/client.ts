@@ -18,6 +18,7 @@ export type CustomerResponseMapped = {
   customerRef: string;
   email?: string;
   name?: string;
+  externalRef?: string;
   plan?: string;
   subscriptions?: components['schemas']['SubscriptionInfo'][];
 };
@@ -48,6 +49,11 @@ export interface SolvaPayClient {
   // GET: /v1/sdk/customers/{reference}
   getCustomer?(params: {
     customerRef: string;
+  }): Promise<CustomerResponseMapped>;
+
+  // GET: /v1/sdk/customers?externalRef={externalRef}
+  getCustomerByExternalRef?(params: {
+    externalRef: string;
   }): Promise<CustomerResponseMapped>;
 
   // Management methods (primarily for integration tests)

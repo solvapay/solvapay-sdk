@@ -149,8 +149,13 @@ export class SolvaPayPaywall {
    * This is a public helper for testing, pre-creating customers, and internal use.
    * Only attempts creation once per customer (idempotent).
    * Returns the backend customer reference to use in API calls.
+   * 
+   * @param customerRef - The customer reference (e.g., Supabase user ID)
+   * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
+   *   If provided, will lookup existing customer by externalRef before creating new one
+   * @param options - Optional customer details (email, name) for customer creation
    */
-  async ensureCustomer(customerRef: string): Promise<string> {
+  async ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string> {
     // Return cached mapping if exists
     if (this.customerRefMapping.has(customerRef)) {
       return this.customerRefMapping.get(customerRef)!;
@@ -161,9 +166,46 @@ export class SolvaPayPaywall {
       return customerRef;
     }
     
+    // If externalRef is provided, try to lookup existing customer first
+    if (externalRef && this.apiClient.getCustomerByExternalRef) {
+      try {
+        this.log(`🔍 Looking up customer by externalRef: ${externalRef}`);
+        const existingCustomer = await this.apiClient.getCustomerByExternalRef({ externalRef });
+        
+        if (existingCustomer && existingCustomer.customerRef) {
+          const backendRef = existingCustomer.customerRef;
+          this.log(`✅ Found existing customer by externalRef: ${externalRef} -> ${backendRef}`);
+          
+          // Store the mapping for future use
+          this.customerRefMapping.set(customerRef, backendRef);
+          
+          // Also track that we've attempted creation for this externalRef to prevent duplicates
+          this.customerCreationAttempts.add(customerRef);
+          if (externalRef !== customerRef) {
+            this.customerCreationAttempts.add(externalRef);
+          }
+          
+          return backendRef;
+        }
+      } catch (error) {
+        // 404 means customer doesn't exist yet - this is expected, continue to creation
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+          this.log(`🔍 Customer not found by externalRef, will create new: ${externalRef}`);
+        } else {
+          // Unexpected error - log but continue to fallback behavior
+          this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`);
+        }
+      }
+    }
+    
     // If already attempted but no mapping, use original ref
-    if (this.customerCreationAttempts.has(customerRef)) {
-      return customerRef;
+    // Check both customerRef and externalRef to prevent duplicates
+    if (this.customerCreationAttempts.has(customerRef) || 
+        (externalRef && this.customerCreationAttempts.has(externalRef))) {
+      // If we have a mapping, use it; otherwise return the original ref
+      const mappedRef = this.customerRefMapping.get(customerRef);
+      return mappedRef || customerRef;
     }
     
     // Skip if createCustomer is not available
@@ -176,11 +218,21 @@ export class SolvaPayPaywall {
     this.customerCreationAttempts.add(customerRef);
     
     try {
-      this.log(`🔧 Auto-creating customer: ${customerRef}`);
-      const result = await this.apiClient.createCustomer({
-        email: `${customerRef}@auto-created.local`,
-        name: customerRef
-      });
+      this.log(`🔧 Auto-creating customer: ${customerRef}${externalRef ? ` (externalRef: ${externalRef})` : ''}`);
+      
+      // Prepare customer creation params
+      // Use provided email/name, or fallback to auto-generated values
+      const createParams: any = {
+        email: options?.email || `${customerRef}@auto-created.local`,
+        name: options?.name || customerRef
+      };
+      
+      // Include externalRef if provided
+      if (externalRef) {
+        createParams.externalRef = externalRef;
+      }
+      
+      const result = await this.apiClient.createCustomer(createParams);
       
       // Extract the backend reference from the response
       const backendRef = (result as any).customerRef || (result as any).reference || customerRef;
@@ -189,6 +241,7 @@ export class SolvaPayPaywall {
       
       this.log(`🔍 DEBUG - ensureCustomer analysis:`);
       this.log(`   - Input customerRef: ${customerRef}`);
+      this.log(`   - ExternalRef: ${externalRef || 'none'}`);
       this.log(`   - Backend customerRef: ${backendRef}`);
       this.log(`   - Has plan in response: ${(result as any).plan ? 'YES - ' + (result as any).plan : 'NO'}`);
       this.log(`   - Has subscription in response: ${(result as any).subscription ? 'YES' : 'NO'}`);

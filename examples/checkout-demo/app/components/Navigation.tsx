@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { PlanBadge, useSubscription } from '@solvapay/react';
 import { Button } from './ui/Button';
+import { signOut, getUserEmail, onAuthStateChange } from '../lib/supabase';
+import { useState, useEffect } from 'react';
 
 /**
  * Navigation Component
@@ -11,21 +13,59 @@ import { Button } from './ui/Button';
  */
 export function Navigation() {
   const { subscriptions } = useSubscription();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   
   // Check if user has any active paid subscription (not free plan)
   const hasActivePaidSubscription = subscriptions.some(
     sub => sub.status === 'active' && sub.planName.toLowerCase() !== 'free'
   );
 
+  // Get user email on mount and listen for auth state changes
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const email = await getUserEmail();
+      setUserEmail(email);
+    };
+    fetchUserEmail();
+
+    // Listen for auth state changes to update email
+    const authStateChange = onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setUserEmail(session?.user?.email || null);
+      } else if (event === 'SIGNED_OUT') {
+        setUserEmail(null);
+      }
+    });
+
+    return () => {
+      if (authStateChange?.data?.subscription) {
+        authStateChange.data.subscription.unsubscribe();
+      }
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      // Auth state change will trigger re-render in layout
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   return (
-    <nav className="bg-white/80 backdrop-blur-sm border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white border-b border-slate-100 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 sm:h-20">
-          <Link href="/" className="text-xl sm:text-2xl font-semibold text-slate-900 no-underline hover:text-slate-700 transition-colors">
+        <div className="flex justify-between items-center h-14">
+          <Link href="/" className="text-lg font-medium text-slate-900 no-underline hover:text-slate-700 transition-colors">
             SolvaPay Demo
           </Link>
 
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-4">
             <PlanBadge>
               {({ subscriptions, loading }) => {
                 const activeSubs = subscriptions.filter(sub => sub.status === 'active');
@@ -38,28 +78,41 @@ export function Navigation() {
                   : null;
                 
                 return (
-                  <div className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-slate-100 border border-slate-200/60 text-sm sm:text-base font-medium shadow-sm">
+                  <div className="px-2.5 py-1 rounded-md bg-slate-50 text-xs font-medium">
                     {loading ? (
-                      <span className="text-slate-500">Loading...</span>
+                      <span className="text-slate-400">Loading...</span>
                     ) : latestSub ? (
-                      <span className="text-emerald-700 font-semibold">
-                        ✓ {latestSub.planName}
+                      <span className="text-emerald-600">
+                        {latestSub.planName}
                       </span>
                     ) : (
-                      <span className="text-slate-600">Free Plan</span>
+                      <span className="text-slate-500">Free Plan</span>
                     )}
                   </div>
                 );
               }}
             </PlanBadge>
 
+            {userEmail && (
+              <div className="hidden sm:block text-xs text-slate-500">
+                {userEmail}
+              </div>
+            )}
+
             {!hasActivePaidSubscription && (
               <Link href="/checkout">
-                <Button variant="primary" className="px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base">
+                <Button variant="primary" className="px-4 py-1.5 text-xs">
                   Upgrade
                 </Button>
               </Link>
             )}
+            <button
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="text-xs text-slate-500 hover:text-slate-900 transition-colors disabled:opacity-50"
+            >
+              {isSigningOut ? 'Signing out...' : 'Sign Out'}
+            </button>
           </div>
         </div>
       </div>
