@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { PaymentForm, useSubscription } from '@solvapay/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { clearCustomerId } from '../lib/customer';
+import { getAccessToken } from '../lib/supabase';
 
 interface Plan {
   reference: string;
@@ -25,7 +25,8 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
-  const { subscriptions } = useSubscription();
+  const [isCancelling, setIsCancelling] = useState<boolean>(false);
+  const { subscriptions, refetch } = useSubscription();
   const router = useRouter();
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -114,11 +115,61 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleCancelPlan = () => {
-    if (confirm('Are you sure you want to cancel your plan? This will reset the demo and clear your subscription.')) {
-      clearCustomerId();
-      // Navigate to home with a full page reload to ensure the provider reinitializes
-      window.location.href = '/';
+  const handleCancelPlan = async () => {
+    if (!confirm('Are you sure you want to cancel your plan? You will be moved to the free plan.')) {
+      return;
+    }
+
+    // Find the active paid subscription to cancel
+    const activePaidSubscription = subscriptions.find(
+      sub => sub.status === 'active' && sub.planName.toLowerCase() !== 'free'
+    );
+
+    if (!activePaidSubscription) {
+      setError('No active subscription found to cancel');
+      return;
+    }
+
+    setIsCancelling(true);
+    setError(null);
+
+    try {
+      // Get access token for authentication
+      const accessToken = await getAccessToken();
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add Authorization header if we have an access token
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      // Call cancel subscription API
+      const res = await fetch('/api/cancel-subscription', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          subscriptionRef: activePaidSubscription.reference,
+          reason: 'User requested cancellation',
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to cancel subscription';
+        throw new Error(errorMessage);
+      }
+
+      // Refetch subscriptions to update the UI
+      await refetch();
+
+      // Navigate to home page to show free subscription
+      router.push('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel subscription');
+      setIsCancelling(false);
     }
   };
 
@@ -216,9 +267,10 @@ export default function CheckoutPage() {
                 {activePlanName && activePlanName.toLowerCase() !== 'free' ? (
                   <button
                     onClick={handleCancelPlan}
-                    className="w-full py-3 border-2 border-slate-300 text-slate-900 rounded-lg hover:border-red-500 hover:text-red-600 transition-colors font-medium"
+                    disabled={isCancelling}
+                    className="w-full py-3 border-2 border-slate-300 text-slate-900 rounded-lg hover:border-red-500 hover:text-red-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Cancel Plan
+                    {isCancelling ? 'Cancelling...' : 'Cancel Plan'}
                   </button>
                 ) : (
                   <button

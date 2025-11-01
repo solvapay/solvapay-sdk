@@ -48,11 +48,23 @@ export function Navigation() {
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut();
-      // Auth state change will trigger re-render in layout
+      const result = await signOut();
+      
+      if (result.error) {
+        console.error('Sign out error:', result.error);
+        alert('Failed to sign out. Please try again.');
+        return;
+      }
+      
+      // Wait a moment for auth state change to propagate
+      // The auth state change listener in layout will handle the UI update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Redirect to ensure clean state (especially important for OAuth sessions)
+      window.location.href = '/';
     } catch (error) {
       console.error('Failed to sign out:', error);
-    } finally {
+      alert('Failed to sign out. Please try again.');
       setIsSigningOut(false);
     }
   };

@@ -4,6 +4,12 @@ import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '
 import { SolvaPayError } from '@solvapay/core';
 
 /**
+ * Request deduplication: Track in-flight requests per userId to prevent race conditions
+ * When multiple requests come in for the same userId simultaneously, they'll share the same promise
+ */
+const inFlightRequests = new Map<string, Promise<string>>();
+
+/**
  * Sync Customer API Route
  * 
  * Ensures a customer exists in SolvaPay backend using externalRef.
@@ -33,21 +39,50 @@ export async function POST(request: NextRequest) {
     const userId = userIdOrError;
 
     // Get user email and name from Supabase JWT token
+    // This is request-specific, but for the same user, the values should be identical
     const email = await getUserEmailFromRequest(request);
     const name = await getUserNameFromRequest(request);
 
-    // SECURITY: Only use the secret key on the server
-    // Config is automatically read from environment variables
-    const solvaPay = createSolvaPay();
+    // Atomic check-and-set pattern to prevent race conditions
+    // Double-check locking: check once, create promise, check again, use existing if found
+    let syncPromise = inFlightRequests.get(userId);
+    
+    if (!syncPromise) {
+      // Create new promise for this userId
+      const newPromise = (async () => {
+        try {
+          // SECURITY: Only use the secret key on the server
+          // Config is automatically read from environment variables
+          const solvaPay = createSolvaPay();
+
+          // Use userId as both customerRef and externalRef
+          // This ensures consistent lookup and prevents duplicate customers
+          // Pass email and name to ensure correct customer data
+          const customerRef = await solvaPay.ensureCustomer(userId, userId, {
+            email: email || undefined,
+            name: name || undefined,
+          });
+          
+          return customerRef;
+        } finally {
+          // Clean up the in-flight request after completion
+          inFlightRequests.delete(userId);
+        }
+      })();
+      
+      // Store the promise atomically - if another request stored one while we were creating, use theirs
+      const existingPromise = inFlightRequests.get(userId);
+      if (existingPromise) {
+        syncPromise = existingPromise;
+      } else {
+        inFlightRequests.set(userId, newPromise);
+        syncPromise = newPromise;
+      }
+    }
 
     try {
-      // Use userId as both customerRef and externalRef
-      // This ensures consistent lookup and prevents duplicate customers
-      // Pass email and name to ensure correct customer data
-      const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-        email: email || undefined,
-        name: name || undefined,
-      });
+      // Wait for the customer sync (either the new one or existing concurrent request)
+      const customerRef = await syncPromise;
       
       return NextResponse.json({
         customerRef,

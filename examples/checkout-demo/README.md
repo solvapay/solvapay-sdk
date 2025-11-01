@@ -8,6 +8,7 @@ Complete payment integration demo showcasing SolvaPay's headless React component
 - 🔒 **Content Gating**: Lock premium features behind subscriptions
 - 💳 **Secure Payments**: Stripe-powered payment processing
 - 📊 **Subscription Management**: Real-time subscription status checking
+- 🔐 **Authentication**: Email/password and Google OAuth sign-in with Supabase
 - 🎨 **Style Agnostic**: Works with any CSS framework or design system
 - 🧪 **Test Mode**: Complete test environment with localStorage persistence
 
@@ -38,6 +39,14 @@ Before running this demo, you need:
    - Create a new project
    - Get your project URL and anon key from Settings → API
    - Get your JWT secret from Settings → API → JWT Secret
+   - **Enable Google OAuth** (optional):
+     - First, create OAuth credentials in Google Cloud Console (see detailed steps below)
+     - Then in Supabase: Authentication → Providers → Google
+     - Enable the provider and paste your Google OAuth Client ID and Client Secret
+     - **Important**: Client IDs field should contain only the Client ID (no spaces, like "123456789-abc.apps.googleusercontent.com")
+     - Copy the Callback URL shown (e.g., `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`)
+     - Add this Callback URL to Google Cloud Console as an authorized redirect URI
+     - Add your app's callback URL (`http://localhost:3000/auth/callback`) to Supabase Redirect URLs
 
 3. **Environment Variables**
    - Copy `env.example` to `.env.local`
@@ -388,6 +397,43 @@ This demo uses Supabase for authentication with Next.js middleware as the defaul
 - User IDs are used directly as customerRef (Supabase user IDs are stable UUIDs)
 - Individual routes can optionally use SupabaseAuthAdapter directly (see route comments)
 
+**Sign-in Methods:**
+- Email/password authentication
+- Google OAuth (requires Google OAuth setup in Supabase dashboard)
+
+**Google OAuth Setup:**
+
+1. **In Google Cloud Console:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com)
+   - Navigate to APIs & Services → Credentials
+   - Create OAuth 2.0 Client ID (or use existing)
+   - Copy the **Client ID** and **Client Secret**
+   - Add authorized redirect URI: `https://[your-project-ref].supabase.co/auth/v1/callback`
+   - Example: `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`
+   - **Note**: This is Supabase's internal callback URL (read-only in Supabase dashboard)
+
+2. **In Supabase Dashboard:**
+   - Go to Authentication → Providers → Google
+   - Enable Google provider (toggle ON)
+   - **Client IDs**: Paste your Google OAuth Client ID (no spaces, just the ID)
+   - **Client Secret (for OAuth)**: Paste your Google OAuth Client Secret
+   - **Callback URL**: This is read-only - Supabase handles the OAuth callback internally at this URL
+   - Add your app's callback URL to Site URL or Redirect URLs:
+     - Go to Authentication → URL Configuration
+     - Add to Redirect URLs: `http://localhost:3000/auth/callback` (for local dev)
+     - Add production URL when deploying: `https://yourdomain.com/auth/callback`
+
+**How it works:**
+1. User clicks "Sign in with Google" → redirects to Supabase → Google
+2. Google redirects back to Supabase's callback URL (read-only, handled by Supabase)
+3. Supabase processes the OAuth and redirects to your app's callback URL (`/auth/callback`)
+4. Your app's callback handler receives the session and syncs the customer
+
+**Important:** 
+- The Supabase callback URL (`https://[your-project-ref].supabase.co/auth/v1/callback`) goes in Google Cloud Console
+- Your app's callback URL (`http://localhost:3000/auth/callback`) goes in Supabase dashboard Redirect URLs
+- The Supabase callback URL is read-only - Supabase handles it automatically
+
 ## Environment Variables
 
 | Variable | Description | Required |
@@ -486,6 +532,32 @@ All components accept any styling approach:
 - Ensure you're inside `<SolvaPayProvider>`
 - Check that hooks are called in functional components
 - Verify all required props are provided
+
+### Google OAuth "redirect_uri_mismatch" Error (Error 400)
+
+This error occurs when Google doesn't recognize the redirect URI that Supabase is using.
+
+**The Fix:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Navigate to **APIs & Services → Credentials**
+3. Click on your **OAuth 2.0 Client ID**
+4. Scroll down to **Authorized redirect URIs**
+5. Click **+ ADD URI**
+6. Add your Supabase callback URL exactly as shown in Supabase dashboard:
+   - `https://[your-project-ref].supabase.co/auth/v1/callback`
+   - Example: `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`
+7. Click **SAVE**
+
+**Important Notes:**
+- Google sees Supabase's callback URL (`https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`), NOT your localhost URL
+- The `redirectTo` option (`localhost:3000/auth/callback`) is where Supabase redirects AFTER processing OAuth
+- You must add the Supabase callback URL to Google Cloud Console, not localhost
+- Make sure the URL matches exactly (including the `/auth/v1/callback` path)
+- After adding the URI, wait a few minutes for changes to propagate
+
+**For Production:**
+- You'll need to add your production Supabase callback URL if different
+- Your app's callback URL (`https://yourdomain.com/auth/callback`) goes in Supabase dashboard Redirect URLs, not Google Cloud Console
 
 ## Learn More
 

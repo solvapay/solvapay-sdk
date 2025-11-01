@@ -45,5 +45,6 @@ export type {
   RetryOptions
 } from './types';
 
-// Export retry utility for general use
-export { withRetry } from './utils';
+// Export utilities for general use
+export { withRetry, createRequestDeduplicator } from './utils';
+export type { RequestDeduplicationOptions } from './utils';

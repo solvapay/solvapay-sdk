@@ -37,7 +37,8 @@ export default function RootLayout({
     const authStateChange = onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         const userId = session?.user?.id || '';
-        setCustomerId(userId);
+        // Only update if userId actually changed to prevent unnecessary re-renders
+        setCustomerId(prev => prev !== userId ? userId : prev);
       } else if (event === 'SIGNED_OUT') {
         setCustomerId('');
       }
