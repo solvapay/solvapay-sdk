@@ -1,0 +1,21 @@
+{
+  "files": [],
+  "references": [],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "skipLibCheck": true,
+    "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@solvapay/core": ["packages/core/src"],
+      "@solvapay/server": ["packages/server/src"],
+      "@solvapay/react": ["packages/react/src"]
+    }
+  }
+}

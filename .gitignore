@@ -1,0 +1,13 @@
+node_modules
+dist
+.cache
+.next
+.env*
+.npmrc
+.pnpm-store
+.turbo
+.DS_Store
+*.tsbuildinfo
+examples/openai-custom-gpt-actions/user-plans.json
+examples/nextjs-openai-custom-gpt-actions/user-plans.json
+**/.demo-data/*

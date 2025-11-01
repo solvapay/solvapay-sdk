@@ -1,0 +1,5 @@
+# NPM Publishing Configuration
+# Copy this file to .npmrc and replace ${NPM_TOKEN} with your actual token
+
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+

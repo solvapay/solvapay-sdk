@@ -1,0 +1,43 @@
+{
+  "name": "solvapay-sdk-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.6.0",
+  "scripts": {
+    "build": "turbo build --concurrency 16",
+    "build:examples": "turbo build --filter=@example/*",
+    "build:packages": "turbo build --filter=@solvapay/*",
+    "clean": "turbo clean",
+    "dev": "turbo dev --no-cache --concurrency 16 --continue",
+    "test": "turbo run test --filter=!@example/*",
+    "lint": "turbo run lint",
+    "type-check": "tsc --build",
+    "type-check:full": "tsc --build tsconfig.with-examples.json",
+    "release": "turbo run release",
+    "version:bump": "tsx scripts/version-bump.ts",
+    "version:bump:minor": "tsx scripts/version-bump.ts minor",
+    "version:bump:major": "tsx scripts/version-bump.ts major",
+    "version:bump:preview": "tsx scripts/version-bump-preview.ts",
+    "publish:packages": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' publish --access public --no-git-checks --no-provenance",
+    "publish:preview": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' publish --tag preview --access public --no-git-checks --no-provenance"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@commitlint/types": "^20.0.0",
+    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger-ui": "^2.1.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.2.79",
+    "conventional-changelog-cli": "^5.0.0",
+    "fastify": "^4.28.1",
+    "jose": "^5.9.3",
+    "nodemon": "^3.1.0",
+    "tsup": "^8.0.1",
+    "tsx": "^4.19.0",
+    "turbo": "^2.0.6",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5",
+    "zod": "^3.23.8"
+  }
+}

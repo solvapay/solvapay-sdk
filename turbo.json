@@ -1,0 +1,46 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "SOLVAPAY_API_KEY",
+    "SOLVAPAY_AGENT",
+    "OAUTH_ISSUER",
+    "OAUTH_CLIENT_ID",
+    "OAUTH_CLIENT_SECRET",
+    "OAUTH_REDIRECT_URI",
+    "OAUTH_JWKS_SECRET",
+    "REDIS_URL",
+    "SESSION_SECRET",
+    "OAUTH_ALLOW_ANY_USER"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "generated/**"],
+      "env": ["PUBLIC_URL"]
+    },
+    "@example/express-basic#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@example/mcp-basic#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@example/nextjs-openai-custom-gpt-actions#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "generated/**"]
+    },
+    "dev": {
+      "persistent": true,
+      "cache": false
+    },
+    "lint": {},
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "release": {
+      "dependsOn": ["build", "test"]
+    }
+  }
+}

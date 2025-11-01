@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/server" },
+    { "path": "packages/react" },
+    { "path": "packages/demo-services" },
+    { "path": "packages/test-utils" },
+    { "path": "examples/express-basic" },
+    { "path": "examples/mcp-basic" },
+    { "path": "examples/checkout-demo" },
+    { "path": "examples/nextjs-openai-custom-gpt-actions" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src", "../shared"],
+  "compilerOptions": { 
+    "outDir": "dist",
+    "composite": false,
+    "skipLibCheck": true
+  }
+}

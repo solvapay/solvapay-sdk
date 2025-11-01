@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src", "../shared"],
+  "compilerOptions": { 
+    "outDir": "dist",
+    "composite": false,
+    "skipLibCheck": true,
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "@solvapay/server": ["../../packages/server/dist/index.d.ts"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  }
+}

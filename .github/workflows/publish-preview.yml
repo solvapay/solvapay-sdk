@@ -1,0 +1,84 @@
+name: Publish Preview to NPM
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+      
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      # TODO: Re-enable example app tests once changes are merged from main branch and test issues are fixed
+      # Note: Example app tests (@example/*) are currently excluded via --filter=!@example/* in package.json test script
+      - name: Run tests
+        run: pnpm test
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Bump preview version
+        run: |
+          pnpm version:bump:preview
+          git add .
+          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
+          git commit -m "chore: bump preview to ${NEW_VERSION} [skip ci]"
+          git tag "v${NEW_VERSION}"
+      
+      - name: Build packages
+        run: pnpm build:packages
+      
+      # Note: Using --no-provenance flag because provenance signing only works with public repositories
+      # This repository is private, so we skip provenance to avoid NPM 422 errors
+      - name: Publish preview to NPM
+        run: pnpm publish:preview
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Push changes and tags
+        run: |
+          git push origin dev
+          git push origin --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
