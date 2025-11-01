@@ -227,7 +227,11 @@ export function createRequestDeduplicator<T = unknown>(
     if (cacheTTL > 0) {
       const cached = resultCache.get(key);
       if (cached && Date.now() - cached.timestamp < cacheTTL) {
+        // Cache hit - return immediately without executing callback
         return cached.data;
+      } else if (cached) {
+        // Cache expired - remove it
+        resultCache.delete(key);
       }
     }
 

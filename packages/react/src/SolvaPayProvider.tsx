@@ -5,7 +5,9 @@ import type {
   SolvaPayContextValue, 
   SubscriptionStatus,
   CustomerSubscriptionData,
+  SubscriptionInfo,
 } from './types';
+import { filterSubscriptions } from './utils/subscriptions';
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
 
@@ -69,7 +71,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [checkSubscription]);
 
   // Fetch subscription function - memoized to prevent unnecessary re-renders
-  const fetchSubscription = useCallback(async () => {
+  const fetchSubscription = useCallback(async (force = false) => {
     const currentCustomerRef = internalCustomerRef;
     
     if (!currentCustomerRef) {
@@ -80,8 +82,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       return;
     }
 
-    // Skip if we've already fetched this customerRef (unless it's in-flight)
-    if (lastFetchedRef.current === currentCustomerRef && inFlightRef.current !== currentCustomerRef) {
+    // Skip if we've already fetched this customerRef (unless it's in-flight or forced)
+    if (!force && lastFetchedRef.current === currentCustomerRef && inFlightRef.current !== currentCustomerRef) {
       return;
     }
 
@@ -98,7 +100,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
       // Only update if this is still the current customerRef (might have changed during fetch)
       if (inFlightRef.current === currentCustomerRef) {
-        setSubscriptionData(data);
+        // Filter subscriptions using shared utility
+        const filteredData: CustomerSubscriptionData = {
+          ...data,
+          subscriptions: filterSubscriptions(data.subscriptions || []),
+        };
+        setSubscriptionData(filteredData);
         lastFetchedRef.current = currentCustomerRef;
       }
     } catch (error) {
@@ -118,6 +125,13 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       }
     }
   }, [internalCustomerRef]); // Only depend on internalCustomerRef
+
+  // Refetch subscription function - forces a fresh fetch by clearing cache
+  const refetchSubscription = useCallback(async () => {
+    // Clear the last fetched ref to force a fresh fetch
+    lastFetchedRef.current = null;
+    await fetchSubscription(true);
+  }, [fetchSubscription]);
 
   // Sync internal customer ref with prop changes
   useEffect(() => {
@@ -160,7 +174,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
         // Only update if this is still the current customerRef (might have changed during fetch)
         if (inFlightRef.current === customerRef) {
-          setSubscriptionData(data);
+          // Filter subscriptions using shared utility
+          const filteredData: CustomerSubscriptionData = {
+            ...data,
+            subscriptions: filterSubscriptions(data.subscriptions || []),
+          };
+          setSubscriptionData(filteredData);
           lastFetchedRef.current = customerRef;
           console.log(`[${effectId}] 💾 [SolvaPayProvider] Updated state for: ${customerRef.substring(0, 8)}...`);
         }
@@ -216,11 +235,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue: SolvaPayContextValue = useMemo(() => ({
     subscription,
-    refetchSubscription: fetchSubscription,
+    refetchSubscription,
     createPayment,
     customerRef: internalCustomerRef,
     updateCustomerRef,
-  }), [subscription, fetchSubscription, createPayment, internalCustomerRef, updateCustomerRef]);
+  }), [subscription, refetchSubscription, createPayment, internalCustomerRef, updateCustomerRef]);
 
   return (
     <SolvaPayContext.Provider value={contextValue}>

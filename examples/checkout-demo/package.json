@@ -11,6 +11,7 @@
   "dependencies": {
     "@solvapay/auth": "workspace:*",
     "@solvapay/core": "workspace:*",
+    "@solvapay/next": "workspace:*",
     "@solvapay/react": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",

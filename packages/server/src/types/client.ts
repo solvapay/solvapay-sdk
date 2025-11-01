@@ -108,5 +108,11 @@ export interface SolvaPayClient {
     publishableKey: string;
     accountId?: string;
   }>;
+
+  // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
+  cancelSubscription?(params: {
+    subscriptionRef: string;
+    reason?: string;
+  }): Promise<components['schemas']['SubscriptionResponse']>;
 }
 

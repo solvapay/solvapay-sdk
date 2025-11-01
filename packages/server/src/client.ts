@@ -162,12 +162,14 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       log(`✅ API Response:`, JSON.stringify(result, null, 2));
       
       // Map response fields to expected format
+      // Note: subscriptions may include additional fields like endDate, cancelledAt
+      // even though they're not in the SubscriptionInfo type definition
       return {
         customerRef: result.reference || result.customerRef,
         email: result.email,
         name: result.name,
         externalRef: result.externalRef,
-        subscriptions: result.subscriptions,
+        subscriptions: result.subscriptions || [],
       };
     },
 
@@ -197,12 +199,14 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const customer = Array.isArray(result) ? result[0] : result;
       
       // Map response fields to expected format
+      // Note: subscriptions may include additional fields like endDate, cancelledAt
+      // even though they're not in the SubscriptionInfo type definition
       return {
         customerRef: customer.reference || customer.customerRef,
         email: customer.email,
         name: customer.name,
         externalRef: customer.externalRef,
-        subscriptions: customer.subscriptions,
+        subscriptions: customer.subscriptions || [],
       };
     },
 
@@ -385,6 +389,54 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         hasClientSecret: !!result.clientSecret,
         hasPublishableKey: !!result.publishableKey,
         accountId: result.accountId
+      });
+      return result;
+    },
+
+    // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
+    async cancelSubscription(params) {
+      const url = `${base}/v1/sdk/subscriptions/${params.subscriptionRef}/cancel`;
+      log(`📡 API Request: POST ${url}`);
+      log(`   Subscription Ref: ${params.subscriptionRef}`);
+      log(`   Reason: ${params.reason || 'none'}`);
+      
+      // Prepare request options
+      const requestOptions: RequestInit = {
+        method: "POST",
+        headers,
+      };
+      
+      // Only include body if reason is provided (backend body is optional)
+      if (params.reason) {
+        requestOptions.body = JSON.stringify({ reason: params.reason });
+        log(`   Request body: ${JSON.stringify({ reason: params.reason })}`);
+      } else {
+        log(`   Request body: (none - optional body omitted)`);
+      }
+      
+      const res = await fetch(url, requestOptions);
+      
+      log(`   Response status: ${res.status} ${res.statusText}`);
+      
+      if (!res.ok) {
+        const error = await res.text();
+        log(`❌ API Error: ${res.status} - ${error}`);
+        
+        if (res.status === 404) {
+          throw new SolvaPayError(`Subscription not found: ${error}`);
+        }
+        
+        if (res.status === 400) {
+          throw new SolvaPayError(`Subscription cannot be cancelled or does not belong to provider: ${error}`);
+        }
+        
+        throw new SolvaPayError(`Cancel subscription failed (${res.status}): ${error}`);
+      }
+      
+      const result = await res.json();
+      log(`✅ Subscription cancelled successfully:`, {
+        reference: result.reference,
+        status: result.status
       });
       return result;
     },

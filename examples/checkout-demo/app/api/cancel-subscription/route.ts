@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSolvaPay } from '@solvapay/server';
 import { requireUserId } from '@solvapay/auth';
 import { SolvaPayError } from '@solvapay/core';
+import { clearSubscriptionCache } from '@solvapay/next';
 
 /**
  * Cancel Subscription API Route
@@ -39,63 +40,50 @@ export async function POST(request: NextRequest) {
     // Config is automatically read from environment variables
     const solvaPay = createSolvaPay();
 
-    // Access the API client directly to call cancel subscription endpoint
-    // The cancel subscription endpoint is: POST /v1/sdk/subscriptions/{subscriptionRef}/cancel
-    const base = process.env.SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com';
-    const apiKey = process.env.SOLVAPAY_SECRET_KEY;
-    
-    if (!apiKey) {
-      throw new SolvaPayError('SOLVAPAY_SECRET_KEY is not configured');
+    // Use the SDK client to cancel the subscription
+    if (!solvaPay.apiClient.cancelSubscription) {
+      throw new SolvaPayError('Cancel subscription method not available on SDK client');
     }
 
-    const url = `${base}/v1/sdk/subscriptions/${subscriptionRef}/cancel`;
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    };
-
-    const body = reason ? { reason } : {};
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+    const cancelledSubscription = await solvaPay.apiClient.cancelSubscription({
+      subscriptionRef,
+      reason,
     });
-
-    if (!res.ok) {
-      const error = await res.text();
-      
-      if (res.status === 404) {
-        return NextResponse.json(
-          { error: 'Subscription not found' },
-          { status: 404 }
-        );
-      }
-      
-      if (res.status === 400) {
-        return NextResponse.json(
-          { error: 'Subscription cannot be cancelled or does not belong to provider' },
-          { status: 400 }
-        );
-      }
-
-      return NextResponse.json(
-        { error: `Failed to cancel subscription: ${error}` },
-        { status: res.status }
-      );
-    }
-
-    const cancelledSubscription = await res.json();
+    
+    // Clear subscription cache to ensure fresh data on next check
+    clearSubscriptionCache(userId);
     
     return NextResponse.json(cancelledSubscription);
 
   } catch (error) {
-    console.error('Cancel subscription failed:', error);
+    console.error('Cancel subscription failed:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     
-    // Handle SolvaPay configuration errors
+    // Handle SolvaPay errors and map to appropriate HTTP status codes
     if (error instanceof SolvaPayError) {
+      const errorMessage = error.message;
+      
+      // Map specific error messages to HTTP status codes
+      if (errorMessage.includes('Subscription not found')) {
+        return NextResponse.json(
+          { error: 'Subscription not found', details: errorMessage },
+          { status: 404 }
+        );
+      }
+      
+      if (errorMessage.includes('cannot be cancelled') || errorMessage.includes('does not belong to provider')) {
+        return NextResponse.json(
+          { error: 'Subscription cannot be cancelled or does not belong to provider', details: errorMessage },
+          { status: 400 }
+        );
+      }
+      
+      // For other SolvaPay errors, return 500 with the error message
       return NextResponse.json(
-        { error: (error as SolvaPayError).message },
+        { error: errorMessage, details: errorMessage },
         { status: 500 }
       );
     }

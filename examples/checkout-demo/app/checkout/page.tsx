@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { PaymentForm, useSubscription } from '@solvapay/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -66,12 +66,7 @@ export default function CheckoutPage() {
         // Set initial selection to first paid plan (skip free plans with price === 0)
         const firstPaidIndex = sortedPlans.findIndex((plan: Plan) => plan.price && plan.price > 0);
         setPlans(sortedPlans);
-        // Only set selection if we found a paid plan, otherwise default to 0
-        if (firstPaidIndex >= 0) {
-          setSelectedPlanIndex(firstPaidIndex);
-        } else {
-          setSelectedPlanIndex(0);
-        }
+        setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0);
       } catch (err) {
         console.error('Failed to fetch plans:', err);
         setError(err instanceof Error ? err.message : 'Failed to load plans');
@@ -85,9 +80,64 @@ export default function CheckoutPage() {
 
   const currentPlan = plans[selectedPlanIndex];
   
-  // Get the active subscription's plan name
-  const activeSubscription = subscriptions.find(sub => sub.status === 'active');
-  const activePlanName = activeSubscription?.planName;
+  // Helper to check if a subscription is for a paid plan
+  const isPaidPlan = useMemo(() => {
+    return (planName: string): boolean => {
+      const plan = plans.find(p => p.name === planName);
+      return plan ? (plan.price ?? 0) > 0 && !plan.isFreeTier : true;
+    };
+  }, [plans]);
+  
+  // Memoize subscription calculations
+  const subscriptionData = useMemo(() => {
+    const activePaidSubscriptions = subscriptions.filter(
+      sub => sub.status === 'active' && isPaidPlan(sub.planName)
+    );
+    
+    const activePaidSubscription = activePaidSubscriptions
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+    
+    const cancelledPaidSubscriptions = subscriptions.filter(
+      sub => sub.status === 'cancelled' && isPaidPlan(sub.planName)
+    );
+    
+    const cancelledSubscription = cancelledPaidSubscriptions
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+    
+    const hasActiveSubscription = subscriptions.some(sub => sub.status === 'active');
+    const shouldShowCancelledNotice = cancelledSubscription && 
+      (!hasActiveSubscription || cancelledSubscription.endDate);
+    
+    return {
+      activePaidSubscription,
+      activePlanName: activePaidSubscription?.planName,
+      cancelledSubscription,
+      hasPaidSubscription: activePaidSubscriptions.length > 0,
+      shouldShowCancelledNotice,
+    };
+  }, [subscriptions, isPaidPlan]);
+
+  const { activePaidSubscription, activePlanName, cancelledSubscription, hasPaidSubscription, shouldShowCancelledNotice } = subscriptionData;
+  
+  // Format date helper
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+  
+  // Calculate days until expiration
+  const getDaysUntilExpiration = (endDate?: string) => {
+    if (!endDate) return null;
+    const now = new Date();
+    const expiration = new Date(endDate);
+    const diffTime = expiration.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
 
   const handlePaymentSuccess = async () => {
     setPaymentSuccess(true);
@@ -110,23 +160,26 @@ export default function CheckoutPage() {
   };
 
   const handleContinue = () => {
-    if (currentPlan && currentPlan.price && currentPlan.price > 0) {
+    if (currentPlan?.price && currentPlan.price > 0) {
       setShowPaymentForm(true);
     }
   };
 
   const handleCancelPlan = async () => {
-    if (!confirm('Are you sure you want to cancel your plan? You will be moved to the free plan.')) {
+    if (!confirm('Are you sure you want to cancel your plan?')) {
       return;
     }
 
-    // Find the active paid subscription to cancel
-    const activePaidSubscription = subscriptions.find(
-      sub => sub.status === 'active' && sub.planName.toLowerCase() !== 'free'
-    );
-
     if (!activePaidSubscription) {
       setError('No active subscription found to cancel');
+      return;
+    }
+
+    // Double-check that the subscription is actually active (not already cancelled)
+    if (activePaidSubscription.status !== 'active') {
+      setError('This subscription is already cancelled');
+      // Refetch to update UI
+      await refetch();
       return;
     }
 
@@ -134,19 +187,19 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      // Get access token for authentication
       const accessToken = await getAccessToken();
       
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
+        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
       };
-      
-      // Add Authorization header if we have an access token
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
 
-      // Call cancel subscription API
+      console.log('Cancelling subscription:', {
+        reference: activePaidSubscription.reference,
+        status: activePaidSubscription.status,
+        planName: activePaidSubscription.planName,
+      });
+
       const res = await fetch('/api/cancel-subscription', {
         method: 'POST',
         headers,
@@ -159,21 +212,30 @@ export default function CheckoutPage() {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         const errorMessage = errorData.error || 'Failed to cancel subscription';
+        console.error('Cancel subscription error:', errorMessage, errorData);
         throw new Error(errorMessage);
       }
 
-      // Refetch subscriptions to update the UI
+      // Refetch to clear any client-side cache
       await refetch();
-
-      // Navigate to home page to show free subscription
-      router.push('/');
+      
+      // Use full page reload to ensure fresh data is fetched from server
+      // This ensures the Navigation component gets fresh subscription data
+      window.location.href = '/';
     } catch (err) {
+      console.error('Cancel subscription failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to cancel subscription');
       setIsCancelling(false);
     }
   };
 
   const price = currentPlan ? (currentPlan.price || 0) / 100 : 0;
+  
+  // Calculate days left for cancelled subscription
+  const cancelledDaysLeft = useMemo(() => {
+    if (!cancelledSubscription?.endDate) return null;
+    return getDaysUntilExpiration(cancelledSubscription.endDate);
+  }, [cancelledSubscription]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -263,8 +325,49 @@ export default function CheckoutPage() {
                   <span className="text-xl font-bold text-slate-900">${Math.floor(price)}</span>
                 </div>
 
+                {/* Cancelled Subscription Notice */}
+                {shouldShowCancelledNotice && cancelledSubscription && (
+                  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-900 mb-2">
+                          Your subscription has been cancelled
+                        </p>
+                        {cancelledSubscription.endDate ? (
+                          <div className="mt-2 p-2 bg-white rounded border border-amber-300">
+                            <p className="text-sm font-semibold text-amber-900">
+                              ⏰ Subscription Expires: {formatDate(cancelledSubscription.endDate)}
+                            </p>
+                            {cancelledDaysLeft !== null && cancelledDaysLeft > 0 && (
+                              <p className="text-xs text-amber-700 mt-1">
+                                {cancelledDaysLeft} {cancelledDaysLeft === 1 ? 'day' : 'days'} remaining
+                              </p>
+                            )}
+                            <p className="text-xs text-amber-700 mt-1">
+                              You'll continue to have access to {cancelledSubscription.planName} features until this date
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-amber-700 mt-1">
+                            Your subscription access has ended
+                          </p>
+                        )}
+                        {cancelledSubscription.cancelledAt && (
+                          <p className="text-xs text-amber-600 mt-2">
+                            Cancelled on {formatDate(cancelledSubscription.cancelledAt)}
+                            {cancelledSubscription.cancellationReason && ` - ${cancelledSubscription.cancellationReason}`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Continue Button or Cancel Plan Button */}
-                {activePlanName && activePlanName.toLowerCase() !== 'free' ? (
+                {hasPaidSubscription && !shouldShowCancelledNotice ? (
                   <button
                     onClick={handleCancelPlan}
                     disabled={isCancelling}

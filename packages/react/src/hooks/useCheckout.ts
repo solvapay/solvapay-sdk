@@ -93,6 +93,9 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
       
       setStripePromise(stripe);
       setClientSecret(result.clientSecret);
+      
+      // Note: We don't refetch here because payment intent creation doesn't change subscription status
+      // Subscription only changes after successful payment completion, which is handled in PaymentForm
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start checkout');
       setError(error);

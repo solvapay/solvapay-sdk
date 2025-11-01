@@ -2,6 +2,7 @@
 import React from 'react';
 import { useSubscription } from '../hooks/useSubscription';
 import type { PlanBadgeProps } from '../types';
+import { getPrimarySubscription } from '../utils/subscriptions';
 
 /**
  * Headless Plan Badge Component
@@ -42,26 +43,20 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
     : className;
 
   // Default rendering with className
-  const activeSubs = subscriptions.filter(sub => sub.status === 'active');
-  
-  // Get the latest active subscription by startDate
-  const latestSub = activeSubs.length > 0
-    ? activeSubs.reduce((latest, current) => {
-        return new Date(current.startDate) > new Date(latest.startDate) ? current : latest;
-      })
-    : null;
+  // Use shared utility to get primary subscription (prioritizes active over cancelled)
+  const primarySubscription = getPrimarySubscription(subscriptions);
   
   const displayText = loading 
     ? 'Loading...' 
-    : latestSub 
-      ? latestSub.planName
+    : primarySubscription 
+      ? primarySubscription.planName
       : 'Free';
 
   return (
     <Component 
       className={computedClassName}
       data-loading={loading}
-      data-has-subscription={activeSubs.length > 0}
+      data-has-subscription={!!primarySubscription}
       role="status"
       aria-live="polite"
       aria-busy={loading}

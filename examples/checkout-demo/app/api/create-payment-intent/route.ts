@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSolvaPay } from '@solvapay/server';
 import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '@solvapay/auth';
 import { SolvaPayError } from '@solvapay/core';
+import { clearSubscriptionCache } from '@solvapay/next';
 // Note: Middleware handles authentication and sets x-user-id header
 // Alternative approach: Use SupabaseAuthAdapter directly in route:
 // import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
@@ -48,13 +49,13 @@ export async function POST(request: NextRequest) {
     }
 
     // SECURITY: Only use the secret key on the server
-    // The SDK handles the secure communication with Stripe
     // Config is automatically read from environment variables
     const solvaPay = createSolvaPay();
 
     // Use userId as customerRef (Supabase user IDs are stable UUIDs)
     // Get or create customer using ensureCustomer with externalRef for consistent lookup
     // Pass email and name to ensure correct customer data
+    // Note: Customer lookup deduplication is handled automatically by the SDK
     const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
       email: email || undefined,
       name: name || undefined,
@@ -67,6 +68,10 @@ export async function POST(request: NextRequest) {
       planRef,
       customerRef: ensuredCustomerRef,
     });
+
+    // Clear subscription cache to ensure fresh data after payment intent creation
+    // Payment intent creation may update subscription status
+    clearSubscriptionCache(userId);
 
     // Return the payment intent details to the client
     // The clientSecret is safe to send to the browser (it's scoped to this payment)

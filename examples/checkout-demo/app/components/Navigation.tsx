@@ -1,10 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { PlanBadge, useSubscription } from '@solvapay/react';
+import { PlanBadge, useSubscription, getPrimarySubscription, hasActivePaidSubscription } from '@solvapay/react';
 import { Button } from './ui/Button';
 import { signOut, getUserEmail, onAuthStateChange } from '../lib/supabase';
 import { useState, useEffect } from 'react';
+
+interface Plan {
+  reference: string;
+  name: string;
+  price?: number;
+  isFreeTier?: boolean;
+}
 
 /**
  * Navigation Component
@@ -15,11 +22,38 @@ export function Navigation() {
   const { subscriptions } = useSubscription();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
   
-  // Check if user has any active paid subscription (not free plan)
-  const hasActivePaidSubscription = subscriptions.some(
-    sub => sub.status === 'active' && sub.planName.toLowerCase() !== 'free'
-  );
+  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
+  
+  // Fetch plans to determine which subscriptions are free vs paid
+  useEffect(() => {
+    const fetchPlans = async () => {
+      if (!agentRef) return;
+      
+      try {
+        const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
+        if (response.ok) {
+          const data = await response.json();
+          setPlans(data.plans || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch plans:', err);
+      }
+    };
+    
+    fetchPlans();
+  }, [agentRef]);
+  
+  // Helper to check if a subscription is for a paid plan
+  const isPaidPlan = (planName: string): boolean => {
+    const plan = plans.find(p => p.name === planName);
+    if (!plan) return true; // Default to paid if plan not found
+    return (plan.price ?? 0) > 0 && !plan.isFreeTier;
+  };
+  
+  // Check if user has any active paid subscription using shared utility
+  const hasActivePaidSubscriptionValue = hasActivePaidSubscription(subscriptions, isPaidPlan);
 
   // Get user email on mount and listen for auth state changes
   useEffect(() => {
@@ -80,25 +114,19 @@ export function Navigation() {
           <div className="flex items-center gap-4">
             <PlanBadge>
               {({ subscriptions, loading }) => {
-                const activeSubs = subscriptions.filter(sub => sub.status === 'active');
-                
-                // Get the latest active subscription by startDate
-                const latestSub = activeSubs.length > 0
-                  ? activeSubs.reduce((latest, current) => {
-                      return new Date(current.startDate) > new Date(latest.startDate) ? current : latest;
-                    })
-                  : null;
+                // Use shared utility to get primary subscription (prioritizes active over cancelled)
+                const primarySubscription = getPrimarySubscription(subscriptions);
                 
                 return (
                   <div className="px-2.5 py-1 rounded-md bg-slate-50 text-xs font-medium">
                     {loading ? (
                       <span className="text-slate-400">Loading...</span>
-                    ) : latestSub ? (
+                    ) : primarySubscription ? (
                       <span className="text-emerald-600">
-                        {latestSub.planName}
+                        {primarySubscription.planName}
                       </span>
                     ) : (
-                      <span className="text-slate-500">Free Plan</span>
+                      <span className="text-slate-500">No Plan</span>
                     )}
                   </div>
                 );
@@ -111,7 +139,7 @@ export function Navigation() {
               </div>
             )}
 
-            {!hasActivePaidSubscription && (
+            {!hasActivePaidSubscriptionValue && (
               <Link href="/checkout">
                 <Button variant="primary" className="px-4 py-1.5 text-xs">
                   Upgrade

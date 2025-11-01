@@ -10,6 +10,9 @@ export interface SubscriptionInfo {
   agentName: string;
   status: string;
   startDate: string;
+  endDate?: string;
+  cancelledAt?: string;
+  cancellationReason?: string;
 }
 
 export interface CustomerSubscriptionData {

@@ -32,3 +32,13 @@ export type {
   PaymentFormProps,
   PaymentError,
 } from './types';
+
+// Utilities
+export {
+  filterSubscriptions,
+  getActiveSubscriptions,
+  getCancelledSubscriptionsWithEndDate,
+  getMostRecentSubscription,
+  getPrimarySubscription,
+  hasActivePaidSubscription,
+} from './utils/subscriptions';
