@@ -13,8 +13,19 @@ const PACKAGES_TO_VERSION = [
 ];
 
 function parseVersion(version: string): { major: number; minor: number; patch: number } {
-  const [major, minor, patch] = version.split('.').map(Number);
-  return { major, minor, patch };
+  // Handle prerelease versions like "1.0.0-preview.5" by extracting just the base version
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
+  
+  if (!match) {
+    throw new Error(`Invalid version format: ${version}`);
+  }
+  
+  const [, major, minor, patch] = match;
+  return { 
+    major: parseInt(major, 10), 
+    minor: parseInt(minor, 10), 
+    patch: parseInt(patch, 10) 
+  };
 }
 
 function incrementVersion(version: string, type: BumpType): string {
