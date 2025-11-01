@@ -1,9 +1,11 @@
 name: Publish to NPM
 
+# Auto-publish disabled - trigger manually via GitHub Actions UI when ready
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   publish:
