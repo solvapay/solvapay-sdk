@@ -1,6 +1,13 @@
 # SolvaPay SDK
 
-A modern TypeScript SDK for SolvaPay with unified paywall protection, payment processing, and edge runtime support.
+A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and subscription management.
+
+**✨ Key Features:**
+- 🛡️ **One-line paywall protection** for Express, Next.js, and MCP servers
+- 💳 **Headless React components** for subscription checkout flows
+- 🚀 **Works out of the box** with stub mode (no API key needed for testing)
+- 🔒 **Secure by default** - API keys never exposed to the browser
+- ⚡ **Edge runtime support** for global low-latency deployments
 
 [![npm version](https://img.shields.io/npm/v/@solvapay/server.svg)](https://www.npmjs.com/package/@solvapay/server)
 [![preview](https://img.shields.io/npm/v/@solvapay/server/preview?label=preview)](https://www.npmjs.com/package/@solvapay/server?activeTab=versions)
@@ -8,12 +15,29 @@ A modern TypeScript SDK for SolvaPay with unified paywall protection, payment pr
 
 ## 🚀 Quick Start
 
-```bash
-# Install dependencies
-pnpm install
+### Try an Example (No API Key Required)
 
-# Build all packages
-pnpm build
+```bash
+# Clone and setup
+git clone https://github.com/solvapay/solvapay-sdk
+cd solvapay-sdk
+pnpm install && pnpm build
+
+# Run Express example with stub mode
+cd examples/express-basic
+pnpm dev
+```
+
+The Express example runs in **stub mode** by default - perfect for testing without an API key!
+
+### Add to Your Project
+
+```bash
+# For server-side paywall protection
+npm install @solvapay/server
+
+# For client-side payment flows
+npm install @solvapay/react
 ```
 
 ## 📦 Packages
@@ -22,19 +46,9 @@ The SDK consists of **3 focused packages**:
 
 - **`@solvapay/core`** - Types, schemas, and shared utilities
 - **`@solvapay/server`** - Universal server SDK (Node + Edge runtime)
-- **`@solvapay/react`** - Payment flow components
+- **`@solvapay/react`** - Headless payment components and hooks
 
 See [`docs/architecture.md`](./docs/architecture.md) for detailed package design and boundaries.
-
-### Installation
-
-```bash
-# Server-side (paywall protection, webhooks)
-npm install @solvapay/server
-
-# Client-side (payment flows)
-npm install @solvapay/react
-```
 
 ## 🎯 Usage
 
@@ -48,35 +62,95 @@ const solvaPay = createSolvaPay({
   apiKey: process.env.SOLVAPAY_SECRET_KEY 
 });
 
-// Create a payable with your agent
-const payable = solvaPay.payable({ agent: 'my-api' });
+// Create payable handlers for your agent
+const payable = solvaPay.payable({ 
+  agent: 'agt_YOUR_AGENT', 
+  plan: 'pln_YOUR_PLAN' 
+});
 
-// Protect endpoints with different adapters:
-app.post('/tasks', payable.http(handler));        // Express/Fastify
-export const POST = payable.next(handler);         // Next.js App Router
-const mcpHandler = payable.mcp(handler);           // MCP servers
+// Protect endpoints with framework-specific adapters:
+app.post('/tasks', payable.http(createTask));      // Express/Fastify
+export const POST = payable.next(createTask);      // Next.js App Router
+const handler = payable.mcp(createTask);           // MCP servers
 ```
 
 ### Client-Side: Payment Flow
 
-```tsx
-import { SolvaPayProvider, PaymentForm } from '@solvapay/react';
+Wrap your app with `SolvaPayProvider` and use `PaymentForm` for checkout:
 
-function CheckoutPage() {
+```tsx
+import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react';
+
+function RootLayout({ children }) {
   return (
-    <SolvaPayProvider 
-      amount={999} 
-      currency="USD" 
-      planRef="pln_basic"
+    <SolvaPayProvider
+      customerRef={userId}
+      createPayment={async ({ planRef, customerRef }) => {
+        const res = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          body: JSON.stringify({ planRef, customerRef, agentRef: 'your_agent' })
+        });
+        return res.json();
+      }}
+      checkSubscription={async (customerRef) => {
+        const res = await fetch(`/api/check-subscription?customerRef=${customerRef}`);
+        return res.json();
+      }}
     >
-      <PaymentForm
-        returnUrl="/success"
-        onSuccess={(paymentIntent) => {
-          console.log('Payment successful!', paymentIntent);
-        }}
-      />
+      {children}
     </SolvaPayProvider>
   );
+}
+
+function CheckoutPage() {
+  const { subscriptions } = useSubscription();
+  
+  return (
+    <PaymentForm
+      planRef="pln_YOUR_PLAN"
+      onSuccess={() => console.log('Payment successful!')}
+    />
+  );
+}
+```
+
+**Backend API routes** needed for `SolvaPayProvider`:
+
+```typescript
+// /api/create-payment-intent/route.ts
+import { createSolvaPay } from '@solvapay/server';
+
+const solvaPay = createSolvaPay({ 
+  apiKey: process.env.SOLVAPAY_SECRET_KEY 
+});
+
+export async function POST(req: Request) {
+  const { planRef, customerRef, agentRef } = await req.json();
+  
+  const paymentIntent = await solvaPay.createPaymentIntent({
+    planRef,
+    customerRef,
+    agentRef
+  });
+  
+  return Response.json(paymentIntent);
+}
+
+// /api/check-subscription/route.ts
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const customerRef = searchParams.get('customerRef');
+  
+  try {
+    const customer = await solvaPay.getCustomer({ customerRef });
+    return Response.json({
+      customerRef: customer.customerRef,
+      subscriptions: customer.subscriptions || []
+    });
+  } catch {
+    // Customer doesn't exist - return empty subscriptions (free tier)
+    return Response.json({ customerRef, subscriptions: [] });
+  }
 }
 ```
 
@@ -84,12 +158,50 @@ function CheckoutPage() {
 
 The [`examples/`](./examples) directory contains working demonstrations:
 
-- **[express-basic](./examples/express-basic)** - Paywall protection for CRUD APIs
-- **[nextjs-openai-custom-gpt-actions](./examples/nextjs-openai-custom-gpt-actions)** - Payment flow with React components and OpenAI integration
-- **[checkout-demo](./examples/checkout-demo)** - Full checkout with plan selection
-- **[mcp-basic](./examples/mcp-basic)** - Model Context Protocol server
+### 🚀 [express-basic](./examples/express-basic)
+Simple Express.js API with paywall protection:
+- Protect CRUD endpoints with `.http()` adapter
+- Customer identification via headers
+- Free tier limits with automatic checkout URLs
+- Works out of the box with stub mode (no API key needed)
 
-See [`examples/README.md`](./examples/README.md) for setup instructions.
+```bash
+cd examples/express-basic && pnpm dev
+```
+
+### 💳 [checkout-demo](./examples/checkout-demo)
+Full-featured Next.js checkout flow:
+- Complete subscription management
+- Plan selection UI with `PaymentForm`
+- Customer session management
+- Subscription status checking with `useSubscription` hook
+
+```bash
+cd examples/checkout-demo && pnpm dev
+```
+
+### 🤖 [nextjs-openai-custom-gpt-actions](./examples/nextjs-openai-custom-gpt-actions)
+OpenAI Custom GPT Actions integration:
+- OAuth 2.0 authentication flow
+- Paywall-protected API endpoints
+- OpenAPI schema generation
+- Payment flow for GPT Actions
+
+```bash
+cd examples/nextjs-openai-custom-gpt-actions && pnpm dev
+```
+
+### 🔌 [mcp-basic](./examples/mcp-basic)
+Model Context Protocol server with paywall:
+- Protect MCP tools with `.mcp()` adapter
+- Integration with Claude Desktop and other MCP clients
+- Pay-per-use pricing model
+
+```bash
+cd examples/mcp-basic && pnpm dev
+```
+
+See [`examples/README.md`](./examples/README.md) for detailed setup instructions.
 
 ## 🏗️ Architecture
 
@@ -147,6 +259,5 @@ MIT
 
 ## 🤝 Support
 
-- **Documentation**: [docs.solvapay.com](https://docs.solvapay.com)
 - **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
 - **Email**: support@solvapay.com
