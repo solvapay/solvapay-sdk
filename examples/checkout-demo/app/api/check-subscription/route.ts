@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSolvaPay } from '@solvapay/server';
+import { checkSubscription, type SubscriptionCheckResult } from '@solvapay/next';
 
 /**
  * Check Subscription API Route
@@ -8,73 +8,36 @@ import { createSolvaPay } from '@solvapay/server';
  * Returns customer details with their active subscriptions.
  * 
  * Flow:
- * 1. Client calls this API with customerRef query parameter
- * 2. This route calls SolvaPay SDK to get customer details
- * 3. Returns customer info with subscriptions array
+ * 1. Client calls this API with Authorization header
+ * 2. Middleware extracts userId from Supabase JWT token and sets x-user-id header
+ * 3. This route uses the SDK helper which:
+ *    - Reads userId from x-user-id header
+ *    - Gets user email and name from Supabase JWT token
+ *    - Calls SolvaPay SDK to get customer details (with built-in deduplication)
+ *    - Returns customer info with subscriptions array
  * 4. If customer doesn't exist, returns empty subscriptions
+ * 
+ * Note: Request deduplication is handled automatically by the SDK:
+ * - Deduplicates concurrent requests (multiple requests share the same promise)
+ * - Caches results for 2 seconds (prevents duplicate sequential requests)
+ * - Automatic cleanup of expired cache entries
+ * - Memory-safe with max cache size
+ * 
+ * This is a simple in-memory cache suitable for single-instance deployments.
+ * For multi-instance deployments, consider using Redis or a shared cache.
  */
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const customerRef = searchParams.get('customerRef');
-
-    if (!customerRef) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: customerRef' },
-        { status: 400 }
-      );
-    }
-
-    // SECURITY: Only use the secret key on the server
-    const solvapaySecretKey = process.env.SOLVAPAY_SECRET_KEY;
-    const solvapayApiBaseUrl = process.env.SOLVAPAY_API_BASE_URL;
-
-    if (!solvapaySecretKey) {
-      console.error('Missing SOLVAPAY_SECRET_KEY environment variable');
-      return NextResponse.json(
-        { error: 'Server configuration error: SolvaPay secret key not configured' },
-        { status: 500 }
-      );
-    }
-
-    // Create SolvaPay instance
-    const solvaPay = createSolvaPay({
-      apiKey: solvapaySecretKey,
-      apiBaseUrl: solvapayApiBaseUrl,
-    });
-
-    try {
-      // Get customer details including subscriptions
-      const customer = await solvaPay.getCustomer({ customerRef });
-
-      // Return customer data with subscriptions
-      // The API returns subscriptions array with {reference, planName, agentName, status, startDate}
-      const response = {
-        customerRef: customer.customerRef || customerRef,
-        email: customer.email,
-        name: customer.name,
-        subscriptions: customer.subscriptions || [],
-      };
-      
-      return NextResponse.json(response);
-
-    } catch (error) {
-      // Customer doesn't exist yet - return empty subscriptions (free tier)
-      return NextResponse.json({
-        customerRef,
-        subscriptions: [],
-      });
-    }
-
-  } catch (error) {
-    console.error('Check subscription failed:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    return NextResponse.json(
-      { error: 'Failed to check subscription', details: errorMessage },
-      { status: 500 }
-    );
+  const result = await checkSubscription(request);
+  
+  // If result is a NextResponse, it's an error response - return it
+  if (result instanceof NextResponse) {
+    return result;
   }
+  
+  // TypeScript now knows result is SubscriptionCheckResult after the instanceof check
+  // Cast to SubscriptionCheckResult to help TypeScript understand the type
+  const subscriptionData = result as SubscriptionCheckResult;
+  
+  return NextResponse.json(subscriptionData);
 }
 

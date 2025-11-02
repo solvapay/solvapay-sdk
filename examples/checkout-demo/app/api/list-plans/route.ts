@@ -54,10 +54,12 @@ export async function GET(request: NextRequest) {
       const plans = await apiClient.listPlans(agentRef);
 
       // Return plans array
-      return NextResponse.json({
+      const response = {
         plans: plans || [],
         agentRef,
-      });
+      };
+      
+      return NextResponse.json(response);
 
     } catch (error) {
       // Failed to fetch plans

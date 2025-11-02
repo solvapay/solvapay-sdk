@@ -45,5 +45,12 @@ export type {
   RetryOptions
 } from './types';
 
-// Export retry utility for general use
+// Export payment processing types
+export type {
+  PurchaseInfo,
+  ProcessPaymentResult,
+  CustomerResponseMapped
+} from './types/client';
+
+// Export utilities for general use
 export { withRetry } from './utils';

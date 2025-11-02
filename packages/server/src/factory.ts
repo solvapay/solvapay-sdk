@@ -8,7 +8,7 @@ import type { SolvaPayClient, PayableOptions, HttpAdapterOptions, NextAdapterOpt
 import { createSolvaPayClient } from './client';
 import { SolvaPayPaywall } from './paywall';
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters';
-import { SolvaPayError } from '@solvapay/core';
+import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core';
 
 /**
  * Configuration for creating a SolvaPay instance
@@ -79,8 +79,13 @@ export interface SolvaPay {
   /**
    * Ensure customer exists (for testing/setup)
    * Only attempts creation once per customer (idempotent).
+   * 
+   * @param customerRef - The customer reference (e.g., Supabase user ID)
+   * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
+   *   If provided, will lookup existing customer by externalRef before creating new one
+   * @param options - Optional customer details (email, name) for customer creation
    */
-  ensureCustomer(customerRef: string): Promise<string>;
+  ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string>;
   
   /**
    * Create a payment intent for a customer to subscribe to a plan
@@ -96,6 +101,17 @@ export interface SolvaPay {
     publishableKey: string;
     accountId?: string;
   }>;
+  
+  /**
+   * Process a payment intent after client-side confirmation
+   * Creates subscription or purchase immediately, eliminating webhook delay
+   */
+  processPayment(params: {
+    paymentIntentId: string;
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }): Promise<import('./types/client').ProcessPaymentResult>;
   
   /**
    * Check if customer is within usage limits
@@ -161,12 +177,15 @@ export interface SolvaPay {
 /**
  * Create a SolvaPay instance
  * 
- * @param config - Configuration with either apiKey or apiClient
+ * @param config - Optional configuration with either apiKey or apiClient. If not provided, reads from environment variables.
  * @returns SolvaPay instance with payable() method
  * 
  * @example
  * ```typescript
- * // Production: Pass API key
+ * // Production: Read from environment variables (recommended)
+ * const solvaPay = createSolvaPay();
+ * 
+ * // Production: Pass API key explicitly
  * const solvaPay = createSolvaPay({ 
  *   apiKey: process.env.SOLVAPAY_SECRET_KEY 
  * });
@@ -182,11 +201,23 @@ export interface SolvaPay {
  * export const POST = payable.next(createTask);
  * ```
  */
-export function createSolvaPay(config: CreateSolvaPayConfig): SolvaPay {
+export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
+  // If no config provided, read from environment variables
+  let resolvedConfig: CreateSolvaPayConfig;
+  if (!config) {
+    const envConfig = getSolvaPayConfig();
+    resolvedConfig = {
+      apiKey: envConfig.apiKey,
+      apiBaseUrl: envConfig.apiBaseUrl,
+    };
+  } else {
+    resolvedConfig = config;
+  }
+
   // Create or use provided API client
-  const apiClient = config.apiClient || createSolvaPayClient({
-    apiKey: config.apiKey!,
-    apiBaseUrl: config.apiBaseUrl
+  const apiClient = resolvedConfig.apiClient || createSolvaPayClient({
+    apiKey: resolvedConfig.apiKey!,
+    apiBaseUrl: resolvedConfig.apiBaseUrl
   });
   
   // Create paywall instance with debug flag controlled by environment variable
@@ -199,8 +230,8 @@ export function createSolvaPay(config: CreateSolvaPayConfig): SolvaPay {
     apiClient,
     
     // Common API methods exposed directly for convenience
-    ensureCustomer(customerRef: string) {
-      return paywall.ensureCustomer(customerRef);
+    ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }) {
+      return paywall.ensureCustomer(customerRef, externalRef, options);
     },
     
     createPaymentIntent(params) {
@@ -208,6 +239,13 @@ export function createSolvaPay(config: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('createPaymentIntent is not available on this API client');
       }
       return apiClient.createPaymentIntent(params);
+    },
+    
+    processPayment(params) {
+      if (!apiClient.processPayment) {
+        throw new SolvaPayError('processPayment is not available on this API client');
+      }
+      return apiClient.processPayment(params);
     },
     
     checkLimits(params) {

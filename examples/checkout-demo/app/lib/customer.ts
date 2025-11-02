@@ -1,45 +1,35 @@
 /**
  * Customer Management Utility
  * 
- * Handles customer ID persistence using localStorage for demo purposes.
- * In a production app, customer IDs would come from your authentication system.
+ * Handles customer ID retrieval from Supabase authentication.
+ * In a production app, customer IDs come from your authentication system.
  */
 
+import { getUserId } from './supabase';
+
 /**
- * Get or create a customer ID
- * Persists to localStorage for demo continuity across page refreshes
+ * Get the current user's ID from Supabase session
+ * Returns empty string if not authenticated (for React Provider compatibility)
  */
-export function getOrCreateCustomerId(): string {
-  if (typeof window === 'undefined') return '';
-  
-  const STORAGE_KEY = 'solvapay_customer_id';
-  
-  let customerId = localStorage.getItem(STORAGE_KEY);
-  
-  if (!customerId) {
-    // Generate a unique customer ID (use format that won't be changed by backend)
-    customerId = `cus_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem(STORAGE_KEY, customerId);
-  }
-  
-  return customerId;
+export async function getOrCreateCustomerId(): Promise<string> {
+  const userId = await getUserId();
+  return userId || '';
 }
 
 /**
- * Update the stored customer ID
- * Used to replace the local customer ID with the backend customer reference
+ * Update customer ID (kept for compatibility, but Supabase handles this)
+ * In practice, this is a no-op since userId comes from Supabase session
  */
-export function updateCustomerId(newCustomerId: string): void {
-  if (typeof window === 'undefined') return;
-  const STORAGE_KEY = 'solvapay_customer_id';
-  localStorage.setItem(STORAGE_KEY, newCustomerId);
+export function updateCustomerId(_newCustomerId: string): void {
+  // No-op: customer ID is managed by Supabase auth
+  // This is kept for compatibility with SolvaPayProvider's onCustomerRefUpdate callback
 }
 
 /**
- * Clear customer ID (for testing purposes)
+ * Clear customer session (sign out)
+ * Used for testing purposes or logout functionality
  */
-export function clearCustomerId(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem('solvapay_customer_id');
+export async function clearCustomerId(): Promise<void> {
+  const { supabase } = await import('./supabase');
+  await supabase.auth.signOut();
 }
-

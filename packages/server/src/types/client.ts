@@ -18,9 +18,32 @@ export type CustomerResponseMapped = {
   customerRef: string;
   email?: string;
   name?: string;
+  externalRef?: string;
   plan?: string;
   subscriptions?: components['schemas']['SubscriptionInfo'][];
 };
+
+/**
+ * Purchase information returned from payment processing
+ */
+export interface PurchaseInfo {
+  reference: string;
+  productRef?: string;
+  amount: number;
+  currency: string;
+  creditsAdded?: number;
+  completedAt: string;
+}
+
+/**
+ * Result from processing a payment intent
+ */
+export interface ProcessPaymentResult {
+  type: 'subscription' | 'purchase';
+  subscription?: components['schemas']['SubscriptionInfo'];
+  purchase?: PurchaseInfo;
+  status: 'completed';
+}
 
 /**
  * SolvaPay API Client Interface
@@ -50,6 +73,11 @@ export interface SolvaPayClient {
     customerRef: string;
   }): Promise<CustomerResponseMapped>;
 
+  // GET: /v1/sdk/customers?externalRef={externalRef}
+  getCustomerByExternalRef?(params: {
+    externalRef: string;
+  }): Promise<CustomerResponseMapped>;
+
   // Management methods (primarily for integration tests)
   
   // GET: /v1/sdk/agents
@@ -74,9 +102,14 @@ export interface SolvaPayClient {
   listPlans?(agentRef: string): Promise<Array<{
     reference: string;
     name: string;
+    description?: string;
+    price?: number;
+    currency?: string;
+    interval?: string;
     isFreeTier?: boolean;
     freeUnits?: number;
-    description?: string;
+    metadata?: Record<string, any>;
+    [key: string]: any; // Allow additional fields from API
   }>>;
 
   // POST: /v1/sdk/agents/{agentRef}/plans
@@ -102,5 +135,19 @@ export interface SolvaPayClient {
     publishableKey: string;
     accountId?: string;
   }>;
+
+  // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
+  cancelSubscription?(params: {
+    subscriptionRef: string;
+    reason?: string;
+  }): Promise<components['schemas']['SubscriptionResponse']>;
+
+  // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
+  processPayment?(params: {
+    paymentIntentId: string;
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }): Promise<ProcessPaymentResult>;
 }
 

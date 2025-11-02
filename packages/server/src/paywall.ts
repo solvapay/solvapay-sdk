@@ -14,7 +14,7 @@ import type {
   PaywallToolResult,
   SolvaPayClient,
 } from './types';
-import { withRetry } from './utils';
+import { withRetry, createRequestDeduplicator } from './utils';
 
 // Re-export types for convenience
 export type {
@@ -34,6 +34,24 @@ export class PaywallError extends Error {
     this.name = 'PaywallError';
   }
 }
+
+/**
+ * Shared customer lookup deduplicator across all SolvaPay instances
+ * 
+ * This prevents duplicate customer lookups when multiple SolvaPay instances
+ * are created in the same process (e.g., in different API routes).
+ * 
+ * Features:
+ * - Deduplicates concurrent requests (multiple requests share the same promise)
+ * - Caches results for 5 seconds (prevents duplicate sequential requests)
+ * - Automatic cleanup of expired cache entries
+ * - Memory-safe with max cache size
+ */
+const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
+  cacheTTL: 5000, // Cache results for 5 seconds (sufficient for concurrent requests)
+  maxCacheSize: 1000, // Maximum cache entries
+  cacheErrors: false, // Don't cache errors - retry on next request
+});
 
 /**
  * Universal SolvaPay Protection - One API for everything
@@ -149,9 +167,14 @@ export class SolvaPayPaywall {
    * This is a public helper for testing, pre-creating customers, and internal use.
    * Only attempts creation once per customer (idempotent).
    * Returns the backend customer reference to use in API calls.
+   * 
+   * @param customerRef - The customer reference (e.g., Supabase user ID)
+   * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
+   *   If provided, will lookup existing customer by externalRef before creating new one
+   * @param options - Optional customer details (email, name) for customer creation
    */
-  async ensureCustomer(customerRef: string): Promise<string> {
-    // Return cached mapping if exists
+  async ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string> {
+    // Return cached mapping if exists (per-instance cache)
     if (this.customerRefMapping.has(customerRef)) {
       return this.customerRefMapping.get(customerRef)!;
     }
@@ -161,47 +184,122 @@ export class SolvaPayPaywall {
       return customerRef;
     }
     
-    // If already attempted but no mapping, use original ref
-    if (this.customerCreationAttempts.has(customerRef)) {
-      return customerRef;
+    // Use shared deduplicator to prevent duplicate lookups across all instances
+    // This is especially important when multiple routes call ensureCustomer concurrently
+    const cacheKey = externalRef || customerRef;
+    
+    // Check if we have a cached result in per-instance cache first (fast path)
+    if (this.customerRefMapping.has(customerRef)) {
+      const cached = this.customerRefMapping.get(customerRef)!;
+      this.log(`✅ [PER-INSTANCE CACHE HIT] Using cached customer lookup: ${customerRef} -> ${cached}`);
+      return cached;
     }
     
-    // Skip if createCustomer is not available
-    if (!this.apiClient.createCustomer) {
-      // eslint-disable-next-line no-console
-      console.warn(`⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`);
-      return customerRef;
-    }
+    // Use shared deduplicator (handles both concurrent requests and cache)
+    // Store state before calling to detect if we got a cached result
+    const hadPerInstanceCache = this.customerRefMapping.has(customerRef);
     
-    this.customerCreationAttempts.add(customerRef);
+    const backendRef = await sharedCustomerLookupDeduplicator.deduplicate(
+      cacheKey,
+      async () => {
+        // If externalRef is provided, try to lookup existing customer first
+        if (externalRef && this.apiClient.getCustomerByExternalRef) {
+          try {
+            this.log(`🔍 Looking up customer by externalRef: ${externalRef}`);
+            const existingCustomer = await this.apiClient.getCustomerByExternalRef({ externalRef });
+            
+            if (existingCustomer && existingCustomer.customerRef) {
+              const ref = existingCustomer.customerRef;
+              this.log(`✅ Found existing customer by externalRef: ${externalRef} -> ${ref}`);
+              
+              // Store the mapping for future use (per-instance cache)
+              this.customerRefMapping.set(customerRef, ref);
+              
+              // Also track that we've attempted creation for this externalRef to prevent duplicates
+              this.customerCreationAttempts.add(customerRef);
+              if (externalRef !== customerRef) {
+                this.customerCreationAttempts.add(externalRef);
+              }
+              
+              return ref;
+            }
+          } catch (error) {
+            // 404 means customer doesn't exist yet - this is expected, continue to creation
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+              this.log(`🔍 Customer not found by externalRef, will create new: ${externalRef}`);
+            } else {
+              // Unexpected error - log but continue to fallback behavior
+              this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`);
+            }
+          }
+        }
+        
+        // If already attempted but no mapping, use original ref
+        // Check both customerRef and externalRef to prevent duplicates
+        if (this.customerCreationAttempts.has(customerRef) || 
+            (externalRef && this.customerCreationAttempts.has(externalRef))) {
+          // If we have a mapping, use it; otherwise return the original ref
+          const mappedRef = this.customerRefMapping.get(customerRef);
+          return mappedRef || customerRef;
+        }
+        
+        // Skip if createCustomer is not available
+        if (!this.apiClient.createCustomer) {
+          // eslint-disable-next-line no-console
+          console.warn(`⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`);
+          return customerRef;
+        }
+        
+        this.customerCreationAttempts.add(customerRef);
+        
+        try {
+          this.log(`🔧 Auto-creating customer: ${customerRef}${externalRef ? ` (externalRef: ${externalRef})` : ''}`);
+          
+          // Prepare customer creation params
+          // Use provided email/name, or fallback to auto-generated values
+          const createParams: any = {
+            email: options?.email || `${customerRef}@auto-created.local`,
+            name: options?.name || customerRef
+          };
+          
+          // Include externalRef if provided
+          if (externalRef) {
+            createParams.externalRef = externalRef;
+          }
+          
+          const result = await this.apiClient.createCustomer(createParams);
+          
+          // Extract the backend reference from the response
+          const ref = (result as any).customerRef || (result as any).reference || customerRef;
+          
+          this.log(`✅ Successfully created customer: ${customerRef} -> ${ref}`, result);
+          
+          this.log(`🔍 DEBUG - ensureCustomer analysis:`);
+          this.log(`   - Input customerRef: ${customerRef}`);
+          this.log(`   - ExternalRef: ${externalRef || 'none'}`);
+          this.log(`   - Backend customerRef: ${ref}`);
+          this.log(`   - Has plan in response: ${(result as any).plan ? 'YES - ' + (result as any).plan : 'NO'}`);
+          this.log(`   - Has subscription in response: ${(result as any).subscription ? 'YES' : 'NO'}`);
+          
+          // Store the mapping (per-instance cache)
+          this.customerRefMapping.set(customerRef, ref);
+          
+          return ref;
+        } catch (error) {
+          this.log(`❌ Failed to auto-create customer ${customerRef}:`, error instanceof Error ? error.message : error);
+          // Continue anyway - use the original ref
+          return customerRef;
+        }
+      }
+    );
     
-    try {
-      this.log(`🔧 Auto-creating customer: ${customerRef}`);
-      const result = await this.apiClient.createCustomer({
-        email: `${customerRef}@auto-created.local`,
-        name: customerRef
-      });
-      
-      // Extract the backend reference from the response
-      const backendRef = (result as any).customerRef || (result as any).reference || customerRef;
-      
-      this.log(`✅ Successfully created customer: ${customerRef} -> ${backendRef}`, result);
-      
-      this.log(`🔍 DEBUG - ensureCustomer analysis:`);
-      this.log(`   - Input customerRef: ${customerRef}`);
-      this.log(`   - Backend customerRef: ${backendRef}`);
-      this.log(`   - Has plan in response: ${(result as any).plan ? 'YES - ' + (result as any).plan : 'NO'}`);
-      this.log(`   - Has subscription in response: ${(result as any).subscription ? 'YES' : 'NO'}`);
-      
-      // Store the mapping
+    // Store the mapping in per-instance cache for faster subsequent lookups
+    if (backendRef !== customerRef) {
       this.customerRefMapping.set(customerRef, backendRef);
-      
-      return backendRef;
-    } catch (error) {
-      this.log(`❌ Failed to auto-create customer ${customerRef}:`, error instanceof Error ? error.message : error);
-      // Continue anyway - use the original ref
-      return customerRef;
     }
+    
+    return backendRef;
   }
 
   async trackUsage(customerRef: string, agentRef: string, planRef: string, toolName: string, outcome: 'success' | 'paywall' | 'fail', requestId: string, actionDuration: number): Promise<void> {

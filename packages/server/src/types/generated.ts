@@ -71,7 +71,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get customer by reference or externalRef
+         * @description Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomerByQuery"];
         put?: never;
         /**
          * Create a new customer
@@ -142,6 +146,26 @@ export interface paths {
         get: operations["PaymentIntentSdkController_getPaymentIntent"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/payment-intents/{id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process payment intent after client-side confirmation
+         * @description Processes a payment intent that has been confirmed on the client-side using Stripe.js. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
+         */
+        post: operations["PaymentIntentSdkController_processPaymentIntent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -260,7 +284,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a plan
-         * @description Deletes a plan by its reference.
+         * @description Deletes a plan by its reference. The plan will be automatically removed from all agents that reference it.
          */
         delete: operations["PlanSdkController_deletePlan"];
         options?: never;
@@ -277,7 +301,7 @@ export interface paths {
         };
         /**
          * Get all subscriptions for provider
-         * @description Retrieves all subscriptions for the authenticated provider. Supports optional filtering by status.
+         * @description Retrieves all subscriptions for the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptions"];
         put?: never;
@@ -320,6 +344,26 @@ export interface paths {
          * @description Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptionsByAgent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get subscription by ID
+         * @description Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
+         */
+        get: operations["SubscriptionSdkController_getSubscriptionById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -374,6 +418,62 @@ export interface components {
         UpdatePlanRequest: Record<string, never>;
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
+        CreateCheckoutSessionRequest: {
+            /**
+             * @description Customer reference
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerReference: string;
+            /**
+             * @description Plan reference (optional)
+             * @example pln_2b3c4d5e6f7g
+             */
+            planRef?: string;
+            /**
+             * @description Agent reference (optional)
+             * @example agt_1a2b3c4d5e6f
+             */
+            agentRef?: string;
+        };
+        CheckoutSessionResponse: {
+            /**
+             * @description Checkout session ID
+             * @example 507f1f77bcf86cd799439011
+             */
+            id: string;
+            /**
+             * @description Public session ID used in checkout URL
+             * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+             */
+            sessionId: string;
+            /**
+             * @description Amount in cents
+             * @example 2999
+             */
+            amount: number;
+            /**
+             * @description Currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * @description Session status
+             * @example active
+             */
+            status: string;
+            /**
+             * @description Checkout URL to open the checkout page
+             * @example http://localhost:3000/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+             */
+            checkoutUrl: string;
+        };
+        CancelSubscriptionRequest: {
+            /**
+             * @description Reason for cancellation
+             * @example Customer request
+             */
+            reason?: string;
+        };
         CheckLimitRequest: {
             /**
              * @description Customer reference identifier
@@ -402,6 +502,11 @@ export interface components {
              * @example https://checkout.solvapay.com/pay_1a2b3c4d
              */
             checkoutUrl?: string;
+            /**
+             * @description Optional checkout session ID if payment is required
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutSessionId?: string;
         };
         UsageEvent: {
             /**
@@ -452,6 +557,11 @@ export interface components {
              * @example John Doe
              */
             name?: string;
+            /**
+             * @description External reference ID from your auth system to map this customer to an auth user (optional)
+             * @example auth_user_12345
+             */
+            externalRef?: string;
         };
         SubscriptionInfo: {
             /**
@@ -496,6 +606,11 @@ export interface components {
              * @example customer@example.com
              */
             email: string;
+            /**
+             * @description External reference ID from your auth system (if set during creation or update)
+             * @example auth_user_12345
+             */
+            externalRef?: string;
             /** @description Active subscriptions */
             subscriptions?: components["schemas"]["SubscriptionInfo"][];
         };
@@ -608,13 +723,6 @@ export interface components {
              * @example 2025-01-01T00:00:00.000Z
              */
             createdAt: string;
-        };
-        CancelSubscriptionRequest: {
-            /**
-             * @description Reason for cancellation
-             * @example Customer request
-             */
-            reason?: string;
         };
         CreatePageSettings: {
             /** @description Page identifier */
@@ -765,6 +873,49 @@ export interface operations {
             };
             /** @description Invalid bulk usage data */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_getCustomerByQuery: {
+        parameters: {
+            query?: {
+                /** @description Customer reference identifier (use this OR externalRef, not both) */
+                reference?: string;
+                /** @description External reference ID from your auth system (use this OR reference, not both) */
+                externalRef?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Invalid request - must provide exactly one of reference or externalRef */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -932,6 +1083,71 @@ export interface operations {
         responses: {
             /** @description Payment intent retrieved successfully */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    PaymentIntentSdkController_processPaymentIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stripe payment intent ID (format: pi_xxx) */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description Payment processing data */
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Agent reference that owns the plan/product
+                     * @example agt_123
+                     */
+                    agentRef: string;
+                    /**
+                     * @description Customer reference identifier
+                     * @example cus_456
+                     */
+                    customerRef: string;
+                    /**
+                     * @description Plan reference - helps determine if payment is for subscription
+                     * @example pln_789
+                     */
+                    planRef?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payment intent status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Payment intent status
+                         * @example succeeded
+                         * @enum {string}
+                         */
+                        status?: "succeeded" | "timeout" | "failed" | "cancelled";
+                        /**
+                         * @description Optional message, only present for timeout status
+                         * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to Stripe webhooks not being configured correctly.
+                         */
+                        message?: string;
+                    };
+                };
+            };
+            /** @description Payment not succeeded or invalid request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1920,10 +2136,7 @@ export interface operations {
     };
     SubscriptionSdkController_getSubscriptions: {
         parameters: {
-            query?: {
-                /** @description Filter by subscription status */
-                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -1999,6 +2212,36 @@ export interface operations {
                 };
             };
             /** @description Agent not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SubscriptionSdkController_getSubscriptionById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Subscription ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionResponse"];
+                };
+            };
+            /** @description Subscription not found */
             404: {
                 headers: {
                     [name: string]: unknown;

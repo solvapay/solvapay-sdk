@@ -32,6 +32,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:*",
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.25",

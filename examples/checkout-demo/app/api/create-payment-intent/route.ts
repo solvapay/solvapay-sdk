@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSolvaPay } from '@solvapay/server';
+import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '@solvapay/auth';
+import { SolvaPayError } from '@solvapay/core';
+import { clearSubscriptionCache } from '@solvapay/next';
+// Note: Middleware handles authentication and sets x-user-id header
+// Alternative approach: Use SupabaseAuthAdapter directly in route:
+// import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+// const auth = new SupabaseAuthAdapter({ jwtSecret: process.env.SUPABASE_JWT_SECRET! });
+// const userId = await auth.getUserIdFromRequest(request);
 
 /**
  * Secure Backend API Route for Creating Payment Intents
@@ -8,44 +16,50 @@ import { createSolvaPay } from '@solvapay/server';
  * It runs on the server with the secret key, keeping it secure from the browser.
  * 
  * Flow:
- * 1. Client calls this API route from browser
- * 2. This route calls SolvaPay SDK with secret key
- * 3. SolvaPay SDK creates payment intent with Stripe
- * 4. Returns clientSecret and publishableKey to client
- * 5. Client initializes Stripe Elements with these values
+ * 1. Client calls this API route from browser with Authorization header
+ * 2. Middleware extracts userId from Supabase JWT token and sets x-user-id header
+ * 3. This route reads userId from x-user-id header
+ * 4. This route calls SolvaPay SDK with secret key
+ * 5. SolvaPay SDK creates payment intent with Stripe
+ * 6. Returns clientSecret and publishableKey to client
+ * 7. Client initializes Stripe Elements with these values
  */
+
 export async function POST(request: NextRequest) {
   try {
-    const { planRef, agentRef, customerRef } = await request.json();
-
-    // SECURITY: Only use the secret key on the server
-    // The SDK handles the secure communication with Stripe
-    const solvapaySecretKey = process.env.SOLVAPAY_SECRET_KEY;
-    const solvapayApiBaseUrl = process.env.SOLVAPAY_API_BASE_URL;
-
-    if (!solvapaySecretKey) {
-      console.error('Missing SOLVAPAY_SECRET_KEY environment variable');
-      return NextResponse.json(
-        { error: 'Server configuration error: SolvaPay secret key not configured' },
-        { status: 500 }
-      );
+    // Get userId from middleware (set by middleware.ts)
+    // Middleware handles authentication and returns 401 if not authenticated
+    const userIdOrError = requireUserId(request);
+    if (userIdOrError instanceof Response) {
+      return userIdOrError;
     }
+    const userId = userIdOrError;
 
-    if (!planRef || !agentRef || !customerRef) {
+    // Get user email and name from Supabase JWT token
+    const email = await getUserEmailFromRequest(request);
+    const name = await getUserNameFromRequest(request);
+
+    const { planRef, agentRef } = await request.json();
+
+    if (!planRef || !agentRef) {
       return NextResponse.json(
-        { error: 'Missing required parameters: planRef, agentRef, and customerRef are required' },
+        { error: 'Missing required parameters: planRef and agentRef are required' },
         { status: 400 }
       );
     }
 
-    // Create SolvaPay instance
-    const solvaPay = createSolvaPay({
-      apiKey: solvapaySecretKey,
-      apiBaseUrl: solvapayApiBaseUrl,
-    });
+    // SECURITY: Only use the secret key on the server
+    // Config is automatically read from environment variables
+    const solvaPay = createSolvaPay();
 
-    // Get or create customer using ensureCustomer
-    const ensuredCustomerRef = await solvaPay.ensureCustomer(customerRef);
+    // Use userId as customerRef (Supabase user IDs are stable UUIDs)
+    // Get or create customer using ensureCustomer with externalRef for consistent lookup
+    // Pass email and name to ensure correct customer data
+    // Note: Customer lookup deduplication is handled automatically by the SDK
+    const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
+      email: email || undefined,
+      name: name || undefined,
+    });
 
     // Create payment intent using the SDK
     // The SDK will call the backend which creates the payment intent
@@ -55,9 +69,12 @@ export async function POST(request: NextRequest) {
       customerRef: ensuredCustomerRef,
     });
 
+    // Clear subscription cache to ensure fresh data after payment intent creation
+    // Payment intent creation may update subscription status
+    clearSubscriptionCache(userId);
+
     // Return the payment intent details to the client
     // The clientSecret is safe to send to the browser (it's scoped to this payment)
-    // IMPORTANT: Return the backend customer reference so frontend can update localStorage
     const response = {
       id: paymentIntent.id,
       clientSecret: paymentIntent.clientSecret,
@@ -70,6 +87,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Payment intent creation failed:', error);
+    
+    // Handle SolvaPay configuration errors
+    if (error instanceof SolvaPayError) {
+      return NextResponse.json(
+        { error: (error as SolvaPayError).message },
+        { status: 500 }
+      );
+    }
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     

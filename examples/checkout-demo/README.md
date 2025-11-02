@@ -8,6 +8,7 @@ Complete payment integration demo showcasing SolvaPay's headless React component
 - 🔒 **Content Gating**: Lock premium features behind subscriptions
 - 💳 **Secure Payments**: Stripe-powered payment processing
 - 📊 **Subscription Management**: Real-time subscription status checking
+- 🔐 **Authentication**: Email/password and Google OAuth sign-in with Supabase
 - 🎨 **Style Agnostic**: Works with any CSS framework or design system
 - 🧪 **Test Mode**: Complete test environment with localStorage persistence
 
@@ -33,9 +34,23 @@ Before running this demo, you need:
    - Get your secret API key from the dashboard
    - Create at least one agent and plan
 
-2. **Environment Variables**
+2. **Supabase Account** (for authentication)
+   - Sign up at https://supabase.com
+   - Create a new project
+   - Get your project URL and anon key from Settings → API
+   - Get your JWT secret from Settings → API → JWT Secret
+   - **Enable Google OAuth** (optional):
+     - First, create OAuth credentials in Google Cloud Console (see detailed steps below)
+     - Then in Supabase: Authentication → Providers → Google
+     - Enable the provider and paste your Google OAuth Client ID and Client Secret
+     - **Important**: Client IDs field should contain only the Client ID (no spaces, like "123456789-abc.apps.googleusercontent.com")
+     - Copy the Callback URL shown (e.g., `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`)
+     - Add this Callback URL to Google Cloud Console as an authorized redirect URI
+     - Add your app's callback URL (`http://localhost:3000/auth/callback`) to Supabase Redirect URLs
+
+3. **Environment Variables**
    - Copy `env.example` to `.env.local`
-   - Fill in your SolvaPay credentials
+   - Fill in your SolvaPay and Supabase credentials
 
 ## Setup
 
@@ -49,9 +64,9 @@ cd examples/checkout-demo
 # Copy environment variables
 cp env.example .env.local
 
-# Edit .env.local with your SolvaPay credentials
-# Required: SOLVAPAY_SECRET_KEY
-# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_AGENT_REF, plan references
+# Edit .env.local with your SolvaPay and Supabase credentials
+# Required: SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_AGENT_REF
 ```
 
 ## Running the Demo
@@ -115,7 +130,84 @@ import { SolvaPayProvider } from '@solvapay/react';
 </SolvaPayProvider>
 ```
 
-### 2. Locked Content with SubscriptionGate
+### 2. Authentication Setup
+
+This demo uses Supabase for authentication with Next.js middleware as the default approach:
+
+**Middleware Approach (Default):**
+
+The `middleware.ts` file extracts user IDs from Supabase JWT tokens and sets them as headers for all API routes:
+
+```tsx
+// middleware.ts
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+
+const auth = new SupabaseAuthAdapter({
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!
+});
+
+export async function middleware(request: NextRequest) {
+  const userId = await auth.getUserIdFromRequest(request);
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Set userId header for downstream routes
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-id', userId);
+  
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+```
+
+**Route-Level Approach (Alternative):**
+
+You can also use SupabaseAuthAdapter directly in individual routes if you prefer:
+
+```tsx
+// app/api/create-payment-intent/route.ts
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+
+const auth = new SupabaseAuthAdapter({
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!
+});
+
+export async function POST(request: NextRequest) {
+  const userId = await auth.getUserIdFromRequest(request);
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Use userId as customerRef
+  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! });
+  const customer = await solvaPay.getCustomer({ customerRef: userId });
+  // ...
+}
+```
+
+The frontend sends the Supabase access token in the Authorization header:
+
+```tsx
+// app/layout.tsx
+import { getAccessToken } from './lib/supabase';
+
+const handleCreatePayment = async ({ planRef }) => {
+  const accessToken = await getAccessToken();
+  const res = await fetch('/api/create-payment-intent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+    },
+    body: JSON.stringify({ planRef, agentRef })
+  });
+  return res.json();
+};
+```
+
+### 3. Locked Content with SubscriptionGate
 
 ```tsx
 // app/page.tsx
@@ -145,7 +237,7 @@ import { SubscriptionGate, UpgradeButton } from '@solvapay/react';
 </SubscriptionGate>
 ```
 
-### 3. Navigation with Plan Badge
+### 4. Navigation with Plan Badge
 
 ```tsx
 // app/components/Navigation.tsx
@@ -174,22 +266,27 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
 </UpgradeButton>
 ```
 
-### 4. Backend API Routes
+### 5. Backend API Routes
 
 **Check Subscription:**
 ```typescript
 // app/api/check-subscription/route.ts
 import { createSolvaPay } from '@solvapay/server';
+// Middleware handles authentication and sets x-user-id header
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const customerRef = searchParams.get('customerRef');
+export async function GET(request: NextRequest) {
+  // Get userId from middleware header
+  const userId = request.headers.get('x-user-id');
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   
   const solvapay = createSolvaPay({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY
+    apiKey: process.env.SOLVAPAY_SECRET_KEY!
   });
   
-  const customer = await solvapay.getCustomer({ customerRef });
+  const customer = await solvapay.getCustomer({ customerRef: userId });
   
   return NextResponse.json({
     customerRef: customer.customerRef,
@@ -203,25 +300,36 @@ export async function GET(request: Request) {
 **Create Payment Intent:**
 ```typescript
 // app/api/create-payment-intent/route.ts
-const { planRef, agentRef, customerRef } = await request.json();
+// Middleware handles authentication and sets x-user-id header
 
-const solvapay = createSolvaPay({
-  apiKey: process.env.SOLVAPAY_SECRET_KEY
-});
-
-await solvapay.ensureCustomer(customerRef);
-
-const paymentIntent = await solvapay.createPaymentIntent({
-  agentRef,
-  planRef,
-  customerRef
-});
-
-return NextResponse.json({
-  clientSecret: paymentIntent.clientSecret,
-  publishableKey: paymentIntent.publishableKey,
-  accountId: paymentIntent.accountId
-});
+export async function POST(request: NextRequest) {
+  // Get userId from middleware header
+  const userId = request.headers.get('x-user-id');
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  const { planRef, agentRef } = await request.json();
+  
+  const solvapay = createSolvaPay({
+    apiKey: process.env.SOLVAPAY_SECRET_KEY!
+  });
+  
+  await solvapay.ensureCustomer(userId);
+  
+  const paymentIntent = await solvapay.createPaymentIntent({
+    agentRef,
+    planRef,
+    customerRef: userId
+  });
+  
+  return NextResponse.json({
+    clientSecret: paymentIntent.clientSecret,
+    publishableKey: paymentIntent.publishableKey,
+    accountId: paymentIntent.accountId
+  });
+}
 ```
 
 ## Project Structure
@@ -237,11 +345,13 @@ checkout-demo/
 │   ├── components/
 │   │   └── Navigation.tsx        # Nav with PlanBadge and UpgradeButton
 │   ├── lib/
-│   │   └── customer.ts           # Customer ID management (localStorage)
+│   │   ├── customer.ts           # Customer ID management (Supabase auth)
+│   │   └── supabase.ts           # Supabase client setup
 │   ├── checkout/
 │   │   └── page.tsx              # Checkout page with plan selection
 │   ├── layout.tsx                # Root layout with SolvaPayProvider
 │   └── page.tsx                  # Home with locked content
+├── middleware.ts                 # Authentication middleware (extracts userId)
 ├── package.json
 ├── next.config.mjs
 ├── tsconfig.json
@@ -277,13 +387,52 @@ The provider automatically:
 - Exposes helper methods (`hasActiveSubscription`, `hasPlan`)
 - Manages loading states
 
-### Customer Simulation
+### Authentication
 
-For demo purposes, customer IDs are stored in localStorage:
-- Generated on first visit
-- Persists across refreshes
-- Simulates authenticated user state
-- Replace with real auth in production
+This demo uses Supabase for authentication with Next.js middleware as the default approach:
+- Middleware extracts user IDs from Supabase JWT tokens on all `/api/*` routes
+- User IDs are set as `x-user-id` header for downstream routes
+- Middleware returns 401 if authentication fails
+- The frontend sends access tokens in Authorization headers
+- User IDs are used directly as customerRef (Supabase user IDs are stable UUIDs)
+- Individual routes can optionally use SupabaseAuthAdapter directly (see route comments)
+
+**Sign-in Methods:**
+- Email/password authentication
+- Google OAuth (requires Google OAuth setup in Supabase dashboard)
+
+**Google OAuth Setup:**
+
+1. **In Google Cloud Console:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com)
+   - Navigate to APIs & Services → Credentials
+   - Create OAuth 2.0 Client ID (or use existing)
+   - Copy the **Client ID** and **Client Secret**
+   - Add authorized redirect URI: `https://[your-project-ref].supabase.co/auth/v1/callback`
+   - Example: `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`
+   - **Note**: This is Supabase's internal callback URL (read-only in Supabase dashboard)
+
+2. **In Supabase Dashboard:**
+   - Go to Authentication → Providers → Google
+   - Enable Google provider (toggle ON)
+   - **Client IDs**: Paste your Google OAuth Client ID (no spaces, just the ID)
+   - **Client Secret (for OAuth)**: Paste your Google OAuth Client Secret
+   - **Callback URL**: This is read-only - Supabase handles the OAuth callback internally at this URL
+   - Add your app's callback URL to Site URL or Redirect URLs:
+     - Go to Authentication → URL Configuration
+     - Add to Redirect URLs: `http://localhost:3000/auth/callback` (for local dev)
+     - Add production URL when deploying: `https://yourdomain.com/auth/callback`
+
+**How it works:**
+1. User clicks "Sign in with Google" → redirects to Supabase → Google
+2. Google redirects back to Supabase's callback URL (read-only, handled by Supabase)
+3. Supabase processes the OAuth and redirects to your app's callback URL (`/auth/callback`)
+4. Your app's callback handler receives the session and syncs the customer
+
+**Important:** 
+- The Supabase callback URL (`https://[your-project-ref].supabase.co/auth/v1/callback`) goes in Google Cloud Console
+- Your app's callback URL (`http://localhost:3000/auth/callback`) goes in Supabase dashboard Redirect URLs
+- The Supabase callback URL is read-only - Supabase handles it automatically
 
 ## Environment Variables
 
@@ -292,8 +441,9 @@ For demo purposes, customer IDs are stored in localStorage:
 | `SOLVAPAY_SECRET_KEY` | Your SolvaPay secret key | Yes |
 | `SOLVAPAY_API_BASE_URL` | Backend URL (defaults to prod) | No |
 | `NEXT_PUBLIC_AGENT_REF` | Agent reference | No |
-| `NEXT_PUBLIC_BASIC_PLAN_REF` | Basic plan reference | No |
-| `NEXT_PUBLIC_PRO_PLAN_REF` | Pro plan reference | No |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | Yes |
+| `SUPABASE_JWT_SECRET` | Supabase JWT secret (for server verification) | Yes |
 
 ## Customization
 
@@ -382,6 +532,32 @@ All components accept any styling approach:
 - Ensure you're inside `<SolvaPayProvider>`
 - Check that hooks are called in functional components
 - Verify all required props are provided
+
+### Google OAuth "redirect_uri_mismatch" Error (Error 400)
+
+This error occurs when Google doesn't recognize the redirect URI that Supabase is using.
+
+**The Fix:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Navigate to **APIs & Services → Credentials**
+3. Click on your **OAuth 2.0 Client ID**
+4. Scroll down to **Authorized redirect URIs**
+5. Click **+ ADD URI**
+6. Add your Supabase callback URL exactly as shown in Supabase dashboard:
+   - `https://[your-project-ref].supabase.co/auth/v1/callback`
+   - Example: `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`
+7. Click **SAVE**
+
+**Important Notes:**
+- Google sees Supabase's callback URL (`https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`), NOT your localhost URL
+- The `redirectTo` option (`localhost:3000/auth/callback`) is where Supabase redirects AFTER processing OAuth
+- You must add the Supabase callback URL to Google Cloud Console, not localhost
+- Make sure the URL matches exactly (including the `/auth/v1/callback` path)
+- After adding the URI, wait a few minutes for changes to propagate
+
+**For Production:**
+- You'll need to add your production Supabase callback URL if different
+- Your app's callback URL (`https://yourdomain.com/auth/callback`) goes in Supabase dashboard Redirect URLs, not Google Cloud Console
 
 ## Learn More
 

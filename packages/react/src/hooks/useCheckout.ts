@@ -11,6 +11,14 @@ export interface UseCheckoutReturn {
   reset: () => void;
 }
 
+// Cache Stripe promises per publishable key + accountId combination
+// This allows reusing Stripe instances across checkout sessions with the same key
+const stripePromiseCache = new Map<string, Promise<Stripe | null>>();
+
+function getStripeCacheKey(publishableKey: string, accountId?: string): string {
+  return accountId ? `${publishableKey}:${accountId}` : publishableKey;
+}
+
 /**
  * Hook to manage checkout flow
  * Handles payment intent creation and Stripe initialization
@@ -69,30 +77,30 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
 
       // If the backend returned a new customer reference, update it
       // This happens when a local customer ID is converted to a backend customer ID
-      if (result.customerRef && result.customerRef !== customerRef) {
-        console.log(`🔄 [useCheckout] Backend returned different customerRef:`, {
-          sent: customerRef,
-          received: result.customerRef,
-        });
-        if (updateCustomerRef) {
-          updateCustomerRef(result.customerRef);
-          console.log('✅ [useCheckout] Customer reference updated via callback');
-        } else {
-          console.warn('⚠️  [useCheckout] No updateCustomerRef callback available!');
-        }
-      } else if (result.customerRef === customerRef) {
-        console.log('✅ [useCheckout] Customer reference unchanged:', customerRef);
+      if (result.customerRef && result.customerRef !== customerRef && updateCustomerRef) {
+        updateCustomerRef(result.customerRef);
       }
 
-      // Load Stripe with the publishable key
+      // Load Stripe with the publishable key (use cache if available)
       const stripeOptions = result.accountId 
         ? { stripeAccount: result.accountId }
         : {};
       
-      const stripe = loadStripe(result.publishableKey, stripeOptions);
+      const cacheKey = getStripeCacheKey(result.publishableKey, result.accountId);
+      let stripe = stripePromiseCache.get(cacheKey);
+      
+      if (!stripe) {
+        // LoadStripe already caches internally, but we cache the promise here too
+        // to avoid recreating it if we've seen this key before
+        stripe = loadStripe(result.publishableKey, stripeOptions);
+        stripePromiseCache.set(cacheKey, stripe);
+      }
       
       setStripePromise(stripe);
       setClientSecret(result.clientSecret);
+      
+      // Note: We don't refetch here because payment intent creation doesn't change subscription status
+      // Subscription only changes after successful payment completion, which is handled in PaymentForm
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start checkout');
       setError(error);

@@ -1,11 +1,13 @@
 "use client";
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { 
   SolvaPayProviderProps, 
   SolvaPayContextValue, 
   SubscriptionStatus,
   CustomerSubscriptionData,
+  SubscriptionInfo,
 } from './types';
+import { filterSubscriptions } from './utils/subscriptions';
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
 
@@ -38,6 +40,7 @@ export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
 export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   createPayment,
   checkSubscription,
+  processPayment,
   customerRef,
   onCustomerRefUpdate,
   children,
@@ -56,45 +59,144 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [internalCustomerRef, setInternalCustomerRef] = useState(customerRef);
-
-  // Sync internal customer ref with prop changes
+  // Track in-flight requests to prevent duplicate calls
+  const inFlightRef = useRef<string | null>(null);
+  // Track what we've already fetched to prevent unnecessary refetches
+  const lastFetchedRef = useRef<string | null>(null);
+  // Store checkSubscription in a ref to avoid dependency issues
+  const checkSubscriptionRef = useRef(checkSubscription);
+  
+  // Update ref when checkSubscription changes
   useEffect(() => {
-    if (customerRef && customerRef !== internalCustomerRef) {
-      setInternalCustomerRef(customerRef);
-    }
-  }, [customerRef, internalCustomerRef]);
+    checkSubscriptionRef.current = checkSubscription;
+  }, [checkSubscription]);
 
-  const fetchSubscription = useCallback(async () => {
+  // Fetch subscription function - memoized to prevent unnecessary re-renders
+  const fetchSubscription = useCallback(async (force = false) => {
     const currentCustomerRef = internalCustomerRef;
     
     if (!currentCustomerRef) {
       setSubscriptionData({ subscriptions: [] });
       setLoading(false);
+      inFlightRef.current = null;
+      lastFetchedRef.current = null;
       return;
     }
 
-    setLoading(true);
-    try {
-      const data = await checkSubscription(currentCustomerRef);
-
-      setSubscriptionData(data);
-    } catch (error) {
-      console.error('❌ [SolvaPayProvider] Failed to fetch subscription:', error);
-      // On error, set empty subscriptions
-      // Error handling is left to the caller via error callbacks if needed
-      setSubscriptionData({ 
-        customerRef: currentCustomerRef,
-        subscriptions: [] 
-      });
-    } finally {
-      setLoading(false);
+    // Skip if we've already fetched this customerRef (unless it's in-flight or forced)
+    if (!force && lastFetchedRef.current === currentCustomerRef && inFlightRef.current !== currentCustomerRef) {
+      return;
     }
-  }, [internalCustomerRef, checkSubscription]);
 
-  // Auto-fetch subscription when customerRef changes
+    // Prevent duplicate concurrent requests for the same customerRef
+    if (inFlightRef.current === currentCustomerRef) {
+      return;
+    }
+
+    inFlightRef.current = currentCustomerRef;
+    setLoading(true);
+    
+    try {
+      const data = await checkSubscriptionRef.current(currentCustomerRef);
+
+      // Only update if this is still the current customerRef (might have changed during fetch)
+      if (inFlightRef.current === currentCustomerRef) {
+        // Filter subscriptions using shared utility
+        const filteredData: CustomerSubscriptionData = {
+          ...data,
+          subscriptions: filterSubscriptions(data.subscriptions || []),
+        };
+        setSubscriptionData(filteredData);
+        lastFetchedRef.current = currentCustomerRef;
+      }
+    } catch (error) {
+      console.error('[SolvaPayProvider] Failed to fetch subscription:', error);
+      // On error, set empty subscriptions
+      if (inFlightRef.current === currentCustomerRef) {
+        setSubscriptionData({ 
+          customerRef: currentCustomerRef,
+          subscriptions: [] 
+        });
+        lastFetchedRef.current = currentCustomerRef;
+      }
+    } finally {
+      if (inFlightRef.current === currentCustomerRef) {
+        setLoading(false);
+        inFlightRef.current = null;
+      }
+    }
+  }, [internalCustomerRef]); // Only depend on internalCustomerRef
+
+  // Refetch subscription function - forces a fresh fetch by clearing cache
+  const refetchSubscription = useCallback(async () => {
+    // Clear both cache refs to force a completely fresh fetch
+    // Clear inFlightRef to ensure we don't skip if there's a pending request
+    const currentCustomerRef = internalCustomerRef;
+    lastFetchedRef.current = null;
+    inFlightRef.current = null;
+    // Force a fresh fetch
+    await fetchSubscription(true);
+  }, [fetchSubscription, internalCustomerRef]);
+
+  // Sync internal customer ref with prop changes
   useEffect(() => {
-    fetchSubscription();
-  }, [fetchSubscription]);
+    if (customerRef !== internalCustomerRef) {
+      setInternalCustomerRef(customerRef);
+    }
+  }, [customerRef, internalCustomerRef]);
+
+  // Fetch subscription when customerRef changes - single effect, no double calls
+  useEffect(() => {
+    // Skip if empty customerRef
+    if (!customerRef) {
+      setSubscriptionData({ subscriptions: [] });
+      setLoading(false);
+      return;
+    }
+
+    // Skip if already fetched or in-flight
+    if (customerRef === lastFetchedRef.current || customerRef === inFlightRef.current) {
+      return;
+    }
+
+    // Fetch subscription directly using refs to avoid dependency issues
+    const doFetch = async () => {
+      inFlightRef.current = customerRef;
+      setLoading(true);
+      
+      try {
+        const data = await checkSubscriptionRef.current(customerRef);
+
+        // Only update if this is still the current customerRef (might have changed during fetch)
+        if (inFlightRef.current === customerRef) {
+          // Filter subscriptions using shared utility
+          const filteredData: CustomerSubscriptionData = {
+            ...data,
+            subscriptions: filterSubscriptions(data.subscriptions || []),
+          };
+          setSubscriptionData(filteredData);
+          lastFetchedRef.current = customerRef;
+        }
+      } catch (error) {
+        console.error('[SolvaPayProvider] Failed to fetch subscription:', error);
+        // On error, set empty subscriptions
+        if (inFlightRef.current === customerRef) {
+          setSubscriptionData({ 
+            customerRef: customerRef,
+            subscriptions: [] 
+          });
+          lastFetchedRef.current = customerRef;
+        }
+      } finally {
+        if (inFlightRef.current === customerRef) {
+          setLoading(false);
+          inFlightRef.current = null;
+        }
+      }
+    };
+
+    doFetch();
+  }, [customerRef]); // Only depend on customerRef - use refs for everything else
 
   // Update customer ref method
   const updateCustomerRef = useCallback((newCustomerRef: string) => {
@@ -103,12 +205,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     if (onCustomerRefUpdate) {
       onCustomerRefUpdate(newCustomerRef);
     }
-    // Only trigger refetch if the customer ref actually changed
     // The useEffect will handle refetching automatically when internalCustomerRef changes
-    if (previousRef !== newCustomerRef) {
-      // Don't call fetchSubscription directly - let the useEffect handle it
-      // This prevents duplicate fetches
-    }
   }, [onCustomerRefUpdate, internalCustomerRef]);
 
   // Build subscription status with helper methods - memoized to prevent unnecessary re-renders
@@ -131,11 +228,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue: SolvaPayContextValue = useMemo(() => ({
     subscription,
-    refetchSubscription: fetchSubscription,
+    refetchSubscription,
     createPayment,
+    processPayment,
     customerRef: internalCustomerRef,
     updateCustomerRef,
-  }), [subscription, fetchSubscription, createPayment, internalCustomerRef, updateCustomerRef]);
+  }), [subscription, refetchSubscription, createPayment, processPayment, internalCustomerRef, updateCustomerRef]);
 
   return (
     <SolvaPayContext.Provider value={contextValue}>
