@@ -163,7 +163,7 @@ export interface paths {
         put?: never;
         /**
          * Process payment intent after client-side confirmation
-         * @description Processes a payment intent that has been confirmed on the client-side using Stripe.js. Verifies payment status and creates subscription or purchase synchronously, eliminating webhook delay. Returns immediately if already processed (idempotent).
+         * @description Processes a payment intent that has been confirmed on the client-side using Stripe.js. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
          */
         post: operations["PaymentIntentSdkController_processPaymentIntent"];
         delete?: never;
@@ -1105,50 +1105,24 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Payment processed successfully */
+            /** @description Payment intent status */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @example subscription */
-                        type?: string;
-                        subscription?: {
-                            /** @example sub_abc123 */
-                            reference?: string;
-                            /** @example Pro Plan */
-                            planName?: string;
-                            /** @example pln_789 */
-                            planRef?: string;
-                            /** @example My Agent */
-                            agentName?: string;
-                            /** @example active */
-                            status?: string;
-                            /** @example 2024-01-01T00:00:00Z */
-                            startDate?: string;
-                        };
-                        /** @example completed */
-                        status?: string;
-                    } | {
-                        /** @example purchase */
-                        type?: string;
-                        purchase?: {
-                            /** @example pur_xyz789 */
-                            reference?: string;
-                            /** @example prod_123 */
-                            productRef?: string;
-                            /** @example 1000 */
-                            amount?: number;
-                            /** @example usd */
-                            currency?: string;
-                            /** @example 100 */
-                            creditsAdded?: number;
-                            /** @example 2024-01-01T00:00:00Z */
-                            completedAt?: string;
-                        };
-                        /** @example completed */
-                        status?: string;
+                        /**
+                         * @description Payment intent status
+                         * @example succeeded
+                         * @enum {string}
+                         */
+                        status?: "succeeded" | "timeout" | "failed" | "cancelled";
+                        /**
+                         * @description Optional message, only present for timeout status
+                         * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to Stripe webhooks not being configured correctly.
+                         */
+                        message?: string;
                     };
                 };
             };
