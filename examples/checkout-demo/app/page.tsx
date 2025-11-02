@@ -1,98 +1,54 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSubscription } from '@solvapay/react';
+import { useMemo, useCallback, useEffect } from 'react';
+import { useSubscription, usePlans, useSubscriptionHelpers } from '@solvapay/react';
 import Link from 'next/link';
 
-interface Plan {
-  reference: string;
-  name: string;
-  price?: number;
-  isFreeTier?: boolean;
-}
-
 export default function HomePage() {
-  const { subscriptions, loading } = useSubscription();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
   
-  // Fetch plans to determine which subscriptions are free vs paid
+  // Memoize the fetcher function to prevent unnecessary re-fetches
+  const fetchPlans = useCallback(async (agentRef: string) => {
+    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
+    if (!response.ok) throw new Error('Failed to fetch plans');
+    const data = await response.json();
+    return data.plans || [];
+  }, []);
+  
+  // Fetch plans using SDK hook
+  const { plans, loading: plansLoading } = usePlans({
+    agentRef: agentRef || undefined,
+    fetcher: fetchPlans,
+  });
+  
+  // Get subscription helpers from SDK
+  const { subscriptions, loading: subscriptionsLoading, hasActiveSubscription, refetch } = useSubscription();
+  
+  // Refetch subscriptions on mount to ensure we have latest data after navigation
   useEffect(() => {
-    const fetchPlans = async () => {
-      if (!agentRef) return;
-      
-      try {
-        const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
-        if (response.ok) {
-          const data = await response.json();
-          setPlans(data.plans || []);
-        }
-      } catch (err) {
-        console.error('Failed to fetch plans:', err);
-      }
-    };
-    
-    fetchPlans();
-  }, [agentRef]);
-  
-  // Helper to check if a subscription is for a paid plan
-  const isPaidPlan = (planName: string): boolean => {
-    const plan = plans.find(p => p.name === planName);
-    if (!plan) return true; // Default to paid if plan not found
-    return (plan.price ?? 0) > 0 && !plan.isFreeTier;
-  };
-  
-  // Get active paid subscriptions (active and not free)
-  const activePaidSubscriptions = subscriptions.filter(
-    sub => sub.status === 'active' && isPaidPlan(sub.planName)
-  );
-  
-  // Get all active subscriptions (including free)
-  const activeSubscriptions = subscriptions.filter(
-    sub => sub.status === 'active'
-  );
-  
-  // Get the most recent active paid subscription
-  const mostRecentActivePaidSubscription = activePaidSubscriptions
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-  
-  // Get the most recent active subscription (for display)
-  const mostRecentActiveSubscription = activeSubscriptions
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-  
-  const hasActiveSubscription = activeSubscriptions.length > 0;
-  const hasPaidSubscription = activePaidSubscriptions.length > 0;
-  
-  // Find cancelled paid subscription (most recent cancelled paid subscription)
-  const cancelledPaidSubscriptions = subscriptions.filter(
-    sub => sub.status === 'cancelled' && isPaidPlan(sub.planName)
-  );
-  const cancelledSubscription = cancelledPaidSubscriptions
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-  
-  // Show cancelled notice if no active paid subscription OR if cancelled has endDate
-  const shouldShowCancelledNotice = cancelledSubscription && (!hasPaidSubscription || cancelledSubscription.endDate);
-  
-  // Format date helper
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    refetch().catch((error) => {
+      console.error('[HomePage] Refetch failed:', error);
     });
-  };
+  }, [refetch]);
+  const {
+    hasPaidSubscription,
+    activePaidSubscription,
+    cancelledSubscription,
+    shouldShowCancelledNotice,
+    formatDate,
+    getDaysUntilExpiration,
+  } = useSubscriptionHelpers(plans);
   
-  // Calculate days until expiration
-  const getDaysUntilExpiration = (endDate?: string) => {
-    if (!endDate) return null;
-    const now = new Date();
-    const expiration = new Date(endDate);
-    const diffTime = expiration.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
+  // Combine loading states - only show content when both are loaded
+  const isLoading = subscriptionsLoading || plansLoading;
+  
+  // Get the most recent active subscription (for display - includes free plans)
+  const mostRecentActiveSubscription = useMemo(() => {
+    const activeSubs = subscriptions.filter(sub => sub.status === 'active');
+    return activeSubs.sort((a, b) => 
+      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    )[0];
+  }, [subscriptions]);
 
   const FeatureCard = ({ 
     title, 
@@ -127,6 +83,11 @@ export default function HomePage() {
     </div>
   );
 
+  // Skeleton loader component
+  const Skeleton = ({ className = '' }: { className?: string }) => (
+    <div className={`animate-pulse bg-slate-200 rounded ${className}`} />
+  );
+
   return (
     <div className="min-h-screen bg-white">
       <main className="max-w-4xl mx-auto px-6 py-16">
@@ -135,10 +96,14 @@ export default function HomePage() {
           <h1 className="text-3xl font-semibold text-slate-900 mb-3">
             Welcome to Your Dashboard
           </h1>
-          {hasPaidSubscription ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center gap-2">
+              <Skeleton className="h-5 w-48" />
+            </div>
+          ) : hasPaidSubscription ? (
             <p className="text-slate-600">
               You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {mostRecentActivePaidSubscription?.planName}
+                {activePaidSubscription?.planName}
               </span> plan
             </p>
           ) : hasActiveSubscription ? (
@@ -147,7 +112,7 @@ export default function HomePage() {
                 {mostRecentActiveSubscription?.planName}
               </span> plan
             </p>
-          ) : shouldShowCancelledNotice ? (
+          ) : shouldShowCancelledNotice && cancelledSubscription ? (
             <div className="space-y-2">
               <p className="text-slate-600">
                 Your <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
@@ -212,8 +177,11 @@ export default function HomePage() {
 
         {/* CTA Section */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-          {loading ? (
-            <div className="text-center py-8 text-slate-500">Loading...</div>
+          {isLoading ? (
+            <div className="text-center py-4 space-y-4">
+              <Skeleton className="h-5 w-64 mx-auto" />
+              <Skeleton className="h-10 w-48 mx-auto" />
+            </div>
           ) : hasActiveSubscription ? (
             <div className="text-center py-4">
               <p className="text-slate-900 mb-4">Manage your subscription and billing</p>
@@ -223,7 +191,7 @@ export default function HomePage() {
                 </button>
               </Link>
             </div>
-          ) : shouldShowCancelledNotice ? (
+          ) : shouldShowCancelledNotice && cancelledSubscription ? (
             <div className="text-center py-4">
               <p className="text-slate-900 mb-2 font-medium">Your subscription is cancelled</p>
               {cancelledSubscription.endDate ? (

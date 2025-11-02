@@ -48,7 +48,8 @@ export type {
 // Export payment processing types
 export type {
   PurchaseInfo,
-  ProcessPaymentResult
+  ProcessPaymentResult,
+  CustomerResponseMapped
 } from './types/client';
 
 // Export utilities for general use

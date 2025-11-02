@@ -1,193 +1,18 @@
 "use client";
-import React, { useState, FormEvent, useEffect, Suspense, useRef } from 'react';
-import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
+import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
+import { Elements } from '@stripe/react-stripe-js';
 import { useCheckout } from './hooks/useCheckout';
 import { useSubscription } from './hooks/useSubscription';
 import { useSolvaPay } from './hooks/useSolvaPay';
+import { Spinner } from './components/Spinner';
+import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper';
 import type { PaymentFormProps } from './types';
-
-/**
- * Simple spinner component using CSS animations
- */
-const Spinner: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ 
-  className = '', 
-  size = 'md' 
-}) => {
-  const sizeClasses = {
-    sm: 'w-4 h-4 border-2',
-    md: 'w-6 h-6 border-2',
-    lg: 'w-8 h-8 border-2',
-  };
-
-  return (
-    <div
-      className={`inline-block border-gray-300 border-t-gray-600 rounded-full animate-spin ${sizeClasses[size]} ${className}`}
-      role="status"
-      aria-busy="true"
-    />
-  );
-};
-
-/**
- * Wrapper component that ensures Elements context is ready before rendering form
- * This component is only rendered inside Elements, so hooks should work
- */
-const StripePaymentFormWrapper: React.FC<{
-  onSuccess?: (paymentIntent: any) => void;
-  onError?: (error: Error) => void;
-  returnUrl?: string;
-  submitButtonText?: string;
-  buttonClassName?: string;
-}> = (props) => {
-  // These hooks are safe to call here because this component is only rendered inside Elements
-  const stripe = useStripe();
-  const elements = useElements();
-  
-  // Show loading state if Stripe is not ready yet
-  if (!stripe || !elements) {
-    return (
-      <div className="space-y-4">
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
-          <Spinner size="md" />
-        </div>
-      </div>
-    );
-  }
-
-  return <StripePaymentForm {...props} />;
-};
-
-/**
- * Internal payment form component that requires Stripe Elements context
- */
-const StripePaymentForm: React.FC<{
-  onSuccess?: (paymentIntent: any) => void;
-  onError?: (error: Error) => void;
-  returnUrl?: string;
-  submitButtonText?: string;
-  buttonClassName?: string;
-}> = ({
-  onSuccess,
-  onError,
-  returnUrl,
-  submitButtonText = 'Pay Now',
-  buttonClassName,
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    // Double-check Stripe availability (defensive programming)
-    if (!stripe || !elements) {
-      const errorMessage = 'Stripe is not available. Please refresh the page.';
-      setMessage(errorMessage);
-      if (onError) {
-        onError(new Error(errorMessage));
-      }
-      return;
-    }
-
-    setIsProcessing(true);
-    setMessage(null);
-
-    try {
-      // Auto-detect return URL if not provided
-      const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/');
-      
-      // Confirm payment with Stripe
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: finalReturnUrl,
-        },
-        redirect: 'if_required' as const, // Only redirect if required by payment method
-      });
-
-      if (error) {
-        // Show error to customer (e.g., payment details are invalid)
-        const errorMessage = error.message || 'An unexpected error occurred.';
-        setMessage(errorMessage);
-        
-        if (onError) {
-          onError(new Error(errorMessage));
-        }
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded
-        setMessage('Payment successful!');
-        
-        if (onSuccess) {
-          onSuccess(paymentIntent);
-        }
-      } else if (paymentIntent) {
-        // Payment is processing or requires additional action
-        setMessage(`Payment status: ${paymentIntent.status || 'processing'}`);
-      }
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      setMessage(error.message);
-      
-      if (onError) {
-        onError(error);
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const isSuccess = message?.includes('successful') ?? false;
-
-  return (
-    <form 
-      onSubmit={handleSubmit} 
-      className="space-y-6"
-      noValidate
-    >
-      <PaymentElement />
-      
-      {message && (
-        <div
-          className={`mt-6 p-4 rounded-lg ${
-            isSuccess 
-              ? 'bg-green-50 border border-green-400 text-green-700' 
-              : 'bg-red-50 border border-red-400 text-red-700'
-          }`}
-          role={isSuccess ? 'status' : 'alert'}
-          aria-live={isSuccess ? 'polite' : 'assertive'}
-          aria-atomic="true"
-        >
-          {message}
-        </div>
-      )}
-      
-      <button
-        type="submit"
-        disabled={!stripe || isProcessing}
-        className={buttonClassName}
-        aria-busy={isProcessing}
-        aria-disabled={!stripe || isProcessing}
-      >
-        {isProcessing ? (
-          <span className="flex items-center justify-center gap-2">
-            <Spinner size="sm" />
-          </span>
-        ) : (
-          submitButtonText
-        )}
-      </button>
-    </form>
-  );
-};
 
 /**
  * SolvaPay Payment Form Component
  * 
- * Handles the entire checkout flow internally including Stripe initialization,
- * payment intent creation, and form rendering. Simply provide a planRef and
- * handle success/error callbacks.
+ * A simplified, minimal payment form that handles the checkout flow.
+ * Automatically initializes Stripe and displays the payment form.
  * 
  * @example
  * ```tsx
@@ -195,6 +20,7 @@ const StripePaymentForm: React.FC<{
  * 
  * <PaymentForm
  *   planRef="pro_plan"
+ *   agentRef="agent_123"
  *   onSuccess={(paymentIntent) => {
  *     console.log('Payment successful!');
  *   }}
@@ -213,229 +39,140 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   submitButtonText = 'Pay Now',
   className,
   buttonClassName,
-  initialButtonText,
-  cancelButtonText = 'Cancel',
 }) => {
-  // Ensure planRef is valid - use empty string as fallback to avoid hook errors
+  // CRITICAL: Always call hooks unconditionally FIRST, before any early returns
+  // Use a safe fallback for planRef to ensure hooks always receive valid input
   const validPlanRef = planRef && typeof planRef === 'string' ? planRef : '';
-  
-  // Always call hooks unconditionally
-  const { loading, error, stripePromise, clientSecret, startCheckout, reset } = useCheckout(validPlanRef);
+  const checkout = useCheckout(validPlanRef);
   const { refetch } = useSubscription();
   const { processPayment, customerRef } = useSolvaPay();
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [hasStartedCheckout, setHasStartedCheckout] = useState(false);
-  const initializationKey = useRef<string>('');
+  const hasInitializedRef = useRef(false);
 
-  // Show error if planRef is invalid (but hooks were already called)
-  const planRefError = !planRef || typeof planRef !== 'string' 
-    ? new Error('PaymentForm: planRef is required')
-    : null;
-
-  // Show error if planRef is invalid
-  if (planRefError) {
-    return (
-      <div className={className}>
-        <div className="mt-4 p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
-          {planRefError.message}
-        </div>
-      </div>
-    );
-  }
-
-  // Initialize checkout once per planRef change
+  // Auto-start checkout on mount - only once
   useEffect(() => {
-    const key = `${planRef}-${initialButtonText}`;
-    
-    // Skip if already initialized for this key
-    if (initializationKey.current === key) {
-      return;
-    }
-    
-    // Reset form state
-    setShowPaymentForm(false);
-    setHasStartedCheckout(false);
-    reset();
-    
-    // Mark as initialized
-    initializationKey.current = key;
-
-    // Auto-start checkout if no initialButtonText
-    // Use requestAnimationFrame instead of setTimeout for better timing
-    if (!initialButtonText && planRef && !loading && !error) {
-      requestAnimationFrame(() => {
-        setHasStartedCheckout(true);
-        startCheckout().then(() => {
-          setShowPaymentForm(true);
-        }).catch(() => {
-          // Error handled by useCheckout hook
-        });
+    if (!hasInitializedRef.current && validPlanRef && !checkout.loading && !checkout.error && !checkout.clientSecret) {
+      hasInitializedRef.current = true;
+      checkout.startCheckout().catch(() => {
+        // Error handled by useCheckout hook
+        hasInitializedRef.current = false; // Allow retry on error
       });
     }
-    // Note: startCheckout intentionally excluded from dependencies - guard in useCheckout prevents issues
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planRef, initialButtonText, loading, error, reset]);
+    // Reset initialization flag if planRef changes
+    if (validPlanRef && checkout.clientSecret) {
+      hasInitializedRef.current = true;
+    }
+  }, [validPlanRef, checkout.loading, checkout.error, checkout.clientSecret, checkout.startCheckout]);
 
-  const handleStartCheckout = async () => {
-    setHasStartedCheckout(true);
-    await startCheckout();
-    setShowPaymentForm(true);
-  };
-
-  const handleSuccess = async (paymentIntent: any) => {
-    setShowPaymentForm(false);
-    reset();
-    
-    // Process payment if processPayment is available and we have required data
-    if (processPayment && customerRef && agentRef && planRef) {
+  // Handle successful payment
+  const handleSuccess = useCallback(async (paymentIntent: any) => {
+    // Process payment if we have the necessary data
+    if (processPayment && customerRef && agentRef) {
       try {
-        // Payment is already confirmed by Stripe, now process it on backend
-        // Backend verifies payment status and returns subscription/ purchase immediately
-        const result = await processPayment({
+        await processPayment({
           paymentIntentId: paymentIntent.id,
           agentRef: agentRef,
           customerRef: customerRef,
           planRef: planRef,
         });
-        
-        // Handle result based on type
-        if (result.type === 'subscription' && result.subscription) {
-          // Wait a bit longer to ensure backend has fully processed and cache is cleared
-          // The API route clears the cache, but we need to ensure it's propagated
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          // Refetch to ensure UI is updated with fresh data
-          // Server-side cache is already cleared by the API route
-          await refetch();
-        } else if (result.type === 'purchase' && result.purchase) {
-          // Credits automatically added - refetch to update UI
-          await new Promise(resolve => setTimeout(resolve, 300));
-          await refetch();
-        } else {
-          // Still refetch in case subscription was created
-          await new Promise(resolve => setTimeout(resolve, 300));
-          await refetch();
-        }
+        await refetch();
       } catch (error) {
         console.error('[PaymentForm] Failed to process payment:', error);
-        // Payment succeeded, but processing failed - webhook will handle it
-        // Still refetch in case webhook already processed it
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Payment succeeded but processing failed - webhook will handle it
         await refetch();
       }
     } else {
-      // If processPayment is not available, still refetch (webhook might have processed)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // No processPayment available, refetch anyway (webhook might have processed)
       await refetch();
     }
     
     if (onSuccess) {
       onSuccess(paymentIntent);
     }
-  };
+  }, [processPayment, customerRef, agentRef, planRef, refetch, onSuccess]);
 
-  const handleCancel = () => {
-    setShowPaymentForm(false);
-    reset();
-  };
-
-  const handleError = (err: Error) => {
+  // Handle payment error
+  const handleError = useCallback((err: Error) => {
     if (onError) {
       onError(err);
     }
-  };
+  }, [onError]);
 
   // Auto-detect return URL if not provided
   const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/');
 
-  // Show payment form when ready (automatically show if no initialButtonText, otherwise wait for showPaymentForm)
-  const shouldShowForm = (!initialButtonText || showPaymentForm) && stripePromise && clientSecret;
-  
-  if (shouldShowForm) {
-    return (
-      <div className={className}>
-        <Suspense fallback={
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
-              <Spinner size="md" />
-            </div>
-          </div>
-        }>
-          <Elements 
-            key={clientSecret} 
-            stripe={stripePromise} 
-            options={{ clientSecret }}
-          >
-            <StripePaymentFormWrapper
-              onSuccess={handleSuccess}
-              onError={handleError}
-              returnUrl={finalReturnUrl}
-              submitButtonText={submitButtonText}
-              buttonClassName={buttonClassName}
-            />
-          </Elements>
-        </Suspense>
-        {cancelButtonText && (
-          <button
-            onClick={handleCancel}
-            type="button"
-            className="mt-6 w-full px-4 py-2 text-xs text-slate-600 bg-transparent rounded-full hover:text-slate-900 hover:bg-slate-50 font-medium transition-all duration-200"
-          >
-            {cancelButtonText}
-          </button>
-        )}
-      </div>
-    );
-  }
+  // Validate planRef AFTER all hooks are called
+  const isValidPlanRef = planRef && typeof planRef === 'string';
 
-  // Show loading or error state
+  // Determine render state
+  const hasError = !!checkout.error;
+  const hasStripeData = !!(checkout.stripePromise && checkout.clientSecret);
+
+  // Memoize Elements options to maintain stable identity while clientSecret stays the same
+  const elementsOptions = useMemo(() => {
+    if (!checkout.clientSecret) return undefined;
+    return { clientSecret: checkout.clientSecret };
+  }, [checkout.clientSecret]);
+
+  // Track if Elements has ever been mounted for this planRef to prevent unmounting
+  // Reset when planRef changes (component will remount due to key prop)
+  const [hasMountedElements, setHasMountedElements] = useState(false);
+  
+  // Update state when Stripe data becomes available
+  useEffect(() => {
+    if (hasStripeData) {
+      setHasMountedElements(true);
+    }
+  }, [hasStripeData]);
+  
+  // Only mount Elements once we have both stripePromise and clientSecret
+  // Once mounted, keep it mounted to maintain hook consistency
+  const shouldRenderElements = hasStripeData || (hasMountedElements && checkout.stripePromise && checkout.clientSecret);
+
+  // Always return the same JSX structure to maintain hook consistency
+  // Once Elements is rendered, it should never unmount to avoid hook count issues
   return (
     <div className={className}>
-      {loading && (
+      {!isValidPlanRef ? (
+        <div className="p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
+          PaymentForm: planRef is required and must be a string
+        </div>
+      ) : hasError ? (
+        <div className="p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
+          <div className="font-medium mb-1">Payment initialization failed</div>
+          <div className="text-sm">{checkout.error?.message || 'Unknown error'}</div>
+        </div>
+      ) : shouldRenderElements && checkout.stripePromise && elementsOptions ? (
+        // Once we have Stripe data, always render Elements to maintain hook consistency
+        // This prevents hook count mismatches when transitioning between states
+        <Elements
+          key={checkout.clientSecret!}
+          stripe={checkout.stripePromise}
+          options={elementsOptions}
+        >
+          <StripePaymentFormWrapper
+            onSuccess={handleSuccess}
+            onError={handleError}
+            returnUrl={finalReturnUrl}
+            submitButtonText={submitButtonText}
+            buttonClassName={buttonClassName}
+          />
+        </Elements>
+      ) : (
+        // Loading state before Stripe data is available
         <div className="space-y-4">
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center min-h-[200px]">
             <Spinner size="md" />
           </div>
-          {initialButtonText && (
-            <button
-              disabled
-              className={buttonClassName}
-              aria-busy="true"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <Spinner size="sm" />
-              </span>
-            </button>
-          )}
+          <button
+            disabled
+            className={buttonClassName}
+            aria-busy="true"
+          >
+            <span className="flex items-center justify-center">
+              <Spinner size="sm" />
+            </span>
+          </button>
         </div>
-      )}
-      
-      {error && (
-        <>
-          {initialButtonText && (
-            <button
-              onClick={() => {
-                reset();
-                handleStartCheckout();
-              }}
-              className={buttonClassName}
-            >
-              {initialButtonText}
-            </button>
-          )}
-          <div className="mt-4 p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
-            {error.message}
-          </div>
-        </>
-      )}
-      
-      {!loading && !error && initialButtonText && (
-        <button
-          onClick={handleStartCheckout}
-          className={buttonClassName}
-        >
-          {initialButtonText}
-        </button>
       )}
     </div>
   );

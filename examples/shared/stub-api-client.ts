@@ -15,7 +15,7 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { SolvaPayClient } from '@solvapay/server';
+import type { SolvaPayClient, CustomerResponseMapped } from '@solvapay/server';
 
 // Re-export the interface from SDK for convenience
 export type { SolvaPayClient };
@@ -33,6 +33,7 @@ interface CustomerData {
     email?: string;
     name?: string;
     plan?: 'free' | 'pro' | 'premium';
+    externalRef?: string;
   };
 }
 
@@ -426,7 +427,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     // If externalRef is provided, check for existing customer by externalRef first
     if (params.externalRef) {
       for (const [ref, customer] of Object.entries(customerData)) {
-        if ((customer as any).externalRef === params.externalRef) {
+        if (customer.externalRef === params.externalRef) {
           this.log(`🔍 Found existing customer by externalRef: ${params.externalRef} -> ${ref}`);
           return { customerRef: ref };
         }
@@ -489,12 +490,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async getCustomer(params: {
     customerRef: string;
-  }): Promise<{
-    customerRef: string;
-    email?: string;
-    name?: string;
-    plan?: string;
-  }> {
+  }): Promise<CustomerResponseMapped> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
 
@@ -517,8 +513,9 @@ export class StubSolvaPayClient implements SolvaPayClient {
       customerRef: params.customerRef,
       email: customer.email,
       name: customer.name,
-      externalRef: (customer as any).externalRef,
-      plan
+      externalRef: customer.externalRef,
+      plan,
+      subscriptions: [] // Stub doesn't track subscriptions yet
     };
   }
 
@@ -527,20 +524,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async getCustomerByExternalRef(params: {
     externalRef: string;
-  }): Promise<{
-    customerRef: string;
-    email?: string;
-    name?: string;
-    externalRef?: string;
-    plan?: string;
-    subscriptions?: Array<{
-      reference: string;
-      planName: string;
-      agentName: string;
-      status: string;
-      startDate: string;
-    }>;
-  }> {
+  }): Promise<CustomerResponseMapped> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
 
@@ -550,7 +534,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     
     // Find customer by externalRef
     for (const [ref, customer] of Object.entries(customerData)) {
-      if ((customer as any).externalRef === params.externalRef) {
+      if (customer.externalRef === params.externalRef) {
         const plan = customer.plan || (customer.credits > 0 ? 'paid' : 'free');
         
         this.log(`✅ Found customer by externalRef: ${params.externalRef} -> ${ref} (${plan})`);

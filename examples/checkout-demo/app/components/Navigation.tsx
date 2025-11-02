@@ -1,17 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { PlanBadge, useSubscription, hasActivePaidSubscription } from '@solvapay/react';
+import { PlanBadge, useSubscription, hasActivePaidSubscription, usePlans } from '@solvapay/react';
 import { Button } from './ui/Button';
-import { signOut, getUserEmail, onAuthStateChange } from '../lib/supabase';
-import { useState, useEffect } from 'react';
-
-interface Plan {
-  reference: string;
-  name: string;
-  price?: number;
-  isFreeTier?: boolean;
-}
+import { signOut } from '../lib/supabase';
+import { useState, useCallback } from 'react';
 
 /**
  * Navigation Component
@@ -19,31 +12,24 @@ interface Plan {
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { subscriptions } = useSubscription();
+  const { subscriptions, loading: subscriptionsLoading } = useSubscription();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
   
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
   
-  // Fetch plans to determine which subscriptions are free vs paid
-  useEffect(() => {
-    const fetchPlans = async () => {
-      if (!agentRef) return;
-      
-      try {
-        const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
-        if (response.ok) {
-          const data = await response.json();
-          setPlans(data.plans || []);
-        }
-      } catch (err) {
-        console.error('Failed to fetch plans:', err);
-      }
-    };
-    
-    fetchPlans();
-  }, [agentRef]);
+  // Memoize the fetcher function to prevent unnecessary re-fetches
+  const fetchPlans = useCallback(async (agentRef: string) => {
+    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
+    if (!response.ok) throw new Error('Failed to fetch plans');
+    const data = await response.json();
+    return data.plans || [];
+  }, []);
+  
+  // Fetch plans using SDK hook
+  const { plans, loading: plansLoading } = usePlans({
+    agentRef: agentRef || undefined,
+    fetcher: fetchPlans,
+  });
   
   // Helper to check if a subscription is for a paid plan
   const isPaidPlan = (planName: string): boolean => {
@@ -53,31 +39,18 @@ export function Navigation() {
   };
   
   // Check if user has any active paid subscription using shared utility
-  const hasActivePaidSubscriptionValue = hasActivePaidSubscription(subscriptions, isPaidPlan);
-
-  // Get user email on mount and listen for auth state changes
-  useEffect(() => {
-    const fetchUserEmail = async () => {
-      const email = await getUserEmail();
-      setUserEmail(email);
-    };
-    fetchUserEmail();
-
-    // Listen for auth state changes to update email
-    const authStateChange = onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setUserEmail(session?.user?.email || null);
-      } else if (event === 'SIGNED_OUT') {
-        setUserEmail(null);
-      }
-    });
-
-    return () => {
-      if (authStateChange?.data?.subscription) {
-        authStateChange.data.subscription.unsubscribe();
-      }
-    };
-  }, []);
+  // Only calculate this when we have plans loaded, otherwise isPaidPlan defaults incorrectly
+  const hasActivePaidSubscriptionValue = plans.length > 0 
+    ? hasActivePaidSubscription(subscriptions, isPaidPlan)
+    : false; // Default to false (show upgrade button) if plans aren't loaded yet
+  
+  // Only show button when we have both subscriptions and plans data loaded
+  // This ensures isPaidPlan can correctly determine if subscriptions are paid
+  const hasLoadedSubscriptions = !subscriptionsLoading;
+  const hasLoadedPlans = plans.length > 0 && !plansLoading;
+  
+  // Show upgrade button if both are loaded and user doesn't have paid subscription
+  const showUpgradeButton = hasLoadedSubscriptions && hasLoadedPlans && !hasActivePaidSubscriptionValue;
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -129,19 +102,15 @@ export function Navigation() {
               }}
             </PlanBadge>
 
-            {userEmail && (
-              <div className="hidden sm:block text-xs text-slate-500">
-                {userEmail}
-              </div>
-            )}
-
-            {!hasActivePaidSubscriptionValue && (
+            {/* Upgrade button - hidden until loaded */}
+            {showUpgradeButton && (
               <Link href="/checkout">
                 <Button variant="primary" className="px-4 py-1.5 text-xs">
                   Upgrade
                 </Button>
               </Link>
             )}
+
             <button
               onClick={handleSignOut}
               disabled={isSigningOut}

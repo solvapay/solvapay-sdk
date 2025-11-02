@@ -301,7 +301,7 @@ export interface paths {
         };
         /**
          * Get all subscriptions for provider
-         * @description Retrieves all subscriptions for the authenticated provider. Supports optional filtering by status.
+         * @description Retrieves all subscriptions for the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptions"];
         put?: never;
@@ -344,6 +344,26 @@ export interface paths {
          * @description Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptionsByAgent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get subscription by ID
+         * @description Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
+         */
+        get: operations["SubscriptionSdkController_getSubscriptionById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2116,10 +2136,7 @@ export interface operations {
     };
     SubscriptionSdkController_getSubscriptions: {
         parameters: {
-            query?: {
-                /** @description Filter by subscription status */
-                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -2195,6 +2212,36 @@ export interface operations {
                 };
             };
             /** @description Agent not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SubscriptionSdkController_getSubscriptionById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Subscription ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionResponse"];
+                };
+            };
+            /** @description Subscription not found */
             404: {
                 headers: {
                     [name: string]: unknown;
