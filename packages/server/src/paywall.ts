@@ -152,7 +152,13 @@ export class SolvaPayPaywall {
         return result;
 
       } catch (error) {
-        this.log(`❌ Error in paywall:`, error);
+        // Log error details for debugging, but format it clearly without full stack traces
+        if (error instanceof Error) {
+          const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error';
+          this.log(`❌ Error in paywall [${errorType}]: ${error.message}`);
+        } else {
+          this.log(`❌ Error in paywall:`, error);
+        }
         const latencyMs = Date.now() - startTime;
         const outcome = error instanceof PaywallError ? 'paywall' : 'fail';
         const planRef = metadata.plan || toolName;
