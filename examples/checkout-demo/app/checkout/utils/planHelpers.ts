@@ -1,11 +1,15 @@
 import type { Plan } from '@solvapay/react';
 
 /**
- * Format price from cents or dollars to display format
+ * Format price from cents to display format (dollars)
  */
 export function formatPrice(price?: number): string {
   if (!price) return '0';
-  return Math.floor(price).toString();
+  // Convert cents to dollars and format with 2 decimal places
+  const dollars = price / 100;
+  const formatted = dollars.toFixed(2);
+  // Remove trailing zeros and decimal point if decimals are .00
+  return formatted.replace(/\.00$/, '');
 }
 
 /**
