@@ -45,13 +45,44 @@ export async function POST(request: NextRequest) {
       throw new SolvaPayError('Cancel subscription method not available on SDK client');
     }
 
-    const cancelledSubscription = await solvaPay.apiClient.cancelSubscription({
+
+    let cancelledSubscription = await solvaPay.apiClient.cancelSubscription({
       subscriptionRef,
       reason,
     });
     
+    // Validate response (client should already extract subscription from nested response)
+    if (!cancelledSubscription || typeof cancelledSubscription !== 'object') {
+      throw new SolvaPayError('Invalid response from cancel subscription endpoint');
+    }
+    
+    // Fallback: Extract subscription from nested response if client didn't already do it
+    // This handles cases where the backend returns { subscription: {...}, message: "..." }
+    const responseAny = cancelledSubscription as any;
+    if (responseAny.subscription && typeof responseAny.subscription === 'object') {
+      cancelledSubscription = responseAny.subscription;
+    }
+    
+    // Validate required fields
+    if (!cancelledSubscription.reference) {
+      throw new SolvaPayError('Cancel subscription response missing required fields');
+    }
+    
+    // Check if subscription was actually cancelled
+    // It's expected for a subscription to be 'active' but with cancelledAt and endDate set
+    // This means the subscription is cancelled but still active until the endDate
+    const isCancelled = cancelledSubscription.status === 'cancelled' || cancelledSubscription.cancelledAt;
+    
+    if (!isCancelled) {
+      throw new SolvaPayError(`Subscription cancellation failed: backend returned status '${cancelledSubscription.status}' without cancelledAt timestamp`);
+    }
+    
     // Clear subscription cache to ensure fresh data on next check
     clearSubscriptionCache(userId);
+    
+    // Add a small delay to allow backend to fully process the cancellation
+    // This helps ensure that subsequent subscription checks return the updated status
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     return NextResponse.json(cancelledSubscription);
 

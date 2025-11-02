@@ -40,6 +40,7 @@ export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
 export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   createPayment,
   checkSubscription,
+  processPayment,
   customerRef,
   onCustomerRefUpdate,
   children,
@@ -109,7 +110,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         lastFetchedRef.current = currentCustomerRef;
       }
     } catch (error) {
-      console.error('❌ [SolvaPayProvider] Failed to fetch subscription:', error);
+      console.error('[SolvaPayProvider] Failed to fetch subscription:', error);
       // On error, set empty subscriptions
       if (inFlightRef.current === currentCustomerRef) {
         setSubscriptionData({ 
@@ -128,10 +129,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   // Refetch subscription function - forces a fresh fetch by clearing cache
   const refetchSubscription = useCallback(async () => {
-    // Clear the last fetched ref to force a fresh fetch
+    // Clear both cache refs to force a completely fresh fetch
+    // Clear inFlightRef to ensure we don't skip if there's a pending request
+    const currentCustomerRef = internalCustomerRef;
     lastFetchedRef.current = null;
+    inFlightRef.current = null;
+    // Force a fresh fetch
     await fetchSubscription(true);
-  }, [fetchSubscription]);
+  }, [fetchSubscription, internalCustomerRef]);
 
   // Sync internal customer ref with prop changes
   useEffect(() => {
@@ -142,13 +147,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   // Fetch subscription when customerRef changes - single effect, no double calls
   useEffect(() => {
-    const effectId = Math.random().toString(36).substring(7);
-    console.log(`[${effectId}] 🔵 [SolvaPayProvider] Effect triggered - customerRef: ${customerRef?.substring(0, 8) || 'empty'}...`);
-    console.log(`[${effectId}] 🔵 [SolvaPayProvider] lastFetchedRef: ${lastFetchedRef.current?.substring(0, 8) || 'null'}, inFlightRef: ${inFlightRef.current?.substring(0, 8) || 'null'}`);
-    
     // Skip if empty customerRef
     if (!customerRef) {
-      console.log(`[${effectId}] ⏭️ [SolvaPayProvider] Skipping - empty customerRef`);
       setSubscriptionData({ subscriptions: [] });
       setLoading(false);
       return;
@@ -156,11 +156,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
     // Skip if already fetched or in-flight
     if (customerRef === lastFetchedRef.current || customerRef === inFlightRef.current) {
-      console.log(`[${effectId}] ⏭️ [SolvaPayProvider] Skipping - already fetched or in-flight`);
       return;
     }
-
-    console.log(`[${effectId}] 🚀 [SolvaPayProvider] Starting fetch for customerRef: ${customerRef.substring(0, 8)}...`);
 
     // Fetch subscription directly using refs to avoid dependency issues
     const doFetch = async () => {
@@ -168,9 +165,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       setLoading(true);
       
       try {
-        console.log(`[${effectId}] 📞 [SolvaPayProvider] Calling checkSubscription for: ${customerRef.substring(0, 8)}...`);
         const data = await checkSubscriptionRef.current(customerRef);
-        console.log(`[${effectId}] ✅ [SolvaPayProvider] Received subscription data for: ${customerRef.substring(0, 8)}...`);
 
         // Only update if this is still the current customerRef (might have changed during fetch)
         if (inFlightRef.current === customerRef) {
@@ -181,10 +176,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
           };
           setSubscriptionData(filteredData);
           lastFetchedRef.current = customerRef;
-          console.log(`[${effectId}] 💾 [SolvaPayProvider] Updated state for: ${customerRef.substring(0, 8)}...`);
         }
       } catch (error) {
-        console.error(`[${effectId}] ❌ [SolvaPayProvider] Failed to fetch subscription:`, error);
+        console.error('[SolvaPayProvider] Failed to fetch subscription:', error);
         // On error, set empty subscriptions
         if (inFlightRef.current === customerRef) {
           setSubscriptionData({ 
@@ -197,7 +191,6 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         if (inFlightRef.current === customerRef) {
           setLoading(false);
           inFlightRef.current = null;
-          console.log(`[${effectId}] 🏁 [SolvaPayProvider] Finished fetch for: ${customerRef.substring(0, 8)}...`);
         }
       }
     };
@@ -237,9 +230,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     subscription,
     refetchSubscription,
     createPayment,
+    processPayment,
     customerRef: internalCustomerRef,
     updateCustomerRef,
-  }), [subscription, refetchSubscription, createPayment, internalCustomerRef, updateCustomerRef]);
+  }), [subscription, refetchSubscription, createPayment, processPayment, internalCustomerRef, updateCustomerRef]);
 
   return (
     <SolvaPayContext.Provider value={contextValue}>

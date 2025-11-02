@@ -115,6 +115,7 @@ function createRequestDeduplicator<T = unknown>(
 
   const inFlightRequests = new Map<string, Promise<T>>();
   const resultCache = new Map<string, CacheEntry<T>>();
+  const cacheInvalidatedAt = new Map<string, number>(); // Track when cache was invalidated
   let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   // Start cleanup interval if caching is enabled
@@ -131,6 +132,8 @@ function createRequestDeduplicator<T = unknown>(
 
       for (const key of entriesToDelete) {
         resultCache.delete(key);
+        // Clean up invalidation timestamp after cache TTL has passed
+        cacheInvalidatedAt.delete(key);
       }
 
       // Enforce max cache size (remove oldest entries if exceeded)
@@ -141,6 +144,7 @@ function createRequestDeduplicator<T = unknown>(
         const toRemove = sortedEntries.slice(0, resultCache.size - maxCacheSize);
         for (const [key] of toRemove) {
           resultCache.delete(key);
+          cacheInvalidatedAt.delete(key);
         }
       }
     }, Math.min(cacheTTL, 1000)); // Clean up at least every second or every cacheTTL, whichever is smaller
@@ -163,13 +167,20 @@ function createRequestDeduplicator<T = unknown>(
     let requestPromise = inFlightRequests.get(key);
 
     if (!requestPromise) {
+      // Record when this request started
+      const requestStartTime = Date.now();
+      
       // Create new promise
       requestPromise = (async () => {
         try {
           const result = await fn();
           
+          // Only cache if cache wasn't invalidated after this request started
+          const invalidatedAt = cacheInvalidatedAt.get(key);
+          const shouldCache = !invalidatedAt || invalidatedAt < requestStartTime;
+          
           // Cache successful results
-          if (cacheTTL > 0) {
+          if (cacheTTL > 0 && shouldCache) {
             resultCache.set(key, {
               data: result,
               timestamp: Date.now(),
@@ -179,7 +190,10 @@ function createRequestDeduplicator<T = unknown>(
           return result;
         } catch (error) {
           // Cache error results if enabled
-          if (cacheTTL > 0 && cacheErrors) {
+          const invalidatedAt = cacheInvalidatedAt.get(key);
+          const shouldCache = !invalidatedAt || invalidatedAt < requestStartTime;
+          
+          if (cacheTTL > 0 && cacheErrors && shouldCache) {
             resultCache.set(key, {
               data: error as T,
               timestamp: Date.now(),
@@ -207,10 +221,16 @@ function createRequestDeduplicator<T = unknown>(
 
   const clearCache = (key: string): void => {
     resultCache.delete(key);
+    // Mark cache as invalidated to prevent in-flight requests from caching stale data
+    cacheInvalidatedAt.set(key, Date.now());
+    // Remove in-flight request so new requests start fresh
+    inFlightRequests.delete(key);
   };
 
   const clearAllCache = (): void => {
     resultCache.clear();
+    cacheInvalidatedAt.clear();
+    inFlightRequests.clear();
   };
 
   const getStats = () => ({
@@ -328,26 +348,45 @@ export async function checkSubscription(
         const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef });
 
         // Filter subscriptions: exclude cancelled subscriptions without endDate or with past endDate
-        // Only include cancelled subscriptions with endDate in the future
+        // A subscription is considered cancelled if:
+        //   1. status === 'cancelled', OR
+        //   2. cancelledAt is set (even if status is still 'active' - this is expected behavior)
+        // Cancelled subscriptions are kept only if they have an endDate in the future
+        // (meaning the subscription is cancelled but still active until the endDate)
+        const now = new Date();
         const filteredSubscriptions = (customer.subscriptions || []).filter(sub => {
+          const subAny = sub as any;
+          
+          // Check if subscription is cancelled (either by status or by cancelledAt timestamp)
+          const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
+          
           // Keep all non-cancelled subscriptions
-          if (sub.status !== 'cancelled') return true;
-          // Keep cancelled subscriptions only if endDate exists and is in the future
-          if (sub.status === 'cancelled' && sub.endDate) {
-            return new Date(sub.endDate) > new Date();
+          if (!isCancelled) {
+            return true;
           }
+          
+          // For cancelled subscriptions, only keep if endDate exists and is in the future
+          if (isCancelled && subAny.endDate) {
+            const endDate = new Date(subAny.endDate);
+            const isFuture = endDate > now;
+            return isFuture;
+          }
+          
           // Filter out cancelled subscriptions without endDate or with past endDate
           return false;
         });
 
         // Return customer data with filtered subscriptions
-        return {
+        const result = {
           customerRef: customer.customerRef || userId,
           email: customer.email,
           name: customer.name,
           subscriptions: filteredSubscriptions,
         } as SubscriptionCheckResult;
+        
+        return result;
       } catch (error) {
+        console.error('[checkSubscription] Error fetching customer:', error);
         // Customer doesn't exist yet - return empty subscriptions (free tier)
         return {
           customerRef: userId,

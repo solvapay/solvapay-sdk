@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription } from '@solvapay/next';
+import { checkSubscription, type SubscriptionCheckResult } from '@solvapay/next';
 
 /**
  * Check Subscription API Route
@@ -34,7 +34,10 @@ export async function GET(request: NextRequest) {
     return result;
   }
   
-  // Otherwise, return the subscription data
-  return NextResponse.json(result);
+  // TypeScript now knows result is SubscriptionCheckResult after the instanceof check
+  // Cast to SubscriptionCheckResult to help TypeScript understand the type
+  const subscriptionData = result as SubscriptionCheckResult;
+  
+  return NextResponse.json(subscriptionData);
 }
 

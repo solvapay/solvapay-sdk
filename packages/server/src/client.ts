@@ -393,6 +393,44 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result;
     },
 
+    // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
+    async processPayment(params) {
+      const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/process`;
+      log(`📡 API Request: POST ${url}`);
+      log(`   Payment Intent ID: ${params.paymentIntentId}`);
+      log(`   Agent Ref: ${params.agentRef}`);
+      log(`   Customer Ref: ${params.customerRef}`);
+      log(`   Plan Ref: ${params.planRef || 'none'}`);
+      
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          agentRef: params.agentRef,
+          customerRef: params.customerRef,
+          planRef: params.planRef
+        })
+      });
+      
+      if (!res.ok) {
+        const error = await res.text();
+        log(`❌ API Error: ${res.status} - ${error}`);
+        throw new SolvaPayError(`Process payment failed (${res.status}): ${error}`);
+      }
+      
+      const result = await res.json();
+      log(`✅ Payment processed:`, {
+        type: result.type,
+        status: result.status,
+        subscriptionRef: result.subscription?.reference,
+        purchaseRef: result.purchase?.reference
+      });
+      return result;
+    },
+
     // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
     async cancelSubscription(params) {
       const url = `${base}/v1/sdk/subscriptions/${params.subscriptionRef}/cancel`;
@@ -433,11 +471,59 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         throw new SolvaPayError(`Cancel subscription failed (${res.status}): ${error}`);
       }
       
-      const result = await res.json();
+      // Get response text first to debug any parsing issues
+      const responseText = await res.text();
+      log(`   Response body (raw): ${responseText.substring(0, 500)}${responseText.length > 500 ? '...' : ''}`);
+      
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        log(`❌ Failed to parse response as JSON: ${parseError}`);
+        throw new SolvaPayError(`Invalid JSON response from cancel subscription endpoint: ${responseText.substring(0, 200)}`);
+      }
+      
+      // Validate response structure
+      if (!responseData || typeof responseData !== 'object') {
+        log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`);
+        throw new SolvaPayError(`Invalid response structure from cancel subscription endpoint`);
+      }
+      
+      // Backend returns nested structure: { subscription: {...}, message: "..." }
+      // Extract the subscription object from the response
+      let result;
+      if (responseData.subscription && typeof responseData.subscription === 'object') {
+        log(`   Extracting subscription from nested response structure`);
+        result = responseData.subscription;
+      } else if (responseData.reference) {
+        log(`   Response is already flat (has reference field)`);
+        result = responseData;
+      } else {
+        log(`⚠️ Warning: Unexpected response structure. Keys:`, Object.keys(responseData));
+        log(`   Full response:`, JSON.stringify(responseData, null, 2));
+        // Try to extract anyway or use the whole response
+        result = responseData.subscription || responseData;
+      }
+      
+      // Check if response has expected fields
+      if (!result || typeof result !== 'object') {
+        log(`❌ Invalid subscription data in response. Full response:`, responseData);
+        throw new SolvaPayError(`Invalid subscription data in cancel subscription response`);
+      }
+      
+      if (!result.reference) {
+        log(`⚠️ Warning: Response missing 'reference' field. Result keys:`, Object.keys(result));
+        log(`   Full response:`, JSON.stringify(responseData, null, 2));
+      }
+      
       log(`✅ Subscription cancelled successfully:`, {
         reference: result.reference,
-        status: result.status
+        status: result.status,
+        planName: result.planName,
+        cancelledAt: result.cancelledAt,
+        cancellationReason: result.cancellationReason,
       });
+      
       return result;
     },
   };

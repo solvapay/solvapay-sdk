@@ -3,6 +3,7 @@ import React, { useState, FormEvent, useEffect, Suspense, useRef } from 'react';
 import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
 import { useCheckout } from './hooks/useCheckout';
 import { useSubscription } from './hooks/useSubscription';
+import { useSolvaPay } from './hooks/useSolvaPay';
 import type { PaymentFormProps } from './types';
 
 /**
@@ -205,6 +206,7 @@ const StripePaymentForm: React.FC<{
  */
 export const PaymentForm: React.FC<PaymentFormProps> = ({
   planRef,
+  agentRef,
   onSuccess,
   onError,
   returnUrl,
@@ -220,6 +222,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   // Always call hooks unconditionally
   const { loading, error, stripePromise, clientSecret, startCheckout, reset } = useCheckout(validPlanRef);
   const { refetch } = useSubscription();
+  const { processPayment, customerRef } = useSolvaPay();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [hasStartedCheckout, setHasStartedCheckout] = useState(false);
   const initializationKey = useRef<string>('');
@@ -282,7 +285,50 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const handleSuccess = async (paymentIntent: any) => {
     setShowPaymentForm(false);
     reset();
-    await refetch();
+    
+    // Process payment if processPayment is available and we have required data
+    if (processPayment && customerRef && agentRef && planRef) {
+      try {
+        // Payment is already confirmed by Stripe, now process it on backend
+        // Backend verifies payment status and returns subscription/ purchase immediately
+        const result = await processPayment({
+          paymentIntentId: paymentIntent.id,
+          agentRef: agentRef,
+          customerRef: customerRef,
+          planRef: planRef,
+        });
+        
+        // Handle result based on type
+        if (result.type === 'subscription' && result.subscription) {
+          // Wait a bit longer to ensure backend has fully processed and cache is cleared
+          // The API route clears the cache, but we need to ensure it's propagated
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Refetch to ensure UI is updated with fresh data
+          // Server-side cache is already cleared by the API route
+          await refetch();
+        } else if (result.type === 'purchase' && result.purchase) {
+          // Credits automatically added - refetch to update UI
+          await new Promise(resolve => setTimeout(resolve, 300));
+          await refetch();
+        } else {
+          // Still refetch in case subscription was created
+          await new Promise(resolve => setTimeout(resolve, 300));
+          await refetch();
+        }
+      } catch (error) {
+        console.error('[PaymentForm] Failed to process payment:', error);
+        // Payment succeeded, but processing failed - webhook will handle it
+        // Still refetch in case webhook already processed it
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await refetch();
+      }
+    } else {
+      // If processPayment is not available, still refetch (webhook might have processed)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await refetch();
+    }
+    
     if (onSuccess) {
       onSuccess(paymentIntent);
     }

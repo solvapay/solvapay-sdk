@@ -110,6 +110,33 @@ export default function RootLayout({
     return res.json();
   }, []);
 
+  const handleProcessPayment = useCallback(async (params: {
+    paymentIntentId: string;
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }) => {
+    const accessToken = await getAccessToken();
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+    };
+
+    const res = await fetch('/api/process-payment', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to process payment');
+    }
+    
+    return res.json();
+  }, []);
+
   return (
     <html lang="en">
       <head>
@@ -128,6 +155,7 @@ export default function RootLayout({
             onCustomerRefUpdate={handleCustomerRefUpdate}
             createPayment={handleCreatePayment}
             checkSubscription={handleCheckSubscription}
+            processPayment={handleProcessPayment}
           >
             <Navigation />
             {children}

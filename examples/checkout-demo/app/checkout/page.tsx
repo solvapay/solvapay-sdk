@@ -31,6 +31,13 @@ export default function CheckoutPage() {
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
+  
+  // Force refetch subscriptions when checkout page mounts to ensure fresh data
+  useEffect(() => {
+    refetch().catch((error) => {
+      console.error(`[CheckoutPage] Refetch failed:`, error);
+    });
+  }, [refetch]);
 
   // Fetch plans from the backend
   useEffect(() => {
@@ -194,12 +201,6 @@ export default function CheckoutPage() {
         ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
       };
 
-      console.log('Cancelling subscription:', {
-        reference: activePaidSubscription.reference,
-        status: activePaidSubscription.status,
-        planName: activePaidSubscription.planName,
-      });
-
       const res = await fetch('/api/cancel-subscription', {
         method: 'POST',
         headers,
@@ -215,6 +216,12 @@ export default function CheckoutPage() {
         console.error('Cancel subscription error:', errorMessage, errorData);
         throw new Error(errorMessage);
       }
+
+      await res.json();
+
+      // Add a small delay to allow backend to fully process the cancellation
+      // The API route already has a delay, but we add another small one here
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Refetch to clear any client-side cache
       await refetch();
@@ -402,6 +409,7 @@ export default function CheckoutPage() {
 
                 <PaymentForm
                   planRef={currentPlan.reference}
+                  agentRef={agentRef}
                   onSuccess={handlePaymentSuccess}
                   onError={handlePaymentError}
                   submitButtonText="Complete Purchase"

@@ -103,6 +103,17 @@ export interface SolvaPay {
   }>;
   
   /**
+   * Process a payment intent after client-side confirmation
+   * Creates subscription or purchase immediately, eliminating webhook delay
+   */
+  processPayment(params: {
+    paymentIntentId: string;
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }): Promise<import('./types/client').ProcessPaymentResult>;
+  
+  /**
    * Check if customer is within usage limits
    */
   checkLimits(params: {
@@ -228,6 +239,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('createPaymentIntent is not available on this API client');
       }
       return apiClient.createPaymentIntent(params);
+    },
+    
+    processPayment(params) {
+      if (!apiClient.processPayment) {
+        throw new SolvaPayError('processPayment is not available on this API client');
+      }
+      return apiClient.processPayment(params);
     },
     
     checkLimits(params) {

@@ -152,6 +152,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/payment-intents/{id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process payment intent after client-side confirmation
+         * @description Processes a payment intent that has been confirmed on the client-side using Stripe.js. Verifies payment status and creates subscription or purchase synchronously, eliminating webhook delay. Returns immediately if already processed (idempotent).
+         */
+        post: operations["PaymentIntentSdkController_processPaymentIntent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/agents": {
         parameters: {
             query?: never;
@@ -264,7 +284,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a plan
-         * @description Deletes a plan by its reference.
+         * @description Deletes a plan by its reference. The plan will be automatically removed from all agents that reference it.
          */
         delete: operations["PlanSdkController_deletePlan"];
         options?: never;
@@ -378,6 +398,62 @@ export interface components {
         UpdatePlanRequest: Record<string, never>;
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
+        CreateCheckoutSessionRequest: {
+            /**
+             * @description Customer reference
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerReference: string;
+            /**
+             * @description Plan reference (optional)
+             * @example pln_2b3c4d5e6f7g
+             */
+            planRef?: string;
+            /**
+             * @description Agent reference (optional)
+             * @example agt_1a2b3c4d5e6f
+             */
+            agentRef?: string;
+        };
+        CheckoutSessionResponse: {
+            /**
+             * @description Checkout session ID
+             * @example 507f1f77bcf86cd799439011
+             */
+            id: string;
+            /**
+             * @description Public session ID used in checkout URL
+             * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+             */
+            sessionId: string;
+            /**
+             * @description Amount in cents
+             * @example 2999
+             */
+            amount: number;
+            /**
+             * @description Currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * @description Session status
+             * @example active
+             */
+            status: string;
+            /**
+             * @description Checkout URL to open the checkout page
+             * @example http://localhost:3000/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+             */
+            checkoutUrl: string;
+        };
+        CancelSubscriptionRequest: {
+            /**
+             * @description Reason for cancellation
+             * @example Customer request
+             */
+            reason?: string;
+        };
         CheckLimitRequest: {
             /**
              * @description Customer reference identifier
@@ -627,13 +703,6 @@ export interface components {
              * @example 2025-01-01T00:00:00.000Z
              */
             createdAt: string;
-        };
-        CancelSubscriptionRequest: {
-            /**
-             * @description Reason for cancellation
-             * @example Customer request
-             */
-            reason?: string;
         };
         CreatePageSettings: {
             /** @description Page identifier */
@@ -994,6 +1063,97 @@ export interface operations {
         responses: {
             /** @description Payment intent retrieved successfully */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    PaymentIntentSdkController_processPaymentIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stripe payment intent ID (format: pi_xxx) */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description Payment processing data */
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Agent reference that owns the plan/product
+                     * @example agt_123
+                     */
+                    agentRef: string;
+                    /**
+                     * @description Customer reference identifier
+                     * @example cus_456
+                     */
+                    customerRef: string;
+                    /**
+                     * @description Plan reference - helps determine if payment is for subscription
+                     * @example pln_789
+                     */
+                    planRef?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payment processed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example subscription */
+                        type?: string;
+                        subscription?: {
+                            /** @example sub_abc123 */
+                            reference?: string;
+                            /** @example Pro Plan */
+                            planName?: string;
+                            /** @example pln_789 */
+                            planRef?: string;
+                            /** @example My Agent */
+                            agentName?: string;
+                            /** @example active */
+                            status?: string;
+                            /** @example 2024-01-01T00:00:00Z */
+                            startDate?: string;
+                        };
+                        /** @example completed */
+                        status?: string;
+                    } | {
+                        /** @example purchase */
+                        type?: string;
+                        purchase?: {
+                            /** @example pur_xyz789 */
+                            reference?: string;
+                            /** @example prod_123 */
+                            productRef?: string;
+                            /** @example 1000 */
+                            amount?: number;
+                            /** @example usd */
+                            currency?: string;
+                            /** @example 100 */
+                            creditsAdded?: number;
+                            /** @example 2024-01-01T00:00:00Z */
+                            completedAt?: string;
+                        };
+                        /** @example completed */
+                        status?: string;
+                    };
+                };
+            };
+            /** @description Payment not succeeded or invalid request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -11,37 +11,62 @@ import type { SubscriptionInfo } from '../types';
  * 
  * Rules:
  * - Keep all non-cancelled subscriptions
+ * - A subscription is considered cancelled if:
+ *   1. status === 'cancelled', OR
+ *   2. cancelledAt is set (even if status is still 'active' - this is expected behavior)
  * - Keep cancelled subscriptions only if they have an endDate in the future
+ *   (meaning the subscription is cancelled but still active until the endDate)
  * - Filter out cancelled subscriptions without endDate or with past endDate
  */
 export function filterSubscriptions(subscriptions: SubscriptionInfo[]): SubscriptionInfo[] {
-  return subscriptions.filter(sub => {
+  const now = new Date();
+  
+  const filtered = subscriptions.filter(sub => {
+    const subAny = sub as any; // Type assertion to access optional properties
+    
+    // Check if subscription is cancelled (either by status or by cancelledAt timestamp)
+    const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
+    
     // Keep all non-cancelled subscriptions
-    if (sub.status !== 'cancelled') return true;
+    if (!isCancelled) {
+      return true;
+    }
     
     // Keep cancelled subscriptions only if endDate exists and is in the future
-    if (sub.status === 'cancelled' && sub.endDate) {
-      return new Date(sub.endDate) > new Date();
+    if (isCancelled && subAny.endDate) {
+      const endDate = new Date(subAny.endDate);
+      const isFuture = endDate > now;
+      return isFuture;
     }
     
     // Filter out cancelled subscriptions without endDate or with past endDate
     return false;
   });
+  
+  return filtered;
 }
 
 /**
  * Get active subscriptions (excluding cancelled ones)
+ * Also excludes subscriptions with cancelledAt set, even if status is still 'active'
  */
 export function getActiveSubscriptions(subscriptions: SubscriptionInfo[]): SubscriptionInfo[] {
-  return subscriptions.filter(sub => sub.status === 'active');
+  return subscriptions.filter(sub => {
+    const subAny = sub as any;
+    // Exclude if status is cancelled or if cancelledAt is set
+    return sub.status === 'active' && !subAny.cancelledAt;
+  });
 }
 
 /**
  * Get cancelled subscriptions with valid endDate (not expired)
+ * Includes subscriptions with cancelledAt set, even if status is still 'active'
  */
 export function getCancelledSubscriptionsWithEndDate(subscriptions: SubscriptionInfo[]): SubscriptionInfo[] {
   return subscriptions.filter(sub => {
-    return sub.status === 'cancelled' && sub.endDate && new Date(sub.endDate) > new Date();
+    const subAny = sub as any; // Type assertion to access optional properties
+    const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
+    return isCancelled && subAny.endDate && new Date(subAny.endDate) > new Date();
   });
 }
 

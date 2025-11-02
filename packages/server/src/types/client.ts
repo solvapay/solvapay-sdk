@@ -24,6 +24,28 @@ export type CustomerResponseMapped = {
 };
 
 /**
+ * Purchase information returned from payment processing
+ */
+export interface PurchaseInfo {
+  reference: string;
+  productRef?: string;
+  amount: number;
+  currency: string;
+  creditsAdded?: number;
+  completedAt: string;
+}
+
+/**
+ * Result from processing a payment intent
+ */
+export interface ProcessPaymentResult {
+  type: 'subscription' | 'purchase';
+  subscription?: components['schemas']['SubscriptionInfo'];
+  purchase?: PurchaseInfo;
+  status: 'completed';
+}
+
+/**
  * SolvaPay API Client Interface
  * 
  * This interface defines the contract for communicating with the SolvaPay backend.
@@ -114,5 +136,13 @@ export interface SolvaPayClient {
     subscriptionRef: string;
     reason?: string;
   }): Promise<components['schemas']['SubscriptionResponse']>;
+
+  // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
+  processPayment?(params: {
+    paymentIntentId: string;
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }): Promise<ProcessPaymentResult>;
 }
 

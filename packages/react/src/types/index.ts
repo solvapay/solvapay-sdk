@@ -3,6 +3,7 @@
  */
 
 import type { PaymentIntent } from '@stripe/stripe-js';
+import type { ProcessPaymentResult } from '@solvapay/server';
 
 export interface SubscriptionInfo {
   reference: string;
@@ -43,6 +44,12 @@ export interface SolvaPayContextValue {
   subscription: SubscriptionStatus;
   refetchSubscription: () => Promise<void>;
   createPayment: (params: { planRef: string; customerRef: string }) => Promise<PaymentIntentResult>;
+  processPayment?: (params: {
+    paymentIntentId: string;
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }) => Promise<ProcessPaymentResult>;
   customerRef?: string;
   updateCustomerRef?: (newCustomerRef: string) => void;
 }
@@ -50,6 +57,12 @@ export interface SolvaPayContextValue {
 export interface SolvaPayProviderProps {
   createPayment: (params: { planRef: string; customerRef: string }) => Promise<PaymentIntentResult>;
   checkSubscription: (customerRef: string) => Promise<CustomerSubscriptionData>;
+  processPayment?: (params: {
+    paymentIntentId: string;
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }) => Promise<ProcessPaymentResult>;
   customerRef?: string;
   onCustomerRefUpdate?: (newCustomerRef: string) => void;
   children: React.ReactNode;
@@ -90,6 +103,10 @@ export interface PaymentFormProps {
    * including Stripe initialization and payment intent creation.
    */
   planRef: string;
+  /**
+   * Agent reference. Required for processing payment after confirmation.
+   */
+  agentRef?: string;
   onSuccess?: (paymentIntent: PaymentIntent) => void;
   onError?: (error: Error) => void;
   /**
