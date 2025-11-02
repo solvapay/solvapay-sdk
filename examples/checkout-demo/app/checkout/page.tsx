@@ -1,29 +1,20 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { PaymentForm, useSubscription } from '@solvapay/react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSubscription, useCheckout, usePlans, useSubscriptionHelpers } from '@solvapay/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAccessToken } from '../lib/supabase';
-
-interface Plan {
-  reference: string;
-  name: string;
-  description?: string;
-  price?: number;
-  currency?: string;
-  interval?: string;
-  features?: string[];
-  isFreeTier?: boolean;
-  metadata?: Record<string, any>;
-}
+import { sortPlansByPrice } from './utils/planHelpers';
+import { PlanSelectionSection } from './components/PlanSelectionSection';
+import { PaymentSummary } from './components/PaymentSummary';
+import { SubscriptionNotices } from './components/SubscriptionNotices';
+import { CheckoutActions } from './components/CheckoutActions';
+import { PaymentFormSection } from './components/PaymentFormSection';
+import { SuccessMessage } from './components/SuccessMessage';
 
 export default function CheckoutPage() {
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(0);
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const { subscriptions, refetch } = useSubscription();
@@ -31,121 +22,45 @@ export default function CheckoutPage() {
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
+
+  // Stable fetcher function to prevent re-renders
+  const plansFetcher = useCallback(async (agentRef: string) => {
+    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch plans');
+    }
+    const data = await response.json();
+    // Sort and limit to first 2 plans in fetcher
+    const sortedPlans = (data.plans || []).sort(sortPlansByPrice).slice(0, 2);
+    return sortedPlans;
+  }, []);
+
+  // Fetch plans using the SDK hook
+  const {
+    plans,
+    loading,
+    error,
+    selectedPlanIndex,
+    selectedPlan: currentPlan,
+    setSelectedPlanIndex,
+  } = usePlans({
+    agentRef: agentRef || '',
+    fetcher: plansFetcher,
+    autoSelectFirstPaid: true,
+  });
+
+  // Use subscription helpers from SDK
+  const subscriptionHelpers = useSubscriptionHelpers(plans);
   
-  // Force refetch subscriptions when checkout page mounts to ensure fresh data
+  // Force refetch subscriptions when checkout page mounts
   useEffect(() => {
     refetch().catch((error) => {
       console.error(`[CheckoutPage] Refetch failed:`, error);
     });
   }, [refetch]);
 
-  // Fetch plans from the backend
-  useEffect(() => {
-    const fetchPlans = async () => {
-      if (!agentRef) {
-        setError('Agent reference not configured');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch plans');
-        }
-
-        const data = await response.json();
-        
-        // Sort plans by price, limit to first 2
-        const sortedPlans = (data.plans || [])
-          .sort((a: Plan, b: Plan) => (a.price || 0) - (b.price || 0))
-          .slice(0, 2);
-
-        if (sortedPlans.length === 0) {
-          throw new Error('No plans available');
-        }
-
-        // Set initial selection to first paid plan (skip free plans with price === 0)
-        const firstPaidIndex = sortedPlans.findIndex((plan: Plan) => plan.price && plan.price > 0);
-        setPlans(sortedPlans);
-        setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0);
-      } catch (err) {
-        console.error('Failed to fetch plans:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load plans');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPlans();
-  }, [agentRef]);
-
-  const currentPlan = plans[selectedPlanIndex];
-  
-  // Helper to check if a subscription is for a paid plan
-  const isPaidPlan = useMemo(() => {
-    return (planName: string): boolean => {
-      const plan = plans.find(p => p.name === planName);
-      return plan ? (plan.price ?? 0) > 0 && !plan.isFreeTier : true;
-    };
-  }, [plans]);
-  
-  // Memoize subscription calculations
-  const subscriptionData = useMemo(() => {
-    const activePaidSubscriptions = subscriptions.filter(
-      sub => sub.status === 'active' && isPaidPlan(sub.planName)
-    );
-    
-    const activePaidSubscription = activePaidSubscriptions
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-    
-    const cancelledPaidSubscriptions = subscriptions.filter(
-      sub => sub.status === 'cancelled' && isPaidPlan(sub.planName)
-    );
-    
-    const cancelledSubscription = cancelledPaidSubscriptions
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-    
-    const hasActiveSubscription = subscriptions.some(sub => sub.status === 'active');
-    const shouldShowCancelledNotice = cancelledSubscription && 
-      (!hasActiveSubscription || cancelledSubscription.endDate);
-    
-    return {
-      activePaidSubscription,
-      activePlanName: activePaidSubscription?.planName,
-      cancelledSubscription,
-      hasPaidSubscription: activePaidSubscriptions.length > 0,
-      shouldShowCancelledNotice,
-    };
-  }, [subscriptions, isPaidPlan]);
-
-  const { activePaidSubscription, activePlanName, cancelledSubscription, hasPaidSubscription, shouldShowCancelledNotice } = subscriptionData;
-  
-  // Format date helper
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
-  
-  // Calculate days until expiration
-  const getDaysUntilExpiration = (endDate?: string) => {
-    if (!endDate) return null;
-    const now = new Date();
-    const expiration = new Date(endDate);
-    const diffTime = expiration.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
-
+  // Handle payment success
   const handlePaymentSuccess = async () => {
     setPaymentSuccess(true);
     redirectTimeoutRef.current = setTimeout(() => {
@@ -153,6 +68,7 @@ export default function CheckoutPage() {
     }, 2000);
   };
 
+  // Clean up timeout on unmount
   useEffect(() => {
     return () => {
       if (redirectTimeoutRef.current) {
@@ -161,37 +77,37 @@ export default function CheckoutPage() {
     };
   }, []);
 
+  // Handle payment error
   const handlePaymentError = (err: Error) => {
     console.error('Payment failed:', err);
     setShowPaymentForm(false);
   };
 
+  // Handle continue button click
   const handleContinue = () => {
     if (currentPlan?.price && currentPlan.price > 0) {
       setShowPaymentForm(true);
     }
   };
 
+  // Handle cancel plan
   const handleCancelPlan = async () => {
     if (!confirm('Are you sure you want to cancel your plan?')) {
       return;
     }
 
+    const { activePaidSubscription } = subscriptionHelpers;
+
     if (!activePaidSubscription) {
-      setError('No active subscription found to cancel');
       return;
     }
 
-    // Double-check that the subscription is actually active (not already cancelled)
     if (activePaidSubscription.status !== 'active') {
-      setError('This subscription is already cancelled');
-      // Refetch to update UI
       await refetch();
       return;
     }
 
     setIsCancelling(true);
-    setError(null);
 
     try {
       const accessToken = await getAccessToken();
@@ -218,31 +134,19 @@ export default function CheckoutPage() {
       }
 
       await res.json();
-
-      // Add a small delay to allow backend to fully process the cancellation
-      // The API route already has a delay, but we add another small one here
       await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Refetch to clear any client-side cache
       await refetch();
-      
-      // Use full page reload to ensure fresh data is fetched from server
-      // This ensures the Navigation component gets fresh subscription data
       window.location.href = '/';
     } catch (err) {
       console.error('Cancel subscription failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to cancel subscription');
       setIsCancelling(false);
     }
   };
 
-  const price = currentPlan ? (currentPlan.price || 0) / 100 : 0;
-  
-  // Calculate days left for cancelled subscription
-  const cancelledDaysLeft = useMemo(() => {
-    if (!cancelledSubscription?.endDate) return null;
-    return getDaysUntilExpiration(cancelledSubscription.endDate);
-  }, [cancelledSubscription]);
+  // Handle back to plan selection
+  const handleBackToSelection = () => {
+    setShowPaymentForm(false);
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -252,16 +156,7 @@ export default function CheckoutPage() {
         </Link>
 
         {paymentSuccess ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-semibold text-slate-900 mb-2">Payment Successful!</h2>
-            <p className="text-slate-600 mb-4">Your subscription has been activated.</p>
-            <p className="text-sm text-slate-500">Redirecting to home page...</p>
-          </div>
+          <SuccessMessage />
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your subscription</h2>
@@ -272,158 +167,56 @@ export default function CheckoutPage() {
 
             {error && !loading && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-center">
-                {error}
+                {error.message}
               </div>
             )}
 
-            {!loading && !error && plans.length > 0 && !showPaymentForm && (
+            {!loading && !error && plans.length > 0 && currentPlan && currentPlan.reference && (
               <>
-                {/* Plan Selection Cards */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  {plans.map((plan, index) => {
-                    const isFreePlan = !plan.price || plan.price === 0;
-                    const isCurrentPlan = plan.name === activePlanName;
-                    const isSelected = !isFreePlan && selectedPlanIndex === index;
-                    const planPrice = plan.price ? Math.floor(plan.price / 100) : '0';
+                {!showPaymentForm && (
+                  <>
+                    {/* Plan Selection Cards */}
+                    <PlanSelectionSection
+                      plans={plans}
+                      selectedPlanIndex={selectedPlanIndex}
+                      activePlanName={subscriptionHelpers.activePlanName}
+                      onSelectPlan={setSelectedPlanIndex}
+                      className="mb-8"
+                    />
 
-                    return (
-                      <div
-                        key={plan.reference}
-                        className={`relative p-6 border-2 rounded-xl transition-all ${
-                          isFreePlan
-                            ? 'border-slate-200 bg-slate-50 cursor-not-allowed opacity-60'
-                            : isSelected
-                            ? 'border-green-500 bg-white shadow-sm cursor-pointer'
-                            : 'border-slate-200 bg-white hover:border-slate-300 cursor-pointer'
-                        }`}
-                        onClick={() => {
-                          if (!isFreePlan) {
-                            setSelectedPlanIndex(index);
-                          }
-                        }}
-                      >
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                        {isCurrentPlan && (
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-medium px-3 py-1 rounded-full">
-                            Current Plan
-                          </div>
-                        )}
-                        {!isCurrentPlan && index === 1 && !isFreePlan && (
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                            Popular
-                          </div>
-                        )}
-                        <div className="text-2xl font-bold text-slate-900 mb-1">${planPrice}</div>
-                        <div className="text-sm text-slate-600">{plan.name}</div>
-                      </div>
-                    );
-                  })}
-                </div>
+                    {/* Payment Summary */}
+                    <PaymentSummary selectedPlan={currentPlan} className="mb-8" />
 
-                {/* Total */}
-                <div className="flex justify-between items-center mb-8">
-                  <span className="text-sm font-medium text-slate-900">Total</span>
-                  <span className="text-xl font-bold text-slate-900">${Math.floor(price)}</span>
-                </div>
+                    {/* Cancelled Subscription Notice */}
+                    <SubscriptionNotices
+                      cancelledSubscription={subscriptionHelpers.cancelledSubscription}
+                      shouldShow={subscriptionHelpers.shouldShowCancelledNotice}
+                      className="mb-6"
+                    />
 
-                {/* Cancelled Subscription Notice */}
-                {shouldShowCancelledNotice && cancelledSubscription && (
-                  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-start">
-                      <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-amber-900 mb-2">
-                          Your subscription has been cancelled
-                        </p>
-                        {cancelledSubscription.endDate ? (
-                          <div className="mt-2 p-2 bg-white rounded border border-amber-300">
-                            <p className="text-sm font-semibold text-amber-900">
-                              ⏰ Subscription Expires: {formatDate(cancelledSubscription.endDate)}
-                            </p>
-                            {cancelledDaysLeft !== null && cancelledDaysLeft > 0 && (
-                              <p className="text-xs text-amber-700 mt-1">
-                                {cancelledDaysLeft} {cancelledDaysLeft === 1 ? 'day' : 'days'} remaining
-                              </p>
-                            )}
-                            <p className="text-xs text-amber-700 mt-1">
-                              You'll continue to have access to {cancelledSubscription.planName} features until this date
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-amber-700 mt-1">
-                            Your subscription access has ended
-                          </p>
-                        )}
-                        {cancelledSubscription.cancelledAt && (
-                          <p className="text-xs text-amber-600 mt-2">
-                            Cancelled on {formatDate(cancelledSubscription.cancelledAt)}
-                            {cancelledSubscription.cancellationReason && ` - ${cancelledSubscription.cancellationReason}`}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    {/* Action Buttons */}
+                    <CheckoutActions
+                      hasPaidSubscription={subscriptionHelpers.hasPaidSubscription}
+                      shouldShowCancelledNotice={subscriptionHelpers.shouldShowCancelledNotice}
+                      onContinue={handleContinue}
+                      onCancel={handleCancelPlan}
+                      isPreparingCheckout={false}
+                      isCancelling={isCancelling}
+                    />
+                  </>
                 )}
 
-                {/* Continue Button or Cancel Plan Button */}
-                {hasPaidSubscription && !shouldShowCancelledNotice ? (
-                  <button
-                    onClick={handleCancelPlan}
-                    disabled={isCancelling}
-                    className="w-full py-3 border-2 border-slate-300 text-slate-900 rounded-lg hover:border-red-500 hover:text-red-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isCancelling ? 'Cancelling...' : 'Cancel Plan'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleContinue}
-                    className="w-full py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium"
-                  >
-                    Continue
-                  </button>
+                {/* Payment Form - Only mount when needed */}
+                {showPaymentForm && (
+                  <PaymentFormSection
+                    currentPlan={currentPlan}
+                    agentRef={agentRef}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    onBack={handleBackToSelection}
+                  />
                 )}
               </>
-            )}
-
-            {/* Payment Form */}
-            {showPaymentForm && currentPlan && (
-              <div className="space-y-6">
-                <div className="pb-6 border-b border-slate-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm text-slate-600">Selected Plan:</span>
-                    <span className="text-sm font-medium text-slate-900">{currentPlan.name}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Total:</span>
-                    <span className="text-lg font-bold text-slate-900">${Math.floor(price)}</span>
-                  </div>
-                </div>
-
-                <PaymentForm
-                  planRef={currentPlan.reference}
-                  agentRef={agentRef}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  submitButtonText="Complete Purchase"
-                  className="space-y-6"
-                  buttonClassName="w-full py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-
-                <button
-                  onClick={() => setShowPaymentForm(false)}
-                  className="mt-6 text-sm text-slate-600 hover:text-slate-900 block"
-                >
-                  ← Back to plan selection
-                </button>
-              </div>
             )}
           </div>
         )}

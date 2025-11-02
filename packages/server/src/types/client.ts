@@ -102,9 +102,14 @@ export interface SolvaPayClient {
   listPlans?(agentRef: string): Promise<Array<{
     reference: string;
     name: string;
+    description?: string;
+    price?: number;
+    currency?: string;
+    interval?: string;
     isFreeTier?: boolean;
     freeUnits?: number;
-    description?: string;
+    metadata?: Record<string, any>;
+    [key: string]: any; // Allow additional fields from API
   }>>;
 
   // POST: /v1/sdk/agents/{agentRef}/plans

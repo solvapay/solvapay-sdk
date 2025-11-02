@@ -13,11 +13,16 @@ export { PaymentForm } from './PaymentForm';
 // Headless Components
 export { PlanBadge } from './components/PlanBadge';
 export { SubscriptionGate } from './components/SubscriptionGate';
+export { PlanSelector } from './components/PlanSelector';
+export { Spinner } from './components/Spinner';
+export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper';
 
 // Hooks
 export { useSubscription } from './hooks/useSubscription';
 export { useCheckout } from './hooks/useCheckout';
 export { useSolvaPay } from './hooks/useSolvaPay';
+export { usePlans } from './hooks/usePlans';
+export { useSubscriptionHelpers } from './hooks/useSubscriptionHelpers';
 
 // Types
 export type {
@@ -29,8 +34,13 @@ export type {
   PaymentIntentResult,
   PlanBadgeProps,
   SubscriptionGateProps,
+  PlanSelectorProps,
   PaymentFormProps,
   PaymentError,
+  Plan,
+  UsePlansOptions,
+  UsePlansReturn,
+  SubscriptionHelpersReturn,
 } from './types';
 
 // Utilities
