@@ -72,6 +72,8 @@ export interface PlanBadgeProps {
   children?: (props: {
     subscriptions: SubscriptionInfo[];
     loading: boolean;
+    displayPlan: string | null;
+    shouldShow: boolean;
   }) => React.ReactNode;
   as?: React.ElementType;
   className?: string | ((props: { subscriptions: SubscriptionInfo[] }) => string);

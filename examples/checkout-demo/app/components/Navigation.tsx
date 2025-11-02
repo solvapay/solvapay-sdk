@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PlanBadge, useSubscription, getPrimarySubscription, hasActivePaidSubscription } from '@solvapay/react';
+import { PlanBadge, useSubscription, hasActivePaidSubscription } from '@solvapay/react';
 import { Button } from './ui/Button';
 import { signOut, getUserEmail, onAuthStateChange } from '../lib/supabase';
 import { useState, useEffect } from 'react';
@@ -113,21 +113,17 @@ export function Navigation() {
 
           <div className="flex items-center gap-4">
             <PlanBadge>
-              {({ subscriptions, loading }) => {
-                // Use shared utility to get primary subscription (prioritizes active over cancelled)
-                const primarySubscription = getPrimarySubscription(subscriptions);
+              {({ displayPlan, shouldShow }) => {
+                // Badge handles hiding internally, only render if shouldShow is true
+                if (!shouldShow) {
+                  return null;
+                }
                 
                 return (
                   <div className="px-2.5 py-1 rounded-md bg-slate-50 text-xs font-medium">
-                    {loading ? (
-                      <span className="text-slate-400">Loading...</span>
-                    ) : primarySubscription ? (
-                      <span className="text-emerald-600">
-                        {primarySubscription.planName}
-                      </span>
-                    ) : (
-                      <span className="text-slate-500">No Plan</span>
-                    )}
+                    <span className="text-emerald-600">
+                      {displayPlan}
+                    </span>
                   </div>
                 );
               }}
