@@ -8,12 +8,13 @@
 // Re-export generated types
 export type { paths, components, operations } from './generated';
 
-// Re-export client types
+// Re-export client types from types/client.ts
 export type {
   LimitResponseWithPlan,
   CustomerResponseMapped,
-  SolvaPayClient,
 } from './client';
+// Re-export SolvaPayClient interface from types/client.ts
+export type { SolvaPayClient } from './client';
 
 // Re-export paywall types
 export type {

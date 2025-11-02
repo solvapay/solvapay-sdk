@@ -168,9 +168,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             className={buttonClassName}
             aria-busy="true"
           >
-            <span className="flex items-center justify-center gap-2">
+            <span className="flex items-center justify-center">
               <Spinner size="sm" />
-              {submitButtonText}
             </span>
           </button>
         </div>

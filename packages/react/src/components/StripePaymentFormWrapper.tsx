@@ -141,14 +141,12 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
         aria-disabled={!isReady || !isPaymentElementReady || isProcessing}
       >
         {isProcessing ? (
-          <span className="flex items-center justify-center gap-2">
+          <span className="flex items-center justify-center">
             <Spinner size="sm" />
-            Processing...
           </span>
         ) : (!isReady || !isPaymentElementReady) ? (
-          <span className="flex items-center justify-center gap-2">
+          <span className="flex items-center justify-center">
             <Spinner size="sm" />
-            {submitButtonText}
           </span>
         ) : (
           submitButtonText
