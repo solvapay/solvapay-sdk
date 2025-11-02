@@ -5,7 +5,7 @@ This document describes the automated publishing and release process for SolvaPa
 ## Overview
 
 The SolvaPay SDK uses an automated publishing workflow that:
-- Publishes three packages: `@solvapay/core`, `@solvapay/react`, and `@solvapay/server`
+- Publishes five packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/server`, `@solvapay/auth`, and `@solvapay/next`
 - Uses **fixed versioning** - all packages share the same version number
 - Auto-increments the **patch** version on every push to `main` branch
 - Generates changelogs using conventional commits
@@ -45,7 +45,7 @@ pnpm version:bump:major
 ```
 
 These commands will:
-1. Update all three package.json files with the new version
+1. Update all five package.json files with the new version
 2. Generate changelog based on conventional commits
 3. Show you the next steps (commit and push)
 
@@ -203,6 +203,8 @@ All packages are published with **public access** under the `@solvapay` scope:
 - `@solvapay/core`
 - `@solvapay/react`
 - `@solvapay/server`
+- `@solvapay/auth`
+- `@solvapay/next`
 
 ## Authentication Best Practices
 
@@ -315,7 +317,7 @@ This will:
 - Detect your current version (e.g., `0.1.0`)
 - Increment to next preview (e.g., `0.1.0-preview.1`)
 - If already a preview, increment the number (e.g., `0.1.0-preview.1` → `0.1.0-preview.2`)
-- Update all three package.json files
+- Update all five package.json files
 
 #### Step 2: Build Packages
 
@@ -329,7 +331,7 @@ pnpm build:packages
 pnpm publish:preview
 ```
 
-This publishes all three packages with the `preview` dist-tag.
+This publishes all five packages with the `preview` dist-tag.
 
 #### Step 4: Commit and Push
 
@@ -348,6 +350,8 @@ Users can install preview versions in several ways:
 npm install @solvapay/core@preview
 npm install @solvapay/react@preview
 npm install @solvapay/server@preview
+npm install @solvapay/auth@preview
+npm install @solvapay/next@preview
 
 # Install a specific preview version
 npm install @solvapay/core@0.1.0-preview.1
@@ -357,7 +361,9 @@ npm install @solvapay/core@0.1.0-preview.1
   "dependencies": {
     "@solvapay/core": "preview",
     "@solvapay/react": "preview",
-    "@solvapay/server": "preview"
+    "@solvapay/server": "preview",
+    "@solvapay/auth": "preview",
+    "@solvapay/next": "preview"
   }
 }
 ```

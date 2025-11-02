@@ -17,8 +17,8 @@
     "version:bump:minor": "tsx scripts/version-bump.ts minor",
     "version:bump:major": "tsx scripts/version-bump.ts major",
     "version:bump:preview": "tsx scripts/version-bump-preview.ts",
-    "publish:packages": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' publish --access public --no-git-checks --no-provenance",
-    "publish:preview": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' publish --tag preview --access public --no-git-checks --no-provenance"
+    "publish:packages": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' --filter '@solvapay/auth' --filter '@solvapay/next' publish --access public --no-git-checks --no-provenance",
+    "publish:preview": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' --filter '@solvapay/auth' --filter '@solvapay/next' publish --tag preview --access public --no-git-checks --no-provenance"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",

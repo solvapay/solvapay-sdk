@@ -15,6 +15,8 @@ solvapay-sdk/
 │  ├─ core/                # @solvapay/core (types & schemas)
 │  ├─ server/              # @solvapay/server (Node + Edge)
 │  ├─ react/               # @solvapay/react (payment components)
+│  ├─ auth/                # @solvapay/auth (authentication adapters)
+│  ├─ next/                # @solvapay/next (Next.js utilities)
 │  ├─ demo-services/       # Demo services for examples (private)
 │  ├─ test-utils/          # Testing utilities (private)
 │  └─ tsconfig/            # Shared TypeScript config (private)
@@ -27,13 +29,15 @@ solvapay-sdk/
 
 ## Package Summary
 
-The SDK has been streamlined to **3 published packages** focused on clear use cases:
+The SDK consists of **5 published packages** focused on clear use cases:
 
 | Package | Version | Purpose | Published |
 |---------|---------|---------|-----------|
-| `@solvapay/core` | 0.1.0 | Types, schemas, shared utilities | ✅ Yes |
-| `@solvapay/server` | 0.1.0 | Node + Edge runtime SDK with unified API | ✅ Yes |
-| `@solvapay/react` | 0.1.0 | Payment flow components (Stripe integration) | ✅ Yes |
+| `@solvapay/core` | 1.0.0-preview.6 | Types, schemas, shared utilities | ✅ Yes |
+| `@solvapay/server` | 1.0.0-preview.6 | Node + Edge runtime SDK with unified API | ✅ Yes |
+| `@solvapay/react` | 1.0.0-preview.6 | Payment flow components (Stripe integration) | ✅ Yes |
+| `@solvapay/auth` | 1.0.0-preview.6 | Authentication adapters for extracting user IDs | ✅ Yes |
+| `@solvapay/next` | 1.0.0-preview.6 | Next.js-specific utilities and helpers | ✅ Yes |
 | `@solvapay/demo-services` | 0.0.0 | Demo services for examples | 🔒 Private |
 | `@solvapay/test-utils` | 0.0.0 | Testing utilities | 🔒 Private |
 | `@solvapay/tsconfig` | 0.0.0 | Shared TypeScript config | 🔒 Private |
@@ -62,6 +66,22 @@ The SDK has been streamlined to **3 published packages** focused on clear use ca
 * Handles Stripe integration for payment processing.
 * Includes default styling for payment forms.
 * Peer deps: `react`, `react-dom`.
+
+### `@solvapay/auth` (authentication adapters)
+
+* Authentication adapters for extracting user IDs from requests.
+* Provides `SupabaseAuthAdapter` for Supabase JWT token validation.
+* Provides `MockAuthAdapter` for testing and development.
+* Works in Edge runtimes (Vercel Edge Functions, Cloudflare Workers, etc.).
+* Peer deps: `jose` (for SupabaseAuthAdapter).
+
+### `@solvapay/next` (Next.js utilities)
+
+* Next.js-specific utilities and helpers.
+* Provides `checkSubscription` helper with built-in request deduplication and caching.
+* Provides cache management utilities (`clearSubscriptionCache`, etc.).
+* Framework-specific optimizations for Next.js API routes.
+* Peer deps: `next` (>=13.0.0).
 
 ## Build & Release
 
@@ -103,6 +123,13 @@ const mcpHandler = payable.mcp(handler);                // MCP servers
 
 // React payment components:
 import { SolvaPayProvider, PaymentForm } from '@solvapay/react';
+
+// Authentication adapters:
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { MockAuthAdapter } from '@solvapay/auth/mock';
+
+// Next.js utilities:
+import { checkSubscription, clearSubscriptionCache } from '@solvapay/next';
 ```
 
 ## Runtime Detection

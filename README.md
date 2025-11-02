@@ -38,15 +38,23 @@ npm install @solvapay/server
 
 # For client-side payment flows
 npm install @solvapay/react
+
+# For Next.js integration
+npm install @solvapay/next
+
+# For authentication adapters
+npm install @solvapay/auth
 ```
 
 ## 📦 Packages
 
-The SDK consists of **3 focused packages**:
+The SDK consists of **5 published packages**:
 
 - **`@solvapay/core`** - Types, schemas, and shared utilities
 - **`@solvapay/server`** - Universal server SDK (Node + Edge runtime)
 - **`@solvapay/react`** - Headless payment components and hooks
+- **`@solvapay/auth`** - Authentication adapters for extracting user IDs from requests
+- **`@solvapay/next`** - Next.js-specific utilities and helpers
 
 See [`docs/architecture.md`](./docs/architecture.md) for detailed package design and boundaries.
 
@@ -205,7 +213,7 @@ See [`examples/README.md`](./examples/README.md) for detailed setup instructions
 
 ## 🏗️ Architecture
 
-This is a **monorepo** with 3 published packages built using Turborepo, tsup, and pnpm workspaces.
+This is a **monorepo** with 5 published packages built using Turborepo, tsup, and pnpm workspaces.
 
 See [`docs/architecture.md`](./docs/architecture.md) for:
 - Detailed package design and boundaries
