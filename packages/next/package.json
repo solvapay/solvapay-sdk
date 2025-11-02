@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/next",
-  "version": "1.0.0-preview.6",
+  "version": "1.0.0-preview.7",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -50,4 +50,3 @@
     "vitest": "^2.0.5"
   }
 }
-
