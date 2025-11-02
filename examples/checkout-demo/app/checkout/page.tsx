@@ -236,7 +236,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const price = currentPlan ? (currentPlan.price || 0) / 100 : 0;
+  const price = currentPlan ? (currentPlan.price || 0) : 0;
   
   // Calculate days left for cancelled subscription
   const cancelledDaysLeft = useMemo(() => {
@@ -284,7 +284,7 @@ export default function CheckoutPage() {
                     const isFreePlan = !plan.price || plan.price === 0;
                     const isCurrentPlan = plan.name === activePlanName;
                     const isSelected = !isFreePlan && selectedPlanIndex === index;
-                    const planPrice = plan.price ? Math.floor(plan.price / 100) : '0';
+                    const planPrice = plan.price ? Math.floor(plan.price) : '0';
 
                     return (
                       <div
