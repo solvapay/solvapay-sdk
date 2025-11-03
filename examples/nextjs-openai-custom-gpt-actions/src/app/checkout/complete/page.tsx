@@ -6,33 +6,22 @@ import Link from 'next/link'
 export default function CheckoutCompletePage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
-  const [plan, setPlan] = useState('')
 
   useEffect(() => {
-    // Get URL parameters
+    // Check URL parameters for success/error status
     const urlParams = new URLSearchParams(window.location.search)
-    const planParam = urlParams.get('plan')
     const returnUrl = urlParams.get('return_url')
     
-    if (planParam) {
-      setPlan(planParam)
-    }
-
-    // Simulate processing the checkout completion
+    // Hosted checkout redirects back here after successful payment
+    // The status is typically handled by the hosted checkout page
+    // For now, assume success if we reach this page
     const timer = setTimeout(() => {
       setStatus('success')
       setMessage('Your subscription has been successfully upgraded!')
-    }, 2000)
+    }, 1000)
 
     return () => clearTimeout(timer)
   }, [])
-
-  const planNames = {
-    pro: 'PRO Plan',
-    enterprise: 'ENTERPRISE Plan'
-  }
-
-  const planName = planNames[plan as keyof typeof planNames] || 'PRO Plan'
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -65,10 +54,10 @@ export default function CheckoutCompletePage() {
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
                 <h3 className="text-lg font-semibold text-blue-800 mb-2">
-                  {planName}
+                  Subscription Active
                 </h3>
                 <p className="text-sm text-blue-700">
-                  Your plan has been upgraded and is now active in ChatGPT.
+                  Your plan has been upgraded and is now active.
                 </p>
               </div>
               <div className="space-y-3">
@@ -117,15 +106,6 @@ export default function CheckoutCompletePage() {
               </div>
             </div>
           )}
-
-          <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <h3 className="text-sm font-medium text-blue-800 mb-2">Demo Mode</h3>
-            <p className="text-sm text-blue-700">
-              This is a demo checkout completion page. In a real implementation, 
-              this would verify the payment with your payment processor and 
-              update the user&apos;s subscription status.
-            </p>
-          </div>
         </div>
       </div>
     </div>

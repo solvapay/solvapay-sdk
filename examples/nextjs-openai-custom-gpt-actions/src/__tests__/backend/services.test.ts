@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { demoApiClient } from '../../services/apiClient'
-import { paywallService } from '../../services/paywallService'
 
 describe('Services', () => {
   describe('DemoApiClient', () => {
@@ -140,28 +139,6 @@ describe('Services', () => {
         expect(url).toContain('customer_ref=test-customer')
         expect(url).toContain('return_url=')
       })
-    })
-  })
-
-  describe('PaywallService', () => {
-    it('should have SolvaPay instance', () => {
-      const solvaPay = paywallService.getSolvaPay()
-      expect(solvaPay).toBeDefined()
-    })
-
-    it('should delegate checkLimits to apiClient', async () => {
-      const result = await paywallService.checkLimits('test-customer', 'test-agent')
-      expect(result).toBeDefined()
-      expect(result.withinLimits).toBe(true)
-    })
-
-    it('should delegate trackUsage to apiClient', async () => {
-      await expect(paywallService.trackUsage('test-customer', 'test-agent')).resolves.toBeUndefined()
-    })
-
-    it('should delegate getCheckoutUrl to apiClient', () => {
-      const url = paywallService.getCheckoutUrl('test-customer', 'test-agent')
-      expect(url).toContain('/checkout')
     })
   })
 

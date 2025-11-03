@@ -273,6 +273,12 @@ importers:
       '@solvapay/demo-services':
         specifier: workspace:*
         version: link:../../packages/demo-services
+      '@solvapay/next':
+        specifier: workspace:*
+        version: link:../../packages/next
+      '@solvapay/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../packages/server

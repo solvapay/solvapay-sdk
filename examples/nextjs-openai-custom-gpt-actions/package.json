@@ -27,6 +27,8 @@
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@solvapay/core": "workspace:*",
+    "@solvapay/react": "workspace:*",
+    "@solvapay/next": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
     "next": "^15.0.0",
     "react": "^18.3.0",
