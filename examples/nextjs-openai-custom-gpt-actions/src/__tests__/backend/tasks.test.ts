@@ -4,12 +4,10 @@ import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from '
 import { join } from 'path'
 import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
 import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
-import { createStubClient } from '../../../shared/stub-api-client'
 
 describe('Tasks CRUD Endpoints', () => {
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
-  const demoApiClient = createStubClient({ useFileStorage: true, debug: false })
 
   beforeEach(async () => {
     // Ensure demo data directory exists
@@ -30,14 +28,10 @@ describe('Tasks CRUD Endpoints', () => {
     }
     
     writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2))
-    
-    // Reset usage counters
-    await demoApiClient.resetUsage()
   })
 
   afterEach(async () => {
-    // Reset demo data
-    await demoApiClient.resetUsage()
+    // Clean up after tests
   })
 
   describe('/api/tasks', () => {

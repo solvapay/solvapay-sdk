@@ -1,20 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
 import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
-import { GET as userPlanGET } from '../../app/api/user/plan/route'
-import { POST as updatePlanPOST } from '../../app/api/user/plan/update/route'
-import { SignJWT } from 'jose'
 import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { NextRequest } from 'next/server'
-import { createStubClient } from '../../../shared/stub-api-client'
 import { clearAllTasks } from '@solvapay/demo-services'
 
 describe('Integration Tests', () => {
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
   const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
-  const demoApiClient = createStubClient({ useFileStorage: true, debug: false })
   
   beforeEach(async () => {
     // Ensure demo data directory exists
@@ -41,14 +36,12 @@ describe('Integration Tests', () => {
       unlinkSync(USER_PLANS_FILE)
     }
     
-    // Reset usage and clear all tasks
-    await demoApiClient.resetUsage()
+    // Clear all tasks
     clearAllTasks()
   })
 
   afterEach(async () => {
     // Clean up after tests
-    await demoApiClient.resetUsage()
     clearAllTasks()
   })
 
@@ -134,3 +127,4 @@ describe('Integration Tests', () => {
     })
   })
 })
+
