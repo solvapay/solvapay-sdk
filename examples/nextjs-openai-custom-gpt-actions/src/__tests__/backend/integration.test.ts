@@ -1,12 +1,59 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
-import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
+// Set environment variables before importing modules that depend on them
+process.env.SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY || 'test-api-key'
+process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { NextRequest } from 'next/server'
 import { clearAllTasks } from '@solvapay/demo-services'
+import { setupTestEnvironment } from './test-utils'
+
+// Mock the route modules to use stub client
+vi.mock('../../app/api/tasks/route', async () => {
+  const { createTask, listTasks } = await import('@solvapay/demo-services')
+  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
+  const { createSolvaPay } = await import('@solvapay/server')
+  
+  const stubClient = new StubSolvaPayClient({ 
+    useFileStorage: true,
+    freeTierLimit: 1000,
+    debug: false
+  })
+  const solvaPay = createSolvaPay({ apiClient: stubClient })
+  const payable = solvaPay.payable({ agent: 'crud-basic' })
+  
+  return {
+    GET: payable.next(listTasks),
+    POST: payable.next(createTask)
+  }
+})
+
+vi.mock('../../app/api/tasks/[id]/route', async () => {
+  const { getTask, deleteTask } = await import('@solvapay/demo-services')
+  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
+  const { createSolvaPay } = await import('@solvapay/server')
+  
+  const stubClient = new StubSolvaPayClient({ 
+    useFileStorage: true,
+    freeTierLimit: 1000,
+    debug: false
+  })
+  const solvaPay = createSolvaPay({ apiClient: stubClient })
+  const payable = solvaPay.payable({ agent: 'crud-basic' })
+  
+  return {
+    GET: payable.next(getTask),
+    DELETE: payable.next(deleteTask)
+  }
+})
+
+// Import after mocking
+import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
+import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
 
 describe('Integration Tests', () => {
+  setupTestEnvironment()
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
   const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
