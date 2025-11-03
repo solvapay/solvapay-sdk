@@ -465,9 +465,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result;
     },
 
-    // POST: /v1/sdk/customer-sessions
+    // POST: /v1/sdk/customers/customer-sessions
     async createCustomerSession(params) {
-      const url = `${base}/v1/sdk/customer-sessions`;
+      const url = `${base}/v1/sdk/customers/customer-sessions`;
       
       const res = await fetch(url, {
         method: "POST",

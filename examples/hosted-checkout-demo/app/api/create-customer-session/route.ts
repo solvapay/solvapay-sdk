@@ -51,13 +51,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Call backend API to create customer session
-    // Backend endpoint: POST /v1/sdk/customer-sessions
     const session = await solvaPay.createCustomerSession({
       customerRef: ensuredCustomerRef,
     });
 
-    // Return the session data to the client
-    // Expected response format: { sessionId: string, sessionUrl?: string, ... }
     return NextResponse.json(session);
 
   } catch (error) {

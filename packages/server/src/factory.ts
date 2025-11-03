@@ -175,7 +175,7 @@ export interface SolvaPay {
     customerRef: string;
     planRef?: string;
   }): Promise<{
-    checkoutSessionId: string;
+    sessionId: string;
     checkoutUrl: string;
   }>;
   
@@ -186,8 +186,7 @@ export interface SolvaPay {
     customerRef: string;
   }): Promise<{
     sessionId: string;
-    sessionUrl?: string;
-    [key: string]: any;
+    customerUrl: string;
   }>;
   
   /**

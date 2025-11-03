@@ -57,11 +57,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Return the session data to the client
-    // Map sessionUrl to customerUrl for consistency with frontend expectations
-    return NextResponse.json({
-      ...session,
-      customerUrl: session.sessionUrl || session.customerUrl,
-    });
+    // Expected response format: { sessionId: string, customerUrl: string }
+    return NextResponse.json(session);
 
   } catch (error) {
     console.error('Customer session creation failed:', error);

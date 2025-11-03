@@ -396,7 +396,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     customerRef: string;
     agentRef: string;
     planRef?: string;
-  }): Promise<{ checkoutSessionId: string; checkoutUrl: string }> {
+  }): Promise<{ sessionId: string; checkoutUrl: string }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
     
@@ -419,7 +419,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`);
     
     return {
-      checkoutSessionId: sessionId,
+      sessionId: sessionId,
       checkoutUrl: checkoutUrl,
     };
   }
@@ -431,8 +431,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     customerRef: string;
   }): Promise<{
     sessionId: string;
-    sessionUrl?: string;
-    [key: string]: any;
+    customerUrl: string;
   }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
@@ -441,13 +440,13 @@ export class StubSolvaPayClient implements SolvaPayClient {
     const sessionId = `customer_sess_${Math.random().toString(36).slice(2, 15)}`;
     
     // Build customer session URL
-    const sessionUrl = `${this.baseUrl}/customer-session/${sessionId}`;
+    const customerUrl = `${this.baseUrl}/customer-session/${sessionId}`;
     
     this.log(`🔐 Created customer session for ${params.customerRef}: ${sessionId}`);
     
     return {
       sessionId,
-      sessionUrl,
+      customerUrl,
     };
   }
 

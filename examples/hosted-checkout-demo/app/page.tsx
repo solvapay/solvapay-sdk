@@ -112,14 +112,14 @@ export default function HomePage() {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      const response = await fetch('/api/create-manage-customer-token', {
+      const response = await fetch('/api/create-customer-session', {
         method: 'POST',
         headers,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || errorData.details || 'Failed to create management token';
+        const errorMessage = errorData.error || errorData.details || 'Failed to create customer session';
         throw new Error(errorMessage);
       }
 

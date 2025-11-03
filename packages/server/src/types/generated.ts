@@ -108,6 +108,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/customers/customer-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a customer session
+         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
+         */
+        post: operations["CustomerSdkController_createCustomerSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer session by sessionId
+         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
+         */
+        get: operations["CustomerSdkController_getCustomerSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/payment-intents": {
         parameters: {
             query?: never;
@@ -454,6 +494,11 @@ export interface components {
              * @example pln_2b3c4d5e6f7g
              */
             planRef?: string;
+            /**
+             * @description URL to redirect to after successful payment (optional)
+             * @example https://example.com/payment-success
+             */
+            returnUrl?: string;
         };
         CheckoutSessionResponse: {
             /**
@@ -483,7 +528,7 @@ export interface components {
             status: string;
             /**
              * @description Checkout URL to open the checkout page
-             * @example http://localhost:3000/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+             * @example https://solvapay.com/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
              */
             checkoutUrl: string;
         };
@@ -634,6 +679,60 @@ export interface components {
             /** @description Active subscriptions */
             subscriptions?: components["schemas"]["SubscriptionInfo"][];
         };
+        CreateCustomerSessionRequest: {
+            /**
+             * @description Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+        };
+        CreateCustomerSessionResponse: {
+            /**
+             * @description Customer session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * @description Full customer URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+        };
+        GetCustomerSessionResponse: {
+            /**
+             * @description Customer session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * @description Session status
+             * @example active
+             * @enum {string}
+             */
+            status: "active" | "expired" | "used";
+            /**
+             * @description Full customer URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+            /**
+             * @description Session expiration date
+             * @example 2025-01-01T12:00:00.000Z
+             */
+            expiresAt: string;
+            /** @description Customer object from session data */
+            customer: components["schemas"]["CustomerResponse"];
+            /**
+             * @description Session creation date
+             * @example 2025-01-01T11:45:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Session last update date
+             * @example 2025-01-01T11:45:00.000Z
+             */
+            updatedAt: string;
+        };
         Agent: Record<string, never>;
         CreateAgentRequest: Record<string, never>;
         UpdateAgentRequest: Record<string, never>;
@@ -749,10 +848,10 @@ export interface components {
              * @description Checkout session ID/token
              * @example e3f1c2d4b6a89f001122334455667788
              */
-            checkoutSessionId: string;
+            sessionId: string;
             /**
              * @description Full checkout URL based on backend configuration (ready to redirect customer)
-             * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
              */
             checkoutUrl: string;
         };
@@ -1013,6 +1112,81 @@ export interface operations {
                 };
             };
             /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_createCustomerSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Customer session creation request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCustomerSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Customer session created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateCustomerSessionResponse"];
+                };
+            };
+            /** @description Invalid request data or customer not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_getCustomerSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer session ID/token */
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer session retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetCustomerSessionResponse"];
+                };
+            };
+            /** @description Customer session not found */
             404: {
                 headers: {
                     [name: string]: unknown;

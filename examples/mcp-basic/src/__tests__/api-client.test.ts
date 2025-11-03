@@ -122,12 +122,12 @@ describe('StubSolvaPayClient', () => {
         planRef: 'test_plan_ref'
       });
 
-      expect(result).toHaveProperty('checkoutSessionId');
+      expect(result).toHaveProperty('sessionId');
       expect(result).toHaveProperty('checkoutUrl');
       expect(result.checkoutUrl).toContain('checkout.solvapay.com');
       expect(result.checkoutUrl).toContain('customer=test_customer');
       expect(result.checkoutUrl).toContain('agent=test_plan');
-      expect(typeof result.checkoutSessionId).toBe('string');
+      expect(typeof result.sessionId).toBe('string');
     });
   });
 

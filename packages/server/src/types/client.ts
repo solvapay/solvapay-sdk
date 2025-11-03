@@ -153,13 +153,9 @@ export interface SolvaPayClient {
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(params: components['schemas']['CreateCheckoutSessionRequest']): Promise<components['schemas']['CreateCheckoutSessionResponse']>;
 
-  // POST: /v1/sdk/customer-sessions
-  createCustomerSession(params: {
-    customerRef: string;
-  }): Promise<{
-    sessionId: string;
-    sessionUrl?: string;
-    [key: string]: any;
-  }>;
+  // POST: /v1/sdk/customers/customer-sessions
+  createCustomerSession(
+    params: components['schemas']['CreateCustomerSessionRequest']
+  ): Promise<components['schemas']['CreateCustomerSessionResponse']>;
 }
 

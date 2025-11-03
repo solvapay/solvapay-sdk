@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Return the session details to the client
-    // The backend returns checkoutSessionId and checkoutUrl
+    // The backend returns sessionId and checkoutUrl
     return NextResponse.json({
-      checkoutSessionId: session.checkoutSessionId,
+      sessionId: session.sessionId,
       checkoutUrl: session.checkoutUrl,
     });
 
