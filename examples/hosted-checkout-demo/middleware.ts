@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/api/list-plans'];
+  const publicRoutes: string[] = [];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   // Initialize auth adapter (with error handling)

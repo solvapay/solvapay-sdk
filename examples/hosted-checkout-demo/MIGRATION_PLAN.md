@@ -42,11 +42,11 @@ The hosted checkout demo will:
 ### API Routes to Remove
 - `/app/api/create-payment-intent/route.ts` - Replaced by create-checkout-token
 - `/app/api/process-payment/route.ts` - Not needed for hosted checkout
+- `/app/api/cancel-subscription/route.ts` - Removed (cancellation handled on hosted page)
+- `/app/api/list-plans/route.ts` - Removed (plan listing handled on hosted checkout page)
 
 ### API Routes to Keep
-- `/app/api/list-plans/route.ts` - May still be needed for displaying plans on home page
 - `/app/api/check-subscription/route.ts` - Still needed for subscription status
-- `/app/api/cancel-subscription/route.ts` - Keep if cancellation can happen from app (or remove if handled on hosted page)
 - `/app/api/sync-customer/route.ts` - Keep for ensuring customer exists before redirecting
 
 ## Files to Create
@@ -284,12 +284,10 @@ The hosted checkout demo will:
    - If selecting on hosted page: Remove plan selection UI entirely
 
 3. **Cancellation**: Should cancellation be handled on the hosted page only, or can users cancel from the app?
-   - If hosted only: Remove `/api/cancel-subscription` route
-   - If app can cancel: Keep route but update UI
+   - ✅ **Resolved**: Cancellation is handled on the hosted page only - `/api/cancel-subscription` route has been removed
 
 4. **Plan Display**: Should the home page still show available plans?
-   - If yes: Keep `/api/list-plans` route and display plans
-   - If no: Remove plan display and just show subscription status
+   - ✅ **Resolved**: Plans are displayed on the hosted checkout page only - `/api/list-plans` route has been removed
 
 5. **Error Handling**: How should errors be displayed?
    - Toast notifications?

@@ -8,22 +8,19 @@ import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '
 // const userId = await auth.getUserIdFromRequest(request);
 
 /**
- * Secure Backend API Route for Creating Checkout Sessions
+ * Secure Backend API Route for Creating Customer Sessions
  * 
- * This route generates a secure checkout session for accessing the hosted checkout page on app.solvapay.com.
- * This replaces the embedded checkout flow (create-payment-intent) with a hosted checkout flow.
+ * This route generates a secure session for accessing customer-specific functionality.
  * 
  * Flow:
  * 1. Client calls this API route from browser with Authorization header
  * 2. Middleware extracts userId from Supabase JWT token and sets x-user-id header
  * 3. This route reads userId from x-user-id header
  * 4. This route ensures customer exists in SolvaPay backend
- * 5. This route calls SolvaPay backend API to create checkout session
- * 6. Returns session details (sessionId and checkoutUrl) to client
- * 7. Client redirects to the checkoutUrl returned by the backend
+ * 5. This route calls SolvaPay backend API to create customer session
+ * 6. Returns session details to client
  * 
- * Similar to Stripe Checkout hosted pages - the session ID is used to access
- * the hosted checkout page, allowing secure access without exposing payment details.
+ * The backend endpoint: POST /v1/sdk/customer-sessions
  */
 
 export async function POST(request: NextRequest) {
@@ -40,15 +37,6 @@ export async function POST(request: NextRequest) {
     const email = await getUserEmailFromRequest(request);
     const name = await getUserNameFromRequest(request);
 
-    const { planRef, agentRef } = await request.json();
-
-    if (!agentRef) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: agentRef is required' },
-        { status: 400 }
-      );
-    }
-
     // SECURITY: Only use the secret key on the server
     // Config is automatically read from environment variables
     const solvaPay = createSolvaPay();
@@ -62,28 +50,23 @@ export async function POST(request: NextRequest) {
       name: name || undefined,
     });
 
-    // Call backend API to create checkout session
-    // Backend endpoint: POST /v1/sdk/checkout-sessions
-    const session = await solvaPay.createCheckoutSession({
-      agentRef,
+    // Call backend API to create customer session
+    // Backend endpoint: POST /v1/sdk/customer-sessions
+    const session = await solvaPay.createCustomerSession({
       customerRef: ensuredCustomerRef,
-      planRef: planRef || undefined,
     });
 
-    // Return the session details to the client
-    // The backend returns checkoutSessionId and checkoutUrl
-    return NextResponse.json({
-      checkoutSessionId: session.checkoutSessionId,
-      checkoutUrl: session.checkoutUrl,
-    });
+    // Return the session data to the client
+    // Expected response format: { sessionId: string, sessionUrl?: string, ... }
+    return NextResponse.json(session);
 
   } catch (error) {
-    console.error('Checkout session creation failed:', error);
+    console.error('Customer session creation failed:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     return NextResponse.json(
-      { error: 'Checkout session creation failed', details: errorMessage },
+      { error: 'Customer session creation failed', details: errorMessage },
       { status: 500 }
     );
   }

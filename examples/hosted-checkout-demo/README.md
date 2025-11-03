@@ -366,8 +366,6 @@ hosted-checkout-demo/
 │   │   │   └── route.ts          # Creates management token, returns hosted URL
 │   │   ├── check-subscription/
 │   │   │   └── route.ts          # Subscription status check
-│   │   ├── list-plans/
-│   │   │   └── route.ts          # List available plans
 │   │   └── sync-customer/
 │   │       └── route.ts          # Ensure customer exists
 │   ├── components/

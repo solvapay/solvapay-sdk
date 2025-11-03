@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSolvaPay } from '@solvapay/server';
 import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '@solvapay/auth';
-import { SolvaPayError } from '@solvapay/core';
-
-/**
- * Request deduplication: Track in-flight requests per userId to prevent race conditions
- * When multiple requests come in for the same userId simultaneously, they'll share the same promise
- */
-const inFlightRequests = new Map<string, Promise<string>>();
 
 /**
  * Sync Customer API Route
@@ -26,6 +19,9 @@ const inFlightRequests = new Map<string, Promise<string>>();
  * - On user signup (eager creation)
  * - On user login (ensure customer exists)
  * - Before payment operations (lazy creation)
+ * 
+ * Note: Customer lookup deduplication is handled automatically by the SDK
+ * (sharedCustomerLookupDeduplicator prevents race conditions across concurrent requests)
  */
 
 export async function POST(request: NextRequest) {
@@ -43,79 +39,25 @@ export async function POST(request: NextRequest) {
     const email = await getUserEmailFromRequest(request);
     const name = await getUserNameFromRequest(request);
 
-    // Atomic check-and-set pattern to prevent race conditions
-    // Double-check locking: check once, create promise, check again, use existing if found
-    let syncPromise = inFlightRequests.get(userId);
-    
-    if (!syncPromise) {
-      // Create new promise for this userId
-      const newPromise = (async () => {
-        try {
-          // SECURITY: Only use the secret key on the server
-          // Config is automatically read from environment variables
-          const solvaPay = createSolvaPay();
+    // SECURITY: Only use the secret key on the server
+    // Config is automatically read from environment variables
+    const solvaPay = createSolvaPay();
 
-          // Use userId as both customerRef and externalRef
-          // This ensures consistent lookup and prevents duplicate customers
-          // Pass email and name to ensure correct customer data
-          const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-            email: email || undefined,
-            name: name || undefined,
-          });
-          
-          return customerRef;
-        } finally {
-          // Clean up the in-flight request after completion
-          inFlightRequests.delete(userId);
-        }
-      })();
-      
-      // Store the promise atomically - if another request stored one while we were creating, use theirs
-      const existingPromise = inFlightRequests.get(userId);
-      if (existingPromise) {
-        syncPromise = existingPromise;
-      } else {
-        inFlightRequests.set(userId, newPromise);
-        syncPromise = newPromise;
-      }
-    }
+    // Use userId as both customerRef and externalRef
+    // This ensures consistent lookup and prevents duplicate customers
+    // Pass email and name to ensure correct customer data
+    // Note: Customer lookup deduplication is handled automatically by the SDK
+    const customerRef = await solvaPay.ensureCustomer(userId, userId, {
+      email: email || undefined,
+      name: name || undefined,
+    });
 
-    try {
-      // Wait for the customer sync (either the new one or existing concurrent request)
-      const customerRef = await syncPromise;
-      
-      return NextResponse.json({
-        customerRef,
-        success: true,
-      });
-    } catch (error) {
-      console.error('Failed to sync customer:', error);
-      
-      // Handle SolvaPay configuration errors
-      if (error instanceof SolvaPayError) {
-        return NextResponse.json(
-          { error: (error as SolvaPayError).message },
-          { status: 500 }
-        );
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      return NextResponse.json(
-        { error: 'Failed to sync customer', details: errorMessage },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({
+      customerRef,
+      success: true,
+    });
   } catch (error) {
     console.error('Sync customer failed:', error);
-    
-    // Handle SolvaPay configuration errors
-    if (error instanceof SolvaPayError) {
-      return NextResponse.json(
-        { error: (error as SolvaPayError).message },
-        { status: 500 }
-      );
-    }
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     

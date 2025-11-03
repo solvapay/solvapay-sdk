@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useCallback, useEffect, useState } from 'react';
-import { useSubscription, usePlans, useSubscriptionHelpers } from '@solvapay/react';
+import { useSubscription, useSubscriptionHelpers } from '@solvapay/react';
 import { getAccessToken } from './lib/supabase';
 
 export default function HomePage() {
@@ -9,21 +9,9 @@ export default function HomePage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Memoize the fetcher function to prevent unnecessary re-fetches
-  const fetchPlans = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
-    if (!response.ok) throw new Error('Failed to fetch plans');
-    const data = await response.json();
-    return data.plans || [];
-  }, []);
-  
-  // Fetch plans using SDK hook
-  const { plans, loading: plansLoading } = usePlans({
-    agentRef: agentRef || undefined,
-    fetcher: fetchPlans,
-  });
-  
   // Get subscription helpers from SDK
+  // Note: Plans are handled on the hosted checkout page, so we pass empty array
+  // This will treat all subscriptions as paid plans (default behavior when plan not found)
   const { subscriptions, loading: subscriptionsLoading, hasActiveSubscription, refetch } = useSubscription();
   
   // Refetch subscriptions on mount to ensure we have latest data after navigation
@@ -39,10 +27,10 @@ export default function HomePage() {
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionHelpers(plans);
+  } = useSubscriptionHelpers([]);
   
-  // Combine loading states - only show content when both are loaded
-  const isLoading = subscriptionsLoading || plansLoading;
+  // Loading state - only subscriptions loading since plans are on hosted page
+  const isLoading = subscriptionsLoading;
   
   // Get the most recent active subscription (for display - includes free plans)
   const mostRecentActiveSubscription = useMemo(() => {

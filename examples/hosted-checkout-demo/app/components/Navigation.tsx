@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PlanBadge, useSubscription, hasActivePaidSubscription, usePlans } from '@solvapay/react';
+import { PlanBadge, useSubscription, hasActivePaidSubscription } from '@solvapay/react';
 import { Button } from './ui/Button';
 import { signOut, getAccessToken } from '../lib/supabase';
 import { useState, useCallback } from 'react';
@@ -18,40 +18,20 @@ export function Navigation() {
   
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
   
-  // Memoize the fetcher function to prevent unnecessary re-fetches
-  const fetchPlans = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
-    if (!response.ok) throw new Error('Failed to fetch plans');
-    const data = await response.json();
-    return data.plans || [];
+  // Helper to check if a subscription is for a paid plan
+  // Since plans are handled on hosted checkout page, we treat all active subscriptions as paid
+  // This ensures upgrade button is hidden when user has any active subscription
+  const isPaidPlan = useCallback((planName: string): boolean => {
+    // Default to true (paid) since we don't have plan details locally
+    // Plans are displayed on the hosted checkout page
+    return true;
   }, []);
   
-  // Fetch plans using SDK hook
-  const { plans, loading: plansLoading } = usePlans({
-    agentRef: agentRef || undefined,
-    fetcher: fetchPlans,
-  });
+  // Check if user has any active paid subscription
+  const hasActivePaidSubscriptionValue = hasActivePaidSubscription(subscriptions, isPaidPlan);
   
-  // Helper to check if a subscription is for a paid plan
-  const isPaidPlan = (planName: string): boolean => {
-    const plan = plans.find(p => p.name === planName);
-    if (!plan) return true; // Default to paid if plan not found
-    return (plan.price ?? 0) > 0 && !plan.isFreeTier;
-  };
-  
-  // Check if user has any active paid subscription using shared utility
-  // Only calculate this when we have plans loaded, otherwise isPaidPlan defaults incorrectly
-  const hasActivePaidSubscriptionValue = plans.length > 0 
-    ? hasActivePaidSubscription(subscriptions, isPaidPlan)
-    : false; // Default to false (show upgrade button) if plans aren't loaded yet
-  
-  // Only show button when we have both subscriptions and plans data loaded
-  // This ensures isPaidPlan can correctly determine if subscriptions are paid
-  const hasLoadedSubscriptions = !subscriptionsLoading;
-  const hasLoadedPlans = plans.length > 0 && !plansLoading;
-  
-  // Show upgrade button if both are loaded and user doesn't have paid subscription
-  const showUpgradeButton = hasLoadedSubscriptions && hasLoadedPlans && !hasActivePaidSubscriptionValue;
+  // Show upgrade button when subscriptions are loaded and user doesn't have paid subscription
+  const showUpgradeButton = !subscriptionsLoading && !hasActivePaidSubscriptionValue;
 
   // Handle redirect to hosted checkout page
   const handleUpgrade = useCallback(async () => {

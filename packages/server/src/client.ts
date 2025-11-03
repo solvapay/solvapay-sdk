@@ -464,6 +464,26 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const result = await res.json();
       return result;
     },
+
+    // POST: /v1/sdk/customer-sessions
+    async createCustomerSession(params) {
+      const url = `${base}/v1/sdk/customer-sessions`;
+      
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(params),
+      });
+      
+      if (!res.ok) {
+        const error = await res.text();
+        log(`❌ API Error: ${res.status} - ${error}`);
+        throw new SolvaPayError(`Create customer session failed (${res.status}): ${error}`);
+      }
+      
+      const result = await res.json();
+      return result;
+    },
   };
 }
 
