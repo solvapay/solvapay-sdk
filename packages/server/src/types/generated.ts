@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Check usage limits for a customer
-         * @description Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout URL if payment is required.
+         * @description Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout session ID and URL if payment is required. Checkout URL is based on backend configuration and matches the environment.
          */
         post: operations["LimitsSdkController_checkLimit"];
         delete?: never;
@@ -100,6 +100,46 @@ export interface paths {
          * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
          */
         get: operations["CustomerSdkController_getCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a customer session
+         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
+         */
+        post: operations["CustomerSdkController_createCustomerSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer session by sessionId
+         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
+         */
+        get: operations["CustomerSdkController_getCustomerSession"];
         put?: never;
         post?: never;
         delete?: never;
@@ -392,6 +432,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/checkout-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a checkout session for a customer
+         * @description Creates a checkout session token that can be used to redirect customers to the checkout page. If planRef is provided, a payment intent is also created and the session is ready for immediate payment. If planRef is not provided, the customer will select a plan on the checkout page. Returns the session token and full checkout URL based on backend configuration.
+         */
+        post: operations["CheckoutSessionSdkController_createCheckoutSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -420,20 +480,25 @@ export interface components {
         ExecuteMultipleQueries: Record<string, never>;
         CreateCheckoutSessionRequest: {
             /**
-             * @description Customer reference
+             * @description Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
-            customerReference: string;
+            customerRef: string;
             /**
-             * @description Plan reference (optional)
+             * @description Agent reference identifier
+             * @example agt_1a2b3c4d5e6f
+             */
+            agentRef: string;
+            /**
+             * @description Plan reference identifier (optional)
              * @example pln_2b3c4d5e6f7g
              */
             planRef?: string;
             /**
-             * @description Agent reference (optional)
-             * @example agt_1a2b3c4d5e6f
+             * @description URL to redirect to after successful payment (optional)
+             * @example https://example.com/payment-success
              */
-            agentRef?: string;
+            returnUrl?: string;
         };
         CheckoutSessionResponse: {
             /**
@@ -463,7 +528,7 @@ export interface components {
             status: string;
             /**
              * @description Checkout URL to open the checkout page
-             * @example http://localhost:3000/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+             * @example https://solvapay.com/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
              */
             checkoutUrl: string;
         };
@@ -498,15 +563,15 @@ export interface components {
              */
             remaining: number;
             /**
-             * @description Optional checkout URL if payment is required
-             * @example https://checkout.solvapay.com/pay_1a2b3c4d
-             */
-            checkoutUrl?: string;
-            /**
-             * @description Optional checkout session ID if payment is required
+             * @description Optional checkout session ID/token if payment is required
              * @example e3f1c2d4b6a89f001122334455667788
              */
             checkoutSessionId?: string;
+            /**
+             * @description Optional full checkout URL if payment is required (based on backend configuration)
+             * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutUrl?: string;
         };
         UsageEvent: {
             /**
@@ -613,6 +678,60 @@ export interface components {
             externalRef?: string;
             /** @description Active subscriptions */
             subscriptions?: components["schemas"]["SubscriptionInfo"][];
+        };
+        CreateCustomerSessionRequest: {
+            /**
+             * @description Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+        };
+        CreateCustomerSessionResponse: {
+            /**
+             * @description Customer session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * @description Full customer URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+        };
+        GetCustomerSessionResponse: {
+            /**
+             * @description Customer session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * @description Session status
+             * @example active
+             * @enum {string}
+             */
+            status: "active" | "expired" | "used";
+            /**
+             * @description Full customer URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+            /**
+             * @description Session expiration date
+             * @example 2025-01-01T12:00:00.000Z
+             */
+            expiresAt: string;
+            /** @description Customer object from session data */
+            customer: components["schemas"]["CustomerResponse"];
+            /**
+             * @description Session creation date
+             * @example 2025-01-01T11:45:00.000Z
+             */
+            createdAt: string;
+            /**
+             * @description Session last update date
+             * @example 2025-01-01T11:45:00.000Z
+             */
+            updatedAt: string;
         };
         Agent: Record<string, never>;
         CreateAgentRequest: Record<string, never>;
@@ -723,6 +842,18 @@ export interface components {
              * @example 2025-01-01T00:00:00.000Z
              */
             createdAt: string;
+        };
+        CreateCheckoutSessionResponse: {
+            /**
+             * @description Checkout session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * @description Full checkout URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutUrl: string;
         };
         CreatePageSettings: {
             /** @description Page identifier */
@@ -981,6 +1112,81 @@ export interface operations {
                 };
             };
             /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_createCustomerSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Customer session creation request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCustomerSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Customer session created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateCustomerSessionResponse"];
+                };
+            };
+            /** @description Invalid request data or customer not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_getCustomerSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer session ID/token */
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer session retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetCustomerSessionResponse"];
+                };
+            };
+            /** @description Customer session not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2289,6 +2495,49 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    CheckoutSessionSdkController_createCheckoutSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Checkout session creation request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCheckoutSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Checkout session created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateCheckoutSessionResponse"];
+                };
+            };
+            /** @description Invalid request data or references not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Agent or plan not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
         };
     };

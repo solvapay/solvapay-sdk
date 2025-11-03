@@ -168,6 +168,28 @@ export interface SolvaPay {
   }>;
   
   /**
+   * Create a checkout session for a customer
+   */
+  createCheckoutSession(params: {
+    agentRef: string;
+    customerRef: string;
+    planRef?: string;
+  }): Promise<{
+    sessionId: string;
+    checkoutUrl: string;
+  }>;
+  
+  /**
+   * Create a customer session for accessing customer-specific functionality
+   */
+  createCustomerSession(params: {
+    customerRef: string;
+  }): Promise<{
+    sessionId: string;
+    customerUrl: string;
+  }>;
+  
+  /**
    * Direct access to the API client for advanced operations
    * (agent/plan management, etc.)
    */
@@ -268,6 +290,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('getCustomer is not available on this API client');
       }
       return apiClient.getCustomer(params);
+    },
+    
+    createCheckoutSession(params) {
+      return apiClient.createCheckoutSession(params);
+    },
+    
+    createCustomerSession(params) {
+      return apiClient.createCustomerSession(params);
     },
     
     // Payable API for framework-specific handlers

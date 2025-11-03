@@ -1,12 +1,38 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+// Set environment variables before importing modules that depend on them
+process.env.SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY || 'test-api-key'
+process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { setupTestEnvironment } from './test-utils'
+
+// Mock the route module to use stub client
+vi.mock('../../app/api/tasks/route', async () => {
+  const { createTask, listTasks } = await import('@solvapay/demo-services')
+  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
+  const { createSolvaPay } = await import('@solvapay/server')
+  
+  const stubClient = new StubSolvaPayClient({ 
+    useFileStorage: true,
+    freeTierLimit: 1000,
+    debug: false
+  })
+  const solvaPay = createSolvaPay({ apiClient: stubClient })
+  const payable = solvaPay.payable({ agent: 'crud-basic' })
+  
+  return {
+    GET: payable.next(listTasks),
+    POST: payable.next(createTask)
+  }
+})
+
+// Import after mocking
 import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
-import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
-import { demoApiClient } from '../../services/apiClient'
 
 describe('Tasks CRUD Endpoints', () => {
+  setupTestEnvironment()
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
 
@@ -29,14 +55,10 @@ describe('Tasks CRUD Endpoints', () => {
     }
     
     writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2))
-    
-    // Reset usage counters
-    await demoApiClient.resetUsage()
   })
 
   afterEach(async () => {
-    // Reset demo data
-    await demoApiClient.resetUsage()
+    // Clean up after tests
   })
 
   describe('/api/tasks', () => {

@@ -1,17 +1,59 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { GET as healthGET } from '../../app/api/health/route'
-import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
-import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
-import { GET as userPlanGET } from '../../app/api/user/plan/route'
-import { POST as updatePlanPOST } from '../../app/api/user/plan/update/route'
-import { SignJWT } from 'jose'
+// Set environment variables before importing modules that depend on them
+process.env.SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY || 'test-api-key'
+process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { NextRequest } from 'next/server'
-import { demoApiClient } from '../../services/apiClient'
 import { clearAllTasks } from '@solvapay/demo-services'
+import { setupTestEnvironment } from './test-utils'
+
+// Mock the route modules to use stub client
+vi.mock('../../app/api/tasks/route', async () => {
+  const { createTask, listTasks } = await import('@solvapay/demo-services')
+  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
+  const { createSolvaPay } = await import('@solvapay/server')
+  
+  const stubClient = new StubSolvaPayClient({ 
+    useFileStorage: true,
+    freeTierLimit: 1000,
+    debug: false
+  })
+  const solvaPay = createSolvaPay({ apiClient: stubClient })
+  const payable = solvaPay.payable({ agent: 'crud-basic' })
+  
+  return {
+    GET: payable.next(listTasks),
+    POST: payable.next(createTask)
+  }
+})
+
+vi.mock('../../app/api/tasks/[id]/route', async () => {
+  const { getTask, deleteTask } = await import('@solvapay/demo-services')
+  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
+  const { createSolvaPay } = await import('@solvapay/server')
+  
+  const stubClient = new StubSolvaPayClient({ 
+    useFileStorage: true,
+    freeTierLimit: 1000,
+    debug: false
+  })
+  const solvaPay = createSolvaPay({ apiClient: stubClient })
+  const payable = solvaPay.payable({ agent: 'crud-basic' })
+  
+  return {
+    GET: payable.next(getTask),
+    DELETE: payable.next(deleteTask)
+  }
+})
+
+// Import after mocking
+import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
+import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
 
 describe('Integration Tests', () => {
+  setupTestEnvironment()
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
   const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
@@ -41,24 +83,17 @@ describe('Integration Tests', () => {
       unlinkSync(USER_PLANS_FILE)
     }
     
-    // Reset usage and clear all tasks
-    await demoApiClient.resetUsage()
+    // Clear all tasks
     clearAllTasks()
   })
 
   afterEach(async () => {
     // Clean up after tests
-    await demoApiClient.resetUsage()
     clearAllTasks()
   })
 
   describe('Complete User Journey', () => {
-    it('should handle complete user journey from health check to task CRUD operations', async () => {
-      // 1. Health check
-      const healthRequest = new NextRequest('http://localhost:3000/api/health')
-      const healthResponse = await healthGET(healthRequest)
-      expect(healthResponse.status).toBe(200)
-
+    it('should handle complete user journey from task CRUD operations', async () => {
       // Ensure demo_user has pro plan
       const proPlans = {
         'demo_user': {
@@ -68,7 +103,7 @@ describe('Integration Tests', () => {
       }
       writeFileSync(USER_PLANS_FILE, JSON.stringify(proPlans, null, 2))
 
-      // 2. Create a task
+      // 1. Create a task
       const createRequest = new NextRequest('http://localhost:3000/api/tasks', {
         method: 'POST',
         headers: {
@@ -91,7 +126,7 @@ describe('Integration Tests', () => {
       // Extract task ID from response
       const taskId = createData.task.id
 
-      // 3. List tasks
+      // 2. List tasks
       const listRequest = new NextRequest('http://localhost:3000/api/tasks', {
         headers: {
           'x-customer-ref': 'demo_user'
@@ -106,7 +141,7 @@ describe('Integration Tests', () => {
       expect(Array.isArray(listData.tasks)).toBe(true)
       expect(listData.tasks.length).toBeGreaterThan(0)
 
-      // 4. Get specific task
+      // 3. Get specific task
       const getRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         headers: {
           'x-customer-ref': 'demo_user'
@@ -121,7 +156,7 @@ describe('Integration Tests', () => {
       expect(getData.task.title).toBe('Integration Test Task')
       expect(getData.task.id).toBe(taskId)
 
-      // 5. Delete task
+      // 4. Delete task
       const deleteRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
@@ -139,3 +174,4 @@ describe('Integration Tests', () => {
     })
   })
 })
+

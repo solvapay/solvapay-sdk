@@ -17,10 +17,6 @@ import {
   // User schemas  
   UserPlanSchema,
   
-  // Health schemas
-  HealthResponseSchema,
-  HealthzResponseSchema,
-  
   // OAuth schemas
   OAuthTokenRequestSchema,
   OAuthTokenResponseSchema,
@@ -44,8 +40,6 @@ registry.register('Task', TaskSchema);
 registry.register('CreateTaskRequest', CreateTaskRequestSchema);
 registry.register('TaskList', TaskListSchema);
 registry.register('UserPlan', UserPlanSchema);
-registry.register('HealthResponse', HealthResponseSchema);
-registry.register('HealthzResponse', HealthzResponseSchema);
 registry.register('OAuthTokenResponse', OAuthTokenResponseSchema);
 registry.register('UserInfoResponse', UserInfoResponseSchema);
 registry.register('JWKSResponse', JWKSResponseSchema);
@@ -94,47 +88,6 @@ registry.registerComponent('securitySchemes', 'oauth2', {
 });
 
 // API endpoints relevant for OpenAI Custom GPT Actions
-
-// Health endpoints
-registry.registerPath({
-  method: 'get',
-  path: '/api/health',
-  operationId: 'getHealthStatus',
-  summary: 'Basic health check',
-  description: 'Check if the API service is running',
-  tags: ['Health'],
-  'x-openai-isConsequential': false,
-  responses: {
-    200: {
-      description: 'Service is healthy',
-      content: {
-        'application/json': {
-          schema: HealthResponseSchema
-        }
-      }
-    }
-  }
-});
-
-registry.registerPath({
-  method: 'get',
-  path: '/api/healthz',
-  operationId: 'getDetailedHealthStatus',
-  summary: 'Detailed health check',
-  description: 'Get detailed health information including memory usage',
-  tags: ['Health'],
-  'x-openai-isConsequential': false,
-  responses: {
-    200: {
-      description: 'Service health details',
-      content: {
-        'application/json': {
-          schema: HealthzResponseSchema
-        }
-      }
-    }
-  }
-});
 
 // Sign-in helper endpoint (EXCLUDED from OpenAPI schema - kept for reference)
 // registry.registerPath({
