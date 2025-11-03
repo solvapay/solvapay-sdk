@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/api/health', '/api/healthz', '/api/auth/signin-url'];
+  const publicRoutes = ['/api/auth/signin-url'];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   // Initialize auth adapter (with error handling)

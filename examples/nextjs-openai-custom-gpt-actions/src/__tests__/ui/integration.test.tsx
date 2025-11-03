@@ -43,17 +43,11 @@ describe('Integration Tests - User Flows', () => {
   })
 
   describe('API Testing Flow', () => {
-    it('completes successful API health check', async () => {
+    it('completes successful API task check', async () => {
       const user = userEvent.setup()
       global.alert = vi.fn()
 
       ;(global.fetch as any).mockImplementation((url: string) => {
-        if (url.includes('/api/healthz')) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ ok: true })
-          })
-        }
         if (url.includes('/api/tasks')) {
           return Promise.resolve({
             ok: true,
@@ -65,11 +59,11 @@ describe('Integration Tests - User Flows', () => {
 
       render(<HomePage />)
       
-      const testHealthButton = screen.getByRole('button', { name: 'Test Health' })
-      await user.click(testHealthButton)
+      const testTasksButton = screen.getByRole('button', { name: 'List Tasks' })
+      await user.click(testTasksButton)
       
       await waitFor(() => {
-        expect(global.alert).toHaveBeenCalledWith(expect.stringContaining('Health Check'))
+        expect(global.alert).toHaveBeenCalledWith(expect.stringContaining('Tasks List'))
       })
     })
   })

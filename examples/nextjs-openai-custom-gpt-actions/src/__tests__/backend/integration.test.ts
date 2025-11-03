@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { GET as healthGET } from '../../app/api/health/route'
 import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
 import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
 import { GET as userPlanGET } from '../../app/api/user/plan/route'
@@ -53,12 +52,7 @@ describe('Integration Tests', () => {
   })
 
   describe('Complete User Journey', () => {
-    it('should handle complete user journey from health check to task CRUD operations', async () => {
-      // 1. Health check
-      const healthRequest = new NextRequest('http://localhost:3000/api/health')
-      const healthResponse = await healthGET(healthRequest)
-      expect(healthResponse.status).toBe(200)
-
+    it('should handle complete user journey from task CRUD operations', async () => {
       // Ensure demo_user has pro plan
       const proPlans = {
         'demo_user': {
@@ -68,7 +62,7 @@ describe('Integration Tests', () => {
       }
       writeFileSync(USER_PLANS_FILE, JSON.stringify(proPlans, null, 2))
 
-      // 2. Create a task
+      // 1. Create a task
       const createRequest = new NextRequest('http://localhost:3000/api/tasks', {
         method: 'POST',
         headers: {
@@ -91,7 +85,7 @@ describe('Integration Tests', () => {
       // Extract task ID from response
       const taskId = createData.task.id
 
-      // 3. List tasks
+      // 2. List tasks
       const listRequest = new NextRequest('http://localhost:3000/api/tasks', {
         headers: {
           'x-customer-ref': 'demo_user'
@@ -106,7 +100,7 @@ describe('Integration Tests', () => {
       expect(Array.isArray(listData.tasks)).toBe(true)
       expect(listData.tasks.length).toBeGreaterThan(0)
 
-      // 4. Get specific task
+      // 3. Get specific task
       const getRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         headers: {
           'x-customer-ref': 'demo_user'
@@ -121,7 +115,7 @@ describe('Integration Tests', () => {
       expect(getData.task.title).toBe('Integration Test Task')
       expect(getData.task.id).toBe(taskId)
 
-      // 5. Delete task
+      // 4. Delete task
       const deleteRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {

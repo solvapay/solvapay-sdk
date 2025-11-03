@@ -5,7 +5,6 @@ import { useSubscription, useSubscriptionHelpers } from '@solvapay/react';
 import { getAccessToken } from '@/lib/supabase';
 
 interface ApiStatus {
-  health: boolean
   tasks: boolean
   oauth: boolean
 }
@@ -13,7 +12,6 @@ interface ApiStatus {
 export default function HomePage() {
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
   const [apiStatus, setApiStatus] = useState<ApiStatus>({
-    health: false,
     tasks: false,
     oauth: false
   })
@@ -48,10 +46,6 @@ export default function HomePage() {
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        // Check health endpoint
-        const healthRes = await fetch('/api/healthz')
-        const healthOk = healthRes.ok
-
         // Check tasks endpoint
         const tasksRes = await fetch('/api/tasks')
         const tasksOk = tasksRes.ok
@@ -61,7 +55,6 @@ export default function HomePage() {
         const oauthOk = oauthRes.ok
 
         setApiStatus({
-          health: healthOk,
           tasks: tasksOk,
           oauth: oauthOk
         })
@@ -239,11 +232,7 @@ export default function HomePage() {
             <span className="text-gray-600">Checking API status...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${apiStatus.health ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm font-medium">Health Endpoint</span>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center space-x-2">
               <div className={`w-3 h-3 rounded-full ${apiStatus.tasks ? 'bg-green-500' : 'bg-red-500'}`}></div>
               <span className="text-sm font-medium">Tasks API</span>
@@ -332,20 +321,6 @@ export default function HomePage() {
         </p>
         <div className="space-y-4">
           <div className="flex items-center space-x-4">
-            <button 
-              onClick={async () => {
-                try {
-                  const res = await fetch('/api/healthz')
-                  const data = await res.json()
-                  alert(`Health Check: ${JSON.stringify(data, null, 2)}`)
-                } catch (error) {
-                  alert(`Error: ${error}`)
-                }
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-            >
-              Test Health
-            </button>
             <button 
               onClick={async () => {
                 try {

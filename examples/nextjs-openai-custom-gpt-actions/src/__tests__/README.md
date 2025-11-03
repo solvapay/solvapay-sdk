@@ -12,7 +12,7 @@ src/__tests__/
 │   ├── integration.test.tsx      # User flow integration tests
 │   └── simple-render.test.tsx    # Simple component render tests
 └── backend/              # Backend/API tests (11 files)
-    ├── api.test.ts               # Health and API endpoint tests
+    ├── api.test.ts               # API endpoint tests
     ├── basic.test.ts             # Basic API functionality tests
     ├── checkout.test.ts          # Checkout flow tests
     ├── oauth.test.ts             # OAuth flow tests (blue sky only)
@@ -53,7 +53,7 @@ npm run test:watch
 - **Task CRUD Operations**: Create, list, get, and delete tasks
 - **OAuth Flow**: Authorization, token exchange (successful flows)
 - **User Plans**: Get and update user plans (successful flows)
-- **Integration**: Complete user journey from health check to task operations
+- **Integration**: Complete user journey from task CRUD operations
 - **Services**: API client and demo service functionality
 
 ### UI Tests
