@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { revokedTokens, refreshTokens } from '@/lib/oauth-storage';
+import { refreshTokens } from '@/lib/oauth-storage';
 
 /**
- * Sign out endpoint that revokes the user's access token
+ * Sign out endpoint that revokes the user's refresh token
  * Supports both Bearer token and form data token input
  * 
  * Note: Supabase handles session management, so we only revoke OAuth tokens here.
+ * Access tokens expire naturally (no blacklist storage needed).
  */
 export async function POST(request: NextRequest) {
   let token: string | null = null;
@@ -33,10 +34,10 @@ export async function POST(request: NextRequest) {
 
   try {
     // Check if it's a refresh token first
-    if (tokenTypeHint === 'refresh_token' || refreshTokens.has(token)) {
-      const refreshTokenData = refreshTokens.get(token);
+    if (tokenTypeHint === 'refresh_token' || await refreshTokens.has(token)) {
+      const refreshTokenData = await refreshTokens.get(token);
       if (refreshTokenData) {
-        refreshTokens.delete(token);
+        await refreshTokens.delete(token);
         
         return NextResponse.json({
           success: true,
@@ -45,23 +46,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try to verify it as a JWT access token
+    // For access tokens, we rely on JWT expiration only (bare minimum approach)
+    // Access tokens expire in 1 hour, so we don't need to store revoked tokens
     try {
       const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
-      const { payload } = await jwtVerify(token, jwtSecret, {
+      await jwtVerify(token, jwtSecret, {
         issuer: process.env.OAUTH_ISSUER!
       });
 
-      // Add to revoked tokens blacklist
-      revokedTokens.add(token);
-      
+      // Token is valid but will expire naturally
       return NextResponse.json({
         success: true,
-        message: 'Successfully signed out'
+        message: 'Successfully signed out (access token will expire naturally)'
       });
-
     } catch (jwtError) {
-      // Token is not a valid JWT, might be an invalid or expired token
+      // Token is expired or invalid - consider it revoked
       // Still return success for security reasons (don't leak token validity info)
       return NextResponse.json({
         success: true,

@@ -55,13 +55,51 @@ OAUTH_CLIENT_ID=your_client_id_here
 PUBLIC_URL=http://localhost:3000
 ```
 
-### 3. Build Dependencies
+### 3. Setup Supabase Database
+
+This example uses Supabase for OAuth storage (bare minimum approach). Initialize the database schema:
+
+**Option 1: Using the init script (recommended)**
+
+1. Add your Supabase database connection string to `.env.local`:
+   ```env
+   SUPABASE_DB_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+   ```
+   
+   Get this from: Supabase Dashboard → Settings → Database → Connection string → URI
+
+2. Run the initialization script:
+   ```bash
+   pnpm init:db
+   ```
+
+**Option 2: Manual SQL execution**
+
+1. Go to your Supabase project dashboard: https://supabase.com/dashboard
+2. Navigate to SQL Editor
+3. Run the migration SQL from `supabase/migrations/001_oauth_refresh_tokens.sql`
+
+**Option 3: Using Supabase CLI**
+
+```bash
+# If you have Supabase CLI installed
+supabase db push
+```
+
+This creates the `oauth_refresh_tokens` table needed for storing OAuth refresh tokens.
+
+**Note**: This is a bare minimum OAuth implementation:
+- ✅ Authorization codes are JWT-encoded (no storage needed)
+- ✅ Refresh tokens stored in Supabase database
+- ✅ Revoked tokens rely on JWT expiration (no blacklist storage)
+
+### 4. Build Dependencies
 
 ```bash
 pnpm build:deps
 ```
 
-### 4. Start Development Server
+### 5. Start Development Server
 
 ```bash
 pnpm dev

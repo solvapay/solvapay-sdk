@@ -4,11 +4,12 @@ import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from '
 import { join } from 'path'
 import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks/route'
 import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tasks/[id]/route'
-import { demoApiClient } from '../../services/apiClient'
+import { createStubClient } from '../../../shared/stub-api-client'
 
 describe('Tasks CRUD Endpoints', () => {
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
+  const demoApiClient = createStubClient({ useFileStorage: true, debug: false })
 
   beforeEach(async () => {
     // Ensure demo data directory exists

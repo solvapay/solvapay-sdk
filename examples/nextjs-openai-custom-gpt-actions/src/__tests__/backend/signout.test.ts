@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST as signoutPOST } from '../../app/api/oauth/signout/route'
-import { revokedTokens, refreshTokens } from '../../lib/oauth-storage'
 import { createMockJWT } from './test-utils'
 
 describe('Sign Out API', () => {
@@ -14,10 +13,11 @@ describe('Sign Out API', () => {
     process.env.OAUTH_CLIENT_SECRET = 'test-client-secret'
     process.env.OAUTH_REDIRECT_URI = 'http://localhost:3000/oauth/callback'
     process.env.OAUTH_JWKS_SECRET = 'test-jwt-secret'
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
     
-    // Clear storage before each test
-    revokedTokens.clear();
-    refreshTokens.clear();
+    // Note: Storage is now in Supabase database - tests may need Supabase mocking
+    // For now, tests rely on JWT expiration validation only
   })
 
   describe('/api/oauth/signout', () => {

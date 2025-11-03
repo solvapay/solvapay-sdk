@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { authorizationCodes } from '@/lib/oauth-storage';
+import { SignJWT } from 'jose';
 import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
 
 /**
@@ -9,7 +9,7 @@ import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
  * Handles the Supabase OAuth callback:
  * 1. Extracts Supabase session
  * 2. Gets OAuth params from cookie
- * 3. Generates authorization code
+ * 3. Generates JWT-encoded authorization code (no storage needed!)
  * 4. Redirects to OpenAI's redirect_uri with the code
  */
 
@@ -51,24 +51,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=no_session', request.url));
     }
 
-    // Generate authorization code
-    const code = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    // Generate JWT-encoded authorization code (no storage needed!)
+    const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
+    const scopes = oauthParams.scope ? oauthParams.scope.split(' ') : ['openid'];
     
-    // Store authorization code with expiration
-    authorizationCodes.set(code, {
-      userId: userId,
+    const authorizationCode = await new SignJWT({
+      userId,
       clientId: oauthParams.client_id,
       redirectUri: oauthParams.redirect_uri,
-      scopes: oauthParams.scope ? oauthParams.scope.split(' ') : ['openid'],
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-      email: '' // Email will be available from Supabase session if needed
-    });
+      scopes,
+      type: 'authorization_code',
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('10m') // 10 minutes
+      .sign(jwtSecret);
 
-    console.log('✅ [OAUTH CALLBACK] Generated authorization code for user:', userId);
+    console.log('✅ [OAUTH CALLBACK] Generated JWT authorization code for user:', userId);
 
-    // Redirect to OpenAI's redirect_uri with authorization code
+    // Redirect to OpenAI's redirect_uri with the authorization code
     const redirectUrl = new URL(oauthParams.redirect_uri);
-    redirectUrl.searchParams.set('code', code);
+    redirectUrl.searchParams.set('code', authorizationCode);
     if (oauthParams.state) {
       redirectUrl.searchParams.set('state', oauthParams.state);
     }
@@ -83,4 +86,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/?error=callback_error', request.url));
   }
 }
-

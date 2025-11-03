@@ -7,13 +7,14 @@ import { SignJWT } from 'jose'
 import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { NextRequest } from 'next/server'
-import { demoApiClient } from '../../services/apiClient'
+import { createStubClient } from '../../../shared/stub-api-client'
 import { clearAllTasks } from '@solvapay/demo-services'
 
 describe('Integration Tests', () => {
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
   const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
+  const demoApiClient = createStubClient({ useFileStorage: true, debug: false })
   
   beforeEach(async () => {
     // Ensure demo data directory exists

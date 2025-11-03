@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { revokedTokens } from '@/lib/oauth-storage';
 import { createClient } from '@supabase/supabase-js';
 
 /**
@@ -8,6 +7,8 @@ import { createClient } from '@supabase/supabase-js';
  * 
  * Returns user information for the authenticated user.
  * Uses Supabase to fetch user details based on the user ID from the JWT token.
+ * 
+ * Note: We rely on JWT expiration for token validation (no revoked tokens blacklist).
  */
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -32,16 +33,9 @@ export async function GET(request: NextRequest) {
 
   const token = authHeader.substring(7);
   
-  // Check if token is revoked
-  if (revokedTokens.has(token)) {
-    return NextResponse.json(
-      { error: 'invalid_token', error_description: 'Token has been revoked' },
-      { status: 401 }
-    );
-  }
-  
   try {
     // Verify JWT token (OAuth token we generated)
+    // JWT expiration is automatically checked by jwtVerify
     const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
     const { payload } = await jwtVerify(token, jwtSecret, {
       issuer: process.env.OAUTH_ISSUER!
@@ -52,12 +46,6 @@ export async function GET(request: NextRequest) {
     // Fetch user info from Supabase
     try {
       const supabase = getSupabaseClient();
-      
-      // Use Supabase Admin API to get user by ID (since we have the user ID from JWT)
-      // For client-side, we can use the user ID from the token
-      // Note: This requires admin access or we can use the user's own session
-      // For now, we'll return basic info from the token payload
-      // In production, you might want to use Supabase Admin API or store user info in the token
       
       // Return user info - email and name can be stored in auth code or fetched from Supabase
       // For simplicity, we'll return the user ID and try to get email from Supabase if possible
@@ -79,8 +67,17 @@ export async function GET(request: NextRequest) {
         email_verified: true,
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Token verification error:', error);
+    
+    // Handle JWT expiration/invalid errors
+    if (error.name === 'JWTExpired' || error.name === 'JWTInvalid') {
+      return NextResponse.json(
+        { error: 'invalid_token', error_description: 'Invalid or expired access token' },
+        { status: 401 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'invalid_token', error_description: 'Invalid access token' },
       { status: 401 }

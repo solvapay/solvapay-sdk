@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { demoApiClient } from '../../services/apiClient'
+import { createStubClient } from '../../../shared/stub-api-client'
 
 describe('Services', () => {
   describe('DemoApiClient', () => {
+    const demoApiClient = createStubClient({ useFileStorage: true, debug: false })
+    
     beforeEach(async () => {
       // Reset the client state using public API
       await demoApiClient.resetUsage()
