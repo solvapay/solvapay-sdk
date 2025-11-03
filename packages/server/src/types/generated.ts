@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Check usage limits for a customer
-         * @description Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout URL if payment is required.
+         * @description Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout session ID and URL if payment is required. Checkout URL is based on backend configuration and matches the environment.
          */
         post: operations["LimitsSdkController_checkLimit"];
         delete?: never;
@@ -392,6 +392,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/checkout-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a checkout session for a customer
+         * @description Creates a checkout session token that can be used to redirect customers to the checkout page. If planRef is provided, a payment intent is also created and the session is ready for immediate payment. If planRef is not provided, the customer will select a plan on the checkout page. Returns the session token and full checkout URL based on backend configuration.
+         */
+        post: operations["CheckoutSessionSdkController_createCheckoutSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -420,20 +440,20 @@ export interface components {
         ExecuteMultipleQueries: Record<string, never>;
         CreateCheckoutSessionRequest: {
             /**
-             * @description Customer reference
+             * @description Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
-            customerReference: string;
+            customerRef: string;
             /**
-             * @description Plan reference (optional)
+             * @description Agent reference identifier
+             * @example agt_1a2b3c4d5e6f
+             */
+            agentRef: string;
+            /**
+             * @description Plan reference identifier (optional)
              * @example pln_2b3c4d5e6f7g
              */
             planRef?: string;
-            /**
-             * @description Agent reference (optional)
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef?: string;
         };
         CheckoutSessionResponse: {
             /**
@@ -498,15 +518,15 @@ export interface components {
              */
             remaining: number;
             /**
-             * @description Optional checkout URL if payment is required
-             * @example https://checkout.solvapay.com/pay_1a2b3c4d
-             */
-            checkoutUrl?: string;
-            /**
-             * @description Optional checkout session ID if payment is required
+             * @description Optional checkout session ID/token if payment is required
              * @example e3f1c2d4b6a89f001122334455667788
              */
             checkoutSessionId?: string;
+            /**
+             * @description Optional full checkout URL if payment is required (based on backend configuration)
+             * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutUrl?: string;
         };
         UsageEvent: {
             /**
@@ -723,6 +743,18 @@ export interface components {
              * @example 2025-01-01T00:00:00.000Z
              */
             createdAt: string;
+        };
+        CreateCheckoutSessionResponse: {
+            /**
+             * @description Checkout session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutSessionId: string;
+            /**
+             * @description Full checkout URL based on backend configuration (ready to redirect customer)
+             * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutUrl: string;
         };
         CreatePageSettings: {
             /** @description Page identifier */
@@ -2289,6 +2321,49 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    CheckoutSessionSdkController_createCheckoutSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Checkout session creation request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCheckoutSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Checkout session created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateCheckoutSessionResponse"];
+                };
+            };
+            /** @description Invalid request data or references not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Agent or plan not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
         };
     };

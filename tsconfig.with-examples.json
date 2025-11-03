@@ -10,6 +10,7 @@
     { "path": "examples/express-basic" },
     { "path": "examples/mcp-basic" },
     { "path": "examples/checkout-demo" },
+    { "path": "examples/hosted-checkout-demo" },
     { "path": "examples/nextjs-openai-custom-gpt-actions" }
   ]
 }

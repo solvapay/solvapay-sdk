@@ -444,6 +444,26 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       
       return result;
     },
+
+    // POST: /v1/sdk/checkout-sessions
+    async createCheckoutSession(params) {
+      const url = `${base}/v1/sdk/checkout-sessions`;
+      
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(params),
+      });
+      
+      if (!res.ok) {
+        const error = await res.text();
+        log(`❌ API Error: ${res.status} - ${error}`);
+        throw new SolvaPayError(`Create checkout session failed (${res.status}): ${error}`);
+      }
+      
+      const result = await res.json();
+      return result;
+    },
   };
 }
 

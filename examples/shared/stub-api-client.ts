@@ -395,16 +395,33 @@ export class StubSolvaPayClient implements SolvaPayClient {
   async createCheckoutSession(params: {
     customerRef: string;
     agentRef: string;
-    returnUrl: string;
-  }): Promise<{ url: string }> {
+    planRef?: string;
+  }): Promise<{ checkoutSessionId: string; checkoutUrl: string }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
     
-    const checkoutUrl = `https://checkout.solvapay.com/demo?customer=${params.customerRef}&agent=${params.agentRef}&return=${encodeURIComponent(params.returnUrl)}`;
+    // Generate a mock session ID
+    const sessionId = `sess_${Math.random().toString(36).slice(2, 15)}`;
+    
+    // Build checkout URL with session ID
+    const queryParams = new URLSearchParams({
+      customer: params.customerRef,
+      agent: params.agentRef,
+      sessionId: sessionId,
+    });
+    
+    if (params.planRef) {
+      queryParams.set('plan', params.planRef);
+    }
+    
+    const checkoutUrl = `https://checkout.solvapay.com/demo?${queryParams.toString()}`;
     
     this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`);
     
-    return { url: checkoutUrl };
+    return {
+      checkoutSessionId: sessionId,
+      checkoutUrl: checkoutUrl,
+    };
   }
 
   /**
