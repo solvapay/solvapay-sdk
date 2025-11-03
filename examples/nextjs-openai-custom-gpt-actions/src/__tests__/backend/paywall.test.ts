@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { writeFileSync, existsSync, unlinkSync } from 'fs'
 import { join } from 'path'
-import { GET as debugUserPlansGET } from '../../app/api/debug/user-plans/route'
-import { GET as debugSetPlanGET } from '../../app/api/debug/set-plan/route'
 import { setupTestEnvironment } from './test-utils'
 
 describe('Example Configuration Tests', () => {
@@ -40,12 +38,6 @@ describe('Example Configuration Tests', () => {
       const content = require('fs').readFileSync(USER_PLANS_FILE, 'utf-8')
       const parsed = JSON.parse(content)
       expect(parsed.test_user.plan).toBe('pro')
-    })
-
-    it('should have debug endpoints configured', () => {
-      // These endpoints should exist and be callable  
-      expect(typeof debugUserPlansGET).toBe('function')
-      expect(typeof debugSetPlanGET).toBe('function')
     })
 
     it('should use SolvaPay SDK for paywall functionality', () => {

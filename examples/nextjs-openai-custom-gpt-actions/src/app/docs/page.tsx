@@ -160,16 +160,6 @@ export default function DocsPage() {
             <h3 className="text-sm font-medium text-gray-900">Custom GPT Schema</h3>
             <p className="text-sm text-gray-600">OpenAI Custom GPT Actions schema</p>
           </a>
-          
-          <a
-            href="/api/healthz"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <h3 className="text-sm font-medium text-gray-900">Health Check</h3>
-            <p className="text-sm text-gray-600">API health status</p>
-          </a>
         </div>
       </div>
     </div>

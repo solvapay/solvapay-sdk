@@ -1,11 +1,9 @@
 import { getTask, deleteTask } from '@solvapay/demo-services';
 import { createSolvaPay } from '@solvapay/server';
-import { demoApiClient } from '@/services/apiClient';
 
 // Create a reusable SolvaPay instance with the new unified API
-const solvaPay = createSolvaPay({
-  apiClient: demoApiClient
-});
+// Config is automatically read from SOLVAPAY_SECRET_KEY environment variable
+const solvaPay = createSolvaPay();
 
 // Create payable handlers with different plans
 const basicPayable = solvaPay.payable({ agent: 'crud-basic' });

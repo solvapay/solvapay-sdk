@@ -5,13 +5,15 @@ This example demonstrates how to integrate SolvaPay with Next.js App Router to c
 ## Features
 
 - **Next.js 15** with App Router
-- **SolvaPay Paywall Protection** with usage limits and plan upgrades
-- **OAuth 2.0 Flow** for user authentication
-- **CRUD Operations** with different limits for free/pro users
-- **Checkout Flow** for seamless plan upgrades
+- **SolvaPay Paywall Protection** with usage limits and subscription management
+- **Supabase Authentication** for user authentication and session management
+- **OAuth 2.0 Endpoints** for OpenAI Custom GPT Actions integration
+- **CRUD Operations** for tasks with paywall protection
+- **Hosted Checkout Flow** - redirects to SolvaPay hosted checkout page
+- **Subscription Management** - check subscription status and manage plans
 - **TypeScript** support with Zod validation
 - **API Routes** using Next.js App Router
-- **Comprehensive Testing** with Vitest (88 tests passing)
+- **Comprehensive Testing** with Vitest
 - **OpenAPI Documentation** auto-generated from Zod schemas
 
 ## Quick Start
@@ -25,27 +27,79 @@ pnpm install
 
 ### 2. Setup Environment
 
+Copy the example environment file and fill in your values:
+
 ```bash
-pnpm setup:env
+cp env.example .env.local
 ```
 
-This creates a `.env.local` file with the following variables:
+Then edit `.env.local` with your actual values. Required variables:
 
 ```env
-SOLVAPAY_SECRET_KEY=demo-key-for-development
-SOLVAPAY_AGENT=custom-gpt-actions
-PORT=3000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
+# SolvaPay Configuration
+SOLVAPAY_SECRET_KEY=sp_sandbox_your_secret_key_here
+SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+NEXT_PUBLIC_AGENT_REF=agt_your_agent_ref
+
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_JWT_SECRET=your_supabase_jwt_secret_here
+
+# OAuth Configuration (for OpenAI Custom GPT Actions)
+OAUTH_ISSUER=https://your-domain.com
+OAUTH_JWKS_SECRET=your_jwks_secret_here
+OAUTH_CLIENT_ID=your_client_id_here
+
+# Public URL (required for OpenAPI generation)
+PUBLIC_URL=http://localhost:3000
 ```
 
-### 3. Build Dependencies
+### 3. Setup Supabase Database
+
+This example uses Supabase for OAuth storage (bare minimum approach). Initialize the database schema:
+
+**Option 1: Using the init script (recommended)**
+
+1. Add your Supabase database connection string to `.env.local`:
+   ```env
+   SUPABASE_DB_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+   ```
+   
+   Get this from: Supabase Dashboard → Settings → Database → Connection string → URI
+
+2. Run the initialization script:
+   ```bash
+   pnpm init:db
+   ```
+
+**Option 2: Manual SQL execution**
+
+1. Go to your Supabase project dashboard: https://supabase.com/dashboard
+2. Navigate to SQL Editor
+3. Run the migration SQL from `supabase/migrations/001_oauth_refresh_tokens.sql`
+
+**Option 3: Using Supabase CLI**
+
+```bash
+# If you have Supabase CLI installed
+supabase db push
+```
+
+This creates the `oauth_refresh_tokens` table needed for storing OAuth refresh tokens.
+
+**Note**: This is a bare minimum OAuth implementation:
+- ✅ Authorization codes are JWT-encoded (no storage needed)
+- ✅ Refresh tokens stored in Supabase database
+- ✅ Revoked tokens rely on JWT expiration (no blacklist storage)
+
+### 4. Build Dependencies
 
 ```bash
 pnpm build:deps
 ```
 
-### 4. Start Development Server
+### 5. Start Development Server
 
 ```bash
 pnpm dev
@@ -55,26 +109,22 @@ The application will be available at `http://localhost:3000`.
 
 ## 🔒 Paywall Protection
 
-This example demonstrates SolvaPay's paywall functionality with different usage limits:
+This example demonstrates SolvaPay's paywall functionality with subscription-based access control:
 
-### Free Users
-- **List/Read Things**: 5-10 calls per day
-- **Create Things**: 3 calls per day  
-- **Update Things**: 3 calls per day (premium)
-- **Delete Things**: 1 call per day (premium)
+### How It Works
 
-### Pro Users
-- **Unlimited** access to all operations
-- Upgraded via checkout flow
+1. **Authentication**: Users authenticate via Supabase (email/password or Google OAuth)
+2. **Customer Sync**: On sign-in, the app automatically syncs the user with SolvaPay backend
+3. **Subscription Check**: API endpoints check subscription status before allowing access
+4. **Usage Limits**: Configured via SolvaPay dashboard per agent/plan
+5. **Upgrade Flow**: Users are redirected to hosted checkout page when limits are exceeded
 
-### Testing Paywall
-```bash
-# Set a user to pro plan
-curl "http://localhost:3000/api/debug/set-plan?user_id=demo_user&plan=pro"
+### Subscription Management
 
-# Check user plans
-curl "http://localhost:3000/api/debug/user-plans"
-```
+- Check subscription status: `GET /api/check-subscription`
+- Create checkout session: `POST /api/create-checkout-session`
+- Manage subscription: `POST /api/create-customer-session`
+- Sync customer: `POST /api/sync-customer` (called automatically on auth)
 
 ## 🌐 Setup for OpenAI Custom GPT Actions
 
@@ -131,10 +181,10 @@ pnpm dev
 ### 5. Test the Integration
 
 Once configured, your Custom GPT will be able to:
-- Create, read, update, and delete "things" 
-- Enforce usage limits (3 API calls per day for free users)
+- Create, read, update, and delete tasks
+- Enforce usage limits based on subscription plans
 - Redirect users to upgrade when limits are exceeded
-- Authenticate users via OAuth flow
+- Authenticate users via OAuth 2.0 flow for OpenAI Custom GPT Actions
 
 ### 6. Troubleshooting
 
@@ -148,62 +198,80 @@ If you encounter issues when importing the OpenAPI schema:
 
 ```
 nextjs-openai-custom-gpt-actions/
-├── src/                          # Source code (default directory)
+├── src/                          # Source code
 │   ├── app/                      # Next.js App Router
 │   │   ├── api/                  # API Routes
-│   │   │   ├── health/           # Health check endpoints
-│   │   │   ├── user/             # User plan management
-│   │   │   ├── oauth/            # OAuth 2.0 endpoints
-│   │   │   ├── things/           # CRUD operations
-│   │   │   └── checkout/         # Payment flow
-│   │   ├── .well-known/          # OpenID Connect discovery
+│   │   │   ├── auth/             # Authentication endpoints
+│   │   │   ├── oauth/            # OAuth 2.0 endpoints (for OpenAI)
+│   │   │   ├── tasks/            # CRUD operations for tasks
+│   │   │   ├── checkout/         # Checkout completion handler
+│   │   │   ├── check-subscription/ # Subscription status
+│   │   │   ├── create-checkout-session/ # Create checkout session
+│   │   │   ├── create-customer-session/ # Customer portal access
+│   │   │   ├── sync-customer/    # Sync user with SolvaPay
+│   │   │   └── docs/             # OpenAPI documentation
+│   │   ├── auth/                 # Auth callback pages
+│   │   ├── checkout/             # Checkout pages
+│   │   ├── docs/                 # API documentation page
+│   │   ├── oauth/                # OAuth pages
+│   │   ├── components/           # React components
 │   │   ├── globals.css           # Global styles
 │   │   ├── layout.tsx            # Root layout
 │   │   └── page.tsx              # Home page
+│   ├── lib/                      # Utility libraries
+│   │   ├── supabase.ts          # Supabase client
+│   │   └── openapi/             # OpenAPI registry
 │   ├── services/                 # Business logic
 │   ├── types/                    # TypeScript types
-│   ├── middleware/               # Next.js middleware
+│   ├── middleware.ts             # Next.js middleware
 │   └── __tests__/                # Test files
-├── user-plans.json              # User plan storage
+├── scripts/                      # Build scripts
+│   └── generate-zod-openapi.ts  # OpenAPI generation
+├── generated/                    # Generated files
+│   └── openapi.json             # Auto-generated OpenAPI spec
 ├── package.json                 # Dependencies
 ├── next.config.js               # Next.js configuration
 ├── tsconfig.json                # TypeScript configuration
+├── env.example                  # Environment variables template
 └── README.md                    # This file
 ```
 
 ## API Endpoints
 
-### Health Endpoints
+### Authentication
 
-- `GET /api/health` - Basic health check
-- `GET /api/healthz` - Detailed health check with memory usage
+- `GET /api/auth/signin-url` - Get Supabase sign-in URL
 
-### User Plan Management
+### Subscription Management
 
-- `GET /api/user/plan` - Get current user plan and usage
-- `POST /api/user/plan/update` - Update user plan (internal)
+- `GET /api/check-subscription` - Get current user subscription status
+- `POST /api/sync-customer` - Sync user with SolvaPay backend (called automatically on auth)
+- `POST /api/create-checkout-session` - Create checkout session (redirects to hosted checkout)
+- `POST /api/create-customer-session` - Create customer portal session (redirects to hosted portal)
+- `GET /api/checkout/complete` - Checkout completion callback
 
-### OAuth 2.0 Flow
+### OAuth 2.0 Flow (for OpenAI Custom GPT Actions)
 
 - `GET /.well-known/openid-configuration` - OpenID Connect discovery
 - `GET /api/oauth/jwks` - JSON Web Key Set
 - `GET /api/oauth/authorize` - Authorization endpoint
 - `POST /api/oauth/token` - Token exchange
 - `GET /api/oauth/userinfo` - User information
+- `POST /api/oauth/revoke` - Revoke token
+- `POST /api/oauth/signout` - Sign out
 
-### CRUD Operations (Things)
+### CRUD Operations (Tasks)
 
-- `GET /api/things` - List things with pagination
-- `POST /api/things` - Create a new thing
-- `GET /api/things/[id]` - Get specific thing
-- `PUT /api/things/[id]` - Update thing
-- `DELETE /api/things/[id]` - Delete thing
+- `GET /api/tasks` - List tasks with pagination (protected with paywall)
+- `POST /api/tasks` - Create a new task (protected with paywall)
+- `GET /api/tasks/[id]` - Get specific task (protected with paywall)
+- `PUT /api/tasks/[id]` - Update task (protected with paywall)
+- `DELETE /api/tasks/[id]` - Delete task (protected with paywall)
 
-### Checkout Flow
+### Documentation
 
-- `GET /api/checkout` - Checkout page
-- `GET /api/checkout/payment` - Payment confirmation
-- `GET /api/checkout/complete` - Success page
+- `GET /api/docs` - Interactive Swagger UI
+- `GET /api/docs/json` - OpenAPI JSON specification
 
 ## Key Differences from Fastify Example
 
@@ -213,14 +281,14 @@ Instead of Fastify route handlers, we use Next.js API routes:
 
 **Fastify:**
 ```typescript
-app.get('/health', async () => ({ status: 'ok' }));
+app.get('/tasks', async () => ({ tasks: [] }));
 ```
 
 **Next.js:**
 ```typescript
-// app/api/health/route.ts
+// app/api/tasks/route.ts
 export async function GET() {
-  return NextResponse.json({ status: 'ok' });
+  return NextResponse.json({ tasks: [] });
 }
 ```
 
@@ -236,10 +304,14 @@ app.addHook('preHandler', async (req) => {
 **Next.js:**
 ```typescript
 // src/middleware.ts
-export function middleware(request: NextRequest) {
-  // Add customer reference to headers
-  const customerRef = `demo_${userEmail.replace('@', '_')}`;
-  requestHeaders.set('x-customer-ref', customerRef);
+export async function middleware(request: NextRequest) {
+  // Extract userId from Supabase JWT token
+  const authAdapter = new SupabaseAuthAdapter({ jwtSecret });
+  const userId = await authAdapter.getUserIdFromRequest(request);
+  
+  // Add userId to headers for downstream routes
+  requestHeaders.set('x-user-id', userId);
+  requestHeaders.set('x-customer-ref', userId); // Legacy support
 }
 ```
 
@@ -290,33 +362,28 @@ const email = formData.get('email') as string;
 
 ### Environment Variables
 
-Create a `.env.local` file with the following variables:
+Copy `env.example` to `.env.local` and fill in your values:
 
-> **⚠️ Important**: The `PUBLIC_URL` and `OPENAI_ACTIONS_BASE_URL` variables are **required** and cannot contain placeholder values like "your-domain" or "your-subdomain". The OpenAPI generation will fail if placeholder URLs are detected to prevent invalid schemas.
+> **⚠️ Important**: The `PUBLIC_URL` variable is **required** for OpenAPI generation and cannot contain placeholder values like "your-domain" or "your-subdomain". The OpenAPI generation will fail if placeholder URLs are detected to prevent invalid schemas.
 
 ```env
 # SolvaPay Configuration
-SOLVAPAY_SECRET_KEY=your-secret-key
-SOLVAPAY_AGENT=custom-gpt-actions
+SOLVAPAY_SECRET_KEY=sp_sandbox_your_secret_key_here
+SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+NEXT_PUBLIC_AGENT_REF=agt_your_agent_ref
 
-# Server Configuration
-PORT=3000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_JWT_SECRET=your_supabase_jwt_secret_here
+
+# OAuth Configuration (for OpenAI Custom GPT Actions)
+OAUTH_ISSUER=https://your-domain.com
+OAUTH_JWKS_SECRET=your_jwks_secret_here
+OAUTH_CLIENT_ID=your_client_id_here
 
 # REQUIRED: Public URL (set to your actual ngrok URL - no placeholders allowed!)
 PUBLIC_URL=https://your-subdomain.ngrok-free.app
-OPENAI_ACTIONS_BASE_URL=https://your-subdomain.ngrok-free.app
-
-# OAuth Configuration
-OAUTH_ISSUER=https://your-subdomain.ngrok-free.app
-OAUTH_CLIENT_ID=solvapay-demo-client
-OAUTH_CLIENT_SECRET=demo-secret-key
-OAUTH_REDIRECT_URI=https://chat.openai.com/aip/g-YOUR-GPT-ID/oauth/callback
-OAUTH_JWKS_SECRET=your-jwt-secret
-
-# Checkout Configuration
-CHECKOUT_BASE_URL=https://your-subdomain.ngrok-free.app
 ```
 
 ### Next.js Configuration
@@ -364,51 +431,37 @@ This example is configured for easy deployment to Vercel with monorepo support.
    - The `vercel.json` already configures the build command
    - Vercel will automatically detect and use the monorepo setup
 
-3. **Set up Vercel KV (Required for Production)**
+3. **Set Required Environment Variables**
    
-   **⚠️ IMPORTANT**: This app requires persistent storage for user plans. On Vercel, you must use Vercel KV:
+   **⚠️ CRITICAL**: You **must** set these environment variables in Vercel's project settings:
    
-   1. Go to your Vercel project → Storage → Create Database
-   2. Select **KV (Redis)**
-   3. Name it (e.g., `user-plans-kv`)
-   4. Click **Create**
-   5. Vercel will automatically add the required environment variables:
-      - `KV_URL`
-      - `KV_REST_API_URL`
-      - `KV_REST_API_TOKEN`
-      - `KV_REST_API_READ_ONLY_TOKEN`
+   Go to your Vercel project → Settings → Environment Variables and add:
    
-   > **Note**: For local development, the app automatically uses file-based storage (`user-plans.json`). Vercel KV is only needed for production deployments.
-
-4. **Set Required Environment Variables**
-   
-   **⚠️ CRITICAL**: You **must** set `PUBLIC_URL` in Vercel's environment variables:
-   
-   ```
+   **Required Variables:**
+   ```env
+   SOLVAPAY_SECRET_KEY=your-production-secret-key
+   NEXT_PUBLIC_AGENT_REF=your-agent-reference
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   SUPABASE_JWT_SECRET=your-supabase-jwt-secret
    PUBLIC_URL=https://your-app.vercel.app
    ```
    
-   This is used as the server URL in the generated OpenAPI specification. Without it, the build will fail.
+   **⚠️ IMPORTANT**: `PUBLIC_URL` is critical for OpenAPI generation. Without it, the build will fail. For preview deployments, you can use `https://$VERCEL_URL` as the value.
    
-   **How to set it:**
-   - Go to your Vercel project → Settings → Environment Variables
-   - Add `PUBLIC_URL` with your production URL
-   - For preview deployments, you can use `https://$VERCEL_URL` as the value
-   
-   **Other Required Variables:**
+   **Optional (for OpenAI Custom GPT Actions):**
    ```env
-   SOLVAPAY_API_KEY=your-production-api-key
-   SOLVAPAY_AGENT=custom-gpt-actions
+   OAUTH_ISSUER=https://your-app.vercel.app
+   OAUTH_JWKS_SECRET=your-jwks-secret
    OAUTH_CLIENT_ID=your-oauth-client-id
-   OAUTH_CLIENT_SECRET=your-oauth-client-secret
-   OAUTH_JWKS_SECRET=your-jwt-secret
+   SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
    ```
 
-5. **Deploy**
+4. **Deploy**
    - Push to your connected branch
    - Vercel will automatically build and deploy
    - The OpenAPI docs will be generated during build using `PUBLIC_URL`
-   - User plans will be stored in Vercel KV (Redis)
+   - Subscription data is stored in SolvaPay backend (no additional storage needed)
 
 #### Vercel Environment Variables Priority
 
@@ -418,17 +471,22 @@ The OpenAPI generation script uses the following priority:
 
 We recommend using `PUBLIC_URL` for production to have full control over the server URL in your OpenAPI specification.
 
-#### Storage Architecture
+#### Architecture
 
-This app uses a smart storage adapter that automatically selects the right storage backend:
+This app uses a modern architecture with:
 
-- **Local Development**: Uses file-based storage (`user-plans.json`) for simplicity
-- **Vercel Production**: Uses Vercel KV (Redis) for persistent, distributed storage across serverless functions
+- **Authentication**: Supabase handles user authentication (email/password, Google OAuth, etc.)
+- **Session Management**: Supabase JWT tokens are verified server-side via middleware
+- **Paywall**: SolvaPay SDK handles subscription checks and usage limits
+- **Storage**: Subscription data is stored in SolvaPay backend (no local storage needed)
+- **Hosted Checkout**: Users are redirected to SolvaPay's hosted checkout page for upgrades
+- **Customer Portal**: Users can manage subscriptions via SolvaPay's hosted customer portal
 
 This ensures:
-- ✅ User plans persist after checkout completion
-- ✅ ChatGPT can retrieve updated plans across different function invocations
-- ✅ No manual configuration needed - it automatically detects the environment
+- ✅ Secure authentication with Supabase
+- ✅ Centralized subscription management via SolvaPay
+- ✅ No need to handle payment processing directly
+- ✅ Automatic customer sync when users sign in
 
 ### Other Platforms
 
@@ -458,32 +516,20 @@ In your OpenAI Custom GPT configuration:
 
 ### 3. Action Configuration
 
-```json
-{
-  "openapi": "3.0.0",
-  "info": {
-    "title": "SolvaPay API",
-    "version": "1.0.0"
-  },
-  "servers": [
-    {
-      "url": "https://your-domain.com/api"
-    }
-  ],
-  "paths": {
-    "/things": {
-      "get": {
-        "operationId": "listThings",
-        "summary": "List things"
-      },
-      "post": {
-        "operationId": "createThing",
-        "summary": "Create a thing"
-      }
-    }
-  }
-}
+The OpenAPI schema is automatically generated from your API routes. Import it from:
+
 ```
+https://your-domain.com/api/docs/json
+```
+
+The schema includes all CRUD operations for tasks:
+- `listTasks` - List all tasks
+- `createTask` - Create a new task
+- `getTask` - Get a specific task
+- `updateTask` - Update a task
+- `deleteTask` - Delete a task
+
+All endpoints are protected with paywall checks and include proper OAuth 2.0 authentication requirements.
 
 ## 🧪 Testing
 
@@ -505,10 +551,20 @@ npm run test:watch     # Watch mode
 
 ### Common Issues
 
-1. **CORS Errors**: Ensure your domain is configured in CORS settings
-2. **OAuth Issues**: Check that all OAuth environment variables are set
-3. **Build Errors**: Run `pnpm build:deps` to build SolvaPay dependencies
-4. **Paywall Issues**: Use debug endpoints to check/set user plans
+1. **CORS Errors**: CORS is configured in `next.config.mjs` - ensure your domain is allowed
+2. **OAuth Issues**: Check that all OAuth environment variables are set (especially for OpenAI Custom GPT Actions)
+3. **Build Errors**: 
+   - Run `pnpm build:deps` to build SolvaPay dependencies
+   - Ensure `PUBLIC_URL` is set for OpenAPI generation
+   - Run `pnpm generate:docs` before building
+4. **Authentication Issues**: 
+   - Verify Supabase credentials are correct
+   - Check that `SUPABASE_JWT_SECRET` matches your Supabase project settings
+   - Ensure Supabase project has email/password auth enabled
+5. **Subscription Issues**: 
+   - Check that `NEXT_PUBLIC_AGENT_REF` matches your SolvaPay agent
+   - Verify `SOLVAPAY_SECRET_KEY` is correct
+   - Check network tab for API errors
 
 ### Debug Mode
 
