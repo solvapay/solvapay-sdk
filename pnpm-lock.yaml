@@ -264,6 +264,9 @@ importers:
       '@asteasolutions/zod-to-openapi':
         specifier: ^7.0.0
         version: 7.3.4(zod@3.25.76)
+      '@solvapay/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@solvapay/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -273,6 +276,9 @@ importers:
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../packages/server
+      '@supabase/supabase-js':
+        specifier: ^2.39.0
+        version: 2.78.0
       '@vercel/kv':
         specifier: ^2.0.0
         version: 2.0.0

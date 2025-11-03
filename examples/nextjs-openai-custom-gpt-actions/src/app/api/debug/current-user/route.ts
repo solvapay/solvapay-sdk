@@ -1,15 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { readSessionUserIdFromRequest } from '@/lib/session';
 
+/**
+ * Debug Current User Endpoint
+ * 
+ * Returns information about the currently authenticated user.
+ * Supports both Supabase auth (from middleware) and OAuth tokens.
+ */
 export async function GET(request: NextRequest) {
+  // First, try to get user ID from middleware (Supabase auth)
+  const userIdFromHeader = request.headers.get('x-user-id');
+  
+  if (userIdFromHeader) {
+    return NextResponse.json({ 
+      success: true, 
+      userId: userIdFromHeader, 
+      source: 'middleware' 
+    });
+  }
+
+  // Fallback: try OAuth token
   const authHeader = request.headers.get('authorization');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    const sessionUser = await readSessionUserIdFromRequest(request as unknown as Request);
-    if (sessionUser) {
-      return NextResponse.json({ success: true, userId: sessionUser, source: 'session' });
-    }
     return NextResponse.json({
       error: 'No Authorization header found',
       headers: Object.fromEntries(request.headers.entries())
@@ -28,7 +41,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       userId: payload.sub,
-      payload: payload
+      payload: payload,
+      source: 'oauth_token'
     });
   } catch (error) {
     return NextResponse.json({

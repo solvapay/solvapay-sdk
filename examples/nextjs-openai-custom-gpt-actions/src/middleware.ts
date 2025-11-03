@@ -1,9 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
 
-export function middleware(request: NextRequest) {
+/**
+ * Next.js Middleware for Authentication
+ * 
+ * Extracts user ID from Supabase JWT tokens and adds it as a header for API routes.
+ * This is the recommended approach as it centralizes auth logic and makes it available
+ * to all downstream routes.
+ * 
+ * Also handles OAuth route rewriting for OpenAI Custom GPT Actions compatibility.
+ */
+
+// Lazy initialization of auth adapter (Edge runtime compatible)
+let auth: SupabaseAuthAdapter | null = null;
+
+function getAuthAdapter(): SupabaseAuthAdapter {
+  if (!auth) {
+    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+    
+    if (!jwtSecret) {
+      throw new Error(
+        'SUPABASE_JWT_SECRET environment variable is required. ' +
+        'Please set it in your .env.local file. ' +
+        'Get it from: Supabase Dashboard → Settings → API → JWT Secret'
+      );
+    }
+    
+    auth = new SupabaseAuthAdapter({ jwtSecret });
+  }
+  
+  return auth;
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Rewrite OAuth routes to API routes
+  // Rewrite OAuth routes to API routes (for OpenAI Custom GPT Actions compatibility)
   if (pathname.startsWith('/oauth/')) {
     const newUrl = request.nextUrl.clone();
     newUrl.pathname = `/api${pathname}`;
@@ -23,15 +55,67 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  // Add customer reference to request headers for API routes
-  const userEmail = request.headers.get('x-dev-user-email') || 'dev@example.com';
-  const defaultCustomerRef = `demo_${userEmail.replace('@', '_').replace(/\./g, '_')}`;
-  const url = request.nextUrl;
-  const customerRefFromQuery = url.searchParams.get('customer_ref')?.trim() || '';
-  const customerRef = customerRefFromQuery || defaultCustomerRef;
-  
+  // Only process API routes
+  if (!pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
+  // Public routes that don't require authentication
+  const publicRoutes = ['/api/health', '/api/healthz', '/api/auth/signin-url'];
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+
+  // Initialize auth adapter (with error handling)
+  let authAdapter: SupabaseAuthAdapter;
+  try {
+    authAdapter = getAuthAdapter();
+  } catch (error) {
+    console.error('Auth adapter initialization failed:', error);
+    // For public routes, allow access even if auth is misconfigured
+    if (isPublicRoute) {
+      return NextResponse.next();
+    }
+    return NextResponse.json(
+      { 
+        error: 'Server configuration error', 
+        details: error instanceof Error ? error.message : 'Authentication not configured'
+      },
+      { status: 500 }
+    );
+  }
+
+  // Extract userId from Supabase JWT token (if present)
+  const userId = await authAdapter.getUserIdFromRequest(request);
+
+  // For public routes, allow access even without auth, but still set userId if available
+  if (isPublicRoute) {
+    const requestHeaders = new Headers(request.headers);
+    if (userId) {
+      requestHeaders.set('x-user-id', userId);
+    }
+    // Also support legacy x-customer-ref header for backward compatibility
+    if (userId) {
+      requestHeaders.set('x-customer-ref', userId);
+    }
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  }
+
+  // For protected routes, require authentication
+  if (!userId) {
+    return NextResponse.json(
+      { error: 'Unauthorized', details: 'Valid authentication required' },
+      { status: 401 }
+    );
+  }
+
+  // Clone request headers and add userId for downstream routes
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-customer-ref', customerRef);
+  requestHeaders.set('x-user-id', userId);
+  // Also support legacy x-customer-ref header for backward compatibility
+  requestHeaders.set('x-customer-ref', userId);
 
   return NextResponse.next({
     request: {

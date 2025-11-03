@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { revokedTokens, refreshTokens } from '@/lib/oauth-storage';
-import { SESSION_COOKIE_NAME } from '@/lib/session';
 
 /**
  * Sign out endpoint that revokes the user's access token
  * Supports both Bearer token and form data token input
+ * 
+ * Note: Supabase handles session management, so we only revoke OAuth tokens here.
  */
 export async function POST(request: NextRequest) {
   let token: string | null = null;
@@ -23,8 +24,6 @@ export async function POST(request: NextRequest) {
     tokenTypeHint = formData.get('token_type_hint') as string;
   }
 
-  // Sign out request received
-
   if (!token) {
     return NextResponse.json(
       { error: 'invalid_request', error_description: 'Missing token parameter' },
@@ -38,14 +37,11 @@ export async function POST(request: NextRequest) {
       const refreshTokenData = refreshTokens.get(token);
       if (refreshTokenData) {
         refreshTokens.delete(token);
-        // Successfully signed out user via refresh token
         
-        const res = NextResponse.json({
+        return NextResponse.json({
           success: true,
           message: 'Successfully signed out'
         });
-        res.cookies.set(SESSION_COOKIE_NAME, '', { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 0 });
-        return res;
       }
     }
 
@@ -59,26 +55,18 @@ export async function POST(request: NextRequest) {
       // Add to revoked tokens blacklist
       revokedTokens.add(token);
       
-      // Successfully signed out user via access token
-      
-      const res = NextResponse.json({
+      return NextResponse.json({
         success: true,
         message: 'Successfully signed out'
       });
-      res.cookies.set(SESSION_COOKIE_NAME, '', { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 0 });
-      return res;
 
     } catch (jwtError) {
       // Token is not a valid JWT, might be an invalid or expired token
-      // Token is not a valid JWT
-      
       // Still return success for security reasons (don't leak token validity info)
-      const res = NextResponse.json({
+      return NextResponse.json({
         success: true,
         message: 'Sign out completed'
       });
-      res.cookies.set(SESSION_COOKIE_NAME, '', { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 0 });
-      return res;
     }
 
   } catch (error) {

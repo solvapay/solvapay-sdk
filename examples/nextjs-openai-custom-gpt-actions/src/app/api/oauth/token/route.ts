@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { users, authorizationCodes, refreshTokens } from '@/lib/oauth-storage';
-import { createSessionToken } from '@/lib/session';
+import { authorizationCodes, refreshTokens } from '@/lib/oauth-storage';
 
+/**
+ * OAuth Token Exchange Endpoint
+ * 
+ * Exchanges authorization code for access token.
+ * Uses Supabase user IDs from authorization codes generated in /auth/callback.
+ */
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const grantType = formData.get('grant_type') as string;
@@ -60,7 +65,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate client (in a real app, you'd validate client_id and client_secret)
-  if (clientId !== 'solvapay-demo-client') {
+  const expectedClientId = process.env.OAUTH_CLIENT_ID || 'solvapay-demo-client';
+  if (clientId !== expectedClientId) {
     return NextResponse.json(
       { error: 'invalid_client', error_description: 'Invalid client credentials' },
       { status: 400 }
@@ -70,22 +76,15 @@ export async function POST(request: NextRequest) {
   // Clean up used authorization code
   authorizationCodes.delete(code);
 
-  // Generate JWT access token
+  // Generate JWT access token using Supabase user ID
   const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
   const issuer = process.env.OAUTH_ISSUER!;
   
-  // Find user data from the authorization code
-  const user = Array.from(users.values()).find(u => u.id === authCodeData.userId);
-  if (!user) {
-    console.log('🔍 [TOKEN DEBUG] User not found:', authCodeData.userId);
-    return NextResponse.json(
-      { error: 'invalid_grant', error_description: 'User not found' },
-      { status: 400 }
-    );
-  }
+  // Use Supabase user ID from authorization code
+  const userId = authCodeData.userId;
   
   const accessToken = await new SignJWT({
-    sub: authCodeData.userId,
+    sub: userId,
     iss: issuer,
     aud: clientId,
     scope: authCodeData.scopes.join(' ')
@@ -99,16 +98,14 @@ export async function POST(request: NextRequest) {
 
   // Store refresh token with expiration (30 days)
   refreshTokens.set(refreshToken, {
-    userId: authCodeData.userId,
+    userId: userId,
     clientId,
     issuedAt: new Date(),
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
   });
 
-  console.log('✅ [TOKEN] Generated JWT tokens for client:', clientId, 'user:', authCodeData.userId);
+  console.log('✅ [TOKEN] Generated JWT tokens for client:', clientId, 'user:', userId);
 
-  // Create a browser session cookie for subsequent GETs from user agent
-  const sessionToken = await createSessionToken({ userId: user.id });
   const res = NextResponse.json({
     access_token: accessToken,
     token_type: 'Bearer',
@@ -116,13 +113,6 @@ export async function POST(request: NextRequest) {
     refresh_token: refreshToken,
     scope: authCodeData.scopes.join(' ')
   });
-  // Note: Next.js app router cookies helper requires response mutation
-  res.cookies.set('sp_session', sessionToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30
-  });
+  
   return res;
 }

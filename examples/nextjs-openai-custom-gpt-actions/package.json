@@ -23,9 +23,11 @@
     "clean:ports": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true"
   },
   "dependencies": {
+    "@solvapay/auth": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@solvapay/core": "workspace:*",
+    "@supabase/supabase-js": "^2.39.0",
     "next": "^15.0.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

@@ -2,24 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import HomePage from '../../app/page'
-import OAuthAuthorizePage from '../../app/oauth/authorize/page'
 import CheckoutPage from '../../app/checkout/page'
 
-// Mock useSearchParams hook for OAuth pages
+// Mock useSearchParams hook
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: (key: string) => {
       const params: Record<string, string> = {
-        'client_id': 'test-client-id',
-        'redirect_uri': 'http://localhost:3000/oauth/callback',
-        'response_type': 'code',
-        'scope': 'openid profile email',
-        'state': 'test-state',
         'plan': 'pro',
         'return_url': 'http://localhost:3000'
       }
       return params[key] || null
     }
+  }),
+  useRouter: () => ({
+    push: vi.fn(),
+    back: vi.fn()
   })
 }))
 
@@ -32,16 +30,6 @@ describe('Integration Tests - User Flows', () => {
     ;(global.fetch as any).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ ok: true })
-    })
-  })
-
-  describe('OAuth Flow', () => {
-    it('displays OAuth authorization form', () => {
-      render(<OAuthAuthorizePage />)
-      
-      expect(screen.getByLabelText('Email:')).toBeInTheDocument()
-      expect(screen.getByLabelText('Password:')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument()
     })
   })
 

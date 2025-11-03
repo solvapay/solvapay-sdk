@@ -1,8 +1,11 @@
-// Demo users
-export const users = new Map([
-  ['demo@example.com', { id: 'user_1', email: 'demo@example.com', name: 'Demo User', password: 'demo123' }],
-  ['test@example.com', { id: 'user_2', email: 'test@example.com', name: 'Test User', password: 'test123' }]
-]);
+/**
+ * OAuth Storage
+ * 
+ * In-memory storage for OAuth authorization codes, refresh tokens, and revoked tokens.
+ * In production, these should be stored in Redis or a database with TTL.
+ * 
+ * Note: User authentication is now handled by Supabase, so we no longer store users here.
+ */
 
 // Authorization codes storage (in production, use Redis or database)
 export const authorizationCodes = new Map<string, { 
