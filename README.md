@@ -234,6 +234,8 @@ pnpm build
 pnpm test
 ```
 
+**💡 Hot Reloading**: For a better development experience, see [`docs/HOT_RELOADING_SETUP.md`](./docs/HOT_RELOADING_SETUP.md) to set up automatic rebuilds and hot reloading when working with SDK packages and examples.
+
 ### Branching & Publishing
 
 - **`dev`** - Main development branch for daily work
@@ -253,6 +255,7 @@ See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflo
 - **[Architecture](./docs/architecture.md)** - Package design and structure
 - **[Contributing](./docs/contributing.md)** - Development guidelines
 - **[Publishing](./docs/publishing.md)** - Publishing and release process
+- **[Hot Reloading Setup](./docs/HOT_RELOADING_SETUP.md)** - Set up automatic rebuilds and hot reloading
 
 ## 🔒 Security
 

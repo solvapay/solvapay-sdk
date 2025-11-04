@@ -55,5 +55,5 @@ export {
   getCancelledSubscriptionsWithEndDate,
   getMostRecentSubscription,
   getPrimarySubscription,
-  hasActivePaidSubscription,
+  isPaidSubscription,
 } from './utils/subscriptions';

@@ -22,7 +22,7 @@ export default function HomePage() {
   });
   
   // Get subscription helpers from SDK
-  const { subscriptions, loading: subscriptionsLoading, hasActiveSubscription, refetch } = useSubscription();
+  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activePaidSubscription } = useSubscription();
   
   // Refetch subscriptions on mount to ensure we have latest data after navigation (only once)
   const hasRefetchedRef = useRef(false);
@@ -35,14 +35,14 @@ export default function HomePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
+  
+  // Get advanced subscription status helpers
   const {
-    hasPaidSubscription,
-    activePaidSubscription,
     cancelledSubscription,
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionStatus(plans);
+  } = useSubscriptionStatus();
   
   // Combine loading states - only show content when both are loaded
   const isLoading = subscriptionsLoading || plansLoading;
@@ -112,7 +112,7 @@ export default function HomePage() {
                 {activePaidSubscription?.planName}
               </span> plan
             </p>
-          ) : hasActiveSubscription ? (
+          ) : mostRecentActiveSubscription ? (
             <p className="text-slate-600">
               You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                 {mostRecentActiveSubscription?.planName}
@@ -188,7 +188,7 @@ export default function HomePage() {
               <Skeleton className="h-5 w-64 mx-auto" />
               <Skeleton className="h-10 w-48 mx-auto" />
             </div>
-          ) : hasActiveSubscription ? (
+          ) : subscriptions.length > 0 ? (
             <div className="text-center py-4">
               <p className="text-slate-900 mb-4">Manage your subscription and billing</p>
               <Link href="/checkout">

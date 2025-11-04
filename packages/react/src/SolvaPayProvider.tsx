@@ -9,7 +9,7 @@ import type {
   SolvaPayConfig,
 } from './types';
 import type { ProcessPaymentResult } from '@solvapay/server';
-import { filterSubscriptions } from './utils/subscriptions';
+import { filterSubscriptions, isPaidSubscription, getPrimarySubscription } from './utils/subscriptions';
 import { defaultAuthAdapter, type AuthAdapter } from './adapters/auth';
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
@@ -432,6 +432,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
           ...data,
           subscriptions: filterSubscriptions(data.subscriptions || []),
         };
+        
         setSubscriptionData(filteredData);
         lastFetchedRef.current = cacheKey;
       }
@@ -460,16 +461,28 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [fetchSubscription]);
   
   const refetchSubscription = useCallback(async () => {
-    const cacheKey = internalCustomerRef || userId || 'anonymous';
+    // Always clear cache state before refetching to ensure fresh data
+    // Clear both the cache key tracking and in-flight requests
     lastFetchedRef.current = null;
     inFlightRef.current = null;
-    // Force a fresh fetch using ref to avoid dependency issues
+    
+    // Also clear subscription data temporarily to ensure UI reflects loading state
+    // This prevents showing stale data while fetching
+    setSubscriptionData({ subscriptions: [] });
+    
+    // Force a fresh fetch by passing force=true
+    // This bypasses the cache check and ensures we get the latest data from the server
     await fetchSubscriptionRef.current(true);
-  }, [internalCustomerRef, userId]);
+  }, []);
 
   // Auto-fetch subscriptions on mount and when auth state changes
   // Only depend on actual values, not the function itself
   useEffect(() => {
+    // Clear cache when userId or customerRef changes to prevent stale data
+    // This is important when switching accounts or when customerRef is updated
+    lastFetchedRef.current = null;
+    inFlightRef.current = null;
+    
     if (isAuthenticated || internalCustomerRef) {
       fetchSubscription();
     } else {
@@ -488,21 +501,35 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [fetchSubscription]);
 
   // Build subscription status with helper methods - memoized to prevent unnecessary re-renders
-  const subscription: SubscriptionStatus = useMemo(() => ({
-    loading,
-    customerRef: subscriptionData.customerRef || internalCustomerRef,
-    email: subscriptionData.email,
-    name: subscriptionData.name,
-    subscriptions: subscriptionData.subscriptions,
-    hasActiveSubscription: subscriptionData.subscriptions.some(
-      sub => sub.status === 'active'
-    ),
-    hasPlan: (planName: string) => {
-      return subscriptionData.subscriptions.some(
-        sub => sub.planName.toLowerCase() === planName.toLowerCase() && sub.status === 'active'
-      );
-    },
-  }), [loading, subscriptionData, internalCustomerRef]);
+  const subscription: SubscriptionStatus = useMemo(() => {
+    // Get primary active subscription (paid or free) - most recent active, or cancelled with valid endDate
+    const activeSubscription = getPrimarySubscription(subscriptionData.subscriptions);
+    
+    // Compute active paid subscriptions
+    const activePaidSubscriptions = subscriptionData.subscriptions.filter(
+      sub => sub.status === 'active' && isPaidSubscription(sub)
+    );
+    
+    // Get most recent active paid subscription (sorted by startDate)
+    const activePaidSubscription = activePaidSubscriptions
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0] || null;
+    
+    return {
+      loading,
+      customerRef: subscriptionData.customerRef || internalCustomerRef,
+      email: subscriptionData.email,
+      name: subscriptionData.name,
+      subscriptions: subscriptionData.subscriptions,
+      hasPlan: (planName: string) => {
+        return subscriptionData.subscriptions.some(
+          sub => sub.planName.toLowerCase() === planName.toLowerCase() && sub.status === 'active'
+        );
+      },
+      activeSubscription,
+      hasPaidSubscription: activePaidSubscriptions.length > 0,
+      activePaidSubscription,
+    };
+  }, [loading, subscriptionData, internalCustomerRef]);
 
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue: SolvaPayContextValue = useMemo(() => ({

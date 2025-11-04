@@ -13,6 +13,10 @@ export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { p
 
 /**
  * Extended CustomerResponse with proper field mapping
+ * 
+ * Note: The backend API may return subscriptions with additional fields beyond SubscriptionInfo
+ * (e.g., amount, endDate, cancelledAt, cancellationReason) as defined in SubscriptionResponse.
+ * These additional fields are preserved in the subscriptions array.
  */
 export type CustomerResponseMapped = {
   customerRef: string;
@@ -20,7 +24,10 @@ export type CustomerResponseMapped = {
   name?: string;
   externalRef?: string;
   plan?: string;
-  subscriptions?: components['schemas']['SubscriptionInfo'][];
+  subscriptions?: Array<
+    components['schemas']['SubscriptionInfo'] & 
+    Partial<Pick<components['schemas']['SubscriptionResponse'], 'amount' | 'currency' | 'endDate' | 'cancelledAt' | 'cancellationReason' | 'paidAt' | 'nextBillingDate'>>
+  >;
 };
 
 /**

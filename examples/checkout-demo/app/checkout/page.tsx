@@ -19,7 +19,7 @@ export default function CheckoutPage() {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
   const [paymentFailed, setPaymentFailed] = useState<boolean>(false);
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
-  const { subscriptions, refetch } = useSubscription();
+  const { subscriptions, refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } = useSubscription();
   const router = useRouter();
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -52,8 +52,8 @@ export default function CheckoutPage() {
     autoSelectFirstPaid: true,
   });
 
-  // Use subscription status from SDK
-  const subscriptionStatus = useSubscriptionStatus(plans);
+  // Get advanced subscription status helpers
+  const subscriptionStatus = useSubscriptionStatus();
   
   // Force refetch subscriptions when checkout page mounts (only once)
   const hasRefetchedRef = useRef(false);
@@ -124,8 +124,6 @@ export default function CheckoutPage() {
     if (!confirm('Are you sure you want to cancel your plan?')) {
       return;
     }
-
-    const { activePaidSubscription } = subscriptionStatus;
 
     if (!activePaidSubscription) {
       return;
@@ -210,7 +208,7 @@ export default function CheckoutPage() {
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanName={subscriptionStatus.activePlanName}
+                      activePlanName={activeSubscription?.planName || null}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
@@ -227,7 +225,7 @@ export default function CheckoutPage() {
 
                     {/* Action Buttons */}
                     <CheckoutActions
-                      hasPaidSubscription={subscriptionStatus.hasPaidSubscription}
+                      hasPaidSubscription={hasPaidSubscription}
                       shouldShowCancelledNotice={subscriptionStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}

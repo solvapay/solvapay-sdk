@@ -51,11 +51,13 @@ export function filterSubscriptions(subscriptions: SubscriptionInfo[]): Subscrip
  * Also excludes subscriptions with cancelledAt set, even if status is still 'active'
  */
 export function getActiveSubscriptions(subscriptions: SubscriptionInfo[]): SubscriptionInfo[] {
-  return subscriptions.filter(sub => {
+  const active = subscriptions.filter(sub => {
     const subAny = sub as any;
     // Exclude if status is cancelled or if cancelledAt is set
     return sub.status === 'active' && !subAny.cancelledAt;
   });
+  
+  return active;
 }
 
 /**
@@ -109,23 +111,13 @@ export function getPrimarySubscription(subscriptions: SubscriptionInfo[]): Subsc
 }
 
 /**
- * Check if user has an active paid subscription
+ * Check if a subscription is paid
+ * Uses subscription amount field: amount > 0 = paid, amount === 0 or undefined = free
  * 
- * @param subscriptions - Array of subscriptions
- * @param isPaidPlan - Function to check if a plan name represents a paid plan
+ * @param sub - Subscription to check
+ * @returns true if subscription is paid (amount > 0)
  */
-export function hasActivePaidSubscription(
-  subscriptions: SubscriptionInfo[],
-  isPaidPlan: (planName: string) => boolean
-): boolean {
-  const filtered = filterSubscriptions(subscriptions);
-  
-  // Check for active paid subscriptions first
-  const activePaid = getActiveSubscriptions(filtered).some(sub => isPaidPlan(sub.planName));
-  if (activePaid) return true;
-  
-  // Check for cancelled paid subscriptions with endDate
-  const cancelledPaid = getCancelledSubscriptionsWithEndDate(filtered).some(sub => isPaidPlan(sub.planName));
-  return cancelledPaid;
+export function isPaidSubscription(sub: SubscriptionInfo): boolean {
+  return (sub.amount ?? 0) > 0;
 }
 

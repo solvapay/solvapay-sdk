@@ -1,63 +1,48 @@
 import { useMemo, useCallback } from 'react';
-import type { Plan, SubscriptionInfo, SubscriptionStatusReturn } from '../types';
+import type { SubscriptionInfo, SubscriptionStatusReturn } from '../types';
 import { useSubscription } from './useSubscription';
 
 /**
- * Hook providing status and helper functions for subscription management
+ * Hook providing advanced status and helper functions for subscription management
  * 
- * Provides utilities for checking subscription status, formatting dates,
- * and working with paid vs free plans.
- * 
- * @param plans - Array of available plans to determine if a subscription is paid
+ * Focuses on cancelled subscription logic and date formatting utilities.
+ * For basic subscription data and paid status checks, use useSubscription() instead.
  * 
  * @example
  * ```tsx
- * const status = useSubscriptionStatus(plans);
+ * const { cancelledSubscription, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } = useSubscriptionStatus();
  * 
- * if (status.isPaidPlan('Pro Plan')) {
- *   // Handle paid plan
+ * if (shouldShowCancelledNotice && cancelledSubscription) {
+ *   const formattedDate = formatDate(cancelledSubscription.endDate);
+ *   const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate);
  * }
- * 
- * const daysLeft = status.getDaysUntilExpiration(subscription.endDate);
  * ```
  */
-export function useSubscriptionStatus(plans: Plan[]): SubscriptionStatusReturn {
+export function useSubscriptionStatus(): SubscriptionStatusReturn {
   const { subscriptions } = useSubscription();
 
-  // Helper to check if a subscription is for a paid plan
-  const isPaidPlan = useCallback((planName: string): boolean => {
-    const plan = plans.find(p => p.name === planName);
-    return plan ? (plan.price ?? 0) > 0 && !plan.isFreeTier : true;
-  }, [plans]);
+  // Helper to check if a subscription is paid
+  // Only uses amount field: amount > 0 = paid, amount === 0 or undefined = free
+  const isPaidSubscription = useCallback((sub: SubscriptionInfo): boolean => {
+    return (sub.amount ?? 0) > 0;
+  }, []);
 
-  // Memoize subscription calculations
+  // Memoize subscription calculations for cancelled subscriptions
   const subscriptionData = useMemo(() => {
-    const activePaidSubscriptions = subscriptions.filter(
-      sub => sub.status === 'active' && isPaidPlan(sub.planName)
-    );
-    
-    const activePaidSubscription = activePaidSubscriptions
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0] || null;
-    
     const cancelledPaidSubscriptions = subscriptions.filter(
-      sub => sub.status === 'cancelled' && isPaidPlan(sub.planName)
+      sub => sub.status === 'cancelled' && isPaidSubscription(sub)
     );
     
     const cancelledSubscription = cancelledPaidSubscriptions
       .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0] || null;
     
-    const hasActiveSubscription = subscriptions.some(sub => sub.status === 'active');
-    const shouldShowCancelledNotice = !!(cancelledSubscription && 
-      (!hasActiveSubscription || cancelledSubscription.endDate));
+    const shouldShowCancelledNotice = !!cancelledSubscription;
     
     return {
-      activePaidSubscription,
-      activePlanName: activePaidSubscription?.planName || null,
       cancelledSubscription,
-      hasPaidSubscription: activePaidSubscriptions.length > 0,
       shouldShowCancelledNotice,
     };
-  }, [subscriptions, isPaidPlan]);
+  }, [subscriptions, isPaidSubscription]);
 
   // Format date helper
   const formatDate = useCallback((dateString?: string): string | null => {
@@ -80,12 +65,8 @@ export function useSubscriptionStatus(plans: Plan[]): SubscriptionStatusReturn {
   }, []);
 
   return {
-    isPaidPlan,
-    activePaidSubscription: subscriptionData.activePaidSubscription,
     cancelledSubscription: subscriptionData.cancelledSubscription,
-    hasPaidSubscription: subscriptionData.hasPaidSubscription,
     shouldShowCancelledNotice: subscriptionData.shouldShowCancelledNotice,
-    activePlanName: subscriptionData.activePlanName,
     formatDate,
     getDaysUntilExpiration,
   };

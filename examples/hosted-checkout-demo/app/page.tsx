@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSubscription, useSubscriptionStatus } from '@solvapay/react';
 import { getAccessToken } from './lib/supabase';
 
@@ -11,34 +11,32 @@ export default function HomePage() {
   
   // Get subscription helpers from SDK
   // Note: Plans are handled on the hosted checkout page, so we pass empty array
-  // This will treat all subscriptions as paid plans (default behavior when plan not found)
-  const { subscriptions, loading: subscriptionsLoading, hasActiveSubscription, refetch } = useSubscription();
+  // Subscription status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
+  // Use hasPaidSubscription and activeSubscription consistently throughout the component
+  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
+  
   
   // Refetch subscriptions on mount to ensure we have latest data after navigation
+  // This is especially important when creating a new account or after account changes
+  // Empty dependency array ensures this only runs once on mount, preventing stale data
   useEffect(() => {
+    // Immediately refetch on mount to bypass any cached data
     refetch().catch((error) => {
       console.error('[HomePage] Refetch failed:', error);
     });
-  }, [refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount to ensure fresh data on page load
+  
+  // Get advanced subscription status helpers
   const {
-    hasPaidSubscription,
-    activePaidSubscription,
     cancelledSubscription,
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionStatus([]);
+  } = useSubscriptionStatus();
   
   // Loading state - only subscriptions loading since plans are on hosted page
   const isLoading = subscriptionsLoading;
-  
-  // Get the most recent active subscription (for display - includes free plans)
-  const mostRecentActiveSubscription = useMemo(() => {
-    const activeSubs = subscriptions.filter(sub => sub.status === 'active');
-    return activeSubs.sort((a, b) => 
-      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-    )[0];
-  }, [subscriptions]);
 
   // Handle redirect to hosted checkout page
   const handleViewPlans = useCallback(async (planRef?: string) => {
@@ -188,16 +186,10 @@ export default function HomePage() {
             <div className="flex justify-center items-center gap-2">
               <Skeleton className="h-5 w-48" />
             </div>
-          ) : hasPaidSubscription ? (
+          ) : activeSubscription ? (
             <p className="text-slate-600">
               You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activePaidSubscription?.planName}
-              </span> plan
-            </p>
-          ) : hasActiveSubscription ? (
-            <p className="text-slate-600">
-              You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {mostRecentActiveSubscription?.planName}
+                {activeSubscription.planName}
               </span> plan
             </p>
           ) : shouldShowCancelledNotice && cancelledSubscription ? (
@@ -254,12 +246,12 @@ export default function HomePage() {
           <FeatureCard
             title="Advanced Analytics"
             description="Real-time data analysis with custom dashboards."
-            locked={!hasPaidSubscription}
+            locked={!isLoading && !hasPaidSubscription}
           />
           <FeatureCard
             title="Priority Support"
             description="Get help from our team within 24 hours."
-            locked={!hasPaidSubscription}
+            locked={!isLoading && !hasPaidSubscription}
           />
         </div>
 
@@ -270,7 +262,7 @@ export default function HomePage() {
               <Skeleton className="h-5 w-64 mx-auto" />
               <Skeleton className="h-10 w-48 mx-auto" />
             </div>
-          ) : hasActiveSubscription ? (
+          ) : hasPaidSubscription ? (
             <div className="text-center py-4">
               <p className="text-slate-900 mb-4">Manage your subscription and billing</p>
               {error && (
@@ -338,7 +330,7 @@ export default function HomePage() {
                 disabled={isRedirecting}
                 className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isRedirecting ? 'Redirecting...' : 'View Plans'}
+                {isRedirecting ? 'Redirecting...' : 'Upgrade'}
               </button>
             </div>
           )}

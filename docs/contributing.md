@@ -5,6 +5,7 @@
 - Build all: `pnpm -w build`
 - Test all: `pnpm -w test`
 - Dev (per package): `pnpm -F @solvapay/<pkg> dev` if defined
+- **Hot reloading**: See [`HOT_RELOADING_SETUP.md`](./HOT_RELOADING_SETUP.md) for setting up automatic rebuilds and hot reloading in examples
 
 ## Code style
 - TypeScript strict mode; no `any` unless justified

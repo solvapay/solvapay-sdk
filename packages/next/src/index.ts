@@ -333,31 +333,44 @@ export async function checkSubscription(
     const solvaPay = options.solvaPay || createSolvaPay();
     
     // If cached customerRef is provided, validate it first (fast path)
+    // IMPORTANT: We must validate that the cached customerRef belongs to the current userId
+    // to prevent showing subscription data from a different user
+    // customerRef is the SolvaPay customer ID (e.g., cus_VQ6VQ8HV)
+    // userId is the Supabase user ID (e.g., e5dd246c-a472-4f27-8779-2bd45f3d73a2)
+    // We validate by checking customer.externalRef === userId
     if (cachedCustomerRef) {
       try {
+        // Try to get customer data first (fast path attempt)
         const customer = await solvaPay.getCustomer({ customerRef: cachedCustomerRef });
         
-        // Validate customer exists and filter subscriptions
         if (customer && customer.customerRef) {
-          const now = new Date();
-          const filteredSubscriptions = (customer.subscriptions || []).filter(sub => {
-            const subAny = sub as any;
-            const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
-            if (!isCancelled) return true;
-            if (isCancelled && subAny.endDate) {
-              const endDate = new Date(subAny.endDate);
-              return endDate > now;
-            }
-            return false;
-          });
-          
-          // Cache hit - return immediately (fast path)
-          return {
-            customerRef: customer.customerRef,
-            email: customer.email,
-            name: customer.name,
-            subscriptions: filteredSubscriptions,
-          } as SubscriptionCheckResult;
+          // Validate that this customerRef belongs to the current userId
+          // customer.externalRef is the Supabase user ID stored when customer was created
+          // Only use fast path if externalRef exists and matches the current userId
+          // If externalRef is undefined, we can't validate ownership, so fall through to normal lookup
+          if (customer.externalRef && customer.externalRef === userId) {
+            const now = new Date();
+            const filteredSubscriptions = (customer.subscriptions || []).filter(sub => {
+              const subAny = sub as any;
+              const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
+              if (!isCancelled) return true;
+              if (isCancelled && subAny.endDate) {
+                const endDate = new Date(subAny.endDate);
+                return endDate > now;
+              }
+              return false;
+            });
+            
+            // Cache hit - return immediately (fast path)
+            return {
+              customerRef: customer.customerRef,
+              email: customer.email,
+              name: customer.name,
+              subscriptions: filteredSubscriptions,
+            } as SubscriptionCheckResult;
+          }
+          // If externalRef doesn't match userId, fall through to normal lookup
+          // This ensures we always use the correct customerRef for the current userId
         }
       } catch (error) {
         // Cached ref is invalid, fall through to normal lookup

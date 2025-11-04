@@ -15,6 +15,7 @@ export interface SubscriptionInfo {
   endDate?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+  amount?: number;
 }
 
 export interface CustomerSubscriptionData {
@@ -37,8 +38,22 @@ export interface SubscriptionStatus {
   email?: string;
   name?: string;
   subscriptions: SubscriptionInfo[];
-  hasActiveSubscription: boolean;
   hasPlan: (planName: string) => boolean;
+  /**
+   * Primary active subscription (paid or free) - most recent active subscription
+   * Prioritizes active subscriptions, falls back to cancelled subscriptions with valid endDate
+   * null if no valid subscription exists
+   */
+  activeSubscription: SubscriptionInfo | null;
+  /**
+   * Check if user has any active paid subscription (amount > 0)
+   */
+  hasPaidSubscription: boolean;
+  /**
+   * Most recent active paid subscription (sorted by startDate)
+   * null if no active paid subscription exists
+   */
+  activePaidSubscription: SubscriptionInfo | null;
 }
 
 /**
@@ -269,38 +284,30 @@ export interface PlanSelectorProps {
 
 /**
  * Return type for useSubscriptionStatus hook
+ * 
+ * Provides advanced subscription status helpers and utilities.
+ * Focuses on cancelled subscription logic and date formatting.
+ * For basic subscription data and paid status, use useSubscription() instead.
  */
 export interface SubscriptionStatusReturn {
   /**
-   * Check if a plan name is a paid plan
-   */
-  isPaidPlan: (planName: string) => boolean;
-  /**
-   * Get active paid subscription
-   */
-  activePaidSubscription: SubscriptionInfo | null;
-  /**
-   * Get cancelled subscription
+   * Most recent cancelled paid subscription (sorted by startDate)
+   * null if no cancelled paid subscription exists
    */
   cancelledSubscription: SubscriptionInfo | null;
   /**
-   * Check if user has any paid subscription
-   */
-  hasPaidSubscription: boolean;
-  /**
-   * Check if should show cancelled notice
+   * Whether to show cancelled subscription notice
+   * true if cancelledSubscription exists
    */
   shouldShowCancelledNotice: boolean;
   /**
-   * Get active plan name
-   */
-  activePlanName: string | null;
-  /**
-   * Format a date string
+   * Format a date string to locale format (e.g., "January 15, 2024")
+   * Returns null if dateString is not provided
    */
   formatDate: (dateString?: string) => string | null;
   /**
-   * Get days until a date
+   * Calculate days until expiration date
+   * Returns null if endDate is not provided, otherwise returns days (0 or positive)
    */
   getDaysUntilExpiration: (endDate?: string) => number | null;
 }

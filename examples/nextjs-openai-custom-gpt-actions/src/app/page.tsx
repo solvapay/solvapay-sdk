@@ -22,7 +22,7 @@ export default function HomePage() {
   // Get subscription helpers from SDK
   // Note: Plans are handled on the hosted checkout page, so we pass empty array
   // This will treat all subscriptions as paid plans (default behavior when plan not found)
-  const { subscriptions, loading: subscriptionsLoading, hasActiveSubscription, refetch } = useSubscription();
+  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activePaidSubscription } = useSubscription();
   
   // Refetch subscriptions on mount to ensure we have latest data after navigation
   useEffect(() => {
@@ -31,14 +31,13 @@ export default function HomePage() {
     });
   }, [refetch]);
   
+  // Get advanced subscription status helpers
   const {
-    hasPaidSubscription,
-    activePaidSubscription,
     cancelledSubscription,
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionStatus([]);
+  } = useSubscriptionStatus();
   
   // Loading state - only subscriptions loading since plans are on hosted page
   const isLoading = subscriptionsLoading;
@@ -197,7 +196,7 @@ export default function HomePage() {
               You&apos;re on the <span className="font-semibold">{activePaidSubscription?.planName}</span> plan
             </p>
           </div>
-        ) : hasActiveSubscription ? (
+        ) : mostRecentActiveSubscription ? (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               You&apos;re on the <span className="font-semibold">{mostRecentActiveSubscription?.planName}</span> plan
@@ -293,7 +292,7 @@ export default function HomePage() {
           <p className="text-gray-600 text-sm mb-4">
             Subscription management and plan upgrade checkout flow.
           </p>
-          {hasActiveSubscription ? (
+          {subscriptions.length > 0 ? (
             <button
               onClick={handleManageSubscription}
               disabled={isRedirecting}

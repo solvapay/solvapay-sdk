@@ -4,7 +4,7 @@
  * Main entry point for creating SolvaPay instances with the unified payable API
  */
 
-import type { SolvaPayClient, PayableOptions, HttpAdapterOptions, NextAdapterOptions, McpAdapterOptions } from './types';
+import type { SolvaPayClient, PayableOptions, HttpAdapterOptions, NextAdapterOptions, McpAdapterOptions, CustomerResponseMapped } from './types';
 import { createSolvaPayClient } from './client';
 import { SolvaPayPaywall } from './paywall';
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters';
@@ -151,22 +151,11 @@ export interface SolvaPay {
   
   /**
    * Get customer details
+   * Uses the generated CustomerResponseMapped type which includes all subscription fields from the API
    */
   getCustomer(params: {
     customerRef: string;
-  }): Promise<{
-    customerRef: string;
-    email?: string;
-    name?: string;
-    plan?: string;
-    subscriptions?: Array<{
-      reference: string;
-      planName: string;
-      agentName: string;
-      status: string;
-      startDate: string;
-    }>;
-  }>;
+  }): Promise<CustomerResponseMapped>;
   
   /**
    * Create a checkout session for a customer

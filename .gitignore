@@ -11,3 +11,8 @@ dist
 examples/openai-custom-gpt-actions/user-plans.json
 examples/nextjs-openai-custom-gpt-actions/user-plans.json
 **/.demo-data/*
+
+# Code coverage
+coverage/
+*.lcov
+.nyc_output
