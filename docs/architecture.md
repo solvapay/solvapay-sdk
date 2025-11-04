@@ -29,13 +29,14 @@ solvapay-sdk/
 
 ## Package Summary
 
-The SDK consists of **5 published packages** focused on clear use cases:
+The SDK consists of **6 published packages** focused on clear use cases:
 
 | Package | Version | Purpose | Published |
 |---------|---------|---------|-----------|
 | `@solvapay/core` | 1.0.0-preview.6 | Types, schemas, shared utilities | ✅ Yes |
 | `@solvapay/server` | 1.0.0-preview.6 | Node + Edge runtime SDK with unified API | ✅ Yes |
 | `@solvapay/react` | 1.0.0-preview.6 | Payment flow components (Stripe integration) | ✅ Yes |
+| `@solvapay/react-supabase` | 1.0.0-preview.9 | Supabase auth adapter for React Provider | ✅ Yes |
 | `@solvapay/auth` | 1.0.0-preview.6 | Authentication adapters for extracting user IDs | ✅ Yes |
 | `@solvapay/next` | 1.0.0-preview.6 | Next.js-specific utilities and helpers | ✅ Yes |
 | `@solvapay/demo-services` | 0.0.0 | Demo services for examples | 🔒 Private |
@@ -62,25 +63,62 @@ The SDK consists of **5 published packages** focused on clear use cases:
 
 ### `@solvapay/react` (payment components)
 
-* Payment flow components: `SolvaPayProvider` and `PaymentForm`.
+* **SolvaPayProvider**: Headless context provider that manages subscription state, payment methods, and customer references.
+  - Zero-config with sensible defaults (uses `/api/check-subscription` and `/api/create-payment-intent`)
+  - Supports custom API routes via config
+  - Auto-fetches subscriptions on mount
+  - Built-in localStorage caching with user validation
+  - Supports auth adapters for extracting user IDs and tokens
+* **PaymentForm**: Stripe payment form component for checkout flows.
+* **Hooks**: `useSubscription`, `useCheckout`, `usePlans`, `useSubscriptionStatus`, `useSolvaPay`
+* **Headless Components**: `PlanBadge`, `SubscriptionGate`, `PlanSelector`, `StripePaymentFormWrapper`
 * Handles Stripe integration for payment processing.
 * Includes default styling for payment forms.
 * Peer deps: `react`, `react-dom`.
 
+### `@solvapay/react-supabase` (Supabase React adapter)
+
+* Provides `createSupabaseAuthAdapter` for use with `SolvaPayProvider`.
+* Integrates with Supabase client-side authentication.
+* Extracts user IDs and tokens from Supabase sessions.
+* Peer deps: `@solvapay/react`, `@supabase/supabase-js`.
+
 ### `@solvapay/auth` (authentication adapters)
 
-* Authentication adapters for extracting user IDs from requests.
-* Provides `SupabaseAuthAdapter` for Supabase JWT token validation.
-* Provides `MockAuthAdapter` for testing and development.
+* **Server-side adapters**: `SupabaseAuthAdapter` for Supabase JWT token validation, `MockAuthAdapter` for testing.
+* **Next.js utilities**: Helper functions for extracting user information from requests:
+  - `getUserIdFromRequest(request)` - Extract user ID from `x-user-id` header
+  - `requireUserId(request)` - Require user ID or return error response
+  - `getUserEmailFromRequest(request)` - Extract email from Supabase JWT token
+  - `getUserNameFromRequest(request)` - Extract name from Supabase JWT token
 * Works in Edge runtimes (Vercel Edge Functions, Cloudflare Workers, etc.).
-* Peer deps: `jose` (for SupabaseAuthAdapter).
+* Peer deps: `jose` (for Supabase JWT verification).
 
 ### `@solvapay/next` (Next.js utilities)
 
-* Next.js-specific utilities and helpers.
-* Provides `checkSubscription` helper with built-in request deduplication and caching.
-* Provides cache management utilities (`clearSubscriptionCache`, etc.).
-* Framework-specific optimizations for Next.js API routes.
+* Next.js-specific route helpers that wrap server SDK functions with Next.js types and optimizations.
+* **Subscription helpers**:
+  - `checkSubscription(request, options?)` - Check user subscription with built-in deduplication and caching
+  - `cancelSubscription(request, body, options?)` - Cancel a subscription
+* **Authentication helpers**:
+  - `getAuthenticatedUser(request, options?)` - Get authenticated user info (userId, email, name)
+* **Customer helpers**:
+  - `syncCustomer(request, options?)` - Sync customer with SolvaPay backend
+* **Payment helpers**:
+  - `createPaymentIntent(request, body, options?)` - Create Stripe payment intent
+  - `processPayment(request, body, options?)` - Process payment after Stripe confirmation
+* **Checkout helpers**:
+  - `createCheckoutSession(request, body, options?)` - Create hosted checkout session
+  - `createCustomerSession(request, options?)` - Create customer portal session
+* **Plans helpers**:
+  - `listPlans(request)` - List available plans (public route, no auth required)
+* **Cache management**:
+  - `clearSubscriptionCache(userId)` - Clear cache for specific user
+  - `clearAllSubscriptionCache()` - Clear all cache entries
+  - `getSubscriptionCacheStats()` - Get cache statistics
+* All helpers return `NextResponse` for errors, making them easy to use in Next.js API routes.
+* Built-in request deduplication and short-term caching (2 seconds) prevent duplicate API calls.
+* Automatic cache clearing after payment operations.
 * Peer deps: `next` (>=13.0.0).
 
 ## Build & Release
@@ -122,14 +160,41 @@ export const POST = payable.next(handler);              // Next.js
 const mcpHandler = payable.mcp(handler);                // MCP servers
 
 // React payment components:
-import { SolvaPayProvider, PaymentForm } from '@solvapay/react';
+import { 
+  SolvaPayProvider, 
+  PaymentForm, 
+  useSubscription, 
+  usePlans 
+} from '@solvapay/react';
 
-// Authentication adapters:
+// Supabase React adapter:
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+
+// Authentication adapters (server-side):
 import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
 import { MockAuthAdapter } from '@solvapay/auth/mock';
 
+// Auth utilities (Next.js routes):
+import { 
+  getUserIdFromRequest, 
+  requireUserId,
+  getUserEmailFromRequest,
+  getUserNameFromRequest 
+} from '@solvapay/auth';
+
 // Next.js utilities:
-import { checkSubscription, clearSubscriptionCache } from '@solvapay/next';
+import { 
+  checkSubscription, 
+  syncCustomer,
+  createPaymentIntent,
+  processPayment,
+  createCheckoutSession,
+  createCustomerSession,
+  cancelSubscription,
+  listPlans,
+  clearSubscriptionCache,
+  getAuthenticatedUser
+} from '@solvapay/next';
 ```
 
 ## Runtime Detection

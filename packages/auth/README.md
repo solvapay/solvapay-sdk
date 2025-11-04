@@ -88,6 +88,81 @@ export const POST = solvaPay.payable({ agent: 'my-api' }).next(
 );
 ```
 
+## Next.js Route Utilities
+
+The package also provides helper functions for extracting user information in Next.js API routes:
+
+### getUserIdFromRequest
+
+Extract user ID from request headers (commonly set by middleware):
+
+```ts
+import { getUserIdFromRequest } from '@solvapay/auth';
+
+export async function GET(request: Request) {
+  const userId = getUserIdFromRequest(request);
+  
+  if (!userId) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  
+  // Use userId...
+}
+```
+
+### requireUserId
+
+Require user ID or return error response:
+
+```ts
+import { requireUserId } from '@solvapay/auth';
+
+export async function GET(request: Request) {
+  const userIdOrError = requireUserId(request);
+  
+  if (userIdOrError instanceof Response) {
+    return userIdOrError; // Returns 401 error
+  }
+  
+  // userIdOrError is now a string
+  const userId = userIdOrError;
+}
+```
+
+### getUserEmailFromRequest
+
+Extract email from Supabase JWT token in Authorization header:
+
+```ts
+import { getUserEmailFromRequest } from '@solvapay/auth';
+
+export async function GET(request: Request) {
+  const email = await getUserEmailFromRequest(request);
+  // Returns email string or null
+}
+```
+
+### getUserNameFromRequest
+
+Extract name from Supabase JWT token in Authorization header:
+
+```ts
+import { getUserNameFromRequest } from '@solvapay/auth';
+
+export async function GET(request: Request) {
+  const name = await getUserNameFromRequest(request);
+  // Returns name string or null
+}
+```
+
+**Note:** `getUserEmailFromRequest` and `getUserNameFromRequest` require the `SUPABASE_JWT_SECRET` environment variable to be set, or you can pass it as an option:
+
+```ts
+const email = await getUserEmailFromRequest(request, {
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!
+});
+```
+
 ## API Reference
 
 ### AuthAdapter Interface
@@ -132,5 +207,41 @@ class MockAuthAdapter implements AuthAdapter {
 
 ## Edge Runtime Support
 
-Both adapters work in Edge runtimes (Vercel Edge Functions, Cloudflare Workers, etc.). SupabaseAuthAdapter uses dynamic imports for `jose` to ensure Edge compatibility.
+Both adapters and Next.js utilities work in Edge runtimes (Vercel Edge Functions, Cloudflare Workers, etc.). SupabaseAuthAdapter and JWT utilities use dynamic imports for `jose` to ensure Edge compatibility.
+
+## Next.js Integration
+
+These utilities work seamlessly with Next.js middleware. Typically, you'll set the `x-user-id` header in your middleware after authentication:
+
+```ts
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  // Extract user ID from your auth system (Supabase, Auth0, etc.)
+  const userId = await getUserIdFromAuth(request);
+  
+  // Clone the request and add user ID header
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-id', userId);
+  
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}
+```
+
+Then in your API routes, use the utilities:
+
+```ts
+import { requireUserId } from '@solvapay/auth';
+
+export async function GET(request: Request) {
+  const userId = requireUserId(request);
+  // userId is guaranteed to exist or an error response is returned
+}
+```
 
