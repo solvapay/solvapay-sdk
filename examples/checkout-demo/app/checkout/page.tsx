@@ -55,17 +55,8 @@ export default function CheckoutPage() {
   // Get advanced subscription status helpers
   const subscriptionStatus = useSubscriptionStatus();
   
-  // Force refetch subscriptions when checkout page mounts (only once)
-  const hasRefetchedRef = useRef(false);
-  useEffect(() => {
-    if (!hasRefetchedRef.current) {
-      hasRefetchedRef.current = true;
-      refetch().catch(() => {
-        // Error handled silently
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
+  // Refetch is only called after operations that change subscription state (payment, cancellation)
 
   // Handle payment success
   const handlePaymentSuccess = async (paymentIntent?: any) => {

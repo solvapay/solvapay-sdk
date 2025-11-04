@@ -528,10 +528,10 @@ describe('useSubscription', () => {
       expect(result.current.activeSubscription?.planName).toBe('Paid');
     });
 
-    it('should handle cancelled subscription with endDate', () => {
+    it('should handle cancelled subscription with endDate - should still grant access until expiration', () => {
       const cancelledSub = createSubscription({
         planName: 'Cancelled Plan',
-        status: 'cancelled',
+        status: 'active', // Backend keeps status as 'active' until expiration
         amount: 2000,
         endDate: '2025-12-31T23:59:59Z',
         cancelledAt: '2024-06-01T00:00:00Z',
@@ -539,8 +539,8 @@ describe('useSubscription', () => {
       const mockSubscription = createMockSubscriptionStatus({
         subscriptions: [cancelledSub],
         activeSubscription: cancelledSub, // Still active until endDate
-        hasPaidSubscription: false, // Cancelled, so not active paid
-        activePaidSubscription: null,
+        hasPaidSubscription: true, // Status is active, so still grants access
+        activePaidSubscription: cancelledSub, // Status is active, so still grants access
       });
       const mockContextValue = createMockContextValue(mockSubscription);
 
@@ -549,8 +549,9 @@ describe('useSubscription', () => {
       const { result } = renderHook(() => useSubscription());
 
       expect(result.current.activeSubscription?.planName).toBe('Cancelled Plan');
-      expect(result.current.activeSubscription?.status).toBe('cancelled');
-      expect(result.current.hasPaidSubscription).toBe(false);
+      expect(result.current.activeSubscription?.status).toBe('active');
+      expect(result.current.hasPaidSubscription).toBe(true); // Should still grant access
+      expect(result.current.activePaidSubscription?.planName).toBe('Cancelled Plan');
     });
 
     it('should handle empty state with no subscriptions', () => {
@@ -611,7 +612,7 @@ describe('useSubscription', () => {
 
     it('should handle subscription with cancellation reason', () => {
       const subscription = createSubscription({
-        status: 'cancelled',
+        status: 'active', // Backend keeps status as 'active' until expiration
         cancelledAt: '2024-06-01T00:00:00Z',
         cancellationReason: 'Customer request',
       });
@@ -626,7 +627,7 @@ describe('useSubscription', () => {
       const { result } = renderHook(() => useSubscription());
 
       const returnedSub = result.current.subscriptions[0];
-      expect(returnedSub.status).toBe('cancelled');
+      expect(returnedSub.status).toBe('active');
       expect(returnedSub.cancelledAt).toBe('2024-06-01T00:00:00Z');
       expect(returnedSub.cancellationReason).toBe('Customer request');
     });

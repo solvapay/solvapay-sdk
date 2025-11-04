@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react';
 import Link from 'next/link';
 
@@ -22,19 +22,11 @@ export default function HomePage() {
   });
   
   // Get subscription helpers from SDK
-  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activePaidSubscription } = useSubscription();
-  
-  // Refetch subscriptions on mount to ensure we have latest data after navigation (only once)
-  const hasRefetchedRef = useRef(false);
-  useEffect(() => {
-    if (!hasRefetchedRef.current) {
-      hasRefetchedRef.current = true;
-      refetch().catch(() => {
-        // Error handled silently
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  // Note: Plans are handled on the checkout page, so we pass empty array
+  // Subscription status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
+  // Use hasPaidSubscription and activeSubscription consistently throughout the component
+  // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
+  const { subscriptions, loading: subscriptionsLoading, hasPaidSubscription, activeSubscription } = useSubscription();
   
   // Get advanced subscription status helpers
   const {
@@ -46,14 +38,6 @@ export default function HomePage() {
   
   // Combine loading states - only show content when both are loaded
   const isLoading = subscriptionsLoading || plansLoading;
-  
-  // Get the most recent active subscription (for display - includes free plans)
-  const mostRecentActiveSubscription = useMemo(() => {
-    const activeSubs = subscriptions.filter(sub => sub.status === 'active');
-    return activeSubs.sort((a, b) => 
-      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-    )[0];
-  }, [subscriptions]);
   
 
   const FeatureCard = ({ 
@@ -106,16 +90,10 @@ export default function HomePage() {
             <div className="flex justify-center items-center gap-2">
               <Skeleton className="h-5 w-48" />
             </div>
-          ) : hasPaidSubscription ? (
+          ) : activeSubscription ? (
             <p className="text-slate-600">
               You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activePaidSubscription?.planName}
-              </span> plan
-            </p>
-          ) : mostRecentActiveSubscription ? (
-            <p className="text-slate-600">
-              You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {mostRecentActiveSubscription?.planName}
+                {activeSubscription.planName}
               </span> plan
             </p>
           ) : shouldShowCancelledNotice && cancelledSubscription ? (
@@ -172,12 +150,12 @@ export default function HomePage() {
           <FeatureCard
             title="Advanced Analytics"
             description="Real-time data analysis with custom dashboards."
-            locked={!hasPaidSubscription}
+            locked={!isLoading && !hasPaidSubscription}
           />
           <FeatureCard
             title="Priority Support"
             description="Get help from our team within 24 hours."
-            locked={!hasPaidSubscription}
+            locked={!isLoading && !hasPaidSubscription}
           />
         </div>
 
@@ -188,7 +166,7 @@ export default function HomePage() {
               <Skeleton className="h-5 w-64 mx-auto" />
               <Skeleton className="h-10 w-48 mx-auto" />
             </div>
-          ) : subscriptions.length > 0 ? (
+          ) : hasPaidSubscription ? (
             <div className="text-center py-4">
               <p className="text-slate-900 mb-4">Manage your subscription and billing</p>
               <Link href="/checkout">
@@ -234,7 +212,7 @@ export default function HomePage() {
               <p className="text-slate-600 text-sm mb-6">Get access to advanced features and more</p>
               <Link href="/checkout">
                 <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  View Plans
+                  Upgrade
                 </button>
               </Link>
             </div>

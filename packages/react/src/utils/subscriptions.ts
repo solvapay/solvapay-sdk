@@ -7,68 +7,41 @@
 import type { SubscriptionInfo } from '../types';
 
 /**
- * Filter subscriptions based on cancellation status and endDate
+ * Filter subscriptions to only include active ones
  * 
  * Rules:
- * - Keep all non-cancelled subscriptions
- * - A subscription is considered cancelled if:
- *   1. status === 'cancelled', OR
- *   2. cancelledAt is set (even if status is still 'active' - this is expected behavior)
- * - Keep cancelled subscriptions only if they have an endDate in the future
- *   (meaning the subscription is cancelled but still active until the endDate)
- * - Filter out cancelled subscriptions without endDate or with past endDate
+ * - Keep subscriptions with status === 'active'
+ * - Filter out subscriptions with status === 'cancelled', 'expired', 'suspended', 'refunded', etc.
+ * 
+ * Note: Backend now keeps subscriptions with status 'active' until expiration,
+ * even when cancelled. Cancellation is tracked via cancelledAt field.
  */
 export function filterSubscriptions(subscriptions: SubscriptionInfo[]): SubscriptionInfo[] {
-  const now = new Date();
-  
-  const filtered = subscriptions.filter(sub => {
-    const subAny = sub as any; // Type assertion to access optional properties
-    
-    // Check if subscription is cancelled (either by status or by cancelledAt timestamp)
-    const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
-    
-    // Keep all non-cancelled subscriptions
-    if (!isCancelled) {
-      return true;
-    }
-    
-    // Keep cancelled subscriptions only if endDate exists and is in the future
-    if (isCancelled && subAny.endDate) {
-      const endDate = new Date(subAny.endDate);
-      const isFuture = endDate > now;
-      return isFuture;
-    }
-    
-    // Filter out cancelled subscriptions without endDate or with past endDate
-    return false;
-  });
-  
-  return filtered;
+  return subscriptions.filter(sub => sub.status === 'active');
 }
 
 /**
- * Get active subscriptions (excluding cancelled ones)
- * Also excludes subscriptions with cancelledAt set, even if status is still 'active'
+ * Get active subscriptions
+ * 
+ * Returns subscriptions with status === 'active'.
+ * Note: Backend keeps subscriptions as 'active' until expiration, even when cancelled.
+ * Use cancelledAt field to check if a subscription is cancelled.
  */
 export function getActiveSubscriptions(subscriptions: SubscriptionInfo[]): SubscriptionInfo[] {
-  const active = subscriptions.filter(sub => {
-    const subAny = sub as any;
-    // Exclude if status is cancelled or if cancelledAt is set
-    return sub.status === 'active' && !subAny.cancelledAt;
-  });
-  
-  return active;
+  return subscriptions.filter(sub => sub.status === 'active');
 }
 
 /**
  * Get cancelled subscriptions with valid endDate (not expired)
- * Includes subscriptions with cancelledAt set, even if status is still 'active'
+ * 
+ * Returns subscriptions with cancelledAt set and status === 'active' that have a future endDate.
+ * Backend keeps cancelled subscriptions as 'active' until expiration.
  */
 export function getCancelledSubscriptionsWithEndDate(subscriptions: SubscriptionInfo[]): SubscriptionInfo[] {
+  const now = new Date();
   return subscriptions.filter(sub => {
     const subAny = sub as any; // Type assertion to access optional properties
-    const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
-    return isCancelled && subAny.endDate && new Date(subAny.endDate) > new Date();
+    return sub.status === 'active' && subAny.cancelledAt && subAny.endDate && new Date(subAny.endDate) > now;
   });
 }
 
@@ -88,23 +61,19 @@ export function getMostRecentSubscription(subscriptions: SubscriptionInfo[]): Su
  * 
  * Prioritization:
  * 1. Active subscriptions (most recent by startDate)
- * 2. Cancelled subscriptions with endDate in the future (most recent by startDate)
- * 3. null if no valid subscriptions
+ * 2. null if no valid subscriptions
+ * 
+ * Note: Backend keeps subscriptions as 'active' until expiration, so we only
+ * need to check for active subscriptions. Cancelled subscriptions are still
+ * active until their endDate.
  */
 export function getPrimarySubscription(subscriptions: SubscriptionInfo[]): SubscriptionInfo | null {
-  // First, filter subscriptions to only include valid ones
+  // Filter to only include active subscriptions
   const filtered = filterSubscriptions(subscriptions);
   
-  // Prioritize active subscriptions
-  const activeSubs = getActiveSubscriptions(filtered);
-  if (activeSubs.length > 0) {
-    return getMostRecentSubscription(activeSubs);
-  }
-  
-  // If no active subscriptions, check for cancelled ones with endDate
-  const cancelledWithEndDate = getCancelledSubscriptionsWithEndDate(filtered);
-  if (cancelledWithEndDate.length > 0) {
-    return getMostRecentSubscription(cancelledWithEndDate);
+  // Get most recent active subscription
+  if (filtered.length > 0) {
+    return getMostRecentSubscription(filtered);
   }
   
   return null;

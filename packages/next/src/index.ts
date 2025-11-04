@@ -349,17 +349,11 @@ export async function checkSubscription(
           // Only use fast path if externalRef exists and matches the current userId
           // If externalRef is undefined, we can't validate ownership, so fall through to normal lookup
           if (customer.externalRef && customer.externalRef === userId) {
-            const now = new Date();
-            const filteredSubscriptions = (customer.subscriptions || []).filter(sub => {
-              const subAny = sub as any;
-              const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
-              if (!isCancelled) return true;
-              if (isCancelled && subAny.endDate) {
-                const endDate = new Date(subAny.endDate);
-                return endDate > now;
-              }
-              return false;
-            });
+            // Filter to only include active subscriptions
+            // Backend keeps subscriptions as 'active' until expiration, even when cancelled
+            const filteredSubscriptions = (customer.subscriptions || []).filter(
+              sub => sub.status === 'active'
+            );
             
             // Cache hit - return immediately (fast path)
             return {
@@ -400,34 +394,12 @@ export async function checkSubscription(
         // Get customer details including subscriptions using the backend customer reference
         const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef });
 
-        // Filter subscriptions: exclude cancelled subscriptions without endDate or with past endDate
-        // A subscription is considered cancelled if:
-        //   1. status === 'cancelled', OR
-        //   2. cancelledAt is set (even if status is still 'active' - this is expected behavior)
-        // Cancelled subscriptions are kept only if they have an endDate in the future
-        // (meaning the subscription is cancelled but still active until the endDate)
-        const now = new Date();
-        const filteredSubscriptions = (customer.subscriptions || []).filter(sub => {
-          const subAny = sub as any;
-          
-          // Check if subscription is cancelled (either by status or by cancelledAt timestamp)
-          const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
-          
-          // Keep all non-cancelled subscriptions
-          if (!isCancelled) {
-            return true;
-          }
-          
-          // For cancelled subscriptions, only keep if endDate exists and is in the future
-          if (isCancelled && subAny.endDate) {
-            const endDate = new Date(subAny.endDate);
-            const isFuture = endDate > now;
-            return isFuture;
-          }
-          
-          // Filter out cancelled subscriptions without endDate or with past endDate
-          return false;
-        });
+        // Filter subscriptions to only include active ones
+        // Backend keeps subscriptions as 'active' until expiration, even when cancelled.
+        // Cancellation is tracked via cancelledAt field.
+        const filteredSubscriptions = (customer.subscriptions || []).filter(
+          sub => sub.status === 'active'
+        );
 
         // Return customer data with filtered subscriptions
         const result = {

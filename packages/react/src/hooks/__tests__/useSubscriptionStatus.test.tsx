@@ -88,7 +88,7 @@ describe('useSubscriptionStatus', () => {
 
     it('should return null when cancelled subscription is free (amount === 0)', () => {
       const subscriptions = [
-        createSubscription({ status: 'cancelled', amount: 0 }),
+        createSubscription({ status: 'active', amount: 0, cancelledAt: '2024-06-01T00:00:00Z' }),
       ];
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
         subscriptions,
@@ -108,7 +108,7 @@ describe('useSubscriptionStatus', () => {
 
     it('should return null when cancelled subscription has undefined amount', () => {
       const subscriptions = [
-        createSubscription({ status: 'cancelled', amount: undefined }),
+        createSubscription({ status: 'active', amount: undefined, cancelledAt: '2024-06-01T00:00:00Z' }),
       ];
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
         subscriptions,
@@ -128,10 +128,11 @@ describe('useSubscriptionStatus', () => {
 
     it('should return cancelled paid subscription when one exists', () => {
       const cancelledSub = createSubscription({
-        status: 'cancelled',
+        status: 'active',
         amount: 1000,
         planName: 'Cancelled Plan',
         reference: 'sub_cancelled',
+        cancelledAt: '2024-06-01T00:00:00Z',
       });
       const subscriptions = [cancelledSub];
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
@@ -148,20 +149,21 @@ describe('useSubscriptionStatus', () => {
 
       expect(result.current.cancelledSubscription).not.toBeNull();
       expect(result.current.cancelledSubscription?.planName).toBe('Cancelled Plan');
-      expect(result.current.cancelledSubscription?.status).toBe('cancelled');
+      expect(result.current.cancelledSubscription?.status).toBe('active');
       expect(result.current.cancelledSubscription?.amount).toBe(1000);
       expect(result.current.shouldShowCancelledNotice).toBe(true);
     });
 
     it('should return most recent cancelled subscription when multiple exist', () => {
       const olderCancelled = createSubscription({
-        status: 'cancelled',
+        status: 'active',
         amount: 1000,
+        cancelledAt: '2024-06-01T00:00:00Z',
         planName: 'Older Plan',
         startDate: '2024-01-01T00:00:00Z',
       });
       const newerCancelled = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 2000,
         planName: 'Newer Plan',
         startDate: '2024-02-01T00:00:00Z',
@@ -186,12 +188,12 @@ describe('useSubscriptionStatus', () => {
 
     it('should only consider cancelled paid subscriptions', () => {
       const cancelledPaid = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 1000,
         planName: 'Cancelled Paid',
       });
       const cancelledFree = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 0,
         planName: 'Cancelled Free',
       });
@@ -255,7 +257,7 @@ describe('useSubscriptionStatus', () => {
 
     it('should be true when cancelled subscription exists', () => {
       const cancelledSub = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 1000,
       });
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
@@ -275,7 +277,7 @@ describe('useSubscriptionStatus', () => {
 
     it('should be false when only cancelled free subscription exists', () => {
       const cancelledFree = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 0,
       });
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
@@ -549,7 +551,7 @@ describe('useSubscriptionStatus', () => {
   describe('Edge cases and integration', () => {
     it('should handle subscription with negative amount', () => {
       const subscription = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: -100,
       });
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
@@ -576,7 +578,7 @@ describe('useSubscriptionStatus', () => {
         planName: 'Active Paid',
       });
       const cancelledPaid = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 1000,
         planName: 'Cancelled Paid',
         startDate: '2024-01-01T00:00:00Z',
@@ -606,19 +608,19 @@ describe('useSubscriptionStatus', () => {
 
     it('should handle multiple cancelled subscriptions with different start dates', () => {
       const sub1 = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 1000,
         planName: 'Plan 1',
         startDate: '2024-01-01T00:00:00Z',
       });
       const sub2 = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 2000,
         planName: 'Plan 2',
         startDate: '2024-03-01T00:00:00Z',
       });
       const sub3 = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 3000,
         planName: 'Plan 3',
         startDate: '2024-02-01T00:00:00Z',
@@ -685,7 +687,7 @@ describe('useSubscriptionStatus', () => {
 
       // Add cancelled subscription
       const cancelledSub = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 1000,
       });
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
@@ -706,7 +708,7 @@ describe('useSubscriptionStatus', () => {
 
     it('should handle date formatting with cancelled subscription', () => {
       const cancelledSub = createSubscription({
-        status: 'cancelled',
+        status: 'active',
         amount: 1000,
         endDate: '2024-12-31T23:59:59Z',
         cancelledAt: '2024-06-01T00:00:00Z',
@@ -754,7 +756,7 @@ describe('useSubscriptionStatus', () => {
 
       // Only paid cancelled subscriptions should be returned
       const cancelledPaid = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 1000,
       });
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
@@ -773,7 +775,7 @@ describe('useSubscriptionStatus', () => {
 
     it('should handle zero amount as free', () => {
       const cancelledFree = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: 0,
       });
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({
@@ -793,7 +795,7 @@ describe('useSubscriptionStatus', () => {
 
     it('should handle undefined amount as free', () => {
       const cancelledUndefined = createSubscription({
-        status: 'cancelled',
+        status: 'active', cancelledAt: '2024-06-01T00:00:00Z',
         amount: undefined,
       });
       vi.mocked(useSubscriptionModule.useSubscription).mockReturnValue({

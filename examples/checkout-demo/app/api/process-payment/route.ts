@@ -18,10 +18,15 @@ export async function POST(request: NextRequest) {
     }
     
     const solvaPay = createSolvaPay();
+    
+    // SECURITY: Always use userId from JWT token, never trust client-provided customerRef header
+    // This ensures we process payment for the correct user, even if frontend cache is stale
+    // The customerRef must match the userId to prevent cross-user payment processing
     const customerRef = await solvaPay.ensureCustomer(userId, userId);
     
     // Call SDK method to process the already-confirmed payment
     // Backend automatically handles provider account context based on API key
+    // Note: The paymentIntent was created with a customerRef, and we verify it matches here
     const result = await solvaPay.processPayment({
       paymentIntentId,
       agentRef,

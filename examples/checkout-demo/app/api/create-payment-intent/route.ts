@@ -52,6 +52,11 @@ export async function POST(request: NextRequest) {
     // Config is automatically read from environment variables
     const solvaPay = createSolvaPay();
 
+    // SECURITY: Always use userId from JWT token, never trust client-provided customerRef header
+    // The frontend may send x-solvapay-customer-ref header, but we ignore it for security
+    // This prevents cross-user contamination if localStorage cache is stale or malicious
+    // We always derive customerRef from the authenticated userId to ensure correctness
+    
     // Use userId as cache key and externalRef (Supabase user IDs are stable UUIDs)
     // The first parameter (customerRef) is used as a cache key
     // The second parameter (externalRef) is stored on the SolvaPay backend for customer lookup

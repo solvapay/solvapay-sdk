@@ -17,23 +17,37 @@ export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
 // localStorage cache keys
 const CUSTOMER_REF_KEY = 'solvapay_customerRef';
 const CUSTOMER_REF_EXPIRY = 'solvapay_customerRef_expiry';
+const CUSTOMER_REF_USER_ID_KEY = 'solvapay_customerRef_userId'; // Track which userId this customerRef belongs to
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Get cached customer reference from localStorage
+ * Only returns it if it belongs to the current userId (if provided)
  */
-function getCachedCustomerRef(): string | null {
+function getCachedCustomerRef(userId?: string | null): string | null {
   if (typeof window === 'undefined') return null;
   
   const cached = localStorage.getItem(CUSTOMER_REF_KEY);
   const expiry = localStorage.getItem(CUSTOMER_REF_EXPIRY);
+  const cachedUserId = localStorage.getItem(CUSTOMER_REF_USER_ID_KEY);
   
   if (!cached || !expiry) return null;
   
   if (Date.now() > parseInt(expiry)) {
     localStorage.removeItem(CUSTOMER_REF_KEY);
     localStorage.removeItem(CUSTOMER_REF_EXPIRY);
+    localStorage.removeItem(CUSTOMER_REF_USER_ID_KEY);
     return null;
+  }
+  
+  // CRITICAL: If userId is provided, only return cached customerRef if it belongs to this userId
+  // This prevents using a customerRef from a different user after sign out/sign in
+  if (userId !== undefined && userId !== null) {
+    if (cachedUserId !== userId) {
+      // CustomerRef belongs to a different user - clear it
+      clearCachedCustomerRef();
+      return null;
+    }
   }
   
   return cached;
@@ -41,12 +55,24 @@ function getCachedCustomerRef(): string | null {
 
 /**
  * Set cached customer reference in localStorage
+ * Also stores the userId to prevent cross-user contamination
+ * 
+ * SECURITY: If userId is not provided, we don't cache the customerRef
+ * This prevents caching customerRef for unauthenticated users or during auth transitions
  */
-function setCachedCustomerRef(customerRef: string): void {
+function setCachedCustomerRef(customerRef: string, userId?: string | null): void {
   if (typeof window === 'undefined') return;
+  
+  // SECURITY: Only cache customerRef if we have a userId to associate it with
+  // This prevents cross-user contamination and ensures we can validate ownership
+  if (userId === undefined || userId === null) {
+    // Don't cache if no userId - this prevents security issues
+    return;
+  }
   
   localStorage.setItem(CUSTOMER_REF_KEY, customerRef);
   localStorage.setItem(CUSTOMER_REF_EXPIRY, String(Date.now() + CACHE_DURATION));
+  localStorage.setItem(CUSTOMER_REF_USER_ID_KEY, userId);
 }
 
 /**
@@ -57,6 +83,7 @@ function clearCachedCustomerRef(): void {
   
   localStorage.removeItem(CUSTOMER_REF_KEY);
   localStorage.removeItem(CUSTOMER_REF_EXPIRY);
+  localStorage.removeItem(CUSTOMER_REF_USER_ID_KEY);
 }
 
 /**
@@ -175,11 +202,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     const currentConfig = configRef.current;
     const adapter = getAuthAdapter(currentConfig);
     const token = await adapter.getToken();
+    const detectedUserId = await adapter.getUserId();
     const route = currentConfig?.api?.checkSubscription || '/api/check-subscription';
     const fetchFn = currentConfig?.fetch || fetch;
     
-    // Get cached customerRef from localStorage
-    const cachedRef = getCachedCustomerRef();
+    // Get cached customerRef from localStorage, validated against current userId
+    const cachedRef = getCachedCustomerRef(detectedUserId);
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -225,11 +253,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     const currentConfig = configRef.current;
     const adapter = getAuthAdapter(currentConfig);
     const token = await adapter.getToken();
+    const detectedUserId = await adapter.getUserId();
     const route = currentConfig?.api?.createPayment || '/api/create-payment-intent';
     const fetchFn = currentConfig?.fetch || fetch;
     
-    // Get cached customerRef from localStorage
-    const cachedRef = getCachedCustomerRef();
+    // Get cached customerRef from localStorage, validated against current userId
+    const cachedRef = getCachedCustomerRef(detectedUserId);
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -281,11 +310,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     const currentConfig = configRef.current;
     const adapter = getAuthAdapter(currentConfig);
     const token = await adapter.getToken();
+    const detectedUserId = await adapter.getUserId();
     const route = currentConfig?.api?.processPayment || '/api/process-payment';
     const fetchFn = currentConfig?.fetch || fetch;
     
-    // Get cached customerRef from localStorage
-    const cachedRef = getCachedCustomerRef();
+    // Get cached customerRef from localStorage, validated against current userId
+    const cachedRef = getCachedCustomerRef(detectedUserId);
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -362,16 +392,30 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       const token = await adapter.getToken();
       const detectedUserId = await adapter.getUserId();
       
+      // Track previous userId to detect user changes
+      const prevUserId = userId;
+      
       setIsAuthenticated(!!token);
       setUserId(detectedUserId);
       
-      // If we have a cached customerRef and are authenticated, use it
-      const cachedRef = getCachedCustomerRef();
+      // CRITICAL: Clear customerRef cache if userId changes (user switched accounts)
+      // This prevents purchasing for the wrong user
+      if (prevUserId !== null && detectedUserId !== prevUserId) {
+        clearCachedCustomerRef();
+        setInternalCustomerRef(undefined);
+        return;
+      }
+      
+      // If we have a cached customerRef and are authenticated, validate it belongs to current user
+      const cachedRef = getCachedCustomerRef(detectedUserId);
       if (cachedRef && token) {
         setInternalCustomerRef(cachedRef);
       } else if (!token) {
         // Clear cache on sign-out
         clearCachedCustomerRef();
+        setInternalCustomerRef(undefined);
+      } else if (token && !cachedRef) {
+        // Authenticated but no valid cached customerRef - clear internal ref
         setInternalCustomerRef(undefined);
       }
     };
@@ -382,7 +426,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     const interval = setInterval(detectAuth, 5000); // Check every 5 seconds
     
     return () => clearInterval(interval);
-  }, []);
+  }, [userId]); // Include userId in deps to detect changes
 
   // Fetch subscription function - memoized to prevent unnecessary re-renders
   // Use refs for checkSubscription to avoid dependency issues
@@ -420,9 +464,13 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       const data = await checkFn();
 
       // Store customerRef from response if available
+      // Only cache if we have a userId to prevent cross-user contamination
       if (data.customerRef) {
         setInternalCustomerRef(data.customerRef);
-        setCachedCustomerRef(data.customerRef);
+        // Get current userId to associate with customerRef
+        const currentAdapter = getAuthAdapter(configRef.current);
+        const currentUserId = await currentAdapter.getUserId();
+        setCachedCustomerRef(data.customerRef, currentUserId);
       }
 
       // Only update if this is still the current cacheKey (might have changed during fetch)
@@ -495,17 +543,19 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   // Update customer ref method
   const updateCustomerRef = useCallback((newCustomerRef: string) => {
     setInternalCustomerRef(newCustomerRef);
-    setCachedCustomerRef(newCustomerRef);
+    // Store with current userId to prevent cross-user contamination
+    setCachedCustomerRef(newCustomerRef, userId);
     // Trigger refetch
     fetchSubscription(true);
-  }, [fetchSubscription]);
+  }, [fetchSubscription, userId]);
 
   // Build subscription status with helper methods - memoized to prevent unnecessary re-renders
   const subscription: SubscriptionStatus = useMemo(() => {
-    // Get primary active subscription (paid or free) - most recent active, or cancelled with valid endDate
+    // Get primary active subscription (paid or free) - most recent active subscription
     const activeSubscription = getPrimarySubscription(subscriptionData.subscriptions);
     
     // Compute active paid subscriptions
+    // Backend keeps subscriptions as 'active' until expiration, even when cancelled
     const activePaidSubscriptions = subscriptionData.subscriptions.filter(
       sub => sub.status === 'active' && isPaidSubscription(sub)
     );

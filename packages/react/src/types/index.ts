@@ -40,17 +40,20 @@ export interface SubscriptionStatus {
   subscriptions: SubscriptionInfo[];
   hasPlan: (planName: string) => boolean;
   /**
-   * Primary active subscription (paid or free) - most recent active subscription
-   * Prioritizes active subscriptions, falls back to cancelled subscriptions with valid endDate
-   * null if no valid subscription exists
+   * Primary active subscription (paid or free) - most recent subscription with status === 'active'
+   * Backend keeps subscriptions as 'active' until expiration, even when cancelled.
+   * null if no active subscription exists
    */
   activeSubscription: SubscriptionInfo | null;
   /**
    * Check if user has any active paid subscription (amount > 0)
+   * Checks subscriptions with status === 'active'.
+   * Backend keeps subscriptions as 'active' until expiration, even when cancelled.
    */
   hasPaidSubscription: boolean;
   /**
    * Most recent active paid subscription (sorted by startDate)
+   * Returns subscription with status === 'active' and amount > 0.
    * null if no active paid subscription exists
    */
   activePaidSubscription: SubscriptionInfo | null;

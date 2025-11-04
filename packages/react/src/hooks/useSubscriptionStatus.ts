@@ -28,10 +28,13 @@ export function useSubscriptionStatus(): SubscriptionStatusReturn {
   }, []);
 
   // Memoize subscription calculations for cancelled subscriptions
+  // Backend keeps cancelled subscriptions as 'active' until expiration, tracked via cancelledAt
   const subscriptionData = useMemo(() => {
-    const cancelledPaidSubscriptions = subscriptions.filter(
-      sub => sub.status === 'cancelled' && isPaidSubscription(sub)
-    );
+    const cancelledPaidSubscriptions = subscriptions.filter(sub => {
+      const subAny = sub as any; // Type assertion to access optional properties
+      // Look for subscriptions with cancelledAt set and status === 'active'
+      return sub.status === 'active' && subAny.cancelledAt && isPaidSubscription(sub);
+    });
     
     const cancelledSubscription = cancelledPaidSubscriptions
       .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0] || null;
