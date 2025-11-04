@@ -1,6 +1,6 @@
 {
   "name": "create-solvapay-app",
-  "version": "1.0.0",
+  "version": "1.0.0-preview.10",
   "description": "CLI tool to set up a Next.js project with SolvaPay and Supabase",
   "type": "module",
   "bin": {
@@ -31,4 +31,3 @@
     "access": "public"
   }
 }
-

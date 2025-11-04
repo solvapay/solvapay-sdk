@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/react-supabase",
-  "version": "1.0.0-preview.9",
+  "version": "1.0.0-preview.10",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -35,4 +35,3 @@
     "vitest": "^2.0.5"
   }
 }
-
