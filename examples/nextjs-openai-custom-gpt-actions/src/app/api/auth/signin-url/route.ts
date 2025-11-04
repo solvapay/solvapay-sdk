@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SignInUrlResponse } from '@/lib/schemas';
 
-/**
- * GET /api/auth/signin-url
- * 
- * Public endpoint that provides the OAuth sign-in URL for OpenAI Custom GPT Actions.
- * This endpoint doesn't require authentication and helps the AI agent guide users
- * through the sign-in process.
- */
 export async function GET(request: NextRequest) {
   try {
-    // Get OAuth configuration from environment variables - no fallbacks!
     const clientId = process.env.OAUTH_CLIENT_ID;
     const redirectUri = process.env.OAUTH_REDIRECT_URI;
     const baseUrl = process.env.PUBLIC_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
     
-    // Validate all required configuration
     const missingVars: string[] = [];
     if (!clientId) missingVars.push('OAUTH_CLIENT_ID');
     if (!redirectUri) missingVars.push('OAUTH_REDIRECT_URI');
@@ -33,13 +24,12 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Generate OAuth parameters (variables are validated above)
     const oauthParams = new URLSearchParams({
       response_type: 'code',
       client_id: clientId!,
       redirect_uri: redirectUri!,
       scope: 'openid email profile',
-      state: crypto.randomUUID() // Generate a random state for security
+      state: crypto.randomUUID()
     });
     
     const signInUrl = `${baseUrl}/api/oauth/authorize?${oauthParams.toString()}`;

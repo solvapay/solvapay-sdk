@@ -43,12 +43,12 @@ export class PaywallError extends Error {
  * 
  * Features:
  * - Deduplicates concurrent requests (multiple requests share the same promise)
- * - Caches results for 5 seconds (prevents duplicate sequential requests)
+ * - Caches results for 60 seconds (prevents duplicate sequential requests)
  * - Automatic cleanup of expired cache entries
  * - Memory-safe with max cache size
  */
 const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
-  cacheTTL: 5000, // Cache results for 5 seconds (sufficient for concurrent requests)
+  cacheTTL: 60000, // Cache results for 60 seconds (reduces API calls significantly)
   maxCacheSize: 1000, // Maximum cache entries
   cacheErrors: false, // Don't cache errors - retry on next request
 });
@@ -116,18 +116,14 @@ export class SolvaPayPaywall {
       try {
         // Check limits with backend using the backend customer reference
         const planRef = metadata.plan || toolName;
-        this.log(`🔍 Checking limits for customer: ${backendCustomerRef}, agent: ${agent}, plan: ${planRef}`);
         
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
           agentRef: agent
         });
-        
-        this.log(`✓ Limits check passed:`, limitsCheck);
 
         if (!limitsCheck.withinLimits) {
           const latencyMs = Date.now() - startTime;
-          this.log(`🚫 Paywall triggered - tracking usage`);
           await this.trackUsage(backendCustomerRef, agent, planRef, toolName, 'paywall', requestId, latencyMs);
           
           throw new PaywallError('Payment required', {
@@ -139,15 +135,11 @@ export class SolvaPayPaywall {
         }
 
         // Execute the protected handler
-        this.log(`⚡ Executing handler: ${toolName}`);
         const result = await handler(args);
-        this.log(`✓ Handler completed successfully`);
         
         // Track successful usage
         const latencyMs = Date.now() - startTime;
-        this.log(`📊 Tracking successful usage`);
         await this.trackUsage(backendCustomerRef, agent, planRef, toolName, 'success', requestId, latencyMs);
-        this.log(`✅ Request completed successfully`);
         
         return result;
 
@@ -174,9 +166,10 @@ export class SolvaPayPaywall {
    * Only attempts creation once per customer (idempotent).
    * Returns the backend customer reference to use in API calls.
    * 
-   * @param customerRef - The customer reference (e.g., Supabase user ID)
+   * @param customerRef - The customer reference used as a cache key (e.g., Supabase user ID)
    * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
-   *   If provided, will lookup existing customer by externalRef before creating new one
+   *   If provided, will lookup existing customer by externalRef before creating new one.
+   *   The externalRef is stored on the SolvaPay backend for customer lookup.
    * @param options - Optional customer details (email, name) for customer creation
    */
   async ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string> {
@@ -197,26 +190,20 @@ export class SolvaPayPaywall {
     // Check if we have a cached result in per-instance cache first (fast path)
     if (this.customerRefMapping.has(customerRef)) {
       const cached = this.customerRefMapping.get(customerRef)!;
-      this.log(`✅ [PER-INSTANCE CACHE HIT] Using cached customer lookup: ${customerRef} -> ${cached}`);
       return cached;
     }
     
     // Use shared deduplicator (handles both concurrent requests and cache)
-    // Store state before calling to detect if we got a cached result
-    const hadPerInstanceCache = this.customerRefMapping.has(customerRef);
-    
     const backendRef = await sharedCustomerLookupDeduplicator.deduplicate(
       cacheKey,
       async () => {
         // If externalRef is provided, try to lookup existing customer first
         if (externalRef && this.apiClient.getCustomerByExternalRef) {
           try {
-            this.log(`🔍 Looking up customer by externalRef: ${externalRef}`);
             const existingCustomer = await this.apiClient.getCustomerByExternalRef({ externalRef });
             
             if (existingCustomer && existingCustomer.customerRef) {
               const ref = existingCustomer.customerRef;
-              this.log(`✅ Found existing customer by externalRef: ${externalRef} -> ${ref}`);
               
               // Store the mapping for future use (per-instance cache)
               this.customerRefMapping.set(customerRef, ref);
@@ -232,9 +219,7 @@ export class SolvaPayPaywall {
           } catch (error) {
             // 404 means customer doesn't exist yet - this is expected, continue to creation
             const errorMessage = error instanceof Error ? error.message : String(error);
-            if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-              this.log(`🔍 Customer not found by externalRef, will create new: ${externalRef}`);
-            } else {
+            if (!errorMessage.includes('404') && !errorMessage.includes('not found')) {
               // Unexpected error - log but continue to fallback behavior
               this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`);
             }
@@ -260,14 +245,17 @@ export class SolvaPayPaywall {
         this.customerCreationAttempts.add(customerRef);
         
         try {
-          this.log(`🔧 Auto-creating customer: ${customerRef}${externalRef ? ` (externalRef: ${externalRef})` : ''}`);
-          
           // Prepare customer creation params
           // Use provided email/name, or fallback to auto-generated values
           const createParams: any = {
             email: options?.email || `${customerRef}@auto-created.local`,
-            name: options?.name || customerRef
           };
+          
+          // Only include name if explicitly provided (don't fallback to customerRef)
+          // This prevents externalRef from being used as the name when both are the same value
+          if (options?.name) {
+            createParams.name = options.name;
+          }
           
           // Include externalRef if provided
           if (externalRef) {
@@ -278,15 +266,6 @@ export class SolvaPayPaywall {
           
           // Extract the backend reference from the response
           const ref = (result as any).customerRef || (result as any).reference || customerRef;
-          
-          this.log(`✅ Successfully created customer: ${customerRef} -> ${ref}`, result);
-          
-          this.log(`🔍 DEBUG - ensureCustomer analysis:`);
-          this.log(`   - Input customerRef: ${customerRef}`);
-          this.log(`   - ExternalRef: ${externalRef || 'none'}`);
-          this.log(`   - Backend customerRef: ${ref}`);
-          this.log(`   - Has plan in response: ${(result as any).plan ? 'YES - ' + (result as any).plan : 'NO'}`);
-          this.log(`   - Has subscription in response: ${(result as any).subscription ? 'YES' : 'NO'}`);
           
           // Store the mapping (per-instance cache)
           this.customerRefMapping.set(customerRef, ref);
@@ -615,10 +594,6 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
         return ensureCustomerRef(payload.sub as string);
       }
     } catch (error) {
-      if (process.env.SOLVAPAY_DEBUG !== 'false') {
-        // eslint-disable-next-line no-console
-        console.log('Failed to verify JWT token:', error);
-      }
       // Fall through to use header fallback
     }
   }

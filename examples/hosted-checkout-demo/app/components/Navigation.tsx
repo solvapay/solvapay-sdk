@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PlanBadge, useSubscription, hasActivePaidSubscription } from '@solvapay/react';
+import { PlanBadge, useSubscription } from '@solvapay/react';
 import { Button } from './ui/Button';
 import { signOut, getAccessToken } from '../lib/supabase';
 import { useState, useCallback } from 'react';
@@ -12,26 +12,14 @@ import { useState, useCallback } from 'react';
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { subscriptions, loading: subscriptionsLoading } = useSubscription();
+  const { subscriptions, loading: subscriptionsLoading, hasPaidSubscription } = useSubscription();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
   
-  // Helper to check if a subscription is for a paid plan
-  // Since plans are handled on hosted checkout page, we treat all active subscriptions as paid
-  // This ensures upgrade button is hidden when user has any active subscription
-  const isPaidPlan = useCallback((planName: string): boolean => {
-    // Default to true (paid) since we don't have plan details locally
-    // Plans are displayed on the hosted checkout page
-    return true;
-  }, []);
-  
-  // Check if user has any active paid subscription
-  const hasActivePaidSubscriptionValue = hasActivePaidSubscription(subscriptions, isPaidPlan);
-  
   // Show upgrade button when subscriptions are loaded and user doesn't have paid subscription
-  const showUpgradeButton = !subscriptionsLoading && !hasActivePaidSubscriptionValue;
+  const showUpgradeButton = !subscriptionsLoading && !hasPaidSubscription;
 
   // Handle redirect to hosted checkout page
   const handleUpgrade = useCallback(async () => {

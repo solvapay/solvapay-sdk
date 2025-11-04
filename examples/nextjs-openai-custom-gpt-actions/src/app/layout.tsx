@@ -1,8 +1,9 @@
 'use client';
 
 import { SolvaPayProvider } from '@solvapay/react';
-import { useState, useEffect, useCallback } from 'react';
-import { getUserId, getAccessToken, onAuthStateChange } from '@/lib/supabase';
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { useState, useEffect, useMemo } from 'react';
+import { getUserId } from '@/lib/supabase';
 import { Auth } from './components/Auth';
 import { Inter } from 'next/font/google'
 import Link from 'next/link'
@@ -15,17 +16,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [customerId, setCustomerId] = useState<string>('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize customer ID from Supabase session
+  // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         const userId = await getUserId();
-        setCustomerId(userId || '');
+        setIsAuthenticated(!!userId);
       } catch (error) {
         console.error('Failed to initialize auth:', error);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
@@ -34,51 +36,19 @@ export default function RootLayout({
     initializeAuth();
   }, []);
 
-  // Listen for auth state changes (sign in/out)
-  useEffect(() => {
-    const { data: { subscription } } = onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setCustomerId(session?.user?.id || '');
-      } else if (event === 'SIGNED_OUT') {
-        setCustomerId('');
-      }
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
-
-  // Memoize callback functions to prevent unnecessary re-renders
-  const handleCustomerRefUpdate = useCallback((newCustomerRef: string) => {
-    setCustomerId(newCustomerRef);
-  }, []);
-
-  // Dummy createPayment function for hosted checkout
-  const handleCreatePayment = useCallback(async ({ planRef, customerRef }: { planRef: string; customerRef: string }) => {
-    throw new Error('Hosted checkout: Use redirect to app.solvapay.com/checkout instead of createPayment');
-  }, []);
-
-  const handleCheckSubscription = useCallback(async (customerRef: string) => {
-    const accessToken = await getAccessToken();
+  // Create Supabase auth adapter (only if env vars are available)
+  const supabaseAdapter = useMemo(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
-    const headers: HeadersInit = {};
-    
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    const res = await fetch('/api/check-subscription', {
-      headers,
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      const errorMessage = errorData.error || 'Failed to check subscription';
-      throw new Error(errorMessage);
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return undefined;
     }
     
-    return res.json();
+    return createSupabaseAuthAdapter({
+      supabaseUrl,
+      supabaseAnonKey,
+    });
   }, []);
 
   return (
@@ -92,13 +62,9 @@ export default function RootLayout({
           <div className="flex justify-center items-center min-h-screen text-gray-500">
             Initializing...
           </div>
-        ) : customerId ? (
-          <SolvaPayProvider
-            customerRef={customerId}
-            onCustomerRefUpdate={handleCustomerRefUpdate}
-            createPayment={handleCreatePayment}
-            checkSubscription={handleCheckSubscription}
-          >
+        ) : isAuthenticated ? (
+          // Provider with Supabase adapter (if available)
+          <SolvaPayProvider config={supabaseAdapter ? { auth: { adapter: supabaseAdapter } } : undefined}>
             <div className="min-h-screen bg-gray-50">
               <nav className="bg-white shadow-sm border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

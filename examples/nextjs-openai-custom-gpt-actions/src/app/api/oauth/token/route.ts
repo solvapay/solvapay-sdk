@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT, jwtVerify } from 'jose';
 import { refreshTokens } from '@/lib/oauth-storage';
 
-/**
- * OAuth Token Exchange Endpoint
- * 
- * Exchanges authorization code (JWT) for access token.
- * Uses Supabase user IDs from JWT-encoded authorization codes.
- */
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const grantType = formData.get('grant_type') as string;
@@ -24,7 +18,6 @@ export async function POST(request: NextRequest) {
     clientSecret: clientSecret ? '***' : 'missing'
   });
 
-  // Validate required parameters
   if (!grantType || grantType !== 'authorization_code') {
     return NextResponse.json(
       { error: 'unsupported_grant_type', error_description: 'Only authorization_code grant type is supported' },
@@ -47,11 +40,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Verify and decode JWT authorization code
     const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
     const { payload } = await jwtVerify(code, jwtSecret);
 
-    // Validate authorization code type
     if (payload.type !== 'authorization_code') {
       return NextResponse.json(
         { error: 'invalid_grant', error_description: 'Invalid authorization code' },
@@ -66,7 +57,6 @@ export async function POST(request: NextRequest) {
       scopes: payload.scopes as string[],
     };
 
-    // Validate redirect URI matches
     if (authCodeData.redirectUri !== redirectUri) {
       console.log('🔍 [TOKEN DEBUG] Redirect URI mismatch');
       return NextResponse.json(
@@ -75,7 +65,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate client
     const expectedClientId = process.env.OAUTH_CLIENT_ID || 'solvapay-demo-client';
     if (clientId !== expectedClientId || authCodeData.clientId !== expectedClientId) {
       return NextResponse.json(
@@ -84,7 +73,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate JWT access token using Supabase user ID
     const issuer = process.env.OAUTH_ISSUER!;
     
     const accessToken = await new SignJWT({
@@ -98,15 +86,13 @@ export async function POST(request: NextRequest) {
       .setExpirationTime('1h')
       .sign(jwtSecret);
 
-    // Generate refresh token
     const refreshToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
-    // Store refresh token in Supabase database
     await refreshTokens.set(refreshToken, {
       userId: authCodeData.userId,
       clientId,
       issuedAt: new Date(),
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     });
 
     console.log('✅ [TOKEN] Generated JWT tokens for client:', clientId, 'user:', authCodeData.userId);
@@ -114,14 +100,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       access_token: accessToken,
       token_type: 'Bearer',
-      expires_in: 3600, // 1 hour
+      expires_in: 3600,
       refresh_token: refreshToken,
       scope: authCodeData.scopes.join(' ')
     });
   } catch (error: any) {
     console.error('Token exchange error:', error);
     
-    // Handle JWT verification errors
     if (error.name === 'JWTExpired' || error.name === 'JWTInvalid') {
       return NextResponse.json(
         { error: 'invalid_grant', error_description: 'Invalid or expired authorization code' },

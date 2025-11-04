@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSubscription } from '../hooks/useSubscription';
 import type { PlanBadgeProps } from '../types';
-import { getPrimarySubscription } from '../utils/subscriptions';
 
 /**
  * Headless Plan Badge Component
@@ -11,8 +10,10 @@ import { getPrimarySubscription } from '../utils/subscriptions';
  * Supports render props, custom components, or className patterns.
  * 
  * Prevents flickering by hiding the badge during initial load and when no subscription exists.
- * Only shows the badge once loading completes AND a subscription value is available.
+ * Shows the badge once loading completes AND an active subscription exists (paid or free).
  * Badge only updates when the plan name actually changes (prevents unnecessary re-renders).
+ * 
+ * Displays the primary active subscription (paid or free) to show current plan status.
  * 
  * @example
  * ```tsx
@@ -34,7 +35,7 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
   as: Component = 'div',
   className,
 }) => {
-  const { subscriptions, loading } = useSubscription();
+  const { subscriptions, loading, hasPaidSubscription, activeSubscription } = useSubscription();
   const [displayPlan, setDisplayPlan] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
@@ -43,17 +44,10 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
   const lastLoadingRef = useRef<boolean>(true); // Start as true (initial loading state)
   const previousSubscriptionsRef = useRef<typeof subscriptions>(subscriptions);
 
-  // Use shared utility to get primary subscription (prioritizes active over cancelled)
-  const primarySubscription = getPrimarySubscription(subscriptions);
-  const currentPlanName = primarySubscription?.planName || null;
+  // Use activeSubscription from hook (primary subscription - paid or free)
+  const currentPlanName = activeSubscription?.planName || null;
   
-  // Fallback: if primarySubscription is null but we have subscriptions, use the first one
-  // This handles edge cases where getPrimarySubscription filters out valid subscriptions
-  const fallbackPlanName = subscriptions.length > 0 && !currentPlanName 
-    ? subscriptions[0]?.planName || null
-    : null;
-  
-  const effectivePlanName = currentPlanName || fallbackPlanName;
+  const effectivePlanName = currentPlanName;
 
   // Track when loading completes (not when subscriptions exist)
   // This handles the case where loading finishes but subscriptions array is empty
@@ -118,7 +112,7 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
   }, [effectivePlanName, displayPlan]);
 
   // Determine if badge should be shown
-  // Show if: loading has completed AND we have a plan name
+  // Show if: loading has completed AND we have an active subscription (paid or free)
   // This ensures badge only appears after initial load completes (prevents flickering)
   const shouldShow = effectivePlanName !== null && hasLoadedOnce;
   
@@ -145,7 +139,8 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
     <Component 
       className={computedClassName}
       data-loading={loading}
-      data-has-subscription={!!primarySubscription}
+      data-has-subscription={!!activeSubscription}
+      data-has-paid-subscription={hasPaidSubscription}
       role="status"
       aria-live="polite"
       aria-busy={loading}

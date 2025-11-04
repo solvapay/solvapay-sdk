@@ -2,24 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { refreshTokens } from '@/lib/oauth-storage';
 
-/**
- * Sign out endpoint that revokes the user's refresh token
- * Supports both Bearer token and form data token input
- * 
- * Note: Supabase handles session management, so we only revoke OAuth tokens here.
- * Access tokens expire naturally (no blacklist storage needed).
- */
 export async function POST(request: NextRequest) {
   let token: string | null = null;
   let tokenTypeHint: string | null = null;
 
-  // Try to get token from Authorization header first
   const authHeader = request.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.substring(7);
     tokenTypeHint = 'access_token';
   } else {
-    // Fall back to form data
     const formData = await request.formData();
     token = formData.get('token') as string;
     tokenTypeHint = formData.get('token_type_hint') as string;
@@ -33,7 +24,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Check if it's a refresh token first
     if (tokenTypeHint === 'refresh_token' || await refreshTokens.has(token)) {
       const refreshTokenData = await refreshTokens.get(token);
       if (refreshTokenData) {
@@ -46,22 +36,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // For access tokens, we rely on JWT expiration only (bare minimum approach)
-    // Access tokens expire in 1 hour, so we don't need to store revoked tokens
     try {
       const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
       await jwtVerify(token, jwtSecret, {
         issuer: process.env.OAUTH_ISSUER!
       });
 
-      // Token is valid but will expire naturally
       return NextResponse.json({
         success: true,
         message: 'Successfully signed out (access token will expire naturally)'
       });
     } catch (jwtError) {
-      // Token is expired or invalid - consider it revoked
-      // Still return success for security reasons (don't leak token validity info)
       return NextResponse.json({
         success: true,
         message: 'Sign out completed'

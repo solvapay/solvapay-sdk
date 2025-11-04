@@ -2,12 +2,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-/**
- * Serve the auto-generated OpenAPI specification
- */
 export async function GET() {
   try {
-    // Validate required environment variables before serving
     const serverUrl = process.env.PUBLIC_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
     if (!serverUrl) {
       return NextResponse.json(
@@ -20,7 +16,6 @@ export async function GET() {
 
     const specPath = path.join(process.cwd(), 'generated/openapi.json');
     
-    // Check if generated spec exists
     if (!fs.existsSync(specPath)) {
       return NextResponse.json(
         { 
@@ -30,11 +25,9 @@ export async function GET() {
       );
     }
 
-    // Read and serve the generated spec
     const specContent = fs.readFileSync(specPath, 'utf8');
     const openApiSpec = JSON.parse(specContent);
     
-    // Additional validation: ensure no placeholder URLs made it through
     const specString = JSON.stringify(openApiSpec);
     if (specString.includes('your-domain') || specString.includes('your-subdomain')) {
       return NextResponse.json(

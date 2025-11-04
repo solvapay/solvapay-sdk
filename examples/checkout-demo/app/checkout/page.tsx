@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSubscription, useCheckout, usePlans, useSubscriptionHelpers } from '@solvapay/react';
+import { useSubscription, useCheckout, usePlans, useSubscriptionStatus } from '@solvapay/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAccessToken } from '../lib/supabase';
@@ -10,14 +10,16 @@ import { PlanSelectionSection } from './components/PlanSelectionSection';
 import { PaymentSummary } from './components/PaymentSummary';
 import { SubscriptionNotices } from './components/SubscriptionNotices';
 import { CheckoutActions } from './components/CheckoutActions';
-import { PaymentFormSection } from './components/PaymentFormSection';
+import { StyledPaymentForm } from './components/StyledPaymentForm';
 import { SuccessMessage } from './components/SuccessMessage';
+import { PaymentFailureMessage } from './components/PaymentFailureMessage';
 
 export default function CheckoutPage() {
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
+  const [paymentFailed, setPaymentFailed] = useState<boolean>(false);
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
-  const { subscriptions, refetch } = useSubscription();
+  const { subscriptions, refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } = useSubscription();
   const router = useRouter();
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -50,22 +52,37 @@ export default function CheckoutPage() {
     autoSelectFirstPaid: true,
   });
 
-  // Use subscription helpers from SDK
-  const subscriptionHelpers = useSubscriptionHelpers(plans);
+  // Get advanced subscription status helpers
+  const subscriptionStatus = useSubscriptionStatus();
   
-  // Force refetch subscriptions when checkout page mounts
-  useEffect(() => {
-    refetch().catch((error) => {
-      console.error(`[CheckoutPage] Refetch failed:`, error);
-    });
-  }, [refetch]);
+  // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
+  // Refetch is only called after operations that change subscription state (payment, cancellation)
 
   // Handle payment success
-  const handlePaymentSuccess = async () => {
-    setPaymentSuccess(true);
-    redirectTimeoutRef.current = setTimeout(() => {
-      router.push('/');
-    }, 2000);
+  const handlePaymentSuccess = async (paymentIntent?: any) => {
+    // Check if payment processing timed out or had an error
+    const isTimeout = paymentIntent?._processingTimeout === true;
+    const hasError = !!paymentIntent?._processingError;
+    
+    // Refetch subscriptions before showing message
+    await refetch();
+    
+    if (isTimeout || hasError) {
+      if (isTimeout) {
+        console.error('[CheckoutPage] Payment processing timed out - webhooks may not be configured');
+      } else if (hasError) {
+        console.error('[CheckoutPage] Payment processing failed:', paymentIntent?._processingError);
+      }
+      
+      // Show failure message to user (no technical details)
+      setPaymentFailed(true);
+    } else {
+      // Only set success if there was no timeout or error
+      setPaymentSuccess(true);
+      redirectTimeoutRef.current = setTimeout(() => {
+        router.push('/');
+      }, 2000);
+    }
   };
 
   // Clean up timeout on unmount
@@ -79,8 +96,11 @@ export default function CheckoutPage() {
 
   // Handle payment error
   const handlePaymentError = (err: Error) => {
-    console.error('Payment failed:', err);
+    console.error('[CheckoutPage] Payment error:', err.message);
+    
+    // Show failure message to user (no technical details)
     setShowPaymentForm(false);
+    setPaymentFailed(true);
   };
 
   // Handle continue button click
@@ -95,8 +115,6 @@ export default function CheckoutPage() {
     if (!confirm('Are you sure you want to cancel your plan?')) {
       return;
     }
-
-    const { activePaidSubscription } = subscriptionHelpers;
 
     if (!activePaidSubscription) {
       return;
@@ -155,7 +173,9 @@ export default function CheckoutPage() {
           ← Back
         </Link>
 
-        {paymentSuccess ? (
+        {paymentFailed ? (
+          <PaymentFailureMessage />
+        ) : paymentSuccess ? (
           <SuccessMessage />
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
@@ -179,7 +199,7 @@ export default function CheckoutPage() {
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanName={subscriptionHelpers.activePlanName}
+                      activePlanName={activeSubscription?.planName || null}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
@@ -189,15 +209,15 @@ export default function CheckoutPage() {
 
                     {/* Cancelled Subscription Notice */}
                     <SubscriptionNotices
-                      cancelledSubscription={subscriptionHelpers.cancelledSubscription}
-                      shouldShow={subscriptionHelpers.shouldShowCancelledNotice}
+                      cancelledSubscription={subscriptionStatus.cancelledSubscription}
+                      shouldShow={subscriptionStatus.shouldShowCancelledNotice}
                       className="mb-6"
                     />
 
                     {/* Action Buttons */}
                     <CheckoutActions
-                      hasPaidSubscription={subscriptionHelpers.hasPaidSubscription}
-                      shouldShowCancelledNotice={subscriptionHelpers.shouldShowCancelledNotice}
+                      hasPaidSubscription={hasPaidSubscription}
+                      shouldShowCancelledNotice={subscriptionStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}
                       isPreparingCheckout={false}
@@ -208,7 +228,7 @@ export default function CheckoutPage() {
 
                 {/* Payment Form - Only mount when needed */}
                 {showPaymentForm && (
-                  <PaymentFormSection
+                  <StyledPaymentForm
                     currentPlan={currentPlan}
                     agentRef={agentRef}
                     onSuccess={handlePaymentSuccess}

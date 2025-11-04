@@ -8,6 +8,7 @@ import { signUp, signIn, signInWithGoogle, getAccessToken } from '../lib/supabas
 
 export function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,12 @@ export function Auth() {
 
     try {
       if (isSignUp) {
-        const { data, error: signUpError } = await signUp(email, password);
+        if (!name.trim()) {
+          setError('Name is required');
+          setIsLoading(false);
+          return;
+        }
+        const { data, error: signUpError } = await signUp(email, password, name);
         if (signUpError) throw signUpError;
         
         // Check if user was immediately signed in (no email confirmation required)
@@ -129,6 +135,17 @@ export function Auth() {
 
             {/* Email/Password Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isSignUp && (
+                <Input
+                  type="text"
+                  label="Name"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              )}
               <Input
                 type="email"
                 label="Email"
@@ -176,6 +193,7 @@ export function Auth() {
                 type="button"
                 onClick={() => {
                   setIsSignUp(!isSignUp);
+                  setName('');
                   setError(null);
                   setSignUpSuccess(false);
                 }}

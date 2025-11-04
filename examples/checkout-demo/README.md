@@ -180,9 +180,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
-  // Use userId as customerRef
+  // Use userId as cache key and externalRef
+  // The ensureCustomer method returns the SolvaPay backend customer reference
   const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! });
-  const customer = await solvaPay.getCustomer({ customerRef: userId });
+  const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId);
+  const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef });
   // ...
 }
 ```
@@ -394,7 +396,8 @@ This demo uses Supabase for authentication with Next.js middleware as the defaul
 - User IDs are set as `x-user-id` header for downstream routes
 - Middleware returns 401 if authentication fails
 - The frontend sends access tokens in Authorization headers
-- User IDs are used directly as customerRef (Supabase user IDs are stable UUIDs)
+- The Supabase user ID is stored as `externalRef` on the SolvaPay backend
+- The `customerRef` prop passed to `SolvaPayProvider` uses the Supabase user ID as a cache key (the actual SolvaPay backend customer reference is returned from API calls)
 - Individual routes can optionally use SupabaseAuthAdapter directly (see route comments)
 
 **Sign-in Methods:**

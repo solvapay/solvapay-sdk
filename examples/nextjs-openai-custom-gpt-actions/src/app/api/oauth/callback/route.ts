@@ -3,16 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { SignJWT } from 'jose';
 import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
 
-/**
- * OAuth Callback API Route
- * 
- * Handles the Supabase OAuth callback:
- * 1. Extracts Supabase session
- * 2. Gets OAuth params from cookie
- * 3. Generates JWT-encoded authorization code (no storage needed!)
- * 4. Redirects to OpenAI's redirect_uri with the code
- */
-
 const OAUTH_PARAMS_COOKIE_NAME = 'oauth_params';
 
 function getSupabaseClient() {
@@ -28,7 +18,6 @@ function getSupabaseClient() {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get OAuth params from cookie
     const oauthParamsCookie = request.cookies.get(OAUTH_PARAMS_COOKIE_NAME);
     
     if (!oauthParamsCookie) {
@@ -36,11 +25,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=missing_oauth_params', request.url));
     }
 
-    // Decode base64 cookie value (Edge-compatible)
     const oauthParamsJson = atob(oauthParamsCookie.value);
     const oauthParams = JSON.parse(oauthParamsJson);
 
-    // Get Supabase session from the request
     const authAdapter = new SupabaseAuthAdapter({ 
       jwtSecret: process.env.SUPABASE_JWT_SECRET! 
     });
@@ -51,7 +38,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=no_session', request.url));
     }
 
-    // Generate JWT-encoded authorization code (no storage needed!)
     const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
     const scopes = oauthParams.scope ? oauthParams.scope.split(' ') : ['openid'];
     
@@ -64,19 +50,17 @@ export async function GET(request: NextRequest) {
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
-      .setExpirationTime('10m') // 10 minutes
+      .setExpirationTime('10m')
       .sign(jwtSecret);
 
     console.log('✅ [OAUTH CALLBACK] Generated JWT authorization code for user:', userId);
 
-    // Redirect to OpenAI's redirect_uri with the authorization code
     const redirectUrl = new URL(oauthParams.redirect_uri);
     redirectUrl.searchParams.set('code', authorizationCode);
     if (oauthParams.state) {
       redirectUrl.searchParams.set('state', oauthParams.state);
     }
 
-    // Clear the OAuth params cookie
     const response = NextResponse.redirect(redirectUrl.toString(), { status: 302 });
     response.cookies.delete(OAUTH_PARAMS_COOKIE_NAME);
 

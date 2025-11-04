@@ -476,6 +476,35 @@ export interface components {
         UpdateConnectedAccount: Record<string, never>;
         CreatePlanRequest: Record<string, never>;
         UpdatePlanRequest: Record<string, never>;
+        CreateCustomerSessionRequest: {
+            /**
+             * @description Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+        };
+        CustomerSessionResponse: {
+            /**
+             * @description Customer session ID
+             * @example 507f1f77bcf86cd799439011
+             */
+            id: string;
+            /**
+             * @description Public session ID used in customer URL
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * @description Session status
+             * @example active
+             */
+            status: string;
+            /**
+             * @description Customer URL to open the customer page
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+        };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
         CreateCheckoutSessionRequest: {
@@ -654,6 +683,31 @@ export interface components {
              * @example 2025-10-27T10:00:00Z
              */
             startDate: string;
+            /**
+             * @description Amount paid in original currency (in cents)
+             * @example 9900
+             */
+            amount: number;
+            /**
+             * @description Currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * @description End date of subscription
+             * @example 2025-11-27T10:00:00Z
+             */
+            endDate?: string;
+            /**
+             * @description When subscription was cancelled
+             * @example 2025-10-28T10:00:00Z
+             */
+            cancelledAt?: string;
+            /**
+             * @description Reason for cancellation
+             * @example Customer request
+             */
+            cancellationReason?: string;
         };
         CustomerResponse: {
             /**
@@ -678,13 +732,6 @@ export interface components {
             externalRef?: string;
             /** @description Active subscriptions */
             subscriptions?: components["schemas"]["SubscriptionInfo"][];
-        };
-        CreateCustomerSessionRequest: {
-            /**
-             * @description Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
         };
         CreateCustomerSessionResponse: {
             /**

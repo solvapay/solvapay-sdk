@@ -4,7 +4,7 @@
  * Main entry point for creating SolvaPay instances with the unified payable API
  */
 
-import type { SolvaPayClient, PayableOptions, HttpAdapterOptions, NextAdapterOptions, McpAdapterOptions } from './types';
+import type { SolvaPayClient, PayableOptions, HttpAdapterOptions, NextAdapterOptions, McpAdapterOptions, CustomerResponseMapped } from './types';
 import { createSolvaPayClient } from './client';
 import { SolvaPayPaywall } from './paywall';
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters';
@@ -80,9 +80,10 @@ export interface SolvaPay {
    * Ensure customer exists (for testing/setup)
    * Only attempts creation once per customer (idempotent).
    * 
-   * @param customerRef - The customer reference (e.g., Supabase user ID)
+   * @param customerRef - The customer reference used as a cache key (e.g., Supabase user ID)
    * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
-   *   If provided, will lookup existing customer by externalRef before creating new one
+   *   If provided, will lookup existing customer by externalRef before creating new one.
+   *   The externalRef is stored on the SolvaPay backend for customer lookup.
    * @param options - Optional customer details (email, name) for customer creation
    */
   ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string>;
@@ -150,22 +151,11 @@ export interface SolvaPay {
   
   /**
    * Get customer details
+   * Uses the generated CustomerResponseMapped type which includes all subscription fields from the API
    */
   getCustomer(params: {
     customerRef: string;
-  }): Promise<{
-    customerRef: string;
-    email?: string;
-    name?: string;
-    plan?: string;
-    subscriptions?: Array<{
-      reference: string;
-      planName: string;
-      agentName: string;
-      status: string;
-      startDate: string;
-    }>;
-  }>;
+  }): Promise<CustomerResponseMapped>;
   
   /**
    * Create a checkout session for a customer

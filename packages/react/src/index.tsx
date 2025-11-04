@@ -19,13 +19,15 @@ export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 
 // Hooks
 export { useSubscription } from './hooks/useSubscription';
+export { useCustomer } from './hooks/useCustomer';
 export { useCheckout } from './hooks/useCheckout';
 export { useSolvaPay } from './hooks/useSolvaPay';
 export { usePlans } from './hooks/usePlans';
-export { useSubscriptionHelpers } from './hooks/useSubscriptionHelpers';
+export { useSubscriptionStatus } from './hooks/useSubscriptionStatus';
 
 // Types
 export type {
+  SolvaPayConfig,
   SolvaPayProviderProps,
   SolvaPayContextValue,
   SubscriptionStatus,
@@ -40,8 +42,13 @@ export type {
   Plan,
   UsePlansOptions,
   UsePlansReturn,
-  SubscriptionHelpersReturn,
+  SubscriptionStatusReturn,
 } from './types';
+export type { CustomerInfo } from './hooks/useCustomer';
+
+// Adapters
+export type { AuthAdapter } from './adapters/auth';
+export { defaultAuthAdapter } from './adapters/auth';
 
 // Utilities
 export {
@@ -50,5 +57,5 @@ export {
   getCancelledSubscriptionsWithEndDate,
   getMostRecentSubscription,
   getPrimarySubscription,
-  hasActivePaidSubscription,
+  isPaidSubscription,
 } from './utils/subscriptions';

@@ -326,19 +326,66 @@ export async function checkSubscription(
       ? await getUserNameFromRequest(request) 
       : null;
 
+    // Check for cached customerRef from client-side localStorage
+    const cachedCustomerRef = request.headers.get('x-solvapay-customer-ref');
+    
+    // Use provided SolvaPay instance or create new one
+    const solvaPay = options.solvaPay || createSolvaPay();
+    
+    // If cached customerRef is provided, validate it first (fast path)
+    // IMPORTANT: We must validate that the cached customerRef belongs to the current userId
+    // to prevent showing subscription data from a different user
+    // customerRef is the SolvaPay customer ID (e.g., cus_VQ6VQ8HV)
+    // userId is the Supabase user ID (e.g., e5dd246c-a472-4f27-8779-2bd45f3d73a2)
+    // We validate by checking customer.externalRef === userId
+    if (cachedCustomerRef) {
+      try {
+        // Try to get customer data first (fast path attempt)
+        const customer = await solvaPay.getCustomer({ customerRef: cachedCustomerRef });
+        
+        if (customer && customer.customerRef) {
+          // Validate that this customerRef belongs to the current userId
+          // customer.externalRef is the Supabase user ID stored when customer was created
+          // Only use fast path if externalRef exists and matches the current userId
+          // If externalRef is undefined, we can't validate ownership, so fall through to normal lookup
+          if (customer.externalRef && customer.externalRef === userId) {
+            // Filter to only include active subscriptions
+            // Backend keeps subscriptions as 'active' until expiration, even when cancelled
+            const filteredSubscriptions = (customer.subscriptions || []).filter(
+              sub => sub.status === 'active'
+            );
+            
+            // Cache hit - return immediately (fast path)
+            return {
+              customerRef: customer.customerRef,
+              email: customer.email,
+              name: customer.name,
+              subscriptions: filteredSubscriptions,
+            } as SubscriptionCheckResult;
+          }
+          // If externalRef doesn't match userId, fall through to normal lookup
+          // This ensures we always use the correct customerRef for the current userId
+        }
+      } catch (error) {
+        // Cached ref is invalid, fall through to normal lookup
+        // This is expected if cache is stale or customer was deleted
+      }
+    }
+
     // Use shared deduplicator
     const deduplicator = getSharedDeduplicator(options.deduplication);
     
     // Deduplicate subscription check
     const response = await deduplicator.deduplicate(userId, async () => {
       try {
-        // Use provided SolvaPay instance or create new one
-        const solvaPay = options.solvaPay || createSolvaPay();
 
-        // Use userId as customerRef (Supabase user IDs are stable UUIDs)
+        // Use userId as cache key and externalRef (Supabase user IDs are stable UUIDs)
+        // The first parameter (customerRef) is used as a cache key
+        // The second parameter (externalRef) is stored on the SolvaPay backend for customer lookup
         // Ensure customer exists and get backend customer reference using externalRef
         // Pass email and name to ensure correct customer data
         // Note: Customer lookup deduplication is handled automatically by the SDK
+        // The returned customerRef is the SolvaPay backend customer reference (different from Supabase user ID)
         const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
           email: email || undefined,
           name: name || undefined,
@@ -347,34 +394,12 @@ export async function checkSubscription(
         // Get customer details including subscriptions using the backend customer reference
         const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef });
 
-        // Filter subscriptions: exclude cancelled subscriptions without endDate or with past endDate
-        // A subscription is considered cancelled if:
-        //   1. status === 'cancelled', OR
-        //   2. cancelledAt is set (even if status is still 'active' - this is expected behavior)
-        // Cancelled subscriptions are kept only if they have an endDate in the future
-        // (meaning the subscription is cancelled but still active until the endDate)
-        const now = new Date();
-        const filteredSubscriptions = (customer.subscriptions || []).filter(sub => {
-          const subAny = sub as any;
-          
-          // Check if subscription is cancelled (either by status or by cancelledAt timestamp)
-          const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
-          
-          // Keep all non-cancelled subscriptions
-          if (!isCancelled) {
-            return true;
-          }
-          
-          // For cancelled subscriptions, only keep if endDate exists and is in the future
-          if (isCancelled && subAny.endDate) {
-            const endDate = new Date(subAny.endDate);
-            const isFuture = endDate > now;
-            return isFuture;
-          }
-          
-          // Filter out cancelled subscriptions without endDate or with past endDate
-          return false;
-        });
+        // Filter subscriptions to only include active ones
+        // Backend keeps subscriptions as 'active' until expiration, even when cancelled.
+        // Cancellation is tracked via cancelledAt field.
+        const filteredSubscriptions = (customer.subscriptions || []).filter(
+          sub => sub.status === 'active'
+        );
 
         // Return customer data with filtered subscriptions
         const result = {
@@ -450,4 +475,21 @@ export function getSubscriptionCacheStats(): { inFlight: number; cached: number 
   const deduplicator = getSharedDeduplicator();
   return deduplicator.getStats();
 }
+
+// Export route helpers
+export {
+  getAuthenticatedUser,
+  syncCustomer,
+  createPaymentIntent,
+  processPayment,
+  createCheckoutSession,
+  createCustomerSession,
+  cancelSubscription,
+  listPlans,
+  createAuthMiddleware,
+  createSupabaseAuthMiddleware,
+} from './helpers';
+
+// Export middleware types
+export type { AuthMiddlewareOptions, SupabaseAuthMiddlewareOptions } from './helpers';
 

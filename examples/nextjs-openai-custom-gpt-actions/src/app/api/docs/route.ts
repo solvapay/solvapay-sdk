@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// Basic Swagger UI HTML template
 const swaggerHTML = `
 <!DOCTYPE html>
 <html lang="en">

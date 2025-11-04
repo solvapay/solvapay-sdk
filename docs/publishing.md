@@ -5,7 +5,7 @@ This document describes the automated publishing and release process for SolvaPa
 ## Overview
 
 The SolvaPay SDK uses an automated publishing workflow that:
-- Publishes five packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/server`, `@solvapay/auth`, and `@solvapay/next`
+- Publishes seven packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `create-solvapay-app`
 - Uses **fixed versioning** - all packages share the same version number
 - Auto-increments the **patch** version on every push to `main` branch
 - Generates changelogs using conventional commits
@@ -45,7 +45,7 @@ pnpm version:bump:major
 ```
 
 These commands will:
-1. Update all five package.json files with the new version
+1. Update all seven package.json files with the new version
 2. Generate changelog based on conventional commits
 3. Show you the next steps (commit and push)
 
@@ -106,7 +106,7 @@ instead of individual parameters.
 
 ## GitHub Actions Workflows
 
-The SDK uses two automated publishing workflows:
+The SDK uses three automated workflows:
 
 ### 1. Stable Release Workflow (`.github/workflows/publish.yml`)
 
@@ -136,9 +136,20 @@ Runs on every push to `dev` branch:
 8. **Creates git tag** (e.g., `v0.1.0-preview.1`)
 9. **Pushes** changes and tags
 
+### 3. Tag as Latest Workflow (`.github/workflows/tag-as-latest.yml`)
+
+**Manual workflow** triggered via GitHub Actions UI:
+
+1. **Validates** the version format
+2. **Checks** which packages exist on npm at that version
+3. **Tags** all published @solvapay packages as "latest"
+4. **Verifies** the tags were applied correctly
+
+This workflow is useful for promoting preview versions to latest without republishing. It includes an optional **dry run mode** to preview changes before applying them.
+
 ### Required Secrets
 
-Both workflows require the following GitHub secret:
+All workflows require the following GitHub secret:
 
 - **`NPM_TOKEN`** - NPM access token with publish permissions
 
@@ -199,12 +210,14 @@ git push origin main --tags
 
 ## Package Access
 
-All packages are published with **public access** under the `@solvapay` scope:
+All packages are published with **public access**:
 - `@solvapay/core`
 - `@solvapay/react`
+- `@solvapay/react-supabase`
 - `@solvapay/server`
 - `@solvapay/auth`
 - `@solvapay/next`
+- `create-solvapay-app`
 
 ## Authentication Best Practices
 
@@ -317,7 +330,7 @@ This will:
 - Detect your current version (e.g., `0.1.0`)
 - Increment to next preview (e.g., `0.1.0-preview.1`)
 - If already a preview, increment the number (e.g., `0.1.0-preview.1` → `0.1.0-preview.2`)
-- Update all five package.json files
+- Update all seven package.json files
 
 #### Step 2: Build Packages
 
@@ -331,7 +344,7 @@ pnpm build:packages
 pnpm publish:preview
 ```
 
-This publishes all five packages with the `preview` dist-tag.
+This publishes all seven packages with the `preview` dist-tag.
 
 #### Step 4: Commit and Push
 
@@ -349,6 +362,7 @@ Users can install preview versions in several ways:
 # Get the latest preview version
 npm install @solvapay/core@preview
 npm install @solvapay/react@preview
+npm install @solvapay/react-supabase@preview
 npm install @solvapay/server@preview
 npm install @solvapay/auth@preview
 npm install @solvapay/next@preview
@@ -361,12 +375,71 @@ npm install @solvapay/core@0.1.0-preview.1
   "dependencies": {
     "@solvapay/core": "preview",
     "@solvapay/react": "preview",
+    "@solvapay/react-supabase": "preview",
     "@solvapay/server": "preview",
     "@solvapay/auth": "preview",
     "@solvapay/next": "preview"
   }
 }
 ```
+
+### Promoting Preview to Latest
+
+Sometimes you may want to make a preview version the "latest" version on npm (e.g., when preview is more stable than the current latest). This is done through GitHub Actions:
+
+**Steps:**
+
+1. Go to your repository on GitHub
+2. Click **Actions** tab
+3. Select **Tag Version as Latest** workflow from the left sidebar
+4. Click **Run workflow** dropdown (top right)
+5. Enter the version you want to tag (e.g., `1.0.0-preview.9`)
+6. Optionally enable **Dry run** to preview what would be tagged without making changes
+7. Click **Run workflow**
+
+**What it does:**
+- Validates the version format
+- Checks which packages exist on npm at that version
+- Tags all published @solvapay packages at that version as "latest"
+- Skips any packages that haven't been published yet
+- Shows verification of the tags
+- No local setup or authentication required!
+
+**Dry Run Mode:**
+
+Enable the dry run option to see what would be tagged without actually making changes. This is useful for:
+- Verifying which packages exist at a specific version
+- Testing before actually changing the tags
+- Previewing the impact
+
+**Benefits:**
+- ✅ No need to be logged in to npm locally
+- ✅ Consistent environment (same as publishing)
+- ✅ Audit trail in GitHub Actions logs
+- ✅ Can be triggered from anywhere (even mobile!)
+- ✅ Dry run option to preview changes
+- ✅ Automatic validation and safety checks
+
+**Verify the Tags:**
+
+After tagging, verify the changes on npm:
+
+```bash
+npm dist-tag ls @solvapay/core
+npm dist-tag ls @solvapay/react
+```
+
+You should see something like:
+```
+latest: 1.0.0-preview.9
+preview: 1.0.0-preview.9
+```
+
+**Important Notes:**
+- Only published versions can be tagged - the script will skip packages/versions that don't exist on npm
+- This changes what users get when they run `npm install @solvapay/core` (without a version/tag)
+- Use this carefully during the preview phase
+- All packages are tagged together to maintain version consistency
 
 ### Preview Version Lifecycle
 

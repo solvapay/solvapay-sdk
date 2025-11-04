@@ -4,6 +4,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { useCheckout } from './hooks/useCheckout';
 import { useSubscription } from './hooks/useSubscription';
 import { useSolvaPay } from './hooks/useSolvaPay';
+import { useCustomer } from './hooks/useCustomer';
 import { Spinner } from './components/Spinner';
 import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper';
 import type { PaymentFormProps } from './types';
@@ -43,9 +44,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   // CRITICAL: Always call hooks unconditionally FIRST, before any early returns
   // Use a safe fallback for planRef to ensure hooks always receive valid input
   const validPlanRef = planRef && typeof planRef === 'string' ? planRef : '';
-  const checkout = useCheckout(validPlanRef);
+  const checkout = useCheckout(validPlanRef, agentRef);
   const { refetch } = useSubscription();
   const { processPayment, customerRef } = useSolvaPay();
+  const customer = useCustomer();
   const hasInitializedRef = useRef(false);
 
   // Auto-start checkout on mount - only once
@@ -65,30 +67,79 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
   // Handle successful payment
   const handleSuccess = useCallback(async (paymentIntent: any) => {
-    // Process payment if we have the necessary data
-    if (processPayment && customerRef && agentRef) {
+    let processingTimeout = false;
+    let processingResult: any = null;
+    
+    // Process payment if we have the necessary data (customerRef is handled internally)
+    if (processPayment && agentRef) {
       try {
-        await processPayment({
+        const result = await processPayment({
           paymentIntentId: paymentIntent.id,
           agentRef: agentRef,
-          customerRef: customerRef,
           planRef: planRef,
         });
-        await refetch();
+        processingResult = result;
+        
+        // Check if the result indicates a timeout
+        // The API can return status: 'timeout' even though TypeScript types say 'completed'
+        const isTimeout = (result as any)?.status === 'timeout';
+        processingTimeout = isTimeout;
+        
+        if (isTimeout) {
+          // Poll for subscription up to 5 times with increasing delays
+          for (let attempt = 1; attempt <= 5; attempt++) {
+            const delay = attempt * 1000; // 1s, 2s, 3s, 4s, 5s
+            await new Promise(resolve => setTimeout(resolve, delay));
+            await refetch();
+          }
+          
+          // Call onSuccess with timeout info first (so CheckoutPage can show failure page)
+          if (onSuccess) {
+            await onSuccess({
+              ...paymentIntent,
+              _processingTimeout: processingTimeout,
+              _processingResult: processingResult,
+            });
+          }
+          
+          // Then throw error to signal timeout to StripePaymentFormWrapper
+          // This will show error state in the form instead of success
+          throw new Error('Payment processing timed out');
+        } else {
+          await refetch();
+        }
       } catch (error) {
         console.error('[PaymentForm] Failed to process payment:', error);
-        // Payment succeeded but processing failed - webhook will handle it
-        await refetch();
+        
+        // Call onSuccess with error info so CheckoutPage can show failure page
+        if (onSuccess) {
+          try {
+            await onSuccess({
+              ...paymentIntent,
+              _processingError: error,
+            });
+          } catch (callbackError) {
+            // Ignore callback errors
+          }
+        }
+        
+        // Re-throw the error so StripePaymentFormWrapper can show error state
+        throw error;
       }
     } else {
       // No processPayment available, refetch anyway (webhook might have processed)
       await refetch();
     }
     
-    if (onSuccess) {
-      onSuccess(paymentIntent);
+    // Call onSuccess callback (only if we haven't already called it for timeout case)
+    if (onSuccess && !processingTimeout) {
+      await onSuccess({
+        ...paymentIntent,
+        _processingTimeout: processingTimeout,
+        _processingResult: processingResult,
+      });
     }
-  }, [processPayment, customerRef, agentRef, planRef, refetch, onSuccess]);
+  }, [processPayment, agentRef, planRef, refetch, onSuccess]);
 
   // Handle payment error
   const handleError = useCallback((err: Error) => {
@@ -133,13 +184,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   return (
     <div className={className}>
       {!isValidPlanRef ? (
-        <div className="p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
+        <div>
           PaymentForm: planRef is required and must be a string
         </div>
       ) : hasError ? (
-        <div className="p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
-          <div className="font-medium mb-1">Payment initialization failed</div>
-          <div className="text-sm">{checkout.error?.message || 'Unknown error'}</div>
+        <div>
+          <div>Payment initialization failed</div>
+          <div>{checkout.error?.message || 'Unknown error'}</div>
         </div>
       ) : shouldRenderElements && checkout.stripePromise && elementsOptions ? (
         // Once we have Stripe data, always render Elements to maintain hook consistency
@@ -155,22 +206,23 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             returnUrl={finalReturnUrl}
             submitButtonText={submitButtonText}
             buttonClassName={buttonClassName}
+            clientSecret={checkout.clientSecret!}
           />
         </Elements>
       ) : (
         // Loading state before Stripe data is available
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center min-h-[200px]">
+        <div>
+          <div style={{ minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Spinner size="md" />
           </div>
           <button
+            type="submit"
             disabled
             className={buttonClassName}
-            aria-busy="true"
+            aria-busy="false"
+            aria-disabled="true"
           >
-            <span className="flex items-center justify-center">
-              <Spinner size="sm" />
-            </span>
+            {submitButtonText}
           </button>
         </div>
       )}

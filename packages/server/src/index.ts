@@ -54,3 +54,18 @@ export type {
 
 // Export utilities for general use
 export { withRetry } from './utils';
+
+// Export route helpers (generic, framework-agnostic)
+export {
+  getAuthenticatedUserCore,
+  syncCustomerCore,
+  createPaymentIntentCore,
+  processPaymentCore,
+  createCheckoutSessionCore,
+  createCustomerSessionCore,
+  cancelSubscriptionCore,
+  listPlansCore,
+  isErrorResult,
+  handleRouteError,
+} from './helpers';
+export type { ErrorResult, AuthenticatedUser } from './helpers';
