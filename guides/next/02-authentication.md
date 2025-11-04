@@ -13,7 +13,7 @@ We'll implement:
 
 ## Step 1: Create Supabase Client
 
-Create `app/lib/supabase.ts`:
+Create `src/app/lib/supabase.ts`:
 
 ```typescript
 /**
@@ -171,7 +171,7 @@ export function onAuthStateChange(callback: (event: string, session: any) => voi
 
 ## Step 2: Create Customer Management Utility
 
-Create `app/lib/customer.ts`:
+Create `src/app/lib/customer.ts`:
 
 ```typescript
 /**
@@ -243,7 +243,7 @@ export const config = {
 
 ## Step 4: Update Root Layout
 
-Update `app/layout.tsx`:
+Update `src/app/layout.tsx`:
 
 ```typescript
 'use client';
@@ -338,7 +338,7 @@ export default function RootLayout({
 
 ## Step 5: Create Auth Component
 
-Create `app/components/Auth.tsx`:
+Create `src/app/components/Auth.tsx`:
 
 ```typescript
 'use client';
@@ -557,7 +557,7 @@ export function Auth() {
 
 ## Step 6: Create OAuth Callback Handler
 
-Create `app/auth/callback/page.tsx`:
+Create `src/app/auth/callback/page.tsx`:
 
 ```typescript
 'use client';
@@ -718,7 +718,7 @@ Test your authentication setup:
 - Add your app callback URL to Supabase Redirect URLs: `http://localhost:3000/auth/callback`
 
 ### Auth component not rendering
-- Check that UI components exist (`app/components/ui/Button.tsx`, etc.)
+- Check that UI components exist (`src/app/components/ui/Button.tsx`, etc.)
 - These will be created in the [Styling Guide](./04-styling.md)
 - For now, you can create simple placeholder components
 

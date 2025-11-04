@@ -13,7 +13,7 @@ We'll implement:
 
 ## Step 1: Create Checkout Session API Route
 
-Create `app/api/create-checkout-session/route.ts`:
+Create `src/app/api/create-checkout-session/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
 ## Step 2: Create Check Subscription API Route
 
-Create `app/api/check-subscription/route.ts`:
+Create `src/app/api/check-subscription/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
 ## Step 3: Create Customer Session API Route
 
-Create `app/api/create-customer-session/route.ts`:
+Create `src/app/api/create-customer-session/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
 ## Step 4: Create Sync Customer API Route
 
-Create `app/api/sync-customer/route.ts`:
+Create `src/app/api/sync-customer/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
@@ -124,7 +124,7 @@ The layout is already set up correctly from Step 2. The `SolvaPayProvider` with 
 
 ## Step 6: Create Home Page with Checkout Flow
 
-Update `app/page.tsx`:
+Update `src/app/page.tsx`:
 
 ```typescript
 'use client';

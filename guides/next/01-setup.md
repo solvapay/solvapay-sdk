@@ -7,7 +7,7 @@ This guide covers initializing a Next.js project and installing all required dep
 Create a new Next.js project with TypeScript and Tailwind CSS:
 
 ```bash
-npx create-next-app@latest my-app --typescript --tailwind --app
+npx create-next-app@latest my-app --typescript --eslint --tailwind --app --import-alias "@/*" --yes
 cd my-app
 ```
 
@@ -84,16 +84,24 @@ npm run dev
 
 Visit http://localhost:3000 - you should see the default Next.js welcome page.
 
+**Note:** This guide assumes your project uses a `src` folder structure. If `create-next-app` created your project without a `src` folder, you'll need to create one and move the `app` folder into it:
+
+```bash
+mkdir src
+mv app src/
+```
+
 ## Project Structure
 
 Your project should now have this structure:
 
 ```
 my-app/
-├── app/
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
+├── src/
+│   └── app/
+│       ├── layout.tsx
+│       ├── page.tsx
+│       └── globals.css
 ├── public/
 ├── .env.local          # Your environment variables (not committed)
 ├── next.config.mjs

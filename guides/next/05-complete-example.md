@@ -14,7 +14,7 @@ This example includes:
 
 ## Complete Home Page
 
-Update `app/page.tsx` with the full implementation:
+Update `src/app/page.tsx` with the full implementation:
 
 ```typescript
 'use client';
@@ -350,34 +350,35 @@ Your project should now have this structure:
 
 ```
 my-app/
-├── app/
-│   ├── api/
-│   │   ├── check-subscription/
-│   │   │   └── route.ts
-│   │   ├── create-checkout-session/
-│   │   │   └── route.ts
-│   │   ├── create-customer-session/
-│   │   │   └── route.ts
-│   │   └── sync-customer/
-│   │       └── route.ts
-│   ├── auth/
-│   │   └── callback/
-│   │       └── page.tsx
-│   ├── components/
-│   │   ├── ui/
-│   │   │   ├── Button.tsx
-│   │   │   ├── Card.tsx
-│   │   │   ├── Badge.tsx
-│   │   │   ├── Input.tsx
-│   │   │   ├── Form.tsx
-│   │   │   └── FormField.tsx
-│   │   └── Auth.tsx
-│   ├── lib/
-│   │   ├── customer.ts
-│   │   └── supabase.ts
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
+├── src/
+│   └── app/
+│       ├── api/
+│       │   ├── check-subscription/
+│       │   │   └── route.ts
+│       │   ├── create-checkout-session/
+│       │   │   └── route.ts
+│       │   ├── create-customer-session/
+│       │   │   └── route.ts
+│       │   └── sync-customer/
+│       │       └── route.ts
+│       ├── auth/
+│       │   └── callback/
+│       │       └── page.tsx
+│       ├── components/
+│       │   ├── ui/
+│       │   │   ├── Button.tsx
+│       │   │   ├── Card.tsx
+│       │   │   ├── Badge.tsx
+│       │   │   ├── Input.tsx
+│       │   │   ├── Form.tsx
+│       │   │   └── FormField.tsx
+│       │   └── Auth.tsx
+│       ├── lib/
+│       │   ├── customer.ts
+│       │   └── supabase.ts
+│       ├── layout.tsx
+│       ├── page.tsx
+│       └── globals.css
 ├── middleware.ts
 ├── tailwind.config.ts
 ├── postcss.config.js

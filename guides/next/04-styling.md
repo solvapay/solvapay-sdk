@@ -100,7 +100,7 @@ export default config;
 
 ## Step 2: Update Global Styles
 
-Update `app/globals.css`:
+Update `src/app/globals.css`:
 
 ```css
 @tailwind base;
@@ -137,7 +137,7 @@ input:focus-visible {
 
 ## Step 3: Create Button Component
 
-Create `app/components/ui/Button.tsx`:
+Create `src/app/components/ui/Button.tsx`:
 
 ```typescript
 import React from 'react';
@@ -188,7 +188,7 @@ export const Button: React.FC<ButtonProps> = ({
 
 ## Step 4: Create Input Component
 
-Create `app/components/ui/Input.tsx`:
+Create `src/app/components/ui/Input.tsx`:
 
 ```typescript
 import React from 'react';
@@ -235,7 +235,7 @@ export const Input: React.FC<InputProps> = ({
 
 ## Step 5: Create Card Component
 
-Create `app/components/ui/Card.tsx`:
+Create `src/app/components/ui/Card.tsx`:
 
 ```typescript
 import React from 'react';
@@ -270,7 +270,7 @@ export const Card: React.FC<CardProps> = ({
 
 ## Step 6: Create Form Component
 
-Create `app/components/ui/Form.tsx`:
+Create `src/app/components/ui/Form.tsx`:
 
 ```typescript
 import React from 'react';
@@ -304,7 +304,7 @@ export const Form: React.FC<FormProps> = ({
 
 ## Step 7: Create Badge Component
 
-Create `app/components/ui/Badge.tsx`:
+Create `src/app/components/ui/Badge.tsx`:
 
 ```typescript
 import React from 'react';
@@ -341,7 +341,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
 ## Step 8: Create FormField Component (Optional)
 
-Create `app/components/ui/FormField.tsx`:
+Create `src/app/components/ui/FormField.tsx`:
 
 ```typescript
 import React from 'react';
@@ -440,7 +440,7 @@ const Skeleton = ({ className = '' }: { className?: string }) => (
 Your component structure should now be:
 
 ```
-app/
+src/app/
   components/
     ui/
       Button.tsx

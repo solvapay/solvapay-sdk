@@ -45,7 +45,7 @@ If you're experienced and want a quick reference:
 
 ```bash
 # 1. Create Next.js project
-npx create-next-app@latest my-app --typescript --tailwind --app
+npx create-next-app@latest my-app --typescript --eslint --tailwind --app --import-alias "@/*" --yes
 cd my-app
 
 # 2. Install dependencies
