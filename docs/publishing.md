@@ -5,7 +5,7 @@ This document describes the automated publishing and release process for SolvaPa
 ## Overview
 
 The SolvaPay SDK uses an automated publishing workflow that:
-- Publishes six packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, and `@solvapay/next`
+- Publishes seven packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `create-solvapay-app`
 - Uses **fixed versioning** - all packages share the same version number
 - Auto-increments the **patch** version on every push to `main` branch
 - Generates changelogs using conventional commits
@@ -45,7 +45,7 @@ pnpm version:bump:major
 ```
 
 These commands will:
-1. Update all six package.json files with the new version
+1. Update all seven package.json files with the new version
 2. Generate changelog based on conventional commits
 3. Show you the next steps (commit and push)
 
@@ -210,13 +210,14 @@ git push origin main --tags
 
 ## Package Access
 
-All packages are published with **public access** under the `@solvapay` scope:
+All packages are published with **public access**:
 - `@solvapay/core`
 - `@solvapay/react`
 - `@solvapay/react-supabase`
 - `@solvapay/server`
 - `@solvapay/auth`
 - `@solvapay/next`
+- `create-solvapay-app`
 
 ## Authentication Best Practices
 
@@ -329,7 +330,7 @@ This will:
 - Detect your current version (e.g., `0.1.0`)
 - Increment to next preview (e.g., `0.1.0-preview.1`)
 - If already a preview, increment the number (e.g., `0.1.0-preview.1` → `0.1.0-preview.2`)
-- Update all six package.json files
+- Update all seven package.json files
 
 #### Step 2: Build Packages
 
@@ -343,7 +344,7 @@ pnpm build:packages
 pnpm publish:preview
 ```
 
-This publishes all six packages with the `preview` dist-tag.
+This publishes all seven packages with the `preview` dist-tag.
 
 #### Step 4: Commit and Push
 
