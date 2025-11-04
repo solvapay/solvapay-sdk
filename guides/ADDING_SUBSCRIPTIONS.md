@@ -133,64 +133,19 @@ export async function clearCustomerId(): Promise<void> {
 Create `middleware.ts` in the project root:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { createSupabaseAuthMiddleware } from '@solvapay/next';
 
-let auth: SupabaseAuthAdapter | null = null;
+/**
+ * Next.js Middleware for Authentication
+ * 
+ * Extracts user ID from Supabase JWT tokens and adds it as a header for API routes.
+ * This is the recommended approach as it centralizes auth logic and makes it available
+ * to all downstream routes.
+ */
 
-function getAuthAdapter(): SupabaseAuthAdapter {
-  if (!auth) {
-    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-    if (!jwtSecret) {
-      throw new Error('SUPABASE_JWT_SECRET environment variable is required.');
-    }
-    auth = new SupabaseAuthAdapter({ jwtSecret });
-  }
-  return auth;
-}
-
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  if (!pathname.startsWith('/api')) {
-    return NextResponse.next();
-  }
-
-  const publicRoutes: string[] = [];
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-
-  let authAdapter: SupabaseAuthAdapter;
-  try {
-    authAdapter = getAuthAdapter();
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Server configuration error', details: error instanceof Error ? error.message : 'Authentication not configured' },
-      { status: 500 }
-    );
-  }
-
-  const userId = await authAdapter.getUserIdFromRequest(request);
-
-  if (isPublicRoute) {
-    const requestHeaders = new Headers(request.headers);
-    if (userId) {
-      requestHeaders.set('x-user-id', userId);
-    }
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
-  if (!userId) {
-    return NextResponse.json(
-      { error: 'Unauthorized', details: 'Valid authentication required' },
-      { status: 401 }
-    );
-  }
-
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-user-id', userId);
-  
-  return NextResponse.next({ request: { headers: requestHeaders } });
-}
+export const middleware = createSupabaseAuthMiddleware({
+  publicRoutes: ['/api/list-plans'], // Add any public routes here
+});
 
 export const config = {
   matcher: ['/api/:path*'],

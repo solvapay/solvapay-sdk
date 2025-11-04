@@ -23,24 +23,15 @@ The middleware extracts the user ID from the Supabase JWT token and adds it as a
 
 ```typescript
 // middleware.ts
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { createSupabaseAuthMiddleware } from '@solvapay/next';
 
-export async function middleware(request: NextRequest) {
-  const authAdapter = new SupabaseAuthAdapter({ 
-    jwtSecret: process.env.SUPABASE_JWT_SECRET 
-  });
-  
-  // Extract userId from Supabase JWT token
-  const userId = await authAdapter.getUserIdFromRequest(request);
-  
-  // Add it as header for downstream API routes
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-user-id', userId);
-  
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  });
-}
+export const middleware = createSupabaseAuthMiddleware({
+  publicRoutes: ['/api/list-plans'], // Add any public routes here
+});
+
+export const config = {
+  matcher: ['/api/:path*'],
+};
 ```
 
 **Key Points:**

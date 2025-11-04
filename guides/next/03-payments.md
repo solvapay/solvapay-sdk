@@ -17,62 +17,19 @@ Create `app/api/create-checkout-session/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
-import { createSolvaPay } from '@solvapay/server';
-import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '@solvapay/auth';
+import { createCheckoutSession } from '@solvapay/next';
 
 export async function POST(request: NextRequest) {
-  try {
-    const userIdOrError = requireUserId(request);
-    if (userIdOrError instanceof Response) {
-      return userIdOrError;
-    }
-    const userId = userIdOrError;
+  const { planRef, agentRef } = await request.json();
 
-    const email = await getUserEmailFromRequest(request);
-    const name = await getUserNameFromRequest(request);
-
-    const { planRef, agentRef } = await request.json();
-
-    if (!agentRef) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: agentRef is required' },
-        { status: 400 }
-      );
-    }
-
-    const solvaPay = createSolvaPay();
-
-    const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    });
-
-    const session = await solvaPay.createCheckoutSession({
-      agentRef,
-      customerRef: ensuredCustomerRef,
-      planRef: planRef || undefined,
-    });
-
-    return NextResponse.json({
-      sessionId: session.sessionId,
-      checkoutUrl: session.checkoutUrl,
-    });
-
-  } catch (error) {
-    console.error('Checkout session creation failed:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    return NextResponse.json(
-      { error: 'Checkout session creation failed', details: errorMessage },
-      { status: 500 }
-    );
-  }
+  const result = await createCheckoutSession(request, { agentRef, planRef });
+  return result instanceof NextResponse ? result : NextResponse.json(result);
 }
 ```
 
 **What this does:**
-- Extracts user ID from request (set by middleware)
+- Uses the `createCheckoutSession` helper from `@solvapay/next`
+- Automatically extracts user ID from request (set by middleware)
 - Gets user email and name from Supabase token
 - Creates or updates customer in SolvaPay
 - Creates checkout session
@@ -84,24 +41,19 @@ Create `app/api/check-subscription/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription, type SubscriptionCheckResult } from '@solvapay/next';
+import { checkSubscription } from '@solvapay/next';
 
 export async function GET(request: NextRequest) {
   const result = await checkSubscription(request);
-  
-  if (result instanceof NextResponse) {
-    return result;
-  }
-  
-  const subscriptionData = result as SubscriptionCheckResult;
-  
-  return NextResponse.json(subscriptionData);
+  return result instanceof NextResponse ? result : NextResponse.json(result);
 }
 ```
 
 **What this does:**
 - Uses the `checkSubscription` helper from `@solvapay/next`
-- Automatically extracts user ID from request
+- Automatically extracts user ID from request (set by middleware)
+- Gets user email and name from Supabase token
+- Ensures customer exists in SolvaPay
 - Checks subscription status with SolvaPay API
 - Returns subscription data
 
@@ -111,47 +63,19 @@ Create `app/api/create-customer-session/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
-import { createSolvaPay } from '@solvapay/server';
-import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '@solvapay/auth';
+import { createCustomerSession } from '@solvapay/next';
 
 export async function POST(request: NextRequest) {
-  try {
-    const userIdOrError = requireUserId(request);
-    if (userIdOrError instanceof Response) {
-      return userIdOrError;
-    }
-    const userId = userIdOrError;
-
-    const email = await getUserEmailFromRequest(request);
-    const name = await getUserNameFromRequest(request);
-
-    const solvaPay = createSolvaPay();
-
-    const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    });
-
-    const session = await solvaPay.createCustomerSession({
-      customerRef: ensuredCustomerRef,
-    });
-
-    return NextResponse.json(session);
-
-  } catch (error) {
-    console.error('Customer session creation failed:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    return NextResponse.json(
-      { error: 'Customer session creation failed', details: errorMessage },
-      { status: 500 }
-    );
-  }
+  const result = await createCustomerSession(request);
+  return result instanceof NextResponse ? result : NextResponse.json(result);
 }
 ```
 
 **What this does:**
+- Uses the `createCustomerSession` helper from `@solvapay/next`
+- Automatically extracts user ID from request (set by middleware)
+- Gets user email and name from Supabase token
+- Ensures customer exists in SolvaPay
 - Creates a customer portal session
 - Allows users to manage subscriptions, payment methods, and billing history
 - Returns URL to redirect user to hosted customer portal
@@ -162,45 +86,26 @@ Create `app/api/sync-customer/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
-import { createSolvaPay } from '@solvapay/server';
-import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '@solvapay/auth';
+import { syncCustomer } from '@solvapay/next';
 
 export async function POST(request: NextRequest) {
-  try {
-    const userIdOrError = requireUserId(request);
-    if (userIdOrError instanceof Response) {
-      return userIdOrError;
-    }
-    const userId = userIdOrError;
-
-    const email = await getUserEmailFromRequest(request);
-    const name = await getUserNameFromRequest(request);
-
-    const solvaPay = createSolvaPay();
-
-    const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    });
-
-    return NextResponse.json({
-      customerRef,
-      success: true,
-    });
-  } catch (error) {
-    console.error('Sync customer failed:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    return NextResponse.json(
-      { error: 'Failed to sync customer', details: errorMessage },
-      { status: 500 }
-    );
+  const customerRef = await syncCustomer(request);
+  
+  if (customerRef instanceof NextResponse) {
+    return customerRef;
   }
+  
+  return NextResponse.json({
+    customerRef,
+    success: true,
+  });
 }
 ```
 
 **What this does:**
+- Uses the `syncCustomer` helper from `@solvapay/next`
+- Automatically extracts user ID from request (set by middleware)
+- Gets user email and name from Supabase token
 - Ensures customer exists in SolvaPay
 - Called after sign-up to create customer immediately
 - Syncs user email and name to SolvaPay customer record
@@ -236,12 +141,16 @@ export default function HomePage() {
   // Get subscription helpers from SDK
   const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
   
-  // Refetch subscriptions on mount to ensure we have latest data
+  // Refetch subscriptions on mount to ensure we have latest data after navigation
+  // This is especially important when creating a new account or after account changes
+  // Empty dependency array ensures this only runs once on mount, preventing stale data
   useEffect(() => {
+    // Immediately refetch on mount to bypass any cached data
     refetch().catch((error) => {
       console.error('[HomePage] Refetch failed:', error);
     });
-  }, [refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount to ensure fresh data on page load
   
   // Get advanced subscription status helpers
   const {

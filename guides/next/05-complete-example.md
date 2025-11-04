@@ -38,11 +38,15 @@ export default function HomePage() {
   const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
   
   // Refetch subscriptions on mount to ensure we have latest data after navigation
+  // This is especially important when creating a new account or after account changes
+  // Empty dependency array ensures this only runs once on mount, preventing stale data
   useEffect(() => {
+    // Immediately refetch on mount to bypass any cached data
     refetch().catch((error) => {
       console.error('[HomePage] Refetch failed:', error);
     });
-  }, [refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount to ensure fresh data on page load
   
   // Get advanced subscription status helpers
   const {
