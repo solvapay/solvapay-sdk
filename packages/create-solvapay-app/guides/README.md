@@ -14,11 +14,11 @@ This guide will help you build a Next.js application with:
 
 Follow these guides in order:
 
-1. **[Setup](./01-setup.md)** - Project initialization and dependencies
-2. **[Authentication](./02-authentication.md)** - Supabase auth integration
-3. **[Payments](./03-payments.md)** - SolvaPay hosted checkout setup
-4. **[Styling](./04-styling.md)** - UI components and styling system
-5. **[Complete Example](./05-complete-example.md)** - Full working implementation
+1. **[Setup](./01-setup.md)** - Prerequisites and setup verification (copy into Cursor first)
+2. **[Authentication](./02-authentication.md)** - Supabase auth integration (copy into Cursor)
+3. **[Payments](./03-payments.md)** - SolvaPay hosted checkout setup (copy into Cursor)
+4. **[Styling](./04-styling.md)** - UI components and styling system (copy into Cursor)
+5. **[Complete Example](./05-complete-example.md)** - Full working implementation (copy into Cursor)
 
 ## Prerequisites
 
@@ -34,23 +34,33 @@ Before starting, ensure you have:
 
 ## Quick Start
 
-If you're experienced and want a quick reference:
+### Step 1: Create Project
+
+Create your project with `create-solvapay-app`:
 
 ```bash
-# 1. Create Next.js project
-npx create-next-app@latest my-app --typescript --eslint --tailwind --app --import-alias "@/*" --yes
+# Create project (handles Next.js setup, dependencies, and configuration)
+npx create-solvapay-app my-app
 cd my-app
-
-# 2. Install dependencies
-npm install @solvapay/auth@preview @solvapay/server@preview @solvapay/next@preview @solvapay/react@preview @solvapay/react-supabase@preview @supabase/supabase-js
-
-# 3. Follow the guides in order:
-# - 01-setup.md
-# - 02-authentication.md
-# - 03-payments.md
-# - 04-styling.md
-# - 05-complete-example.md
 ```
+
+### Step 2: Use Guides with Cursor
+
+After creating your project, use these guides with Cursor AI:
+
+1. **First, copy the setup verification instructions** (`01-setup.md`) into Cursor with:
+   ```
+   Verify my project setup matches these requirements
+   ```
+   Then paste the contents of `01-setup.md`
+
+2. **Then, copy the implementation guides** (files `02-authentication.md` through `05-complete-example.md`) into Cursor with:
+   ```
+   Add subscription to my app using these instructions
+   ```
+   Then paste the contents of all the guide files (excluding `01-setup.md`)
+
+The guides are designed to be copied directly into Cursor, where the AI assistant will help you implement each step.
 
 ## Architecture Overview
 
