@@ -5,6 +5,18 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./adapters/auth": {
+      "types": "./dist/adapters/auth.d.ts",
+      "import": "./dist/adapters/auth.js",
+      "require": "./dist/adapters/auth.cjs"
+    }
+  },
   "files": [
     "dist",
     "README.md"
@@ -26,7 +38,7 @@
     "@stripe/stripe-js": "^4.8.0"
   },
   "scripts": {
-    "build": "tsup src/index.tsx --format esm,cjs --dts --tsconfig tsconfig.build.json",
+    "build": "tsup src/index.tsx src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
     "test:watch": "vitest"

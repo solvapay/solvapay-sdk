@@ -55,9 +55,12 @@ export async function POST(request: NextRequest) {
           // Config is automatically read from environment variables
           const solvaPay = createSolvaPay();
 
-          // Use userId as both customerRef and externalRef
+          // Use userId as cache key (first param) and externalRef (second param)
+          // The first parameter (customerRef) is used as a cache key
+          // The second parameter (externalRef) is stored on the SolvaPay backend for customer lookup
           // This ensures consistent lookup and prevents duplicate customers
           // Pass email and name to ensure correct customer data
+          // The returned customerRef is the SolvaPay backend customer reference (different from Supabase user ID)
           const customerRef = await solvaPay.ensureCustomer(userId, userId, {
             email: email || undefined,
             name: name || undefined,

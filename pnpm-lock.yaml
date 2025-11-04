@@ -77,6 +77,9 @@ importers:
       '@solvapay/react':
         specifier: workspace:*
         version: link:../../packages/react
+      '@solvapay/react-supabase':
+        specifier: workspace:*
+        version: link:../../packages/react-supabase
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../packages/server
@@ -178,6 +181,9 @@ importers:
       '@solvapay/react':
         specifier: workspace:*
         version: link:../../packages/react
+      '@solvapay/react-supabase':
+        specifier: workspace:*
+        version: link:../../packages/react-supabase
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../packages/server
@@ -279,6 +285,9 @@ importers:
       '@solvapay/react':
         specifier: workspace:*
         version: link:../../packages/react
+      '@solvapay/react-supabase':
+        specifier: workspace:*
+        version: link:../../packages/react-supabase
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../packages/server
@@ -471,6 +480,28 @@ importers:
       '@types/react-dom':
         specifier: ^18.2.25
         version: 18.3.7(@types/react@18.3.24)
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.2
+      vitest:
+        specifier: ^2.0.5
+        version: 2.1.9(@types/node@20.19.14)(jsdom@23.2.0)
+
+  packages/react-supabase:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.0.0
+        version: 2.78.0
+    devDependencies:
+      '@solvapay/react':
+        specifier: workspace:*
+        version: link:../react
+      '@types/react':
+        specifier: ^18.2.74
+        version: 18.3.24
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.0(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.2)(yaml@2.8.1)
       typescript:
         specifier: ^5.5.4
         version: 5.9.2

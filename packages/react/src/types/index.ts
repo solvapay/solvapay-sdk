@@ -4,6 +4,7 @@
 
 import type { PaymentIntent } from '@stripe/stripe-js';
 import type { ProcessPaymentResult } from '@solvapay/server';
+import type { AuthAdapter } from '../adapters/auth';
 
 export interface SubscriptionInfo {
   reference: string;
@@ -40,14 +41,87 @@ export interface SubscriptionStatus {
   hasPlan: (planName: string) => boolean;
 }
 
+/**
+ * SolvaPay Provider Configuration
+ * Sensible defaults for minimal code, but fully customizable
+ */
+export interface SolvaPayConfig {
+  /**
+   * API route configuration
+   * Defaults to standard Next.js API routes
+   */
+  api?: {
+    checkSubscription?: string;  // Default: '/api/check-subscription'
+    createPayment?: string;       // Default: '/api/create-payment-intent'
+    processPayment?: string;      // Default: '/api/process-payment'
+  };
+  
+  /**
+   * Authentication configuration
+   * Uses adapter pattern for flexible auth provider support
+   */
+  auth?: {
+    /**
+     * Auth adapter instance
+     * Default: checks localStorage for 'auth_token' key
+     * 
+     * @example
+     * ```tsx
+     * import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+     * 
+     * <SolvaPayProvider
+     *   config={{
+     *     auth: {
+     *       adapter: createSupabaseAuthAdapter({
+     *         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+     *         supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+     *       })
+     *     }
+     *   }}
+     * >
+     * ```
+     */
+    adapter?: AuthAdapter;
+    
+    /**
+     * @deprecated Use `adapter` instead. Will be removed in a future version.
+     * Function to get auth token
+     */
+    getToken?: () => Promise<string | null>;
+    
+    /**
+     * @deprecated Use `adapter` instead. Will be removed in a future version.
+     * Function to get user ID (for cache key)
+     */
+    getUserId?: () => Promise<string | null>;
+  };
+  
+  /**
+   * Custom fetch implementation
+   * Default: uses global fetch
+   */
+  fetch?: typeof fetch;
+  
+  /**
+   * Request headers to include in all API calls
+   * Default: empty
+   */
+  headers?: HeadersInit | (() => Promise<HeadersInit>);
+  
+  /**
+   * Custom error handler
+   * Default: logs to console
+   */
+  onError?: (error: Error, context: string) => void;
+}
+
 export interface SolvaPayContextValue {
   subscription: SubscriptionStatus;
   refetchSubscription: () => Promise<void>;
-  createPayment: (params: { planRef: string; customerRef: string }) => Promise<PaymentIntentResult>;
+  createPayment: (params: { planRef: string }) => Promise<PaymentIntentResult>;
   processPayment?: (params: {
     paymentIntentId: string;
     agentRef: string;
-    customerRef: string;
     planRef?: string;
   }) => Promise<ProcessPaymentResult>;
   customerRef?: string;
@@ -55,16 +129,24 @@ export interface SolvaPayContextValue {
 }
 
 export interface SolvaPayProviderProps {
-  createPayment: (params: { planRef: string; customerRef: string }) => Promise<PaymentIntentResult>;
-  checkSubscription: (customerRef: string) => Promise<CustomerSubscriptionData>;
+  /**
+   * Configuration object with sensible defaults
+   * If not provided, uses standard Next.js API routes
+   */
+  config?: SolvaPayConfig;
+  
+  /**
+   * Custom API functions (override config defaults)
+   * Use only if you need custom logic beyond standard API routes
+   */
+  createPayment?: (params: { planRef: string }) => Promise<PaymentIntentResult>;
+  checkSubscription?: () => Promise<CustomerSubscriptionData>;
   processPayment?: (params: {
     paymentIntentId: string;
     agentRef: string;
-    customerRef: string;
     planRef?: string;
   }) => Promise<ProcessPaymentResult>;
-  customerRef?: string;
-  onCustomerRefUpdate?: (newCustomerRef: string) => void;
+  
   children: React.ReactNode;
 }
 
@@ -186,9 +268,9 @@ export interface PlanSelectorProps {
 }
 
 /**
- * Return type for useSubscriptionHelpers hook
+ * Return type for useSubscriptionStatus hook
  */
-export interface SubscriptionHelpersReturn {
+export interface SubscriptionStatusReturn {
   /**
    * Check if a plan name is a paid plan
    */

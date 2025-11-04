@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSubscription, useSubscriptionHelpers } from '@solvapay/react';
+import { useSubscription, useSubscriptionStatus } from '@solvapay/react';
 import { getAccessToken } from '@/lib/supabase';
 
 interface ApiStatus {
@@ -38,7 +38,7 @@ export default function HomePage() {
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionHelpers([]);
+  } = useSubscriptionStatus([]);
   
   // Loading state - only subscriptions loading since plans are on hosted page
   const isLoading = subscriptionsLoading;

@@ -48,19 +48,14 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
       return;
     }
 
-    if (!customerRef) {
-      setError(new Error('No customer reference available. Please ensure you are logged in.'));
-      return;
-    }
-
     // Set guard flag
     isStartingRef.current = true;
     setLoading(true);
     setError(null);
 
     try {
-      // Create payment intent
-      const result = await createPayment({ planRef, customerRef });
+      // Create payment intent (customerRef is handled internally by provider)
+      const result = await createPayment({ planRef });
 
       // Validate payment intent result
       if (!result || typeof result !== 'object') {
@@ -108,7 +103,7 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
       setLoading(false);
       isStartingRef.current = false; // Clear guard flag
     }
-  }, [planRef, customerRef, createPayment, updateCustomerRef, loading]);
+  }, [planRef, createPayment, updateCustomerRef, loading]);
 
   const reset = useCallback(() => {
     isStartingRef.current = false;

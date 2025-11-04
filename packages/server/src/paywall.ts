@@ -43,12 +43,12 @@ export class PaywallError extends Error {
  * 
  * Features:
  * - Deduplicates concurrent requests (multiple requests share the same promise)
- * - Caches results for 5 seconds (prevents duplicate sequential requests)
+ * - Caches results for 60 seconds (prevents duplicate sequential requests)
  * - Automatic cleanup of expired cache entries
  * - Memory-safe with max cache size
  */
 const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
-  cacheTTL: 5000, // Cache results for 5 seconds (sufficient for concurrent requests)
+  cacheTTL: 60000, // Cache results for 60 seconds (reduces API calls significantly)
   maxCacheSize: 1000, // Maximum cache entries
   cacheErrors: false, // Don't cache errors - retry on next request
 });
@@ -174,9 +174,10 @@ export class SolvaPayPaywall {
    * Only attempts creation once per customer (idempotent).
    * Returns the backend customer reference to use in API calls.
    * 
-   * @param customerRef - The customer reference (e.g., Supabase user ID)
+   * @param customerRef - The customer reference used as a cache key (e.g., Supabase user ID)
    * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
-   *   If provided, will lookup existing customer by externalRef before creating new one
+   *   If provided, will lookup existing customer by externalRef before creating new one.
+   *   The externalRef is stored on the SolvaPay backend for customer lookup.
    * @param options - Optional customer details (email, name) for customer creation
    */
   async ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string> {

@@ -22,10 +22,11 @@ export { useSubscription } from './hooks/useSubscription';
 export { useCheckout } from './hooks/useCheckout';
 export { useSolvaPay } from './hooks/useSolvaPay';
 export { usePlans } from './hooks/usePlans';
-export { useSubscriptionHelpers } from './hooks/useSubscriptionHelpers';
+export { useSubscriptionStatus } from './hooks/useSubscriptionStatus';
 
 // Types
 export type {
+  SolvaPayConfig,
   SolvaPayProviderProps,
   SolvaPayContextValue,
   SubscriptionStatus,
@@ -40,8 +41,12 @@ export type {
   Plan,
   UsePlansOptions,
   UsePlansReturn,
-  SubscriptionHelpersReturn,
+  SubscriptionStatusReturn,
 } from './types';
+
+// Adapters
+export type { AuthAdapter } from './adapters/auth';
+export { defaultAuthAdapter } from './adapters/auth';
 
 // Utilities
 export {

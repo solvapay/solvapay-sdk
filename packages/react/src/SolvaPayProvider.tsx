@@ -5,32 +5,117 @@ import type {
   SolvaPayContextValue, 
   SubscriptionStatus,
   CustomerSubscriptionData,
-  SubscriptionInfo,
+  PaymentIntentResult,
+  SolvaPayConfig,
 } from './types';
+import type { ProcessPaymentResult } from '@solvapay/server';
 import { filterSubscriptions } from './utils/subscriptions';
+import { defaultAuthAdapter, type AuthAdapter } from './adapters/auth';
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
+
+// localStorage cache keys
+const CUSTOMER_REF_KEY = 'solvapay_customerRef';
+const CUSTOMER_REF_EXPIRY = 'solvapay_customerRef_expiry';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Get cached customer reference from localStorage
+ */
+function getCachedCustomerRef(): string | null {
+  if (typeof window === 'undefined') return null;
+  
+  const cached = localStorage.getItem(CUSTOMER_REF_KEY);
+  const expiry = localStorage.getItem(CUSTOMER_REF_EXPIRY);
+  
+  if (!cached || !expiry) return null;
+  
+  if (Date.now() > parseInt(expiry)) {
+    localStorage.removeItem(CUSTOMER_REF_KEY);
+    localStorage.removeItem(CUSTOMER_REF_EXPIRY);
+    return null;
+  }
+  
+  return cached;
+}
+
+/**
+ * Set cached customer reference in localStorage
+ */
+function setCachedCustomerRef(customerRef: string): void {
+  if (typeof window === 'undefined') return;
+  
+  localStorage.setItem(CUSTOMER_REF_KEY, customerRef);
+  localStorage.setItem(CUSTOMER_REF_EXPIRY, String(Date.now() + CACHE_DURATION));
+}
+
+/**
+ * Clear cached customer reference from localStorage
+ */
+function clearCachedCustomerRef(): void {
+  if (typeof window === 'undefined') return;
+  
+  localStorage.removeItem(CUSTOMER_REF_KEY);
+  localStorage.removeItem(CUSTOMER_REF_EXPIRY);
+}
+
+/**
+ * Get the auth adapter to use (adapter > deprecated functions > default)
+ */
+function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
+  // Use adapter if provided (preferred)
+  if (config?.auth?.adapter) {
+    return config.auth.adapter;
+  }
+  
+  // Support deprecated getToken/getUserId functions for backward compatibility
+  if (config?.auth?.getToken || config?.auth?.getUserId) {
+    return {
+      async getToken() {
+        return config?.auth?.getToken?.() || null;
+      },
+      async getUserId() {
+        return config?.auth?.getUserId?.() || null;
+      },
+    };
+  }
+  
+  // Default adapter (localStorage only)
+  return defaultAuthAdapter;
+}
 
 /**
  * SolvaPay Provider - Headless Context Provider
  * 
  * Provides subscription state and payment methods to child components.
- * This is a headless provider that manages state without rendering UI.
+ * Supports zero-config with sensible defaults, or full customization.
  * 
  * @example
  * ```tsx
+ * // Zero config (uses defaults)
+ * <SolvaPayProvider>
+ *   <App />
+ * </SolvaPayProvider>
+ * 
+ * // Custom API routes
  * <SolvaPayProvider
- *   customerRef={user?.id}
- *   createPayment={async ({ planRef, customerRef }) => {
- *     const res = await fetch('/api/payments/create', {
- *       method: 'POST',
- *       body: JSON.stringify({ planRef, customerRef })
- *     });
- *     return res.json();
+ *   config={{
+ *     api: {
+ *       checkSubscription: '/custom/api/subscription',
+ *       createPayment: '/custom/api/payment'
+ *     }
  *   }}
- *   checkSubscription={async (customerRef) => {
- *     const res = await fetch(`/api/subscriptions/${customerRef}`);
- *     return res.json();
+ * >
+ *   <App />
+ * </SolvaPayProvider>
+ * 
+ * // Fully custom
+ * <SolvaPayProvider
+ *   checkSubscription={async () => {
+ *     return await myCustomAPI.checkSubscription();
+ *   }}
+ *   createPayment={async ({ planRef }) => {
+ *     return await myCustomAPI.createPayment(planRef);
  *   }}
  * >
  *   <App />
@@ -38,180 +123,343 @@ export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
  * ```
  */
 export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
-  createPayment,
-  checkSubscription,
-  processPayment,
-  customerRef,
-  onCustomerRefUpdate,
+  config,
+  createPayment: customCreatePayment,
+  checkSubscription: customCheckSubscription,
+  processPayment: customProcessPayment,
   children,
 }) => {
-  // Validate required props
-  if (!createPayment || typeof createPayment !== 'function') {
-    throw new Error('SolvaPayProvider: createPayment prop is required and must be a function');
-  }
-  
-  if (!checkSubscription || typeof checkSubscription !== 'function') {
-    throw new Error('SolvaPayProvider: checkSubscription prop is required and must be a function');
-  }
-
   const [subscriptionData, setSubscriptionData] = useState<CustomerSubscriptionData>({
     subscriptions: [],
   });
   const [loading, setLoading] = useState(false);
-  const [internalCustomerRef, setInternalCustomerRef] = useState(customerRef);
+  const [internalCustomerRef, setInternalCustomerRef] = useState<string | undefined>(undefined);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
   // Track in-flight requests to prevent duplicate calls
   const inFlightRef = useRef<string | null>(null);
   // Track what we've already fetched to prevent unnecessary refetches
   const lastFetchedRef = useRef<string | null>(null);
-  // Store checkSubscription in a ref to avoid dependency issues
-  const checkSubscriptionRef = useRef(checkSubscription);
   
-  // Update ref when checkSubscription changes
+  // Store functions in refs to avoid dependency issues
+  const checkSubscriptionRef = useRef<(() => Promise<CustomerSubscriptionData>) | null>(null);
+  const createPaymentRef = useRef<((params: { planRef: string }) => Promise<PaymentIntentResult>) | null>(null);
+  const processPaymentRef = useRef<((params: {
+    paymentIntentId: string;
+    agentRef: string;
+    planRef?: string;
+  }) => Promise<ProcessPaymentResult>) | null>(null);
+  const configRef = useRef(config);
+  
+  // Update refs when props change
   useEffect(() => {
-    checkSubscriptionRef.current = checkSubscription;
-  }, [checkSubscription]);
+    configRef.current = config;
+  }, [config]);
+  
+  useEffect(() => {
+    checkSubscriptionRef.current = customCheckSubscription || null;
+  }, [customCheckSubscription]);
+  
+  useEffect(() => {
+    createPaymentRef.current = customCreatePayment || null;
+  }, [customCreatePayment]);
+  
+  useEffect(() => {
+    processPaymentRef.current = customProcessPayment || null;
+  }, [customProcessPayment]);
+
+  // Build default checkSubscription implementation
+  const buildDefaultCheckSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
+    const currentConfig = configRef.current;
+    const adapter = getAuthAdapter(currentConfig);
+    const token = await adapter.getToken();
+    const route = currentConfig?.api?.checkSubscription || '/api/check-subscription';
+    const fetchFn = currentConfig?.fetch || fetch;
+    
+    // Get cached customerRef from localStorage
+    const cachedRef = getCachedCustomerRef();
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (cachedRef) {
+      headers['x-solvapay-customer-ref'] = cachedRef;
+    }
+    
+    // Add custom headers
+    if (currentConfig?.headers) {
+      const customHeaders = typeof currentConfig.headers === 'function' 
+        ? await currentConfig.headers()
+        : currentConfig.headers;
+      Object.assign(headers, customHeaders);
+    }
+    
+    const res = await fetchFn(route, {
+      method: 'GET',
+      headers,
+    });
+    
+    if (!res.ok) {
+      const error = new Error(`Failed to check subscription: ${res.statusText}`);
+      currentConfig?.onError?.(error, 'checkSubscription');
+      throw error;
+    }
+    
+    return res.json();
+  }, []);
+
+  // Build default createPayment implementation
+  const buildDefaultCreatePayment = useCallback(async (params: { planRef: string }): Promise<PaymentIntentResult> => {
+    const currentConfig = configRef.current;
+    const adapter = getAuthAdapter(currentConfig);
+    const token = await adapter.getToken();
+    const route = currentConfig?.api?.createPayment || '/api/create-payment-intent';
+    const fetchFn = currentConfig?.fetch || fetch;
+    
+    // Get cached customerRef from localStorage
+    const cachedRef = getCachedCustomerRef();
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (cachedRef) {
+      headers['x-solvapay-customer-ref'] = cachedRef;
+    }
+    
+    // Add custom headers
+    if (currentConfig?.headers) {
+      const customHeaders = typeof currentConfig.headers === 'function'
+        ? await currentConfig.headers()
+        : currentConfig.headers;
+      Object.assign(headers, customHeaders);
+    }
+    
+    const res = await fetchFn(route, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ planRef: params.planRef }),
+    });
+    
+    if (!res.ok) {
+      const error = new Error(`Failed to create payment: ${res.statusText}`);
+      currentConfig?.onError?.(error, 'createPayment');
+      throw error;
+    }
+    
+    return res.json();
+  }, []);
+
+  // Build default processPayment implementation
+  const buildDefaultProcessPayment = useCallback(async (params: {
+    paymentIntentId: string;
+    agentRef: string;
+    planRef?: string;
+  }): Promise<any> => {
+    const currentConfig = configRef.current;
+    const adapter = getAuthAdapter(currentConfig);
+    const token = await adapter.getToken();
+    const route = currentConfig?.api?.processPayment || '/api/process-payment';
+    const fetchFn = currentConfig?.fetch || fetch;
+    
+    // Get cached customerRef from localStorage
+    const cachedRef = getCachedCustomerRef();
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (cachedRef) {
+      headers['x-solvapay-customer-ref'] = cachedRef;
+    }
+    
+    // Add custom headers
+    if (currentConfig?.headers) {
+      const customHeaders = typeof currentConfig.headers === 'function'
+        ? await currentConfig.headers()
+        : currentConfig.headers;
+      Object.assign(headers, customHeaders);
+    }
+    
+    const res = await fetchFn(route, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    
+    if (!res.ok) {
+      const error = new Error(`Failed to process payment: ${res.statusText}`);
+      currentConfig?.onError?.(error, 'processPayment');
+      throw error;
+    }
+    
+    return res.json();
+  }, []);
+
+  // Get the actual functions to use (priority: custom > config > defaults)
+  const checkSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
+    if (checkSubscriptionRef.current) {
+      return checkSubscriptionRef.current();
+    }
+    return buildDefaultCheckSubscription();
+  }, [buildDefaultCheckSubscription]);
+
+  const createPayment = useCallback(async (params: { planRef: string }): Promise<PaymentIntentResult> => {
+    if (createPaymentRef.current) {
+      return createPaymentRef.current(params);
+    }
+    return buildDefaultCreatePayment(params);
+  }, [buildDefaultCreatePayment]);
+
+  const processPayment = useCallback(async (params: {
+    paymentIntentId: string;
+    agentRef: string;
+    planRef?: string;
+  }): Promise<any> => {
+    if (processPaymentRef.current) {
+      return processPaymentRef.current(params);
+    }
+    return buildDefaultProcessPayment(params);
+  }, [buildDefaultProcessPayment]);
+
+  // Detect authentication state and user ID
+  useEffect(() => {
+    const detectAuth = async () => {
+      const currentConfig = configRef.current;
+      const adapter = getAuthAdapter(currentConfig);
+      
+      const token = await adapter.getToken();
+      const detectedUserId = await adapter.getUserId();
+      
+      setIsAuthenticated(!!token);
+      setUserId(detectedUserId);
+      
+      // If we have a cached customerRef and are authenticated, use it
+      const cachedRef = getCachedCustomerRef();
+      if (cachedRef && token) {
+        setInternalCustomerRef(cachedRef);
+      } else if (!token) {
+        // Clear cache on sign-out
+        clearCachedCustomerRef();
+        setInternalCustomerRef(undefined);
+      }
+    };
+    
+    detectAuth();
+    
+    // Set up polling to detect auth changes (e.g., token refresh)
+    const interval = setInterval(detectAuth, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch subscription function - memoized to prevent unnecessary re-renders
   const fetchSubscription = useCallback(async (force = false) => {
-    const currentCustomerRef = internalCustomerRef;
-    
-    if (!currentCustomerRef) {
+    // Only fetch if authenticated or if we have a customerRef
+    if (!isAuthenticated && !internalCustomerRef) {
       setSubscriptionData({ subscriptions: [] });
       setLoading(false);
       inFlightRef.current = null;
       lastFetchedRef.current = null;
       return;
     }
-
-    // Skip if we've already fetched this customerRef (unless it's in-flight or forced)
-    if (!force && lastFetchedRef.current === currentCustomerRef && inFlightRef.current !== currentCustomerRef) {
+    
+    const cacheKey = internalCustomerRef || userId || 'anonymous';
+    
+    // Skip if we've already fetched this cacheKey (unless it's in-flight or forced)
+    if (!force && lastFetchedRef.current === cacheKey && inFlightRef.current !== cacheKey) {
       return;
     }
 
-    // Prevent duplicate concurrent requests for the same customerRef
-    if (inFlightRef.current === currentCustomerRef) {
+    // Prevent duplicate concurrent requests for the same cacheKey
+    if (inFlightRef.current === cacheKey) {
       return;
     }
 
-    inFlightRef.current = currentCustomerRef;
+    inFlightRef.current = cacheKey;
     setLoading(true);
     
     try {
-      const data = await checkSubscriptionRef.current(currentCustomerRef);
+      const data = await checkSubscription();
 
-      // Only update if this is still the current customerRef (might have changed during fetch)
-      if (inFlightRef.current === currentCustomerRef) {
+      // Store customerRef from response if available
+      if (data.customerRef) {
+        setInternalCustomerRef(data.customerRef);
+        setCachedCustomerRef(data.customerRef);
+      }
+
+      // Only update if this is still the current cacheKey (might have changed during fetch)
+      if (inFlightRef.current === cacheKey) {
         // Filter subscriptions using shared utility
         const filteredData: CustomerSubscriptionData = {
           ...data,
           subscriptions: filterSubscriptions(data.subscriptions || []),
         };
         setSubscriptionData(filteredData);
-        lastFetchedRef.current = currentCustomerRef;
+        lastFetchedRef.current = cacheKey;
       }
     } catch (error) {
       console.error('[SolvaPayProvider] Failed to fetch subscription:', error);
       // On error, set empty subscriptions
-      if (inFlightRef.current === currentCustomerRef) {
+      if (inFlightRef.current === cacheKey) {
         setSubscriptionData({ 
-          customerRef: currentCustomerRef,
           subscriptions: [] 
         });
-        lastFetchedRef.current = currentCustomerRef;
+        lastFetchedRef.current = cacheKey;
       }
     } finally {
-      if (inFlightRef.current === currentCustomerRef) {
+      if (inFlightRef.current === cacheKey) {
         setLoading(false);
         inFlightRef.current = null;
       }
     }
-  }, [internalCustomerRef]); // Only depend on internalCustomerRef
+  }, [isAuthenticated, internalCustomerRef, userId, checkSubscription]);
 
   // Refetch subscription function - forces a fresh fetch by clearing cache
   const refetchSubscription = useCallback(async () => {
-    // Clear both cache refs to force a completely fresh fetch
-    // Clear inFlightRef to ensure we don't skip if there's a pending request
-    const currentCustomerRef = internalCustomerRef;
+    const cacheKey = internalCustomerRef || userId || 'anonymous';
     lastFetchedRef.current = null;
     inFlightRef.current = null;
     // Force a fresh fetch
     await fetchSubscription(true);
-  }, [fetchSubscription, internalCustomerRef]);
+  }, [fetchSubscription, internalCustomerRef, userId]);
 
-  // Sync internal customer ref with prop changes
+  // Auto-fetch subscriptions on mount and when auth state changes
   useEffect(() => {
-    if (customerRef !== internalCustomerRef) {
-      setInternalCustomerRef(customerRef);
-    }
-  }, [customerRef, internalCustomerRef]);
-
-  // Fetch subscription when customerRef changes - single effect, no double calls
-  useEffect(() => {
-    // Skip if empty customerRef
-    if (!customerRef) {
+    if (isAuthenticated || internalCustomerRef) {
+      fetchSubscription();
+    } else {
       setSubscriptionData({ subscriptions: [] });
       setLoading(false);
-      return;
     }
-
-    // Skip if already fetched or in-flight
-    if (customerRef === lastFetchedRef.current || customerRef === inFlightRef.current) {
-      return;
-    }
-
-    // Fetch subscription directly using refs to avoid dependency issues
-    const doFetch = async () => {
-      inFlightRef.current = customerRef;
-      setLoading(true);
-      
-      try {
-        const data = await checkSubscriptionRef.current(customerRef);
-
-        // Only update if this is still the current customerRef (might have changed during fetch)
-        if (inFlightRef.current === customerRef) {
-          // Filter subscriptions using shared utility
-          const filteredData: CustomerSubscriptionData = {
-            ...data,
-            subscriptions: filterSubscriptions(data.subscriptions || []),
-          };
-          setSubscriptionData(filteredData);
-          lastFetchedRef.current = customerRef;
-        }
-      } catch (error) {
-        console.error('[SolvaPayProvider] Failed to fetch subscription:', error);
-        // On error, set empty subscriptions
-        if (inFlightRef.current === customerRef) {
-          setSubscriptionData({ 
-            customerRef: customerRef,
-            subscriptions: [] 
-          });
-          lastFetchedRef.current = customerRef;
-        }
-      } finally {
-        if (inFlightRef.current === customerRef) {
-          setLoading(false);
-          inFlightRef.current = null;
-        }
-      }
-    };
-
-    doFetch();
-  }, [customerRef]); // Only depend on customerRef - use refs for everything else
+  }, [isAuthenticated, internalCustomerRef, fetchSubscription]);
 
   // Update customer ref method
   const updateCustomerRef = useCallback((newCustomerRef: string) => {
-    const previousRef = internalCustomerRef;
     setInternalCustomerRef(newCustomerRef);
-    if (onCustomerRefUpdate) {
-      onCustomerRefUpdate(newCustomerRef);
-    }
-    // The useEffect will handle refetching automatically when internalCustomerRef changes
-  }, [onCustomerRefUpdate, internalCustomerRef]);
+    setCachedCustomerRef(newCustomerRef);
+    // Trigger refetch
+    fetchSubscription(true);
+  }, [fetchSubscription]);
 
   // Build subscription status with helper methods - memoized to prevent unnecessary re-renders
   const subscription: SubscriptionStatus = useMemo(() => ({
     loading,
-    customerRef: subscriptionData.customerRef,
+    customerRef: subscriptionData.customerRef || internalCustomerRef,
     email: subscriptionData.email,
     name: subscriptionData.name,
     subscriptions: subscriptionData.subscriptions,
@@ -223,7 +471,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         sub => sub.planName.toLowerCase() === planName.toLowerCase() && sub.status === 'active'
       );
     },
-  }), [loading, subscriptionData]);
+  }), [loading, subscriptionData, internalCustomerRef]);
 
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue: SolvaPayContextValue = useMemo(() => ({
@@ -231,9 +479,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     refetchSubscription,
     createPayment,
     processPayment,
-    customerRef: internalCustomerRef,
+    customerRef: subscriptionData.customerRef || internalCustomerRef,
     updateCustomerRef,
-  }), [subscription, refetchSubscription, createPayment, processPayment, internalCustomerRef, updateCustomerRef]);
+  }), [subscription, refetchSubscription, createPayment, processPayment, subscriptionData.customerRef, internalCustomerRef, updateCustomerRef]);
 
   return (
     <SolvaPayContext.Provider value={contextValue}>

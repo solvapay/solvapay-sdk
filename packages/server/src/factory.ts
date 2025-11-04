@@ -80,9 +80,10 @@ export interface SolvaPay {
    * Ensure customer exists (for testing/setup)
    * Only attempts creation once per customer (idempotent).
    * 
-   * @param customerRef - The customer reference (e.g., Supabase user ID)
+   * @param customerRef - The customer reference used as a cache key (e.g., Supabase user ID)
    * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
-   *   If provided, will lookup existing customer by externalRef before creating new one
+   *   If provided, will lookup existing customer by externalRef before creating new one.
+   *   The externalRef is stored on the SolvaPay backend for customer lookup.
    * @param options - Optional customer details (email, name) for customer creation
    */
   ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string>;

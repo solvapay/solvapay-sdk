@@ -13,6 +13,7 @@
     "@solvapay/core": "workspace:*",
     "@solvapay/next": "workspace:*",
     "@solvapay/react": "workspace:*",
+    "@solvapay/react-supabase": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
     "@stripe/react-stripe-js": "^2.9.0",

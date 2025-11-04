@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from 'react';
-import type { Plan, SubscriptionInfo, SubscriptionHelpersReturn } from '../types';
+import type { Plan, SubscriptionInfo, SubscriptionStatusReturn } from '../types';
 import { useSubscription } from './useSubscription';
 
 /**
- * Hook providing helper functions for subscription management
+ * Hook providing status and helper functions for subscription management
  * 
  * Provides utilities for checking subscription status, formatting dates,
  * and working with paid vs free plans.
@@ -12,16 +12,16 @@ import { useSubscription } from './useSubscription';
  * 
  * @example
  * ```tsx
- * const helpers = useSubscriptionHelpers(plans);
+ * const status = useSubscriptionStatus(plans);
  * 
- * if (helpers.isPaidPlan('Pro Plan')) {
+ * if (status.isPaidPlan('Pro Plan')) {
  *   // Handle paid plan
  * }
  * 
- * const daysLeft = helpers.getDaysUntilExpiration(subscription.endDate);
+ * const daysLeft = status.getDaysUntilExpiration(subscription.endDate);
  * ```
  */
-export function useSubscriptionHelpers(plans: Plan[]): SubscriptionHelpersReturn {
+export function useSubscriptionStatus(plans: Plan[]): SubscriptionStatusReturn {
   const { subscriptions } = useSubscription();
 
   // Helper to check if a subscription is for a paid plan

@@ -326,19 +326,59 @@ export async function checkSubscription(
       ? await getUserNameFromRequest(request) 
       : null;
 
+    // Check for cached customerRef from client-side localStorage
+    const cachedCustomerRef = request.headers.get('x-solvapay-customer-ref');
+    
+    // Use provided SolvaPay instance or create new one
+    const solvaPay = options.solvaPay || createSolvaPay();
+    
+    // If cached customerRef is provided, validate it first (fast path)
+    if (cachedCustomerRef) {
+      try {
+        const customer = await solvaPay.getCustomer({ customerRef: cachedCustomerRef });
+        
+        // Validate customer exists and filter subscriptions
+        if (customer && customer.customerRef) {
+          const now = new Date();
+          const filteredSubscriptions = (customer.subscriptions || []).filter(sub => {
+            const subAny = sub as any;
+            const isCancelled = sub.status === 'cancelled' || subAny.cancelledAt;
+            if (!isCancelled) return true;
+            if (isCancelled && subAny.endDate) {
+              const endDate = new Date(subAny.endDate);
+              return endDate > now;
+            }
+            return false;
+          });
+          
+          // Cache hit - return immediately (fast path)
+          return {
+            customerRef: customer.customerRef,
+            email: customer.email,
+            name: customer.name,
+            subscriptions: filteredSubscriptions,
+          } as SubscriptionCheckResult;
+        }
+      } catch (error) {
+        // Cached ref is invalid, fall through to normal lookup
+        // This is expected if cache is stale or customer was deleted
+      }
+    }
+
     // Use shared deduplicator
     const deduplicator = getSharedDeduplicator(options.deduplication);
     
     // Deduplicate subscription check
     const response = await deduplicator.deduplicate(userId, async () => {
       try {
-        // Use provided SolvaPay instance or create new one
-        const solvaPay = options.solvaPay || createSolvaPay();
 
-        // Use userId as customerRef (Supabase user IDs are stable UUIDs)
+        // Use userId as cache key and externalRef (Supabase user IDs are stable UUIDs)
+        // The first parameter (customerRef) is used as a cache key
+        // The second parameter (externalRef) is stored on the SolvaPay backend for customer lookup
         // Ensure customer exists and get backend customer reference using externalRef
         // Pass email and name to ensure correct customer data
         // Note: Customer lookup deduplication is handled automatically by the SDK
+        // The returned customerRef is the SolvaPay backend customer reference (different from Supabase user ID)
         const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
           email: email || undefined,
           name: name || undefined,

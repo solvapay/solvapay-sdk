@@ -65,13 +65,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
   // Handle successful payment
   const handleSuccess = useCallback(async (paymentIntent: any) => {
-    // Process payment if we have the necessary data
-    if (processPayment && customerRef && agentRef) {
+    // Process payment if we have the necessary data (customerRef is handled internally)
+    if (processPayment && agentRef) {
       try {
         await processPayment({
           paymentIntentId: paymentIntent.id,
           agentRef: agentRef,
-          customerRef: customerRef,
           planRef: planRef,
         });
         await refetch();
@@ -88,7 +87,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     if (onSuccess) {
       onSuccess(paymentIntent);
     }
-  }, [processPayment, customerRef, agentRef, planRef, refetch, onSuccess]);
+  }, [processPayment, agentRef, planRef, refetch, onSuccess]);
 
   // Handle payment error
   const handleError = useCallback((err: Error) => {

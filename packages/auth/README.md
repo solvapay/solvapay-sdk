@@ -35,9 +35,11 @@ export async function POST(request: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
   
-  // Use userId as customerRef for SolvaPay
+  // Use userId as cache key and externalRef
+  // The ensureCustomer method returns the SolvaPay backend customer reference
   const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! });
-  const customer = await solvaPay.getCustomer({ customerRef: userId });
+  const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId);
+  const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef });
   
   return Response.json({ userId, customer });
 }

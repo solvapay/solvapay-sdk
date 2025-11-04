@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSubscription, useCheckout, usePlans, useSubscriptionHelpers } from '@solvapay/react';
+import { useSubscription, useCheckout, usePlans, useSubscriptionStatus } from '@solvapay/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAccessToken } from '../lib/supabase';
@@ -50,8 +50,8 @@ export default function CheckoutPage() {
     autoSelectFirstPaid: true,
   });
 
-  // Use subscription helpers from SDK
-  const subscriptionHelpers = useSubscriptionHelpers(plans);
+  // Use subscription status from SDK
+  const subscriptionStatus = useSubscriptionStatus(plans);
   
   // Force refetch subscriptions when checkout page mounts
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const { activePaidSubscription } = subscriptionHelpers;
+    const { activePaidSubscription } = subscriptionStatus;
 
     if (!activePaidSubscription) {
       return;
@@ -179,7 +179,7 @@ export default function CheckoutPage() {
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanName={subscriptionHelpers.activePlanName}
+                      activePlanName={subscriptionStatus.activePlanName}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
@@ -189,15 +189,15 @@ export default function CheckoutPage() {
 
                     {/* Cancelled Subscription Notice */}
                     <SubscriptionNotices
-                      cancelledSubscription={subscriptionHelpers.cancelledSubscription}
-                      shouldShow={subscriptionHelpers.shouldShowCancelledNotice}
+                      cancelledSubscription={subscriptionStatus.cancelledSubscription}
+                      shouldShow={subscriptionStatus.shouldShowCancelledNotice}
                       className="mb-6"
                     />
 
                     {/* Action Buttons */}
                     <CheckoutActions
-                      hasPaidSubscription={subscriptionHelpers.hasPaidSubscription}
-                      shouldShowCancelledNotice={subscriptionHelpers.shouldShowCancelledNotice}
+                      hasPaidSubscription={subscriptionStatus.hasPaidSubscription}
+                      shouldShowCancelledNotice={subscriptionStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}
                       isPreparingCheckout={false}

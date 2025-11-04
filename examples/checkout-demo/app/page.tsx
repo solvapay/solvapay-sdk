@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useCallback, useEffect } from 'react';
-import { useSubscription, usePlans, useSubscriptionHelpers } from '@solvapay/react';
+import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react';
 import Link from 'next/link';
 
 export default function HomePage() {
@@ -37,7 +37,7 @@ export default function HomePage() {
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionHelpers(plans);
+  } = useSubscriptionStatus(plans);
   
   // Combine loading states - only show content when both are loaded
   const isLoading = subscriptionsLoading || plansLoading;

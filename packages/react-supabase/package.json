@@ -1,0 +1,38 @@
+{
+  "name": "@solvapay/react-supabase",
+  "version": "1.0.0-preview.9",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git",
+    "directory": "packages/react-supabase"
+  },
+  "peerDependencies": {
+    "@solvapay/react": "^1.0.0-preview.9",
+    "@supabase/supabase-js": "^2.0.0"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
+    "test": "vitest run || exit 0",
+    "test:unit": "vitest run || exit 0",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@solvapay/react": "workspace:*",
+    "@types/react": "^18.2.74",
+    "typescript": "^5.5.4",
+    "tsup": "^8.0.0",
+    "vitest": "^2.0.5"
+  }
+}
+

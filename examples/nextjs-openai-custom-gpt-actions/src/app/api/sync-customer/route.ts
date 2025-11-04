@@ -31,9 +31,12 @@ export async function POST(request: NextRequest) {
     // SECURITY: Only use the secret key on the server
     const solvaPay = createSolvaPay();
 
-    // Use userId as customerRef (Supabase user IDs are stable UUIDs)
+    // Use userId as cache key and externalRef (Supabase user IDs are stable UUIDs)
+    // The first parameter (customerRef) is used as a cache key
+    // The second parameter (externalRef) is stored on the SolvaPay backend for customer lookup
     // Get or create customer using ensureCustomer with externalRef for consistent lookup
     // Pass email and name to ensure correct customer data
+    // The returned customerRef is the SolvaPay backend customer reference (different from Supabase user ID)
     const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
       email: email || undefined,
       name: name || undefined,

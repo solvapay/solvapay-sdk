@@ -30,6 +30,7 @@
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/next": "workspace:*",
     "@solvapay/react": "workspace:*",
+    "@solvapay/react-supabase": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
     "@vercel/kv": "^2.0.0",
