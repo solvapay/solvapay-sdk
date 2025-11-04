@@ -12,6 +12,7 @@ import { execSync } from 'child_process';
 const PACKAGES_TO_CHECK = [
   { name: '@solvapay/core', path: 'packages/core' },
   { name: '@solvapay/react', path: 'packages/react' },
+  { name: '@solvapay/react-supabase', path: 'packages/react-supabase' },
   { name: '@solvapay/server', path: 'packages/server' },
   { name: '@solvapay/auth', path: 'packages/auth' },
   { name: '@solvapay/next', path: 'packages/next' },

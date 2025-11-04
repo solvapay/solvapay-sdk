@@ -9,6 +9,7 @@ type BumpType = 'patch' | 'minor' | 'major';
 const PACKAGES_TO_VERSION = [
   'packages/core/package.json',
   'packages/react/package.json',
+  'packages/react-supabase/package.json',
   'packages/server/package.json',
   'packages/auth/package.json',
   'packages/next/package.json',
