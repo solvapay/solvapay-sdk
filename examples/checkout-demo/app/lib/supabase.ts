@@ -54,10 +54,15 @@ export async function getUser() {
 /**
  * Sign up a new user with email and password
  */
-export async function signUp(email: string, password: string) {
+export async function signUp(email: string, password: string, name?: string) {
   return await supabase.auth.signUp({
     email,
     password,
+    options: name ? {
+      data: {
+        full_name: name,
+      },
+    } : undefined,
   });
 }
 
