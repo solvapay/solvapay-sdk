@@ -389,15 +389,6 @@ Test your payment setup:
 
 ## Troubleshooting
 
-### "Missing required parameter: agentRef"
-- Ensure `NEXT_PUBLIC_AGENT_REF` is set in `.env.local`
-- Restart dev server after adding environment variables
-
-### "Failed to create checkout session"
-- Check your `SOLVAPAY_SECRET_KEY` is correct
-- Verify agent reference exists in SolvaPay dashboard
-- Check network tab for API errors
-
 ### Subscription not updating after checkout
 - Ensure `refetch()` is called after returning from checkout
 - Check that `/api/check-subscription` returns correct format
@@ -407,6 +398,112 @@ Test your payment setup:
 - Verify middleware is properly extracting user ID
 - Check that Authorization header is being sent
 - Ensure user is authenticated before calling checkout
+
+## Understanding Subscription Status Tracking
+
+### How It Works
+
+The subscription tracking system follows this flow:
+
+1. **Authentication** → User ID extracted from Supabase JWT token via middleware
+2. **API Route** → Backend checks subscription status via SolvaPay API using `checkSubscription` helper
+3. **React Hook** → Components access subscription data with automatic caching via `useSubscription()`
+4. **UI Display** → Features shown/hidden based on subscription status
+
+### Key Concepts
+
+- **User ID Mapping**: The Supabase user ID is stored as `externalRef` on the SolvaPay backend
+- **Customer Reference**: The `customerRef` returned from API calls is the SolvaPay backend customer reference (different from the Supabase user ID)
+- **Automatic Subscription Checking**: The Supabase adapter automatically calls `/api/check-subscription` with the token - no manual setup needed
+- **Request Deduplication**: The SDK automatically prevents duplicate concurrent requests for the same user
+- **Caching**: Results are cached for 2 seconds to prevent rapid sequential requests
+
+### Subscription States
+
+- **Active**: `status === 'active'` and not cancelled
+- **Cancelled**: `status === 'cancelled'` OR `cancelledAt` is set
+- **Expired**: Cancelled subscription with `endDate` in the past
+- **Active Cancelled**: Cancelled subscription with `endDate` in the future
+
+### Using Subscription Hooks
+
+```typescript
+import { useSubscription, useSubscriptionStatus } from '@solvapay/react';
+
+function MyComponent() {
+  // Basic subscription data
+  const { 
+    subscriptions,           // Array of subscription objects
+    loading,                 // Loading state
+    hasActiveSubscription,   // Boolean: has any active subscription
+    refetch                  // Function to force refresh
+  } = useSubscription();
+  
+  // Helper utilities for subscription logic
+  const {
+    hasPaidSubscription,      // Boolean: has active paid plan
+    activePaidSubscription,   // Most recent paid subscription
+    cancelledSubscription,    // Most recent cancelled subscription
+    shouldShowCancelledNotice, // Should show cancellation notice
+    formatDate,               // Format dates for display
+    getDaysUntilExpiration    // Calculate days until expiration
+  } = useSubscriptionStatus([]); // Pass array of plan definitions
+  
+  // Use these values to control UI
+}
+```
+
+### Subscription Filtering
+
+The SDK automatically filters subscriptions:
+- ✅ **Included**: Active subscriptions
+- ✅ **Included**: Cancelled subscriptions with future `endDate`
+- ❌ **Excluded**: Cancelled subscriptions without `endDate`
+- ❌ **Excluded**: Cancelled subscriptions with past `endDate`
+
+### Refetching Subscription Status
+
+Force a refresh when subscription status might have changed:
+
+```typescript
+const { refetch } = useSubscription();
+
+// After successful payment
+const handlePaymentSuccess = async () => {
+  await refetch();
+};
+
+// Auto-refetch on mount to ensure fresh data
+useEffect(() => {
+  refetch().catch(console.error);
+}, [refetch]);
+```
+
+### Common Patterns
+
+**Feature Gating:**
+```typescript
+const { hasPaidSubscription } = useSubscriptionStatus([]);
+if (!hasPaidSubscription) {
+  return <UpgradePrompt />;
+}
+return <PremiumContent />;
+```
+
+**Status Display:**
+```typescript
+const { activePaidSubscription, cancelledSubscription, shouldShowCancelledNotice } = useSubscriptionStatus([]);
+
+if (activePaidSubscription) {
+  return <SuccessBanner>Active: {activePaidSubscription.planName}</SuccessBanner>;
+}
+
+if (shouldShowCancelledNotice && cancelledSubscription) {
+  return <WarningBanner>Expires: {formatDate(cancelledSubscription.endDate)}</WarningBanner>;
+}
+```
+
+For more details on subscription status tracking, see the complete example in [Step 5: Complete Example](./05-complete-example.md).
 
 ## Next Steps
 

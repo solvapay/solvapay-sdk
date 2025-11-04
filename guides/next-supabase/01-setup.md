@@ -36,7 +36,7 @@ npm install @solvapay/auth@preview @solvapay/server@preview @solvapay/next@previ
 
 ## Environment Variables
 
-Create a `.env.local` file in your project root:
+Create a `.env.local` file in your project root with the required environment variables:
 
 ```env
 # SolvaPay Configuration
@@ -49,29 +49,6 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 SUPABASE_JWT_SECRET=your_supabase_jwt_secret_here
 ```
-
-**Getting your credentials:**
-
-1. **SolvaPay Secret Key:**
-   - Log in to https://solvapay.com
-   - Go to Dashboard → Settings → API Keys
-   - Copy your secret key (starts with `sp_sandbox_` or `sp_live_`)
-
-2. **SolvaPay Agent Reference:**
-   - In SolvaPay Dashboard → Agents
-   - Copy the agent reference (starts with `agt_`)
-
-3. **Supabase URL and Anon Key:**
-   - Log in to https://supabase.com
-   - Go to your project → Settings → API
-   - Copy "Project URL" and "anon public" key
-
-4. **Supabase JWT Secret:**
-   - In Supabase → Settings → API
-   - Scroll to "JWT Settings"
-   - Copy the "JWT Secret" (click "Reveal" if needed)
-
-**Security Note:** Never commit `.env.local` to version control. It's already in `.gitignore` by default.
 
 ## Verify Installation
 

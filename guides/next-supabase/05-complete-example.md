@@ -474,13 +474,6 @@ Test your complete implementation:
 - Verify customerRef matches between checkout and subscription check
 - Check browser console for errors
 
-### Issue: "Agent reference is not configured"
-
-**Solution:**
-- Ensure `NEXT_PUBLIC_AGENT_REF` is set in `.env.local`
-- Restart dev server after adding environment variables
-- Verify agent reference exists in SolvaPay dashboard
-
 ### Issue: Premium features not unlocking
 
 **Solution:**
@@ -512,9 +505,7 @@ Now that you have a complete implementation, consider:
    - Add subscription usage tracking
 
 3. **Production Deployment:**
-   - Set up production environment variables
-   - Configure production Supabase project
-   - Set up production SolvaPay account
+   - Configure production environment variables
    - Add error tracking (Sentry, etc.)
    - Add analytics
 

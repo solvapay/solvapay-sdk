@@ -7,7 +7,7 @@ This guide covers setting up Supabase authentication with email/password and Goo
 We'll implement:
 1. Supabase client utilities
 2. Authentication middleware
-3. Sign-in/sign-up pages
+3. Sign-in/sign-up pages with email/password and Google OAuth
 4. OAuth callback handler
 5. Root layout with auth state management
 
@@ -251,8 +251,8 @@ Update `src/app/layout.tsx`:
 import { SolvaPayProvider } from '@solvapay/react';
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { getOrCreateCustomerId } from './lib/customer';
-import { Auth } from './components/Auth';
 import './globals.css';
 
 export default function RootLayout({
@@ -260,6 +260,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -295,6 +297,23 @@ export default function RootLayout({
     });
   }, []);
 
+  // Redirect unauthenticated users to sign-in (except on auth pages)
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && 
+        pathname !== '/sign-in' && 
+        pathname !== '/sign-up' && 
+        pathname !== '/auth/callback') {
+      router.push('/sign-in');
+    }
+  }, [isLoading, isAuthenticated, pathname, router]);
+
+  // Redirect authenticated users away from auth pages
+  useEffect(() => {
+    if (isAuthenticated && (pathname === '/sign-in' || pathname === '/sign-up')) {
+      router.push('/');
+    }
+  }, [isAuthenticated, pathname, router]);
+
   return (
     <html lang="en">
       <head>
@@ -314,8 +333,15 @@ export default function RootLayout({
             {children}
           </SolvaPayProvider>
         ) : (
-          // Show auth form if not authenticated
-          <Auth />
+          // Allow auth pages and callback to render
+          (pathname === '/sign-in' || pathname === '/sign-up' || pathname === '/auth/callback') ? (
+            children
+          ) : (
+            // Show loading while redirecting
+            <div className="flex justify-center items-center min-h-screen text-slate-500">
+              Redirecting...
+            </div>
+          )
         )}
       </body>
     </html>
@@ -326,7 +352,8 @@ export default function RootLayout({
 **What this does:**
 - Checks authentication status on mount
 - Shows loading state while checking
-- Renders auth form if not authenticated
+- Redirects unauthenticated users to `/sign-in` (except on auth pages)
+- Redirects authenticated users away from auth pages to home
 - Wraps app in `SolvaPayProvider` with Supabase adapter if authenticated
 - **The Supabase adapter automatically handles subscription checking** - no need for a `checkSubscription` prop
 
@@ -343,20 +370,33 @@ Create `src/app/components/Auth.tsx`:
 ```typescript
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Form } from './ui/Form';
 import { signUp, signIn, signInWithGoogle, getAccessToken } from '../lib/supabase';
+import Link from 'next/link';
 
-export function Auth() {
-  const [isSignUp, setIsSignUp] = useState(false);
+interface AuthProps {
+  initialMode?: 'sign-in' | 'sign-up';
+  showToggle?: boolean;
+}
+
+export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) {
+  const router = useRouter();
+  const [isSignUp, setIsSignUp] = useState(initialMode === 'sign-up');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
+
+  // Sync isSignUp with initialMode prop changes
+  useEffect(() => {
+    setIsSignUp(initialMode === 'sign-up');
+  }, [initialMode]);
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -410,8 +450,8 @@ export function Auth() {
             // Silent failure - don't block signup if customer creation fails
             console.warn('Failed to sync customer after signup:', err);
           }
-          // User is signed in immediately - auth state change will handle navigation
-          setIsLoading(false);
+          // User is signed in immediately - redirect to home
+          router.push('/');
           return;
         } else {
           // Email confirmation required
@@ -420,7 +460,8 @@ export function Auth() {
       } else {
         const { error: signInError } = await signIn(email, password);
         if (signInError) throw signInError;
-        // Success - auth state change will trigger re-render in layout
+        // Success - redirect to home
+        router.push('/');
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
@@ -530,21 +571,25 @@ export function Auth() {
               </Button>
             </form>
 
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setName('');
-                  setError(null);
-                  setSignUpSuccess(false);
-                }}
-                className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
-                disabled={isLoading}
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </button>
-            </div>
+            {showToggle && (
+              <div className="text-center">
+                {isSignUp ? (
+                  <Link
+                    href="/sign-in"
+                    className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
+                  >
+                    Already have an account? Sign in
+                  </Link>
+                ) : (
+                  <Link
+                    href="/sign-up"
+                    className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
+                  >
+                    Don&apos;t have an account? Sign up
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </Form>
       </div>
@@ -555,7 +600,35 @@ export function Auth() {
 
 **Note:** This component uses UI components from `./ui/Button`, `./ui/Input`, and `./ui/Form`. We'll create these in the [Styling Guide](./04-styling.md).
 
-## Step 6: Create OAuth Callback Handler
+## Step 6: Create Sign-In Page
+
+Create `src/app/sign-in/page.tsx`:
+
+```typescript
+'use client';
+
+import { Auth } from '../components/Auth';
+
+export default function SignInPage() {
+  return <Auth initialMode="sign-in" showToggle={true} />;
+}
+```
+
+## Step 7: Create Sign-Up Page
+
+Create `src/app/sign-up/page.tsx`:
+
+```typescript
+'use client';
+
+import { Auth } from '../components/Auth';
+
+export default function SignUpPage() {
+  return <Auth initialMode="sign-up" showToggle={true} />;
+}
+```
+
+## Step 8: Create OAuth Callback Handler
 
 Create `src/app/auth/callback/page.tsx`:
 
@@ -652,27 +725,6 @@ export default function AuthCallbackPage() {
 }
 ```
 
-## Step 7: Configure Google OAuth (Optional)
-
-To enable Google OAuth sign-in:
-
-1. **In Google Cloud Console:**
-   - Go to [Google Cloud Console](https://console.cloud.google.com)
-   - Navigate to APIs & Services → Credentials
-   - Create OAuth 2.0 Client ID (or use existing)
-   - Copy the **Client ID** and **Client Secret**
-   - Add authorized redirect URI: `https://[your-project-ref].supabase.co/auth/v1/callback`
-   - Example: `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`
-
-2. **In Supabase Dashboard:**
-   - Go to Authentication → Providers → Google
-   - Enable Google provider (toggle ON)
-   - **Client IDs**: Paste your Google OAuth Client ID (no spaces, just the ID)
-   - **Client Secret (for OAuth)**: Paste your Google OAuth Client Secret
-   - Add your app's callback URL to Redirect URLs: `http://localhost:3000/auth/callback`
-
-**Important:** Google sees Supabase's callback URL, NOT your localhost URL. The `redirectTo` option in `signInWithGoogle()` is where Supabase redirects AFTER processing OAuth.
-
 ## Verification
 
 Test your authentication setup:
@@ -683,44 +735,35 @@ Test your authentication setup:
    ```
 
 2. **Test email/password sign-up:**
-   - Visit http://localhost:3000
-   - Click "Don't have an account? Sign up"
+   - Visit http://localhost:3000 (should redirect to `/sign-in`)
+   - Click "Don't have an account? Sign up" to go to `/sign-up`
    - Fill in name, email, and password
    - Submit the form
-   - If email confirmation is disabled, you should be signed in immediately
+   - If email confirmation is disabled, you should be signed in and redirected to home
    - If email confirmation is required, check your email
 
 3. **Test sign-in:**
-   - Sign out (if signed in)
+   - Visit http://localhost:3000/sign-in
    - Enter email and password
    - Click "Sign In"
-   - You should be authenticated
+   - You should be authenticated and redirected to home
 
-4. **Test Google OAuth (if configured):**
+4. **Test Google OAuth:**
+   - Visit http://localhost:3000/sign-in
    - Click "Sign in with Google"
    - Complete Google authentication
    - You should be redirected back and signed in
 
 ## Troubleshooting
 
-### "SUPABASE_JWT_SECRET environment variable is required"
-- Ensure `.env.local` exists with `SUPABASE_JWT_SECRET` set
-- Restart dev server after adding environment variables
-
-### "Unauthorized" errors in API routes
-- Verify middleware is running (`middleware.ts` exists)
-- Check that Authorization header is being sent with requests
-- Verify Supabase JWT secret matches your project
-
-### Google OAuth "redirect_uri_mismatch" Error
-- Ensure Supabase callback URL is added to Google Cloud Console
-- Format: `https://[your-project-ref].supabase.co/auth/v1/callback`
-- Add your app callback URL to Supabase Redirect URLs: `http://localhost:3000/auth/callback`
-
 ### Auth component not rendering
 - Check that UI components exist (`src/app/components/ui/Button.tsx`, etc.)
 - These will be created in the [Styling Guide](./04-styling.md)
 - For now, you can create simple placeholder components
+
+### Redirect loop
+- Ensure your layout correctly checks the pathname before redirecting
+- Make sure the redirect logic excludes `/sign-in`, `/sign-up`, and `/auth/callback` paths
 
 ## Next Steps
 

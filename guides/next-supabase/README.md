@@ -24,20 +24,13 @@ Follow these guides in order:
 
 Before starting, ensure you have:
 
-1. **SolvaPay Account**
-   - Sign up at https://solvapay.com
-   - Get your secret API key from the dashboard
-   - Create at least one agent and plan
-
-2. **Supabase Account**
-   - Sign up at https://supabase.com
-   - Create a new project
-   - Get your project URL and anon key from Settings → API
-   - Get your JWT secret from Settings → API → JWT Secret
-
-3. **Node.js Environment**
+1. **Node.js Environment**
    - Node.js 18+ installed
    - npm, pnpm, or yarn package manager
+
+2. **Environment Variables**
+   - SolvaPay credentials configured in `.env.local`
+   - Supabase credentials configured in `.env.local`
 
 ## Quick Start
 
