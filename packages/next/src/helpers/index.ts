@@ -23,3 +23,7 @@ export { cancelSubscription } from './subscription';
 // Export plans helpers
 export { listPlans } from './plans';
 
+// Export middleware helpers
+export { createAuthMiddleware, createSupabaseAuthMiddleware } from './middleware';
+export type { AuthMiddlewareOptions, SupabaseAuthMiddlewareOptions } from './middleware';
+

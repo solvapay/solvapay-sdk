@@ -486,5 +486,10 @@ export {
   createCustomerSession,
   cancelSubscription,
   listPlans,
+  createAuthMiddleware,
+  createSupabaseAuthMiddleware,
 } from './helpers';
+
+// Export middleware types
+export type { AuthMiddlewareOptions, SupabaseAuthMiddlewareOptions } from './helpers';
 
