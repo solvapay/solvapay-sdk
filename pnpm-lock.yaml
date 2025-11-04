@@ -305,7 +305,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.0.0
-        version: 15.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.5.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.0
         version: 18.3.1
@@ -414,6 +414,8 @@ importers:
       vitest:
         specifier: ^2.0.5
         version: 2.1.9(@types/node@20.19.14)(jsdom@23.2.0)
+
+  packages/create-solvapay-app: {}
 
   packages/demo-services:
     dependencies:
@@ -533,6 +535,9 @@ importers:
         specifier: workspace:*
         version: link:../core
     devDependencies:
+      '@solvapay/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@solvapay/demo-services':
         specifier: workspace:*
         version: link:../demo-services
@@ -8408,7 +8413,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@15.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@15.5.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 15.5.3
       '@swc/helpers': 0.5.15
@@ -8416,7 +8421,7 @@ snapshots:
       postcss: 8.4.31
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      styled-jsx: 5.1.6(react@18.3.1)
+      styled-jsx: 5.1.6(@babel/core@7.28.4)(react@18.3.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.5.3
       '@next/swc-darwin-x64': 15.5.3
@@ -9321,10 +9326,12 @@ snapshots:
       client-only: 0.0.1
       react: 19.2.0
 
-  styled-jsx@5.1.6(react@18.3.1):
+  styled-jsx@5.1.6(@babel/core@7.28.4)(react@18.3.1):
     dependencies:
       client-only: 0.0.1
       react: 18.3.1
+    optionalDependencies:
+      '@babel/core': 7.28.4
 
   styled-jsx@5.1.6(react@19.2.0):
     dependencies:
