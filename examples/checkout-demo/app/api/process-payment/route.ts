@@ -29,6 +29,12 @@ export async function POST(request: NextRequest) {
       planRef,
     });
     
+    // Check if we got a timeout - this means webhooks aren't configured
+    // The subscription may still be created by webhook later, but we can't wait for it
+    if ((result as any)?.status === 'timeout') {
+      console.warn('[process-payment] Payment processing timed out waiting for webhook');
+    }
+    
     // Clear subscription cache to ensure fresh data on next fetch
     // This ensures the new subscription appears immediately when client refetches
     clearSubscriptionCache(userId);

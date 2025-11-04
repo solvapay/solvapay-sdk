@@ -4,6 +4,9 @@ import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase, getAccessToken } from '../../lib/supabase';
 
+// Mark page as dynamic since it uses searchParams
+export const dynamic = 'force-dynamic';
+
 /**
  * OAuth Callback Content
  * 

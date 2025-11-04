@@ -24,8 +24,9 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * Handles payment intent creation and Stripe initialization
  * 
  * @param planRef - The plan reference to checkout
+ * @param agentRef - Optional agent reference
  */
-export function useCheckout(planRef: string): UseCheckoutReturn {
+export function useCheckout(planRef: string, agentRef?: string): UseCheckoutReturn {
   const { createPayment, customerRef, updateCustomerRef } = useSolvaPay();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(
@@ -55,7 +56,7 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
 
     try {
       // Create payment intent (customerRef is handled internally by provider)
-      const result = await createPayment({ planRef });
+      const result = await createPayment({ planRef, agentRef });
 
       // Validate payment intent result
       if (!result || typeof result !== 'object') {
@@ -103,7 +104,7 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
       setLoading(false);
       isStartingRef.current = false; // Clear guard flag
     }
-  }, [planRef, createPayment, updateCustomerRef, loading]);
+  }, [planRef, agentRef, createPayment, updateCustomerRef, loading]);
 
   const reset = useCallback(() => {
     isStartingRef.current = false;

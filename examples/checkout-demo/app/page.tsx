@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react';
 import Link from 'next/link';
 
@@ -24,12 +24,17 @@ export default function HomePage() {
   // Get subscription helpers from SDK
   const { subscriptions, loading: subscriptionsLoading, hasActiveSubscription, refetch } = useSubscription();
   
-  // Refetch subscriptions on mount to ensure we have latest data after navigation
+  // Refetch subscriptions on mount to ensure we have latest data after navigation (only once)
+  const hasRefetchedRef = useRef(false);
   useEffect(() => {
-    refetch().catch((error) => {
-      console.error('[HomePage] Refetch failed:', error);
-    });
-  }, [refetch]);
+    if (!hasRefetchedRef.current) {
+      hasRefetchedRef.current = true;
+      refetch().catch(() => {
+        // Error handled silently
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
   const {
     hasPaidSubscription,
     activePaidSubscription,
@@ -49,6 +54,7 @@ export default function HomePage() {
       new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
     )[0];
   }, [subscriptions]);
+  
 
   const FeatureCard = ({ 
     title, 

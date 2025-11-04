@@ -4,7 +4,7 @@ import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 import { Spinner } from './Spinner';
 
 interface StripePaymentFormWrapperProps {
-  onSuccess?: (paymentIntent: any) => void;
+  onSuccess?: (paymentIntent: any) => void | Promise<void>;
   onError?: (error: Error) => void;
   returnUrl?: string;
   submitButtonText?: string;
@@ -63,20 +63,41 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
         // Show error to customer (e.g., payment details are invalid)
         const errorMessage = error.message || 'An unexpected error occurred.';
         setMessage(errorMessage);
+        setIsProcessing(false);
         
         if (onError) {
           onError(new Error(errorMessage));
         }
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded
-        setMessage('Payment successful!');
+        // Payment succeeded on Stripe side - now wait for backend processing
+        // Don't show any message during processing - wait for backend to confirm
+        setMessage(null);
         
         if (onSuccess) {
-          onSuccess(paymentIntent);
+          try {
+            // Wait for backend processing to complete
+            await onSuccess(paymentIntent);
+            // Backend processing completed - now show success
+            setMessage('Payment successful!');
+          } catch (err) {
+            // Backend processing failed
+            const error = err instanceof Error ? err : new Error('Payment processing failed');
+            setMessage('Payment processing failed. Please try again or contact support.');
+            setIsProcessing(false);
+            
+            if (onError) {
+              onError(error);
+            }
+            return;
+          }
+        } else {
+          // No onSuccess callback - show success immediately
+          setMessage('Payment successful!');
         }
       } else if (paymentIntent) {
         // Payment is processing or requires additional action
         setMessage(`Payment status: ${paymentIntent.status || 'processing'}`);
+        setIsProcessing(false);
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error occurred');

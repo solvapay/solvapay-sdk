@@ -114,8 +114,8 @@ function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
  *   checkSubscription={async () => {
  *     return await myCustomAPI.checkSubscription();
  *   }}
- *   createPayment={async ({ planRef }) => {
- *     return await myCustomAPI.createPayment(planRef);
+ *   createPayment={async ({ planRef, agentRef }) => {
+ *     return await myCustomAPI.createPayment(planRef, agentRef);
  *   }}
  * >
  *   <App />
@@ -144,13 +144,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   
   // Store functions in refs to avoid dependency issues
   const checkSubscriptionRef = useRef<(() => Promise<CustomerSubscriptionData>) | null>(null);
-  const createPaymentRef = useRef<((params: { planRef: string }) => Promise<PaymentIntentResult>) | null>(null);
+  const createPaymentRef = useRef<((params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>) | null>(null);
   const processPaymentRef = useRef<((params: {
     paymentIntentId: string;
     agentRef: string;
     planRef?: string;
   }) => Promise<ProcessPaymentResult>) | null>(null);
   const configRef = useRef(config);
+  const buildDefaultCheckSubscriptionRef = useRef<(() => Promise<CustomerSubscriptionData>) | null>(null);
   
   // Update refs when props change
   useEffect(() => {
@@ -169,7 +170,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     processPaymentRef.current = customProcessPayment || null;
   }, [customProcessPayment]);
 
-  // Build default checkSubscription implementation
+  // Build default checkSubscription implementation - store in ref to keep it stable
   const buildDefaultCheckSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
     const currentConfig = configRef.current;
     const adapter = getAuthAdapter(currentConfig);
@@ -213,9 +214,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     
     return res.json();
   }, []);
+  
+  // Store in ref so it doesn't need to be in dependency arrays
+  useEffect(() => {
+    buildDefaultCheckSubscriptionRef.current = buildDefaultCheckSubscription;
+  }, [buildDefaultCheckSubscription]);
 
   // Build default createPayment implementation
-  const buildDefaultCreatePayment = useCallback(async (params: { planRef: string }): Promise<PaymentIntentResult> => {
+  const buildDefaultCreatePayment = useCallback(async (params: { planRef: string; agentRef?: string }): Promise<PaymentIntentResult> => {
     const currentConfig = configRef.current;
     const adapter = getAuthAdapter(currentConfig);
     const token = await adapter.getToken();
@@ -245,10 +251,16 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       Object.assign(headers, customHeaders);
     }
     
+    // Build request body with planRef and agentRef if provided
+    const body: { planRef: string; agentRef?: string } = { planRef: params.planRef };
+    if (params.agentRef) {
+      body.agentRef = params.agentRef;
+    }
+    
     const res = await fetchFn(route, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ planRef: params.planRef }),
+      body: JSON.stringify(body),
     });
     
     if (!res.ok) {
@@ -311,14 +323,19 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, []);
 
   // Get the actual functions to use (priority: custom > config > defaults)
+  // Use refs to avoid dependency issues - this keeps the function stable
   const checkSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
     if (checkSubscriptionRef.current) {
       return checkSubscriptionRef.current();
     }
+    if (buildDefaultCheckSubscriptionRef.current) {
+      return buildDefaultCheckSubscriptionRef.current();
+    }
+    // Fallback (shouldn't happen, but TypeScript needs it)
     return buildDefaultCheckSubscription();
-  }, [buildDefaultCheckSubscription]);
+  }, []);
 
-  const createPayment = useCallback(async (params: { planRef: string }): Promise<PaymentIntentResult> => {
+  const createPayment = useCallback(async (params: { planRef: string; agentRef?: string }): Promise<PaymentIntentResult> => {
     if (createPaymentRef.current) {
       return createPaymentRef.current(params);
     }
@@ -368,6 +385,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, []);
 
   // Fetch subscription function - memoized to prevent unnecessary re-renders
+  // Use refs for checkSubscription to avoid dependency issues
   const fetchSubscription = useCallback(async (force = false) => {
     // Only fetch if authenticated or if we have a customerRef
     if (!isAuthenticated && !internalCustomerRef) {
@@ -394,7 +412,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     setLoading(true);
     
     try {
-      const data = await checkSubscription();
+      // Use ref to get the current checkSubscription function
+      const checkFn = checkSubscriptionRef.current || buildDefaultCheckSubscriptionRef.current;
+      if (!checkFn) {
+        throw new Error('checkSubscription function not available');
+      }
+      const data = await checkFn();
 
       // Store customerRef from response if available
       if (data.customerRef) {
@@ -427,18 +450,25 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         inFlightRef.current = null;
       }
     }
-  }, [isAuthenticated, internalCustomerRef, userId, checkSubscription]);
+  }, [isAuthenticated, internalCustomerRef, userId]);
 
   // Refetch subscription function - forces a fresh fetch by clearing cache
+  // Use ref to get fetchSubscription to avoid dependency issues
+  const fetchSubscriptionRef = useRef(fetchSubscription);
+  useEffect(() => {
+    fetchSubscriptionRef.current = fetchSubscription;
+  }, [fetchSubscription]);
+  
   const refetchSubscription = useCallback(async () => {
     const cacheKey = internalCustomerRef || userId || 'anonymous';
     lastFetchedRef.current = null;
     inFlightRef.current = null;
-    // Force a fresh fetch
-    await fetchSubscription(true);
-  }, [fetchSubscription, internalCustomerRef, userId]);
+    // Force a fresh fetch using ref to avoid dependency issues
+    await fetchSubscriptionRef.current(true);
+  }, [internalCustomerRef, userId]);
 
   // Auto-fetch subscriptions on mount and when auth state changes
+  // Only depend on actual values, not the function itself
   useEffect(() => {
     if (isAuthenticated || internalCustomerRef) {
       fetchSubscription();
@@ -446,7 +476,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       setSubscriptionData({ subscriptions: [] });
       setLoading(false);
     }
-  }, [isAuthenticated, internalCustomerRef, fetchSubscription]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, internalCustomerRef, userId]);
 
   // Update customer ref method
   const updateCustomerRef = useCallback((newCustomerRef: string) => {

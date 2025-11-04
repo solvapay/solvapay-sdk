@@ -12,10 +12,12 @@ import { SubscriptionNotices } from './components/SubscriptionNotices';
 import { CheckoutActions } from './components/CheckoutActions';
 import { PaymentFormSection } from './components/PaymentFormSection';
 import { SuccessMessage } from './components/SuccessMessage';
+import { PaymentFailureMessage } from './components/PaymentFailureMessage';
 
 export default function CheckoutPage() {
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
+  const [paymentFailed, setPaymentFailed] = useState<boolean>(false);
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const { subscriptions, refetch } = useSubscription();
   const router = useRouter();
@@ -53,19 +55,43 @@ export default function CheckoutPage() {
   // Use subscription status from SDK
   const subscriptionStatus = useSubscriptionStatus(plans);
   
-  // Force refetch subscriptions when checkout page mounts
+  // Force refetch subscriptions when checkout page mounts (only once)
+  const hasRefetchedRef = useRef(false);
   useEffect(() => {
-    refetch().catch((error) => {
-      console.error(`[CheckoutPage] Refetch failed:`, error);
-    });
-  }, [refetch]);
+    if (!hasRefetchedRef.current) {
+      hasRefetchedRef.current = true;
+      refetch().catch(() => {
+        // Error handled silently
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Handle payment success
-  const handlePaymentSuccess = async () => {
-    setPaymentSuccess(true);
-    redirectTimeoutRef.current = setTimeout(() => {
-      router.push('/');
-    }, 2000);
+  const handlePaymentSuccess = async (paymentIntent?: any) => {
+    // Check if payment processing timed out or had an error
+    const isTimeout = paymentIntent?._processingTimeout === true;
+    const hasError = !!paymentIntent?._processingError;
+    
+    // Refetch subscriptions before showing message
+    await refetch();
+    
+    if (isTimeout || hasError) {
+      if (isTimeout) {
+        console.error('[CheckoutPage] Payment processing timed out - webhooks may not be configured');
+      } else if (hasError) {
+        console.error('[CheckoutPage] Payment processing failed:', paymentIntent?._processingError);
+      }
+      
+      // Show failure message to user (no technical details)
+      setPaymentFailed(true);
+    } else {
+      // Only set success if there was no timeout or error
+      setPaymentSuccess(true);
+      redirectTimeoutRef.current = setTimeout(() => {
+        router.push('/');
+      }, 2000);
+    }
   };
 
   // Clean up timeout on unmount
@@ -79,8 +105,11 @@ export default function CheckoutPage() {
 
   // Handle payment error
   const handlePaymentError = (err: Error) => {
-    console.error('Payment failed:', err);
+    console.error('[CheckoutPage] Payment error:', err.message);
+    
+    // Show failure message to user (no technical details)
     setShowPaymentForm(false);
+    setPaymentFailed(true);
   };
 
   // Handle continue button click
@@ -155,7 +184,9 @@ export default function CheckoutPage() {
           ← Back
         </Link>
 
-        {paymentSuccess ? (
+        {paymentFailed ? (
+          <PaymentFailureMessage />
+        ) : paymentSuccess ? (
           <SuccessMessage />
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">

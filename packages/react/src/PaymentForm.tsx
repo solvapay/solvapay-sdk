@@ -43,7 +43,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   // CRITICAL: Always call hooks unconditionally FIRST, before any early returns
   // Use a safe fallback for planRef to ensure hooks always receive valid input
   const validPlanRef = planRef && typeof planRef === 'string' ? planRef : '';
-  const checkout = useCheckout(validPlanRef);
+  const checkout = useCheckout(validPlanRef, agentRef);
   const { refetch } = useSubscription();
   const { processPayment, customerRef } = useSolvaPay();
   const hasInitializedRef = useRef(false);
@@ -65,27 +65,77 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
   // Handle successful payment
   const handleSuccess = useCallback(async (paymentIntent: any) => {
+    let processingTimeout = false;
+    let processingResult: any = null;
+    
     // Process payment if we have the necessary data (customerRef is handled internally)
     if (processPayment && agentRef) {
       try {
-        await processPayment({
+        const result = await processPayment({
           paymentIntentId: paymentIntent.id,
           agentRef: agentRef,
           planRef: planRef,
         });
-        await refetch();
+        processingResult = result;
+        
+        // Check if the result indicates a timeout
+        // The API can return status: 'timeout' even though TypeScript types say 'completed'
+        const isTimeout = (result as any)?.status === 'timeout';
+        processingTimeout = isTimeout;
+        
+        if (isTimeout) {
+          // Poll for subscription up to 5 times with increasing delays
+          for (let attempt = 1; attempt <= 5; attempt++) {
+            const delay = attempt * 1000; // 1s, 2s, 3s, 4s, 5s
+            await new Promise(resolve => setTimeout(resolve, delay));
+            await refetch();
+          }
+          
+          // Call onSuccess with timeout info first (so CheckoutPage can show failure page)
+          if (onSuccess) {
+            await onSuccess({
+              ...paymentIntent,
+              _processingTimeout: processingTimeout,
+              _processingResult: processingResult,
+            });
+          }
+          
+          // Then throw error to signal timeout to StripePaymentFormWrapper
+          // This will show error state in the form instead of success
+          throw new Error('Payment processing timed out');
+        } else {
+          await refetch();
+        }
       } catch (error) {
         console.error('[PaymentForm] Failed to process payment:', error);
-        // Payment succeeded but processing failed - webhook will handle it
-        await refetch();
+        
+        // Call onSuccess with error info so CheckoutPage can show failure page
+        if (onSuccess) {
+          try {
+            await onSuccess({
+              ...paymentIntent,
+              _processingError: error,
+            });
+          } catch (callbackError) {
+            // Ignore callback errors
+          }
+        }
+        
+        // Re-throw the error so StripePaymentFormWrapper can show error state
+        throw error;
       }
     } else {
       // No processPayment available, refetch anyway (webhook might have processed)
       await refetch();
     }
     
-    if (onSuccess) {
-      onSuccess(paymentIntent);
+    // Call onSuccess callback (only if we haven't already called it for timeout case)
+    if (onSuccess && !processingTimeout) {
+      await onSuccess({
+        ...paymentIntent,
+        _processingTimeout: processingTimeout,
+        _processingResult: processingResult,
+      });
     }
   }, [processPayment, agentRef, planRef, refetch, onSuccess]);
 

@@ -118,7 +118,7 @@ export interface SolvaPayConfig {
 export interface SolvaPayContextValue {
   subscription: SubscriptionStatus;
   refetchSubscription: () => Promise<void>;
-  createPayment: (params: { planRef: string }) => Promise<PaymentIntentResult>;
+  createPayment: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>;
   processPayment?: (params: {
     paymentIntentId: string;
     agentRef: string;
@@ -139,7 +139,7 @@ export interface SolvaPayProviderProps {
    * Custom API functions (override config defaults)
    * Use only if you need custom logic beyond standard API routes
    */
-  createPayment?: (params: { planRef: string }) => Promise<PaymentIntentResult>;
+  createPayment?: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>;
   checkSubscription?: () => Promise<CustomerSubscriptionData>;
   processPayment?: (params: {
     paymentIntentId: string;

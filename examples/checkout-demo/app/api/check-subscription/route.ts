@@ -27,6 +27,8 @@ import { checkSubscription, type SubscriptionCheckResult } from '@solvapay/next'
  * For multi-instance deployments, consider using Redis or a shared cache.
  */
 export async function GET(request: NextRequest) {
+  const userId = request.headers.get('x-user-id');
+  
   const result = await checkSubscription(request);
   
   // If result is a NextResponse, it's an error response - return it
