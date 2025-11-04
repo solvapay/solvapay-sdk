@@ -20,7 +20,8 @@
     "test:publish": "tsx scripts/test-publish.ts",
     "publish:packages": "pnpm --filter=@solvapay/* publish --access public --no-git-checks --no-provenance",
     "publish:preview": "pnpm --filter=@solvapay/* publish --tag preview --access public --no-git-checks --no-provenance",
-    "publish:preview:dry-run": "pnpm --filter=@solvapay/* publish --tag preview --access public --no-git-checks --no-provenance --dry-run"
+    "publish:preview:dry-run": "pnpm --filter=@solvapay/* publish --tag preview --access public --no-git-checks --no-provenance --dry-run",
+    "tag:latest": "tsx scripts/tag-as-latest.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
