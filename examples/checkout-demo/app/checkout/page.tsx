@@ -10,7 +10,7 @@ import { PlanSelectionSection } from './components/PlanSelectionSection';
 import { PaymentSummary } from './components/PaymentSummary';
 import { SubscriptionNotices } from './components/SubscriptionNotices';
 import { CheckoutActions } from './components/CheckoutActions';
-import { PaymentFormSection } from './components/PaymentFormSection';
+import { StyledPaymentForm } from './components/StyledPaymentForm';
 import { SuccessMessage } from './components/SuccessMessage';
 import { PaymentFailureMessage } from './components/PaymentFailureMessage';
 
@@ -228,7 +228,7 @@ export default function CheckoutPage() {
 
                 {/* Payment Form - Only mount when needed */}
                 {showPaymentForm && (
-                  <PaymentFormSection
+                  <StyledPaymentForm
                     currentPlan={currentPlan}
                     agentRef={agentRef}
                     onSuccess={handlePaymentSuccess}

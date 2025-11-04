@@ -4,6 +4,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { useCheckout } from './hooks/useCheckout';
 import { useSubscription } from './hooks/useSubscription';
 import { useSolvaPay } from './hooks/useSolvaPay';
+import { useCustomer } from './hooks/useCustomer';
 import { Spinner } from './components/Spinner';
 import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper';
 import type { PaymentFormProps } from './types';
@@ -46,6 +47,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const checkout = useCheckout(validPlanRef, agentRef);
   const { refetch } = useSubscription();
   const { processPayment, customerRef } = useSolvaPay();
+  const customer = useCustomer();
   const hasInitializedRef = useRef(false);
 
   // Auto-start checkout on mount - only once
@@ -182,13 +184,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   return (
     <div className={className}>
       {!isValidPlanRef ? (
-        <div className="p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
+        <div>
           PaymentForm: planRef is required and must be a string
         </div>
       ) : hasError ? (
-        <div className="p-4 bg-red-50 border border-red-400 rounded-lg text-red-700">
-          <div className="font-medium mb-1">Payment initialization failed</div>
-          <div className="text-sm">{checkout.error?.message || 'Unknown error'}</div>
+        <div>
+          <div>Payment initialization failed</div>
+          <div>{checkout.error?.message || 'Unknown error'}</div>
         </div>
       ) : shouldRenderElements && checkout.stripePromise && elementsOptions ? (
         // Once we have Stripe data, always render Elements to maintain hook consistency
@@ -204,22 +206,23 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             returnUrl={finalReturnUrl}
             submitButtonText={submitButtonText}
             buttonClassName={buttonClassName}
+            clientSecret={checkout.clientSecret!}
           />
         </Elements>
       ) : (
         // Loading state before Stripe data is available
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center min-h-[200px]">
+        <div>
+          <div style={{ minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Spinner size="md" />
           </div>
           <button
+            type="submit"
             disabled
             className={buttonClassName}
-            aria-busy="true"
+            aria-busy="false"
+            aria-disabled="true"
           >
-            <span className="flex items-center justify-center">
-              <Spinner size="sm" />
-            </span>
+            {submitButtonText}
           </button>
         </div>
       )}

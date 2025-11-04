@@ -19,6 +19,7 @@ export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 
 // Hooks
 export { useSubscription } from './hooks/useSubscription';
+export { useCustomer } from './hooks/useCustomer';
 export { useCheckout } from './hooks/useCheckout';
 export { useSolvaPay } from './hooks/useSolvaPay';
 export { usePlans } from './hooks/usePlans';
@@ -43,6 +44,7 @@ export type {
   UsePlansReturn,
   SubscriptionStatusReturn,
 } from './types';
+export type { CustomerInfo } from './hooks/useCustomer';
 
 // Adapters
 export type { AuthAdapter } from './adapters/auth';

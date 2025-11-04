@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, FormEvent } from 'react';
-import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
+import { useCustomer } from '../hooks/useCustomer';
 import { Spinner } from './Spinner';
 
 interface StripePaymentFormWrapperProps {
@@ -9,6 +10,7 @@ interface StripePaymentFormWrapperProps {
   returnUrl?: string;
   submitButtonText?: string;
   buttonClassName?: string;
+  clientSecret: string;
 }
 
 /**
@@ -22,15 +24,17 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
   returnUrl,
   submitButtonText = 'Pay Now',
   buttonClassName,
+  clientSecret,
 }) => {
   // Always call hooks unconditionally
   const stripe = useStripe();
   const elements = useElements();
+  const customer = useCustomer();
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isPaymentElementReady, setIsPaymentElementReady] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
     // Double-check Stripe availability (defensive programming)
@@ -43,20 +47,39 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
       return;
     }
 
+    if (!clientSecret) {
+      const errorMessage = 'Payment intent not available. Please refresh the page.';
+      setMessage(errorMessage);
+      if (onError) {
+        onError(new Error(errorMessage));
+      }
+      return;
+    }
+
     setIsProcessing(true);
     setMessage(null);
 
     try {
-      // Auto-detect return URL if not provided
-      const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/');
-      
-      // Confirm payment with Stripe
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: finalReturnUrl,
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        const errorMessage = 'Card element not found';
+        setMessage(errorMessage);
+        setIsProcessing(false);
+        if (onError) {
+          onError(new Error(errorMessage));
+        }
+        return;
+      }
+
+      // Confirm the payment using the clientSecret from the payment intent
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            email: customer.email,
+            name: customer.name,
+          },
         },
-        redirect: 'if_required' as const, // Only redirect if required by payment method
       });
 
       if (error) {
@@ -94,6 +117,10 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
           // No onSuccess callback - show success immediately
           setMessage('Payment successful!');
         }
+      } else if (paymentIntent && paymentIntent.status === 'requires_action') {
+        // Payment requires additional action (3D Secure, etc.)
+        setMessage('Payment requires additional authentication. Please complete the verification.');
+        setIsProcessing(false);
       } else if (paymentIntent) {
         // Payment is processing or requires additional action
         setMessage(`Payment status: ${paymentIntent.status || 'processing'}`);
@@ -115,39 +142,49 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
 
   const isReady = !!(stripe && elements);
 
+  // Card element options for minimal styling
+  const cardElementOptions = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: '#424770',
+        '::placeholder': {
+          color: '#aab7c4',
+        },
+      },
+      invalid: {
+        color: '#9e2146',
+      },
+    },
+    hidePostalCode: true,
+  };
+
   return (
-    <form 
-      onSubmit={handleSubmit} 
-      className="space-y-6"
-      noValidate
-    >
-      {/* PaymentElement container with loading placeholder */}
-      <div className="relative">
-        {/* Loading placeholder - shown until PaymentElement is ready or Elements not ready */}
-        {(!isPaymentElementReady || !isReady) && (
-          <div className="absolute inset-0 z-10 p-4 bg-white border border-gray-300 rounded-lg min-h-[200px] flex items-center justify-center">
-            <Spinner size="md" />
-          </div>
-        )}
-        {/* PaymentElement - render only when Elements is ready; hide until ready to prevent flash */}
-        {isReady && (
-          <div className={isPaymentElementReady ? 'block' : 'opacity-0 pointer-events-none'}>
-            <PaymentElement 
-              onReady={() => setIsPaymentElementReady(true)}
-            />
-          </div>
-        )}
-      </div>
+    <>
+      {/* CardElement - render when ready, show loading placeholder while initializing */}
+      {isReady ? (
+        <CardElement 
+          options={cardElementOptions}
+          onChange={(e) => {
+            if (e.error) {
+              setMessage(e.error.message);
+              setCardComplete(false);
+            } else {
+              setMessage(null);
+              setCardComplete(e.complete);
+            }
+          }}
+        />
+      ) : (
+        <div style={{ padding: '12px', border: '1px solid #cbd5e1', borderRadius: '0.375rem', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40px' }}>
+          <Spinner size="sm" />
+        </div>
+      )}
       
-      {message && (
+      {message && !isSuccess && (
         <div
-          className={`mt-6 p-4 rounded-lg ${
-            isSuccess 
-              ? 'bg-green-50 border border-green-400 text-green-700' 
-              : 'bg-red-50 border border-red-400 text-red-700'
-          }`}
-          role={isSuccess ? 'status' : 'alert'}
-          aria-live={isSuccess ? 'polite' : 'assertive'}
+          role="alert"
+          aria-live="assertive"
           aria-atomic="true"
         >
           {message}
@@ -156,24 +193,22 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
       
       <button
         type="submit"
-        disabled={!isReady || !isPaymentElementReady || isProcessing}
+        disabled={!isReady || !cardComplete || isProcessing || !clientSecret}
         className={buttonClassName}
-        aria-busy={isProcessing || !isPaymentElementReady || !isReady}
-        aria-disabled={!isReady || !isPaymentElementReady || isProcessing}
+        aria-busy={isProcessing}
+        aria-disabled={!isReady || !cardComplete || isProcessing || !clientSecret}
+        onClick={handleSubmit}
       >
         {isProcessing ? (
-          <span className="flex items-center justify-center">
+          <>
             <Spinner size="sm" />
-          </span>
-        ) : (!isReady || !isPaymentElementReady) ? (
-          <span className="flex items-center justify-center">
-            <Spinner size="sm" />
-          </span>
+            <span>Processing...</span>
+          </>
         ) : (
           submitButtonText
         )}
       </button>
-    </form>
+    </>
   );
 };
 
