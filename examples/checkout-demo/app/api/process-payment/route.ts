@@ -12,6 +12,6 @@ export async function POST(request: NextRequest) {
   }
   
   const result = await processPayment(request, { paymentIntentId, agentRef, planRef });
-  return result;
+  return result instanceof NextResponse ? result : NextResponse.json(result);
 }
 

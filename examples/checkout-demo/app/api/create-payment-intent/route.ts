@@ -12,6 +12,6 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await createPaymentIntent(request, { planRef, agentRef });
-  return result;
+  return result instanceof NextResponse ? result : NextResponse.json(result);
 }
 

@@ -1,40 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSolvaPay } from '@solvapay/server';
-import { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } from '@solvapay/auth';
+import { createCustomerSession } from '@solvapay/next';
 
 export async function POST(request: NextRequest) {
-  try {
-    const userIdOrError = requireUserId(request);
-    if (userIdOrError instanceof Response) {
-      return userIdOrError;
-    }
-    const userId = userIdOrError;
-
-    const email = await getUserEmailFromRequest(request);
-    const name = await getUserNameFromRequest(request);
-
-    const solvaPay = createSolvaPay();
-
-    const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    });
-
-    const session = await solvaPay.createCustomerSession({
-      customerRef: ensuredCustomerRef,
-    });
-
-    return NextResponse.json(session);
-
-  } catch (error) {
-    console.error('Customer session creation failed:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    return NextResponse.json(
-      { error: 'Customer session creation failed', details: errorMessage },
-      { status: 500 }
-    );
-  }
+  const result = await createCustomerSession(request);
+  return result instanceof NextResponse ? result : NextResponse.json(result);
 }
 
