@@ -476,3 +476,15 @@ export function getSubscriptionCacheStats(): { inFlight: number; cached: number 
   return deduplicator.getStats();
 }
 
+// Export route helpers
+export {
+  getAuthenticatedUser,
+  syncCustomer,
+  createPaymentIntent,
+  processPayment,
+  createCheckoutSession,
+  createCustomerSession,
+  cancelSubscription,
+  listPlans,
+} from './helpers';
+

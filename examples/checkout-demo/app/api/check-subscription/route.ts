@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription, type SubscriptionCheckResult } from '@solvapay/next';
+import { checkSubscription } from '@solvapay/next';
 
 /**
  * Check Subscription API Route
@@ -27,19 +27,7 @@ import { checkSubscription, type SubscriptionCheckResult } from '@solvapay/next'
  * For multi-instance deployments, consider using Redis or a shared cache.
  */
 export async function GET(request: NextRequest) {
-  const userId = request.headers.get('x-user-id');
-  
   const result = await checkSubscription(request);
-  
-  // If result is a NextResponse, it's an error response - return it
-  if (result instanceof NextResponse) {
-    return result;
-  }
-  
-  // TypeScript now knows result is SubscriptionCheckResult after the instanceof check
-  // Cast to SubscriptionCheckResult to help TypeScript understand the type
-  const subscriptionData = result as SubscriptionCheckResult;
-  
-  return NextResponse.json(subscriptionData);
+  return result instanceof NextResponse ? result : NextResponse.json(result);
 }
 
