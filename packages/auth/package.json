@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/auth",
-  "version": "1.0.0-preview.10",
+  "version": "1.0.0-preview.11",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
