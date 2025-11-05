@@ -379,9 +379,9 @@ my-app/
 │       ├── layout.tsx
 │       ├── page.tsx
 │       └── globals.css
-├── middleware.ts
+│   └── proxy.ts
 ├── tailwind.config.ts
-├── postcss.config.js
+├── postcss.config.mjs (or postcss.config.js)
 ├── package.json
 ├── tsconfig.json
 ├── next.config.mjs

@@ -10,7 +10,29 @@ We'll create:
 3. UI component library (Button, Input, Card, Form, Badge)
 4. Common styling patterns
 
-## Step 1: Configure Tailwind CSS
+## Prerequisites
+
+Ensure Tailwind CSS v4 is installed:
+
+```bash
+npm install tailwindcss@^4 @tailwindcss/postcss@^4
+```
+
+## Step 1: Configure PostCSS
+
+Create or update `postcss.config.mjs` (or `postcss.config.js`):
+
+```javascript
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+```
+
+## Step 2: Configure Tailwind CSS
 
 Update `tailwind.config.ts`:
 
@@ -98,14 +120,14 @@ const config: Config = {
 export default config;
 ```
 
-## Step 2: Update Global Styles
+**Note:** Tailwind CSS supports both CSS-based configuration (via `@theme` directive) and JavaScript/TypeScript config files. The config file approach is recommended for custom themes, colors, and animations.
+
+## Step 3: Update Global Styles
 
 Update `src/app/globals.css`:
 
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Minimal styling */
 html, body {
@@ -135,7 +157,7 @@ input:focus-visible {
 }
 ```
 
-## Step 3: Create Button Component
+## Step 4: Create Button Component
 
 Create `src/app/components/ui/Button.tsx`:
 
@@ -186,7 +208,7 @@ export const Button: React.FC<ButtonProps> = ({
 };
 ```
 
-## Step 4: Create Input Component
+## Step 5: Create Input Component
 
 Create `src/app/components/ui/Input.tsx`:
 
@@ -233,7 +255,7 @@ export const Input: React.FC<InputProps> = ({
 };
 ```
 
-## Step 5: Create Card Component
+## Step 6: Create Card Component
 
 Create `src/app/components/ui/Card.tsx`:
 
@@ -268,7 +290,7 @@ export const Card: React.FC<CardProps> = ({
 };
 ```
 
-## Step 6: Create Form Component
+## Step 7: Create Form Component
 
 Create `src/app/components/ui/Form.tsx`:
 
@@ -302,7 +324,7 @@ export const Form: React.FC<FormProps> = ({
 };
 ```
 
-## Step 7: Create Badge Component
+## Step 8: Create Badge Component
 
 Create `src/app/components/ui/Badge.tsx`:
 
@@ -339,7 +361,7 @@ export const Badge: React.FC<BadgeProps> = ({
 };
 ```
 
-## Step 8: Create FormField Component (Optional)
+## Step 9: Create FormField Component (Optional)
 
 Create `src/app/components/ui/FormField.tsx`:
 
@@ -525,11 +547,34 @@ Test your components:
 
 ## Troubleshooting
 
-### Tailwind styles not applying
-- Verify `tailwind.config.ts` includes all content paths
-- Ensure `globals.css` is imported in `layout.tsx`
-- Check that PostCSS is configured correctly
-- Restart the dev server after configuration changes
+### Styles Not Applying
+
+**Symptom:** Tailwind utility classes don't appear to be working.
+
+**Solution:** 
+1. Verify CSS file uses `@import "tailwindcss"` (not `@tailwind` directives)
+2. Verify `tailwind.config.ts` includes all content paths
+3. Ensure `globals.css` is imported in `layout.tsx`
+4. Check that PostCSS is configured correctly with `@tailwindcss/postcss` plugin
+5. Restart the dev server after configuration changes
+
+### Rendering Artifacts / Dark Shapes
+
+**Symptom:** Large dark shapes or artifacts appearing on the page.
+
+**Cause:** Usually indicates Tailwind styles are not being processed correctly, often due to incorrect CSS import syntax.
+
+**Solution:** 
+1. Verify CSS file uses `@import "tailwindcss"`
+2. Verify PostCSS config uses `@tailwindcss/postcss` plugin
+3. Ensure Tailwind CSS v4 is installed: `npm install tailwindcss@^4 @tailwindcss/postcss@^4`
+4. Restart the dev server
+
+### Overflow Issues
+
+**Symptom:** Horizontal scrolling or layout overflow.
+
+**Solution:** Add `overflow-x-hidden` to body/main containers if needed.
 
 ### Components not rendering
 - Check import paths are correct
