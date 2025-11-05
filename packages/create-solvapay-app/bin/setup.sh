@@ -31,18 +31,24 @@ while [ -L "$RESOLVED_SCRIPT" ] && [ $ITERATIONS -lt $MAX_ITERATIONS ]; do
     ITERATIONS=$((ITERATIONS + 1))
 done
 
-# Get the directory of the resolved script
+# Get the directory of the resolved script - ALWAYS use absolute path
 # Use realpath if available for better symlink resolution
+SCRIPT_DIR=""
 if command -v realpath &> /dev/null; then
     SCRIPT_DIR="$(realpath "$(dirname "$RESOLVED_SCRIPT")" 2>/dev/null)"
 fi
-# Fallback to cd/pwd method
+# Fallback to cd/pwd method (ensures absolute path)
 if [ -z "$SCRIPT_DIR" ] || [ ! -d "$SCRIPT_DIR" ]; then
     SCRIPT_DIR="$(cd "$(dirname "$RESOLVED_SCRIPT")" 2>/dev/null && pwd)"
 fi
 # Final fallback: use the original script source directory
 if [ -z "$SCRIPT_DIR" ] || [ ! -d "$SCRIPT_DIR" ]; then
     SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" 2>/dev/null && pwd)"
+fi
+
+# Ensure SCRIPT_DIR is absolute (should be from pwd, but double-check)
+if [[ "$SCRIPT_DIR" != /* ]]; then
+    SCRIPT_DIR="$(cd "$SCRIPT_DIR" 2>/dev/null && pwd)"
 fi
 
 # Find the package root by looking for the guides directory or package.json
@@ -55,8 +61,9 @@ GUIDES_DIR=""
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     # Check if script is in a bin directory and parent has guides
     # This handles: node_modules/create-solvapay-app/bin/setup.sh -> node_modules/create-solvapay-app/guides
-    PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-    if [ -d "$PARENT_DIR/guides" ]; then
+    # Use absolute path resolution
+    PARENT_DIR="$(cd "$(dirname "$SCRIPT_DIR")" 2>/dev/null && pwd)"
+    if [ -n "$PARENT_DIR" ] && [ -d "$PARENT_DIR/guides" ]; then
         # Verify parent also has package.json to confirm it's the package root
         if [ -f "$PARENT_DIR/package.json" ]; then
             if grep -q '"name":\s*"create-solvapay-app"' "$PARENT_DIR/package.json" 2>/dev/null; then
@@ -350,15 +357,20 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     # If not found and this is a retry, wait a moment and re-check
     if [ $RETRY_COUNT -gt 0 ]; then
         sleep 0.5
-        # Re-run search from script location (absolute path)
+        # Re-run search from script location (using absolute paths)
         SEARCH_DIR="$SCRIPT_DIR"
         for i in 1 2 3 4 5; do
+            # Convert to absolute path
+            ABS_SEARCH_DIR="$(cd "$SEARCH_DIR" 2>/dev/null && pwd)"
+            if [ -z "$ABS_SEARCH_DIR" ]; then
+                break
+            fi
             # Check if we're in the package directory
-            if [ -f "$SEARCH_DIR/package.json" ]; then
-                if grep -q '"name":\s*"create-solvapay-app"' "$SEARCH_DIR/package.json" 2>/dev/null; then
-                    if [ -d "$SEARCH_DIR/guides" ]; then
-                        GUIDES_DIR="$(cd "$SEARCH_DIR/guides" 2>/dev/null && pwd)"
-                        if [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
+            if [ -f "$ABS_SEARCH_DIR/package.json" ]; then
+                if grep -q '"name":\s*"create-solvapay-app"' "$ABS_SEARCH_DIR/package.json" 2>/dev/null; then
+                    if [ -d "$ABS_SEARCH_DIR/guides" ]; then
+                        GUIDES_DIR="$(cd "$ABS_SEARCH_DIR/guides" 2>/dev/null && pwd)"
+                        if [ -n "$GUIDES_DIR" ] && [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
                             GUIDES_FOUND=true
                             break
                         fi
@@ -366,9 +378,9 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
                 fi
             fi
             # Check for node_modules/create-solvapay-app/guides
-            if [ -d "$SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
-                GUIDES_DIR="$(cd "$SEARCH_DIR/node_modules/create-solvapay-app/guides" 2>/dev/null && pwd)"
-                if [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
+            if [ -d "$ABS_SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
+                GUIDES_DIR="$(cd "$ABS_SEARCH_DIR/node_modules/create-solvapay-app/guides" 2>/dev/null && pwd)"
+                if [ -n "$GUIDES_DIR" ] && [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
                     GUIDES_FOUND=true
                     break
                 fi
@@ -405,43 +417,68 @@ if [ "$GUIDES_FOUND" = true ] && [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; t
     fi
 else
     echo "Warning: Guides directory not found"
-    if [ -n "$GUIDES_DIR" ]; then
-        echo "  Expected location: $GUIDES_DIR"
-    fi
-    echo "  Script location: $SCRIPT_DIR"
+    echo "  Current working directory: $(pwd)"
+    echo "  Script location (absolute): $SCRIPT_DIR"
     echo "  Resolved script path: $RESOLVED_SCRIPT"
-    # Try to find where the package might actually be
-    PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-    echo "  Checking parent directory: $PARENT_DIR"
-    if [ -f "$PARENT_DIR/package.json" ]; then
+    # Try to find where the package might actually be using absolute paths
+    PARENT_DIR="$(cd "$(dirname "$SCRIPT_DIR")" 2>/dev/null && pwd)"
+    echo "  Parent directory (absolute): $PARENT_DIR"
+    if [ -n "$PARENT_DIR" ] && [ -f "$PARENT_DIR/package.json" ]; then
         echo "  Found package.json at: $PARENT_DIR/package.json"
         if [ -d "$PARENT_DIR/guides" ]; then
-            echo "  Guides directory exists at: $PARENT_DIR/guides"
-            echo "  Contents: $(ls -la "$PARENT_DIR/guides" 2>/dev/null | head -5)"
+            echo "  Guides directory EXISTS at: $PARENT_DIR/guides"
+            echo "  Contents: $(ls -A "$PARENT_DIR/guides" 2>/dev/null | head -5)"
+            echo "  Attempting to use this location..."
+            GUIDES_DIR="$(cd "$PARENT_DIR/guides" 2>/dev/null && pwd)"
+            if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
+                # Try copying again
+                COPIED_COUNT=0
+                for file in "$GUIDES_DIR"/*.md; do
+                    if [ -f "$file" ]; then
+                        filename=$(basename "$file")
+                        cp "$file" "./guides/$filename"
+                        echo "  - Copied $filename"
+                        COPIED_COUNT=$((COPIED_COUNT + 1))
+                    fi
+                done
+                if [ "$COPIED_COUNT" -gt 0 ]; then
+                    echo "Guide files copied successfully ($COPIED_COUNT files)"
+                    GUIDES_FOUND=true
+                fi
+            fi
         else
             echo "  Guides directory does not exist at: $PARENT_DIR/guides"
         fi
     fi
     # Also check if we can find it by searching from script location
-    echo "  Searching from script location..."
-    SEARCH_DIR="$SCRIPT_DIR"
-    for i in 1 2 3 4 5; do
-        if [ -d "$SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
-            echo "  Found guides at: $SEARCH_DIR/node_modules/create-solvapay-app/guides"
-            break
-        fi
-        if [ -f "$SEARCH_DIR/package.json" ] && grep -q '"name":\s*"create-solvapay-app"' "$SEARCH_DIR/package.json" 2>/dev/null; then
-            if [ -d "$SEARCH_DIR/guides" ]; then
-                echo "  Found guides at: $SEARCH_DIR/guides"
+    if [ "$GUIDES_FOUND" != true ]; then
+        echo "  Searching from script location..."
+        SEARCH_DIR="$SCRIPT_DIR"
+        for i in 1 2 3 4 5; do
+            ABS_SEARCH_DIR="$(cd "$SEARCH_DIR" 2>/dev/null && pwd)"
+            if [ -n "$ABS_SEARCH_DIR" ]; then
+                if [ -d "$ABS_SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
+                    echo "  Found guides at: $ABS_SEARCH_DIR/node_modules/create-solvapay-app/guides"
+                    GUIDES_DIR="$(cd "$ABS_SEARCH_DIR/node_modules/create-solvapay-app/guides" 2>/dev/null && pwd)"
+                    break
+                fi
+                if [ -f "$ABS_SEARCH_DIR/package.json" ] && grep -q '"name":\s*"create-solvapay-app"' "$ABS_SEARCH_DIR/package.json" 2>/dev/null; then
+                    if [ -d "$ABS_SEARCH_DIR/guides" ]; then
+                        echo "  Found guides at: $ABS_SEARCH_DIR/guides"
+                        GUIDES_DIR="$(cd "$ABS_SEARCH_DIR/guides" 2>/dev/null && pwd)"
+                        break
+                    fi
+                fi
+            fi
+            SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+            if [ "$SEARCH_DIR" = "/" ] || [ "$SEARCH_DIR" = "$(dirname "$SEARCH_DIR")" ]; then
                 break
             fi
-        fi
-        SEARCH_DIR="$(dirname "$SEARCH_DIR")"
-        if [ "$SEARCH_DIR" = "/" ] || [ "$SEARCH_DIR" = "$(dirname "$SEARCH_DIR")" ]; then
-            break
-        fi
-    done
-    echo "  Please check that the create-solvapay-app package is properly installed"
+        done
+    fi
+    if [ "$GUIDES_FOUND" != true ]; then
+        echo "  Please check that the create-solvapay-app package is properly installed"
+    fi
 fi
 
 # Store the project directory path for opening with Cursor
