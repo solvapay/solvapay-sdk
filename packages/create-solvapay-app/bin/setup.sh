@@ -43,57 +43,89 @@ fi
 PACKAGE_ROOT="$SCRIPT_DIR"
 GUIDES_DIR=""
 
-# Method 1: Try to use Node.js to find the package location (most reliable for npm/npx)
-if command -v node &> /dev/null; then
-    # Use Node.js to resolve the package location
-    # Pass the resolved script path as an environment variable to avoid argv issues
-    export RESOLVED_SCRIPT_PATH="$RESOLVED_SCRIPT"
-    NODE_PACKAGE_DIR=$(node -e "
-        try {
-            const path = require('path');
-            const fs = require('fs');
-            // Get the script path from environment variable
-            const scriptPath = process.env.RESOLVED_SCRIPT_PATH;
-            if (!scriptPath) return;
-            let currentDir = path.dirname(scriptPath);
-            // Walk up to find node_modules
-            for (let i = 0; i < 10; i++) {
-                const nodeModulesPath = path.join(currentDir, 'node_modules', 'create-solvapay-app');
-                if (fs.existsSync(nodeModulesPath)) {
-                    const guidesPath = path.join(nodeModulesPath, 'guides');
-                    if (fs.existsSync(guidesPath)) {
-                        console.log(guidesPath);
-                        process.exit(0);
+# Method 1: Check if we're already in the package directory (common case with npx)
+# If script is at node_modules/create-solvapay-app/bin/setup.sh, guides is at node_modules/create-solvapay-app/guides
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
+    # Check if script is in a bin directory and parent has guides
+    # This handles: node_modules/create-solvapay-app/bin/setup.sh -> node_modules/create-solvapay-app/guides
+    PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+    if [ -d "$PARENT_DIR/guides" ]; then
+        # Verify parent also has package.json to confirm it's the package root
+        if [ -f "$PARENT_DIR/package.json" ]; then
+            if grep -q '"name":\s*"create-solvapay-app"' "$PARENT_DIR/package.json" 2>/dev/null; then
+                GUIDES_DIR="$(cd "$PARENT_DIR/guides" 2>/dev/null && pwd)"
+            fi
+        fi
+    fi
+fi
+
+# Method 2: Try to use Node.js to find the package (most reliable for npm/npx)
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
+    if command -v node &> /dev/null; then
+        # Use Node.js to find the package location
+        # Pass the resolved script path as an environment variable
+        export RESOLVED_SCRIPT_PATH="$RESOLVED_SCRIPT"
+        NODE_PACKAGE_DIR=$(node -e "
+            try {
+                const path = require('path');
+                const fs = require('fs');
+                // Get the script path from environment variable
+                const scriptPath = process.env.RESOLVED_SCRIPT_PATH;
+                if (!scriptPath) return;
+                let scriptDir = path.dirname(scriptPath);
+                
+                // Build list of possible paths to check
+                const possiblePaths = [];
+                
+                // First, check if we're already in the package (parent of bin/)
+                for (let j = 0; j < 3; j++) {
+                    const packageJsonPath = path.join(scriptDir, 'package.json');
+                    if (fs.existsSync(packageJsonPath)) {
+                        try {
+                            const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+                            if (pkg.name === 'create-solvapay-app') {
+                                const guidesPath = path.join(scriptDir, 'guides');
+                                if (fs.existsSync(guidesPath)) {
+                                    console.log(guidesPath);
+                                    process.exit(0);
+                                }
+                            }
+                        } catch (e) {
+                            // Ignore JSON parse errors
+                        }
                     }
+                    scriptDir = path.dirname(scriptDir);
+                    if (scriptDir === path.dirname(scriptDir)) break;
                 }
-                // Also check if we're already in the package directory
-                const packageJsonPath = path.join(currentDir, 'package.json');
-                if (fs.existsSync(packageJsonPath)) {
-                    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                    if (pkg.name === 'create-solvapay-app') {
-                        const guidesPath = path.join(currentDir, 'guides');
+                
+                // Reset scriptDir and search for node_modules/create-solvapay-app
+                scriptDir = path.dirname(scriptPath);
+                for (let i = 0; i < 10; i++) {
+                    const nodeModulesPath = path.join(scriptDir, 'node_modules', 'create-solvapay-app');
+                    if (fs.existsSync(nodeModulesPath)) {
+                        const guidesPath = path.join(nodeModulesPath, 'guides');
                         if (fs.existsSync(guidesPath)) {
                             console.log(guidesPath);
                             process.exit(0);
                         }
                     }
+                    const parentDir = path.dirname(scriptDir);
+                    if (parentDir === scriptDir) break;
+                    scriptDir = parentDir;
                 }
-                const parentDir = path.dirname(currentDir);
-                if (parentDir === currentDir) break;
-                currentDir = parentDir;
+            } catch (e) {
+                // Ignore errors
             }
-        } catch (e) {
-            // Ignore errors
-        }
-    " 2>/dev/null)
-    unset RESOLVED_SCRIPT_PATH
-    
-    if [ -n "$NODE_PACKAGE_DIR" ] && [ -d "$NODE_PACKAGE_DIR" ]; then
-        GUIDES_DIR="$(cd "$NODE_PACKAGE_DIR" 2>/dev/null && pwd)"
+        " 2>/dev/null)
+        unset RESOLVED_SCRIPT_PATH
+        
+        if [ -n "$NODE_PACKAGE_DIR" ] && [ -d "$NODE_PACKAGE_DIR" ]; then
+            GUIDES_DIR="$(cd "$NODE_PACKAGE_DIR" 2>/dev/null && pwd)"
+        fi
     fi
 fi
 
-# Method 2: Check if guides is in the parent directory (common case: script in bin/)
+# Method 3: Check if guides is in the parent directory (common case: script in bin/)
 # This handles both local development and npm installation
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     if [ -d "$SCRIPT_DIR/../guides" ]; then
@@ -101,7 +133,7 @@ if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     fi
 fi
 
-# Method 3: Walk up the directory tree to find the package root
+# Method 4: Walk up the directory tree to find the package root
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     CURRENT_DIR="$SCRIPT_DIR"
     MAX_WALK_UP=10
@@ -130,14 +162,14 @@ if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     done
 fi
 
-# Method 4: Check if guides is in the same directory as the script
+# Method 5: Check if guides is in the same directory as the script
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     if [ -d "$SCRIPT_DIR/guides" ]; then
         GUIDES_DIR="$(cd "$SCRIPT_DIR/guides" 2>/dev/null && pwd)"
     fi
 fi
 
-# Method 5: Try to find node_modules/create-solvapay-app/guides relative to script location
+# Method 6: Try to find node_modules/create-solvapay-app/guides relative to script location
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     CURRENT_DIR="$SCRIPT_DIR"
     MAX_WALK_UP=10
@@ -248,13 +280,46 @@ fi
 
 # Copy guide files to guides folder
 echo ""
-echo "Copying guide files to guides folder..."
+echo "Copying guide files to project root..."
 
 # Create guides directory if it doesn't exist
 mkdir -p guides
 
+# Retry mechanism for npx - files might not be fully extracted yet
+MAX_RETRIES=3
+RETRY_COUNT=0
+GUIDES_FOUND=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
+        # Check if directory has markdown files
+        if [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
+            GUIDES_FOUND=true
+            break
+        fi
+    fi
+    
+    # If not found and this is a retry, wait a moment and re-check
+    if [ $RETRY_COUNT -gt 0 ]; then
+        sleep 0.5
+        # Re-run Method 1 check (quick check for parent directory)
+        PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+        if [ -d "$PARENT_DIR/guides" ] && [ -f "$PARENT_DIR/package.json" ]; then
+            if grep -q '"name":\s*"create-solvapay-app"' "$PARENT_DIR/package.json" 2>/dev/null; then
+                GUIDES_DIR="$(cd "$PARENT_DIR/guides" 2>/dev/null && pwd)"
+                if [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
+                    GUIDES_FOUND=true
+                    break
+                fi
+            fi
+        fi
+    fi
+    
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+done
+
 # Copy all markdown files from the guides directory
-if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
+if [ "$GUIDES_FOUND" = true ] && [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
     COPIED_COUNT=0
     for file in "$GUIDES_DIR"/*.md; do
         # Check if file exists (handles case where no .md files match the glob)
@@ -266,23 +331,24 @@ if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
         fi
     done
     if [ "$COPIED_COUNT" -gt 0 ]; then
-        echo "Guide files copied successfully to guides folder"
+        echo "Guide files copied successfully ($COPIED_COUNT files)"
     else
         echo "Warning: No markdown files found in $GUIDES_DIR"
     fi
 else
-    echo "Warning: Guides directory not found"
+    echo "Warning: Guides directory not found at $GUIDES_DIR"
     echo "  Script location: $SCRIPT_DIR"
     echo "  Resolved script path: $RESOLVED_SCRIPT"
-    echo "  Expected guides location: $GUIDES_DIR"
-    echo "  Attempted paths:"
-    echo "    - $SCRIPT_DIR/../guides"
-    echo "    - $SCRIPT_DIR/guides"
     # Try to find where the package might actually be
-    if [ -f "$SCRIPT_DIR/../package.json" ]; then
-        echo "  Found package.json at: $SCRIPT_DIR/../package.json"
-        if [ -d "$SCRIPT_DIR/../guides" ]; then
-            echo "  Guides directory exists at: $SCRIPT_DIR/../guides"
+    PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+    echo "  Checking parent directory: $PARENT_DIR"
+    if [ -f "$PARENT_DIR/package.json" ]; then
+        echo "  Found package.json at: $PARENT_DIR/package.json"
+        if [ -d "$PARENT_DIR/guides" ]; then
+            echo "  Guides directory exists at: $PARENT_DIR/guides"
+            echo "  Contents: $(ls -la "$PARENT_DIR/guides" 2>/dev/null | head -5)"
+        else
+            echo "  Guides directory does not exist at: $PARENT_DIR/guides"
         fi
     fi
     echo "  Please check that the create-solvapay-app package is properly installed"
