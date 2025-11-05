@@ -10,33 +10,68 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 # Resolve symlinks iteratively to find the actual script location
 # This works on both macOS and Linux
 RESOLVED_SCRIPT="$SCRIPT_SOURCE"
-while [ -L "$RESOLVED_SCRIPT" ]; do
+# Limit iterations to prevent infinite loops
+ITERATIONS=0
+MAX_ITERATIONS=20
+while [ -L "$RESOLVED_SCRIPT" ] && [ $ITERATIONS -lt $MAX_ITERATIONS ]; do
     TARGET="$(readlink "$RESOLVED_SCRIPT")"
     if [[ "$TARGET" = /* ]]; then
         # Absolute symlink
         RESOLVED_SCRIPT="$TARGET"
     else
         # Relative symlink - resolve relative to the symlink's directory
-        RESOLVED_SCRIPT="$(cd "$(dirname "$RESOLVED_SCRIPT")" && pwd)/$TARGET"
+        SYMLINK_DIR="$(cd "$(dirname "$RESOLVED_SCRIPT")" 2>/dev/null && pwd)"
+        if [ -n "$SYMLINK_DIR" ]; then
+            RESOLVED_SCRIPT="$SYMLINK_DIR/$TARGET"
+        else
+            # If cd fails, break the loop
+            break
+        fi
     fi
+    ITERATIONS=$((ITERATIONS + 1))
 done
 
 # Get the directory of the resolved script
-SCRIPT_DIR="$(cd "$(dirname "$RESOLVED_SCRIPT")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$RESOLVED_SCRIPT")" 2>/dev/null && pwd)"
+if [ -z "$SCRIPT_DIR" ]; then
+    # Fallback: use the original script source directory
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" 2>/dev/null && pwd)"
+fi
 
-# Find the package root by looking for the guides directory
+# Find the package root by looking for the guides directory or package.json
 # Walk up from the script directory until we find the package root
 PACKAGE_ROOT="$SCRIPT_DIR"
-while [ "$PACKAGE_ROOT" != "/" ]; do
-    # Check if this directory contains the guides folder (indicating package root)
-    if [ -d "$PACKAGE_ROOT/guides" ]; then
-        break
-    fi
-    PACKAGE_ROOT="$(dirname "$PACKAGE_ROOT")"
-done
+GUIDES_DIR=""
 
-# Set guides directory relative to package root
-GUIDES_DIR="$PACKAGE_ROOT/guides"
+# First, check if guides is in the parent directory (common case: script in bin/)
+if [ -d "$SCRIPT_DIR/../guides" ]; then
+    GUIDES_DIR="$(cd "$SCRIPT_DIR/../guides" && pwd)"
+elif [ -d "$SCRIPT_DIR/guides" ]; then
+    # Guides might be in the same directory as the script
+    GUIDES_DIR="$(cd "$SCRIPT_DIR/guides" && pwd)"
+else
+    # Walk up the directory tree to find the package root
+    # Look for either guides directory or package.json with name "create-solvapay-app"
+    CURRENT_DIR="$SCRIPT_DIR"
+    while [ "$CURRENT_DIR" != "/" ]; do
+        # Check if this directory contains the guides folder
+        if [ -d "$CURRENT_DIR/guides" ]; then
+            GUIDES_DIR="$CURRENT_DIR/guides"
+            break
+        fi
+        # Also check if this is the package root by looking for package.json
+        if [ -f "$CURRENT_DIR/package.json" ]; then
+            # Check if this is the create-solvapay-app package
+            if grep -q '"name":\s*"create-solvapay-app"' "$CURRENT_DIR/package.json" 2>/dev/null; then
+                if [ -d "$CURRENT_DIR/guides" ]; then
+                    GUIDES_DIR="$CURRENT_DIR/guides"
+                    break
+                fi
+            fi
+        fi
+        CURRENT_DIR="$(dirname "$CURRENT_DIR")"
+    done
+fi
 
 # Get project name from argument or prompt
 if [ -n "$1" ]; then
@@ -139,17 +174,27 @@ echo "Copying guide files to guides folder..."
 mkdir -p guides
 
 # Copy all markdown files from the guides directory
-if [ -d "$GUIDES_DIR" ]; then
+if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
+    COPIED_COUNT=0
     for file in "$GUIDES_DIR"/*.md; do
+        # Check if file exists (handles case where no .md files match the glob)
         if [ -f "$file" ]; then
             filename=$(basename "$file")
             cp "$file" "./guides/$filename"
             echo "  - Copied $filename"
+            COPIED_COUNT=$((COPIED_COUNT + 1))
         fi
     done
-    echo "Guide files copied successfully to guides folder"
+    if [ "$COPIED_COUNT" -gt 0 ]; then
+        echo "Guide files copied successfully to guides folder"
+    else
+        echo "Warning: No markdown files found in $GUIDES_DIR"
+    fi
 else
-    echo "Warning: Guides directory not found at $GUIDES_DIR"
+    echo "Warning: Guides directory not found"
+    echo "  Script location: $SCRIPT_DIR"
+    echo "  Expected guides location: $GUIDES_DIR"
+    echo "  Please check that the create-solvapay-app package is properly installed"
 fi
 
 # Store the project directory path for opening with Cursor
