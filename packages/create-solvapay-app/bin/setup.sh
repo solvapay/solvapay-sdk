@@ -32,9 +32,16 @@ while [ -L "$RESOLVED_SCRIPT" ] && [ $ITERATIONS -lt $MAX_ITERATIONS ]; do
 done
 
 # Get the directory of the resolved script
-SCRIPT_DIR="$(cd "$(dirname "$RESOLVED_SCRIPT")" 2>/dev/null && pwd)"
-if [ -z "$SCRIPT_DIR" ]; then
-    # Fallback: use the original script source directory
+# Use realpath if available for better symlink resolution
+if command -v realpath &> /dev/null; then
+    SCRIPT_DIR="$(realpath "$(dirname "$RESOLVED_SCRIPT")" 2>/dev/null)"
+fi
+# Fallback to cd/pwd method
+if [ -z "$SCRIPT_DIR" ] || [ ! -d "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "$RESOLVED_SCRIPT")" 2>/dev/null && pwd)"
+fi
+# Final fallback: use the original script source directory
+if [ -z "$SCRIPT_DIR" ] || [ ! -d "$SCRIPT_DIR" ]; then
     SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" 2>/dev/null && pwd)"
 fi
 
@@ -59,32 +66,67 @@ if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     fi
 fi
 
-# Method 2: Try to use Node.js to find the package (most reliable for npm/npx)
+# Method 2: Search from resolved script location (most reliable for npx)
+# When npx runs, the script is at node_modules/create-solvapay-app/bin/setup.sh
+# We need to find node_modules/create-solvapay-app/guides
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
+    # Start from the resolved script's directory and walk up
+    SEARCH_DIR="$SCRIPT_DIR"
+    MAX_SEARCH_DEPTH=10
+    SEARCH_COUNT=0
+    
+    while [ "$SEARCH_COUNT" -lt "$MAX_SEARCH_DEPTH" ] && [ "$SEARCH_DIR" != "/" ]; do
+        # Check if we're in a create-solvapay-app package directory
+        if [ -f "$SEARCH_DIR/package.json" ]; then
+            if grep -q '"name":\s*"create-solvapay-app"' "$SEARCH_DIR/package.json" 2>/dev/null; then
+                if [ -d "$SEARCH_DIR/guides" ]; then
+                    GUIDES_DIR="$(cd "$SEARCH_DIR/guides" 2>/dev/null && pwd)"
+                    break
+                fi
+            fi
+        fi
+        
+        # Also check for node_modules/create-solvapay-app/guides at this level
+        if [ -d "$SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
+            GUIDES_DIR="$(cd "$SEARCH_DIR/node_modules/create-solvapay-app/guides" 2>/dev/null && pwd)"
+            break
+        fi
+        
+        # Move up one directory
+        SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+        SEARCH_COUNT=$((SEARCH_COUNT + 1))
+    done
+fi
+
+# Method 3: Try to use Node.js to find the package (fallback)
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     if command -v node &> /dev/null; then
         # Use Node.js to find the package location
         # Pass the resolved script path as an environment variable
         export RESOLVED_SCRIPT_PATH="$RESOLVED_SCRIPT"
+        export SCRIPT_DIR_PATH="$SCRIPT_DIR"
         NODE_PACKAGE_DIR=$(node -e "
             try {
                 const path = require('path');
                 const fs = require('fs');
-                // Get the script path from environment variable
+                // Get paths from environment variables
                 const scriptPath = process.env.RESOLVED_SCRIPT_PATH;
-                if (!scriptPath) return;
-                let scriptDir = path.dirname(scriptPath);
+                const scriptDir = process.env.SCRIPT_DIR_PATH;
+                if (!scriptPath && !scriptDir) return;
                 
-                // Build list of possible paths to check
-                const possiblePaths = [];
+                // Start from script directory if available, otherwise from script path
+                let startDir = scriptDir || (scriptPath ? path.dirname(scriptPath) : null);
+                if (!startDir) return;
                 
                 // First, check if we're already in the package (parent of bin/)
-                for (let j = 0; j < 3; j++) {
-                    const packageJsonPath = path.join(scriptDir, 'package.json');
+                let checkDir = startDir;
+                for (let j = 0; j < 5; j++) {
+                    const packageJsonPath = path.join(checkDir, 'package.json');
                     if (fs.existsSync(packageJsonPath)) {
                         try {
                             const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
                             if (pkg.name === 'create-solvapay-app') {
-                                const guidesPath = path.join(scriptDir, 'guides');
+                                const guidesPath = path.join(checkDir, 'guides');
                                 if (fs.existsSync(guidesPath)) {
                                     console.log(guidesPath);
                                     process.exit(0);
@@ -94,14 +136,15 @@ if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
                             // Ignore JSON parse errors
                         }
                     }
-                    scriptDir = path.dirname(scriptDir);
-                    if (scriptDir === path.dirname(scriptDir)) break;
+                    const parentDir = path.dirname(checkDir);
+                    if (parentDir === checkDir) break;
+                    checkDir = parentDir;
                 }
                 
-                // Reset scriptDir and search for node_modules/create-solvapay-app
-                scriptDir = path.dirname(scriptPath);
-                for (let i = 0; i < 10; i++) {
-                    const nodeModulesPath = path.join(scriptDir, 'node_modules', 'create-solvapay-app');
+                // Search for node_modules/create-solvapay-app
+                let searchDir = startDir;
+                for (let i = 0; i < 15; i++) {
+                    const nodeModulesPath = path.join(searchDir, 'node_modules', 'create-solvapay-app');
                     if (fs.existsSync(nodeModulesPath)) {
                         const guidesPath = path.join(nodeModulesPath, 'guides');
                         if (fs.existsSync(guidesPath)) {
@@ -109,15 +152,16 @@ if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
                             process.exit(0);
                         }
                     }
-                    const parentDir = path.dirname(scriptDir);
-                    if (parentDir === scriptDir) break;
-                    scriptDir = parentDir;
+                    const parentDir = path.dirname(searchDir);
+                    if (parentDir === searchDir) break;
+                    searchDir = parentDir;
                 }
             } catch (e) {
                 // Ignore errors
             }
         " 2>/dev/null)
         unset RESOLVED_SCRIPT_PATH
+        unset SCRIPT_DIR_PATH
         
         if [ -n "$NODE_PACKAGE_DIR" ] && [ -d "$NODE_PACKAGE_DIR" ]; then
             GUIDES_DIR="$(cd "$NODE_PACKAGE_DIR" 2>/dev/null && pwd)"
@@ -125,15 +169,19 @@ if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     fi
 fi
 
-# Method 3: Check if guides is in the parent directory (common case: script in bin/)
+# Method 4: Check if guides is in the parent directory (common case: script in bin/)
 # This handles both local development and npm installation
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
-    if [ -d "$SCRIPT_DIR/../guides" ]; then
-        GUIDES_DIR="$(cd "$SCRIPT_DIR/../guides" 2>/dev/null && pwd)"
+    # Check parent directory (if script is in bin/, parent should be package root)
+    PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+    if [ -d "$PARENT_DIR/guides" ] && [ -f "$PARENT_DIR/package.json" ]; then
+        if grep -q '"name":\s*"create-solvapay-app"' "$PARENT_DIR/package.json" 2>/dev/null; then
+            GUIDES_DIR="$(cd "$PARENT_DIR/guides" 2>/dev/null && pwd)"
+        fi
     fi
 fi
 
-# Method 4: Walk up the directory tree to find the package root
+# Method 5: Walk up the directory tree to find the package root
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     CURRENT_DIR="$SCRIPT_DIR"
     MAX_WALK_UP=10
@@ -162,14 +210,14 @@ if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     done
 fi
 
-# Method 5: Check if guides is in the same directory as the script
+# Method 6: Check if guides is in the same directory as the script
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     if [ -d "$SCRIPT_DIR/guides" ]; then
         GUIDES_DIR="$(cd "$SCRIPT_DIR/guides" 2>/dev/null && pwd)"
     fi
 fi
 
-# Method 6: Try to find node_modules/create-solvapay-app/guides relative to script location
+# Method 7: Try to find node_modules/create-solvapay-app/guides relative to script location
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     CURRENT_DIR="$SCRIPT_DIR"
     MAX_WALK_UP=10
@@ -302,16 +350,36 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     # If not found and this is a retry, wait a moment and re-check
     if [ $RETRY_COUNT -gt 0 ]; then
         sleep 0.5
-        # Re-run Method 1 check (quick check for parent directory)
-        PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-        if [ -d "$PARENT_DIR/guides" ] && [ -f "$PARENT_DIR/package.json" ]; then
-            if grep -q '"name":\s*"create-solvapay-app"' "$PARENT_DIR/package.json" 2>/dev/null; then
-                GUIDES_DIR="$(cd "$PARENT_DIR/guides" 2>/dev/null && pwd)"
+        # Re-run search from script location (absolute path)
+        SEARCH_DIR="$SCRIPT_DIR"
+        for i in 1 2 3 4 5; do
+            # Check if we're in the package directory
+            if [ -f "$SEARCH_DIR/package.json" ]; then
+                if grep -q '"name":\s*"create-solvapay-app"' "$SEARCH_DIR/package.json" 2>/dev/null; then
+                    if [ -d "$SEARCH_DIR/guides" ]; then
+                        GUIDES_DIR="$(cd "$SEARCH_DIR/guides" 2>/dev/null && pwd)"
+                        if [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
+                            GUIDES_FOUND=true
+                            break
+                        fi
+                    fi
+                fi
+            fi
+            # Check for node_modules/create-solvapay-app/guides
+            if [ -d "$SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
+                GUIDES_DIR="$(cd "$SEARCH_DIR/node_modules/create-solvapay-app/guides" 2>/dev/null && pwd)"
                 if [ -n "$(ls -A "$GUIDES_DIR"/*.md 2>/dev/null)" ]; then
                     GUIDES_FOUND=true
                     break
                 fi
             fi
+            SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+            if [ "$SEARCH_DIR" = "/" ] || [ "$SEARCH_DIR" = "$(dirname "$SEARCH_DIR")" ]; then
+                break
+            fi
+        done
+        if [ "$GUIDES_FOUND" = true ]; then
+            break
         fi
     fi
     
@@ -336,7 +404,10 @@ if [ "$GUIDES_FOUND" = true ] && [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; t
         echo "Warning: No markdown files found in $GUIDES_DIR"
     fi
 else
-    echo "Warning: Guides directory not found at $GUIDES_DIR"
+    echo "Warning: Guides directory not found"
+    if [ -n "$GUIDES_DIR" ]; then
+        echo "  Expected location: $GUIDES_DIR"
+    fi
     echo "  Script location: $SCRIPT_DIR"
     echo "  Resolved script path: $RESOLVED_SCRIPT"
     # Try to find where the package might actually be
@@ -351,6 +422,25 @@ else
             echo "  Guides directory does not exist at: $PARENT_DIR/guides"
         fi
     fi
+    # Also check if we can find it by searching from script location
+    echo "  Searching from script location..."
+    SEARCH_DIR="$SCRIPT_DIR"
+    for i in 1 2 3 4 5; do
+        if [ -d "$SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
+            echo "  Found guides at: $SEARCH_DIR/node_modules/create-solvapay-app/guides"
+            break
+        fi
+        if [ -f "$SEARCH_DIR/package.json" ] && grep -q '"name":\s*"create-solvapay-app"' "$SEARCH_DIR/package.json" 2>/dev/null; then
+            if [ -d "$SEARCH_DIR/guides" ]; then
+                echo "  Found guides at: $SEARCH_DIR/guides"
+                break
+            fi
+        fi
+        SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+        if [ "$SEARCH_DIR" = "/" ] || [ "$SEARCH_DIR" = "$(dirname "$SEARCH_DIR")" ]; then
+            break
+        fi
+    done
     echo "  Please check that the create-solvapay-app package is properly installed"
 fi
 
