@@ -3,10 +3,40 @@
 # Script to set up a Next.js project with SolvaPay and Supabase
 # Distributed via npx create-solvapay-app
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Guides directory is relative to the script (package root)
-GUIDES_DIR="$SCRIPT_DIR/../guides"
+# Get the directory where this script is located, resolving symlinks
+# This handles the case where npx creates a symlink in node_modules/.bin/
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+
+# Resolve symlinks iteratively to find the actual script location
+# This works on both macOS and Linux
+RESOLVED_SCRIPT="$SCRIPT_SOURCE"
+while [ -L "$RESOLVED_SCRIPT" ]; do
+    TARGET="$(readlink "$RESOLVED_SCRIPT")"
+    if [[ "$TARGET" = /* ]]; then
+        # Absolute symlink
+        RESOLVED_SCRIPT="$TARGET"
+    else
+        # Relative symlink - resolve relative to the symlink's directory
+        RESOLVED_SCRIPT="$(cd "$(dirname "$RESOLVED_SCRIPT")" && pwd)/$TARGET"
+    fi
+done
+
+# Get the directory of the resolved script
+SCRIPT_DIR="$(cd "$(dirname "$RESOLVED_SCRIPT")" && pwd)"
+
+# Find the package root by looking for the guides directory
+# Walk up from the script directory until we find the package root
+PACKAGE_ROOT="$SCRIPT_DIR"
+while [ "$PACKAGE_ROOT" != "/" ]; do
+    # Check if this directory contains the guides folder (indicating package root)
+    if [ -d "$PACKAGE_ROOT/guides" ]; then
+        break
+    fi
+    PACKAGE_ROOT="$(dirname "$PACKAGE_ROOT")"
+done
+
+# Set guides directory relative to package root
+GUIDES_DIR="$PACKAGE_ROOT/guides"
 
 # Get project name from argument or prompt
 if [ -n "$1" ]; then
@@ -101,20 +131,23 @@ if [ ! -d "src" ] && [ -d "app" ]; then
     echo "src folder structure created"
 fi
 
-# Copy guide files to project root
+# Copy guide files to guides folder
 echo ""
-echo "Copying guide files to project root..."
+echo "Copying guide files to guides folder..."
+
+# Create guides directory if it doesn't exist
+mkdir -p guides
 
 # Copy all markdown files from the guides directory
 if [ -d "$GUIDES_DIR" ]; then
     for file in "$GUIDES_DIR"/*.md; do
         if [ -f "$file" ]; then
             filename=$(basename "$file")
-            cp "$file" "./$filename"
+            cp "$file" "./guides/$filename"
             echo "  - Copied $filename"
         fi
     done
-    echo "Guide files copied successfully"
+    echo "Guide files copied successfully to guides folder"
 else
     echo "Warning: Guides directory not found at $GUIDES_DIR"
 fi
