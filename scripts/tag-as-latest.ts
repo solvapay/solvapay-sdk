@@ -39,6 +39,7 @@ const PACKAGES_TO_TAG = [
   '@solvapay/server',
   '@solvapay/auth',
   '@solvapay/next',
+  'create-solvapay-app',
 ];
 
 function getCurrentVersion(): string {
