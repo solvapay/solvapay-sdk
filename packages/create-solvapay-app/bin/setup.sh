@@ -180,8 +180,9 @@ fi
 # This handles both local development and npm installation
 if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     # Check parent directory (if script is in bin/, parent should be package root)
-    PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-    if [ -d "$PARENT_DIR/guides" ] && [ -f "$PARENT_DIR/package.json" ]; then
+    # Use absolute path resolution
+    PARENT_DIR="$(cd "$(dirname "$SCRIPT_DIR")" 2>/dev/null && pwd)"
+    if [ -n "$PARENT_DIR" ] && [ -d "$PARENT_DIR/guides" ] && [ -f "$PARENT_DIR/package.json" ]; then
         if grep -q '"name":\s*"create-solvapay-app"' "$PARENT_DIR/package.json" 2>/dev/null; then
             GUIDES_DIR="$(cd "$PARENT_DIR/guides" 2>/dev/null && pwd)"
         fi
@@ -339,6 +340,41 @@ echo "Copying guide files to project root..."
 
 # Create guides directory if it doesn't exist
 mkdir -p guides
+
+# If GUIDES_DIR is not set or invalid, search for it now (before changing directories)
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
+    # Search from script location using absolute paths
+    SEARCH_DIR="$SCRIPT_DIR"
+    for i in 1 2 3 4 5; do
+        # Convert to absolute path
+        ABS_SEARCH_DIR="$(cd "$SEARCH_DIR" 2>/dev/null && pwd)"
+        if [ -z "$ABS_SEARCH_DIR" ]; then
+            break
+        fi
+        # Check if we're in the package directory
+        if [ -f "$ABS_SEARCH_DIR/package.json" ]; then
+            if grep -q '"name":\s*"create-solvapay-app"' "$ABS_SEARCH_DIR/package.json" 2>/dev/null; then
+                if [ -d "$ABS_SEARCH_DIR/guides" ]; then
+                    GUIDES_DIR="$(cd "$ABS_SEARCH_DIR/guides" 2>/dev/null && pwd)"
+                    if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
+                        break
+                    fi
+                fi
+            fi
+        fi
+        # Check for node_modules/create-solvapay-app/guides
+        if [ -d "$ABS_SEARCH_DIR/node_modules/create-solvapay-app/guides" ]; then
+            GUIDES_DIR="$(cd "$ABS_SEARCH_DIR/node_modules/create-solvapay-app/guides" 2>/dev/null && pwd)"
+            if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
+                break
+            fi
+        fi
+        SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+        if [ "$SEARCH_DIR" = "/" ] || [ "$SEARCH_DIR" = "$(dirname "$SEARCH_DIR")" ]; then
+            break
+        fi
+    done
+fi
 
 # Retry mechanism for npx - files might not be fully extracted yet
 MAX_RETRIES=3
