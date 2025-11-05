@@ -164,6 +164,7 @@ export interface SolvaPay {
     agentRef: string;
     customerRef: string;
     planRef?: string;
+    returnUrl?: string;
   }): Promise<{
     sessionId: string;
     checkoutUrl: string;

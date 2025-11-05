@@ -26,11 +26,13 @@ export async function createCheckoutSession(
   body: {
     agentRef: string;
     planRef?: string;
+    returnUrl?: string;
   },
   options: {
     solvaPay?: SolvaPay;
     includeEmail?: boolean;
     includeName?: boolean;
+    returnUrl?: string;
   } = {}
 ): Promise<{
   sessionId: string;

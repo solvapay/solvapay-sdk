@@ -24,11 +24,13 @@ export async function createCheckoutSessionCore(
   body: {
     agentRef: string;
     planRef?: string;
+    returnUrl?: string;
   },
   options: {
     solvaPay?: SolvaPay;
     includeEmail?: boolean;
     includeName?: boolean;
+    returnUrl?: string;
   } = {}
 ): Promise<{
   sessionId: string;
@@ -56,6 +58,18 @@ export async function createCheckoutSessionCore(
 
     const customerRef = customerResult;
 
+    // Extract returnUrl from request if not provided
+    // Priority: body.returnUrl > options.returnUrl > auto-extract from request origin
+    let returnUrl = body.returnUrl || options.returnUrl;
+    if (!returnUrl) {
+      try {
+        const url = new URL(request.url);
+        returnUrl = url.origin;
+      } catch (error) {
+        // If URL parsing fails, continue without returnUrl
+      }
+    }
+
     // Use provided SolvaPay instance or create new one
     const solvaPay = options.solvaPay || createSolvaPay();
 
@@ -64,6 +78,7 @@ export async function createCheckoutSessionCore(
       agentRef: body.agentRef,
       customerRef,
       planRef: body.planRef || undefined,
+      returnUrl: returnUrl,
     });
 
     // Return the session details

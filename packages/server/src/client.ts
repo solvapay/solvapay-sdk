@@ -447,6 +447,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
     // POST: /v1/sdk/checkout-sessions
     async createCheckoutSession(params) {
+
       const url = `${base}/v1/sdk/checkout-sessions`;
       
       const res = await fetch(url, {
