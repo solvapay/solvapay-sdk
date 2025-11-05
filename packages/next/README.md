@@ -257,10 +257,54 @@ This package is separate from `@solvapay/server` to keep the server package fram
 
 ## Middleware Setup
 
-These helpers expect the user ID to be set in the `x-user-id` header by your Next.js middleware:
+These helpers expect the user ID to be set in the `x-user-id` header by your Next.js middleware/proxy.
+
+### Quick Setup with Supabase
+
+The easiest way is to use `createSupabaseAuthMiddleware`:
+
+**For Next.js 15:**
+```typescript
+// middleware.ts (at project root)
+import { createSupabaseAuthMiddleware } from '@solvapay/next';
+
+export const middleware = createSupabaseAuthMiddleware({
+  publicRoutes: ['/api/list-plans'],
+});
+
+export const config = {
+  matcher: ['/api/:path*'],
+};
+```
+
+**For Next.js 16 with `src/` folder:**
+```typescript
+// src/proxy.ts (in src/ folder, not project root)
+import { createSupabaseAuthMiddleware } from '@solvapay/next';
+
+// Use 'proxy' export for Next.js 16 (no deprecation warning)
+export const proxy = createSupabaseAuthMiddleware({
+  publicRoutes: ['/api/list-plans'],
+});
+
+export const config = {
+  matcher: ['/api/:path*'],
+};
+```
+
+**File Location Notes:**
+- **Next.js 15**: Place `middleware.ts` at project root
+- **Next.js 16 without `src/` folder**: Place `middleware.ts` or `proxy.ts` at project root
+- **Next.js 16 with `src/` folder**: Place `src/proxy.ts` or `src/middleware.ts` (in `src/` folder, not root)
+
+> **Note:** Next.js 16 renamed "middleware" to "proxy". You can use either export name, but `proxy` is recommended to avoid deprecation warnings.
+
+### Custom Middleware
+
+Alternatively, you can create your own middleware:
 
 ```typescript
-// middleware.ts
+// middleware.ts (or src/proxy.ts for Next.js 16)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -280,5 +324,5 @@ export async function middleware(request: NextRequest) {
 }
 ```
 
-Alternatively, you can use the `requireUserId` utility from `@solvapay/auth` in your middleware.
+You can also use the `requireUserId` utility from `@solvapay/auth` in your middleware.
 

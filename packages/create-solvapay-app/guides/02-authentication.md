@@ -213,6 +213,8 @@ export async function clearCustomerId(): Promise<void> {
 
 ## Step 3: Create Authentication Middleware
 
+### For Next.js 15
+
 Create `middleware.ts` in the project root:
 
 ```typescript
@@ -234,6 +236,45 @@ export const config = {
   matcher: ['/api/:path*'],
 };
 ```
+
+### For Next.js 16
+
+**Important:** Next.js 16 with `src/` folder structure requires the middleware/proxy file to be in the `src/` folder, not the project root.
+
+Create `src/proxy.ts` (or `src/middleware.ts`) in the `src/` folder:
+
+```typescript
+import { createSupabaseAuthMiddleware } from '@solvapay/next';
+
+/**
+ * Next.js Proxy for Authentication (Next.js 16)
+ * 
+ * Extracts user ID from Supabase JWT tokens and adds it as a header for API routes.
+ * This is the recommended approach as it centralizes auth logic and makes it available
+ * to all downstream routes.
+ * 
+ * Note: Next.js 16 renamed "middleware" to "proxy". Use 'proxy' export to avoid deprecation warnings.
+ */
+
+// Recommended: Use 'proxy' export for Next.js 16 (no deprecation warning)
+export const proxy = createSupabaseAuthMiddleware({
+  publicRoutes: ['/api/list-plans'], // Add any public routes here
+});
+
+// Alternative: Use 'middleware' export (works but shows deprecation warning in Next.js 16)
+// export const middleware = createSupabaseAuthMiddleware({
+//   publicRoutes: ['/api/list-plans'],
+// });
+
+export const config = {
+  matcher: ['/api/:path*'],
+};
+```
+
+**File Location Summary:**
+- **Next.js 15**: `middleware.ts` at project root
+- **Next.js 16 without `src/` folder**:  `proxy.ts` at project root
+- **Next.js 16 with `src/` folder**: `src/proxy.ts` 
 
 **What this does:**
 - Intercepts all `/api/*` routes

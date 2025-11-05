@@ -41,10 +41,11 @@ export interface AuthMiddlewareOptions {
  * 4. Returns appropriate error responses for auth failures
  * 
  * @param options - Configuration options
- * @returns Next.js middleware function
+ * @returns Next.js middleware function (can be exported as `middleware` or `proxy`)
  * 
- * @example
+ * @example Next.js 15
  * ```typescript
+ * // middleware.ts (at project root)
  * import { createAuthMiddleware } from '@solvapay/next';
  * import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
  * 
@@ -53,6 +54,27 @@ export interface AuthMiddlewareOptions {
  * });
  * 
  * export const middleware = createAuthMiddleware({
+ *   adapter,
+ *   publicRoutes: ['/api/list-plans'],
+ * });
+ * 
+ * export const config = {
+ *   matcher: ['/api/:path*'],
+ * };
+ * ```
+ * 
+ * @example Next.js 16 with src/ folder
+ * ```typescript
+ * // src/proxy.ts (in src/ folder, not project root)
+ * import { createAuthMiddleware } from '@solvapay/next';
+ * import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+ * 
+ * const adapter = new SupabaseAuthAdapter({
+ *   jwtSecret: process.env.SUPABASE_JWT_SECRET!,
+ * });
+ * 
+ * // Use 'proxy' export for Next.js 16 (no deprecation warning)
+ * export const proxy = createAuthMiddleware({
  *   adapter,
  *   publicRoutes: ['/api/list-plans'],
  * });
@@ -78,6 +100,14 @@ export interface AuthMiddlewareOptions {
  *   adapter: myAdapter,
  * });
  * ```
+ * 
+ * **File Location Notes:**
+ * - **Next.js 15**: Place `middleware.ts` at project root
+ * - **Next.js 16 without `src/` folder**: Place `middleware.ts` or `proxy.ts` at project root
+ * - **Next.js 16 with `src/` folder**: Place `src/proxy.ts` or `src/middleware.ts` (in `src/` folder, not root)
+ * 
+ * **Note:** Next.js 16 renamed "middleware" to "proxy". You can export the return value as either
+ * `middleware` or `proxy` - both work, but `proxy` is recommended to avoid deprecation warnings.
  */
 export function createAuthMiddleware(options: AuthMiddlewareOptions) {
   const {
@@ -164,10 +194,11 @@ export interface SupabaseAuthMiddlewareOptions {
  * Uses dynamic import to avoid requiring Supabase as a dependency in @solvapay/next.
  * 
  * @param options - Configuration options
- * @returns Next.js middleware function
+ * @returns Next.js middleware function (can be exported as `middleware` or `proxy`)
  * 
- * @example
+ * @example Next.js 15
  * ```typescript
+ * // middleware.ts (at project root)
  * import { createSupabaseAuthMiddleware } from '@solvapay/next';
  * 
  * export const middleware = createSupabaseAuthMiddleware({
@@ -178,6 +209,29 @@ export interface SupabaseAuthMiddlewareOptions {
  *   matcher: ['/api/:path*'],
  * };
  * ```
+ * 
+ * @example Next.js 16 with src/ folder
+ * ```typescript
+ * // src/proxy.ts (in src/ folder, not project root)
+ * import { createSupabaseAuthMiddleware } from '@solvapay/next';
+ * 
+ * // Use 'proxy' export for Next.js 16 (no deprecation warning)
+ * export const proxy = createSupabaseAuthMiddleware({
+ *   publicRoutes: ['/api/list-plans'],
+ * });
+ * 
+ * export const config = {
+ *   matcher: ['/api/:path*'],
+ * };
+ * ```
+ * 
+ * **File Location Notes:**
+ * - **Next.js 15**: Place `middleware.ts` at project root
+ * - **Next.js 16 without `src/` folder**: Place `middleware.ts` or `proxy.ts` at project root
+ * - **Next.js 16 with `src/` folder**: Place `src/proxy.ts` or `src/middleware.ts` (in `src/` folder, not root)
+ * 
+ * **Note:** Next.js 16 renamed "middleware" to "proxy". You can export the return value as either
+ * `middleware` or `proxy` - both work, but `proxy` is recommended to avoid deprecation warnings.
  */
 export function createSupabaseAuthMiddleware(options: SupabaseAuthMiddlewareOptions = {}) {
   const {
