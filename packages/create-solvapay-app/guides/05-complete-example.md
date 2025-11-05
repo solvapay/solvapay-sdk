@@ -12,9 +12,38 @@ This example includes:
 - Error handling
 - Loading states
 
+## Using Your App Description
+
+**Important:** Before implementing this guide, make sure you have `00-app-description.md` available. This guide will use your app description to customize:
+
+- **HomePage content** - Welcome messages, feature names, descriptions
+- **Feature cards** - Free vs premium features based on your app description
+- **Branding** - Colors, tone, and messaging style
+- **Call-to-action text** - Upgrade buttons and subscription management messaging
+
+**How to use:**
+1. Copy `00-app-description.md` into Cursor along with this guide
+2. The AI will automatically adapt the HomePage code below to match your app description
+3. If you haven't customized the app description, it will use the default generic example
+
+**Customization points** - The AI will adapt these elements based on your app description:
+- App name in the welcome header
+- Feature card titles and descriptions (both free and premium)
+- Brand colors and styling
+- Messaging tone and style
+- HomePage layout and content structure
+
 ## Complete Home Page
 
-Update `src/app/page.tsx` with the full implementation:
+Update `src/app/page.tsx` with the full implementation. 
+
+**Note:** The code below shows a generic example. When you implement this with Cursor AI and include `00-app-description.md`, the AI will customize:
+- Feature card titles and descriptions to match your app's features
+- Welcome message and branding to match your app's tone
+- Colors and styling to match your brand
+- Overall layout and content structure
+
+If you haven't customized `00-app-description.md`, this generic example will work perfectly fine as a starting point.
 
 ```typescript
 'use client';
@@ -208,6 +237,10 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       <main className="max-w-4xl mx-auto px-6 py-16">
         {/* Header */}
+        {/* 
+          CUSTOMIZE: The welcome message and app name should be adapted from 00-app-description.md
+          Replace "Welcome" with your app name or a branded welcome message
+        */}
         <div className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900 mb-2">Welcome</h1>
@@ -253,6 +286,12 @@ export default function HomePage() {
         </div>
 
         {/* Features Grid */}
+        {/* 
+          CUSTOMIZE: Replace these feature cards with features from 00-app-description.md
+          - Free tier features should NOT have locked={true}
+          - Premium tier features should have locked={!isLoading && !hasPaidSubscription}
+          - Update titles and descriptions to match your app's actual features
+        */}
         <div className="grid md:grid-cols-2 gap-4 mb-8">
           <FeatureCard
             title="Basic Analytics"
@@ -489,14 +528,41 @@ Test your complete implementation:
 - Check browser console for errors
 - Ensure router is properly imported and used
 
+## Customization Guide
+
+### Using Your App Description
+
+If you customized `00-app-description.md`, here's how the HomePage should be adapted:
+
+1. **App Name & Welcome Message:**
+   - Replace "Welcome" with your app name or branded welcome message
+   - Update the header to reflect your app's purpose
+
+2. **Feature Cards:**
+   - Replace generic features with your app's actual free tier features
+   - Replace premium features with your app's actual premium tier features
+   - Ensure premium features have `locked={!isLoading && !hasPaidSubscription}`
+   - Ensure free features don't have the `locked` prop
+
+3. **Branding:**
+   - Update colors in Tailwind classes to match your brand colors
+   - Adjust tone and messaging to match your app's style
+   - Update button text and CTAs to match your app's voice
+
+4. **Layout:**
+   - Adjust grid layout if you have more/fewer features
+   - Add or remove sections based on your app's needs
+
+**Example:** If your app description mentions "E-commerce Analytics" with features like "Sales Dashboard" and "Inventory Tracking", replace the generic "Basic Analytics" and "Standard Reports" with those specific features.
+
 ## Next Steps
 
 Now that you have a complete implementation, consider:
 
 1. **Customization:**
-   - Customize colors and styling to match your brand
+   - Use `00-app-description.md` to customize colors, styling, and branding
    - Add your logo and branding
-   - Customize feature cards and content
+   - Customize feature cards and content based on your app description
 
 2. **Enhanced Features:**
    - Add password reset flow

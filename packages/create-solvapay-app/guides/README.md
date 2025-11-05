@@ -14,11 +14,12 @@ This guide will help you build a Next.js application with:
 
 Follow these guides in order:
 
+0. **[App Description](./00-app-description.md)** - (Optional) Customize your app description template before implementing
 1. **[Setup](./01-setup.md)** - Prerequisites and setup verification (copy into Cursor first)
 2. **[Authentication](./02-authentication.md)** - Supabase auth integration (copy into Cursor)
 3. **[Payments](./03-payments.md)** - SolvaPay hosted checkout setup (copy into Cursor)
 4. **[Styling](./04-styling.md)** - UI components and styling system (copy into Cursor)
-5. **[Complete Example](./05-complete-example.md)** - Full working implementation (copy into Cursor)
+5. **[Complete Example](./05-complete-example.md)** - Full working implementation (copy into Cursor, includes app description customization)
 
 ## Prerequisites
 
@@ -44,7 +45,17 @@ npx create-solvapay-app my-app
 cd my-app
 ```
 
-### Step 2: Use Guides with Cursor
+### Step 2: (Optional) Customize App Description
+
+Before implementing, you can optionally customize your app description:
+
+1. **Open `guides/00-app-description.md`** - Review the template
+2. **Customize it** (optional) - Edit to match your app's features, branding, and requirements
+3. **Or leave as-is** - The default generic example works fine
+
+**Why customize?** When implementing `05-complete-example.md`, the AI will use this description to customize the HomePage, feature cards, and messaging to match your app.
+
+### Step 3: Use Guides with Cursor
 
 After creating your project, use these guides with Cursor AI:
 
@@ -54,11 +65,16 @@ After creating your project, use these guides with Cursor AI:
    ```
    Then paste the contents of `01-setup.md`
 
-2. **Then, copy the implementation guides** (files `02-authentication.md` through `05-complete-example.md`) into Cursor with:
+2. **Then, copy the implementation guides** into Cursor with:
    ```
    Add subscription to my app using these instructions
    ```
-   Then paste the contents of all the guide files (excluding `01-setup.md`)
+   Then paste the contents of:
+   - `00-app-description.md` - Your app description (for customizing HomePage)
+   - `02-authentication.md` - Supabase auth integration
+   - `03-payments.md` - SolvaPay hosted checkout setup
+   - `04-styling.md` - UI components and styling
+   - `05-complete-example.md` - Complete implementation (will use app description)
 
 The guides are designed to be copied directly into Cursor, where the AI assistant will help you implement each step.
 

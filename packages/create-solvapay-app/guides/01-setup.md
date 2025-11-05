@@ -57,7 +57,19 @@ Verify that your project has been properly set up by `create-solvapay-app`:
    - `@supabase/supabase-js`
 3. **Environment file** - `.env.local` exists and contains all required variables
 
-## Step 5: Implement Integration with Cursor
+## Step 5: (Optional) Customize App Description
+
+Before implementing the guides, you can optionally customize your app description:
+
+1. **Open `guides/00-app-description.md`** - This template describes your application
+2. **Customize it** (optional) - Edit the file to match your specific app, features, branding, and requirements
+3. **Or leave it as-is** - The default generic example will work fine
+
+**Why customize?** The app description will be used to customize the HomePage and feature cards to match your app's specific purpose, branding, and features when you implement `05-complete-example.md`.
+
+**Example:** If you're building an analytics app, update the features section to reflect analytics-specific features instead of generic ones.
+
+## Step 6: Implement Integration with Cursor
 
 Once your accounts are set up and environment variables are configured, copy the following implementation guides into Cursor:
 
@@ -68,11 +80,12 @@ Add subscription and auth to my app using these instructions
 ```
 
 **Then drag these guide files into the chat as references:**
+- `00-app-description.md` - Your app description (use this to customize the HomePage)
 - `02-authentication.md` - Supabase authentication setup
 - `03-payments.md` - SolvaPay hosted checkout setup
 - `04-styling.md` - UI components and styling
-- `05-complete-example.md` - Complete working implementation
+- `05-complete-example.md` - Complete working implementation (will use app description to customize HomePage)
 
 
-Cursor will help you implement each step automatically. Sit back and relax while it builds your subscription integration!
+Cursor will help you implement each step automatically. When implementing `05-complete-example.md`, it will use your app description to customize the HomePage, feature cards, and messaging to match your app's specific needs!
 
