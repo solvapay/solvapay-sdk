@@ -282,26 +282,20 @@ export const config = {
 - Sets `x-user-id` header for downstream API routes
 - Returns 401 if authentication is required but missing
 
-## Step 4: Update Root Layout
+## Step 4: Create Client Layout Component
 
-Update `src/app/layout.tsx`:
+Create `src/app/components/ClientLayout.tsx`:
 
 ```typescript
 'use client';
 
-import { SolvaPayProvider } from '@solvapay/react';
-import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getOrCreateCustomerId } from './lib/customer';
-import { onAuthStateChange } from './lib/supabase';
-import './globals.css';
+import { getOrCreateCustomerId } from '../lib/customer';
+import { onAuthStateChange } from '../lib/supabase';
+import { Providers } from './Providers';
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -309,46 +303,39 @@ export default function RootLayout({
 
   // Initialize auth state and subscribe to changes
   useEffect(() => {
+    let cancelled = false;
+    
     const initializeAuth = async () => {
       try {
         const userId = await getOrCreateCustomerId();
-        setIsAuthenticated(!!userId);
+        if (!cancelled) {
+          setIsAuthenticated(!!userId);
+        }
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
-        setIsAuthenticated(false);
+        if (!cancelled) {
+          console.error('Failed to initialize auth:', error);
+          setIsAuthenticated(false);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     initializeAuth();
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = onAuthStateChange(async (event, session) => {
-      // Update auth state when session changes
-      const userId = session?.user?.id || null;
-      setIsAuthenticated(!!userId);
+    const { data: { subscription } } = onAuthStateChange((event, session) => {
+      if (!cancelled) {
+        setIsAuthenticated(!!session?.user?.id);
+      }
     });
 
-    // Cleanup subscription on unmount
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
     };
-  }, []);
-
-  // Create Supabase auth adapter (only if env vars are available)
-  const supabaseAdapter = useMemo(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return undefined;
-    }
-    
-    return createSupabaseAuthAdapter({
-      supabaseUrl,
-      supabaseAnonKey,
-    });
   }, []);
 
   // Redirect unauthenticated users to sign-in (except on auth pages)
@@ -368,6 +355,76 @@ export default function RootLayout({
     }
   }, [isAuthenticated, pathname, router]);
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-slate-500">
+        Initializing...
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return (
+      <Providers>
+        {children}
+      </Providers>
+    );
+  }
+
+  // Allow auth pages and callback to render
+  if (pathname === '/sign-in' || pathname === '/sign-up' || pathname === '/auth/callback') {
+    return <>{children}</>;
+  }
+
+  // Show loading while redirecting
+  return (
+    <div className="flex justify-center items-center min-h-screen text-slate-500">
+      Redirecting...
+    </div>
+  );
+}
+```
+
+## Step 5: Create Providers Component
+
+Create `src/app/components/Providers.tsx`:
+
+```typescript
+'use client';
+
+import { SolvaPayProvider } from '@solvapay/react';
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { useMemo } from 'react';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const supabaseAdapter = useMemo(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) return undefined;
+    return createSupabaseAuthAdapter({ supabaseUrl, supabaseAnonKey });
+  }, []);
+
+  return (
+    <SolvaPayProvider config={supabaseAdapter ? { auth: { adapter: supabaseAdapter } } : undefined}>
+      {children}
+    </SolvaPayProvider>
+  );
+}
+```
+
+## Step 6: Update Root Layout
+
+Update `src/app/layout.tsx` (server component):
+
+```typescript
+import { ClientLayout } from './components/ClientLayout';
+import './globals.css';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <head>
@@ -375,28 +432,7 @@ export default function RootLayout({
         <meta name="description" content="App description" />
       </head>
       <body className="font-sans">
-        {isLoading ? (
-          // Show loading state while auth is being initialized
-          <div className="flex justify-center items-center min-h-screen text-slate-500">
-            Initializing...
-          </div>
-        ) : isAuthenticated ? (
-          // Provider with Supabase adapter (if available)
-          // The adapter automatically handles subscription checking
-          <SolvaPayProvider config={supabaseAdapter ? { auth: { adapter: supabaseAdapter } } : undefined}>
-            {children}
-          </SolvaPayProvider>
-        ) : (
-          // Allow auth pages and callback to render
-          (pathname === '/sign-in' || pathname === '/sign-up' || pathname === '/auth/callback') ? (
-            children
-          ) : (
-            // Show loading while redirecting
-            <div className="flex justify-center items-center min-h-screen text-slate-500">
-              Redirecting...
-            </div>
-          )
-        )}
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );
@@ -404,6 +440,7 @@ export default function RootLayout({
 ```
 
 **What this does:**
+- **Root layout is a server component** - follows Next.js App Router best practices
 - Checks authentication status on mount
 - Subscribes to Supabase auth state changes using `onAuthStateChange`
 - Updates `isAuthenticated` state when auth events occur (sign-in, sign-out)
@@ -425,7 +462,7 @@ export default function RootLayout({
 - Subscription state is updated automatically
 - You can use `useSubscription()` hook anywhere in your app to access subscription data
 
-## Step 5: Create Auth Component
+## Step 7: Create Auth Component
 
 Create `src/app/components/Auth.tsx`:
 
@@ -658,7 +695,7 @@ export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) 
 
 **Note:** This component uses UI components from `./ui/Button`, `./ui/Input`, and `./ui/Form`. We'll create these in the [Styling Guide](./04-styling.md).
 
-## Step 6: Create Sign-In Page
+## Step 8: Create Sign-In Page
 
 Create `src/app/sign-in/page.tsx`:
 
@@ -672,7 +709,7 @@ export default function SignInPage() {
 }
 ```
 
-## Step 7: Create Sign-Up Page
+## Step 9: Create Sign-Up Page
 
 Create `src/app/sign-up/page.tsx`:
 
@@ -686,7 +723,7 @@ export default function SignUpPage() {
 }
 ```
 
-## Step 8: Create OAuth Callback Handler
+## Step 10: Create OAuth Callback Handler
 
 Create `src/app/auth/callback/page.tsx`:
 

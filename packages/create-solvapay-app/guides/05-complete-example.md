@@ -413,7 +413,9 @@ my-app/
 │       │   │   ├── Input.tsx
 │       │   │   ├── Form.tsx
 │       │   │   └── FormField.tsx
-│       │   └── Auth.tsx
+│       │   ├── Auth.tsx
+│       │   ├── ClientLayout.tsx
+│       │   └── Providers.tsx
 │       ├── lib/
 │       │   ├── customer.ts
 │       │   └── supabase.ts

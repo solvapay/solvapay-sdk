@@ -12,6 +12,7 @@ import type { ProcessPaymentResult } from '@solvapay/server';
 import { filterSubscriptions, isPaidSubscription, getPrimarySubscription } from './utils/subscriptions';
 import { defaultAuthAdapter, type AuthAdapter } from './adapters/auth';
 
+
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null);
 
 // localStorage cache keys
