@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/server",
-  "version": "1.0.0-preview.11",
+  "version": "1.0.0-preview.12",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
