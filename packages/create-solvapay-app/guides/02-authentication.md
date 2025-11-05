@@ -294,6 +294,7 @@ import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getOrCreateCustomerId } from './lib/customer';
+import { onAuthStateChange } from './lib/supabase';
 import './globals.css';
 
 export default function RootLayout({
@@ -306,7 +307,7 @@ export default function RootLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize auth state
+  // Initialize auth state and subscribe to changes
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -321,6 +322,18 @@ export default function RootLayout({
     };
 
     initializeAuth();
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = onAuthStateChange(async (event, session) => {
+      // Update auth state when session changes
+      const userId = session?.user?.id || null;
+      setIsAuthenticated(!!userId);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Create Supabase auth adapter (only if env vars are available)
@@ -392,11 +405,19 @@ export default function RootLayout({
 
 **What this does:**
 - Checks authentication status on mount
+- Subscribes to Supabase auth state changes using `onAuthStateChange`
+- Updates `isAuthenticated` state when auth events occur (sign-in, sign-out)
 - Shows loading state while checking
 - Redirects unauthenticated users to `/sign-in` (except on auth pages)
 - Redirects authenticated users away from auth pages to home
 - Wraps app in `SolvaPayProvider` with Supabase adapter if authenticated
 - **The Supabase adapter automatically handles subscription checking** - no need for a `checkSubscription` prop
+
+**Key changes for automatic redirects:**
+- The layout subscribes to `onAuthStateChange` to detect when users sign in or sign out
+- When auth state changes, the layout automatically updates `isAuthenticated`
+- The existing redirect `useEffect` hooks detect the state change and redirect accordingly
+- No manual redirects needed in the Auth component - the layout handles it automatically
 
 **How subscription checking works:**
 - The Supabase adapter gets the access token from the Supabase session
@@ -412,7 +433,6 @@ Create `src/app/components/Auth.tsx`:
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Form } from './ui/Form';
@@ -425,7 +445,6 @@ interface AuthProps {
 }
 
 export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) {
-  const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(initialMode === 'sign-up');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -491,8 +510,7 @@ export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) 
             // Silent failure - don't block signup if customer creation fails
             console.warn('Failed to sync customer after signup:', err);
           }
-          // User is signed in immediately - redirect to home
-          router.push('/');
+          // Layout's auth state listener will handle redirect automatically
           return;
         } else {
           // Email confirmation required
@@ -501,8 +519,7 @@ export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) 
       } else {
         const { error: signInError } = await signIn(email, password);
         if (signInError) throw signInError;
-        // Success - redirect to home
-        router.push('/');
+        // Layout's auth state listener will handle redirect automatically
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');

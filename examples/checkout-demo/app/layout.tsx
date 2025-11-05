@@ -4,6 +4,7 @@ import { SolvaPayProvider } from '@solvapay/react';
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
 import { useState, useEffect, useMemo } from 'react';
 import { getOrCreateCustomerId } from './lib/customer';
+import { onAuthStateChange } from './lib/supabase';
 import { Auth } from './components/Auth';
 import { Navigation } from './components/Navigation';
 import './globals.css';
@@ -16,7 +17,7 @@ export default function RootLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize auth state
+  // Initialize auth state and subscribe to changes
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -31,6 +32,18 @@ export default function RootLayout({
     };
 
     initializeAuth();
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = onAuthStateChange(async (event, session) => {
+      // Update auth state when session changes
+      const userId = session?.user?.id || null;
+      setIsAuthenticated(!!userId);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Create Supabase auth adapter (only if env vars are available)

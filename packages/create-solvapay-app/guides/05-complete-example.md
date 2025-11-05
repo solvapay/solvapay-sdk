@@ -189,7 +189,9 @@ export default function HomePage() {
     setIsSigningOut(true);
     try {
       await signOut();
-      router.push('/');
+      // The layout's auth state listener will handle the redirect
+      // Give it a moment to process the auth state change
+      router.refresh();
     } catch (err) {
       console.error('Failed to sign out:', err);
       setIsSigningOut(false);
@@ -433,9 +435,9 @@ Test your complete implementation:
 
 ### Authentication
 - [ ] Sign up with email/password works
-- [ ] Sign in with email/password works
-- [ ] Google OAuth sign-in works (if configured)
-- [ ] Sign out works
+- [ ] Sign in with email/password works → **Should redirect to home automatically (no page refresh needed)**
+- [ ] Google OAuth sign-in works (if configured) → **Should redirect to home automatically after callback**
+- [ ] Sign out works → **Should redirect to sign-in automatically (no page refresh needed)**
 - [ ] Auth state persists across page refreshes
 - [ ] Unauthenticated users see auth form
 - [ ] Authenticated users see app content
