@@ -43,33 +43,113 @@ fi
 PACKAGE_ROOT="$SCRIPT_DIR"
 GUIDES_DIR=""
 
-# First, check if guides is in the parent directory (common case: script in bin/)
-if [ -d "$SCRIPT_DIR/../guides" ]; then
-    GUIDES_DIR="$(cd "$SCRIPT_DIR/../guides" && pwd)"
-elif [ -d "$SCRIPT_DIR/guides" ]; then
-    # Guides might be in the same directory as the script
-    GUIDES_DIR="$(cd "$SCRIPT_DIR/guides" && pwd)"
-else
-    # Walk up the directory tree to find the package root
-    # Look for either guides directory or package.json with name "create-solvapay-app"
+# Method 1: Try to use Node.js to find the package location (most reliable for npm/npx)
+if command -v node &> /dev/null; then
+    # Use Node.js to resolve the package location
+    # Pass the resolved script path as an environment variable to avoid argv issues
+    export RESOLVED_SCRIPT_PATH="$RESOLVED_SCRIPT"
+    NODE_PACKAGE_DIR=$(node -e "
+        try {
+            const path = require('path');
+            const fs = require('fs');
+            // Get the script path from environment variable
+            const scriptPath = process.env.RESOLVED_SCRIPT_PATH;
+            if (!scriptPath) return;
+            let currentDir = path.dirname(scriptPath);
+            // Walk up to find node_modules
+            for (let i = 0; i < 10; i++) {
+                const nodeModulesPath = path.join(currentDir, 'node_modules', 'create-solvapay-app');
+                if (fs.existsSync(nodeModulesPath)) {
+                    const guidesPath = path.join(nodeModulesPath, 'guides');
+                    if (fs.existsSync(guidesPath)) {
+                        console.log(guidesPath);
+                        process.exit(0);
+                    }
+                }
+                // Also check if we're already in the package directory
+                const packageJsonPath = path.join(currentDir, 'package.json');
+                if (fs.existsSync(packageJsonPath)) {
+                    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+                    if (pkg.name === 'create-solvapay-app') {
+                        const guidesPath = path.join(currentDir, 'guides');
+                        if (fs.existsSync(guidesPath)) {
+                            console.log(guidesPath);
+                            process.exit(0);
+                        }
+                    }
+                }
+                const parentDir = path.dirname(currentDir);
+                if (parentDir === currentDir) break;
+                currentDir = parentDir;
+            }
+        } catch (e) {
+            // Ignore errors
+        }
+    " 2>/dev/null)
+    unset RESOLVED_SCRIPT_PATH
+    
+    if [ -n "$NODE_PACKAGE_DIR" ] && [ -d "$NODE_PACKAGE_DIR" ]; then
+        GUIDES_DIR="$(cd "$NODE_PACKAGE_DIR" 2>/dev/null && pwd)"
+    fi
+fi
+
+# Method 2: Check if guides is in the parent directory (common case: script in bin/)
+# This handles both local development and npm installation
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
+    if [ -d "$SCRIPT_DIR/../guides" ]; then
+        GUIDES_DIR="$(cd "$SCRIPT_DIR/../guides" 2>/dev/null && pwd)"
+    fi
+fi
+
+# Method 3: Walk up the directory tree to find the package root
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
     CURRENT_DIR="$SCRIPT_DIR"
-    while [ "$CURRENT_DIR" != "/" ]; do
-        # Check if this directory contains the guides folder
-        if [ -d "$CURRENT_DIR/guides" ]; then
-            GUIDES_DIR="$CURRENT_DIR/guides"
-            break
-        fi
-        # Also check if this is the package root by looking for package.json
+    MAX_WALK_UP=10
+    WALK_COUNT=0
+    while [ "$CURRENT_DIR" != "/" ] && [ $WALK_COUNT -lt $MAX_WALK_UP ]; do
+        # Check if this directory contains both package.json and guides folder
         if [ -f "$CURRENT_DIR/package.json" ]; then
             # Check if this is the create-solvapay-app package
             if grep -q '"name":\s*"create-solvapay-app"' "$CURRENT_DIR/package.json" 2>/dev/null; then
                 if [ -d "$CURRENT_DIR/guides" ]; then
-                    GUIDES_DIR="$CURRENT_DIR/guides"
+                    GUIDES_DIR="$(cd "$CURRENT_DIR/guides" 2>/dev/null && pwd)"
                     break
                 fi
             fi
         fi
+        # Also check if guides exists at this level
+        if [ -d "$CURRENT_DIR/guides" ]; then
+            # Verify it's not empty and has markdown files
+            if [ -n "$(ls -A "$CURRENT_DIR/guides"/*.md 2>/dev/null)" ]; then
+                GUIDES_DIR="$(cd "$CURRENT_DIR/guides" 2>/dev/null && pwd)"
+                break
+            fi
+        fi
         CURRENT_DIR="$(dirname "$CURRENT_DIR")"
+        WALK_COUNT=$((WALK_COUNT + 1))
+    done
+fi
+
+# Method 4: Check if guides is in the same directory as the script
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
+    if [ -d "$SCRIPT_DIR/guides" ]; then
+        GUIDES_DIR="$(cd "$SCRIPT_DIR/guides" 2>/dev/null && pwd)"
+    fi
+fi
+
+# Method 5: Try to find node_modules/create-solvapay-app/guides relative to script location
+if [ -z "$GUIDES_DIR" ] || [ ! -d "$GUIDES_DIR" ]; then
+    CURRENT_DIR="$SCRIPT_DIR"
+    MAX_WALK_UP=10
+    WALK_COUNT=0
+    while [ "$CURRENT_DIR" != "/" ] && [ $WALK_COUNT -lt $MAX_WALK_UP ]; do
+        # Look for node_modules/create-solvapay-app/guides
+        if [ -d "$CURRENT_DIR/node_modules/create-solvapay-app/guides" ]; then
+            GUIDES_DIR="$(cd "$CURRENT_DIR/node_modules/create-solvapay-app/guides" 2>/dev/null && pwd)"
+            break
+        fi
+        CURRENT_DIR="$(dirname "$CURRENT_DIR")"
+        WALK_COUNT=$((WALK_COUNT + 1))
     done
 fi
 
@@ -193,7 +273,18 @@ if [ -n "$GUIDES_DIR" ] && [ -d "$GUIDES_DIR" ]; then
 else
     echo "Warning: Guides directory not found"
     echo "  Script location: $SCRIPT_DIR"
+    echo "  Resolved script path: $RESOLVED_SCRIPT"
     echo "  Expected guides location: $GUIDES_DIR"
+    echo "  Attempted paths:"
+    echo "    - $SCRIPT_DIR/../guides"
+    echo "    - $SCRIPT_DIR/guides"
+    # Try to find where the package might actually be
+    if [ -f "$SCRIPT_DIR/../package.json" ]; then
+        echo "  Found package.json at: $SCRIPT_DIR/../package.json"
+        if [ -d "$SCRIPT_DIR/../guides" ]; then
+            echo "  Guides directory exists at: $SCRIPT_DIR/../guides"
+        fi
+    fi
     echo "  Please check that the create-solvapay-app package is properly installed"
 fi
 
