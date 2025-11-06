@@ -21,6 +21,7 @@
 - [ ] Tests pass (`pnpm -w test`)
 - [ ] Types OK (no dts errors)
 - [ ] Docs updated when needed
+- [ ] Documentation links valid (`pnpm docs:validate-links`)
 
 ## Commit & PR Hygiene
 

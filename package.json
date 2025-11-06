@@ -24,7 +24,8 @@
     "tag:latest": "tsx scripts/tag-as-latest.ts",
     "docs:build": "typedoc",
     "docs:watch": "typedoc --watch",
-    "docs:check": "typedoc --json docs/api.json"
+    "docs:check": "typedoc --json docs/api.json",
+    "docs:validate-links": "tsx scripts/validate-doc-links.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
@@ -37,6 +38,7 @@
     "@types/react": "^18.2.79",
     "conventional-changelog-cli": "^5.0.0",
     "fastify": "^4.28.1",
+    "glob": "^11.0.3",
     "jose": "^5.9.3",
     "nodemon": "^3.1.0",
     "tsup": "^8.0.1",
