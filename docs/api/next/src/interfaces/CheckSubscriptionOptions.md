@@ -19,7 +19,7 @@ Options for checking subscriptions
 Defined in: [packages/next/src/index.ts:66](https://github.com/solvapay/solvapay-sdk/blob/main/packages/next/src/index.ts#L66)
 
 Request deduplication options
-Default: { cacheTTL: 2000, maxCacheSize: 1000, cacheErrors: true }
+Default: `{ cacheTTL: 2000, maxCacheSize: 1000, cacheErrors: true }`
 
 ***
 

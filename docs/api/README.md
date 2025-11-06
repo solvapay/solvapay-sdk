@@ -275,13 +275,13 @@ The `@solvapay/auth` package provides utilities for extracting user information:
 - `SupabaseAuthAdapter` - For Supabase JWT token validation (server-side)
 - `MockAuthAdapter` - For testing and development
 
-See [`packages/next/README.md`](_media/README.md) and [`packages/auth/README.md`](_media/README-1.md) for detailed documentation.
+See the [Next.js package README](https://github.com/solvapay/solvapay-sdk/tree/dev/packages/next/README.md) and [Auth package README](https://github.com/solvapay/solvapay-sdk/tree/dev/packages/auth/README.md) for detailed documentation.
 
 ## 📚 Examples
 
-The [`examples/`](_media/examples) directory contains working demonstrations:
+The [examples directory](https://github.com/solvapay/solvapay-sdk/tree/dev/examples) contains working demonstrations:
 
-### 🚀 [express-basic](_media/express-basic)
+### 🚀 [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic)
 Simple Express.js API with paywall protection:
 - Protect CRUD endpoints with `.http()` adapter
 - Customer identification via headers
@@ -292,7 +292,7 @@ Simple Express.js API with paywall protection:
 cd examples/express-basic && pnpm dev
 ```
 
-### 💳 [checkout-demo](_media/checkout-demo)
+### 💳 [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo)
 Full-featured Next.js checkout flow:
 - Complete subscription management using `SolvaPayProvider`
 - Plan selection UI with `PaymentForm` and `usePlans` hook
@@ -305,7 +305,7 @@ Full-featured Next.js checkout flow:
 cd examples/checkout-demo && pnpm dev
 ```
 
-### 🤖 [nextjs-openai-custom-gpt-actions](_media/nextjs-openai-custom-gpt-actions)
+### 🤖 [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions)
 OpenAI Custom GPT Actions integration:
 - OAuth 2.0 authentication flow
 - Paywall-protected API endpoints
@@ -316,7 +316,7 @@ OpenAI Custom GPT Actions integration:
 cd examples/nextjs-openai-custom-gpt-actions && pnpm dev
 ```
 
-### 🔌 [mcp-basic](_media/mcp-basic)
+### 🔌 [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic)
 Model Context Protocol server with paywall:
 - Protect MCP tools with `.mcp()` adapter
 - Integration with Claude Desktop and other MCP clients
@@ -326,7 +326,7 @@ Model Context Protocol server with paywall:
 cd examples/mcp-basic && pnpm dev
 ```
 
-See [`examples/README.md`](_media/README-2.md) for detailed setup instructions.
+See the [examples README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/README.md) for detailed setup instructions.
 
 ## 🏗️ Architecture
 
@@ -351,7 +351,7 @@ pnpm build
 pnpm test
 ```
 
-**💡 Hot Reloading**: For a better development experience, see [`docs/HOT_RELOADING_SETUP.md`](./docs/HOT_RELOADING_SETUP.md) to set up automatic rebuilds and hot reloading when working with SDK packages and examples.
+**💡 Hot Reloading**: For a better development experience, see the [Hot Reloading Setup guide](https://github.com/solvapay/solvapay-sdk/tree/dev/docs/HOT_RELOADING_SETUP.md) to set up automatic rebuilds and hot reloading when working with SDK packages and examples.
 
 ### Branching & Publishing
 
@@ -365,14 +365,14 @@ pnpm version:bump:minor  # 0.1.x → 0.2.0
 pnpm version:bump:major  # 0.x.x → 1.0.0
 ```
 
-See [`../publishing.md`](../publishing.md) for complete publishing workflow and [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) for development guidelines.
+See [`../publishing.md`](../publishing.md) for complete publishing workflow and the [CONTRIBUTING guide](https://github.com/solvapay/solvapay-sdk/blob/dev/CONTRIBUTING.md) for development guidelines.
 
 ## 📖 Documentation
 
 - **[Architecture](../guides/architecture.md)** - Package design and structure
-- **[Contributing](../../CONTRIBUTING.md)** - Development guidelines
+- **[Contributing](https://github.com/solvapay/solvapay-sdk/blob/dev/CONTRIBUTING.md)** - Development guidelines
 - **[Publishing](../publishing.md)** - Publishing and release process
-- **[Hot Reloading Setup](./docs/HOT_RELOADING_SETUP.md)** - Set up automatic rebuilds and hot reloading
+- **[Hot Reloading Setup](https://github.com/solvapay/solvapay-sdk/tree/dev/docs/HOT_RELOADING_SETUP.md)** - Set up automatic rebuilds and hot reloading
 
 ## 🔒 Security
 

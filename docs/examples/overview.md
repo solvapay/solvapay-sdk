@@ -16,11 +16,11 @@ This document provides an overview of all available examples in the SolvaPay SDK
 
 | Example | Framework | Checkout Type | Auth | Use Case | Complexity |
 |---------|-----------|---------------|------|----------|------------|
-| [express-basic](./../../examples/express-basic/README.md) | Express.js | N/A (Paywall only) | Header-based | API protection | ⭐ Simple |
-| [checkout-demo](./../../examples/checkout-demo/README.md) | Next.js | Embedded | Supabase | Full payment flow | ⭐⭐⭐ Advanced |
-| [hosted-checkout-demo](./../../examples/hosted-checkout-demo/README.md) | Next.js | Hosted | Supabase | Hosted checkout | ⭐⭐ Intermediate |
-| [mcp-basic](./../../examples/mcp-basic/README.md) | MCP Server | N/A (Paywall only) | Header-based | MCP tool protection | ⭐ Simple |
-| [nextjs-openai-custom-gpt-actions](./../../examples/nextjs-openai-custom-gpt-actions/README.md) | Next.js | Hosted | Supabase + OAuth | OpenAI GPT Actions | ⭐⭐⭐ Advanced |
+| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic) | Express.js | N/A (Paywall only) | Header-based | API protection | ⭐ Simple |
+| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo) | Next.js | Embedded | Supabase | Full payment flow | ⭐⭐⭐ Advanced |
+| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo) | Next.js | Hosted | Supabase | Hosted checkout | ⭐⭐ Intermediate |
+| [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic) | MCP Server | N/A (Paywall only) | Header-based | MCP tool protection | ⭐ Simple |
+| [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions) | Next.js | Hosted | Supabase + OAuth | OpenAI GPT Actions | ⭐⭐⭐ Advanced |
 
 ## Available Examples
 
@@ -40,7 +40,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Simple API protection patterns
 - Testing paywall behavior locally
 
-**Documentation**: [express-basic README](./../../examples/express-basic/README.md)
+**Documentation**: [express-basic README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic/README.md)
 
 ---
 
@@ -62,7 +62,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Embedded checkout flows
 - Learning React component patterns
 
-**Documentation**: [checkout-demo README](./../../examples/checkout-demo/README.md)
+**Documentation**: [checkout-demo README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo/README.md)
 
 ---
 
@@ -84,7 +84,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Standard checkout experience
 - Similar to Stripe Checkout pattern
 
-**Documentation**: [hosted-checkout-demo README](./../../examples/hosted-checkout-demo/README.md)
+**Documentation**: [hosted-checkout-demo README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo/README.md)
 
 ---
 
@@ -105,7 +105,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Tool access control
 - Usage-based pricing models
 
-**Documentation**: [mcp-basic README](./../../examples/mcp-basic/README.md)
+**Documentation**: [mcp-basic README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic/README.md)
 
 ---
 
@@ -127,7 +127,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Production-ready applications
 - Complex authentication flows
 
-**Documentation**: [nextjs-openai-custom-gpt-actions README](./../../examples/nextjs-openai-custom-gpt-actions/README.md)
+**Documentation**: [nextjs-openai-custom-gpt-actions README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions/README.md)
 
 ---
 

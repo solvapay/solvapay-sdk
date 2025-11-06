@@ -79,7 +79,7 @@ app.post('/webhooks/solvapay', express.raw({ type: 'application/json' }), (req, 
 
 ## See
 
-[Webhook Guide](../guides/webhooks.md) for complete webhook handling examples
+[Webhook Guide](../../../../guides/webhooks.md) for complete webhook handling examples
 
 ## Since
 
