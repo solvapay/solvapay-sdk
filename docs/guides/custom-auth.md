@@ -543,5 +543,5 @@ class OAuthAdapter implements AuthAdapter {
 - [Next.js Integration Guide](./nextjs.md) - Use adapters with Next.js
 - [React Integration Guide](./react.md) - Use adapters with React
 - [Error Handling Strategies](./error-handling.md) - Handle authentication errors
-- [API Reference](/api/auth/) - Full API documentation
+- [API Reference](../api/auth/src/README.md) - Full API documentation
 

@@ -629,5 +629,5 @@ console.log(stats);
 - [React Integration Guide](./react.md) - Learn about React components and hooks
 - [Error Handling Strategies](./error-handling.md) - Advanced error handling patterns
 - [Performance Optimization](./performance.md) - Optimize your Next.js app
-- [API Reference](/api/next/) - Full API documentation
+- [API Reference](../api/next/src/README.md) - Full API documentation
 

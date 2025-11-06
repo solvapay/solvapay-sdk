@@ -141,7 +141,7 @@ The SDK consists of **6 published packages** focused on clear use cases:
 * **Test utilities**: Shared helpers in `@solvapay/test-utils` (private package)
 * **Demo services**: Example service implementations in `@solvapay/demo-services` (private package)
 
-See [`packages/server/__tests__/`](../../packages/server/__tests__/) for comprehensive test examples.
+See [testing guide](./testing.md) for comprehensive test examples.
 
 ## Example Imports
 

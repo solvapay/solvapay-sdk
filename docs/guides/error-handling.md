@@ -620,5 +620,5 @@ export async function POST(request: NextRequest) {
 - [Express.js Integration Guide](./express.md) - Learn Express integration
 - [Next.js Integration Guide](./nextjs.md) - Learn Next.js integration
 - [Custom Authentication Adapters](./custom-auth.md) - Handle auth errors
-- [API Reference](/api/server/) - Full API documentation
+- [API Reference](../api/server/src/README.md) - Full API documentation
 

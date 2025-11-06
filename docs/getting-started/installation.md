@@ -214,5 +214,5 @@ See [MCP Server Integration Guide](../guides/mcp.md) for detailed setup.
 
 - [Quick Start Guide](./quick-start.md) - Get up and running in 5 minutes
 - [Core Concepts](./core-concepts.md) - Understand the key concepts
-- [Framework Guides](../guides/) - Framework-specific integration guides
+- [Framework Guides](../guides/express.md) - Framework-specific integration guides
 

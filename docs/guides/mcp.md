@@ -670,5 +670,5 @@ async function createTask(args: any) {
 - [Express.js Integration Guide](./express.md) - Learn HTTP framework integration
 - [Error Handling Strategies](./error-handling.md) - Advanced error handling patterns
 - [Custom Authentication Adapters](./custom-auth.md) - Build custom auth adapters
-- [API Reference](/api/server/) - Full API documentation
+- [API Reference](../api/server/src/README.md) - Full API documentation
 

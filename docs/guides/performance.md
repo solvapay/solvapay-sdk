@@ -327,5 +327,5 @@ async function batchCustomerLookups(userIds: string[]) {
 
 - [Testing with Stub Mode](./testing.md) - Test performance
 - [Next.js Integration Guide](./nextjs.md) - Next.js performance tips
-- [API Reference](/api/server/) - Full API documentation
+- [API Reference](../api/server/src/README.md) - Full API documentation
 

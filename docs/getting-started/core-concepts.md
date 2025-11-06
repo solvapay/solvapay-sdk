@@ -269,6 +269,6 @@ Usage limits are enforced automatically:
 ## Next Steps
 
 - [Quick Start](./quick-start.md) - Try the examples
-- [Framework Guides](../guides/) - Framework-specific integration
+- [Framework Guides](../guides/express.md) - Framework-specific integration
 - [API Reference](../api/) - Complete API documentation
 

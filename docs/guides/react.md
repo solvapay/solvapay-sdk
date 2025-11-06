@@ -712,5 +712,5 @@ SolvaPay components are headless and don't include default styles. Style them to
 - [Next.js Integration Guide](./nextjs.md) - Learn Next.js-specific integration
 - [Custom Authentication Adapters](./custom-auth.md) - Build custom auth adapters
 - [Error Handling Strategies](./error-handling.md) - Advanced error handling
-- [API Reference](/api/react/) - Full API documentation
+- [API Reference](../api/react/src/README.md) - Full API documentation
 

@@ -289,6 +289,6 @@ function Checkout() {
 ## Next Steps
 
 - [Core Concepts](./core-concepts.md) - Understand agents, plans, and the paywall flow
-- [Framework Guides](../guides/) - Detailed integration guides for your framework
+- [Framework Guides](../guides/express.md) - Detailed integration guides for your framework
 - [API Reference](../api/) - Complete API documentation
 
