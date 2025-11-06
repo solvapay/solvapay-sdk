@@ -384,9 +384,9 @@ Two checkout approaches are demonstrated:
 - [Webhook Handling](../guides/webhooks.md)
 
 ### API Reference
-- [Server SDK API Reference](../api/server/)
-- [React SDK API Reference](../api/react/)
-- [Next.js SDK API Reference](../api/next/)
+- [Server SDK API Reference](../api/server/src/)
+- [React SDK API Reference](../api/react/src/)
+- [Next.js SDK API Reference](../api/next/src/)
 
 ## Troubleshooting
 
