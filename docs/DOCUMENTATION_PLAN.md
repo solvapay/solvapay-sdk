@@ -806,7 +806,7 @@ solvapay-org/
 ├── solvapay-docs/              # Central documentation repo
 │   ├── docs-site/              # Docusaurus site
 │   └── docs/                   # General documentation
-├── solvapay-sdk-typescript/    # TypeScript SDK repo
+├── solvapay-sdk/    # TypeScript SDK repo
 │   ├── docs/                   # TypeScript-specific docs
 │   └── README.md               # SDK overview
 ├── solvapay-sdk-python/        # Python SDK repo (later)
@@ -852,7 +852,7 @@ This approach:
    cd solvapay-docs
    
    # Add TypeScript SDK as submodule
-   git submodule add https://github.com/solvapay/solvapay-sdk-typescript.git sdks/typescript
+   git submodule add https://github.com/solvapay/solvapay-sdk.git sdks/typescript
    
    # Add Python SDK as submodule
    git submodule add https://github.com/solvapay/solvapay-sdk-python.git sdks/python
@@ -901,7 +901,7 @@ This approach:
            path: 'sdks/typescript/docs',
            routeBasePath: 'sdks/typescript',
            sidebarPath: './sidebars-typescript.ts',
-           editUrl: 'https://github.com/solvapay/solvapay-sdk-typescript/tree/main/docs/',
+           editUrl: 'https://github.com/solvapay/solvapay-sdk/tree/main/docs/',
          },
        ],
        // Python SDK docs (later)
@@ -1085,7 +1085,7 @@ async function fetchFromGitHub(owner, repo, path, branch = 'main') {
 
 async function main() {
   // Fetch TypeScript SDK docs
-  const tsDocs = await fetchFromGitHub('solvapay', 'solvapay-sdk-typescript', 'docs');
+  const tsDocs = await fetchFromGitHub('solvapay', 'solvapay-sdk', 'docs');
   fs.mkdirSync('docs-site/sdks/typescript/docs', { recursive: true });
   // Process and save docs...
   
@@ -1139,7 +1139,7 @@ solvapay-monorepo/
 **TypeScript SDK Structure:**
 
 ```
-solvapay-sdk-typescript/
+solvapay-sdk/
 ├── README.md                    # Overview, quick start, badges
 ├── docs/
 │   ├── intro.md                 # SDK introduction
@@ -2174,7 +2174,7 @@ npx create-docusaurus@latest docs-site classic --typescript
 cd solvapay-docs
 
 # Add TypeScript SDK as submodule
-git submodule add https://github.com/solvapay/solvapay-sdk-typescript.git sdks/typescript
+git submodule add https://github.com/solvapay/solvapay-sdk.git sdks/typescript
 
 # Add Python SDK as submodule (later)
 # git submodule add https://github.com/solvapay/solvapay-sdk-python.git sdks/python
@@ -2185,7 +2185,7 @@ git submodule add https://github.com/solvapay/solvapay-sdk-typescript.git sdks/t
 
 **Note:** If repositories are private, you may need to use SSH URLs:
 ```bash
-git submodule add git@github.com:solvapay/solvapay-sdk-typescript.git sdks/typescript
+git submodule add git@github.com:solvapay/solvapay-sdk.git sdks/typescript
 ```
 
 ### Step 5: Configure Docusaurus
@@ -2256,9 +2256,9 @@ Choose your preferred language:
 
 **In each SDK repository, create `docs/` directory:**
 
-For TypeScript SDK (`solvapay-sdk-typescript/docs/`):
+For TypeScript SDK (`solvapay-sdk/docs/`):
 ```bash
-cd solvapay-sdk-typescript
+cd solvapay-sdk
 mkdir -p docs/api-reference docs/guides docs/examples
 
 # Create intro file
@@ -2453,7 +2453,7 @@ cd solvapay-docs
 npx create-docusaurus@latest docs-site classic --typescript
 
 # 3. Add SDK submodules
-git submodule add https://github.com/solvapay/solvapay-sdk-typescript.git sdks/typescript
+git submodule add https://github.com/solvapay/solvapay-sdk.git sdks/typescript
 
 # 4. Install dependencies
 cd docs-site
@@ -2585,7 +2585,7 @@ solvapay-docs/
 ### SDK Repository Structure (Each SDK)
 
 ```
-solvapay-sdk-typescript/
+solvapay-sdk/
 ├── docs/
 │   ├── intro.md                      # SDK introduction
 │   ├── installation.md               # Installation guide

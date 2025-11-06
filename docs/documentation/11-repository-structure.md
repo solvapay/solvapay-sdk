@@ -46,7 +46,7 @@ solvapay-docs/
 ## SDK Repository Structure (Each SDK)
 
 ```
-solvapay-sdk-typescript/
+solvapay-sdk/
 ├── docs/
 │   ├── intro.md                      # SDK introduction
 │   ├── installation.md               # Installation guide

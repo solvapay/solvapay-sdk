@@ -71,10 +71,10 @@ cd /Users/tommy/projects/solvapay/solvapay-docs
 
 # Add TypeScript SDK as submodule
 # Use the dev branch or main branch depending on where you pushed
-git submodule add -b dev https://github.com/solvapay/solvapay-sdk-typescript.git sdks/typescript
+git submodule add -b dev https://github.com/solvapay/solvapay-sdk.git sdks/typescript
 
 # Or if using SSH:
-git submodule add -b dev git@github.com:solvapay/solvapay-sdk-typescript.git sdks/typescript
+git submodule add -b dev git@github.com:solvapay/solvapay-sdk.git sdks/typescript
 
 # Initialize submodule
 git submodule update --init --recursive
@@ -135,7 +135,7 @@ const config: Config = {
         path: 'sdks/typescript/docs',
         routeBasePath: 'sdks/typescript',
         sidebarPath: './sidebars-typescript.ts',
-        editUrl: 'https://github.com/solvapay/solvapay-sdk-typescript/tree/dev/docs/',
+        editUrl: 'https://github.com/solvapay/solvapay-sdk/tree/dev/docs/',
       },
     ],
   ],
@@ -353,7 +353,7 @@ Choose your preferred language:
 
 The TypeScript SDK repo already has its docs in `docs/`, but we need to ensure the structure matches what Docusaurus expects.
 
-**In the TypeScript SDK repo** (`solvapay-sdk-typescript/docs/`), ensure you have:
+**In the TypeScript SDK repo** (`solvapay-sdk/docs/`), ensure you have:
 
 ```
 docs/

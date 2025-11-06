@@ -11,7 +11,7 @@ solvapay-org/
 ├── solvapay-docs/              # Central documentation repo
 │   ├── docs-site/              # Docusaurus site
 │   └── docs/                   # General documentation
-├── solvapay-sdk-typescript/    # TypeScript SDK repo
+├── solvapay-sdk/    # TypeScript SDK repo
 │   ├── docs/                   # TypeScript-specific docs
 │   └── README.md               # SDK overview
 ├── solvapay-sdk-python/        # Python SDK repo (later)
@@ -57,7 +57,7 @@ This approach:
    cd solvapay-docs
    
    # Add TypeScript SDK as submodule
-   git submodule add https://github.com/solvapay/solvapay-sdk-typescript.git sdks/typescript
+   git submodule add https://github.com/solvapay/solvapay-sdk.git sdks/typescript
    
    # Add Python SDK as submodule
    git submodule add https://github.com/solvapay/solvapay-sdk-python.git sdks/python
@@ -132,7 +132,7 @@ solvapay-monorepo/
 **TypeScript SDK Structure:**
 
 ```
-solvapay-sdk-typescript/
+solvapay-sdk/
 ├── README.md                    # Overview, quick start, badges
 ├── docs/
 │   ├── intro.md                 # SDK introduction
