@@ -60,7 +60,7 @@ The SDK consists of **6 published packages**:
 - **`@solvapay/auth`** - Authentication adapters and utilities for extracting user IDs from requests
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
 
-See [`docs/architecture.md`](./docs/architecture.md) for detailed package design and boundaries.
+See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed package design and boundaries.
 
 ## 🎯 Usage
 
@@ -328,7 +328,7 @@ See [`examples/README.md`](./examples/README.md) for detailed setup instructions
 
 This is a **monorepo** with 5 published packages built using Turborepo, tsup, and pnpm workspaces.
 
-See [`docs/architecture.md`](./docs/architecture.md) for:
+See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for:
 - Detailed package design and boundaries
 - Runtime detection strategy (Node vs Edge)
 - Build system and testing approach
@@ -361,12 +361,12 @@ pnpm version:bump:minor  # 0.1.x → 0.2.0
 pnpm version:bump:major  # 0.x.x → 1.0.0
 ```
 
-See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflow and [`docs/contributing.md`](./docs/contributing.md) for development guidelines.
+See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflow and [`CONTRIBUTING.md`](./CONTRIBUTING.md) for development guidelines.
 
 ## 📖 Documentation
 
-- **[Architecture](./docs/architecture.md)** - Package design and structure
-- **[Contributing](./docs/contributing.md)** - Development guidelines
+- **[Architecture](./docs/guides/architecture.md)** - Package design and structure
+- **[Contributing](./CONTRIBUTING.md)** - Development guidelines
 - **[Publishing](./docs/publishing.md)** - Publishing and release process
 - **[Hot Reloading Setup](./docs/HOT_RELOADING_SETUP.md)** - Set up automatic rebuilds and hot reloading
 

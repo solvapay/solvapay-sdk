@@ -273,32 +273,50 @@ function getSharedDeduplicator(options?: RequestDeduplicationOptions) {
 }
 
 /**
- * Check user subscription status
+ * Check user subscription status with automatic deduplication and caching.
  * 
- * This helper function:
+ * This Next.js helper function provides optimized subscription checking with:
+ * - Automatic request deduplication (concurrent requests share the same promise)
+ * - Short-term caching (2 seconds) to prevent duplicate sequential requests
+ * - Fast path optimization using cached customer references from client
+ * - Automatic customer creation if needed
+ * 
+ * The function:
  * 1. Extracts user ID from request (via requireUserId from @solvapay/auth)
- * 2. Gets user email and name from Supabase JWT token
- * 3. Ensures customer exists in SolvaPay
- * 4. Returns customer subscription information
- * 5. Handles deduplication automatically
+ * 2. Gets user email and name from Supabase JWT token (if available)
+ * 3. Validates cached customer reference (if provided via header)
+ * 4. Ensures customer exists in SolvaPay backend
+ * 5. Returns customer subscription information
  * 
- * @param request - Next.js request object (NextRequest extends Request, so Request is accepted)
+ * @param request - Next.js request object (NextRequest extends Request)
  * @param options - Configuration options
- * @returns Subscription check result or error response
+ * @param options.deduplication - Request deduplication options
+ * @param options.deduplication.cacheTTL - Cache TTL in milliseconds (default: 2000)
+ * @param options.deduplication.maxCacheSize - Maximum cache size (default: 1000)
+ * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
+ * @param options.includeEmail - Whether to include email in response (default: true)
+ * @param options.includeName - Whether to include name in response (default: true)
+ * @returns Subscription check result with customer data and subscriptions, or NextResponse error
  * 
  * @example
  * ```typescript
- * import { NextRequest } from 'next/server';
+ * import { NextRequest, NextResponse } from 'next/server';
  * import { checkSubscription } from '@solvapay/next';
  * 
  * export async function GET(request: NextRequest) {
  *   const result = await checkSubscription(request);
+ *   
  *   if (result instanceof NextResponse) {
  *     return result; // Error response
  *   }
+ *   
  *   return NextResponse.json(result);
  * }
  * ```
+ * 
+ * @see {@link clearSubscriptionCache} for cache management
+ * @see {@link getSubscriptionCacheStats} for cache monitoring
+ * @since 1.0.0
  */
 export async function checkSubscription(
   request: Request,
@@ -442,12 +460,26 @@ export async function checkSubscription(
 }
 
 /**
- * Clear subscription cache for a specific user
+ * Clear subscription cache for a specific user.
  * 
- * Useful when you know subscription status has changed
- * (e.g., after a successful checkout or subscription update)
+ * Useful when you know subscription status has changed (e.g., after a successful
+ * checkout, subscription update, or cancellation). This forces the next
+ * `checkSubscription()` call to fetch fresh data from the backend.
  * 
  * @param userId - User ID to clear cache for
+ * 
+ * @example
+ * ```typescript
+ * import { clearSubscriptionCache } from '@solvapay/next';
+ * 
+ * // After successful payment
+ * await processPayment(request, body);
+ * clearSubscriptionCache(userId); // Force refresh on next check
+ * ```
+ * 
+ * @see {@link checkSubscription} for subscription checking
+ * @see {@link clearAllSubscriptionCache} to clear all cache entries
+ * @since 1.0.0
  */
 export function clearSubscriptionCache(userId: string): void {
   const deduplicator = getSharedDeduplicator();
@@ -455,9 +487,25 @@ export function clearSubscriptionCache(userId: string): void {
 }
 
 /**
- * Clear all subscription cache entries
+ * Clear all subscription cache entries.
  * 
- * Useful for testing or when you need to force fresh lookups
+ * Useful for testing, debugging, or when you need to force fresh lookups
+ * for all users. This clears both the in-flight request cache and the
+ * result cache.
+ * 
+ * @example
+ * ```typescript
+ * import { clearAllSubscriptionCache } from '@solvapay/next';
+ * 
+ * // In a test setup
+ * beforeEach(() => {
+ *   clearAllSubscriptionCache();
+ * });
+ * ```
+ * 
+ * @see {@link clearSubscriptionCache} to clear cache for a specific user
+ * @see {@link getSubscriptionCacheStats} for cache monitoring
+ * @since 1.0.0
  */
 export function clearAllSubscriptionCache(): void {
   const deduplicator = getSharedDeduplicator();
@@ -465,11 +513,34 @@ export function clearAllSubscriptionCache(): void {
 }
 
 /**
- * Get subscription cache statistics
+ * Get subscription cache statistics for monitoring and debugging.
  * 
- * Useful for monitoring and debugging
+ * Returns the current state of the subscription cache, including:
+ * - Number of in-flight requests (being deduplicated)
+ * - Number of cached results
  * 
- * @returns Cache statistics
+ * @returns Cache statistics object
+ * @returns inFlight - Number of currently in-flight requests
+ * @returns cached - Number of cached results
+ * 
+ * @example
+ * ```typescript
+ * import { getSubscriptionCacheStats } from '@solvapay/next';
+ * 
+ * // In a monitoring endpoint
+ * export async function GET() {
+ *   const stats = getSubscriptionCacheStats();
+ *   return Response.json({
+ *     cache: {
+ *       inFlight: stats.inFlight,
+ *       cached: stats.cached
+ *     }
+ *   });
+ * }
+ * ```
+ * 
+ * @see {@link checkSubscription} for subscription checking
+ * @since 1.0.0
  */
 export function getSubscriptionCacheStats(): { inFlight: number; cached: number } {
   const deduplicator = getSharedDeduplicator();

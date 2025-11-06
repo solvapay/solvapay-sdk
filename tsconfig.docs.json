@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "packages/server/src/**/*",
+    "packages/react/src/**/*",
+    "packages/next/src/**/*",
+    "packages/auth/src/**/*",
+    "packages/react-supabase/src/**/*",
+    "packages/core/src/**/*"
+  ],
+  "exclude": [
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/node_modules/**",
+    "**/dist/**"
+  ]
+}
+

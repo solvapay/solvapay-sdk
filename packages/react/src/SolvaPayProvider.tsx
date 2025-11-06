@@ -113,42 +113,83 @@ function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
 }
 
 /**
- * SolvaPay Provider - Headless Context Provider
+ * SolvaPay Provider - Headless Context Provider for React.
  * 
- * Provides subscription state and payment methods to child components.
- * Supports zero-config with sensible defaults, or full customization.
+ * Provides subscription state, payment methods, and customer data to child components
+ * via React Context. This is the root component that must wrap your app to use
+ * SolvaPay React hooks and components.
+ * 
+ * Features:
+ * - Automatic subscription status checking
+ * - Customer reference caching in localStorage
+ * - Payment intent creation and processing
+ * - Authentication adapter support (Supabase, custom, etc.)
+ * - Zero-config with sensible defaults, or full customization
+ * 
+ * @param props - Provider configuration
+ * @param props.config - Configuration object for API routes and authentication
+ * @param props.config.api - API route configuration (optional, uses defaults if not provided)
+ * @param props.config.api.checkSubscription - Endpoint for checking subscription status (default: '/api/check-subscription')
+ * @param props.config.api.createPayment - Endpoint for creating payment intents (default: '/api/create-payment-intent')
+ * @param props.config.api.processPayment - Endpoint for processing payments (default: '/api/process-payment')
+ * @param props.config.auth - Authentication configuration (optional)
+ * @param props.config.auth.adapter - Auth adapter for extracting user ID and token
+ * @param props.children - React children components
  * 
  * @example
  * ```tsx
+ * import { SolvaPayProvider } from '@solvapay/react';
+ * 
  * // Zero config (uses defaults)
- * <SolvaPayProvider>
- *   <App />
- * </SolvaPayProvider>
+ * function App() {
+ *   return (
+ *     <SolvaPayProvider>
+ *       <YourApp />
+ *     </SolvaPayProvider>
+ *   );
+ * }
  * 
  * // Custom API routes
- * <SolvaPayProvider
- *   config={{
- *     api: {
- *       checkSubscription: '/custom/api/subscription',
- *       createPayment: '/custom/api/payment'
- *     }
- *   }}
- * >
- *   <App />
- * </SolvaPayProvider>
+ * function App() {
+ *   return (
+ *     <SolvaPayProvider
+ *       config={{
+ *         api: {
+ *           checkSubscription: '/custom/api/subscription',
+ *           createPayment: '/custom/api/payment'
+ *         }
+ *       }}
+ *     >
+ *       <YourApp />
+ *     </SolvaPayProvider>
+ *   );
+ * }
  * 
- * // Fully custom
- * <SolvaPayProvider
- *   checkSubscription={async () => {
- *     return await myCustomAPI.checkSubscription();
- *   }}
- *   createPayment={async ({ planRef, agentRef }) => {
- *     return await myCustomAPI.createPayment(planRef, agentRef);
- *   }}
- * >
- *   <App />
- * </SolvaPayProvider>
+ * // With Supabase auth adapter
+ * import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+ * 
+ * function App() {
+ *   const adapter = createSupabaseAuthAdapter({
+ *     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+ *     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+ *   });
+ * 
+ *   return (
+ *     <SolvaPayProvider
+ *       config={{
+ *         auth: { adapter }
+ *       }}
+ *     >
+ *       <YourApp />
+ *     </SolvaPayProvider>
+ *   );
+ * }
  * ```
+ * 
+ * @see {@link useSubscription} for accessing subscription data
+ * @see {@link useCheckout} for payment checkout flow
+ * @see {@link useSolvaPay} for accessing provider methods
+ * @since 1.0.0
  */
 export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   config,

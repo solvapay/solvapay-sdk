@@ -1,0 +1,43 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "tsconfig": "tsconfig.docs.json",
+  "entryPoints": [
+    "packages/server/src/index.ts",
+    "packages/react/src/index.tsx",
+    "packages/next/src/index.ts",
+    "packages/auth/src/index.ts",
+    "packages/react-supabase/src/index.ts",
+    "packages/core/src/index.ts"
+  ],
+  "out": "docs/api",
+  "readme": "README.md",
+  "name": "SolvaPay SDK",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "exclude": [
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/node_modules/**"
+  ],
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Server",
+    "React",
+    "Next.js",
+    "Auth",
+    "*"
+  ],
+  "plugin": [
+    "typedoc-plugin-markdown"
+  ],
+  "theme": "default",
+  "githubPages": false,
+  "gitRevision": "main",
+  "gitRemote": "origin"
+}
+

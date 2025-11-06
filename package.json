@@ -21,7 +21,10 @@
     "publish:packages": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --access public --no-git-checks --no-provenance",
     "publish:preview": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --tag preview --access public --no-git-checks --no-provenance",
     "publish:preview:dry-run": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --tag preview --access public --no-git-checks --no-provenance --dry-run",
-    "tag:latest": "tsx scripts/tag-as-latest.ts"
+    "tag:latest": "tsx scripts/tag-as-latest.ts",
+    "docs:build": "typedoc",
+    "docs:watch": "typedoc --watch",
+    "docs:check": "typedoc --json docs/api.json"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
@@ -39,6 +42,8 @@
     "tsup": "^8.0.1",
     "tsx": "^4.19.0",
     "turbo": "^2.0.6",
+    "typedoc": "^0.28.14",
+    "typedoc-plugin-markdown": "^4.9.0",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5",
     "zod": "^3.23.8"

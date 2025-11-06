@@ -12,13 +12,41 @@ import { handleRouteError, isErrorResult } from './error';
 import { getAuthenticatedUserCore } from './auth';
 
 /**
- * Sync customer - ensure customer exists in SolvaPay backend
+ * Sync customer with SolvaPay backend (ensure customer exists).
  * 
- * Uses externalRef for consistent lookup and prevents duplicate customers.
+ * This helper ensures a customer exists in the SolvaPay backend by:
+ * 1. Extracting authenticated user information from the request
+ * 2. Creating or retrieving the customer using the user ID as external reference
+ * 3. Syncing customer data (email, name) if provided
  * 
- * @param request - Standard Web API Request
+ * Uses `externalRef` for consistent lookup and prevents duplicate customers.
+ * The returned customer reference is the SolvaPay backend customer ID.
+ * 
+ * @param request - Standard Web API Request object
  * @param options - Configuration options
- * @returns Customer reference or error result
+ * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
+ * @param options.includeEmail - Whether to include email in customer data (default: true)
+ * @param options.includeName - Whether to include name in customer data (default: true)
+ * @returns Customer reference (backend customer ID) or error result
+ * 
+ * @example
+ * ```typescript
+ * // In an API route handler
+ * export async function POST(request: Request) {
+ *   const customerResult = await syncCustomerCore(request);
+ *   
+ *   if (isErrorResult(customerResult)) {
+ *     return Response.json(customerResult, { status: customerResult.status });
+ *   }
+ *   
+ *   const customerRef = customerResult;
+ *   // Use customer reference...
+ * }
+ * ```
+ * 
+ * @see {@link getAuthenticatedUserCore} for user extraction
+ * @see {@link ErrorResult} for error handling
+ * @since 1.0.0
  */
 export async function syncCustomerCore(
   request: Request,

@@ -25,7 +25,47 @@ export type {
   SolvaPayClient,
 };
 
+/**
+ * Error thrown when a paywall is triggered (subscription required or usage limit exceeded).
+ * 
+ * This error is automatically thrown by the paywall protection system when:
+ * - Customer doesn't have required subscription
+ * - Customer has exceeded usage limits
+ * - Customer needs to upgrade their plan
+ * 
+ * The error includes structured content with checkout URLs and metadata for
+ * building custom paywall UIs.
+ * 
+ * @example
+ * ```typescript
+ * import { PaywallError } from '@solvapay/server';
+ * 
+ * try {
+ *   const result = await payable.http(createTask)(req, res);
+ *   return result;
+ * } catch (error) {
+ *   if (error instanceof PaywallError) {
+ *     // Custom paywall handling
+ *     return res.status(402).json({
+ *       error: error.message,
+ *       checkoutUrl: error.structuredContent.checkoutUrl,
+ *       // Additional metadata available in error.structuredContent
+ *     });
+ *   }
+ *   throw error;
+ * }
+ * ```
+ * 
+ * @see {@link PaywallStructuredContent} for the structured content format
+ * @since 1.0.0
+ */
 export class PaywallError extends Error {
+  /**
+   * Creates a new PaywallError instance.
+   * 
+   * @param message - Error message
+   * @param structuredContent - Structured content with checkout URLs and metadata
+   */
   constructor(
     message: string,
     public structuredContent: PaywallStructuredContent

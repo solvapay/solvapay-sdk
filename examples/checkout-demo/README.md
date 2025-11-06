@@ -2,6 +2,23 @@
 
 Complete payment integration demo showcasing SolvaPay's headless React components with locked content and subscription gates.
 
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Running the Demo](#running-the-demo)
+- [Demo Flow](#demo-flow)
+- [Testing Payments](#testing-payments)
+- [How It Works](#how-it-works)
+- [Project Structure](#project-structure)
+- [Key Concepts](#key-concepts)
+- [Environment Variables](#environment-variables)
+- [Customization](#customization)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Related Documentation](#related-documentation)
+
 ## Features
 
 - 🎯 **Headless Components**: Fully flexible, unstyled components with render props
@@ -515,26 +532,171 @@ All components accept any styling approach:
 </UpgradeButton>
 ```
 
+## Best Practices
+
+### 1. Provider Setup
+
+Always wrap your app with `SolvaPayProvider` at the root level:
+
+```tsx
+// app/layout.tsx
+<SolvaPayProvider
+  customerRef={customerId}
+  createPayment={handleCreatePayment}
+  checkSubscription={handleCheckSubscription}
+>
+  {children}
+</SolvaPayProvider>
+```
+
+### 2. Error Handling
+
+Handle errors in your API callbacks:
+
+```tsx
+const handleCreatePayment = async ({ planRef, customerRef }) => {
+  try {
+    const res = await fetch('/api/create-payment-intent', {
+      method: 'POST',
+      body: JSON.stringify({ planRef, customerRef, agentRef })
+    });
+    
+    if (!res.ok) {
+      throw new Error('Payment intent creation failed');
+    }
+    
+    return res.json();
+  } catch (error) {
+    console.error('Payment error:', error);
+    throw error; // Re-throw to let provider handle it
+  }
+};
+```
+
+### 3. Subscription Refetching
+
+Always refetch subscription after successful payment:
+
+```tsx
+const { refetch } = useSubscription();
+
+const handlePaymentSuccess = async () => {
+  await refetch(); // Update subscription status
+  // Navigate or show success message
+};
+```
+
+### 4. Loading States
+
+Use loading states from hooks:
+
+```tsx
+const { loading, subscriptions } = useSubscription();
+
+if (loading) {
+  return <Spinner />;
+}
+```
+
+### 5. Type Safety
+
+Use TypeScript types from the SDK:
+
+```tsx
+import type { SubscriptionStatus } from '@solvapay/react';
+
+const status: SubscriptionStatus = subscription.status;
+```
+
+### 6. Environment Variables
+
+Never commit `.env.local` files and document all required variables:
+
+```bash
+# .env.local (never commit)
+SOLVAPAY_SECRET_KEY=your_key_here
+SUPABASE_JWT_SECRET=your_secret_here
+```
+
 ## Troubleshooting
 
 ### "Missing SOLVAPAY_SECRET_KEY"
-- Ensure `.env.local` exists with your secret key
-- Restart the dev server after adding environment variables
+
+**Problem**: Error about missing secret key.
+
+**Solution**:
+1. Ensure `.env.local` exists in the example directory
+2. Copy from `env.example` if needed: `cp env.example .env.local`
+3. Add your SolvaPay secret key to `.env.local`
+4. Restart the dev server after adding environment variables
+5. Verify the variable name is exactly `SOLVAPAY_SECRET_KEY`
 
 ### "Payment intent creation failed"
-- Check your SolvaPay API key is valid
-- Verify the backend URL is correct
-- Check network tab for API errors
+
+**Problem**: Payment intent creation returns an error.
+
+**Solution**:
+1. Check your SolvaPay API key is valid in the dashboard
+2. Verify the backend URL is correct (`SOLVAPAY_API_BASE_URL`)
+3. Check network tab for API errors and status codes
+4. Verify agent and plan references match your dashboard
+5. Check server logs for detailed error messages
+6. Ensure API route is properly handling authentication
 
 ### Subscription not updating after payment
-- Check that `refetch()` is called after successful payment
-- Verify API returns proper subscription format
-- Check browser console for errors
+
+**Problem**: Payment succeeds but subscription status doesn't update.
+
+**Solution**:
+1. Check that `refetch()` is called after successful payment:
+   ```tsx
+   const { refetch } = useSubscription();
+   await refetch();
+   ```
+2. Verify API returns proper subscription format
+3. Check browser console for errors
+4. Verify customer reference matches between frontend and backend
+5. Check that webhook is configured (if using webhooks)
+6. Wait a few seconds and manually refetch
 
 ### Components not rendering
-- Ensure you're inside `<SolvaPayProvider>`
-- Check that hooks are called in functional components
-- Verify all required props are provided
+
+**Problem**: SolvaPay components don't appear or throw errors.
+
+**Solution**:
+1. Ensure you're inside `<SolvaPayProvider>`:
+   ```tsx
+   <SolvaPayProvider {...props}>
+     <YourComponent />
+   </SolvaPayProvider>
+   ```
+2. Check that hooks are called in functional components (not class components)
+3. Verify all required props are provided to provider
+4. Check browser console for React errors
+5. Verify customer reference is available
+
+### "Unauthorized" errors
+
+**Problem**: API routes return 401 Unauthorized.
+
+**Solution**:
+1. Verify Supabase credentials are correct
+2. Check that `SUPABASE_JWT_SECRET` matches your project settings
+3. Ensure middleware is properly extracting user ID
+4. Verify access token is being sent in Authorization header
+5. Check Supabase project has email/password auth enabled
+6. Review middleware logs for authentication errors
+
+### Payment form not appearing
+
+**Problem**: Clicking upgrade button doesn't show payment form.
+
+**Solution**:
+1. Check that `createPayment` callback is provided to provider
+2. Verify callback returns proper format with `clientSecret`
+3. Check browser console for errors
+4. Ensure Stripe publishable key is available
+5. Verify payment intent creation succeeds
 
 ### Google OAuth "redirect_uri_mismatch" Error (Error 400)
 
@@ -562,12 +724,31 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 - You'll need to add your production Supabase callback URL if different
 - Your app's callback URL (`https://yourdomain.com/auth/callback`) goes in Supabase dashboard Redirect URLs, not Google Cloud Console
 
-## Learn More
+## Related Documentation
 
-- [SolvaPay Documentation](https://docs.solvapay.com)
-- [Headless Components Pattern](https://www.patterns.dev/posts/headless-ui)
-- [Stripe Testing Documentation](https://stripe.com/docs/testing)
-- [Next.js Documentation](https://nextjs.org/docs)
+### Getting Started
+- [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
+- [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
+- [Quick Start Guide](../../docs/getting-started/quick-start.md) - Quick setup guide
+- [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
+
+### Framework Guides
+- [React Integration Guide](../../docs/guides/react.md) - Complete React integration guide
+- [Next.js Integration Guide](../../docs/guides/nextjs.md) - Next.js specific patterns
+- [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
+- [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
+
+### API Reference
+- [React SDK API Reference](../../docs/api/react/) - Complete React component documentation
+- [Server SDK API Reference](../../docs/api/server/) - Backend API documentation
+- [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
+
+### Additional Resources
+- [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
+- [Headless Components Pattern](https://www.patterns.dev/posts/headless-ui) - Headless UI patterns
+- [Stripe Testing Documentation](https://stripe.com/docs/testing) - Test card numbers
+- [Next.js Documentation](https://nextjs.org/docs) - Next.js framework docs
+- [GitHub Repository](https://github.com/solvapay/solvapay-sdk) - Source code and issues
 
 ## Support
 

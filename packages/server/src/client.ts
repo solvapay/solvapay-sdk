@@ -26,20 +26,38 @@ export type ServerClientOptions = {
 };
 
 /**
- * Creates a SolvaPay API client that implements the full SolvaPayClient
- * for server-side paywall and usage tracking operations.
+ * Creates a SolvaPay API client that implements the full SolvaPayClient interface.
  * 
- * @param opts - Configuration options including API key and optional base URL
+ * This function creates a low-level API client for direct communication with the
+ * SolvaPay backend. For most use cases, use `createSolvaPay()` instead, which
+ * provides a higher-level API with paywall protection.
+ * 
+ * Use this function when you need:
+ * - Direct API access for custom operations
+ * - Testing with custom client implementations
+ * - Advanced use cases not covered by the main API
+ * 
+ * @param opts - Configuration options
+ * @param opts.apiKey - Your SolvaPay API key (required)
+ * @param opts.apiBaseUrl - Optional API base URL override
  * @returns A fully configured SolvaPayClient instance
  * @throws {SolvaPayError} If API key is missing
  * 
  * @example
  * ```typescript
+ * // Create API client directly
  * const client = createSolvaPayClient({
  *   apiKey: process.env.SOLVAPAY_SECRET_KEY!,
  *   apiBaseUrl: 'https://api.solvapay.com' // optional
  * });
+ * 
+ * // Use client for custom operations
+ * const agents = await client.listAgents();
  * ```
+ * 
+ * @see {@link createSolvaPay} for the recommended high-level API
+ * @see {@link ServerClientOptions} for configuration options
+ * @since 1.0.0
  */
 export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient {
   const base = opts.apiBaseUrl ?? "https://api-dev.solvapay.com";

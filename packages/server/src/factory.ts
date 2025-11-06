@@ -11,31 +11,86 @@ import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './ad
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core';
 
 /**
- * Configuration for creating a SolvaPay instance
+ * Configuration for creating a SolvaPay instance.
+ * 
+ * You can provide either an `apiKey` (for production) or an `apiClient` (for testing).
+ * If neither is provided, the SDK will attempt to read `SOLVAPAY_SECRET_KEY` from
+ * environment variables. If no API key is found, the SDK runs in stub mode.
+ * 
+ * @example
+ * ```typescript
+ * // Production: Use API key
+ * const config: CreateSolvaPayConfig = {
+ *   apiKey: process.env.SOLVAPAY_SECRET_KEY
+ * };
+ * 
+ * // Testing: Use mock client
+ * const config: CreateSolvaPayConfig = {
+ *   apiClient: mockClient
+ * };
+ * ```
  */
 export interface CreateSolvaPayConfig {
   /**
-   * API key for production use (creates client automatically)
+   * API key for production use (creates client automatically).
+   * Defaults to `SOLVAPAY_SECRET_KEY` environment variable if not provided.
    */
   apiKey?: string;
   
   /**
-   * API client for testing or custom implementations
+   * API client for testing or custom implementations.
+   * Use this for stub mode, testing, or custom client implementations.
    */
   apiClient?: SolvaPayClient;
   
   /**
-   * Optional API base URL (only used with apiKey)
+   * Optional API base URL override (only used with apiKey).
+   * Defaults to production API URL if not provided.
    */
   apiBaseUrl?: string;
 }
 
 /**
- * Payable function that provides explicit adapters
+ * Payable function that provides explicit adapters for different frameworks.
+ * 
+ * Use the appropriate adapter method for your framework:
+ * - `http()` - Express.js, Fastify, and other HTTP frameworks
+ * - `next()` - Next.js App Router API routes
+ * - `mcp()` - Model Context Protocol servers
+ * - `function()` - Pure functions, background jobs, or testing
+ * 
+ * @example
+ * ```typescript
+ * const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
+ * 
+ * // Express.js
+ * app.post('/tasks', payable.http(createTask));
+ * 
+ * // Next.js
+ * export const POST = payable.next(createTask);
+ * 
+ * // MCP Server
+ * const handler = payable.mcp(createTask);
+ * 
+ * // Pure function
+ * const protectedFn = await payable.function(createTask);
+ * ```
  */
 export interface PayableFunction {
   /**
-   * HTTP adapter for Express/Fastify
+   * HTTP adapter for Express.js, Fastify, and other HTTP frameworks.
+   * 
+   * @param businessLogic - Your business logic function
+   * @param options - Optional adapter configuration
+   * @returns HTTP route handler function
+   * 
+   * @example
+   * ```typescript
+   * app.post('/tasks', payable.http(async (req) => {
+   *   const { title } = req.body;
+   *   return { success: true, task: { title } };
+   * }));
+   * ```
    */
   http<T = any>(
     businessLogic: (args: any) => Promise<T>,
@@ -43,7 +98,20 @@ export interface PayableFunction {
   ): (req: any, reply: any) => Promise<any>;
   
   /**
-   * Next.js adapter for App Router
+   * Next.js adapter for App Router API routes.
+   * 
+   * @param businessLogic - Your business logic function
+   * @param options - Optional adapter configuration
+   * @returns Next.js route handler function
+   * 
+   * @example
+   * ```typescript
+   * // app/api/tasks/route.ts
+   * export const POST = payable.next(async (request) => {
+   *   const body = await request.json();
+   *   return Response.json({ success: true });
+   * });
+   * ```
    */
   next<T = any>(
     businessLogic: (args: any) => Promise<T>,
@@ -51,7 +119,18 @@ export interface PayableFunction {
   ): (request: Request, context?: any) => Promise<Response>;
   
   /**
-   * MCP adapter for Model Context Protocol servers
+   * MCP adapter for Model Context Protocol servers.
+   * 
+   * @param businessLogic - Your tool implementation function
+   * @param options - Optional adapter configuration
+   * @returns MCP tool handler function
+   * 
+   * @example
+   * ```typescript
+   * const handler = payable.mcp(async (args) => {
+   *   return { success: true, result: 'tool output' };
+   * });
+   * ```
    */
   mcp<T = any>(
     businessLogic: (args: any) => Promise<T>,
@@ -59,8 +138,25 @@ export interface PayableFunction {
   ): (args: any) => Promise<any>;
   
   /**
-   * Pure function adapter for direct function protection
-   * Use this for testing, background jobs, or non-framework contexts
+   * Pure function adapter for direct function protection.
+   * 
+   * Use this for testing, background jobs, or non-framework contexts.
+   * 
+   * @param businessLogic - Your business logic function
+   * @returns Protected function that requires customer reference in args
+   * 
+   * @example
+   * ```typescript
+   * const protectedFn = await payable.function(async (args) => {
+   *   return { result: 'processed' };
+   * });
+   * 
+   * // Call with customer reference
+   * const result = await protectedFn({
+   *   auth: { customer_ref: 'user_123' },
+   *   // ... other args
+   * });
+   * ```
    */
   function<T = any>(
     businessLogic: (args: any) => Promise<T>,
@@ -68,28 +164,106 @@ export interface PayableFunction {
 }
 
 /**
- * SolvaPay instance with payable method and common API methods
+ * SolvaPay instance with payable method and common API methods.
+ * 
+ * This interface provides the main API for interacting with SolvaPay.
+ * Use `createSolvaPay()` to create an instance.
+ * 
+ * @example
+ * ```typescript
+ * const solvaPay = createSolvaPay();
+ * 
+ * // Create payable handlers
+ * const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
+ * 
+ * // Manage customers
+ * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
+ *   email: 'user@example.com'
+ * });
+ * 
+ * // Create payment intents
+ * const intent = await solvaPay.createPaymentIntent({
+ *   agentRef: 'agt_myapi',
+ *   planRef: 'pln_premium',
+ *   customerRef: 'user_123'
+ * });
+ * ```
  */
 export interface SolvaPay {
   /**
-   * Create a payable handler with explicit adapters
+   * Create a payable handler with explicit adapters for different frameworks.
+   * 
+   * @param options - Payable options including agent and plan references
+   * @returns PayableFunction with framework-specific adapters
+   * 
+   * @example
+   * ```typescript
+   * const payable = solvaPay.payable({ 
+   *   agent: 'agt_myapi', 
+   *   plan: 'pln_premium' 
+   * });
+   * 
+   * app.post('/tasks', payable.http(createTask));
+   * ```
    */
   payable(options?: PayableOptions): PayableFunction;
   
   /**
-   * Ensure customer exists (for testing/setup)
-   * Only attempts creation once per customer (idempotent).
+   * Ensure customer exists in SolvaPay backend (idempotent).
+   * 
+   * Creates a customer if they don't exist, or returns existing customer reference.
+   * This is automatically called by the paywall system, but you can call it
+   * explicitly for setup or testing.
    * 
    * @param customerRef - The customer reference used as a cache key (e.g., Supabase user ID)
-   * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
+   * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID).
    *   If provided, will lookup existing customer by externalRef before creating new one.
    *   The externalRef is stored on the SolvaPay backend for customer lookup.
-   * @param options - Optional customer details (email, name) for customer creation
+   * @param options - Optional customer details for customer creation
+   * @param options.email - Customer email address
+   * @param options.name - Customer name
+   * @returns Customer reference (backend customer ID)
+   * 
+   * @example
+   * ```typescript
+   * // Ensure customer exists before processing payment
+   * const customerRef = await solvaPay.ensureCustomer(
+   *   'user_123',           // customerRef (your user ID)
+   *   'user_123',           // externalRef (same or different)
+   *   {
+   *     email: 'user@example.com',
+   *     name: 'John Doe'
+   *   }
+   * );
+   * ```
    */
   ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string>;
   
   /**
-   * Create a payment intent for a customer to subscribe to a plan
+   * Create a Stripe payment intent for a customer to subscribe to a plan.
+   * 
+   * This creates a payment intent that can be confirmed on the client side
+   * using Stripe.js. After confirmation, call `processPayment()` to complete
+   * the subscription.
+   * 
+   * @param params - Payment intent parameters
+   * @param params.agentRef - Agent reference
+   * @param params.planRef - Plan reference to subscribe to
+   * @param params.customerRef - Customer reference
+   * @param params.idempotencyKey - Optional idempotency key for retry safety
+   * @returns Payment intent with client secret and publishable key
+   * 
+   * @example
+   * ```typescript
+   * const intent = await solvaPay.createPaymentIntent({
+   *   agentRef: 'agt_myapi',
+   *   planRef: 'pln_premium',
+   *   customerRef: 'user_123',
+   *   idempotencyKey: 'unique-key-123'
+   * });
+   * 
+   * // Use intent.clientSecret with Stripe.js on client
+   * ```
    */
   createPaymentIntent(params: {
     agentRef: string;
@@ -104,8 +278,32 @@ export interface SolvaPay {
   }>;
   
   /**
-   * Process a payment intent after client-side confirmation
-   * Creates subscription or purchase immediately, eliminating webhook delay
+   * Process a payment intent after client-side Stripe confirmation.
+   * 
+   * Creates subscription or purchase immediately, eliminating webhook delay.
+   * Call this after the client has confirmed the payment intent with Stripe.js.
+   * 
+   * @param params - Payment processing parameters
+   * @param params.paymentIntentId - Stripe payment intent ID from client confirmation
+   * @param params.agentRef - Agent reference
+   * @param params.customerRef - Customer reference
+   * @param params.planRef - Optional plan reference (if not in payment intent)
+   * @returns Payment processing result with subscription details
+   * 
+   * @example
+   * ```typescript
+   * // After client confirms payment with Stripe.js
+   * const result = await solvaPay.processPayment({
+   *   paymentIntentId: 'pi_1234567890',
+   *   agentRef: 'agt_myapi',
+   *   customerRef: 'user_123',
+   *   planRef: 'pln_premium'
+   * });
+   * 
+   * if (result.success) {
+   *   console.log('Subscription created:', result.subscriptionRef);
+   * }
+   * ```
    */
   processPayment(params: {
     paymentIntentId: string;
@@ -115,7 +313,28 @@ export interface SolvaPay {
   }): Promise<import('./types/client').ProcessPaymentResult>;
   
   /**
-   * Check if customer is within usage limits
+   * Check if customer is within usage limits for an agent.
+   * 
+   * This method checks subscription status and usage limits without
+   * executing business logic. Use `payable()` for automatic protection.
+   * 
+   * @param params - Limit check parameters
+   * @param params.customerRef - Customer reference
+   * @param params.agentRef - Agent reference
+   * @returns Limit check result with remaining usage and checkout URL if needed
+   * 
+   * @example
+   * ```typescript
+   * const limits = await solvaPay.checkLimits({
+   *   customerRef: 'user_123',
+   *   agentRef: 'agt_myapi'
+   * });
+   * 
+   * if (!limits.withinLimits) {
+   *   // Redirect to checkout
+   *   window.location.href = limits.checkoutUrl;
+   * }
+   * ```
    */
   checkLimits(params: {
     customerRef: string;
@@ -128,7 +347,34 @@ export interface SolvaPay {
   }>;
   
   /**
-   * Track usage for a customer action
+   * Track usage for a customer action.
+   * 
+   * This is automatically called by the paywall system. You typically
+   * don't need to call this manually unless implementing custom tracking.
+   * 
+   * @param params - Usage tracking parameters
+   * @param params.customerRef - Customer reference
+   * @param params.agentRef - Agent reference
+   * @param params.planRef - Plan reference
+   * @param params.outcome - Action outcome ('success', 'paywall', or 'fail')
+   * @param params.action - Optional action name for analytics
+   * @param params.requestId - Unique request ID
+   * @param params.actionDuration - Action duration in milliseconds
+   * @param params.timestamp - ISO timestamp of the action
+   * 
+   * @example
+   * ```typescript
+   * await solvaPay.trackUsage({
+   *   customerRef: 'user_123',
+   *   agentRef: 'agt_myapi',
+   *   planRef: 'pln_premium',
+   *   outcome: 'success',
+   *   action: 'api_call',
+   *   requestId: 'req_123',
+   *   actionDuration: 150,
+   *   timestamp: new Date().toISOString()
+   * });
+   * ```
    */
   trackUsage(params: {
     customerRef: string;
@@ -142,7 +388,23 @@ export interface SolvaPay {
   }): Promise<void>;
   
   /**
-   * Create a new customer
+   * Create a new customer in SolvaPay backend.
+   * 
+   * Note: `ensureCustomer()` is usually preferred as it's idempotent.
+   * Use this only if you need explicit control over customer creation.
+   * 
+   * @param params - Customer creation parameters
+   * @param params.email - Customer email address (required)
+   * @param params.name - Optional customer name
+   * @returns Created customer reference
+   * 
+   * @example
+   * ```typescript
+   * const { customerRef } = await solvaPay.createCustomer({
+   *   email: 'user@example.com',
+   *   name: 'John Doe'
+   * });
+   * ```
    */
   createCustomer(params: {
     email: string;
@@ -150,15 +412,54 @@ export interface SolvaPay {
   }): Promise<{ customerRef: string }>;
   
   /**
-   * Get customer details
-   * Uses the generated CustomerResponseMapped type which includes all subscription fields from the API
+   * Get customer details including subscriptions and usage.
+   * 
+   * Returns full customer information from the SolvaPay backend, including
+   * all active subscriptions, usage history, and customer metadata.
+   * 
+   * @param params - Customer lookup parameters
+   * @param params.customerRef - Customer reference
+   * @returns Customer details with subscriptions and metadata
+   * 
+   * @example
+   * ```typescript
+   * const customer = await solvaPay.getCustomer({
+   *   customerRef: 'user_123'
+   * });
+   * 
+   * console.log('Active subscriptions:', customer.subscriptions);
+   * console.log('Email:', customer.email);
+   * ```
    */
   getCustomer(params: {
     customerRef: string;
   }): Promise<CustomerResponseMapped>;
   
   /**
-   * Create a checkout session for a customer
+   * Create a hosted checkout session for a customer.
+   * 
+   * This creates a Stripe Checkout session that redirects the customer
+   * to a hosted payment page. After payment, customer is redirected back.
+   * 
+   * @param params - Checkout session parameters
+   * @param params.agentRef - Agent reference
+   * @param params.customerRef - Customer reference
+   * @param params.planRef - Optional plan reference (if not specified, shows plan selector)
+   * @param params.returnUrl - URL to redirect to after successful payment
+   * @returns Checkout session with redirect URL
+   * 
+   * @example
+   * ```typescript
+   * const session = await solvaPay.createCheckoutSession({
+   *   agentRef: 'agt_myapi',
+   *   customerRef: 'user_123',
+   *   planRef: 'pln_premium',
+   *   returnUrl: 'https://myapp.com/success'
+   * });
+   * 
+   * // Redirect customer to checkout
+   * window.location.href = session.checkoutUrl;
+   * ```
    */
   createCheckoutSession(params: {
     agentRef: string;
@@ -171,7 +472,24 @@ export interface SolvaPay {
   }>;
   
   /**
-   * Create a customer session for accessing customer-specific functionality
+   * Create a customer portal session for managing subscriptions.
+   * 
+   * This creates a Stripe Customer Portal session that allows customers
+   * to manage their subscriptions, update payment methods, and view invoices.
+   * 
+   * @param params - Customer session parameters
+   * @param params.customerRef - Customer reference
+   * @returns Customer portal session with redirect URL
+   * 
+   * @example
+   * ```typescript
+   * const session = await solvaPay.createCustomerSession({
+   *   customerRef: 'user_123'
+   * });
+   * 
+   * // Redirect customer to portal
+   * window.location.href = session.customerUrl;
+   * ```
    */
   createCustomerSession(params: {
     customerRef: string;
@@ -181,38 +499,63 @@ export interface SolvaPay {
   }>;
   
   /**
-   * Direct access to the API client for advanced operations
-   * (agent/plan management, etc.)
+   * Direct access to the API client for advanced operations.
+   * 
+   * Use this for operations not exposed by the SolvaPay interface,
+   * such as agent/plan management or custom API calls.
+   * 
+   * @example
+   * ```typescript
+   * // Access API client directly for custom operations
+   * const agents = await solvaPay.apiClient.listAgents();
+   * ```
    */
   apiClient: SolvaPayClient;
 }
 
 /**
- * Create a SolvaPay instance
+ * Create a SolvaPay instance with paywall protection capabilities.
  * 
- * @param config - Optional configuration with either apiKey or apiClient. If not provided, reads from environment variables.
- * @returns SolvaPay instance with payable() method
+ * This factory function creates a SolvaPay instance that can be used to
+ * protect API endpoints, functions, and MCP tools with usage limits and
+ * subscription checks.
+ * 
+ * @param config - Optional configuration object
+ * @param config.apiKey - API key for production use (defaults to `SOLVAPAY_SECRET_KEY` env var)
+ * @param config.apiClient - Custom API client for testing or advanced use cases
+ * @param config.apiBaseUrl - Optional API base URL override
+ * @returns SolvaPay instance with payable() method and API client access
  * 
  * @example
  * ```typescript
- * // Production: Read from environment variables (recommended)
+ * // Production: Use environment variable (recommended)
  * const solvaPay = createSolvaPay();
  * 
  * // Production: Pass API key explicitly
- * const solvaPay = createSolvaPay({ 
- *   apiKey: process.env.SOLVAPAY_SECRET_KEY 
+ * const solvaPay = createSolvaPay({
+ *   apiKey: process.env.SOLVAPAY_SECRET_KEY
  * });
  * 
- * // Testing: Pass mock client
- * const solvaPay = createSolvaPay({ 
- *   apiClient: mockClient 
+ * // Testing: Use mock client
+ * const solvaPay = createSolvaPay({
+ *   apiClient: mockClient
  * });
  * 
- * // Create payable handlers
- * const payable = solvaPay.payable({ agent: 'my-api' });
- * app.post('/tasks', payable.http(createTask));
- * export const POST = payable.next(createTask);
+ * // Create payable handlers for your agent
+ * const payable = solvaPay.payable({ 
+ *   agent: 'agt_myapi', 
+ *   plan: 'pln_premium' 
+ * });
+ * 
+ * // Protect endpoints with framework-specific adapters
+ * app.post('/tasks', payable.http(createTask));      // Express/Fastify
+ * export const POST = payable.next(createTask);      // Next.js App Router
+ * const handler = payable.mcp(createTask);           // MCP servers
  * ```
+ * 
+ * @see {@link SolvaPay} for the returned instance interface
+ * @see {@link CreateSolvaPayConfig} for configuration options
+ * @since 1.0.0
  */
 export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
   // If no config provided, read from environment variables

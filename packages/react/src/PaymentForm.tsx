@@ -10,26 +10,56 @@ import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 import type { PaymentFormProps } from './types';
 
 /**
- * SolvaPay Payment Form Component
+ * Payment form component for handling Stripe checkout.
  * 
- * A simplified, minimal payment form that handles the checkout flow.
- * Automatically initializes Stripe and displays the payment form.
+ * This component provides a complete payment form with Stripe integration,
+ * including card input, plan selection, and payment processing. It handles
+ * the entire checkout flow including payment intent creation and confirmation.
+ * 
+ * Features:
+ * - Automatic Stripe Elements initialization
+ * - Payment intent creation on mount
+ * - Card input and validation
+ * - Payment processing with error handling
+ * - Automatic subscription refresh after payment
+ * 
+ * @param props - Payment form configuration
+ * @param props.planRef - Plan reference to subscribe to (required)
+ * @param props.agentRef - Agent reference for usage tracking (required)
+ * @param props.onSuccess - Callback when payment succeeds
+ * @param props.onError - Callback when payment fails
+ * @param props.returnUrl - Optional return URL after payment (for redirects)
+ * @param props.submitButtonText - Custom text for submit button (default: 'Pay Now')
+ * @param props.className - Custom CSS class for the form container
+ * @param props.buttonClassName - Custom CSS class for the submit button
  * 
  * @example
  * ```tsx
  * import { PaymentForm } from '@solvapay/react';
+ * import { useRouter } from 'next/navigation';
  * 
- * <PaymentForm
- *   planRef="pro_plan"
- *   agentRef="agent_123"
- *   onSuccess={(paymentIntent) => {
- *     console.log('Payment successful!');
- *   }}
- *   onError={(error) => {
- *     console.error('Payment failed:', error);
- *   }}
- * />
+ * function CheckoutPage() {
+ *   const router = useRouter();
+ * 
+ *   return (
+ *     <PaymentForm
+ *       planRef="pln_premium"
+ *       agentRef="agt_myapi"
+ *       onSuccess={() => {
+ *         console.log('Payment successful!');
+ *         router.push('/dashboard');
+ *       }}
+ *       onError={(error) => {
+ *         console.error('Payment failed:', error);
+ *       }}
+ *     />
+ *   );
+ * }
  * ```
+ * 
+ * @see {@link useCheckout} for programmatic checkout handling
+ * @see {@link SolvaPayProvider} for required context provider
+ * @since 1.0.0
  */
 export const PaymentForm: React.FC<PaymentFormProps> = ({
   planRef,

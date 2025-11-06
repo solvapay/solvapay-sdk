@@ -354,4 +354,4 @@ By default, both are **disabled** to keep test output clean and readable. Enable
   run: pnpm test:integration
 ```
 
-More: docs/architecture.md
+More: [docs/guides/architecture.md](../../docs/guides/architecture.md)

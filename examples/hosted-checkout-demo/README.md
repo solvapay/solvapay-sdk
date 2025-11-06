@@ -2,6 +2,24 @@
 
 Complete payment integration demo showcasing SolvaPay's hosted checkout flow with subscription management and content gating.
 
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Running the Demo](#running-the-demo)
+- [Demo Flow](#demo-flow)
+- [Testing Payments](#testing-payments)
+- [How It Works](#how-it-works)
+- [Project Structure](#project-structure)
+- [Key Concepts](#key-concepts)
+- [Environment Variables](#environment-variables)
+- [Backend Endpoints](#backend-endpoints)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Related Documentation](#related-documentation)
+
 ## Features
 
 - 🎯 **Hosted Checkout**: Secure checkout hosted on app.solvapay.com (similar to Stripe Checkout)
@@ -473,32 +491,149 @@ This demo expects the following backend endpoints to be implemented:
 
 These endpoints should be implemented on the SolvaPay backend and will be called by the Next.js API routes.
 
+## Best Practices
+
+### 1. Token Generation
+
+Always generate tokens server-side for security:
+
+```typescript
+// ✅ Good: Server-side token generation
+export async function POST(request: NextRequest) {
+  const userId = requireUserId(request);
+  const { token } = await createCheckoutToken(userId);
+  return NextResponse.json({ checkoutUrl: `https://app.solvapay.com/checkout?token=${token}` });
+}
+
+// ❌ Bad: Client-side token generation (security risk)
+const token = await generateToken(); // Never do this!
+```
+
+### 2. Return URL Configuration
+
+Configure return URLs properly:
+
+```typescript
+const checkoutUrl = `https://app.solvapay.com/checkout?token=${token}&returnUrl=${encodeURIComponent('https://yourdomain.com/checkout/complete')}`;
+```
+
+### 3. Subscription Refetching
+
+Always refetch subscription after returning from hosted checkout:
+
+```tsx
+// app/checkout/complete/page.tsx
+useEffect(() => {
+  const refetchSubscription = async () => {
+    await refetch(); // Update subscription status
+  };
+  refetchSubscription();
+}, []);
+```
+
+### 4. Error Handling
+
+Handle checkout errors gracefully:
+
+```tsx
+const handleViewPlans = async () => {
+  try {
+    const { checkoutUrl } = await createCheckoutToken();
+    window.location.href = checkoutUrl;
+  } catch (error) {
+    // Show error message to user
+    setError('Failed to start checkout. Please try again.');
+  }
+};
+```
+
+### 5. Customer Portal Access
+
+Provide easy access to customer portal:
+
+```tsx
+const handleManageSubscription = async () => {
+  const { customerUrl } = await createCustomerSessionToken();
+  window.location.href = customerUrl;
+};
+```
+
 ## Troubleshooting
 
 ### "Missing SOLVAPAY_SECRET_KEY"
-- Ensure `.env.local` exists with your secret key
-- Restart the dev server after adding environment variables
+
+**Problem**: Error about missing secret key.
+
+**Solution**:
+1. Ensure `.env.local` exists in the example directory
+2. Copy from `env.example` if needed: `cp env.example .env.local`
+3. Add your SolvaPay secret key to `.env.local`
+4. Restart the dev server after adding environment variables
+5. Verify the variable name is exactly `SOLVAPAY_SECRET_KEY`
 
 ### "Failed to create checkout token"
-- Check your SolvaPay API key is valid
-- Verify the backend URL is correct (`SOLVAPAY_API_BASE_URL`)
-- Ensure backend endpoint `/api/create-checkout-token` is implemented
-- Check network tab for API errors
+
+**Problem**: Checkout token creation fails.
+
+**Solution**:
+1. Check your SolvaPay API key is valid in the dashboard
+2. Verify the backend URL is correct (`SOLVAPAY_API_BASE_URL`)
+3. Ensure backend endpoint `/api/create-checkout-token` is implemented
+4. Check network tab for API errors and status codes
+5. Verify customer reference is properly set
+6. Check server logs for detailed error messages
+7. Ensure authentication is working (userId is available)
 
 ### "Backend did not return a token"
-- Verify backend endpoint is returning `{ token: string }` in response
-- Check backend logs for errors
+
+**Problem**: Backend response doesn't include token.
+
+**Solution**:
+1. Verify backend endpoint is returning `{ token: string }` in response
+2. Check backend logs for errors
+3. Verify response format matches expected structure
+4. Check that backend API is properly configured
+5. Ensure backend has access to SolvaPay API
 
 ### Subscription not updating after checkout
-- Check that `refetch()` is called after returning from hosted checkout
-- Verify API returns proper subscription format
-- Check browser console for errors
-- Ensure return URL is configured correctly on backend
+
+**Problem**: Payment succeeds but subscription status doesn't update after returning from hosted checkout.
+
+**Solution**:
+1. Check that `refetch()` is called after returning from hosted checkout:
+   ```tsx
+   useEffect(() => {
+     refetch();
+   }, []);
+   ```
+2. Verify API returns proper subscription format
+3. Check browser console for errors
+4. Verify customer reference matches between frontend and backend
+5. Ensure return URL is configured correctly on backend
+6. Wait a few seconds and manually refetch
+7. Check that webhook is configured (if using webhooks)
 
 ### Components not rendering
-- Ensure you're inside `<SolvaPayProvider>`
-- Check that hooks are called in functional components
-- Verify all required props are provided
+
+**Problem**: SolvaPay components don't appear or throw errors.
+
+**Solution**:
+1. Ensure you're inside `<SolvaPayProvider>`
+2. Check that hooks are called in functional components
+3. Verify all required props are provided
+4. Check browser console for React errors
+5. Verify customer reference is available
+
+### Redirect not working
+
+**Problem**: After checkout, user is not redirected back to app.
+
+**Solution**:
+1. Verify return URL is configured in checkout token creation
+2. Check that return URL matches your app's domain
+3. Ensure return URL is added to allowed redirects in SolvaPay dashboard
+4. Check browser console for redirect errors
+5. Verify hosted checkout page is configured correctly
 
 ### Google OAuth "redirect_uri_mismatch" Error
 
@@ -510,11 +645,30 @@ These endpoints should be implemented on the SolvaPay backend and will be called
 
 **Important**: Google sees Supabase's callback URL, NOT your localhost URL. The `redirectTo` option is where Supabase redirects AFTER processing OAuth.
 
-## Learn More
+## Related Documentation
 
-- [SolvaPay Documentation](https://docs.solvapay.com)
-- [Stripe Checkout Documentation](https://stripe.com/docs/payments/checkout) (similar pattern)
-- [Next.js Documentation](https://nextjs.org/docs)
+### Getting Started
+- [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
+- [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
+- [Quick Start Guide](../../docs/getting-started/quick-start.md) - Quick setup guide
+- [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
+
+### Framework Guides
+- [React Integration Guide](../../docs/guides/react.md) - Complete React integration guide
+- [Next.js Integration Guide](../../docs/guides/nextjs.md) - Next.js specific patterns
+- [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
+- [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
+
+### API Reference
+- [React SDK API Reference](../../docs/api/react/) - Complete React component documentation
+- [Server SDK API Reference](../../docs/api/server/) - Backend API documentation
+- [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
+
+### Additional Resources
+- [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
+- [Stripe Checkout Documentation](https://stripe.com/docs/payments/checkout) - Similar hosted checkout pattern
+- [Next.js Documentation](https://nextjs.org/docs) - Next.js framework docs
+- [GitHub Repository](https://github.com/solvapay/solvapay-sdk) - Source code and issues
 
 ## Support
 

@@ -5,19 +5,28 @@
 import type { RetryOptions } from './types';
 
 /**
- * Executes an async function with automatic retry logic
+ * Execute an async function with automatic retry logic.
+ * 
+ * This utility function provides configurable retry logic with exponential backoff,
+ * conditional retry logic, and retry callbacks. Useful for handling transient
+ * network errors or rate limiting.
  * 
  * @template T The return type of the async function
  * @param fn The async function to execute
  * @param options Retry configuration options
+ * @param options.maxRetries - Maximum number of retry attempts (default: 2)
+ * @param options.initialDelay - Initial delay in milliseconds before first retry (default: 500)
+ * @param options.backoffStrategy - Backoff strategy: 'fixed', 'linear', or 'exponential' (default: 'fixed')
+ * @param options.shouldRetry - Optional function to determine if error should be retried
+ * @param options.onRetry - Optional callback called before each retry attempt
  * @returns A promise that resolves with the function result or rejects with the last error
  * 
  * @example
  * ```typescript
- * // Simple retry with defaults
+ * // Simple retry with defaults (2 retries, 500ms delay)
  * const result = await withRetry(() => apiCall());
  * 
- * // Custom retry with conditional logic
+ * // Custom retry with exponential backoff
  * const result = await withRetry(
  *   () => apiCall(),
  *   {
@@ -29,6 +38,8 @@ import type { RetryOptions } from './types';
  *   }
  * );
  * ```
+ * 
+ * @since 1.0.0
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,

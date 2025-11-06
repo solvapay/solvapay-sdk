@@ -20,29 +20,44 @@ export interface SupabaseAuthAdapterConfig {
 }
 
 /**
- * Create a Supabase auth adapter for SolvaPayProvider
+ * Create a Supabase authentication adapter for SolvaPayProvider.
  * 
- * This adapter uses Supabase's client-side auth to get tokens and user IDs.
- * It dynamically imports @supabase/supabase-js to avoid adding it as a dependency
- * if Supabase isn't being used.
+ * This adapter integrates with Supabase Auth to extract user IDs and tokens
+ * from the current Supabase session. It uses Supabase's client-side auth
+ * and dynamically imports @supabase/supabase-js to avoid adding it as a
+ * dependency if Supabase isn't being used.
+ * 
+ * The adapter caches the Supabase client instance to avoid recreating it
+ * on every call, improving performance.
  * 
  * @param config - Supabase configuration
- * @returns AuthAdapter instance
+ * @param config.supabaseUrl - Supabase project URL (required)
+ * @param config.supabaseAnonKey - Supabase anonymous/public key (required)
+ * @returns AuthAdapter instance compatible with SolvaPayProvider
+ * @throws {Error} If supabaseUrl or supabaseAnonKey is missing
  * 
  * @example
  * ```tsx
  * import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
  * import { SolvaPayProvider } from '@solvapay/react';
  * 
- * const adapter = createSupabaseAuthAdapter({
- *   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
- *   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
- * });
+ * function App() {
+ *   const adapter = createSupabaseAuthAdapter({
+ *     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+ *     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+ *   });
  * 
- * <SolvaPayProvider config={{ auth: { adapter } }}>
- *   {children}
- * </SolvaPayProvider>
+ *   return (
+ *     <SolvaPayProvider config={{ auth: { adapter } }}>
+ *       <YourApp />
+ *     </SolvaPayProvider>
+ *   );
+ * }
  * ```
+ * 
+ * @see {@link SolvaPayProvider} for using the adapter
+ * @see {@link AuthAdapter} for the adapter interface
+ * @since 1.0.0
  */
 export function createSupabaseAuthAdapter(
   config: SupabaseAuthAdapterConfig

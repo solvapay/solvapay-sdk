@@ -311,4 +311,4 @@ import type { PaymentFormProps, SubscriptionStatus, PaymentIntentResult } from '
 
 ## More Information
 
-See `docs/architecture.md` for detailed architecture documentation.
+See [`docs/guides/architecture.md`](../../docs/guides/architecture.md) for detailed architecture documentation.

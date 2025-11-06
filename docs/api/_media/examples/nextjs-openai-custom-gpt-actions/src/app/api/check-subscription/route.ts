@@ -1,0 +1,8 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { checkSubscription } from '@solvapay/next';
+
+export async function GET(request: NextRequest) {
+  const result = await checkSubscription(request);
+  return result instanceof NextResponse ? result : NextResponse.json(result);
+}
+

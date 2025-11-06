@@ -20,11 +20,52 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
 }
 
 /**
- * Hook to manage checkout flow
- * Handles payment intent creation and Stripe initialization
+ * Hook to manage checkout flow for payment processing.
  * 
- * @param planRef - The plan reference to checkout
- * @param agentRef - Optional agent reference
+ * Handles payment intent creation and Stripe initialization. This hook
+ * manages the checkout state including loading, errors, Stripe instance,
+ * and client secret. Use this for programmatic checkout flows.
+ * 
+ * @param planRef - Plan reference to subscribe to (required)
+ * @param agentRef - Optional agent reference for usage tracking
+ * @returns Checkout state and methods
+ * @returns loading - Whether checkout is in progress
+ * @returns error - Error state if checkout fails
+ * @returns stripePromise - Promise resolving to Stripe instance
+ * @returns clientSecret - Stripe payment intent client secret
+ * @returns startCheckout - Function to start the checkout process
+ * @returns reset - Function to reset checkout state
+ * 
+ * @example
+ * ```tsx
+ * import { useCheckout } from '@solvapay/react';
+ * import { PaymentElement } from '@stripe/react-stripe-js';
+ * 
+ * function CustomCheckout() {
+ *   const { loading, error, stripePromise, clientSecret, startCheckout } = useCheckout(
+ *     'pln_premium',
+ *     'agt_myapi'
+ *   );
+ * 
+ *   useEffect(() => {
+ *     startCheckout();
+ *   }, []);
+ * 
+ *   if (loading) return <Spinner />;
+ *   if (error) return <div>Error: {error.message}</div>;
+ *   if (!clientSecret || !stripePromise) return null;
+ * 
+ *   return (
+ *     <Elements stripe={await stripePromise} options={{ clientSecret }}>
+ *       <PaymentElement />
+ *     </Elements>
+ *   );
+ * }
+ * ```
+ * 
+ * @see {@link PaymentForm} for a complete payment form component
+ * @see {@link SolvaPayProvider} for required context provider
+ * @since 1.0.0
  */
 export function useCheckout(planRef: string, agentRef?: string): UseCheckoutReturn {
   const { createPayment, customerRef, updateCustomerRef } = useSolvaPay();

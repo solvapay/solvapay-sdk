@@ -2,6 +2,24 @@
 
 This example demonstrates how to integrate SolvaPay with Next.js App Router to create OpenAI Custom GPT Actions with paywall protection. It provides the same functionality as the Fastify/Vite example but uses Next.js 15 with the latest App Router.
 
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Paywall Protection](#paywall-protection)
+- [Setup for OpenAI Custom GPT Actions](#setup-for-openai-custom-gpt-actions)
+- [Project Structure](#project-structure)
+- [API Endpoints](#api-endpoints)
+- [Key Differences from Fastify Example](#key-differences-from-fastify-example)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Usage with OpenAI Custom GPT Actions](#usage-with-openai-custom-gpt-actions)
+- [Testing](#testing)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Related Documentation](#related-documentation)
+
 ## Features
 
 - **Next.js 15** with App Router
@@ -547,24 +565,188 @@ npm run test:watch     # Watch mode
 - **UI Tests**: Component rendering and user interactions
 - **SDK Tests**: Core paywall functionality tested in the SDK package
 
+## Best Practices
+
+### 1. Environment Variables
+
+Always use environment variables for sensitive data:
+
+```typescript
+// ✅ Good: Environment variables
+const apiKey = process.env.SOLVAPAY_SECRET_KEY!;
+
+// ❌ Bad: Hardcoded values
+const apiKey = 'sp_secret_123...';
+```
+
+### 2. OAuth Security
+
+Never expose OAuth secrets in client-side code:
+
+```typescript
+// ✅ Good: Server-side only
+export async function POST(request: NextRequest) {
+  const clientSecret = process.env.OAUTH_CLIENT_SECRET; // Server-side only
+}
+
+// ❌ Bad: Client-side exposure
+const clientSecret = process.env.NEXT_PUBLIC_OAUTH_SECRET; // Never do this!
+```
+
+### 3. Error Handling
+
+Handle errors gracefully in API routes:
+
+```typescript
+export async function POST(request: NextRequest) {
+  try {
+    // Your logic
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### 4. OpenAPI Generation
+
+Always set `PUBLIC_URL` for OpenAPI generation:
+
+```bash
+# Development
+PUBLIC_URL=http://localhost:3000
+
+# Production
+PUBLIC_URL=https://your-domain.com
+```
+
+### 5. Testing
+
+Use stub client in tests:
+
+```typescript
+import { createStubClient } from '../../shared/stub-api-client';
+
+const apiClient = createStubClient({ freeTierLimit: 5 });
+```
+
 ## Troubleshooting
 
-### Common Issues
+### CORS Errors
 
-1. **CORS Errors**: CORS is configured in `next.config.mjs` - ensure your domain is allowed
-2. **OAuth Issues**: Check that all OAuth environment variables are set (especially for OpenAI Custom GPT Actions)
-3. **Build Errors**: 
-   - Run `pnpm build:deps` to build SolvaPay dependencies
-   - Ensure `PUBLIC_URL` is set for OpenAPI generation
-   - Run `pnpm generate:docs` before building
-4. **Authentication Issues**: 
-   - Verify Supabase credentials are correct
-   - Check that `SUPABASE_JWT_SECRET` matches your Supabase project settings
-   - Ensure Supabase project has email/password auth enabled
-5. **Subscription Issues**: 
-   - Check that `NEXT_PUBLIC_AGENT_REF` matches your SolvaPay agent
-   - Verify `SOLVAPAY_SECRET_KEY` is correct
-   - Check network tab for API errors
+**Problem**: CORS errors when accessing API from OpenAI Custom GPT Actions.
+
+**Solution**:
+1. CORS is configured in `next.config.mjs` - ensure your domain is allowed
+2. Check that `Access-Control-Allow-Origin` header is set correctly
+3. Verify preflight OPTIONS requests are handled
+4. Check browser console for specific CORS error messages
+5. Ensure OpenAI domain is in allowed origins (if restricting)
+
+### OAuth Issues
+
+**Problem**: OAuth flow not working with OpenAI Custom GPT Actions.
+
+**Solution**:
+1. Check that all OAuth environment variables are set:
+   - `OAUTH_ISSUER`
+   - `OAUTH_JWKS_SECRET`
+   - `OAUTH_CLIENT_ID`
+2. Verify OAuth endpoints are accessible from OpenAI
+3. Check that redirect URIs match OpenAI configuration
+4. Verify JWT signing and verification keys match
+5. Review OAuth flow logs for specific errors
+6. Ensure OpenID Connect discovery endpoint is accessible
+
+### Build Errors
+
+**Problem**: Build fails with various errors.
+
+**Solution**:
+1. Run `pnpm build:deps` to build SolvaPay dependencies first
+2. Ensure `PUBLIC_URL` is set for OpenAPI generation (no placeholders!)
+3. Run `pnpm generate:docs` before building
+4. Check that all environment variables are set
+5. Verify TypeScript compilation errors are resolved
+6. Check build logs for specific error messages
+7. Ensure all dependencies are installed: `pnpm install`
+
+### Authentication Issues
+
+**Problem**: Authentication not working.
+
+**Solution**:
+1. Verify Supabase credentials are correct:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_JWT_SECRET`
+2. Check that `SUPABASE_JWT_SECRET` matches your Supabase project settings
+3. Ensure Supabase project has email/password auth enabled
+4. Verify middleware is properly extracting user ID
+5. Check that access tokens are being sent in Authorization header
+6. Review middleware logs for authentication errors
+7. Verify Supabase project is active and accessible
+
+### Subscription Issues
+
+**Problem**: Subscription checks failing or incorrect.
+
+**Solution**:
+1. Check that `NEXT_PUBLIC_AGENT_REF` matches your SolvaPay agent
+2. Verify `SOLVAPAY_SECRET_KEY` is correct and has proper permissions
+3. Check network tab for API errors and status codes
+4. Verify customer reference is properly set
+5. Ensure subscription sync is called after authentication
+6. Check SolvaPay dashboard for subscription status
+7. Review API logs for detailed error messages
+
+### OpenAPI Schema Issues
+
+**Problem**: OpenAI can't import OpenAPI schema.
+
+**Solution**:
+1. Verify `PUBLIC_URL` is set correctly (no placeholders!)
+2. Check that `/api/docs/json` endpoint is accessible
+3. Verify schema includes proper `operationId` for all endpoints
+4. Check that server URL in schema matches your actual domain
+5. Ensure schema is valid JSON
+6. Review OpenAPI generation script for errors
+7. Test schema import in OpenAI Custom GPT Actions interface
+
+### Database Issues
+
+**Problem**: Database operations failing.
+
+**Solution**:
+1. Verify Supabase database connection string is correct
+2. Check that migration has been run: `pnpm init:db`
+3. Verify `oauth_refresh_tokens` table exists
+4. Check database permissions
+5. Review Supabase logs for errors
+6. Ensure database is accessible from your deployment
+
+### Port Already in Use
+
+**Problem**: Port 3000 is already in use.
+
+**Solution**:
+1. Stop other processes using port 3000
+2. Use a different port: `PORT=3001 pnpm dev`
+3. Check what's using the port: `lsof -i :3000`
+
+### Module Not Found Errors
+
+**Problem**: Errors about missing modules.
+
+**Solution**:
+1. Run `pnpm install` to install dependencies
+2. Run `pnpm build:deps` to build SDK packages
+3. Verify workspace dependencies are properly linked
+4. Check that you're in the correct directory
+5. Clear node_modules and reinstall if needed
 
 ### Debug Mode
 
@@ -574,7 +756,38 @@ Enable debug logging by setting:
 NODE_ENV=development
 ```
 
-This will show detailed logs for OAuth flow and paywall decisions.
+This will show detailed logs for:
+- OAuth flow
+- Paywall decisions
+- API requests
+- Authentication flow
+
+## Related Documentation
+
+### Getting Started
+- [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
+- [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
+- [Quick Start Guide](../../docs/getting-started/quick-start.md) - Quick setup guide
+- [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
+
+### Framework Guides
+- [Next.js Integration Guide](../../docs/guides/nextjs.md) - Complete Next.js integration guide
+- [MCP Server Integration Guide](../../docs/guides/mcp.md) - MCP server patterns
+- [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
+- [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
+- [Webhook Handling Guide](../../docs/guides/webhooks.md) - Webhook integration
+
+### API Reference
+- [Server SDK API Reference](../../docs/api/server/) - Complete backend API documentation
+- [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
+- [React SDK API Reference](../../docs/api/react/) - React component documentation
+
+### Additional Resources
+- [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
+- [OpenAI Custom GPT Actions](https://platform.openai.com/docs/actions) - OpenAI documentation
+- [Next.js Documentation](https://nextjs.org/docs) - Next.js framework docs
+- [OAuth 2.0 Specification](https://oauth.net/2/) - OAuth 2.0 reference
+- [GitHub Repository](https://github.com/solvapay/solvapay-sdk) - Source code and issues
 
 ## Contributing
 
