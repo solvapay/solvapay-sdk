@@ -351,8 +351,6 @@ pnpm build
 pnpm test
 ```
 
-**💡 Hot Reloading**: For a better development experience, see the [Hot Reloading Setup guide](https://github.com/solvapay/solvapay-sdk/tree/dev/docs/HOT_RELOADING_SETUP.md) to set up automatic rebuilds and hot reloading when working with SDK packages and examples.
-
 ### Branching & Publishing
 
 - **`dev`** - Main development branch for daily work
@@ -372,7 +370,6 @@ See [`../publishing.md`](../publishing.md) for complete publishing workflow and 
 - **[Architecture](../guides/architecture.md)** - Package design and structure
 - **[Contributing](https://github.com/solvapay/solvapay-sdk/blob/dev/CONTRIBUTING.md)** - Development guidelines
 - **[Publishing](../publishing.md)** - Publishing and release process
-- **[Hot Reloading Setup](https://github.com/solvapay/solvapay-sdk/tree/dev/docs/HOT_RELOADING_SETUP.md)** - Set up automatic rebuilds and hot reloading
 
 ## 🔒 Security
 
