@@ -21,7 +21,8 @@ export type { RequestDeduplicationOptions, SubscriptionCheckResult } from './cac
 export interface CheckSubscriptionOptions {
   /**
    * Request deduplication options
-   * Default: { cacheTTL: 2000, maxCacheSize: 1000, cacheErrors: true }
+   * 
+   * Default values: cacheTTL: 2000ms, maxCacheSize: 1000, cacheErrors: true
    */
   deduplication?: RequestDeduplicationOptions;
   
