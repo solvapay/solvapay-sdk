@@ -1,39 +1,60 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSubscription, useSubscriptionStatus } from '@solvapay/react';
+import { getAccessToken } from '@/lib/supabase';
 
 interface ApiStatus {
-  health: boolean
-  things: boolean
+  tasks: boolean
   oauth: boolean
 }
 
 export default function HomePage() {
+  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
   const [apiStatus, setApiStatus] = useState<ApiStatus>({
-    health: false,
-    things: false,
+    tasks: false,
     oauth: false
   })
   const [loading, setLoading] = useState(true)
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get subscription helpers from SDK
+  // Note: Plans are handled on the hosted checkout page, so we pass empty array
+  // This will treat all subscriptions as paid plans (default behavior when plan not found)
+  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activePaidSubscription } = useSubscription();
+  
+  // Refetch subscriptions on mount to ensure we have latest data after navigation
+  useEffect(() => {
+    refetch().catch((error) => {
+      console.error('[HomePage] Refetch failed:', error);
+    });
+  }, [refetch]);
+  
+  // Get advanced subscription status helpers
+  const {
+    cancelledSubscription,
+    shouldShowCancelledNotice,
+    formatDate,
+    getDaysUntilExpiration,
+  } = useSubscriptionStatus();
+  
+  // Loading state - only subscriptions loading since plans are on hosted page
+  const isLoading = subscriptionsLoading;
 
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        // Check health endpoint
-        const healthRes = await fetch('/api/healthz')
-        const healthOk = healthRes.ok
-
-        // Check things endpoint
-        const thingsRes = await fetch('/api/tasks')
-        const thingsOk = thingsRes.ok
+        // Check tasks endpoint
+        const tasksRes = await fetch('/api/tasks')
+        const tasksOk = tasksRes.ok
 
         // Check OAuth endpoint
         const oauthRes = await fetch('/api/oauth/authorize')
         const oauthOk = oauthRes.ok
 
         setApiStatus({
-          health: healthOk,
-          things: thingsOk,
+          tasks: tasksOk,
           oauth: oauthOk
         })
       } catch (error) {
@@ -46,6 +67,112 @@ export default function HomePage() {
     checkApiStatus()
   }, [])
 
+  // Handle redirect to hosted checkout page
+  const handleViewPlans = useCallback(async (planRef?: string) => {
+    if (!agentRef) {
+      setError('Agent reference is not configured');
+      return;
+    }
+
+    setIsRedirecting(true);
+    setError(null);
+
+    try {
+      const accessToken = await getAccessToken();
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      const requestBody: { agentRef: string; planRef?: string } = {
+        agentRef,
+      };
+
+      if (planRef) {
+        requestBody.planRef = planRef;
+      }
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.details || 'Failed to create checkout session';
+        throw new Error(errorMessage);
+      }
+
+      const { checkoutUrl } = await response.json();
+
+      if (!checkoutUrl) {
+        throw new Error('No checkout URL returned');
+      }
+
+      // Redirect to hosted checkout page
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      console.error('Failed to redirect to checkout:', err);
+      setError(err instanceof Error ? err.message : 'Failed to redirect to checkout');
+      setIsRedirecting(false);
+    }
+  }, [agentRef]);
+
+  // Handle redirect to hosted customer management page
+  const handleManageSubscription = useCallback(async () => {
+    setIsRedirecting(true);
+    setError(null);
+
+    try {
+      const accessToken = await getAccessToken();
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      const response = await fetch('/api/create-customer-session', {
+        method: 'POST',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.details || 'Failed to create management token';
+        throw new Error(errorMessage);
+      }
+
+      const { customerUrl } = await response.json();
+
+      if (!customerUrl) {
+        throw new Error('No customer URL returned');
+      }
+
+      // Redirect to hosted customer management page
+      window.location.href = customerUrl;
+    } catch (err) {
+      console.error('Failed to redirect to customer management:', err);
+      setError(err instanceof Error ? err.message : 'Failed to redirect to customer management');
+      setIsRedirecting(false);
+    }
+  }, []);
+
+  // Get the most recent active subscription (for display - includes free plans)
+  const mostRecentActiveSubscription = useMemo(() => {
+    const activeSubs = subscriptions.filter(sub => sub.status === 'active');
+    return activeSubs.sort((a, b) => 
+      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    )[0];
+  }, [subscriptions]);
+
   return (
     <div className="px-4 sm:px-0">
       <div className="mb-8">
@@ -56,6 +183,43 @@ export default function HomePage() {
           A Next.js frontend demonstrating SolvaPay&apos;s paywall-protected API endpoints 
           designed for OpenAI Custom GPT Actions integration.
         </p>
+        
+        {/* Subscription Status */}
+        {isLoading ? (
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="text-gray-600 text-sm">Loading subscription status...</span>
+          </div>
+        ) : hasPaidSubscription ? (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800">
+              You&apos;re on the <span className="font-semibold">{activePaidSubscription?.planName}</span> plan
+            </p>
+          </div>
+        ) : mostRecentActiveSubscription ? (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              You&apos;re on the <span className="font-semibold">{mostRecentActiveSubscription?.planName}</span> plan
+            </p>
+          </div>
+        ) : shouldShowCancelledNotice && cancelledSubscription ? (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-medium text-amber-900">
+              Your <span className="font-semibold">{cancelledSubscription.planName}</span> subscription has been cancelled
+            </p>
+            {cancelledSubscription.endDate && (
+              <p className="text-xs text-amber-700 mt-1">
+                Access expires on {formatDate(cancelledSubscription.endDate)}
+              </p>
+            )}
+          </div>
+        ) : null}
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
       </div>
 
       {/* API Status */}
@@ -67,14 +231,10 @@ export default function HomePage() {
             <span className="text-gray-600">Checking API status...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${apiStatus.health ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm font-medium">Health Endpoint</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${apiStatus.things ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm font-medium">Things API</span>
+              <div className={`w-3 h-3 rounded-full ${apiStatus.tasks ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm font-medium">Tasks API</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className={`w-3 h-3 rounded-full ${apiStatus.oauth ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -96,7 +256,7 @@ export default function HomePage() {
             <h3 className="text-lg font-semibold text-gray-900">API Endpoints</h3>
           </div>
           <p className="text-gray-600 text-sm mb-4">
-            Full CRUD operations for &ldquo;things&rdquo; with paywall protection via API endpoints.
+            Full CRUD operations for tasks with paywall protection via API endpoints.
           </p>
           <a href="/docs" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
             View API Docs →
@@ -132,9 +292,23 @@ export default function HomePage() {
           <p className="text-gray-600 text-sm mb-4">
             Subscription management and plan upgrade checkout flow.
           </p>
-          <a href="/checkout" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-            Upgrade Plan →
-          </a>
+          {subscriptions.length > 0 ? (
+            <button
+              onClick={handleManageSubscription}
+              disabled={isRedirecting}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRedirecting ? 'Redirecting...' : 'Manage Subscription →'}
+            </button>
+          ) : (
+            <button
+              onClick={() => handleViewPlans()}
+              disabled={isRedirecting}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRedirecting ? 'Redirecting...' : 'Upgrade Plan →'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -149,48 +323,34 @@ export default function HomePage() {
             <button 
               onClick={async () => {
                 try {
-                  const res = await fetch('/api/healthz')
-                  const data = await res.json()
-                  alert(`Health Check: ${JSON.stringify(data, null, 2)}`)
-                } catch (error) {
-                  alert(`Error: ${error}`)
-                }
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-            >
-              Test Health
-            </button>
-            <button 
-              onClick={async () => {
-                try {
                   const res = await fetch('/api/tasks')
                   const data = await res.json()
-                  alert(`Things List: ${JSON.stringify(data, null, 2)}`)
+                  alert(`Tasks List: ${JSON.stringify(data, null, 2)}`)
                 } catch (error) {
                   alert(`Error: ${error}`)
                 }
               }}
               className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700"
             >
-              List Things
+              List Tasks
             </button>
             <button 
               onClick={async () => {
                 try {
-                  const res = await fetch('/api/things', {
+                  const res = await fetch('/api/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: 'Test Thing', description: 'Created from UI' })
+                    body: JSON.stringify({ title: 'Test Task', description: 'Created from UI' })
                   })
                   const data = await res.json()
-                  alert(`Create Thing: ${JSON.stringify(data, null, 2)}`)
+                  alert(`Create Task: ${JSON.stringify(data, null, 2)}`)
                 } catch (error) {
                   alert(`Error: ${error}`)
                 }
               }}
               className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700"
             >
-              Create Thing
+              Create Task
             </button>
           </div>
         </div>

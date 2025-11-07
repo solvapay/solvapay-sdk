@@ -17,8 +17,16 @@
     "version:bump:minor": "tsx scripts/version-bump.ts minor",
     "version:bump:major": "tsx scripts/version-bump.ts major",
     "version:bump:preview": "tsx scripts/version-bump-preview.ts",
-    "publish:packages": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' publish --access public --no-git-checks --no-provenance",
-    "publish:preview": "pnpm --filter '@solvapay/core' --filter '@solvapay/react' --filter '@solvapay/server' publish --tag preview --access public --no-git-checks --no-provenance"
+    "test:publish": "tsx scripts/test-publish.ts",
+    "publish:packages": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --access public --no-git-checks --no-provenance",
+    "publish:preview": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --tag preview --access public --no-git-checks --no-provenance",
+    "publish:preview:dry-run": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --tag preview --access public --no-git-checks --no-provenance --dry-run",
+    "tag:latest": "tsx scripts/tag-as-latest.ts",
+    "docs:build": "rm -rf docs/api && typedoc",
+    "docs:watch": "typedoc --watch",
+    "docs:check": "typedoc --json docs/api.json",
+    "docs:validate-links": "tsx scripts/validate-doc-links.ts",
+    "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
@@ -31,11 +39,14 @@
     "@types/react": "^18.2.79",
     "conventional-changelog-cli": "^5.0.0",
     "fastify": "^4.28.1",
+    "glob": "^11.0.3",
     "jose": "^5.9.3",
     "nodemon": "^3.1.0",
     "tsup": "^8.0.1",
     "tsx": "^4.19.0",
     "turbo": "^2.0.6",
+    "typedoc": "^0.28.14",
+    "typedoc-plugin-markdown": "^4.9.0",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5",
     "zod": "^3.23.8"

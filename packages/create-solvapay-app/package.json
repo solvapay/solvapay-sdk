@@ -1,0 +1,33 @@
+{
+  "name": "create-solvapay-app",
+  "version": "1.0.0-preview.18",
+  "description": "CLI tool to set up a Next.js project with SolvaPay and Supabase",
+  "type": "module",
+  "bin": {
+    "create-solvapay-app": "./bin/setup.sh"
+  },
+  "files": [
+    "bin",
+    "guides"
+  ],
+  "keywords": [
+    "solvapay",
+    "nextjs",
+    "supabase",
+    "setup",
+    "cli"
+  ],
+  "author": "SolvaPay",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git",
+    "directory": "packages/create-solvapay-app"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

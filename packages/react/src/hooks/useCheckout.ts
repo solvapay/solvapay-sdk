@@ -11,13 +11,63 @@ export interface UseCheckoutReturn {
   reset: () => void;
 }
 
+// Cache Stripe promises per publishable key + accountId combination
+// This allows reusing Stripe instances across checkout sessions with the same key
+const stripePromiseCache = new Map<string, Promise<Stripe | null>>();
+
+function getStripeCacheKey(publishableKey: string, accountId?: string): string {
+  return accountId ? `${publishableKey}:${accountId}` : publishableKey;
+}
+
 /**
- * Hook to manage checkout flow
- * Handles payment intent creation and Stripe initialization
+ * Hook to manage checkout flow for payment processing.
  * 
- * @param planRef - The plan reference to checkout
+ * Handles payment intent creation and Stripe initialization. This hook
+ * manages the checkout state including loading, errors, Stripe instance,
+ * and client secret. Use this for programmatic checkout flows.
+ * 
+ * @param planRef - Plan reference to subscribe to (required)
+ * @param agentRef - Optional agent reference for usage tracking
+ * @returns Checkout state and methods
+ * @returns loading - Whether checkout is in progress
+ * @returns error - Error state if checkout fails
+ * @returns stripePromise - Promise resolving to Stripe instance
+ * @returns clientSecret - Stripe payment intent client secret
+ * @returns startCheckout - Function to start the checkout process
+ * @returns reset - Function to reset checkout state
+ * 
+ * @example
+ * ```tsx
+ * import { useCheckout } from '@solvapay/react';
+ * import { PaymentElement } from '@stripe/react-stripe-js';
+ * 
+ * function CustomCheckout() {
+ *   const { loading, error, stripePromise, clientSecret, startCheckout } = useCheckout(
+ *     'pln_premium',
+ *     'agt_myapi'
+ *   );
+ * 
+ *   useEffect(() => {
+ *     startCheckout();
+ *   }, []);
+ * 
+ *   if (loading) return <Spinner />;
+ *   if (error) return <div>Error: {error.message}</div>;
+ *   if (!clientSecret || !stripePromise) return null;
+ * 
+ *   return (
+ *     <Elements stripe={await stripePromise} options={{ clientSecret }}>
+ *       <PaymentElement />
+ *     </Elements>
+ *   );
+ * }
+ * ```
+ * 
+ * @see {@link PaymentForm} for a complete payment form component
+ * @see {@link SolvaPayProvider} for required context provider
+ * @since 1.0.0
  */
-export function useCheckout(planRef: string): UseCheckoutReturn {
+export function useCheckout(planRef: string, agentRef?: string): UseCheckoutReturn {
   const { createPayment, customerRef, updateCustomerRef } = useSolvaPay();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(
@@ -40,19 +90,14 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
       return;
     }
 
-    if (!customerRef) {
-      setError(new Error('No customer reference available. Please ensure you are logged in.'));
-      return;
-    }
-
     // Set guard flag
     isStartingRef.current = true;
     setLoading(true);
     setError(null);
 
     try {
-      // Create payment intent
-      const result = await createPayment({ planRef, customerRef });
+      // Create payment intent (customerRef is handled internally by provider)
+      const result = await createPayment({ planRef, agentRef });
 
       // Validate payment intent result
       if (!result || typeof result !== 'object') {
@@ -69,30 +114,30 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
 
       // If the backend returned a new customer reference, update it
       // This happens when a local customer ID is converted to a backend customer ID
-      if (result.customerRef && result.customerRef !== customerRef) {
-        console.log(`🔄 [useCheckout] Backend returned different customerRef:`, {
-          sent: customerRef,
-          received: result.customerRef,
-        });
-        if (updateCustomerRef) {
-          updateCustomerRef(result.customerRef);
-          console.log('✅ [useCheckout] Customer reference updated via callback');
-        } else {
-          console.warn('⚠️  [useCheckout] No updateCustomerRef callback available!');
-        }
-      } else if (result.customerRef === customerRef) {
-        console.log('✅ [useCheckout] Customer reference unchanged:', customerRef);
+      if (result.customerRef && result.customerRef !== customerRef && updateCustomerRef) {
+        updateCustomerRef(result.customerRef);
       }
 
-      // Load Stripe with the publishable key
+      // Load Stripe with the publishable key (use cache if available)
       const stripeOptions = result.accountId 
         ? { stripeAccount: result.accountId }
         : {};
       
-      const stripe = loadStripe(result.publishableKey, stripeOptions);
+      const cacheKey = getStripeCacheKey(result.publishableKey, result.accountId);
+      let stripe = stripePromiseCache.get(cacheKey);
+      
+      if (!stripe) {
+        // LoadStripe already caches internally, but we cache the promise here too
+        // to avoid recreating it if we've seen this key before
+        stripe = loadStripe(result.publishableKey, stripeOptions);
+        stripePromiseCache.set(cacheKey, stripe);
+      }
       
       setStripePromise(stripe);
       setClientSecret(result.clientSecret);
+      
+      // Note: We don't refetch here because payment intent creation doesn't change subscription status
+      // Subscription only changes after successful payment completion, which is handled in PaymentForm
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start checkout');
       setError(error);
@@ -100,7 +145,7 @@ export function useCheckout(planRef: string): UseCheckoutReturn {
       setLoading(false);
       isStartingRef.current = false; // Clear guard flag
     }
-  }, [planRef, customerRef, createPayment, updateCustomerRef, loading]);
+  }, [planRef, agentRef, createPayment, updateCustomerRef, loading]);
 
   const reset = useCallback(() => {
     isStartingRef.current = false;

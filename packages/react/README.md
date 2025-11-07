@@ -15,24 +15,85 @@ pnpm add @solvapay/react
 
 ## Quick Start
 
+### Zero-Config Usage (Recommended)
+
 ```tsx
-import { SolvaPayProvider, UpgradeButton, useSubscription } from '@solvapay/react';
+import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react';
+
+export default function App() {
+  return (
+    <SolvaPayProvider>
+      <CheckoutPage />
+    </SolvaPayProvider>
+  );
+}
+```
+
+By default, `SolvaPayProvider` uses:
+- `/api/check-subscription` for subscription checks
+- `/api/create-payment-intent` for payment creation
+- `/api/process-payment` for payment processing
+
+### Custom API Routes
+
+```tsx
+import { SolvaPayProvider, PaymentForm } from '@solvapay/react';
 
 export default function App() {
   return (
     <SolvaPayProvider
-      customerRef={user?.id}
-      createPayment={async ({ planRef, customerRef }) => {
-        const res = await fetch('/api/payments/create', {
+      config={{
+        api: {
+          checkSubscription: '/api/custom/subscription',
+          createPayment: '/api/custom/payment',
+          processPayment: '/api/custom/process',
+        },
+      }}
+    >
+      <CheckoutPage />
+    </SolvaPayProvider>
+  );
+}
+```
+
+### With Supabase Authentication
+
+```tsx
+import { SolvaPayProvider } from '@solvapay/react';
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+
+export default function App() {
+  const adapter = createSupabaseAuthAdapter({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  });
+
+  return (
+    <SolvaPayProvider config={{ auth: { adapter } }}>
+      <CheckoutPage />
+    </SolvaPayProvider>
+  );
+}
+```
+
+### Fully Custom Implementation
+
+```tsx
+import { SolvaPayProvider } from '@solvapay/react';
+
+export default function App() {
+  return (
+    <SolvaPayProvider
+      createPayment={async ({ planRef, agentRef }) => {
+        const res = await fetch('/api/custom/payment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planRef, customerRef }),
+          body: JSON.stringify({ planRef, agentRef }),
         });
         if (!res.ok) throw new Error('Failed to create payment');
         return res.json();
       }}
       checkSubscription={async (customerRef) => {
-        const res = await fetch(`/api/subscriptions/${customerRef}`);
+        const res = await fetch(`/api/custom/subscription?customerRef=${customerRef}`);
         if (!res.ok) throw new Error('Failed to check subscription');
         return res.json();
       }}
@@ -47,53 +108,97 @@ export default function App() {
 
 ### SolvaPayProvider
 
-Headless context provider that manages subscription state and payment methods.
+Headless context provider that manages subscription state, payment methods, and customer references.
+
+**Features:**
+- Zero-config with sensible defaults
+- Auto-fetches subscriptions on mount
+- Built-in localStorage caching with user validation
+- Supports auth adapters for extracting user IDs and tokens
+- Customizable API routes via config
 
 **Props:**
-- `createPayment: (params: { planRef: string; customerRef: string }) => Promise<PaymentIntentResult>` - Function to create payment intent
-- `checkSubscription: (customerRef: string) => Promise<CustomerSubscriptionData>` - Function to check subscription status
-- `customerRef?: string` - Optional customer reference
-- `onCustomerRefUpdate?: (newCustomerRef: string) => void` - Callback when customer ref updates
+- `config?: SolvaPayConfig` - Configuration object (optional)
+  - `config.api?` - Custom API route paths
+  - `config.auth?` - Auth adapter configuration
+- `createPayment?: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>` - Custom payment creation function (optional, overrides config)
+- `checkSubscription?: (customerRef: string) => Promise<CustomerSubscriptionData>` - Custom subscription check function (optional, overrides config)
+- `processPayment?: (params: { paymentIntentId: string; agentRef: string; planRef?: string }) => Promise<ProcessPaymentResult>` - Custom payment processing function (optional)
 - `children: React.ReactNode` - Child components
 
-### UpgradeButton
+**Config Options:**
+```tsx
+interface SolvaPayConfig {
+  api?: {
+    checkSubscription?: string;      // Default: '/api/check-subscription'
+    createPayment?: string;           // Default: '/api/create-payment-intent'
+    processPayment?: string;          // Default: '/api/process-payment'
+  };
+  auth?: {
+    adapter?: AuthAdapter;           // Auth adapter for extracting user ID/token
+    getToken?: () => Promise<string | null>;  // Deprecated: use adapter
+    getUserId?: () => Promise<string | null>; // Deprecated: use adapter
+  };
+}
+```
 
-Headless component for handling upgrade flows with render props pattern.
+### PlanSelector
+
+Component for selecting and displaying available plans.
 
 **Props:**
-- `planRef: string` - Plan reference to upgrade to
-- `onSuccess?: () => void` - Callback on successful payment
-- `onError?: (error: Error) => void` - Callback on payment error
-- `children: (props) => React.ReactNode` - Render prop function
-- `renderPaymentForm?: (props) => React.ReactNode` - Custom payment form renderer
-- `paymentFormContainerClassName?: string` - Optional className for container
-- `cancelButtonClassName?: string` - Optional className for cancel button
+- `agentRef?: string` - Agent reference to filter plans
+- `fetcher?: (agentRef: string) => Promise<Plan[]>` - Custom plan fetcher function
+- `onPlanSelect?: (plan: Plan) => void` - Callback when plan is selected
+- `renderPlan?: (plan: Plan) => React.ReactNode` - Custom plan renderer
+- `className?: string` - Container className
 
 **Example:**
 ```tsx
-<UpgradeButton planRef="pro_plan">
-  {({ onClick, loading, disabled, error }) => (
-    <button onClick={onClick} disabled={disabled}>
-      {loading ? 'Processing...' : 'Upgrade to Pro'}
-      {error && <span>Error: {error.message}</span>}
-    </button>
-  )}
-</UpgradeButton>
+import { PlanSelector, usePlans } from '@solvapay/react';
+
+function PlansPage() {
+  const { plans, loading } = usePlans({ agentRef: 'my-agent' });
+  
+  return (
+    <div>
+      {loading ? 'Loading...' : plans.map(plan => (
+        <div key={plan.reference}>{plan.name}</div>
+      ))}
+    </div>
+  );
+}
 ```
 
 ### PaymentForm
 
-Payment form component using Stripe PaymentElement. Must be wrapped in Stripe Elements provider (provided by UpgradeButton or manually).
+Payment form component using Stripe PaymentElement. Automatically handles Stripe Elements provider setup.
 
 **Props:**
+- `planRef: string` - Plan reference for the payment
+- `agentRef?: string` - Optional agent reference
 - `onSuccess?: (paymentIntent: PaymentIntent) => void` - Callback on successful payment
 - `onError?: (error: Error) => void` - Callback on payment error
 - `returnUrl?: string` - Return URL after payment
 - `submitButtonText?: string` - Submit button text (default: "Pay Now")
-- `className?: string` - Form className (legacy, use formClassName)
 - `formClassName?: string` - Form element className
 - `messageClassName?: string` - Message container className
 - `buttonClassName?: string` - Submit button className
+
+**Example:**
+```tsx
+import { PaymentForm } from '@solvapay/react';
+
+function CheckoutPage() {
+  return (
+    <PaymentForm
+      planRef="pln_YOUR_PLAN"
+      agentRef="agt_YOUR_AGENT"
+      onSuccess={() => console.log('Payment successful!')}
+    />
+  );
+}
+```
 
 ### PlanBadge
 
@@ -132,10 +237,45 @@ Controls access to content based on subscription status.
 
 ### useSubscription
 
-Access subscription status and refetch function.
+Access subscription status, active subscriptions, and helper functions.
 
 ```tsx
-const { subscriptions, loading, hasActiveSubscription, hasPlan, refetch } = useSubscription();
+const { 
+  subscriptions,           // Array of all subscriptions
+  loading,                 // Loading state
+  hasPaidSubscription,    // Boolean: has any paid subscription
+  activeSubscription,      // Most recent active subscription
+  refetch                  // Function to refetch subscriptions
+} = useSubscription();
+```
+
+### usePlans
+
+Fetch and manage available plans.
+
+```tsx
+const { 
+  plans,                   // Array of available plans
+  loading,                 // Loading state
+  error,                   // Error object if fetch failed
+  refetch                  // Function to refetch plans
+} = usePlans({ 
+  agentRef: 'my-agent',   // Optional agent reference
+  fetcher: customFetcher  // Optional custom fetcher function
+});
+```
+
+### useSubscriptionStatus
+
+Advanced subscription status helpers.
+
+```tsx
+const {
+  cancelledSubscription,      // Most recent cancelled subscription
+  shouldShowCancelledNotice,   // Boolean: should show cancellation notice
+  formatDate,                  // Helper to format dates
+  getDaysUntilExpiration       // Helper to get days until expiration
+} = useSubscriptionStatus();
 ```
 
 ### useCheckout
@@ -151,7 +291,14 @@ const { loading, error, startCheckout, reset } = useCheckout('plan_ref');
 Access SolvaPay context directly.
 
 ```tsx
-const { subscription, createPayment, customerRef } = useSolvaPay();
+const { 
+  subscriptionData,      // Full subscription data
+  loading,                // Loading state
+  createPayment,         // Payment creation function
+  processPayment,        // Payment processing function
+  customerRef,           // Current customer reference
+  updateCustomerRef      // Function to update customer reference
+} = useSolvaPay();
 ```
 
 ## TypeScript
@@ -164,4 +311,4 @@ import type { PaymentFormProps, SubscriptionStatus, PaymentIntentResult } from '
 
 ## More Information
 
-See `docs/architecture.md` for detailed architecture documentation.
+See [`docs/guides/architecture.md`](../../docs/guides/architecture.md) for detailed architecture documentation.

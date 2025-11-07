@@ -72,6 +72,7 @@ jobs:
       
       # Note: Using --no-provenance flag because provenance signing only works with public repositories
       # This repository is private, so we skip provenance to avoid NPM 422 errors
+      # Publishes all 7 packages: @solvapay/core, @solvapay/react, @solvapay/react-supabase, @solvapay/server, @solvapay/auth, @solvapay/next, create-solvapay-app
       - name: Publish preview to NPM
         run: pnpm publish:preview
         env:

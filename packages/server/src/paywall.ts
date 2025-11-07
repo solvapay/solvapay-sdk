@@ -14,7 +14,7 @@ import type {
   PaywallToolResult,
   SolvaPayClient,
 } from './types';
-import { withRetry } from './utils';
+import { withRetry, createRequestDeduplicator } from './utils';
 
 // Re-export types for convenience
 export type {
@@ -25,7 +25,47 @@ export type {
   SolvaPayClient,
 };
 
+/**
+ * Error thrown when a paywall is triggered (subscription required or usage limit exceeded).
+ * 
+ * This error is automatically thrown by the paywall protection system when:
+ * - Customer doesn't have required subscription
+ * - Customer has exceeded usage limits
+ * - Customer needs to upgrade their plan
+ * 
+ * The error includes structured content with checkout URLs and metadata for
+ * building custom paywall UIs.
+ * 
+ * @example
+ * ```typescript
+ * import { PaywallError } from '@solvapay/server';
+ * 
+ * try {
+ *   const result = await payable.http(createTask)(req, res);
+ *   return result;
+ * } catch (error) {
+ *   if (error instanceof PaywallError) {
+ *     // Custom paywall handling
+ *     return res.status(402).json({
+ *       error: error.message,
+ *       checkoutUrl: error.structuredContent.checkoutUrl,
+ *       // Additional metadata available in error.structuredContent
+ *     });
+ *   }
+ *   throw error;
+ * }
+ * ```
+ * 
+ * @see {@link PaywallStructuredContent} for the structured content format
+ * @since 1.0.0
+ */
 export class PaywallError extends Error {
+  /**
+   * Creates a new PaywallError instance.
+   * 
+   * @param message - Error message
+   * @param structuredContent - Structured content with checkout URLs and metadata
+   */
   constructor(
     message: string,
     public structuredContent: PaywallStructuredContent
@@ -34,6 +74,24 @@ export class PaywallError extends Error {
     this.name = 'PaywallError';
   }
 }
+
+/**
+ * Shared customer lookup deduplicator across all SolvaPay instances
+ * 
+ * This prevents duplicate customer lookups when multiple SolvaPay instances
+ * are created in the same process (e.g., in different API routes).
+ * 
+ * Features:
+ * - Deduplicates concurrent requests (multiple requests share the same promise)
+ * - Caches results for 60 seconds (prevents duplicate sequential requests)
+ * - Automatic cleanup of expired cache entries
+ * - Memory-safe with max cache size
+ */
+const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
+  cacheTTL: 60000, // Cache results for 60 seconds (reduces API calls significantly)
+  maxCacheSize: 1000, // Maximum cache entries
+  cacheErrors: false, // Don't cache errors - retry on next request
+});
 
 /**
  * Universal SolvaPay Protection - One API for everything
@@ -98,18 +156,14 @@ export class SolvaPayPaywall {
       try {
         // Check limits with backend using the backend customer reference
         const planRef = metadata.plan || toolName;
-        this.log(`🔍 Checking limits for customer: ${backendCustomerRef}, agent: ${agent}, plan: ${planRef}`);
         
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
           agentRef: agent
         });
-        
-        this.log(`✓ Limits check passed:`, limitsCheck);
 
         if (!limitsCheck.withinLimits) {
           const latencyMs = Date.now() - startTime;
-          this.log(`🚫 Paywall triggered - tracking usage`);
           await this.trackUsage(backendCustomerRef, agent, planRef, toolName, 'paywall', requestId, latencyMs);
           
           throw new PaywallError('Payment required', {
@@ -121,20 +175,22 @@ export class SolvaPayPaywall {
         }
 
         // Execute the protected handler
-        this.log(`⚡ Executing handler: ${toolName}`);
         const result = await handler(args);
-        this.log(`✓ Handler completed successfully`);
         
         // Track successful usage
         const latencyMs = Date.now() - startTime;
-        this.log(`📊 Tracking successful usage`);
         await this.trackUsage(backendCustomerRef, agent, planRef, toolName, 'success', requestId, latencyMs);
-        this.log(`✅ Request completed successfully`);
         
         return result;
 
       } catch (error) {
-        this.log(`❌ Error in paywall:`, error);
+        // Log error details for debugging, but format it clearly without full stack traces
+        if (error instanceof Error) {
+          const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error';
+          this.log(`❌ Error in paywall [${errorType}]: ${error.message}`);
+        } else {
+          this.log(`❌ Error in paywall:`, error);
+        }
         const latencyMs = Date.now() - startTime;
         const outcome = error instanceof PaywallError ? 'paywall' : 'fail';
         const planRef = metadata.plan || toolName;
@@ -149,9 +205,15 @@ export class SolvaPayPaywall {
    * This is a public helper for testing, pre-creating customers, and internal use.
    * Only attempts creation once per customer (idempotent).
    * Returns the backend customer reference to use in API calls.
+   * 
+   * @param customerRef - The customer reference used as a cache key (e.g., Supabase user ID)
+   * @param externalRef - Optional external reference for backend lookup (e.g., Supabase user ID)
+   *   If provided, will lookup existing customer by externalRef before creating new one.
+   *   The externalRef is stored on the SolvaPay backend for customer lookup.
+   * @param options - Optional customer details (email, name) for customer creation
    */
-  async ensureCustomer(customerRef: string): Promise<string> {
-    // Return cached mapping if exists
+  async ensureCustomer(customerRef: string, externalRef?: string, options?: { email?: string; name?: string }): Promise<string> {
+    // Return cached mapping if exists (per-instance cache)
     if (this.customerRefMapping.has(customerRef)) {
       return this.customerRefMapping.get(customerRef)!;
     }
@@ -161,47 +223,108 @@ export class SolvaPayPaywall {
       return customerRef;
     }
     
-    // If already attempted but no mapping, use original ref
-    if (this.customerCreationAttempts.has(customerRef)) {
-      return customerRef;
+    // Use shared deduplicator to prevent duplicate lookups across all instances
+    // This is especially important when multiple routes call ensureCustomer concurrently
+    const cacheKey = externalRef || customerRef;
+    
+    // Check if we have a cached result in per-instance cache first (fast path)
+    if (this.customerRefMapping.has(customerRef)) {
+      const cached = this.customerRefMapping.get(customerRef)!;
+      return cached;
     }
     
-    // Skip if createCustomer is not available
-    if (!this.apiClient.createCustomer) {
-      // eslint-disable-next-line no-console
-      console.warn(`⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`);
-      return customerRef;
-    }
+    // Use shared deduplicator (handles both concurrent requests and cache)
+    const backendRef = await sharedCustomerLookupDeduplicator.deduplicate(
+      cacheKey,
+      async () => {
+        // If externalRef is provided, try to lookup existing customer first
+        if (externalRef && this.apiClient.getCustomerByExternalRef) {
+          try {
+            const existingCustomer = await this.apiClient.getCustomerByExternalRef({ externalRef });
+            
+            if (existingCustomer && existingCustomer.customerRef) {
+              const ref = existingCustomer.customerRef;
+              
+              // Store the mapping for future use (per-instance cache)
+              this.customerRefMapping.set(customerRef, ref);
+              
+              // Also track that we've attempted creation for this externalRef to prevent duplicates
+              this.customerCreationAttempts.add(customerRef);
+              if (externalRef !== customerRef) {
+                this.customerCreationAttempts.add(externalRef);
+              }
+              
+              return ref;
+            }
+          } catch (error) {
+            // 404 means customer doesn't exist yet - this is expected, continue to creation
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (!errorMessage.includes('404') && !errorMessage.includes('not found')) {
+              // Unexpected error - log but continue to fallback behavior
+              this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`);
+            }
+          }
+        }
+        
+        // If already attempted but no mapping, use original ref
+        // Check both customerRef and externalRef to prevent duplicates
+        if (this.customerCreationAttempts.has(customerRef) || 
+            (externalRef && this.customerCreationAttempts.has(externalRef))) {
+          // If we have a mapping, use it; otherwise return the original ref
+          const mappedRef = this.customerRefMapping.get(customerRef);
+          return mappedRef || customerRef;
+        }
+        
+        // Skip if createCustomer is not available
+        if (!this.apiClient.createCustomer) {
+          // eslint-disable-next-line no-console
+          console.warn(`⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`);
+          return customerRef;
+        }
+        
+        this.customerCreationAttempts.add(customerRef);
+        
+        try {
+          // Prepare customer creation params
+          // Use provided email/name, or fallback to auto-generated values
+          const createParams: any = {
+            email: options?.email || `${customerRef}@auto-created.local`,
+          };
+          
+          // Only include name if explicitly provided (don't fallback to customerRef)
+          // This prevents externalRef from being used as the name when both are the same value
+          if (options?.name) {
+            createParams.name = options.name;
+          }
+          
+          // Include externalRef if provided
+          if (externalRef) {
+            createParams.externalRef = externalRef;
+          }
+          
+          const result = await this.apiClient.createCustomer(createParams);
+          
+          // Extract the backend reference from the response
+          const ref = (result as any).customerRef || (result as any).reference || customerRef;
+          
+          // Store the mapping (per-instance cache)
+          this.customerRefMapping.set(customerRef, ref);
+          
+          return ref;
+        } catch (error) {
+          this.log(`❌ Failed to auto-create customer ${customerRef}:`, error instanceof Error ? error.message : error);
+          // Continue anyway - use the original ref
+          return customerRef;
+        }
+      }
+    );
     
-    this.customerCreationAttempts.add(customerRef);
-    
-    try {
-      this.log(`🔧 Auto-creating customer: ${customerRef}`);
-      const result = await this.apiClient.createCustomer({
-        email: `${customerRef}@auto-created.local`,
-        name: customerRef
-      });
-      
-      // Extract the backend reference from the response
-      const backendRef = (result as any).customerRef || (result as any).reference || customerRef;
-      
-      this.log(`✅ Successfully created customer: ${customerRef} -> ${backendRef}`, result);
-      
-      this.log(`🔍 DEBUG - ensureCustomer analysis:`);
-      this.log(`   - Input customerRef: ${customerRef}`);
-      this.log(`   - Backend customerRef: ${backendRef}`);
-      this.log(`   - Has plan in response: ${(result as any).plan ? 'YES - ' + (result as any).plan : 'NO'}`);
-      this.log(`   - Has subscription in response: ${(result as any).subscription ? 'YES' : 'NO'}`);
-      
-      // Store the mapping
+    // Store the mapping in per-instance cache for faster subsequent lookups
+    if (backendRef !== customerRef) {
       this.customerRefMapping.set(customerRef, backendRef);
-      
-      return backendRef;
-    } catch (error) {
-      this.log(`❌ Failed to auto-create customer ${customerRef}:`, error instanceof Error ? error.message : error);
-      // Continue anyway - use the original ref
-      return customerRef;
     }
+    
+    return backendRef;
   }
 
   async trackUsage(customerRef: string, agentRef: string, planRef: string, toolName: string, outcome: 'success' | 'paywall' | 'fail', requestId: string, actionDuration: number): Promise<void> {
@@ -511,10 +634,6 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
         return ensureCustomerRef(payload.sub as string);
       }
     } catch (error) {
-      if (process.env.SOLVAPAY_DEBUG !== 'false') {
-        // eslint-disable-next-line no-console
-        console.log('Failed to verify JWT token:', error);
-      }
       // Fall through to use header fallback
     }
   }

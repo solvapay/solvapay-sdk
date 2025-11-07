@@ -55,7 +55,7 @@ export const expectJsonResponse = (response: Response, expectedStatus = 200) => 
   return response.json()
 }
 
-// Mock JWT token creation
+// Mock JWT token creation (for OAuth token testing)
 export const createMockJWT = async (payload: any = {}) => {
   const { SignJWT } = await import('jose')
   
@@ -83,13 +83,6 @@ export const createMockJWT = async (payload: any = {}) => {
 export const createTestThing = (overrides: any = {}) => ({
   name: 'Test Thing',
   description: 'A test thing for testing',
-  ...overrides
-})
-
-export const createTestUser = (overrides: any = {}) => ({
-  id: 'user_1',
-  email: 'test@example.com',
-  name: 'Test User',
   ...overrides
 })
 

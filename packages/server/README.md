@@ -93,6 +93,36 @@ const result = await protectedHandler({
 });
 ```
 
+### Authentication Integration
+
+You can integrate authentication adapters from `@solvapay/auth` with the `getCustomerRef` option:
+
+```ts
+import { createSolvaPay } from '@solvapay/server';
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+
+const auth = new SupabaseAuthAdapter({
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!
+});
+
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! });
+
+// Use with Next.js adapter
+export const POST = solvaPay.payable({ agent: 'my-api' }).next(
+  async (args) => {
+    return { result: 'success' };
+  },
+  {
+    getCustomerRef: async (req) => {
+      const userId = await auth.getUserIdFromRequest(req);
+      return userId ?? 'anonymous';
+    }
+  }
+);
+```
+
+This automatically extracts the user ID from authentication tokens and uses it as the customer reference for paywall checks.
+
 ### When to Use Each Adapter
 
 Choose the adapter based on your context:
@@ -324,4 +354,4 @@ By default, both are **disabled** to keep test output clean and readable. Enable
   run: pnpm test:integration
 ```
 
-More: docs/architecture.md
+More: [docs/guides/architecture.md](../../docs/guides/architecture.md)

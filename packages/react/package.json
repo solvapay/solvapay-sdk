@@ -1,10 +1,22 @@
 {
   "name": "@solvapay/react",
-  "version": "1.0.0-preview.6",
+  "version": "1.0.0-preview.18",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./adapters/auth": {
+      "types": "./dist/adapters/auth.d.ts",
+      "import": "./dist/adapters/auth.js",
+      "require": "./dist/adapters/auth.cjs"
+    }
+  },
   "files": [
     "dist",
     "README.md"
@@ -26,15 +38,22 @@
     "@stripe/stripe-js": "^4.8.0"
   },
   "scripts": {
-    "build": "tsup src/index.tsx --format esm,cjs --dts --tsconfig tsconfig.build.json",
+    "build": "tsup src/index.tsx src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:*",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.25",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^2.0.5",
+    "jsdom": "^23.0.1",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5"
   }

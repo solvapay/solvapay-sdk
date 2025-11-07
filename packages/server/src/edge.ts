@@ -39,6 +39,22 @@ export type {
 // Export retry utility for general use
 export { withRetry } from './utils';
 
+// Export route helpers (generic, framework-agnostic)
+// These work in edge runtimes as they use standard Web API Request
+export {
+  getAuthenticatedUserCore,
+  syncCustomerCore,
+  createPaymentIntentCore,
+  processPaymentCore,
+  createCheckoutSessionCore,
+  createCustomerSessionCore,
+  cancelSubscriptionCore,
+  listPlansCore,
+  isErrorResult,
+  handleRouteError,
+} from './helpers';
+export type { ErrorResult, AuthenticatedUser } from './helpers';
+
 /**
  * Verify webhook signature using edge-compatible Web Crypto API
  * Works in: Vercel Edge Functions, Cloudflare Workers, Deno, Supabase Edge Functions

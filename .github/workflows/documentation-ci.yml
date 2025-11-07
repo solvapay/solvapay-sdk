@@ -1,0 +1,199 @@
+name: Documentation CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'docs/**'
+      - 'packages/**/src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'typedoc.json'
+      - 'tsconfig.docs.json'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'docs/**'
+      - 'packages/**/src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'typedoc.json'
+      - 'tsconfig.docs.json'
+  workflow_dispatch:
+    inputs:
+      skip_link_validation:
+        description: 'Skip link validation steps'
+        required: false
+        type: boolean
+        default: false
+      skip_type_check:
+        description: 'Skip TypeScript type check'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+      
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Build packages
+        run: pnpm build:packages
+        # Packages must be built before generating docs since TypeDoc needs compiled types
+      
+      - name: Validate documentation links (before build)
+        id: validate-links-before
+        if: github.event_name != 'workflow_dispatch' || inputs.skip_link_validation == false
+        run: pnpm exec tsx scripts/validate-doc-links.ts --skip-api
+        continue-on-error: false
+        # Validates non-generated links early (skips docs/api/** which don't exist yet)
+      
+      - name: Check TypeDoc configuration
+        id: check-typedoc
+        run: pnpm docs:check
+        continue-on-error: false
+        # Validates TypeDoc can parse the codebase and generate JSON output
+        # This catches JSDoc syntax errors and missing exports
+      
+      - name: Build documentation
+        id: build-docs
+        run: pnpm docs:build
+        continue-on-error: false
+        # Ensures documentation can be generated successfully
+        # This is the final check that everything works end-to-end
+      
+      - name: Validate documentation links (after build)
+        id: validate-links-after
+        if: github.event_name != 'workflow_dispatch' || inputs.skip_link_validation == false
+        run: pnpm docs:validate-links
+        continue-on-error: false
+        # Validates ALL links including docs/api/** now that they exist
+        # This catches broken links to generated API documentation
+      
+      - name: Check for TypeScript errors in docs
+        if: github.event_name != 'workflow_dispatch' || inputs.skip_type_check == false
+        run: |
+          # Check if there are any TypeScript compilation errors that would affect docs
+          pnpm type-check || echo "Type check failed - this may affect documentation generation"
+        continue-on-error: true
+        # Type check is informational - docs build is the real test
+      
+      - name: Validate markdown files
+        run: |
+          # Check for common markdown issues
+          echo "Checking markdown files for common issues..."
+          
+          # Check for files with no content (just headers)
+          find docs -name "*.md" -type f ! -path "*/node_modules/*" ! -path "*/_media/*" ! -path "*/api/*" | while read file; do
+            # Skip if file is too small (likely empty or just headers)
+            if [ $(wc -l < "$file") -lt 5 ]; then
+              echo "⚠️  Warning: $file seems very short (less than 5 lines)"
+            fi
+          done
+          
+          # Check for markdown files with no links or content
+          find docs -name "*.md" -type f ! -path "*/node_modules/*" ! -path "*/_media/*" ! -path "*/api/*" -exec grep -L "." {} \; | while read file; do
+            echo "⚠️  Warning: $file appears to be empty"
+          done || true
+        continue-on-error: true
+        # Markdown validation is informational
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Documentation CI')
+            );
+            
+            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
+            const body = `## ${status} Documentation CI
+            
+            **Status:** ${{ job.status == 'success' && 'All checks passed' || 'Some checks failed' }}
+            
+            **Checks performed:**
+            - ✅ Link validation (before build)
+            - ✅ TypeDoc configuration check
+            - ✅ Documentation build
+            - ✅ Link validation (after build)
+            - ℹ️  TypeScript type check (informational)
+            - ℹ️  Markdown validation (informational)
+            
+            **Details:**
+            - Link validation (before): ${{ steps.validate-links-before.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
+            - TypeDoc check: ${{ steps.check-typedoc.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
+            - Docs build: ${{ steps.build-docs.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
+            - Link validation (after): ${{ steps.validate-links-after.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
+            
+            ${{ job.status == 'success' && 'All documentation checks passed! 🎉' || 'Please fix the issues above before merging.' }}
+            `;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+      
+      - name: Upload documentation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-docs
+          path: docs/api/
+          retention-days: 7
+          if-no-files-found: ignore
+

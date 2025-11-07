@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { revokedTokens, refreshTokens } from '@/lib/oauth-storage';
+import { refreshTokens } from '@/lib/oauth-storage';
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -20,11 +20,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Check if it's a refresh token first
-    if (tokenTypeHint === 'refresh_token' || refreshTokens.has(token)) {
-      const refreshTokenData = refreshTokens.get(token);
+    if (tokenTypeHint === 'refresh_token' || await refreshTokens.has(token)) {
+      const refreshTokenData = await refreshTokens.get(token);
       if (refreshTokenData) {
-        refreshTokens.delete(token);
+        await refreshTokens.delete(token);
         console.log('✅ [REVOKE] Successfully revoked refresh token for user:', refreshTokenData.userId);
         
         return NextResponse.json({
@@ -34,29 +33,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try to verify it as a JWT access token
     try {
       const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!);
-      const { payload } = await jwtVerify(token, jwtSecret, {
+      await jwtVerify(token, jwtSecret, {
         issuer: process.env.OAUTH_ISSUER!
       });
 
-      // Add to revoked tokens blacklist
-      revokedTokens.add(token);
-      
-      console.log('✅ [REVOKE] Successfully revoked access token for user:', payload.sub);
+      console.log('✅ [REVOKE] Access token will expire naturally (no blacklist storage)');
       
       return NextResponse.json({
         revoked: true,
-        message: 'Access token successfully revoked'
+        message: 'Token revocation completed'
       });
-
-    } catch (jwtError) {
-      // Token is not a valid JWT, might be an invalid or expired token
-      console.log('🔍 [REVOKE DEBUG] Token is not a valid JWT:', jwtError);
-      
-      // According to OAuth2 RFC 7009, the server should respond with 200 OK
-      // even if the token was not found or already revoked
+    } catch (jwtError: any) {
       return NextResponse.json({
         revoked: true,
         message: 'Token revocation completed'

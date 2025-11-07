@@ -12,4 +12,4 @@ pnpm add @solvapay/core
 import { SolvaPayError, Env } from '@solvapay/core';
 ```
 
-More: docs/architecture.md
+More: [docs/guides/architecture.md](../../docs/guides/architecture.md)

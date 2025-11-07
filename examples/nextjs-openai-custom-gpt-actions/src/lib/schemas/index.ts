@@ -64,25 +64,6 @@ export const UserPlanSchema = z.object({
   upgradedAt: z.string().datetime().optional().describe('Timestamp when plan was upgraded')
 }).openapi('UserPlan');
 
-// Health check schemas
-export const HealthResponseSchema = z.object({
-  status: z.literal('ok').describe('Service status'),
-  timestamp: z.string().datetime().describe('Current server timestamp'),
-  uptime: z.number().describe('Process uptime in seconds')
-}).openapi('HealthResponse');
-
-export const HealthzResponseSchema = z.object({
-  status: z.literal('ok').describe('Service status'),
-  timestamp: z.string().datetime().describe('Current server timestamp'),
-  uptime: z.number().describe('Process uptime in seconds'),
-  memory: z.object({
-    rss: z.number().describe('Resident Set Size'),
-    heapTotal: z.number().describe('Total heap size'),
-    heapUsed: z.number().describe('Used heap size'),
-    external: z.number().describe('External memory usage')
-  }).describe('Memory usage statistics')
-}).openapi('HealthzResponse');
-
 // OAuth schemas
 export const OAuthTokenRequestSchema = z.object({
   grant_type: z.literal('authorization_code').describe('OAuth grant type'),
@@ -166,8 +147,6 @@ export type Task = z.infer<typeof TaskSchema>;
 export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
 export type TaskList = z.infer<typeof TaskListSchema>;
 export type UserPlan = z.infer<typeof UserPlanSchema>;
-export type HealthResponse = z.infer<typeof HealthResponseSchema>;
-export type HealthzResponse = z.infer<typeof HealthzResponseSchema>;
 export type OAuthTokenRequest = z.infer<typeof OAuthTokenRequestSchema>;
 export type OAuthTokenResponse = z.infer<typeof OAuthTokenResponseSchema>;
 export type UserInfoResponse = z.infer<typeof UserInfoResponseSchema>;

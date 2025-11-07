@@ -119,12 +119,15 @@ describe('StubSolvaPayClient', () => {
       const result = await apiClient.createCheckoutSession({
         customerRef: 'test_customer',
         agentRef: 'test_plan',
-        returnUrl: 'https://example.com/return'
+        planRef: 'test_plan_ref'
       });
 
-      expect(result.url).toContain('checkout.solvapay.com');
-      expect(result.url).toContain('customer=test_customer');
-      expect(result.url).toContain('agent=test_plan');
+      expect(result).toHaveProperty('sessionId');
+      expect(result).toHaveProperty('checkoutUrl');
+      expect(result.checkoutUrl).toContain('checkout.solvapay.com');
+      expect(result.checkoutUrl).toContain('customer=test_customer');
+      expect(result.checkoutUrl).toContain('agent=test_plan');
+      expect(typeof result.sessionId).toBe('string');
     });
   });
 

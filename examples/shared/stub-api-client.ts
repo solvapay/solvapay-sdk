@@ -15,7 +15,7 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { SolvaPayClient } from '@solvapay/server';
+import type { SolvaPayClient, CustomerResponseMapped } from '@solvapay/server';
 
 // Re-export the interface from SDK for convenience
 export type { SolvaPayClient };
@@ -33,6 +33,7 @@ interface CustomerData {
     email?: string;
     name?: string;
     plan?: 'free' | 'pro' | 'premium';
+    externalRef?: string;
   };
 }
 
@@ -394,16 +395,59 @@ export class StubSolvaPayClient implements SolvaPayClient {
   async createCheckoutSession(params: {
     customerRef: string;
     agentRef: string;
-    returnUrl: string;
-  }): Promise<{ url: string }> {
+    planRef?: string;
+  }): Promise<{ sessionId: string; checkoutUrl: string }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
     
-    const checkoutUrl = `https://checkout.solvapay.com/demo?customer=${params.customerRef}&agent=${params.agentRef}&return=${encodeURIComponent(params.returnUrl)}`;
+    // Generate a mock session ID
+    const sessionId = `sess_${Math.random().toString(36).slice(2, 15)}`;
+    
+    // Build checkout URL with session ID
+    const queryParams = new URLSearchParams({
+      customer: params.customerRef,
+      agent: params.agentRef,
+      sessionId: sessionId,
+    });
+    
+    if (params.planRef) {
+      queryParams.set('plan', params.planRef);
+    }
+    
+    const checkoutUrl = `https://checkout.solvapay.com/demo?${queryParams.toString()}`;
     
     this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`);
     
-    return { url: checkoutUrl };
+    return {
+      sessionId: sessionId,
+      checkoutUrl: checkoutUrl,
+    };
+  }
+
+  /**
+   * Create a customer session for accessing customer-specific functionality
+   */
+  async createCustomerSession(params: {
+    customerRef: string;
+  }): Promise<{
+    sessionId: string;
+    customerUrl: string;
+  }> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer));
+    
+    // Generate a mock session ID
+    const sessionId = `customer_sess_${Math.random().toString(36).slice(2, 15)}`;
+    
+    // Build customer session URL
+    const customerUrl = `${this.baseUrl}/customer-session/${sessionId}`;
+    
+    this.log(`🔐 Created customer session for ${params.customerRef}: ${sessionId}`);
+    
+    return {
+      sessionId,
+      customerUrl,
+    };
   }
 
   /**
@@ -412,15 +456,26 @@ export class StubSolvaPayClient implements SolvaPayClient {
   async createCustomer(params: {
     email: string;
     name?: string;
+    externalRef?: string;
   }): Promise<{ customerRef: string }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
 
     this.log(`📡 Stub Request: POST /v1/sdk/customers`);
-    this.log(`   Email: ${params.email}, Name: ${params.name || 'N/A'}`);
+    this.log(`   Email: ${params.email}, Name: ${params.name || 'N/A'}, ExternalRef: ${params.externalRef || 'N/A'}`);
     
     const customerData = await this.loadCustomerData();
     const normalizedEmail = params.email.trim().toLowerCase();
+    
+    // If externalRef is provided, check for existing customer by externalRef first
+    if (params.externalRef) {
+      for (const [ref, customer] of Object.entries(customerData)) {
+        if (customer.externalRef === params.externalRef) {
+          this.log(`🔍 Found existing customer by externalRef: ${params.externalRef} -> ${ref}`);
+          return { customerRef: ref };
+        }
+      }
+    }
     
     // Look for existing customer by email
     for (const [ref, customer] of Object.entries(customerData)) {
@@ -446,7 +501,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
       customerData[potentialRef] = {
         credits: 0, // New customers start with 0 credits (free tier only)
         email: normalizedEmail,
-        name: params.name
+        name: params.name,
+        externalRef: params.externalRef
       };
       
       await this.saveCustomerData(customerData);
@@ -462,7 +518,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
     customerData[ref] = {
       credits: 0, // New customers start with 0 credits (free tier only)
       email: normalizedEmail,
-      name: params.name
+      name: params.name,
+      externalRef: params.externalRef
     };
     
     await this.saveCustomerData(customerData);
@@ -476,12 +533,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async getCustomer(params: {
     customerRef: string;
-  }): Promise<{
-    customerRef: string;
-    email?: string;
-    name?: string;
-    plan?: string;
-  }> {
+  }): Promise<CustomerResponseMapped> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer));
 
@@ -504,8 +556,45 @@ export class StubSolvaPayClient implements SolvaPayClient {
       customerRef: params.customerRef,
       email: customer.email,
       name: customer.name,
-      plan
+      externalRef: customer.externalRef,
+      plan,
+      subscriptions: [] // Stub doesn't track subscriptions yet
     };
+  }
+
+  /**
+   * Get customer by external reference
+   */
+  async getCustomerByExternalRef(params: {
+    externalRef: string;
+  }): Promise<CustomerResponseMapped> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer));
+
+    this.log(`📡 Stub Request: GET /v1/sdk/customers?externalRef=${params.externalRef}`);
+    
+    const customerData = await this.loadCustomerData();
+    
+    // Find customer by externalRef
+    for (const [ref, customer] of Object.entries(customerData)) {
+      if (customer.externalRef === params.externalRef) {
+        const plan = customer.plan || (customer.credits > 0 ? 'paid' : 'free');
+        
+        this.log(`✅ Found customer by externalRef: ${params.externalRef} -> ${ref} (${plan})`);
+        
+        return {
+          customerRef: ref,
+          email: customer.email,
+          name: customer.name,
+          externalRef: params.externalRef,
+          plan,
+          subscriptions: [] // Stub doesn't track subscriptions yet
+        };
+      }
+    }
+    
+    this.log(`❌ Customer not found by externalRef: ${params.externalRef}`);
+    throw new Error(`Customer not found by externalRef: ${params.externalRef}`);
   }
 
   /**

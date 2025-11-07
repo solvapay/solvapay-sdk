@@ -1,4 +1,4 @@
-import { writeFileSync, unlinkSync } from 'fs';
+import { writeFileSync, unlinkSync, readFileSync } from 'fs';
 import { execSync } from 'child_process';
 
 const OPENAPI_URL = 'http://localhost:3001/v1/openapi.json';
@@ -56,6 +56,24 @@ async function main(): Promise<void> {
       `npx openapi-typescript ${TEMP_SPEC_FILE} -o ${OUTPUT_FILE}`,
       { stdio: 'inherit' }
     );
+    
+    // Post-process: Convert @description tags to TypeDoc-compatible format
+    console.log('Converting @description tags to TypeDoc-compatible format...');
+    let generatedContent = readFileSync(OUTPUT_FILE, 'utf-8');
+    
+    // Replace @description tags with inline descriptions
+    // Pattern: /**\n * @description Text\n * @example ...\n */
+    // Becomes: /**\n * Text\n * @example ...\n */
+    // Match: /** followed by newline, then * @description <text>, then rest of comment
+    generatedContent = generatedContent.replace(
+      /(\/\*\*)\n(\s*)\*\s*@description\s+([^\n]+)/g,
+      (match, commentStart, indent, description) => {
+        // Remove @description and put description text directly
+        return `${commentStart}\n${indent}* ${description.trim()}`;
+      }
+    );
+    
+    writeFileSync(OUTPUT_FILE, generatedContent);
     
     // Clean up temp file
     console.log('Cleaning up...');

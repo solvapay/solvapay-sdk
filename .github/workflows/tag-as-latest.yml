@@ -1,0 +1,120 @@
+name: Tag Version as Latest
+
+# Manual workflow to promote a specific version to the "latest" npm dist-tag
+# This is useful for promoting preview versions to latest
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag as latest (e.g., 1.0.0-preview.9)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (show what would be tagged without actually tagging)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  tag-latest:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: X.Y.Z or X.Y.Z-preview.N"
+            exit 1
+          fi
+          echo "✅ Version format is valid: $VERSION"
+      
+      - name: Dry Run - Show what would be tagged
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "🔍 DRY RUN MODE - No changes will be made"
+          echo ""
+          echo "Would tag the following packages as 'latest':"
+          echo "  - @solvapay/core@${{ inputs.version }}"
+          echo "  - @solvapay/react@${{ inputs.version }}"
+          echo "  - @solvapay/react-supabase@${{ inputs.version }}"
+          echo "  - @solvapay/server@${{ inputs.version }}"
+          echo "  - @solvapay/auth@${{ inputs.version }}"
+          echo "  - @solvapay/next@${{ inputs.version }}"
+          echo ""
+          echo "Checking which versions exist on npm..."
+          
+          PACKAGES=("@solvapay/core" "@solvapay/react" "@solvapay/react-supabase" "@solvapay/server" "@solvapay/auth" "@solvapay/next")
+          
+          for pkg in "${PACKAGES[@]}"; do
+            if npm view "$pkg@${{ inputs.version }}" version &> /dev/null; then
+              echo "  ✅ $pkg@${{ inputs.version }} exists"
+            else
+              echo "  ⚠️  $pkg@${{ inputs.version }} not found (would skip)"
+            fi
+          done
+          
+          echo ""
+          echo "To actually tag these versions, re-run without dry_run enabled."
+      
+      - name: Tag versions as latest
+        if: ${{ !inputs.dry_run }}
+        run: pnpm tag:latest ${{ inputs.version }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Verify tags
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo ""
+          echo "📝 Verifying tags on npm..."
+          echo ""
+          npm dist-tag ls @solvapay/core || true
+          echo ""
+          npm dist-tag ls @solvapay/react || true
+          echo ""
+          npm dist-tag ls @solvapay/react-supabase || true
+          echo ""
+          npm dist-tag ls @solvapay/server || true
+          echo ""
+          npm dist-tag ls @solvapay/auth || true
+          echo ""
+          npm dist-tag ls @solvapay/next || true
+      
+      - name: Summary
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "✅ Successfully tagged version ${{ inputs.version }} as 'latest'"
+          echo ""
+          echo "Users can now install with:"
+          echo "  npm install @solvapay/core"
+          echo "  npm install @solvapay/react"
+          echo "  npm install @solvapay/react-supabase"
+          echo "  npm install @solvapay/server"
+          echo "  npm install @solvapay/auth"
+          echo "  npm install @solvapay/next"
+          echo ""
+          echo "And they will get version ${{ inputs.version }}"
+

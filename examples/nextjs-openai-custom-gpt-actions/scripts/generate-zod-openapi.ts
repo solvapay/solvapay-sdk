@@ -28,29 +28,16 @@ async function generateOpenApiSpec() {
   console.log('   - VERCEL:', process.env.VERCEL);
   console.log('   - PUBLIC_URL:', process.env.PUBLIC_URL ? '✓ Set' : '✗ Missing');
   
-  // Require PUBLIC_URL to be explicitly set
-  const serverUrl = process.env.PUBLIC_URL;
+  // Use PUBLIC_URL if set, otherwise fallback to localhost for development
+  const serverUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
   
-  if (!serverUrl) {
-    console.error('❌ Missing required environment variable: PUBLIC_URL');
-    console.error('');
-    console.error('PUBLIC_URL must be set in Vercel environment variables.');
-    console.error('');
-    console.error('🔧 How to fix on Vercel:');
-    console.error('   1. Go to your project settings: https://vercel.com/[team]/[project]/settings/environment-variables');
-    console.error('   2. Add environment variable: PUBLIC_URL');
-    console.error('   3. Set value to: https://gpt-demo.solvapay.com (or your custom domain)');
-    console.error('   4. ⚠️  IMPORTANT: Check all environment checkboxes:');
-    console.error('      ☑ Production');
-    console.error('      ☑ Preview');
-    console.error('      ☑ Development');
-    console.error('   5. Save and redeploy');
-    console.error('');
-    console.error('💡 For local development:');
-    console.error('   Add to .env.local: PUBLIC_URL=https://your-subdomain.ngrok-free.app');
-    console.error('');
-    console.error('📋 Currently available env vars:', Object.keys(process.env).filter(k => !k.includes('KEY') && !k.includes('SECRET')).sort().join(', '));
-    throw new Error('Missing required environment variable: PUBLIC_URL');
+  if (!process.env.PUBLIC_URL) {
+    console.warn('⚠️  PUBLIC_URL not set, using fallback: http://localhost:3000');
+    console.warn('');
+    console.warn('💡 For production deployments, set PUBLIC_URL in environment variables:');
+    console.warn('   - Vercel: Add PUBLIC_URL in project settings');
+    console.warn('   - Local: Add to .env.local: PUBLIC_URL=https://your-subdomain.ngrok-free.app');
+    console.warn('');
   }
 
   // Reject placeholder URLs
@@ -93,10 +80,6 @@ async function generateOpenApiSpec() {
         }
       ],
       tags: [
-        {
-          name: 'Health',
-          description: 'Health check endpoints'
-        },
         {
           name: 'OAuth',
           description: 'OAuth 2.0 authentication endpoints for OpenAI Custom GPT integration'
