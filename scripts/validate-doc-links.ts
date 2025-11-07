@@ -124,21 +124,18 @@ function resolveLinkPath(linkPath: string, fromFile: string): string | null {
   return resolved;
 }
 
-function checkLink(linkPath: string, resolvedPath: string): 'broken' | 'valid' {
-  // Special case: Links to docs/api/** are always valid
-  // These point to TypeDoc-generated documentation which exists but we don't validate
+function checkLink(linkPath: string, resolvedPath: string, skipApiValidation: boolean = false): 'broken' | 'valid' {
   const apiPath = join(ROOT_DIR, 'docs', 'api');
+  
+  // Special case: Links to docs/api/** 
   if (resolvedPath.startsWith(apiPath)) {
-    // If the path exists, it's valid (TypeDoc generates these files/directories)
-    if (existsSync(resolvedPath)) {
+    if (skipApiValidation) {
+      // Skip validation for docs/api/** before docs are built
+      // These are generated files that don't exist yet
       return 'valid';
     }
-    // If the path doesn't exist, check if parent directory exists
-    // (TypeDoc generates directory structure, so this is likely valid)
-    const parentDir = dirname(resolvedPath);
-    if (parentDir.startsWith(apiPath) && existsSync(parentDir)) {
-      return 'valid'; // Parent directory exists, likely valid TypeDoc-generated path
-    }
+    // After docs are built, validate docs/api/** links normally
+    // Fall through to normal validation below
   }
 
   // Check if file exists
@@ -178,7 +175,7 @@ function checkLink(linkPath: string, resolvedPath: string): 'broken' | 'valid' {
   return 'valid';
 }
 
-function validateLinks(): LinkIssue[] {
+function validateLinks(skipApiValidation: boolean = false): LinkIssue[] {
   const issues: LinkIssue[] = [];
 
   // Find all markdown files in docs directory
@@ -197,6 +194,9 @@ function validateLinks(): LinkIssue[] {
   });
 
   console.log(`📄 Found ${markdownFiles.length} markdown files to check...\n`);
+  if (skipApiValidation) {
+    console.log('ℹ️  Skipping validation for docs/api/** links (will be validated after docs build)\n');
+  }
 
   for (const file of markdownFiles) {
     try {
@@ -211,7 +211,7 @@ function validateLinks(): LinkIssue[] {
           continue;
         }
 
-        const status = checkLink(link, resolvedPath);
+        const status = checkLink(link, resolvedPath, skipApiValidation);
         if (status === 'broken') {
           issues.push({
             file: file.replace(ROOT_DIR + '/', ''),
@@ -231,9 +231,12 @@ function validateLinks(): LinkIssue[] {
 }
 
 function main() {
+  // Check if --skip-api flag is provided (for validation before docs build)
+  const skipApiValidation = process.argv.includes('--skip-api');
+  
   console.log('🔍 Validating documentation links...\n');
 
-  const issues = validateLinks();
+  const issues = validateLinks(skipApiValidation);
 
   if (issues.length === 0) {
     console.log('✅ All links are valid!');
