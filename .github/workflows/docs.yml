@@ -133,7 +133,7 @@ jobs:
             const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
             const body = `## ${status} Documentation Checks
             
-            **Status:** ${{ job.status === 'success' && 'All checks passed' || 'Some checks failed' }}
+            **Status:** ${{ job.status == 'success' && 'All checks passed' || 'Some checks failed' }}
             
             **Checks performed:**
             - ✅ Link validation
@@ -143,11 +143,11 @@ jobs:
             - ℹ️  Markdown validation (informational)
             
             **Details:**
-            - Link validation: ${{ steps.validate-links.outcome === 'success' && '✅ Passed' || '❌ Failed' }}
-            - TypeDoc check: ${{ steps.check-typedoc.outcome === 'success' && '✅ Passed' || '❌ Failed' }}
-            - Docs build: ${{ steps.build-docs.outcome === 'success' && '✅ Passed' || '❌ Failed' }}
+            - Link validation: ${{ steps.validate-links.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
+            - TypeDoc check: ${{ steps.check-typedoc.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
+            - Docs build: ${{ steps.build-docs.outcome == 'success' && '✅ Passed' || '❌ Failed' }}
             
-            ${{ job.status === 'success' && 'All documentation checks passed! 🎉' || 'Please fix the issues above before merging.' }}
+            ${{ job.status == 'success' && 'All documentation checks passed! 🎉' || 'Please fix the issues above before merging.' }}
             `;
             
             if (botComment) {
