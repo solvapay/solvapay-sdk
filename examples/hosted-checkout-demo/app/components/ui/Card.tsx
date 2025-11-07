@@ -7,12 +7,12 @@ interface CardProps {
   style?: React.CSSProperties;
 }
 
-export const Card: React.FC<CardProps> = ({
+export function Card({
   children,
   className = '',
   variant = 'default',
   style,
-}) => {
+}: CardProps) {
   const baseClasses = 'rounded-2xl shadow-xl border border-slate-200/60';
   
   const variantClasses = {
@@ -25,5 +25,5 @@ export const Card: React.FC<CardProps> = ({
       {children}
     </div>
   );
-};
+}
 

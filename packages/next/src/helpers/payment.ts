@@ -12,7 +12,7 @@ import {
   type ErrorResult,
   isErrorResult,
 } from '@solvapay/server';
-import { clearSubscriptionCache } from '../index';
+import { clearSubscriptionCache } from '../cache';
 import { getAuthenticatedUserCore } from '@solvapay/server';
 
 /**

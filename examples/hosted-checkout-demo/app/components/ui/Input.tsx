@@ -6,13 +6,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = ({
+export function Input({
   label,
   error,
   icon,
   className = '',
   ...props
-}) => {
+}: InputProps) {
   const inputClasses = `block w-full px-3 py-2 bg-white border rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition-colors ${
     error ? 'border-red-400 focus:ring-red-200' : 'border-slate-200/60'
   } ${icon ? 'pr-12' : ''} ${className}`;
@@ -37,5 +37,5 @@ export const Input: React.FC<InputProps> = ({
       )}
     </div>
   );
-};
+}
 
