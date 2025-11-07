@@ -40,7 +40,7 @@ export interface RequestLike {
  * };
  * ```
  * 
- * @see {@link SupabaseAuthAdapter} for Supabase implementation
+ * @see SupabaseAuthAdapter (from `@solvapay/auth/supabase`) for Supabase implementation
  * @see {@link MockAuthAdapter} for testing implementation
  * @since 1.0.0
  */

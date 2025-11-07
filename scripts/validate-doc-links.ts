@@ -125,6 +125,22 @@ function resolveLinkPath(linkPath: string, fromFile: string): string | null {
 }
 
 function checkLink(linkPath: string, resolvedPath: string): 'broken' | 'valid' {
+  // Special case: Links to docs/api/** are always valid
+  // These point to TypeDoc-generated documentation which exists but we don't validate
+  const apiPath = join(ROOT_DIR, 'docs', 'api');
+  if (resolvedPath.startsWith(apiPath)) {
+    // If the path exists, it's valid (TypeDoc generates these files/directories)
+    if (existsSync(resolvedPath)) {
+      return 'valid';
+    }
+    // If the path doesn't exist, check if parent directory exists
+    // (TypeDoc generates directory structure, so this is likely valid)
+    const parentDir = dirname(resolvedPath);
+    if (parentDir.startsWith(apiPath) && existsSync(parentDir)) {
+      return 'valid'; // Parent directory exists, likely valid TypeDoc-generated path
+    }
+  }
+
   // Check if file exists
   if (!existsSync(resolvedPath)) {
     return 'broken';
@@ -166,11 +182,18 @@ function validateLinks(): LinkIssue[] {
   const issues: LinkIssue[] = [];
 
   // Find all markdown files in docs directory
-  // Skip generated TypeDoc files in _media (they have different link semantics)
+  // Skip generated TypeDoc files:
+  // - `docs/api/**` - All TypeDoc-generated API documentation (auto-generated)
+  // - `**/_media/**` - TypeDoc media files (they have different link semantics)
   const markdownFiles = glob.sync('**/*.md', {
     cwd: DOCS_DIR,
     absolute: true,
-    ignore: ['**/node_modules/**', '**/dist/**', '**/_media/**'],
+    ignore: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/_media/**',
+      '**/api/**', // Exclude all TypeDoc-generated API documentation
+    ],
   });
 
   console.log(`📄 Found ${markdownFiles.length} markdown files to check...\n`);

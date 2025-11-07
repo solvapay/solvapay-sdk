@@ -22,10 +22,11 @@
     "publish:preview": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --tag preview --access public --no-git-checks --no-provenance",
     "publish:preview:dry-run": "pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --tag preview --access public --no-git-checks --no-provenance --dry-run",
     "tag:latest": "tsx scripts/tag-as-latest.ts",
-    "docs:build": "typedoc",
+    "docs:build": "rm -rf docs/api && typedoc",
     "docs:watch": "typedoc --watch",
     "docs:check": "typedoc --json docs/api.json",
-    "docs:validate-links": "tsx scripts/validate-doc-links.ts"
+    "docs:validate-links": "tsx scripts/validate-doc-links.ts",
+    "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",

@@ -290,9 +290,7 @@ function getSharedDeduplicator(options?: RequestDeduplicationOptions) {
  * 
  * @param request - Next.js request object (NextRequest extends Request)
  * @param options - Configuration options
- * @param options.deduplication - Request deduplication options
- * @param options.deduplication.cacheTTL - Cache TTL in milliseconds (default: 2000)
- * @param options.deduplication.maxCacheSize - Maximum cache size (default: 1000)
+ * @param options.deduplication - Request deduplication options (see {@link RequestDeduplicationOptions})
  * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
  * @param options.includeEmail - Whether to include email in response (default: true)
  * @param options.includeName - Whether to include name in response (default: true)

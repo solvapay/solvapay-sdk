@@ -16,3 +16,7 @@ examples/nextjs-openai-custom-gpt-actions/user-plans.json
 coverage/
 *.lcov
 .nyc_output
+
+# Generated documentation (TypeDoc output)
+docs/api/
+docs/api.json

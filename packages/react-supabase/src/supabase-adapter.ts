@@ -55,7 +55,7 @@ export interface SupabaseAuthAdapterConfig {
  * }
  * ```
  * 
- * @see {@link SolvaPayProvider} for using the adapter
+ * @see SolvaPayProvider (from `@solvapay/react`) for using the adapter
  * @see {@link AuthAdapter} for the adapter interface
  * @since 1.0.0
  */

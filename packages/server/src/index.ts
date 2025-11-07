@@ -60,7 +60,7 @@ export type { ServerClientOptions } from './client';
  * });
  * ```
  * 
- * @see [Webhook Guide](../guides/webhooks.md) for complete webhook handling examples
+ * @see [Webhook Guide](../../../../guides/webhooks.md) for complete webhook handling examples
  * @since 1.0.0
  */
 export function verifyWebhook({ body, signature, secret }: { body: string; signature: string; secret: string }) {

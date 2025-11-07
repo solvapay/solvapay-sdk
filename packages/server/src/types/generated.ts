@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Check usage limits for a customer
-         * @description Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout session ID and URL if payment is required. Checkout URL is based on backend configuration and matches the environment.
+         * Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout session ID and URL if payment is required. Checkout URL is based on backend configuration and matches the environment.
          */
         post: operations["LimitsSdkController_checkLimit"];
         delete?: never;
@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * Record usage event
-         * @description Records a usage event for a customer action against an agent. This is a high-volume endpoint.
+         * Records a usage event for a customer action against an agent. This is a high-volume endpoint.
          */
         post: operations["UsageSdkController_recordUsage"];
         delete?: never;
@@ -55,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Record multiple usage events
-         * @description Records multiple usage events in a single request for better performance.
+         * Records multiple usage events in a single request for better performance.
          */
         post: operations["UsageSdkController_recordBulkUsage"];
         delete?: never;
@@ -73,13 +73,13 @@ export interface paths {
         };
         /**
          * Get customer by reference or externalRef
-         * @description Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+         * Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
          */
         get: operations["CustomerSdkController_getCustomerByQuery"];
         put?: never;
         /**
          * Create a new customer
-         * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will use your AI agents. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
+         * Creates a new customer record for the authenticated provider. Customers represent end-users who will use your AI agents. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
          */
         post: operations["CustomerSdkController_createCustomer"];
         delete?: never;
@@ -97,7 +97,7 @@ export interface paths {
         };
         /**
          * Get customer by reference
-         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+         * Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
          */
         get: operations["CustomerSdkController_getCustomer"];
         put?: never;
@@ -119,7 +119,7 @@ export interface paths {
         put?: never;
         /**
          * Create a customer session
-         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
+         * Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
          */
         post: operations["CustomerSdkController_createCustomerSession"];
         delete?: never;
@@ -137,7 +137,7 @@ export interface paths {
         };
         /**
          * Get customer session by sessionId
-         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
+         * Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
          */
         get: operations["CustomerSdkController_getCustomerSession"];
         put?: never;
@@ -157,13 +157,13 @@ export interface paths {
         };
         /**
          * List payment intents for the provider
-         * @description Retrieves a paginated list of all payment intents created by the authenticated provider. Supports pagination through limit and offset query parameters.
+         * Retrieves a paginated list of all payment intents created by the authenticated provider. Supports pagination through limit and offset query parameters.
          */
         get: operations["PaymentIntentSdkController_getPaymentIntents"];
         put?: never;
         /**
          * Create a payment intent
-         * @description Creates a new payment intent for a customer to subscribe to a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+         * Creates a new payment intent for a customer to subscribe to a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
          */
         post: operations["PaymentIntentSdkController_createPaymentIntent"];
         delete?: never;
@@ -181,7 +181,7 @@ export interface paths {
         };
         /**
          * Get a specific payment intent by ID
-         * @description Retrieves detailed information about a specific payment intent including amount, currency, and client secret for Stripe integration.
+         * Retrieves detailed information about a specific payment intent including amount, currency, and client secret for Stripe integration.
          */
         get: operations["PaymentIntentSdkController_getPaymentIntent"];
         put?: never;
@@ -203,7 +203,7 @@ export interface paths {
         put?: never;
         /**
          * Process payment intent after client-side confirmation
-         * @description Processes a payment intent that has been confirmed on the client-side using Stripe.js. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
+         * Processes a payment intent that has been confirmed on the client-side using Stripe.js. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
          */
         post: operations["PaymentIntentSdkController_processPaymentIntent"];
         delete?: never;
@@ -221,13 +221,13 @@ export interface paths {
         };
         /**
          * List agents for the provider
-         * @description Retrieves a paginated list of all agents created by the authenticated provider, including their associated plans. Supports pagination through limit and offset query parameters, and filtering by search, categories, and status.
+         * Retrieves a paginated list of all agents created by the authenticated provider, including their associated plans. Supports pagination through limit and offset query parameters, and filtering by search, categories, and status.
          */
         get: operations["AgentSdkController_listAgents"];
         put?: never;
         /**
          * Create a new agent
-         * @description Creates a new AI agent that can be offered to customers through plans. The agent will be associated with the authenticated provider.
+         * Creates a new AI agent that can be offered to customers through plans. The agent will be associated with the authenticated provider.
          */
         post: operations["AgentSdkController_createAgent"];
         delete?: never;
@@ -247,7 +247,7 @@ export interface paths {
         put?: never;
         /**
          * Upload agent avatar
-         * @description Uploads an avatar image for an agent.
+         * Uploads an avatar image for an agent.
          */
         post: operations["AgentSdkController_uploadAvatar"];
         delete?: never;
@@ -266,13 +266,13 @@ export interface paths {
         get?: never;
         /**
          * Update an agent
-         * @description Updates an existing agent by its reference. Only the authenticated provider can update their own agents.
+         * Updates an existing agent by its reference. Only the authenticated provider can update their own agents.
          */
         put: operations["AgentSdkController_updateAgent"];
         post?: never;
         /**
          * Delete an agent
-         * @description Permanently deletes an agent by its reference. Only the authenticated provider can delete their own agents. This action cannot be undone.
+         * Permanently deletes an agent by its reference. Only the authenticated provider can delete their own agents. This action cannot be undone.
          */
         delete: operations["AgentSdkController_deleteAgent"];
         options?: never;
@@ -289,13 +289,13 @@ export interface paths {
         };
         /**
          * List plans for an agent
-         * @description Retrieves all plans associated with a specific agent. Supports pagination and filtering.
+         * Retrieves all plans associated with a specific agent. Supports pagination and filtering.
          */
         get: operations["PlanSdkController_listPlans"];
         put?: never;
         /**
          * Create a new plan for an agent
-         * @description Creates a new pricing plan for a specific agent. The plan will be associated with the authenticated provider and the specified agent.
+         * Creates a new pricing plan for a specific agent. The plan will be associated with the authenticated provider and the specified agent.
          */
         post: operations["PlanSdkController_createPlan"];
         delete?: never;
@@ -313,18 +313,18 @@ export interface paths {
         };
         /**
          * Get a specific plan
-         * @description Retrieves a specific plan by its reference for the authenticated agent.
+         * Retrieves a specific plan by its reference for the authenticated agent.
          */
         get: operations["PlanSdkController_getPlan"];
         /**
          * Update a plan
-         * @description Updates an existing plan by its reference.
+         * Updates an existing plan by its reference.
          */
         put: operations["PlanSdkController_updatePlan"];
         post?: never;
         /**
          * Delete a plan
-         * @description Deletes a plan by its reference. The plan will be automatically removed from all agents that reference it.
+         * Deletes a plan by its reference. The plan will be automatically removed from all agents that reference it.
          */
         delete: operations["PlanSdkController_deletePlan"];
         options?: never;
@@ -341,7 +341,7 @@ export interface paths {
         };
         /**
          * Get all subscriptions for provider
-         * @description Retrieves all subscriptions for the authenticated provider.
+         * Retrieves all subscriptions for the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptions"];
         put?: never;
@@ -361,7 +361,7 @@ export interface paths {
         };
         /**
          * Get subscriptions by customer reference
-         * @description Retrieves all subscriptions for a specific customer using their reference ID. Only returns subscriptions owned by the authenticated provider.
+         * Retrieves all subscriptions for a specific customer using their reference ID. Only returns subscriptions owned by the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptionsByCustomer"];
         put?: never;
@@ -381,7 +381,7 @@ export interface paths {
         };
         /**
          * Get subscriptions by agent reference
-         * @description Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
+         * Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptionsByAgent"];
         put?: never;
@@ -401,7 +401,7 @@ export interface paths {
         };
         /**
          * Get subscription by ID
-         * @description Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
+         * Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
          */
         get: operations["SubscriptionSdkController_getSubscriptionById"];
         put?: never;
@@ -423,7 +423,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel a subscription
-         * @description Cancels an active subscription using its reference ID. Only subscriptions owned by the authenticated provider can be cancelled.
+         * Cancels an active subscription using its reference ID. Only subscriptions owned by the authenticated provider can be cancelled.
          */
         post: operations["SubscriptionSdkController_cancelSubscription"];
         delete?: never;
@@ -443,7 +443,7 @@ export interface paths {
         put?: never;
         /**
          * Create a checkout session for a customer
-         * @description Creates a checkout session token that can be used to redirect customers to the checkout page. If planRef is provided, a payment intent is also created and the session is ready for immediate payment. If planRef is not provided, the customer will select a plan on the checkout page. Returns the session token and full checkout URL based on backend configuration.
+         * Creates a checkout session token that can be used to redirect customers to the checkout page. If planRef is provided, a payment intent is also created and the session is ready for immediate payment. If planRef is not provided, the customer will select a plan on the checkout page. Returns the session token and full checkout URL based on backend configuration.
          */
         post: operations["CheckoutSessionSdkController_createCheckoutSession"];
         delete?: never;
@@ -478,29 +478,29 @@ export interface components {
         UpdatePlanRequest: Record<string, never>;
         CreateCustomerSessionRequest: {
             /**
-             * @description Customer reference identifier
+             * Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
             customerRef: string;
         };
         CustomerSessionResponse: {
             /**
-             * @description Customer session ID
+             * Customer session ID
              * @example 507f1f77bcf86cd799439011
              */
             id: string;
             /**
-             * @description Public session ID used in customer URL
+             * Public session ID used in customer URL
              * @example e3f1c2d4b6a89f001122334455667788
              */
             sessionId: string;
             /**
-             * @description Session status
+             * Session status
              * @example active
              */
             status: string;
             /**
-             * @description Customer URL to open the customer page
+             * Customer URL to open the customer page
              * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
              */
             customerUrl: string;
@@ -509,273 +509,273 @@ export interface components {
         ExecuteMultipleQueries: Record<string, never>;
         CreateCheckoutSessionRequest: {
             /**
-             * @description Customer reference identifier
+             * Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
             customerRef: string;
             /**
-             * @description Agent reference identifier
+             * Agent reference identifier
              * @example agt_1a2b3c4d5e6f
              */
             agentRef: string;
             /**
-             * @description Plan reference identifier (optional)
+             * Plan reference identifier (optional)
              * @example pln_2b3c4d5e6f7g
              */
             planRef?: string;
             /**
-             * @description URL to redirect to after successful payment (optional)
+             * URL to redirect to after successful payment (optional)
              * @example https://example.com/payment-success
              */
             returnUrl?: string;
         };
         CheckoutSessionResponse: {
             /**
-             * @description Checkout session ID
+             * Checkout session ID
              * @example 507f1f77bcf86cd799439011
              */
             id: string;
             /**
-             * @description Public session ID used in checkout URL
+             * Public session ID used in checkout URL
              * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
              */
             sessionId: string;
             /**
-             * @description Amount in cents
+             * Amount in cents
              * @example 2999
              */
             amount: number;
             /**
-             * @description Currency code
+             * Currency code
              * @example USD
              */
             currency: string;
             /**
-             * @description Session status
+             * Session status
              * @example active
              */
             status: string;
             /**
-             * @description Checkout URL to open the checkout page
+             * Checkout URL to open the checkout page
              * @example https://solvapay.com/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
              */
             checkoutUrl: string;
         };
         CancelSubscriptionRequest: {
             /**
-             * @description Reason for cancellation
+             * Reason for cancellation
              * @example Customer request
              */
             reason?: string;
         };
         CheckLimitRequest: {
             /**
-             * @description Customer reference identifier
+             * Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
             customerRef: string;
             /**
-             * @description Agent reference identifier
+             * Agent reference identifier
              * @example agt_1a2b3c4d5e6f
              */
             agentRef: string;
         };
         LimitResponse: {
             /**
-             * @description Whether the customer is within their usage limits
+             * Whether the customer is within their usage limits
              * @example true
              */
             withinLimits: boolean;
             /**
-             * @description Remaining usage units before hitting the limit
+             * Remaining usage units before hitting the limit
              * @example 997
              */
             remaining: number;
             /**
-             * @description Optional checkout session ID/token if payment is required
+             * Optional checkout session ID/token if payment is required
              * @example e3f1c2d4b6a89f001122334455667788
              */
             checkoutSessionId?: string;
             /**
-             * @description Optional full checkout URL if payment is required (based on backend configuration)
+             * Optional full checkout URL if payment is required (based on backend configuration)
              * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
              */
             checkoutUrl?: string;
         };
         UsageEvent: {
             /**
-             * @description Customer reference identifier
+             * Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
             customerRef: string;
             /**
-             * @description Agent reference identifier
+             * Agent reference identifier
              * @example agt_1a2b3c4d5e6f
              */
             agentRef: string;
             /**
-             * @description Outcome of the action
+             * Outcome of the action
              * @example success
              * @enum {string}
              */
             outcome: "success" | "paywall" | "fail";
             /**
-             * @description Optional action identifier
+             * Optional action identifier
              * @example generate_text
              */
             action?: string;
             /**
-             * @description Unique request identifier matching the limits check
+             * Unique request identifier matching the limits check
              * @example req_1a2b3c4d5e6f
              */
             requestId: string;
             /**
-             * @description Duration of the action in milliseconds
+             * Duration of the action in milliseconds
              * @example 1250
              */
             actionDuration: number;
             /**
-             * @description ISO 8601 timestamp of when the action occurred
+             * ISO 8601 timestamp of when the action occurred
              * @example 2025-10-21T10:30:00.000Z
              */
             timestamp: string;
         };
         CreateCustomerRequest: {
             /**
-             * @description Customer email address (required)
+             * Customer email address (required)
              * @example customer@example.com
              */
             email: string;
             /**
-             * @description Customer full name (optional)
+             * Customer full name (optional)
              * @example John Doe
              */
             name?: string;
             /**
-             * @description External reference ID from your auth system to map this customer to an auth user (optional)
+             * External reference ID from your auth system to map this customer to an auth user (optional)
              * @example auth_user_12345
              */
             externalRef?: string;
         };
         SubscriptionInfo: {
             /**
-             * @description Subscription reference
+             * Subscription reference
              * @example sub_abc123
              */
             reference: string;
             /**
-             * @description Plan name
+             * Plan name
              * @example Pro Plan
              */
             planName: string;
             /**
-             * @description Agent name
+             * Agent name
              * @example AI Assistant
              */
             agentName: string;
             /**
-             * @description Subscription status
+             * Subscription status
              * @example active
              */
             status: string;
             /**
-             * @description Start date
+             * Start date
              * @example 2025-10-27T10:00:00Z
              */
             startDate: string;
             /**
-             * @description Amount paid in original currency (in cents)
+             * Amount paid in original currency (in cents)
              * @example 9900
              */
             amount: number;
             /**
-             * @description Currency code
+             * Currency code
              * @example USD
              */
             currency: string;
             /**
-             * @description End date of subscription
+             * End date of subscription
              * @example 2025-11-27T10:00:00Z
              */
             endDate?: string;
             /**
-             * @description When subscription was cancelled
+             * When subscription was cancelled
              * @example 2025-10-28T10:00:00Z
              */
             cancelledAt?: string;
             /**
-             * @description Reason for cancellation
+             * Reason for cancellation
              * @example Customer request
              */
             cancellationReason?: string;
         };
         CustomerResponse: {
             /**
-             * @description Customer reference identifier
+             * Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
             reference: string;
             /**
-             * @description Customer full name
+             * Customer full name
              * @example John Doe
              */
             name: string;
             /**
-             * @description Customer email address
+             * Customer email address
              * @example customer@example.com
              */
             email: string;
             /**
-             * @description External reference ID from your auth system (if set during creation or update)
+             * External reference ID from your auth system (if set during creation or update)
              * @example auth_user_12345
              */
             externalRef?: string;
-            /** @description Active subscriptions */
+            /** Active subscriptions */
             subscriptions?: components["schemas"]["SubscriptionInfo"][];
         };
         CreateCustomerSessionResponse: {
             /**
-             * @description Customer session ID/token
+             * Customer session ID/token
              * @example e3f1c2d4b6a89f001122334455667788
              */
             sessionId: string;
             /**
-             * @description Full customer URL based on backend configuration (ready to redirect customer)
+             * Full customer URL based on backend configuration (ready to redirect customer)
              * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
              */
             customerUrl: string;
         };
         GetCustomerSessionResponse: {
             /**
-             * @description Customer session ID/token
+             * Customer session ID/token
              * @example e3f1c2d4b6a89f001122334455667788
              */
             sessionId: string;
             /**
-             * @description Session status
+             * Session status
              * @example active
              * @enum {string}
              */
             status: "active" | "expired" | "used";
             /**
-             * @description Full customer URL based on backend configuration (ready to redirect customer)
+             * Full customer URL based on backend configuration (ready to redirect customer)
              * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
              */
             customerUrl: string;
             /**
-             * @description Session expiration date
+             * Session expiration date
              * @example 2025-01-01T12:00:00.000Z
              */
             expiresAt: string;
-            /** @description Customer object from session data */
+            /** Customer object from session data */
             customer: components["schemas"]["CustomerResponse"];
             /**
-             * @description Session creation date
+             * Session creation date
              * @example 2025-01-01T11:45:00.000Z
              */
             createdAt: string;
             /**
-             * @description Session last update date
+             * Session last update date
              * @example 2025-01-01T11:45:00.000Z
              */
             updatedAt: string;
@@ -786,156 +786,156 @@ export interface components {
         BasePlan: Record<string, never>;
         SubscriptionResponse: {
             /**
-             * @description Subscription reference identifier
+             * Subscription reference identifier
              * @example sub_1a2b3c4d5e6f
              */
             reference: string;
             /**
-             * @description Customer reference identifier
+             * Customer reference identifier
              * @example cus_3c4d5e6f7g8h
              */
             customerRef: string;
             /**
-             * @description Customer email
+             * Customer email
              * @example customer@example.com
              */
             customerEmail: string;
             /**
-             * @description Customer name
+             * Customer name
              * @example John Doe
              */
             customerName?: string;
             /**
-             * @description Agent reference identifier
+             * Agent reference identifier
              * @example agt_1a2b3c4d5e6f
              */
             agentRef: string;
             /**
-             * @description Agent name
+             * Agent name
              * @example My AI Agent
              */
             agentName: string;
             /**
-             * @description Plan reference identifier
+             * Plan reference identifier
              * @example pln_1a2b3c4d5e6f
              */
             planRef: string;
             /**
-             * @description Plan name
+             * Plan name
              * @example Premium Plan
              */
             planName: string;
             /**
-             * @description Plan type
+             * Plan type
              * @example recurring
              * @enum {string}
              */
             planType: "recurring" | "usage-based" | "one-time" | "hybrid";
             /**
-             * @description Subscription status
+             * Subscription status
              * @example active
              * @enum {string}
              */
             status: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
             /**
-             * @description Amount paid in original currency (in cents)
+             * Amount paid in original currency (in cents)
              * @example 9900
              */
             amount: number;
             /**
-             * @description Currency code
+             * Currency code
              * @example USD
              */
             currency: string;
             /**
-             * @description Start date of subscription
+             * Start date of subscription
              * @example 2025-01-01T00:00:00.000Z
              */
             startDate: string;
             /**
-             * @description End date of subscription (if applicable)
+             * End date of subscription (if applicable)
              * @example 2025-02-01T00:00:00.000Z
              */
             endDate?: string;
             /**
-             * @description When payment was confirmed
+             * When payment was confirmed
              * @example 2025-01-01T00:00:00.000Z
              */
             paidAt?: string;
-            /** @description Usage quota information (for usage-based plans) */
+            /** Usage quota information (for usage-based plans) */
             usageQuota?: Record<string, never>;
             /**
-             * @description Whether this is a recurring subscription
+             * Whether this is a recurring subscription
              * @example true
              */
             isRecurring: boolean;
             /**
-             * @description Next billing date (for recurring subscriptions)
+             * Next billing date (for recurring subscriptions)
              * @example 2025-02-01T00:00:00.000Z
              */
             nextBillingDate?: string;
             /**
-             * @description When subscription was cancelled (if applicable)
+             * When subscription was cancelled (if applicable)
              * @example 2025-01-15T00:00:00.000Z
              */
             cancelledAt?: string;
             /**
-             * @description Reason for cancellation (if applicable)
+             * Reason for cancellation (if applicable)
              * @example Customer request
              */
             cancellationReason?: string;
             /**
-             * @description When subscription was created
+             * When subscription was created
              * @example 2025-01-01T00:00:00.000Z
              */
             createdAt: string;
         };
         CreateCheckoutSessionResponse: {
             /**
-             * @description Checkout session ID/token
+             * Checkout session ID/token
              * @example e3f1c2d4b6a89f001122334455667788
              */
             sessionId: string;
             /**
-             * @description Full checkout URL based on backend configuration (ready to redirect customer)
+             * Full checkout URL based on backend configuration (ready to redirect customer)
              * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
              */
             checkoutUrl: string;
         };
         CreatePageSettings: {
-            /** @description Page identifier */
+            /** Page identifier */
             id: string;
-            /** @description Page display name */
+            /** Page display name */
             name: string;
-            /** @description Logo URL */
+            /** Logo URL */
             logo?: string;
             /**
-             * @description Text color in hex format
+             * Text color in hex format
              * @example #2d3748
              */
             textColor: string;
             /**
-             * @description Button color in hex format
+             * Button color in hex format
              * @example #3182ce
              */
             buttonColor: string;
             /**
-             * @description Left background color in hex format
+             * Left background color in hex format
              * @example #f7fafc
              */
             leftBackgroundColor: string;
             /**
-             * @description Right background color in hex format
+             * Right background color in hex format
              * @example #ffffff
              */
             rightBackgroundColor: string;
             /**
-             * @description Font family
+             * Font family
              * @example Inter
              */
             fontFamily: string;
             /**
-             * @description Font size
+             * Font size
              * @example 16px
              */
             fontSize: string;
@@ -956,14 +956,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Limit check request data */
+        /** Limit check request data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CheckLimitRequest"];
             };
         };
         responses: {
-            /** @description Limit check completed successfully */
+            /** Limit check completed successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -972,7 +972,7 @@ export interface operations {
                     "application/json": components["schemas"]["LimitResponse"];
                 };
             };
-            /** @description Invalid request data or references not found */
+            /** Invalid request data or references not found */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -990,14 +990,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Usage event data */
+        /** Usage event data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UsageEvent"];
             };
         };
         responses: {
-            /** @description Usage recorded successfully */
+            /** Usage recorded successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1006,7 +1006,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid usage data or references not found */
+            /** Invalid usage data or references not found */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1024,7 +1024,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Array of usage events */
+        /** Array of usage events */
         requestBody: {
             content: {
                 "application/json": {
@@ -1040,7 +1040,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Bulk usage recorded successfully */
+            /** Bulk usage recorded successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1049,7 +1049,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid bulk usage data */
+            /** Invalid bulk usage data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1063,9 +1063,9 @@ export interface operations {
     CustomerSdkController_getCustomerByQuery: {
         parameters: {
             query?: {
-                /** @description Customer reference identifier (use this OR externalRef, not both) */
+                /** Customer reference identifier (use this OR externalRef, not both) */
                 reference?: string;
-                /** @description External reference ID from your auth system (use this OR reference, not both) */
+                /** External reference ID from your auth system (use this OR reference, not both) */
                 externalRef?: string;
             };
             header?: never;
@@ -1074,7 +1074,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Customer retrieved successfully */
+            /** Customer retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1083,7 +1083,7 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerResponse"];
                 };
             };
-            /** @description Invalid request - must provide exactly one of reference or externalRef */
+            /** Invalid request - must provide exactly one of reference or externalRef */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1092,7 +1092,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1110,14 +1110,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Customer creation data */
+        /** Customer creation data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateCustomerRequest"];
             };
         };
         responses: {
-            /** @description Customer created successfully */
+            /** Customer created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1126,7 +1126,7 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerResponse"];
                 };
             };
-            /** @description Invalid email or missing required fields */
+            /** Invalid email or missing required fields */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1142,14 +1142,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Customer reference identifier */
+                /** Customer reference identifier */
                 reference: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Customer retrieved successfully */
+            /** Customer retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1158,7 +1158,7 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerResponse"];
                 };
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1176,14 +1176,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Customer session creation request data */
+        /** Customer session creation request data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateCustomerSessionRequest"];
             };
         };
         responses: {
-            /** @description Customer session created successfully */
+            /** Customer session created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1192,7 +1192,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreateCustomerSessionResponse"];
                 };
             };
-            /** @description Invalid request data or customer not found */
+            /** Invalid request data or customer not found */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1201,7 +1201,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1217,14 +1217,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Customer session ID/token */
+                /** Customer session ID/token */
                 sessionId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Customer session retrieved successfully */
+            /** Customer session retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1233,7 +1233,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetCustomerSessionResponse"];
                 };
             };
-            /** @description Customer session not found */
+            /** Customer session not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1247,9 +1247,9 @@ export interface operations {
     PaymentIntentSdkController_getPaymentIntents: {
         parameters: {
             query?: {
-                /** @description Maximum number of results */
+                /** Maximum number of results */
                 limit?: number;
-                /** @description Pagination offset */
+                /** Pagination offset */
                 offset?: number;
             };
             header?: never;
@@ -1258,7 +1258,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Payment intents retrieved successfully */
+            /** Payment intents retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1273,28 +1273,28 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Unique idempotency key to prevent duplicate payments (required) */
+                /** Unique idempotency key to prevent duplicate payments (required) */
                 "idempotency-key": string;
             };
             path?: never;
             cookie?: never;
         };
-        /** @description Payment intent creation data */
+        /** Payment intent creation data */
         requestBody: {
             content: {
                 "application/json": {
                     /**
-                     * @description Plan reference to subscribe to
+                     * Plan reference to subscribe to
                      * @example pln_2b3c4d5e6f7g
                      */
                     planRef: string;
                     /**
-                     * @description Agent reference that owns the plan
+                     * Agent reference that owns the plan
                      * @example agt_1a2b3c4d5e6f
                      */
                     agentRef: string;
                     /**
-                     * @description Customer reference identifier
+                     * Customer reference identifier
                      * @example cus_3c4d5e6f7g8h
                      */
                     customerReference: string;
@@ -1302,7 +1302,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Payment intent created successfully */
+            /** Payment intent created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1311,7 +1311,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Missing required fields or invalid data */
+            /** Missing required fields or invalid data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1327,14 +1327,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Payment intent ID */
+                /** Payment intent ID */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Payment intent retrieved successfully */
+            /** Payment intent retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1350,27 +1350,27 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Stripe payment intent ID (format: pi_xxx) */
+                /** Stripe payment intent ID (format: pi_xxx) */
                 id: string;
             };
             cookie?: never;
         };
-        /** @description Payment processing data */
+        /** Payment processing data */
         requestBody: {
             content: {
                 "application/json": {
                     /**
-                     * @description Agent reference that owns the plan/product
+                     * Agent reference that owns the plan/product
                      * @example agt_123
                      */
                     agentRef: string;
                     /**
-                     * @description Customer reference identifier
+                     * Customer reference identifier
                      * @example cus_456
                      */
                     customerRef: string;
                     /**
-                     * @description Plan reference - helps determine if payment is for subscription
+                     * Plan reference - helps determine if payment is for subscription
                      * @example pln_789
                      */
                     planRef?: string;
@@ -1378,7 +1378,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Payment intent status */
+            /** Payment intent status */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1386,20 +1386,20 @@ export interface operations {
                 content: {
                     "application/json": {
                         /**
-                         * @description Payment intent status
+                         * Payment intent status
                          * @example succeeded
                          * @enum {string}
                          */
                         status?: "succeeded" | "timeout" | "failed" | "cancelled";
                         /**
-                         * @description Optional message, only present for timeout status
+                         * Optional message, only present for timeout status
                          * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to Stripe webhooks not being configured correctly.
                          */
                         message?: string;
                     };
                 };
             };
-            /** @description Payment not succeeded or invalid request */
+            /** Payment not succeeded or invalid request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1413,15 +1413,15 @@ export interface operations {
     AgentSdkController_listAgents: {
         parameters: {
             query?: {
-                /** @description Maximum number of agents to return (1-100) */
+                /** Maximum number of agents to return (1-100) */
                 limit?: number;
-                /** @description Number of agents to skip for pagination */
+                /** Number of agents to skip for pagination */
                 offset?: number;
-                /** @description Search term to filter agents by name, description, reference, or categories (case-insensitive) */
+                /** Search term to filter agents by name, description, reference, or categories (case-insensitive) */
                 search?: string;
-                /** @description Comma-separated list of categories to filter by (e.g., "ai,chat,automation") */
+                /** Comma-separated list of categories to filter by (e.g., "ai,chat,automation") */
                 categories?: string;
-                /** @description Filter by agent status */
+                /** Filter by agent status */
                 status?: "published" | "unpublished" | "all";
             };
             header?: never;
@@ -1431,7 +1431,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /**
-             * @description Agents retrieved successfully
+             * Agents retrieved successfully
              * @example [
              *       {
              *         "id": "agt_1234567890abcdef",
@@ -1513,7 +1513,7 @@ export interface operations {
                     "application/json": components["schemas"]["Agent"][];
                 };
             };
-            /** @description Invalid request parameters or validation errors */
+            /** Invalid request parameters or validation errors */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1535,7 +1535,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid, missing, or expired secret key */
+            /** Invalid, missing, or expired secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1560,7 +1560,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Agent creation data */
+        /** Agent creation data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateAgentRequest"];
@@ -1568,7 +1568,7 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Agent created successfully
+             * Agent created successfully
              * @example {
              *       "id": "agt_1234567890abcdef",
              *       "reference": "agt_1234567890abcdef",
@@ -1694,7 +1694,7 @@ export interface operations {
                     "application/json": components["schemas"]["Agent"];
                 };
             };
-            /** @description Invalid request data */
+            /** Invalid request data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1703,7 +1703,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1730,7 +1730,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Avatar uploaded successfully */
+            /** Avatar uploaded successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1741,14 +1741,14 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid file or request data */
+            /** Invalid file or request data */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1762,12 +1762,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
             };
             cookie?: never;
         };
-        /** @description Agent update data - only provided fields will be updated */
+        /** Agent update data - only provided fields will be updated */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateAgentRequest"];
@@ -1775,7 +1775,7 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Agent updated successfully
+             * Agent updated successfully
              * @example {
              *       "id": "agt_1234567890abcdef",
              *       "reference": "agt_1234567890abcdef",
@@ -1903,7 +1903,7 @@ export interface operations {
                     "application/json": components["schemas"]["Agent"];
                 };
             };
-            /** @description Invalid request data */
+            /** Invalid request data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1912,7 +1912,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1921,7 +1921,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Agent not found */
+            /** Agent not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1937,14 +1937,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Agent deleted successfully */
+            /** Agent deleted successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1953,7 +1953,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1962,7 +1962,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Agent not found */
+            /** Agent not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1976,20 +1976,20 @@ export interface operations {
     PlanSdkController_listPlans: {
         parameters: {
             query?: {
-                /** @description Maximum number of results to return */
+                /** Maximum number of results to return */
                 limit?: number;
-                /** @description Pagination offset */
+                /** Pagination offset */
                 offset?: number;
-                /** @description Search term to filter plans by name, description, or reference */
+                /** Search term to filter plans by name, description, or reference */
                 search?: string;
-                /** @description Filter by plan type */
+                /** Filter by plan type */
                 type?: string;
-                /** @description Filter by plan status */
+                /** Filter by plan status */
                 status?: string;
             };
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
             };
             cookie?: never;
@@ -1997,7 +1997,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /**
-             * @description Plans retrieved successfully
+             * Plans retrieved successfully
              * @example [
              *       {
              *         "_id": "pln_1234567890abcdef",
@@ -2091,7 +2091,7 @@ export interface operations {
                     "application/json": components["schemas"]["BasePlan"][];
                 };
             };
-            /** @description Invalid request parameters */
+            /** Invalid request parameters */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2100,7 +2100,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2109,7 +2109,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Agent not found */
+            /** Agent not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2125,12 +2125,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
             };
             cookie?: never;
         };
-        /** @description Plan creation data */
+        /** Plan creation data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreatePlanRequest"];
@@ -2138,7 +2138,7 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Plan created successfully
+             * Plan created successfully
              * @example {
              *       "id": "plan_1234567890abcdef",
              *       "reference": "plan_1234567890abcdef",
@@ -2228,7 +2228,7 @@ export interface operations {
                     "application/json": components["schemas"]["BasePlan"];
                 };
             };
-            /** @description Invalid request data */
+            /** Invalid request data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2237,7 +2237,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2246,7 +2246,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Agent not found */
+            /** Agent not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2262,16 +2262,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
-                /** @description Plan reference identifier */
+                /** Plan reference identifier */
                 planRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Plan retrieved successfully */
+            /** Plan retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2280,7 +2280,7 @@ export interface operations {
                     "application/json": components["schemas"]["BasePlan"];
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2289,7 +2289,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Plan not found */
+            /** Plan not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2305,9 +2305,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference */
+                /** Agent reference */
                 agentRef: string;
-                /** @description Plan reference */
+                /** Plan reference */
                 planRef: string;
             };
             cookie?: never;
@@ -2318,7 +2318,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Plan updated successfully */
+            /** Plan updated successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2327,21 +2327,21 @@ export interface operations {
                     "application/json": components["schemas"]["BasePlan"];
                 };
             };
-            /** @description Invalid request data */
+            /** Invalid request data */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Plan not found */
+            /** Plan not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2355,30 +2355,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference */
+                /** Agent reference */
                 agentRef: string;
-                /** @description Plan reference */
+                /** Plan reference */
                 planRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Plan deleted successfully */
+            /** Plan deleted successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Plan not found */
+            /** Plan not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2396,7 +2396,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Subscriptions retrieved successfully */
+            /** Subscriptions retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2410,19 +2410,19 @@ export interface operations {
     SubscriptionSdkController_getSubscriptionsByCustomer: {
         parameters: {
             query?: {
-                /** @description Filter by subscription status */
+                /** Filter by subscription status */
                 status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
             };
             header?: never;
             path: {
-                /** @description Customer reference identifier */
+                /** Customer reference identifier */
                 customerRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Customer subscriptions retrieved successfully */
+            /** Customer subscriptions retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2431,7 +2431,7 @@ export interface operations {
                     "application/json": components["schemas"]["SubscriptionResponse"][];
                 };
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2443,19 +2443,19 @@ export interface operations {
     SubscriptionSdkController_getSubscriptionsByAgent: {
         parameters: {
             query?: {
-                /** @description Filter by subscription status */
+                /** Filter by subscription status */
                 status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
             };
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Agent subscriptions retrieved successfully */
+            /** Agent subscriptions retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2464,7 +2464,7 @@ export interface operations {
                     "application/json": components["schemas"]["SubscriptionResponse"][];
                 };
             };
-            /** @description Agent not found */
+            /** Agent not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2478,14 +2478,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Subscription ID */
+                /** Subscription ID */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Subscription retrieved successfully */
+            /** Subscription retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2494,7 +2494,7 @@ export interface operations {
                     "application/json": components["schemas"]["SubscriptionResponse"];
                 };
             };
-            /** @description Subscription not found */
+            /** Subscription not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2508,19 +2508,19 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Subscription reference identifier */
+                /** Subscription reference identifier */
                 subscriptionRef: string;
             };
             cookie?: never;
         };
-        /** @description Cancellation details */
+        /** Cancellation details */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["CancelSubscriptionRequest"];
             };
         };
         responses: {
-            /** @description Subscription cancelled successfully */
+            /** Subscription cancelled successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2529,14 +2529,14 @@ export interface operations {
                     "application/json": components["schemas"]["SubscriptionResponse"];
                 };
             };
-            /** @description Subscription cannot be cancelled or does not belong to provider */
+            /** Subscription cannot be cancelled or does not belong to provider */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Subscription not found */
+            /** Subscription not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2552,14 +2552,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Checkout session creation request data */
+        /** Checkout session creation request data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateCheckoutSessionRequest"];
             };
         };
         responses: {
-            /** @description Checkout session created successfully */
+            /** Checkout session created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -2568,7 +2568,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreateCheckoutSessionResponse"];
                 };
             };
-            /** @description Invalid request data or references not found */
+            /** Invalid request data or references not found */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2577,7 +2577,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Agent or plan not found */
+            /** Agent or plan not found */
             404: {
                 headers: {
                     [name: string]: unknown;
