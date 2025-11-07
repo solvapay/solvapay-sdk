@@ -1,4 +1,4 @@
-name: Documentation Checks
+name: Documentation CI
 
 on:
   push:
@@ -127,11 +127,11 @@ jobs:
             
             const botComment = comments.find(comment => 
               comment.user.type === 'Bot' && 
-              comment.body.includes('Documentation Checks')
+              comment.body.includes('Documentation CI')
             );
             
             const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
-            const body = `## ${status} Documentation Checks
+            const body = `## ${status} Documentation CI
             
             **Status:** ${{ job.status == 'success' && 'All checks passed' || 'Some checks failed' }}
             
