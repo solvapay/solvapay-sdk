@@ -219,10 +219,10 @@ importers:
         specifier: ^20
         version: 20.19.14
       '@types/react':
-        specifier: ^19
+        specifier: ^19.0.0
         version: 19.2.2
       '@types/react-dom':
-        specifier: ^19
+        specifier: ^19.0.0
         version: 19.2.2(@types/react@19.2.2)
       autoprefixer:
         specifier: ^10.4.0
@@ -495,10 +495,10 @@ importers:
         specifier: ^14.5.1
         version: 14.6.1(@testing-library/dom@9.3.4)
       '@types/react':
-        specifier: ^18.2.74
+        specifier: '>=18.2.0'
         version: 18.3.24
       '@types/react-dom':
-        specifier: ^18.2.25
+        specifier: '>=18.2.0'
         version: 18.3.7(@types/react@18.3.24)
       '@vitejs/plugin-react':
         specifier: ^4.2.1
@@ -526,7 +526,7 @@ importers:
         specifier: workspace:*
         version: link:../react
       '@types/react':
-        specifier: ^18.2.74
+        specifier: '>=18.2.0'
         version: 18.3.24
       tsup:
         specifier: ^8.0.0
@@ -550,9 +550,6 @@ importers:
       '@solvapay/demo-services':
         specifier: workspace:*
         version: link:../demo-services
-      '@solvapay/test-utils':
-        specifier: workspace:*
-        version: link:../test-utils
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -577,6 +574,9 @@ importers:
 
   packages/test-utils:
     devDependencies:
+      '@solvapay/server':
+        specifier: workspace:*
+        version: link:../server
       typescript:
         specifier: ^5.5.4
         version: 5.9.2
@@ -8606,7 +8606,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@15.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@15.5.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 15.5.3
       '@swc/helpers': 0.5.15
@@ -9526,7 +9526,7 @@ snapshots:
       client-only: 0.0.1
       react: 19.2.0
 
-  styled-jsx@5.1.6(react@18.3.1):
+  styled-jsx@5.1.6(@babel/core@7.28.4)(react@18.3.1):
     dependencies:
       client-only: 0.0.1
       react: 18.3.1

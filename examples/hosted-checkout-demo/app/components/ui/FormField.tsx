@@ -7,13 +7,13 @@ interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
 }
 
-export const FormField: React.FC<FormFieldProps> = ({
+export function FormField({
   label,
   error,
   icon,
   className = '',
   ...props
-}) => {
+}: FormFieldProps) {
   return (
     <div>
       <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -28,5 +28,5 @@ export const FormField: React.FC<FormFieldProps> = ({
       />
     </div>
   );
-};
+}
 

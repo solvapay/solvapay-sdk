@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "devDependencies": {
+    "@solvapay/server": "workspace:*",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5"
   }

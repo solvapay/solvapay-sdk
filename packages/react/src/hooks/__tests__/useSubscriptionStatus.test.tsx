@@ -521,8 +521,11 @@ describe('useSubscriptionStatus', () => {
       expect(days1).toBeGreaterThan(0);
       expect(days2).toBeGreaterThan(25); // Should be around 30
       expect(days3).toBeGreaterThan(360); // Should be around 365
-      expect(days1).toBeLessThan(days2);
-      expect(days2).toBeLessThan(days3);
+      expect(days1).not.toBeNull();
+      expect(days2).not.toBeNull();
+      expect(days3).not.toBeNull();
+      expect(days1!).toBeLessThan(days2!);
+      expect(days2!).toBeLessThan(days3!);
     });
 
     it('should use Math.ceil for rounding', () => {

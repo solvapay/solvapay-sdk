@@ -57,7 +57,6 @@
   "devDependencies": {
     "@solvapay/auth": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
-    "@solvapay/test-utils": "workspace:*",
     "dotenv": "^17.2.3",
     "openapi-typescript": "^7.4.4",
     "stripe": "^17.3.1",

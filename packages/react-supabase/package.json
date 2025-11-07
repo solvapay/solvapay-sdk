@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@solvapay/react": "workspace:*",
-    "@types/react": "^18.2.74",
+    "@types/react": ">=18.2.0",
     "typescript": "^5.5.4",
     "tsup": "^8.0.0",
     "vitest": "^2.0.5"

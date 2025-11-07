@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase, getAccessToken } from '../../lib/supabase';
 
@@ -76,7 +76,7 @@ function AuthCallbackContent() {
  */
 export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={
+    <React.Suspense fallback={
       <div className="flex justify-center items-center min-h-screen px-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mx-auto mb-4"></div>
@@ -85,7 +85,7 @@ export default function AuthCallbackPage() {
       </div>
     }>
       <AuthCallbackContent />
-    </Suspense>
+    </React.Suspense>
   );
 }
 
