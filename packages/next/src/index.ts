@@ -61,7 +61,11 @@ export interface SubscriptionCheckResult {
 export interface CheckSubscriptionOptions {
   /**
    * Request deduplication options
-   * Default: `{ cacheTTL: 2000, maxCacheSize: 1000, cacheErrors: true }`
+   * 
+   * @default
+   * ```ts
+   * { cacheTTL: 2000, maxCacheSize: 1000, cacheErrors: true }
+   * ```
    */
   deduplication?: RequestDeduplicationOptions;
   
