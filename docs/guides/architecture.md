@@ -33,12 +33,12 @@ The SDK consists of **6 published packages** focused on clear use cases:
 
 | Package | Version | Purpose | Published |
 |---------|---------|---------|-----------|
-| `@solvapay/core` | 1.0.0-preview.6 | Types, schemas, shared utilities | ✅ Yes |
-| `@solvapay/server` | 1.0.0-preview.6 | Node + Edge runtime SDK with unified API | ✅ Yes |
-| `@solvapay/react` | 1.0.0-preview.6 | Payment flow components (Stripe integration) | ✅ Yes |
-| `@solvapay/react-supabase` | 1.0.0-preview.9 | Supabase auth adapter for React Provider | ✅ Yes |
-| `@solvapay/auth` | 1.0.0-preview.6 | Authentication adapters for extracting user IDs | ✅ Yes |
-| `@solvapay/next` | 1.0.0-preview.6 | Next.js-specific utilities and helpers | ✅ Yes |
+| `@solvapay/core` | 1.0.0-preview.18 | Types, schemas, shared utilities | ✅ Yes |
+| `@solvapay/server` | 1.0.0-preview.18 | Node + Edge runtime SDK with unified API | ✅ Yes |
+| `@solvapay/react` | 1.0.0-preview.18 | Payment flow components (Stripe integration) | ✅ Yes |
+| `@solvapay/react-supabase` | 1.0.0-preview.18 | Supabase auth adapter for React Provider | ✅ Yes |
+| `@solvapay/auth` | 1.0.0-preview.18 | Authentication adapters for extracting user IDs | ✅ Yes |
+| `@solvapay/next` | 1.0.0-preview.18 | Next.js-specific utilities and helpers | ✅ Yes |
 | `@solvapay/demo-services` | 0.0.0 | Demo services for examples | 🔒 Private |
 | `@solvapay/test-utils` | 0.0.0 | Testing utilities | 🔒 Private |
 | `@solvapay/tsconfig` | 0.0.0 | Shared TypeScript config | 🔒 Private |
