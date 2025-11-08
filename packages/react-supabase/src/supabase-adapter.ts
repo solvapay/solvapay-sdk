@@ -94,7 +94,7 @@ export function createSupabaseAuthAdapter(config: SupabaseAuthAdapterConfig): Au
         const { createClient } = await import('@supabase/supabase-js')
         const client = createClient(config.supabaseUrl, config.supabaseAnonKey) as unknown as SupabaseClientType
         supabaseClient = client
-        return supabaseClient
+        return client
       } catch {
         // Clear promise on error so we can retry
         clientPromise = null
