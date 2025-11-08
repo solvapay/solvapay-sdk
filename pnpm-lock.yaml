@@ -45,10 +45,10 @@ importers:
         specifier: ^10.1.8
         version: 10.1.8(eslint@9.39.1(jiti@2.6.1))
       eslint-plugin-react:
-        specifier: ^7.37.5
+        specifier: ^7.37.0
         version: 7.37.5(eslint@9.39.1(jiti@2.6.1))
       eslint-plugin-react-hooks:
-        specifier: ^5.2.0
+        specifier: ^5.1.0
         version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
       fastify:
         specifier: ^4.28.1
@@ -335,7 +335,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.0.0
-        version: 15.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.5.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.0
         version: 18.3.1
@@ -8484,7 +8484,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@15.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@15.5.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 15.5.3
       '@swc/helpers': 0.5.15
@@ -8492,7 +8492,7 @@ snapshots:
       postcss: 8.4.31
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      styled-jsx: 5.1.6(react@18.3.1)
+      styled-jsx: 5.1.6(@babel/core@7.28.4)(react@18.3.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.5.3
       '@next/swc-darwin-x64': 15.5.3
@@ -9393,10 +9393,12 @@ snapshots:
       '@types/node': 20.19.14
       qs: 6.13.0
 
-  styled-jsx@5.1.6(react@18.3.1):
+  styled-jsx@5.1.6(@babel/core@7.28.4)(react@18.3.1):
     dependencies:
       client-only: 0.0.1
       react: 18.3.1
+    optionalDependencies:
+      '@babel/core': 7.28.4
 
   styled-jsx@5.1.6(react@19.2.0):
     dependencies:
