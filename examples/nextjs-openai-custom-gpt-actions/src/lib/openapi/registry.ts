@@ -57,7 +57,6 @@ let baseUrl = process.env.PUBLIC_URL;
 // If running on Vercel and no explicit URL is set, use VERCEL_URL
 if (!baseUrl && process.env.VERCEL_URL) {
   baseUrl = `https://${process.env.VERCEL_URL}`;
-  console.log('📍 [OpenAPI Registry] Using Vercel deployment URL');
 }
 
 // Use placeholder only during build if no URL is available

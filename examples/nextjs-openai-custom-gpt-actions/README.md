@@ -1,5 +1,9 @@
 # SolvaPay Next.js OpenAI Custom GPT Actions Example
 
+> **⚠️ Work in Progress - Untested**
+> 
+> This example is currently under active development and has not been fully tested. The implementation may contain bugs, incomplete features, or breaking changes. Use at your own risk and expect issues. Contributions and feedback are welcome!
+
 This example demonstrates how to integrate SolvaPay with Next.js App Router to create OpenAI Custom GPT Actions with paywall protection. It provides the same functionality as the Fastify/Vite example but uses Next.js 15 with the latest App Router.
 
 ## Table of Contents
@@ -551,6 +555,8 @@ All endpoints are protected with paywall checks and include proper OAuth 2.0 aut
 
 ## 🧪 Testing
 
+> **Note**: This example is currently untested. The test suite may be incomplete or contain failing tests.
+
 ### Run All Tests
 ```bash
 npm test           # All tests
@@ -560,7 +566,7 @@ npm run test:watch     # Watch mode
 ```
 
 ### Test Coverage
-- **Comprehensive test suite** covering all functionality ✅
+- **Test suite status**: ⚠️ Work in progress - tests may be incomplete or failing
 - **Backend Tests**: Paywall protection, CRUD operations, OAuth flow, checkout functionality
 - **UI Tests**: Component rendering and user interactions
 - **SDK Tests**: Core paywall functionality tested in the SDK package

@@ -7,11 +7,6 @@ export async function POST(request: NextRequest) {
   const token = formData.get('token') as string;
   const tokenTypeHint = formData.get('token_type_hint') as string;
 
-  console.log('🔍 [REVOKE DEBUG] Token revocation request:', {
-    tokenTypeHint,
-    tokenLength: token?.length
-  });
-
   if (!token) {
     return NextResponse.json(
       { error: 'invalid_request', error_description: 'Missing token parameter' },
@@ -24,7 +19,6 @@ export async function POST(request: NextRequest) {
       const refreshTokenData = await refreshTokens.get(token);
       if (refreshTokenData) {
         await refreshTokens.delete(token);
-        console.log('✅ [REVOKE] Successfully revoked refresh token for user:', refreshTokenData.userId);
         
         return NextResponse.json({
           revoked: true,
@@ -38,14 +32,14 @@ export async function POST(request: NextRequest) {
       await jwtVerify(token, jwtSecret, {
         issuer: process.env.OAUTH_ISSUER!
       });
-
-      console.log('✅ [REVOKE] Access token will expire naturally (no blacklist storage)');
       
       return NextResponse.json({
         revoked: true,
         message: 'Token revocation completed'
       });
-    } catch (jwtError: any) {
+    } catch {
+      // Token verification failed, but we still return success
+      // as the token will expire naturally
       return NextResponse.json({
         revoked: true,
         message: 'Token revocation completed'

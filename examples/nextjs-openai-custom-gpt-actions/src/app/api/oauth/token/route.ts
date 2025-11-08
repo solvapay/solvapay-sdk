@@ -8,15 +8,8 @@ export async function POST(request: NextRequest) {
   const code = formData.get('code') as string;
   const redirectUri = formData.get('redirect_uri') as string;
   const clientId = formData.get('client_id') as string;
-  const clientSecret = formData.get('client_secret') as string;
-
-  console.log('🔍 [TOKEN DEBUG] Token exchange request:', {
-    grantType,
-    code: code ? `${code.substring(0, 20)}...` : 'missing',
-    redirectUri,
-    clientId,
-    clientSecret: clientSecret ? '***' : 'missing'
-  });
+  // Note: client_secret is accepted but not validated in this implementation
+  formData.get('client_secret'); // Accept but don't validate
 
   if (!grantType || grantType !== 'authorization_code') {
     return NextResponse.json(
@@ -58,7 +51,6 @@ export async function POST(request: NextRequest) {
     };
 
     if (authCodeData.redirectUri !== redirectUri) {
-      console.log('🔍 [TOKEN DEBUG] Redirect URI mismatch');
       return NextResponse.json(
         { error: 'invalid_grant', error_description: 'Redirect URI mismatch' },
         { status: 400 }
@@ -94,8 +86,6 @@ export async function POST(request: NextRequest) {
       issuedAt: new Date(),
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     });
-
-    console.log('✅ [TOKEN] Generated JWT tokens for client:', clientId, 'user:', authCodeData.userId);
 
     return NextResponse.json({
       access_token: accessToken,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSubscription, useCheckout, usePlans, useSubscriptionStatus } from '@solvapay/react';
+import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAccessToken } from '../lib/supabase';
@@ -19,7 +19,7 @@ export default function CheckoutPage() {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
   const [paymentFailed, setPaymentFailed] = useState<boolean>(false);
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
-  const { subscriptions, refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } = useSubscription();
+  const { refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } = useSubscription();
   const router = useRouter();
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 

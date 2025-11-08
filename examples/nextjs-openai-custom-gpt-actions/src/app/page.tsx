@@ -36,7 +36,6 @@ export default function HomePage() {
     cancelledSubscription,
     shouldShowCancelledNotice,
     formatDate,
-    getDaysUntilExpiration,
   } = useSubscriptionStatus();
   
   // Loading state - only subscriptions loading since plans are on hosted page

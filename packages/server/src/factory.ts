@@ -709,9 +709,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
 /**
  * Helper to get package name from package.json
+ * Edge-safe: returns undefined in edge runtimes where process.cwd() is not available
  */
 function getPackageJsonName(): string | undefined {
   try {
+    // Check if we're in an edge runtime (process.cwd may not be available)
+    if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
+      return undefined;
+    }
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const pkg = require(process.cwd() + '/package.json');
     return pkg.name;

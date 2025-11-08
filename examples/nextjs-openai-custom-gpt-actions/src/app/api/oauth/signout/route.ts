@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Successfully signed out (access token will expire naturally)'
       });
-    } catch (jwtError) {
+    } catch {
+      // Token verification failed, but we still return success
       return NextResponse.json({
         success: true,
         message: 'Sign out completed'

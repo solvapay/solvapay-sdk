@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { existsSync, unlinkSync } from 'fs'
+import { join } from 'path'
 
 // Test utilities for common test patterns
 export const createMockRequest = (url: string, options: RequestInit = {}) => {
@@ -88,9 +90,6 @@ export const createTestThing = (overrides: any = {}) => ({
 
 // Cleanup utilities
 export const cleanupUserPlans = () => {
-  const { writeFileSync, existsSync, unlinkSync } = require('fs')
-  const { join } = require('path')
-  
   const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
   if (existsSync(USER_PLANS_FILE)) {
     unlinkSync(USER_PLANS_FILE)

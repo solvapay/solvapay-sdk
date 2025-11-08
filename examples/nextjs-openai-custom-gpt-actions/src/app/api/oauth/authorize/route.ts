@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   return NextResponse.json(
     { error: 'method_not_allowed', error_description: 'Use GET to initiate OAuth flow' },
     { status: 405 }

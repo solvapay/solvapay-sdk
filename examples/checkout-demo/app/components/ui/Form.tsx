@@ -7,12 +7,12 @@ interface FormProps {
   className?: string;
 }
 
-export const Form: React.FC<FormProps> = ({
+export function Form({
   children,
   title,
   description,
   className = '',
-}) => {
+}: FormProps) {
   return (
     <div className={`bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/60 p-5 ${className}`}>
       {title && (
@@ -24,5 +24,5 @@ export const Form: React.FC<FormProps> = ({
       {children}
     </div>
   );
-};
+}
 

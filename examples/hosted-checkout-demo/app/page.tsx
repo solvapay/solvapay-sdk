@@ -13,19 +13,17 @@ export default function HomePage() {
   // Note: Plans are handled on the hosted checkout page, so we pass empty array
   // Subscription status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
   // Use hasPaidSubscription and activeSubscription consistently throughout the component
-  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
+  const { loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
   
   
   // Refetch subscriptions on mount to ensure we have latest data after navigation
   // This is especially important when creating a new account or after account changes
-  // Empty dependency array ensures this only runs once on mount, preventing stale data
   useEffect(() => {
     // Immediately refetch on mount to bypass any cached data
     refetch().catch((error) => {
       console.error('[HomePage] Refetch failed:', error);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - only run on mount to ensure fresh data on page load
+  }, [refetch]);
   
   // Get advanced subscription status helpers
   const {

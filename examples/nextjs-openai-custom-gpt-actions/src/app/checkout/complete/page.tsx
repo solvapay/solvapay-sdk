@@ -8,13 +8,10 @@ export default function CheckoutCompletePage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    // Check URL parameters for success/error status
-    const urlParams = new URLSearchParams(window.location.search)
-    const returnUrl = urlParams.get('return_url')
-    
     // Hosted checkout redirects back here after successful payment
     // The status is typically handled by the hosted checkout page
     // For now, assume success if we reach this page
+    // const returnUrl = searchParams.get('returnUrl'); // Reserved for future use
     const timer = setTimeout(() => {
       setStatus('success')
       setMessage('Your subscription has been successfully upgraded!')

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase, getAccessToken } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 /**
  * OAuth Callback Content

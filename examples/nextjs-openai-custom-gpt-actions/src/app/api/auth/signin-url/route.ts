@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { SignInUrlResponse } from '@/lib/schemas';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const clientId = process.env.OAUTH_CLIENT_ID;
     const redirectUri = process.env.OAUTH_REDIRECT_URI;
@@ -38,10 +38,6 @@ export async function GET(request: NextRequest) {
       signInUrl,
       instructions: 'Please visit this URL to sign in with your account using OAuth flow.'
     };
-    
-    console.log('🔗 [SIGNIN URL] Generated sign-in URL:', signInUrl);
-    console.log('🔧 [SIGNIN URL] Using client_id:', clientId);
-    console.log('🔧 [SIGNIN URL] Using redirect_uri:', redirectUri);
     
     return NextResponse.json(response);
   } catch (error) {

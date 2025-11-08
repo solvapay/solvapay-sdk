@@ -12,7 +12,7 @@ import { useState } from 'react';
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { subscriptions, loading: subscriptionsLoading, hasPaidSubscription } = useSubscription();
+  const { loading: subscriptionsLoading, hasPaidSubscription } = useSubscription();
   const [isSigningOut, setIsSigningOut] = useState(false);
   
   // Show upgrade button when subscriptions are loaded and user doesn't have paid subscription

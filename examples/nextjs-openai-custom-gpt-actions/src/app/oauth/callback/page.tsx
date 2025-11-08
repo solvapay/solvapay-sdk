@@ -6,9 +6,9 @@ import { useEffect, Suspense } from 'react'
 function OAuthCallbackContent() {
   const searchParams = useSearchParams()
   const code = searchParams.get('code')
-  const state = searchParams.get('state')
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
+  // const state = searchParams.get('state'); // Reserved for future use
 
   // OAuth Callback received
 

@@ -16,7 +16,7 @@ export default function HomePage() {
   }, []);
   
   // Fetch plans using SDK hook
-  const { plans, loading: plansLoading } = usePlans({
+  const { loading: plansLoading } = usePlans({
     agentRef: agentRef || undefined,
     fetcher: fetchPlans,
   });
@@ -26,7 +26,7 @@ export default function HomePage() {
   // Subscription status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
   // Use hasPaidSubscription and activeSubscription consistently throughout the component
   // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
-  const { subscriptions, loading: subscriptionsLoading, hasPaidSubscription, activeSubscription } = useSubscription();
+  const { loading: subscriptionsLoading, hasPaidSubscription, activeSubscription } = useSubscription();
   
   // Get advanced subscription status helpers
   const {

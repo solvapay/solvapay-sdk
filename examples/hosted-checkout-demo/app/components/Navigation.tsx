@@ -12,7 +12,7 @@ import { useState, useCallback } from 'react';
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { subscriptions, loading: subscriptionsLoading, hasPaidSubscription } = useSubscription();
+  const { loading: subscriptionsLoading, hasPaidSubscription } = useSubscription();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   

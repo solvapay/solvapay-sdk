@@ -39,7 +39,6 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/oauth/')) {
     const newUrl = request.nextUrl.clone();
     newUrl.pathname = `/api${pathname}`;
-    console.log('🔄 [MIDDLEWARE] Rewriting OAuth route:', pathname, '→', newUrl.pathname);
     return NextResponse.rewrite(newUrl);
   }
 

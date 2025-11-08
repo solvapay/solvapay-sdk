@@ -6,14 +6,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export function Button({
   variant = 'primary',
   children,
   className = '',
   isLoading = false,
   disabled,
   ...props
-}) => {
+}: ButtonProps) {
   const baseClasses = 'font-medium transition-all duration-200 focus:outline-none focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2';
   
   const variantClasses = {
@@ -41,5 +41,5 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </button>
   );
-};
+}
 

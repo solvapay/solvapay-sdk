@@ -4,7 +4,7 @@ process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
+import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { setupTestEnvironment } from './test-utils'
 
