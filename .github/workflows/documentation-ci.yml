@@ -187,12 +187,3 @@ jobs:
                 body: body,
               });
             }
-
-      - name: Upload documentation artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-docs
-          path: docs/api/
-          retention-days: 7
-          if-no-files-found: ignore
