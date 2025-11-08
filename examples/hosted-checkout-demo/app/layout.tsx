@@ -1,11 +1,7 @@
-import { ClientLayout } from './components/ClientLayout';
-import './globals.css';
+import { ClientLayout } from './components/ClientLayout'
+import './globals.css'
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -16,5 +12,5 @@ export default function RootLayout({
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
-  );
+  )
 }

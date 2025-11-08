@@ -1,7 +1,33 @@
 {
   "name": "solvapay-sdk-monorepo",
+  "version": "1.0.0",
+  "description": "A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and subscription management",
   "private": true,
   "packageManager": "pnpm@9.6.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git"
+  },
+  "homepage": "https://github.com/solvapay/solvapay-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/solvapay/solvapay-sdk/issues"
+  },
+  "keywords": [
+    "solvapay",
+    "sdk",
+    "typescript",
+    "paywall",
+    "subscription",
+    "payment",
+    "monetization",
+    "api",
+    "mcp",
+    "nextjs",
+    "react",
+    "express"
+  ],
+  "author": "SolvaPay Inc.",
+  "license": "MIT",
   "scripts": {
     "build": "turbo build --concurrency 16",
     "build:examples": "turbo build --filter=@example/*",
@@ -10,6 +36,8 @@
     "dev": "turbo dev --no-cache --concurrency 16 --continue",
     "test": "turbo run test --filter=!@example/*",
     "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "type-check": "tsc --build",
     "type-check:full": "tsc --build tsconfig.with-examples.json",
     "release": "turbo run release",
@@ -38,10 +66,12 @@
     "@types/node": "^20.14.9",
     "@types/react": "^18.2.79",
     "conventional-changelog-cli": "^5.0.0",
+    "eslint-config-prettier": "^10.1.8",
     "fastify": "^4.28.1",
     "glob": "^11.0.3",
     "jose": "^5.9.3",
     "nodemon": "^3.1.0",
+    "prettier": "^3.6.2",
     "tsup": "^8.0.1",
     "tsx": "^4.19.0",
     "turbo": "^2.0.6",

@@ -7,38 +7,38 @@ Get up and running with SolvaPay SDK in minutes. These examples are copy-paste r
 Protect an Express.js API endpoint with paywall protection:
 
 ```typescript
-import express from 'express';
-import { createSolvaPay } from '@solvapay/server';
+import express from 'express'
+import { createSolvaPay } from '@solvapay/server'
 
-const app = express();
-app.use(express.json());
+const app = express()
+app.use(express.json())
 
 // Initialize SolvaPay (works without API key in stub mode)
 const solvaPay = createSolvaPay({
   // apiKey: process.env.SOLVAPAY_SECRET_KEY // Optional for production
-});
+})
 
 // Create payable handler for your agent
 const payable = solvaPay.payable({
-  agent: 'agt_YOUR_AGENT',  // Your agent reference from SolvaPay dashboard
-  plan: 'pln_YOUR_PLAN'      // Your plan reference
-});
+  agent: 'agt_YOUR_AGENT', // Your agent reference from SolvaPay dashboard
+  plan: 'pln_YOUR_PLAN', // Your plan reference
+})
 
 // Your business logic
 async function createTask(req: express.Request) {
-  const { title } = req.body;
+  const { title } = req.body
   return {
     success: true,
-    task: { id: '1', title, createdAt: new Date() }
-  };
+    task: { id: '1', title, createdAt: new Date() },
+  }
 }
 
 // Protect the endpoint with one line
-app.post('/tasks', payable.http(createTask));
+app.post('/tasks', payable.http(createTask))
 
 app.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
-});
+  console.log('Server running on http://localhost:3000')
+})
 ```
 
 **Test it:**
@@ -59,36 +59,29 @@ Create API routes for subscription checking and payment:
 
 ```typescript
 // app/api/check-subscription/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { checkSubscription } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request);
-  return result instanceof NextResponse 
-    ? result 
-    : NextResponse.json(result);
+  const result = await checkSubscription(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
 ```typescript
 // app/api/create-payment-intent/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { createPaymentIntent } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json();
-  
+  const { planRef, agentRef } = await request.json()
+
   if (!planRef || !agentRef) {
-    return NextResponse.json(
-      { error: 'Missing required parameters' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await createPaymentIntent(request, { planRef, agentRef });
-  return result instanceof NextResponse 
-    ? result 
-    : NextResponse.json(result);
+  const result = await createPaymentIntent(request, { planRef, agentRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -96,7 +89,7 @@ export async function POST(request: NextRequest) {
 
 ```tsx
 // app/layout.tsx
-import { SolvaPayProvider } from '@solvapay/react';
+import { SolvaPayProvider } from '@solvapay/react'
 
 export default function RootLayout({ children }) {
   return (
@@ -107,14 +100,14 @@ export default function RootLayout({ children }) {
             api: {
               checkSubscription: '/api/check-subscription',
               createPayment: '/api/create-payment-intent',
-            }
+            },
           }}
         >
           {children}
         </SolvaPayProvider>
       </body>
     </html>
-  );
+  )
 }
 ```
 
@@ -122,13 +115,13 @@ export default function RootLayout({ children }) {
 
 ```tsx
 // app/checkout/page.tsx
-'use client';
+'use client'
 
-import { PaymentForm } from '@solvapay/react';
-import { useRouter } from 'next/navigation';
+import { PaymentForm } from '@solvapay/react'
+import { useRouter } from 'next/navigation'
 
 export default function CheckoutPage() {
-  const router = useRouter();
+  const router = useRouter()
 
   return (
     <div>
@@ -137,15 +130,15 @@ export default function CheckoutPage() {
         planRef="pln_YOUR_PLAN"
         agentRef="agt_YOUR_AGENT"
         onSuccess={() => {
-          console.log('Payment successful!');
-          router.push('/dashboard');
+          console.log('Payment successful!')
+          router.push('/dashboard')
         }}
-        onError={(error) => {
-          console.error('Payment failed:', error);
+        onError={error => {
+          console.error('Payment failed:', error)
         }}
       />
     </div>
-  );
+  )
 }
 ```
 
@@ -154,27 +147,27 @@ export default function CheckoutPage() {
 Protect MCP (Model Context Protocol) tools with paywall protection:
 
 ```typescript
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createSolvaPay } from '@solvapay/server';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import { createSolvaPay } from '@solvapay/server'
 
 // Initialize SolvaPay
 const solvaPay = createSolvaPay({
   // apiKey: process.env.SOLVAPAY_SECRET_KEY // Optional for production
-});
+})
 
 // Create payable handler
 const payable = solvaPay.payable({
-  agent: 'agt_YOUR_AGENT'
-});
+  agent: 'agt_YOUR_AGENT',
+})
 
 // Your tool implementation
 async function myTool(args: { input: string }) {
   return {
     success: true,
-    result: `Processed: ${args.input}`
-  };
+    result: `Processed: ${args.input}`,
+  }
 }
 
 // Create MCP server
@@ -185,30 +178,30 @@ const server = new Server(
   },
   {
     capabilities: { tools: {} },
-  }
-);
+  },
+)
 
 // Handle tool execution with paywall protection
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  
+server.setRequestHandler(CallToolRequestSchema, async request => {
+  const { name, arguments: args } = request.params
+
   if (name === 'my_tool') {
     // Protect the tool with one line
-    const handler = payable.mcp(myTool);
-    return await handler(args);
+    const handler = payable.mcp(myTool)
+    return await handler(args)
   }
-  
-  throw new Error(`Unknown tool: ${name}`);
-});
+
+  throw new Error(`Unknown tool: ${name}`)
+})
 
 // Start server
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('MCP server started');
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+  console.error('MCP server started')
 }
 
-main();
+main()
 ```
 
 ## React: Add Payment UI Components (10 minutes)
@@ -217,7 +210,7 @@ main();
 
 ```tsx
 // App.tsx or layout component
-import { SolvaPayProvider } from '@solvapay/react';
+import { SolvaPayProvider } from '@solvapay/react'
 
 function App() {
   return (
@@ -226,12 +219,12 @@ function App() {
         api: {
           checkSubscription: '/api/check-subscription',
           createPayment: '/api/create-payment-intent',
-        }
+        },
       }}
     >
       <YourApp />
     </SolvaPayProvider>
-  );
+  )
 }
 ```
 
@@ -239,12 +232,12 @@ function App() {
 
 ```tsx
 // components/Dashboard.tsx
-import { useSubscription } from '@solvapay/react';
+import { useSubscription } from '@solvapay/react'
 
 function Dashboard() {
-  const { subscriptions, hasPaidSubscription, isLoading } = useSubscription();
+  const { subscriptions, hasPaidSubscription, isLoading } = useSubscription()
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>
 
   if (!hasPaidSubscription) {
     return (
@@ -252,7 +245,7 @@ function Dashboard() {
         <h2>Upgrade to Premium</h2>
         <a href="/checkout">Subscribe Now</a>
       </div>
-    );
+    )
   }
 
   return (
@@ -260,7 +253,7 @@ function Dashboard() {
       <h2>Welcome, Premium User!</h2>
       <p>Active subscriptions: {subscriptions.length}</p>
     </div>
-  );
+  )
 }
 ```
 
@@ -268,7 +261,7 @@ function Dashboard() {
 
 ```tsx
 // components/Checkout.tsx
-import { PaymentForm } from '@solvapay/react';
+import { PaymentForm } from '@solvapay/react'
 
 function Checkout() {
   return (
@@ -278,11 +271,11 @@ function Checkout() {
         planRef="pln_YOUR_PLAN"
         agentRef="agt_YOUR_AGENT"
         onSuccess={() => {
-          window.location.href = '/dashboard';
+          window.location.href = '/dashboard'
         }}
       />
     </div>
-  );
+  )
 }
 ```
 
@@ -291,4 +284,3 @@ function Checkout() {
 - [Core Concepts](./core-concepts.md) - Understand agents, plans, and the paywall flow
 - [Framework Guides](../guides/express.md) - Detailed integration guides for your framework
 - [API Reference](../api/) - Complete API documentation
-

@@ -5,6 +5,7 @@ This guide covers setting up a modern UI component library with Tailwind CSS.
 ## Overview
 
 We'll create:
+
 1. Tailwind CSS configuration
 2. Global styles
 3. UI component library (Button, Input, Card, Form, Badge)
@@ -25,11 +26,11 @@ Create or update `postcss.config.mjs` (or `postcss.config.js`):
 ```javascript
 const config = {
   plugins: {
-    "@tailwindcss/postcss": {},
+    '@tailwindcss/postcss': {},
   },
-};
+}
 
-export default config;
+export default config
 ```
 
 ## Step 2: Configure Tailwind CSS
@@ -37,15 +38,15 @@ export default config;
 Update `tailwind.config.ts`:
 
 ```typescript
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss'
 
 const config: Config = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
@@ -96,28 +97,28 @@ const config: Config = {
       },
       keyframes: {
         'fade-in': {
-          'from': { opacity: '0' },
-          'to': { opacity: '1' },
+          from: { opacity: '0' },
+          to: { opacity: '1' },
         },
         'slide-up': {
-          'from': { opacity: '0', transform: 'translateY(20px)' },
-          'to': { opacity: '1', transform: 'translateY(0)' },
+          from: { opacity: '0', transform: 'translateY(20px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
         'slide-down': {
-          'from': { opacity: '0', transform: 'translateY(-20px)' },
-          'to': { opacity: '1', transform: 'translateY(0)' },
+          from: { opacity: '0', transform: 'translateY(-20px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
         'scale-in': {
-          'from': { opacity: '0', transform: 'scale(0.9)' },
-          'to': { opacity: '1', transform: 'scale(1)' },
+          from: { opacity: '0', transform: 'scale(0.9)' },
+          to: { opacity: '1', transform: 'scale(1)' },
         },
       },
     },
   },
   plugins: [],
-};
+}
 
-export default config;
+export default config
 ```
 
 **Note:** Tailwind CSS supports both CSS-based configuration (via `@theme` directive) and JavaScript/TypeScript config files. The config file approach is recommended for custom themes, colors, and animations.
@@ -127,10 +128,11 @@ export default config;
 Update `src/app/globals.css`:
 
 ```css
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Minimal styling */
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -139,7 +141,9 @@ html, body {
 body {
   background-color: white;
   color: #0f172a;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    sans-serif;
 }
 
 /* Smooth transitions */
@@ -179,7 +183,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses = 'font-medium transition-all duration-200 focus:outline-none focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2';
-  
+
   const variantClasses = {
     primary: 'px-4 py-2.5 text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed',
     secondary: 'px-4 py-2 text-xs text-slate-600 bg-transparent rounded-full hover:text-slate-900 hover:bg-slate-50',
@@ -276,7 +280,7 @@ export const Card: React.FC<CardProps> = ({
   style,
 }) => {
   const baseClasses = 'rounded-2xl shadow-xl border border-slate-200/60';
-  
+
   const variantClasses = {
     default: 'bg-white',
     glass: 'bg-white/95 backdrop-blur-lg',
@@ -446,7 +450,7 @@ const Skeleton = ({ className = '' }: { className?: string }) => (
 ## Design Principles
 
 1. **Color Palette**: Primarily uses slate grays with accent colors (emerald, blue, purple, red) for status indicators
-2. **Border Radius**: 
+2. **Border Radius**:
    - Small elements: `rounded-lg` (8px)
    - Medium elements: `rounded-xl` (12px)
    - Large elements: `rounded-2xl` (16px)
@@ -551,7 +555,8 @@ Test your components:
 
 **Symptom:** Tailwind utility classes don't appear to be working.
 
-**Solution:** 
+**Solution:**
+
 1. Verify CSS file uses `@import "tailwindcss"` (not `@tailwind` directives)
 2. Verify `tailwind.config.ts` includes all content paths
 3. Ensure `globals.css` is imported in `layout.tsx`
@@ -564,7 +569,8 @@ Test your components:
 
 **Cause:** Usually indicates Tailwind styles are not being processed correctly, often due to incorrect CSS import syntax.
 
-**Solution:** 
+**Solution:**
+
 1. Verify CSS file uses `@import "tailwindcss"`
 2. Verify PostCSS config uses `@tailwindcss/postcss` plugin
 3. Ensure Tailwind CSS v4 is installed: `npm install tailwindcss@^4 @tailwindcss/postcss@^4`
@@ -577,6 +583,7 @@ Test your components:
 **Solution:** Add `overflow-x-hidden` to body/main containers if needed.
 
 ### Components not rendering
+
 - Check import paths are correct
 - Verify components are exported correctly
 - Check browser console for errors
@@ -584,5 +591,5 @@ Test your components:
 ## Next Steps
 
 Now that styling is set up, proceed to:
-- **[Step 5: Complete Example](./05-complete-example.md)** - Full working implementation with all features
 
+- **[Step 5: Complete Example](./05-complete-example.md)** - Full working implementation with all features

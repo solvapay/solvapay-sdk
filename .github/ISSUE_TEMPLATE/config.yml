@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/solvapay/solvapay-sdk/security/advisories/new
+    about: Please report security vulnerabilities privately via GitHub Security Advisories
+  - name: Community Support
+    url: https://github.com/solvapay/solvapay-sdk/discussions
+    about: Ask questions and discuss with the community
+  - name: Documentation Issue
+    url: https://github.com/solvapay/solvapay-sdk/issues/new?template=documentation.md
+    about: Report issues with documentation

@@ -17,8 +17,8 @@ Agents are created in the SolvaPay dashboard and represent the service you're pr
 ```typescript
 // All endpoints for this agent share the same paywall rules
 const payable = solvaPay.payable({
-  agent: 'agt_myapi'  // Your agent reference
-});
+  agent: 'agt_myapi', // Your agent reference
+})
 ```
 
 ### Plans
@@ -37,8 +37,8 @@ Plans are created in the SolvaPay dashboard and can be associated with agents.
 // Protect endpoints with a specific plan requirement
 const payable = solvaPay.payable({
   agent: 'agt_myapi',
-  plan: 'pln_premium'  // Users need this plan to access
-});
+  plan: 'pln_premium', // Users need this plan to access
+})
 ```
 
 ### Agent-Plan Relationship
@@ -67,13 +67,13 @@ A **Customer Reference** (`customerRef`) is a unique identifier for a user in yo
 ```typescript
 // Ensure customer exists (creates if doesn't exist)
 const customerRef = await solvaPay.ensureCustomer(
-  'user_123',           // customerRef (your user ID)
-  'user_123',           // externalRef (same or different)
+  'user_123', // customerRef (your user ID)
+  'user_123', // externalRef (same or different)
   {
     email: 'user@example.com',
-    name: 'John Doe'
-  }
-);
+    name: 'John Doe',
+  },
+)
 ```
 
 ### Customer Reference in Requests
@@ -82,17 +82,20 @@ For HTTP adapters, pass the customer reference via headers:
 
 ```typescript
 // Express.js example
-app.post('/tasks', payable.http(async (req) => {
-  const customerRef = req.headers['x-customer-ref'];
-  // Business logic here
-}));
+app.post(
+  '/tasks',
+  payable.http(async req => {
+    const customerRef = req.headers['x-customer-ref']
+    // Business logic here
+  }),
+)
 ```
 
 For Next.js, the customer reference is automatically extracted from authentication:
 
 ```typescript
 // Next.js automatically extracts from auth middleware
-const result = await checkSubscription(request);
+const result = await checkSubscription(request)
 // result.customerRef is automatically set
 ```
 
@@ -146,17 +149,17 @@ You can customize the error handling:
 
 ```typescript
 try {
-  const result = await handler(req);
-  return result;
+  const result = await handler(req)
+  return result
 } catch (error) {
   if (error instanceof PaywallError) {
     // Custom paywall handling
     return res.status(402).json({
       error: error.message,
-      checkoutUrl: error.checkoutUrl
-    });
+      checkoutUrl: error.checkoutUrl,
+    })
   }
-  throw error;
+  throw error
 }
 ```
 
@@ -175,14 +178,14 @@ Subscriptions can be in different states:
 
 ```typescript
 // Check subscription status
-const customer = await solvaPay.getCustomer({ customerRef: 'user_123' });
-const subscriptions = customer.subscriptions;
+const customer = await solvaPay.getCustomer({ customerRef: 'user_123' })
+const subscriptions = customer.subscriptions
 
 // Cancel subscription
 await solvaPay.cancelSubscription({
   customerRef: 'user_123',
-  subscriptionRef: 'sub_...'
-});
+  subscriptionRef: 'sub_...',
+})
 ```
 
 ### Free Tier
@@ -210,15 +213,15 @@ SolvaPay provides adapters for common auth systems:
 
 ```typescript
 // Supabase adapter
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
 
 const adapter = new SupabaseAuthAdapter({
   supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_ANON_KEY
-});
+  supabaseKey: process.env.SUPABASE_ANON_KEY,
+})
 
 // Extract user ID from Supabase JWT
-const userId = adapter.getUserId(request);
+const userId = adapter.getUserId(request)
 ```
 
 ### Next.js Authentication
@@ -226,10 +229,10 @@ const userId = adapter.getUserId(request);
 Next.js helpers automatically extract user info:
 
 ```typescript
-import { getAuthenticatedUser } from '@solvapay/next';
+import { getAuthenticatedUser } from '@solvapay/next'
 
 // Automatically extracts userId, email, name from Supabase JWT
-const user = await getAuthenticatedUser(request);
+const user = await getAuthenticatedUser(request)
 // { userId: '...', email: '...', name: '...' }
 ```
 
@@ -253,9 +256,11 @@ You can also track usage manually:
 await solvaPay.trackUsage({
   customerRef: 'user_123',
   agentRef: 'agt_myapi',
-  amount: 1,  // Usage amount
-  metadata: { /* custom data */ }
-});
+  amount: 1, // Usage amount
+  metadata: {
+    /* custom data */
+  },
+})
 ```
 
 ### Usage Limits
@@ -271,4 +276,3 @@ Usage limits are enforced automatically:
 - [Quick Start](./quick-start.md) - Try the examples
 - [Framework Guides](../guides/express.md) - Framework-specific integration
 - [API Reference](../api/) - Complete API documentation
-

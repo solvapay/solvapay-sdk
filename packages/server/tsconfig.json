@@ -4,14 +4,7 @@
     "composite": true,
     "outDir": "dist"
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "__tests__",
-    "**/*.test.ts"
-  ],
-  "references": [
-    { "path": "../core" }
-  ]
+  "include": ["src"],
+  "exclude": ["__tests__", "**/*.test.ts"],
+  "references": [{ "path": "../core" }, { "path": "../auth" }]
 }

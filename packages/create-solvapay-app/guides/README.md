@@ -5,6 +5,7 @@ Complete step-by-step guide for integrating SolvaPay hosted checkout and Supabas
 ## Overview
 
 This guide will help you build a Next.js application with:
+
 - ✅ **Supabase Authentication** - Email/password and Google OAuth sign-in
 - ✅ **SolvaPay Hosted Checkout** - Secure subscription payments hosted on SolvaPay
 - ✅ **Modern UI Components** - Beautiful, accessible components with Tailwind CSS
@@ -60,9 +61,11 @@ Before implementing, you can optionally customize your app description:
 After creating your project, use these guides with Cursor AI:
 
 1. **First, copy the setup verification instructions** (`01-setup.md`) into Cursor with:
+
    ```
    Verify my project setup matches these requirements
    ```
+
    Then paste the contents of `01-setup.md`
 
 2. **Then, copy the implementation guides** into Cursor with:
@@ -81,12 +84,14 @@ The guides are designed to be copied directly into Cursor, where the AI assistan
 ## Architecture Overview
 
 ### Authentication Flow
+
 1. User signs in with Supabase (email/password or Google OAuth)
 2. Middleware extracts user ID from Supabase JWT token
 3. User ID is passed to API routes via `x-user-id` header
 4. SolvaPay customer is created/updated using user ID
 
 ### Payment Flow
+
 1. User clicks "Upgrade" or "View Plans"
 2. Frontend calls `/api/create-checkout-session`
 3. Server creates SolvaPay checkout session
@@ -105,6 +110,7 @@ The guides are designed to be copied directly into Cursor, where the AI assistan
 ## Support
 
 For issues or questions:
+
 - Check the troubleshooting sections in each guide
 - Review the example implementation in `examples/hosted-checkout-demo`
 - GitHub Issues: https://github.com/solvapay/solvapay-sdk/issues
@@ -112,4 +118,3 @@ For issues or questions:
 ## Next Steps
 
 Start with [Setup Guide](./01-setup.md) →
-

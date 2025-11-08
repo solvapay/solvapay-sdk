@@ -19,17 +19,20 @@ This example demonstrates how to integrate SolvaPay paywall functionality with a
 ## Features
 
 ### 🔒 **Agent-Based Access Control**
+
 - Uses `agent` to identify the service/tool suite
 - Supports both free tier and paid plan access
 - Backend-configurable plans (no hardcoded pricing in SDK)
 
 ### 📊 **Persistent Free Tier Tracking**
+
 - **Production-ready demo**: Free tier usage persists across server restarts
 - **File-based storage**: Simulates database persistence using JSON files
 - **Daily reset logic**: Automatically resets counters each day
 - **Concurrent safe**: Handles multiple API calls properly
 
 ### 📈 **Usage Analytics**
+
 - Tracks feature usage with `trackUsage()` (not tied to plans)
 - Clean separation: Plans control access, features track usage
 - Perfect foundation for usage-based pricing models
@@ -37,6 +40,7 @@ This example demonstrates how to integrate SolvaPay paywall functionality with a
 ## How Persistence Works
 
 ### **Demo Implementation (Current)**
+
 ```typescript
 // Data stored in .demo-data/ directory
 .demo-data/
@@ -45,13 +49,14 @@ This example demonstrates how to integrate SolvaPay paywall functionality with a
 ```
 
 ### **Production Implementation (Required)**
+
 In production, the SolvaPay backend would handle persistence:
 
 ```typescript
 // Backend API handles all persistence
-POST /api/check-limits
-POST /api/track-usage  
-POST /api/create-checkout
+POST / api / check - limits
+POST / api / track - usage
+POST / api / create - checkout
 ```
 
 ## Key Benefits
@@ -59,13 +64,14 @@ POST /api/create-checkout
 ✅ **Server restart resilience** - Free tier counts persist  
 ✅ **Multi-instance compatible** - Shared storage approach  
 ✅ **Development realistic** - Mirrors production behavior  
-✅ **Alpha launch ready** - Transparent about requirements  
+✅ **Alpha launch ready** - Transparent about requirements
 
 ## Quick Start
 
 ### Prerequisites
 
 1. **Install dependencies**:
+
    ```bash
    cd examples/mcp-basic
    pnpm install
@@ -103,7 +109,7 @@ rm -rf .demo-data
 ### See Persistence in Action
 
 1. **Start the server** and make some API calls
-2. **Stop the server** 
+2. **Stop the server**
 3. **Check the data files**:
    ```bash
    cat .demo-data/customers.json
@@ -121,31 +127,31 @@ The example uses a stub client for local development:
 
 ```typescript
 // src/index.ts
-import { createSolvaPay } from '@solvapay/server';
-import { createStubClient } from '../../shared/stub-api-client';
+import { createSolvaPay } from '@solvapay/server'
+import { createStubClient } from '../../shared/stub-api-client'
 
 // Create stub client (in-memory for tests, file-based for demo)
-const apiClient = createStubClient({ 
-  useFileStorage: false,  // In-memory for tests
-  freeTierLimit: 3,      // 3 free calls per day
-  debug: true
-});
+const apiClient = createStubClient({
+  useFileStorage: false, // In-memory for tests
+  freeTierLimit: 3, // 3 free calls per day
+  debug: true,
+})
 
 // Initialize SolvaPay
 const solvaPay = createSolvaPay({
-  apiClient
-});
+  apiClient,
+})
 ```
 
 **For Production**: Replace with real API client:
 
 ```typescript
-import { createSolvaPayClient } from '@solvapay/server';
+import { createSolvaPayClient } from '@solvapay/server'
 
 const apiClient = createSolvaPayClient({
   apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-  baseUrl: process.env.SOLVAPAY_API_BASE_URL
-});
+  baseUrl: process.env.SOLVAPAY_API_BASE_URL,
+})
 ```
 
 ### Step 2: Create Payable Handler
@@ -154,9 +160,9 @@ Create a payable handler for MCP tools:
 
 ```typescript
 // Create payable handler with agent configuration
-const payable = solvaPay.payable({ 
-  agent: 'basic-crud'  // Agent identifier
-});
+const payable = solvaPay.payable({
+  agent: 'basic-crud', // Agent identifier
+})
 ```
 
 **Note**: MCP servers typically use a single agent for all tools, but you can use different agents per tool if needed.
@@ -166,7 +172,7 @@ const payable = solvaPay.payable({
 Define your MCP tools with proper schemas:
 
 ```typescript
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { Tool } from '@modelcontextprotocol/sdk/types.js'
 
 const tools: Tool[] = [
   {
@@ -187,15 +193,15 @@ const tools: Tool[] = [
           type: 'object',
           description: 'Authentication information',
           properties: {
-            customer_ref: { type: 'string' }
-          }
-        }
+            customer_ref: { type: 'string' },
+          },
+        },
       },
       required: ['title'],
     },
   },
   // ... more tools
-];
+]
 ```
 
 ### Step 4: Wrap Business Logic
@@ -205,16 +211,16 @@ Wrap your business logic functions with the MCP adapter:
 ```typescript
 // Business logic function
 async function createTaskMCP(args: CreateTaskArgs) {
-  const result = await createTask(args);
+  const result = await createTask(args)
   return {
     success: result.success,
     message: 'Task created successfully',
-    task: result.task
-  };
+    task: result.task,
+  }
 }
 
 // Wrap with MCP adapter
-const handler = payable.mcp(createTaskMCP);
+const handler = payable.mcp(createTaskMCP)
 ```
 
 ### Step 5: Handle Tool Execution
@@ -222,17 +228,17 @@ const handler = payable.mcp(createTaskMCP);
 In your MCP server's tool handler:
 
 ```typescript
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+server.setRequestHandler(CallToolRequestSchema, async request => {
+  const { name, arguments: args } = request.params
 
   switch (name) {
     case 'create_task': {
-      const handler = payable.mcp(createTaskMCP);
-      return await handler(args as CreateTaskArgs);
+      const handler = payable.mcp(createTaskMCP)
+      return await handler(args as CreateTaskArgs)
     }
     // ... other tools
   }
-});
+})
 ```
 
 ### Step 6: Request Flow
@@ -276,31 +282,35 @@ The MCP adapter automatically handles errors:
 ## Configuration
 
 ### Agent-Based Configuration
+
 ```typescript
 const paywallMetadata = {
-  agent: 'basic-crud'          // Agent identifier
-};
+  agent: 'basic-crud', // Agent identifier
+}
 ```
 
 ### Endpoint-Specific Metering
+
 ```typescript
 // Different endpoints can use different agents
 const tools = [
-  { agent: 'list-api' },       // List operations
-  { agent: 'ai-analyzer' },    // AI analysis
-  { agent: 'premium-api' }     // Premium features
-];
+  { agent: 'list-api' }, // List operations
+  { agent: 'ai-analyzer' }, // AI analysis
+  { agent: 'premium-api' }, // Premium features
+]
 ```
 
 ## Production Considerations
 
 ### **Required for Production**
+
 1. **Database persistence** - Replace file-based storage
 2. **Distributed locks** - For concurrent access safety
 3. **Rate limiting** - Additional protection
 4. **Monitoring** - Track usage patterns and errors
 
 ### **Recommended for Production**
+
 1. **Redis caching** - Fast access to usage counts
 2. **Event sourcing** - Audit trail of all usage
 3. **Backup strategy** - Don't lose usage data
@@ -339,10 +349,10 @@ Use the stub client during development to avoid API costs:
 
 ```typescript
 const apiClient = createStubClient({
-  useFileStorage: true,  // Persist across restarts
+  useFileStorage: true, // Persist across restarts
   freeTierLimit: 3,
-  debug: true
-});
+  debug: true,
+})
 ```
 
 ### 3. Separate Business Logic
@@ -352,15 +362,15 @@ Keep business logic separate from MCP adapter:
 ```typescript
 // ✅ Good: Separate function
 async function createTaskMCP(args: CreateTaskArgs) {
-  return await createTask(args);
+  return await createTask(args)
 }
 
-const handler = payable.mcp(createTaskMCP);
+const handler = payable.mcp(createTaskMCP)
 
 // ❌ Bad: Inline logic
-const handler = payable.mcp(async (args) => {
+const handler = payable.mcp(async args => {
   // Logic here makes testing harder
-});
+})
 ```
 
 ### 4. Error Messages
@@ -370,13 +380,13 @@ Provide clear error messages in MCP responses:
 ```typescript
 async function createTaskMCP(args: CreateTaskArgs) {
   try {
-    return await createTask(args);
+    return await createTask(args)
   } catch (error) {
     return {
       success: false,
       error: error.message,
       // MCP adapter will format this properly
-    };
+    }
   }
 }
 ```
@@ -399,9 +409,9 @@ Use in-memory storage for tests:
 
 ```typescript
 const apiClient = createStubClient({
-  useFileStorage: false,  // In-memory for tests
-  freeTierLimit: 3
-});
+  useFileStorage: false, // In-memory for tests
+  freeTierLimit: 3,
+})
 ```
 
 ## Testing
@@ -446,6 +456,7 @@ src/__tests__/
 **Problem**: MCP client cannot connect to server.
 
 **Solution**:
+
 1. Ensure server is running: `pnpm start`
 2. Check that stdio transport is configured correctly
 3. Verify MCP client configuration matches server
@@ -455,6 +466,7 @@ src/__tests__/
 **Problem**: Making tool calls but paywall never triggers.
 
 **Solution**:
+
 1. Check that `auth.customer_ref` is included in tool arguments
 2. Verify stub client is configured correctly
 3. Check console logs for debug information
@@ -465,6 +477,7 @@ src/__tests__/
 **Problem**: Usage counts reset after server restart.
 
 **Solution**:
+
 1. Check that `useFileStorage: true` is set
 2. Verify `.demo-data/` directory is writable
 3. Check file permissions
@@ -475,6 +488,7 @@ src/__tests__/
 **Problem**: Tools return errors even when within limits.
 
 **Solution**:
+
 1. Verify tool schema matches function signature
 2. Check that `customer_ref` is provided in `args.auth`
 3. Review error messages in console
@@ -485,6 +499,7 @@ src/__tests__/
 **Problem**: Type errors in tool handlers.
 
 **Solution**:
+
 1. Ensure function signature matches `PayableFunction` type
 2. Check that return type is correct
 3. Verify argument types match tool schema
@@ -495,6 +510,7 @@ src/__tests__/
 **Problem**: Tests are failing.
 
 **Solution**:
+
 1. Ensure in-memory storage is used (`useFileStorage: false`)
 2. Clean test data: `rm -rf .demo-data`
 3. Check that test environment is isolated
@@ -503,20 +519,24 @@ src/__tests__/
 ## Related Documentation
 
 ### Getting Started
+
 - [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
 - [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
 - [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
+
 - [MCP Server Integration Guide](../../docs/guides/mcp.md) - Complete MCP integration guide
 - [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
 - [Testing Guide](../../docs/guides/testing.md) - Testing with stub mode
 
 ### API Reference
+
 - [Server SDK API Reference](../../docs/api/server/) - Complete API documentation
 - [Server SDK README](../../packages/server/README.md) - Package documentation
 
 ### Additional Resources
+
 - [Model Context Protocol](https://modelcontextprotocol.io) - MCP specification
 - [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
 - [GitHub Repository](https://github.com/solvapay/solvapay-sdk) - Source code and issues
@@ -527,6 +547,6 @@ See the main SolvaPay SDK documentation for the complete API reference. This exa
 
 - `payable.mcp()` - MCP adapter for tool protection
 - `checkLimits()` - Plan access control with persistent free tier
-- `trackUsage()` - Feature usage analytics  
+- `trackUsage()` - Feature usage analytics
 - `createCheckoutSession()` - Payment flow initiation
 - `getOrCreateCustomer()` - Customer management

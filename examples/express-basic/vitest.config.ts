@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
@@ -9,5 +9,4 @@ export default defineConfig({
     teardownTimeout: 30000,
     setupFiles: ['./vitest.setup.ts'],
   },
-});
-
+})

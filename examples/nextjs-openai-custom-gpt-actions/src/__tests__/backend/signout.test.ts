@@ -15,30 +15,30 @@ describe('Sign Out API', () => {
     process.env.OAUTH_JWKS_SECRET = 'test-jwt-secret'
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
-    
+
     // Note: Storage is now in Supabase database - tests may need Supabase mocking
     // For now, tests rely on JWT expiration validation only
   })
 
   describe('/api/oauth/signout', () => {
     it('should sign out using Bearer token in header', async () => {
-      const testToken = await createMockJWT();
+      const testToken = await createMockJWT()
 
       const signoutRequest = new NextRequest('http://localhost:3000/api/oauth/signout', {
         method: 'POST',
         headers: {
-          'authorization': `Bearer ${testToken}`,
-          'content-type': 'application/x-www-form-urlencoded'
+          authorization: `Bearer ${testToken}`,
+          'content-type': 'application/x-www-form-urlencoded',
         },
-        body: new FormData()
-      });
+        body: new FormData(),
+      })
 
-      const signoutResponse = await signoutPOST(signoutRequest);
-      expect(signoutResponse.status).toBe(200);
+      const signoutResponse = await signoutPOST(signoutRequest)
+      expect(signoutResponse.status).toBe(200)
 
-      const signoutData = await signoutResponse.json();
-      expect(signoutData.success).toBe(true);
-      expect(signoutData.message).toContain('Successfully signed out');
+      const signoutData = await signoutResponse.json()
+      expect(signoutData.success).toBe(true)
+      expect(signoutData.message).toContain('Successfully signed out')
     })
   })
 })

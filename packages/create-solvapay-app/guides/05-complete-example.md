@@ -5,6 +5,7 @@ This guide provides a complete working example that ties everything together.
 ## Overview
 
 This example includes:
+
 - Complete home page with subscription status
 - Feature cards with premium gating
 - Subscription management UI
@@ -22,11 +23,13 @@ This example includes:
 - **Call-to-action text** - Upgrade buttons and subscription management messaging
 
 **How to use:**
+
 1. Copy `00-app-description.md` into Cursor along with this guide
 2. The AI will automatically adapt the HomePage code below to match your app description
 3. If you haven't customized the app description, it will use the default generic example
 
 **Customization points** - The AI will adapt these elements based on your app description:
+
 - App name in the welcome header
 - Feature card titles and descriptions (both free and premium)
 - Brand colors and styling
@@ -35,9 +38,10 @@ This example includes:
 
 ## Complete Home Page
 
-Update `src/app/page.tsx` with the full implementation. 
+Update `src/app/page.tsx` with the full implementation.
 
 **Note:** The code below shows a generic example. When you implement this with Cursor AI and include `00-app-description.md`, the AI will customize:
+
 - Feature card titles and descriptions to match your app's features
 - Welcome message and branding to match your app's tone
 - Colors and styling to match your brand
@@ -62,10 +66,10 @@ export default function HomePage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Get subscription helpers from SDK
   const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
-  
+
   // Refetch subscriptions on mount to ensure we have latest data after navigation
   // This is especially important when creating a new account or after account changes
   // Empty dependency array ensures this only runs once on mount, preventing stale data
@@ -76,7 +80,7 @@ export default function HomePage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run on mount to ensure fresh data on page load
-  
+
   // Get advanced subscription status helpers
   const {
     cancelledSubscription,
@@ -99,11 +103,11 @@ export default function HomePage() {
 
     try {
       const accessToken = await getAccessToken();
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
@@ -150,11 +154,11 @@ export default function HomePage() {
 
     try {
       const accessToken = await getAccessToken();
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
@@ -199,13 +203,13 @@ export default function HomePage() {
   }, [router]);
 
   // Feature card component
-  const FeatureCard = ({ 
-    title, 
-    description, 
-    locked = false 
-  }: { 
-    title: string; 
-    description: string; 
+  const FeatureCard = ({
+    title,
+    description,
+    locked = false
+  }: {
+    title: string;
+    description: string;
     locked?: boolean;
   }) => (
     <div className={`p-6 rounded-xl border ${locked ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'} relative`}>
@@ -239,7 +243,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       <main className="max-w-4xl mx-auto px-6 py-16">
         {/* Header */}
-        {/* 
+        {/*
           CUSTOMIZE: The welcome message and app name should be adapted from 00-app-description.md
           Replace "Welcome" with your app name or a branded welcome message
         */}
@@ -288,7 +292,7 @@ export default function HomePage() {
         </div>
 
         {/* Features Grid */}
-        {/* 
+        {/*
           CUSTOMIZE: Replace these feature cards with features from 00-app-description.md
           - Free tier features should NOT have locked={true}
           - Premium tier features should have locked={!isLoading && !hasPaidSubscription}
@@ -436,6 +440,7 @@ my-app/
 Test your complete implementation:
 
 ### Authentication
+
 - [ ] Sign up with email/password works
 - [ ] Sign in with email/password works → **Should redirect to home automatically (no page refresh needed)**
 - [ ] Google OAuth sign-in works (if configured) → **Should redirect to home automatically after callback**
@@ -445,6 +450,7 @@ Test your complete implementation:
 - [ ] Authenticated users see app content
 
 ### Payments
+
 - [ ] "Upgrade" button redirects to checkout
 - [ ] Checkout session is created successfully
 - [ ] Test payment completes successfully
@@ -454,6 +460,7 @@ Test your complete implementation:
 - [ ] Customer portal redirects correctly
 
 ### UI/UX
+
 - [ ] Loading states display correctly
 - [ ] Error messages display correctly
 - [ ] Premium features are locked for free users
@@ -467,6 +474,7 @@ Test your complete implementation:
 ### Test Payment Flow
 
 1. **Start dev server:**
+
    ```bash
    npm run dev
    ```
@@ -512,6 +520,7 @@ Test your complete implementation:
 ### Issue: Subscription not updating after checkout
 
 **Solution:**
+
 - Ensure `refetch()` is called after returning from checkout
 - Check that `/api/check-subscription` returns correct format
 - Verify customerRef matches between checkout and subscription check
@@ -520,6 +529,7 @@ Test your complete implementation:
 ### Issue: Premium features not unlocking
 
 **Solution:**
+
 - Verify `hasPaidSubscription` is correctly checking subscription amount
 - Check that subscription amount > 0 for paid plans
 - Ensure subscription check is completing successfully
@@ -528,6 +538,7 @@ Test your complete implementation:
 ### Issue: Sign out not working
 
 **Solution:**
+
 - Verify `signOut` function in `lib/supabase.ts` is correct
 - Check browser console for errors
 - Ensure router is properly imported and used
@@ -596,6 +607,7 @@ Now that you have a complete implementation, consider:
 ## Summary
 
 You've successfully built a complete Next.js application with:
+
 - ✅ Supabase authentication (email/password + Google OAuth)
 - ✅ SolvaPay hosted checkout
 - ✅ Subscription management
@@ -604,4 +616,3 @@ You've successfully built a complete Next.js application with:
 - ✅ Error handling and loading states
 
 The implementation follows best practices and provides a solid foundation for building a subscription-based SaaS application.
-

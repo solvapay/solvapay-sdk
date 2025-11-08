@@ -18,29 +18,29 @@ on:
 jobs:
   tag-latest:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       id-token: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.6.0
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
       - name: Validate version format
         run: |
           VERSION="${{ inputs.version }}"
@@ -50,7 +50,7 @@ jobs:
             exit 1
           fi
           echo "✅ Version format is valid: $VERSION"
-      
+
       - name: Dry Run - Show what would be tagged
         if: ${{ inputs.dry_run }}
         run: |
@@ -65,9 +65,9 @@ jobs:
           echo "  - @solvapay/next@${{ inputs.version }}"
           echo ""
           echo "Checking which versions exist on npm..."
-          
+
           PACKAGES=("@solvapay/core" "@solvapay/react" "@solvapay/react-supabase" "@solvapay/server" "@solvapay/auth" "@solvapay/next")
-          
+
           for pkg in "${PACKAGES[@]}"; do
             if npm view "$pkg@${{ inputs.version }}" version &> /dev/null; then
               echo "  ✅ $pkg@${{ inputs.version }} exists"
@@ -75,16 +75,16 @@ jobs:
               echo "  ⚠️  $pkg@${{ inputs.version }} not found (would skip)"
             fi
           done
-          
+
           echo ""
           echo "To actually tag these versions, re-run without dry_run enabled."
-      
+
       - name: Tag versions as latest
         if: ${{ !inputs.dry_run }}
         run: pnpm tag:latest ${{ inputs.version }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       - name: Verify tags
         if: ${{ !inputs.dry_run }}
         run: |
@@ -102,7 +102,7 @@ jobs:
           npm dist-tag ls @solvapay/auth || true
           echo ""
           npm dist-tag ls @solvapay/next || true
-      
+
       - name: Summary
         if: ${{ !inputs.dry_run }}
         run: |
@@ -117,4 +117,3 @@ jobs:
           echo "  npm install @solvapay/next"
           echo ""
           echo "And they will get version ${{ inputs.version }}"
-

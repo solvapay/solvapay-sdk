@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# Generated files
+generated/
+docs/api/
+
+# Lock files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
+
+# Environment files
+.env*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turbo
+.turbo/
+
+# Cache
+.cache/
+

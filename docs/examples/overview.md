@@ -14,13 +14,13 @@ This document provides an overview of all available examples in the SolvaPay SDK
 
 ## Quick Comparison
 
-| Example | Framework | Checkout Type | Auth | Use Case | Complexity |
-|---------|-----------|---------------|------|----------|------------|
-| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic) | Express.js | N/A (Paywall only) | Header-based | API protection | ⭐ Simple |
-| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo) | Next.js | Embedded | Supabase | Full payment flow | ⭐⭐⭐ Advanced |
-| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo) | Next.js | Hosted | Supabase | Hosted checkout | ⭐⭐ Intermediate |
-| [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic) | MCP Server | N/A (Paywall only) | Header-based | MCP tool protection | ⭐ Simple |
-| [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions) | Next.js | Hosted | Supabase + OAuth | OpenAI GPT Actions | ⭐⭐⭐ Advanced |
+| Example                                                                                                                         | Framework  | Checkout Type      | Auth             | Use Case            | Complexity        |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------ | ---------------- | ------------------- | ----------------- |
+| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic)                                       | Express.js | N/A (Paywall only) | Header-based     | API protection      | ⭐ Simple         |
+| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo)                                       | Next.js    | Embedded           | Supabase         | Full payment flow   | ⭐⭐⭐ Advanced   |
+| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo)                         | Next.js    | Hosted             | Supabase         | Hosted checkout     | ⭐⭐ Intermediate |
+| [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic)                                               | MCP Server | N/A (Paywall only) | Header-based     | MCP tool protection | ⭐ Simple         |
+| [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions) | Next.js    | Hosted             | Supabase + OAuth | OpenAI GPT Actions  | ⭐⭐⭐ Advanced   |
 
 ## Available Examples
 
@@ -29,6 +29,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 **Purpose**: Demonstrates basic paywall protection for Express.js REST APIs.
 
 **Key Features**:
+
 - Express.js REST API with CRUD operations
 - Paywall protection on all endpoints
 - Stub client for local development (no backend required)
@@ -36,6 +37,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Header-based customer identification
 
 **Best For**:
+
 - Learning basic paywall integration
 - Simple API protection patterns
 - Testing paywall behavior locally
@@ -49,6 +51,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 **Purpose**: Complete payment integration with embedded checkout form.
 
 **Key Features**:
+
 - Headless React components with render props
 - Embedded Stripe payment form
 - Content gating with subscription gates
@@ -57,6 +60,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Full payment flow implementation
 
 **Best For**:
+
 - Full payment integration
 - Custom UI/UX requirements
 - Embedded checkout flows
@@ -71,6 +75,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 **Purpose**: Payment integration using SolvaPay's hosted checkout pages.
 
 **Key Features**:
+
 - Hosted checkout (redirects to app.solvapay.com)
 - Hosted customer portal
 - Token-based access control
@@ -79,6 +84,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Consistent checkout experience
 
 **Best For**:
+
 - Quick payment integration
 - Minimal PCI compliance requirements
 - Standard checkout experience
@@ -93,6 +99,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 **Purpose**: Demonstrates paywall protection for Model Context Protocol (MCP) servers.
 
 **Key Features**:
+
 - MCP server integration
 - Tool protection with paywall
 - Persistent free tier tracking
@@ -100,6 +107,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - File-based storage simulation
 
 **Best For**:
+
 - MCP server developers
 - AI agent monetization
 - Tool access control
@@ -114,6 +122,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 **Purpose**: Complete integration for OpenAI Custom GPT Actions with OAuth and paywall.
 
 **Key Features**:
+
 - Next.js 15 with App Router
 - OAuth 2.0 for OpenAI Custom GPT Actions
 - Hosted checkout flow
@@ -122,6 +131,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 - Comprehensive testing suite
 
 **Best For**:
+
 - OpenAI Custom GPT Actions integration
 - OAuth 2.0 implementation
 - Production-ready applications
@@ -196,6 +206,7 @@ Follow the example-specific README for detailed instructions.
 **Location**: `examples/express-basic/`
 
 **Run**:
+
 ```bash
 cd examples/express-basic
 pnpm install
@@ -203,6 +214,7 @@ pnpm dev
 ```
 
 **Features Demonstrated**:
+
 - Basic paywall protection
 - HTTP adapter usage
 - Stub client for local development
@@ -217,6 +229,7 @@ pnpm dev
 **Location**: `examples/checkout-demo/`
 
 **Run**:
+
 ```bash
 cd examples/checkout-demo
 pnpm install
@@ -226,6 +239,7 @@ pnpm dev
 ```
 
 **Features Demonstrated**:
+
 - Embedded payment form
 - React components (SolvaPayProvider, PaymentForm, SubscriptionGate)
 - Supabase authentication
@@ -240,6 +254,7 @@ pnpm dev
 **Location**: `examples/hosted-checkout-demo/`
 
 **Run**:
+
 ```bash
 cd examples/hosted-checkout-demo
 pnpm install
@@ -249,6 +264,7 @@ pnpm dev
 ```
 
 **Features Demonstrated**:
+
 - Hosted checkout flow
 - Token generation
 - Customer portal access
@@ -263,6 +279,7 @@ pnpm dev
 **Location**: `examples/mcp-basic/`
 
 **Run**:
+
 ```bash
 cd examples/mcp-basic
 pnpm install
@@ -270,6 +287,7 @@ pnpm start
 ```
 
 **Features Demonstrated**:
+
 - MCP server integration
 - MCP adapter usage
 - Tool protection
@@ -284,6 +302,7 @@ pnpm start
 **Location**: `examples/nextjs-openai-custom-gpt-actions/`
 
 **Run**:
+
 ```bash
 cd examples/nextjs-openai-custom-gpt-actions
 pnpm install
@@ -295,6 +314,7 @@ pnpm dev
 ```
 
 **Features Demonstrated**:
+
 - OAuth 2.0 flow
 - OpenAI Custom GPT Actions integration
 - OpenAPI documentation
@@ -315,12 +335,12 @@ Begin with `express-basic` or `mcp-basic` to understand core concepts before mov
 All examples support stub client mode for local development without requiring a real backend:
 
 ```typescript
-import { createStubClient } from '../../shared/stub-api-client';
+import { createStubClient } from '../../shared/stub-api-client'
 
 const apiClient = createStubClient({
   freeTierLimit: 5,
-  debug: true
-});
+  debug: true,
+})
 ```
 
 ### 3. Environment Variables
@@ -335,7 +355,7 @@ All examples demonstrate proper error handling patterns:
 
 ```typescript
 try {
-  const result = await payable.http(handler)(req, res);
+  const result = await payable.http(handler)(req, res)
 } catch (error) {
   if (error instanceof PaywallError) {
     // Handle paywall error
@@ -346,6 +366,7 @@ try {
 ### 5. Testing
 
 Examples include test suites demonstrating:
+
 - Unit tests for business logic
 - Integration tests for API routes
 - Paywall behavior verification
@@ -353,6 +374,7 @@ Examples include test suites demonstrating:
 ### 6. Authentication Patterns
 
 Examples show different authentication approaches:
+
 - **Header-based**: Simple, for APIs
 - **Supabase**: Full authentication with JWT
 - **OAuth 2.0**: For third-party integrations
@@ -360,23 +382,27 @@ Examples show different authentication approaches:
 ### 7. Checkout Patterns
 
 Two checkout approaches are demonstrated:
+
 - **Embedded**: Full control, more complex (`checkout-demo`)
 - **Hosted**: Simpler, lower PCI burden (`hosted-checkout-demo`)
 
 ## Related Documentation
 
 ### Getting Started
+
 - [Installation Guide](../getting-started/installation.md)
 - [Quick Start Guide](../getting-started/quick-start.md)
 - [Core Concepts](../getting-started/core-concepts.md)
 
 ### Framework Guides
+
 - [Express.js Integration](../guides/express.md)
 - [Next.js Integration](../guides/nextjs.md)
 - [React Integration](../guides/react.md)
 - [MCP Server Integration](../guides/mcp.md)
 
 ### Advanced Topics
+
 - [Custom Authentication Adapters](../guides/custom-auth.md)
 - [Error Handling](../guides/error-handling.md)
 - [Testing with Stub Mode](../guides/testing.md)
@@ -384,6 +410,7 @@ Two checkout approaches are demonstrated:
 - [Webhook Handling](../guides/webhooks.md)
 
 ### API Reference
+
 - [Server SDK API Reference](../api/server/src/)
 - [React SDK API Reference](../api/react/src/)
 - [Next.js SDK API Reference](../api/next/src/)
@@ -417,7 +444,7 @@ Two checkout approaches are demonstrated:
 
 - **Documentation**: Check example-specific README files
 - **GitHub Issues**: https://github.com/solvapay/solvapay-sdk/issues
-- **Email Support**: support@solvapay.com
+- **Email Support**: contact@solvapay.com
 
 ## Next Steps
 
@@ -431,4 +458,3 @@ After exploring examples:
 ---
 
 **Last Updated**: 2024-12-19
-

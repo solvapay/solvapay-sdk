@@ -4,7 +4,7 @@ process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
+import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { setupTestEnvironment } from './test-utils'
 
@@ -13,18 +13,18 @@ vi.mock('../../app/api/tasks/route', async () => {
   const { createTask, listTasks } = await import('@solvapay/demo-services')
   const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
   const { createSolvaPay } = await import('@solvapay/server')
-  
-  const stubClient = new StubSolvaPayClient({ 
+
+  const stubClient = new StubSolvaPayClient({
     useFileStorage: true,
     freeTierLimit: 1000,
-    debug: false
+    debug: false,
   })
   const solvaPay = createSolvaPay({ apiClient: stubClient })
   const payable = solvaPay.payable({ agent: 'crud-basic' })
-  
+
   return {
     GET: payable.next(listTasks),
-    POST: payable.next(createTask)
+    POST: payable.next(createTask),
   }
 })
 
@@ -41,19 +41,19 @@ describe('Tasks CRUD Endpoints', () => {
     if (!existsSync(DEMO_DATA_DIR)) {
       mkdirSync(DEMO_DATA_DIR, { recursive: true })
     }
-    
+
     // Set up test customers with pro plans
-    const customers = existsSync(CUSTOMERS_FILE) 
+    const customers = existsSync(CUSTOMERS_FILE)
       ? JSON.parse(readFileSync(CUSTOMERS_FILE, 'utf-8'))
       : {}
-    
+
     customers['demo_user'] = {
       credits: 100,
       email: 'demo@example.com',
       name: 'Demo User',
-      plan: 'pro'
+      plan: 'pro',
     }
-    
+
     writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2))
   })
 
@@ -65,8 +65,8 @@ describe('Tasks CRUD Endpoints', () => {
     it('should list tasks', async () => {
       const request = new NextRequest('http://localhost:3000/api/tasks', {
         headers: {
-          'x-customer-ref': 'demo_user'
-        }
+          'x-customer-ref': 'demo_user',
+        },
       })
 
       const response = await listTasksGET(request)
@@ -83,12 +83,12 @@ describe('Tasks CRUD Endpoints', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-customer-ref': 'demo_user'
+          'x-customer-ref': 'demo_user',
         },
         body: JSON.stringify({
           title: 'Test Task',
-          description: 'A test task for testing'
-        })
+          description: 'A test task for testing',
+        }),
       })
 
       const response = await createTaskPOST(request)

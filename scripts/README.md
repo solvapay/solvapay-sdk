@@ -9,17 +9,20 @@ This directory contains utility scripts for the SolvaPay SDK monorepo.
 Validates that all markdown links in documentation files are valid and point to existing files.
 
 **Usage:**
+
 ```bash
 pnpm docs:validate-links
 ```
 
 **What it does:**
+
 - Scans all `.md` files in the `docs/` directory
 - Validates relative file and directory links
 - Reports broken links with file and line numbers
 - Exits with error code 1 if broken links are found
 
 **Integration:**
+
 - Add to PR checklist (see `CONTRIBUTING.md`)
 - Run before committing documentation changes
 - Can be integrated into CI/CD pipelines
@@ -47,4 +50,3 @@ Script to fix common documentation link issues. Run this if links need to be upd
 
 - `cleanup-for-public.sh` - Prepare repository for public release
 - `setup-pre-commit-hook.sh` - Setup git hooks for link validation
-

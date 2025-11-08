@@ -17,27 +17,12 @@
   "excludeProtected": true,
   "excludeInternal": true,
   "excludeExternals": true,
-  "exclude": [
-    "**/__tests__/**",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/node_modules/**"
-  ],
+  "exclude": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "**/node_modules/**"],
   "categorizeByGroup": true,
-  "categoryOrder": [
-    "Core",
-    "Server",
-    "React",
-    "Next.js",
-    "Auth",
-    "*"
-  ],
-  "plugin": [
-    "typedoc-plugin-markdown"
-  ],
+  "categoryOrder": ["Core", "Server", "React", "Next.js", "Auth", "*"],
+  "plugin": ["typedoc-plugin-markdown"],
   "theme": "default",
   "githubPages": false,
   "gitRevision": "main",
   "gitRemote": "origin"
 }
-

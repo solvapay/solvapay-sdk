@@ -1,55 +1,56 @@
-'use client';
+'use client'
 
-import { useCallback } from 'react';
-import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react';
-import Link from 'next/link';
+import { useCallback } from 'react'
+import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react'
+import Link from 'next/link'
 
 export default function HomePage() {
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
-  
+  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF
+
   // Memoize the fetcher function to prevent unnecessary re-fetches
   const fetchPlans = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
-    if (!response.ok) throw new Error('Failed to fetch plans');
-    const data = await response.json();
-    return data.plans || [];
-  }, []);
-  
+    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`)
+    if (!response.ok) throw new Error('Failed to fetch plans')
+    const data = await response.json()
+    return data.plans || []
+  }, [])
+
   // Fetch plans using SDK hook
-  const { plans, loading: plansLoading } = usePlans({
+  const { loading: plansLoading } = usePlans({
     agentRef: agentRef || undefined,
     fetcher: fetchPlans,
-  });
-  
+  })
+
   // Get subscription helpers from SDK
   // Note: Plans are handled on the checkout page, so we pass empty array
   // Subscription status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
   // Use hasPaidSubscription and activeSubscription consistently throughout the component
   // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
-  const { subscriptions, loading: subscriptionsLoading, hasPaidSubscription, activeSubscription } = useSubscription();
-  
-  // Get advanced subscription status helpers
   const {
-    cancelledSubscription,
-    shouldShowCancelledNotice,
-    formatDate,
-    getDaysUntilExpiration,
-  } = useSubscriptionStatus();
-  
-  // Combine loading states - only show content when both are loaded
-  const isLoading = subscriptionsLoading || plansLoading;
-  
+    loading: subscriptionsLoading,
+    hasPaidSubscription,
+    activeSubscription,
+  } = useSubscription()
 
-  const FeatureCard = ({ 
-    title, 
-    description, 
-    locked = false 
-  }: { 
-    title: string; 
-    description: string; 
-    locked?: boolean;
+  // Get advanced subscription status helpers
+  const { cancelledSubscription, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
+    useSubscriptionStatus()
+
+  // Combine loading states - only show content when both are loaded
+  const isLoading = subscriptionsLoading || plansLoading
+
+  const FeatureCard = ({
+    title,
+    description,
+    locked = false,
+  }: {
+    title: string
+    description: string
+    locked?: boolean
   }) => (
-    <div className={`p-6 rounded-xl border ${locked ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'} relative`}>
+    <div
+      className={`p-6 rounded-xl border ${locked ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'} relative`}
+    >
       {locked && (
         <div className="absolute top-4 right-4">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
@@ -60,48 +61,58 @@ export default function HomePage() {
       <h3 className={`text-lg font-medium mb-2 ${locked ? 'text-slate-500' : 'text-slate-900'}`}>
         {title}
       </h3>
-      <p className={`text-sm ${locked ? 'text-slate-400' : 'text-slate-600'}`}>
-        {description}
-      </p>
+      <p className={`text-sm ${locked ? 'text-slate-400' : 'text-slate-600'}`}>{description}</p>
       {locked && (
         <div className="mt-4">
-          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          <svg
+            className="w-5 h-5 text-slate-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
           </svg>
         </div>
       )}
     </div>
-  );
+  )
 
   // Skeleton loader component
   const Skeleton = ({ className = '' }: { className?: string }) => (
     <div className={`animate-pulse bg-slate-200 rounded ${className}`} />
-  );
+  )
 
   return (
     <div className="min-h-screen bg-white">
       <main className="max-w-4xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-semibold text-slate-900 mb-3">
-            Welcome to Your Dashboard
-          </h1>
+          <h1 className="text-3xl font-semibold text-slate-900 mb-3">Welcome to Your Dashboard</h1>
           {isLoading ? (
             <div className="flex justify-center items-center gap-2">
               <Skeleton className="h-5 w-48" />
             </div>
           ) : activeSubscription ? (
             <p className="text-slate-600">
-              You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+              You're on the{' '}
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                 {activeSubscription.planName}
-              </span> plan
+              </span>{' '}
+              plan
             </p>
           ) : shouldShowCancelledNotice && cancelledSubscription ? (
             <div className="space-y-2">
               <p className="text-slate-600">
-                Your <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                Your{' '}
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
                   {cancelledSubscription.planName}
-                </span> subscription has been cancelled
+                </span>{' '}
+                subscription has been cancelled
               </p>
               {cancelledSubscription.endDate ? (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -109,26 +120,26 @@ export default function HomePage() {
                     ⏰ Access expires on {formatDate(cancelledSubscription.endDate)}
                   </p>
                   {(() => {
-                    const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate);
+                    const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate)
                     return daysLeft !== null && daysLeft > 0 ? (
                       <p className="text-xs text-amber-700 mt-1">
                         {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
                       </p>
-                    ) : null;
+                    ) : null
                   })()}
                   <p className="text-xs text-amber-700 mt-1">
-                    You'll continue to have access to {cancelledSubscription.planName} features until this date
+                    You'll continue to have access to {cancelledSubscription.planName} features
+                    until this date
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500 mt-1">
-                  Your subscription access has ended
-                </p>
+                <p className="text-sm text-slate-500 mt-1">Your subscription access has ended</p>
               )}
               {cancelledSubscription.cancelledAt && (
                 <p className="text-xs text-slate-400 mt-2">
                   Cancelled on {formatDate(cancelledSubscription.cancelledAt)}
-                  {cancelledSubscription.cancellationReason && ` - ${cancelledSubscription.cancellationReason}`}
+                  {cancelledSubscription.cancellationReason &&
+                    ` - ${cancelledSubscription.cancellationReason}`}
                 </p>
               )}
             </div>
@@ -184,21 +195,20 @@ export default function HomePage() {
                     ⏰ Subscription Expires: {formatDate(cancelledSubscription.endDate)}
                   </p>
                   {(() => {
-                    const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate);
+                    const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate)
                     return daysLeft !== null && daysLeft > 0 ? (
                       <p className="text-xs text-amber-700 mb-1">
                         {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
                       </p>
-                    ) : null;
+                    ) : null
                   })()}
                   <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledSubscription.planName} features until this date
+                    You'll continue to have access to {cancelledSubscription.planName} features
+                    until this date
                   </p>
                 </div>
               ) : (
-                <p className="text-slate-600 text-sm mb-6">
-                  Your subscription access has ended
-                </p>
+                <p className="text-slate-600 text-sm mb-6">Your subscription access has ended</p>
               )}
               <Link href="/checkout">
                 <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
@@ -209,7 +219,9 @@ export default function HomePage() {
           ) : (
             <div className="text-center py-4">
               <p className="text-slate-900 mb-2 font-medium">Upgrade your plan</p>
-              <p className="text-slate-600 text-sm mb-6">Get access to advanced features and more</p>
+              <p className="text-slate-600 text-sm mb-6">
+                Get access to advanced features and more
+              </p>
               <Link href="/checkout">
                 <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
                   Upgrade
@@ -220,5 +232,5 @@ export default function HomePage() {
         </div>
       </main>
     </div>
-  );
+  )
 }

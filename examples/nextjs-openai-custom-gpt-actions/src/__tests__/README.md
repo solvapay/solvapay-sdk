@@ -7,7 +7,7 @@ This directory contains simplified tests for the Next.js OpenAI Custom GPT Actio
 ```
 src/__tests__/
 ├── ui/                    # Frontend/UI tests (3 files)
-│   ├── basic-ui.test.tsx         # Basic component rendering tests  
+│   ├── basic-ui.test.tsx         # Basic component rendering tests
 │   ├── home.test.tsx             # Home page tests
 │   ├── integration.test.tsx      # User flow integration tests
 │   └── simple-render.test.tsx    # Simple component render tests
@@ -28,21 +28,25 @@ src/__tests__/
 ## 🚀 Running Tests
 
 ### All Tests
+
 ```bash
 npm test
 ```
 
 ### Backend Tests Only
+
 ```bash
 npm run test:backend
 ```
 
-### UI Tests Only  
+### UI Tests Only
+
 ```bash
 npm run test:ui-components
 ```
 
 ### Watch Mode
+
 ```bash
 npm run test:watch
 ```
@@ -50,6 +54,7 @@ npm run test:watch
 ## ✅ Test Coverage
 
 ### Backend Tests
+
 - **Task CRUD Operations**: Create, list, get, and delete tasks
 - **OAuth Flow**: Authorization, token exchange (successful flows)
 - **User Plans**: Get and update user plans (successful flows)
@@ -57,6 +62,7 @@ npm run test:watch
 - **Services**: API client and demo service functionality
 
 ### UI Tests
+
 - **Component Rendering**: Basic rendering of main pages
 - **User Interactions**: Button clicks and form submissions (successful flows)
 - **Integration Flows**: OAuth, checkout, and API testing flows
@@ -64,7 +70,7 @@ npm run test:watch
 ## 🔧 Test Configuration
 
 - **Framework**: Vitest with React Testing Library
-- **Environment**: jsdom for UI tests, node for backend tests  
+- **Environment**: jsdom for UI tests, node for backend tests
 - **Mocking**: Next.js navigation hooks and fetch API
 - **Focus**: Blue sky scenarios (happy paths) only
 - **Service**: Uses `@solvapay/demo-services` for task management

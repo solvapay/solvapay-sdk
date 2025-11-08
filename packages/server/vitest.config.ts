@@ -8,13 +8,13 @@ config({ path: resolve(__dirname, '.env'), override: true })
 
 /**
  * Logging Control Environment Variables:
- * 
+ *
  * - SOLVAPAY_DEBUG=true       - Enable detailed SDK API client logging
  * - VERBOSE_TEST_LOGS=true    - Enable verbose test helper logging
- * 
+ *
  * By default, both are disabled for clean test output.
  * Enable them when debugging test failures or SDK behavior.
- * 
+ *
  * Usage:
  *   SOLVAPAY_DEBUG=true pnpm test:integration
  *   VERBOSE_TEST_LOGS=true pnpm test:integration

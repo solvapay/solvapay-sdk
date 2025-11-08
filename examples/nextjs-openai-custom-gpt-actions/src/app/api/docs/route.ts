@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
 
 const swaggerHTML = `
 <!DOCTYPE html>
@@ -50,12 +50,12 @@ const swaggerHTML = `
   </script>
 </body>
 </html>
-`;
+`
 
 export async function GET() {
   return new NextResponse(swaggerHTML, {
     headers: {
       'Content-Type': 'text/html',
     },
-  });
+  })
 }

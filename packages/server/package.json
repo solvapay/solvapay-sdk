@@ -46,7 +46,8 @@
     "test:all": "vitest run",
     "test:all:integration": "vitest run",
     "test:watch": "vitest",
-    "lint": "echo 'no lint yet'"
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
   },
   "dependencies": {
     "@solvapay/core": "workspace:*"

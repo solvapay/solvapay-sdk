@@ -15,6 +15,7 @@ Provides reusable business logic for demonstrating paywall protection patterns i
 A simple in-memory CRUD service for task management that demonstrates paywall-protected operations.
 
 **Features:**
+
 - In-memory task storage
 - CRUD operations (Create, Read, List, Delete)
 - Paywall integration via `auth` parameter
@@ -23,24 +24,24 @@ A simple in-memory CRUD service for task management that demonstrates paywall-pr
 **Usage:**
 
 ```typescript
-import { createTask, getTask, listTasks, deleteTask, clearAllTasks } from '@solvapay/demo-services';
+import { createTask, getTask, listTasks, deleteTask, clearAllTasks } from '@solvapay/demo-services'
 
 // Create a task
 const result = await createTask({
   title: 'My Task',
   description: 'Task description',
-  auth: { customer_ref: 'user_123' }
-});
+  auth: { customer_ref: 'user_123' },
+})
 
 // List tasks
 const tasks = await listTasks({
   limit: 10,
   offset: 0,
-  auth: { customer_ref: 'user_123' }
-});
+  auth: { customer_ref: 'user_123' },
+})
 
 // Clear all tasks (useful for tests)
-clearAllTasks();
+clearAllTasks()
 ```
 
 ## Used By
@@ -51,6 +52,7 @@ clearAllTasks();
 ## Development
 
 This package is for internal use only:
+
 - ✅ Private package (not published)
 - ✅ Used as workspace dependency
 - ✅ Source files imported directly (no build step)
@@ -63,4 +65,3 @@ When adding new demo services:
 2. Export from `src/index.ts`
 3. Update this README with usage documentation
 4. Ensure service follows the auth pattern (accepts `auth?: { customer_ref?: string }`)
-
