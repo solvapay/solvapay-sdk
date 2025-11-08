@@ -9,8 +9,7 @@ import type { SolvaPay } from '../factory';
 import type { ErrorResult } from './types';
 import { createSolvaPay } from '../factory';
 import { SolvaPayError } from '@solvapay/core';
-import { handleRouteError, isErrorResult } from './error';
-import { getAuthenticatedUserCore } from './auth';
+import { handleRouteError } from './error';
 
 /**
  * Cancel subscription - core implementation
@@ -31,11 +30,6 @@ export async function cancelSubscriptionCore(
   } = {}
 ): Promise<any | ErrorResult> {
   try {
-    // Get authenticated user
-    const userResult = await getAuthenticatedUserCore(request);
-    if (isErrorResult(userResult)) {
-      return userResult;
-    }
     // Validate required parameters
     if (!body.subscriptionRef) {
       return {
