@@ -675,4 +675,4 @@ const handleManageSubscription = async () => {
 For issues or questions:
 - GitHub Issues: https://github.com/solvapay/solvapay-sdk/issues
 - Documentation: https://docs.solvapay.com
-- Email: support@solvapay.com
+- Email: contact@solvapay.com

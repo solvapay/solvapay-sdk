@@ -30,7 +30,8 @@
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
     "test:watch": "vitest",
-    "lint": "echo 'no lint yet'"
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
   },
   "dependencies": {
     "zod": "^3.23.8"

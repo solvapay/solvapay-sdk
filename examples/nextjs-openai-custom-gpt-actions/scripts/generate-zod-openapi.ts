@@ -66,7 +66,7 @@ async function generateOpenApiSpec() {
         contact: {
           name: 'SolvaPay Support',
           url: 'https://solvapay.com/support',
-          email: 'support@solvapay.com'
+          email: 'contact@solvapay.com'
         },
         license: {
           name: 'MIT',

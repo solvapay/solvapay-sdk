@@ -417,7 +417,7 @@ Two checkout approaches are demonstrated:
 
 - **Documentation**: Check example-specific README files
 - **GitHub Issues**: https://github.com/solvapay/solvapay-sdk/issues
-- **Email Support**: support@solvapay.com
+- **Email Support**: contact@solvapay.com
 
 ## Next Steps
 

@@ -41,7 +41,9 @@
     "build": "tsup src/index.tsx src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts,.tsx --config ../../.eslintrc.react.json",
+    "lint:fix": "eslint src --ext .ts,.tsx --config ../../.eslintrc.react.json --fix"
   },
   "devDependencies": {
     "@solvapay/server": "workspace:*",

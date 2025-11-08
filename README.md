@@ -374,6 +374,8 @@ See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflo
 - Webhook signature verification included
 - Automatic runtime detection prevents environment mismatches
 
+**Found a security vulnerability?** Please report it responsibly - see our [Security Policy](./SECURITY.md) for details.
+
 ## 📝 License
 
 MIT License - see [LICENSE.md](./LICENSE.md) for details.
@@ -381,4 +383,10 @@ MIT License - see [LICENSE.md](./LICENSE.md) for details.
 ## 🤝 Support
 
 - **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
-- **Email**: support@solvapay.com
+- **Email**: contact@solvapay.com
+
+## 📋 Additional Resources
+
+- **[Contributing Guide](./CONTRIBUTING.md)** - How to contribute to the project
+- **[Code of Conduct](./CODE_OF_CONDUCT.md)** - Community guidelines
+- **[Security Policy](./SECURITY.md)** - How to report security vulnerabilities

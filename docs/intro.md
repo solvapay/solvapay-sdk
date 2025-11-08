@@ -199,7 +199,7 @@ Return Paywall Error (with checkout URL)
 ## Support
 
 - **GitHub Issues**: [https://github.com/solvapay/solvapay-sdk/issues](https://github.com/solvapay/solvapay-sdk/issues)
-- **Email**: support@solvapay.com
+- **Email**: contact@solvapay.com
 
 ---
 
