@@ -376,7 +376,7 @@ See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflo
 
 ## 📝 License
 
-MIT
+MIT License - see [LICENSE.md](./LICENSE.md) for details.
 
 ## 🤝 Support
 
