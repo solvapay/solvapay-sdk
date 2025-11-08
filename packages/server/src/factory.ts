@@ -712,6 +712,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
  */
 function getPackageJsonName(): string | undefined {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const pkg = require(process.cwd() + '/package.json');
     return pkg.name;
   } catch {

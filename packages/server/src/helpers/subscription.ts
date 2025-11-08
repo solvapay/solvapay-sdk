@@ -36,9 +36,6 @@ export async function cancelSubscriptionCore(
     if (isErrorResult(userResult)) {
       return userResult;
     }
-
-    const { userId } = userResult;
-
     // Validate required parameters
     if (!body.subscriptionRef) {
       return {

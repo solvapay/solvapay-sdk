@@ -121,6 +121,7 @@ export class SolvaPayPaywall {
 
   private getPackageJsonName(): string | undefined {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const pkg = require(process.cwd() + '/package.json');
       return pkg.name;
     } catch {
@@ -401,7 +402,7 @@ export function createPaywall(config: {
 
   // HTTP framework integration
   function createHttpHandler(
-    methodOrMetadata: Function | PaywallMetadata,
+    methodOrMetadata: ((...args: any[]) => any) | PaywallMetadata,
     handlerOrOptions?: ((args: any) => Promise<any>) | {
       extractArgs?: (req: any) => any;
       transformResponse?: (result: any, reply: any) => any;
@@ -465,7 +466,7 @@ export function createPaywall(config: {
   }
 
   // MCP integration
-  function createMCPHandler(methodOrMetadata: Function | PaywallMetadata, handler?: (args: any) => Promise<any>) {
+  function createMCPHandler(methodOrMetadata: ((...args: any[]) => any) | PaywallMetadata, handler?: (args: any) => Promise<any>) {
     // Handle decorated method
     if (typeof methodOrMetadata === 'function') {
       const method = methodOrMetadata;

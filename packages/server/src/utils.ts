@@ -202,11 +202,12 @@ export function createRequestDeduplicator<T = unknown>(
 
   const inFlightRequests = new Map<string, Promise<T>>();
   const resultCache = new Map<string, CacheEntry<T>>();
-  let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  // Cleanup interval runs in background - intentionally not stored for clearing
+  let _cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   // Start cleanup interval if caching is enabled
   if (cacheTTL > 0) {
-    cleanupInterval = setInterval(() => {
+    _cleanupInterval = setInterval(() => {
       const now = Date.now();
       const entriesToDelete: string[] = [];
 
