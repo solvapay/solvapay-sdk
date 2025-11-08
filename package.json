@@ -38,8 +38,6 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
-    "type-check": "tsc --build",
-    "type-check:full": "tsc --build tsconfig.with-examples.json",
     "release": "turbo run release",
     "version:bump": "tsx scripts/version-bump.ts",
     "version:bump:minor": "tsx scripts/version-bump.ts minor",

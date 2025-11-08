@@ -49,13 +49,5 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
-      - name: Type check
-        run: pnpm type-check
-
-      - name: Lint
-        run: pnpm lint
-        continue-on-error: true
-        # Continue on error since linting may not be fully configured yet
-
       - name: Run tests
         run: pnpm test

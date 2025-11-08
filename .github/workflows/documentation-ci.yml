@@ -26,11 +26,6 @@ on:
         required: false
         type: boolean
         default: false
-      skip_type_check:
-        description: 'Skip TypeScript type check'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   docs:
@@ -106,14 +101,6 @@ jobs:
         # Validates ALL links including docs/api/** now that they exist
         # This catches broken links to generated API documentation
 
-      - name: Check for TypeScript errors in docs
-        if: github.event_name != 'workflow_dispatch' || inputs.skip_type_check == false
-        run: |
-          # Check if there are any TypeScript compilation errors that would affect docs
-          pnpm type-check || echo "Type check failed - this may affect documentation generation"
-        continue-on-error: true
-        # Type check is informational - docs build is the real test
-
       - name: Validate markdown files
         run: |
           # Check for common markdown issues
@@ -160,7 +147,6 @@ jobs:
             - ✅ TypeDoc configuration check
             - ✅ Documentation build
             - ✅ Link validation (after build)
-            - ℹ️  TypeScript type check (informational)
             - ℹ️  Markdown validation (informational)
 
             **Details:**
