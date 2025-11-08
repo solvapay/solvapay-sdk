@@ -91,7 +91,7 @@ export async function cancelSubscriptionCore(
     await new Promise(resolve => setTimeout(resolve, 500))
 
     return cancelledSubscription
-  } catch (error) {
+  } catch (error: unknown) {
     // Handle SolvaPay errors and map to appropriate HTTP status codes
     if (error instanceof SolvaPayError) {
       const errorMessage = error.message

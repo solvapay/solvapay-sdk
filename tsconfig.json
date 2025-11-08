@@ -3,6 +3,7 @@
   "files": [],
   "references": [
     { "path": "packages/core" },
+    { "path": "packages/auth" },
     { "path": "packages/server" },
     { "path": "packages/react" },
     { "path": "packages/demo-services" },

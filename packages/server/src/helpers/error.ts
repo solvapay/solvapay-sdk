@@ -26,10 +26,11 @@ export function handleRouteError(
 
   // Handle SolvaPay configuration errors
   if (error instanceof SolvaPayError) {
+    const errorMessage = error.message
     return {
-      error: error.message,
+      error: errorMessage,
       status: 500,
-      details: error.message,
+      details: errorMessage,
     }
   }
 
