@@ -38,7 +38,7 @@ export class NextAdapter implements Adapter<NextContext, Response> {
       ) {
         body = await request.json()
       }
-    } catch (error) {
+    } catch {
       // If parsing fails, continue with empty body
     }
 

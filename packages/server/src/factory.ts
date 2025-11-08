@@ -16,6 +16,8 @@ import { createSolvaPayClient } from './client'
 import { SolvaPayPaywall } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 /**
  * Configuration for creating a SolvaPay instance.
@@ -709,8 +711,9 @@ function getPackageJsonName(): string | undefined {
     if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
       return undefined
     }
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pkg = require(process.cwd() + '/package.json')
+    const packageJsonPath = join(process.cwd(), 'package.json')
+    const pkgContent = readFileSync(packageJsonPath, 'utf-8')
+    const pkg = JSON.parse(pkgContent)
     return pkg.name
   } catch {
     return undefined

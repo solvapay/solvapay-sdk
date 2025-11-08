@@ -68,7 +68,7 @@ export async function createCheckoutSessionCore(
       try {
         const url = new URL(request.url)
         returnUrl = url.origin
-      } catch (error) {
+      } catch {
         // If URL parsing fails, continue without returnUrl
       }
     }

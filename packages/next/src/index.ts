@@ -6,7 +6,6 @@
  * like request deduplication and caching.
  */
 
-import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createSolvaPay, type SolvaPay } from '@solvapay/server'
 import { SolvaPayError } from '@solvapay/core'
@@ -160,7 +159,7 @@ export async function checkSubscription(
           // If externalRef doesn't match userId, fall through to normal lookup
           // This ensures we always use the correct customerRef for the current userId
         }
-      } catch (error) {
+      } catch {
         // Cached ref is invalid, fall through to normal lookup
         // This is expected if cache is stale or customer was deleted
       }

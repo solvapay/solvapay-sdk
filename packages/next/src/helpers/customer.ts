@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { syncCustomerCore, type ErrorResult, isErrorResult } from '@solvapay/server'
+import { syncCustomerCore, isErrorResult } from '@solvapay/server'
 
 /**
  * Sync customer - Next.js wrapper

@@ -9,7 +9,6 @@ import type { SolvaPay } from '@solvapay/server'
 import {
   createCheckoutSessionCore,
   createCustomerSessionCore,
-  type ErrorResult,
   isErrorResult,
 } from '@solvapay/server'
 

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, FormEvent } from 'react'
+import React, { useState } from 'react'
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
 import { useCustomer } from '../hooks/useCustomer'
 import { Spinner } from './Spinner'
@@ -21,7 +21,7 @@ interface StripePaymentFormWrapperProps {
 export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> = ({
   onSuccess,
   onError,
-  returnUrl,
+  returnUrl: _returnUrl,
   submitButtonText = 'Pay Now',
   buttonClassName,
   clientSecret,

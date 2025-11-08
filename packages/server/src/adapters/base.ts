@@ -76,7 +76,7 @@ export class AdapterUtils {
       })
 
       return (payload.sub as string) || null
-    } catch (error) {
+    } catch {
       // JWT verification failed, return null
       return null
     }
