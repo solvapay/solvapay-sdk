@@ -59,16 +59,27 @@ export interface SupabaseAuthAdapterConfig {
  * @see {@link AuthAdapter} for the adapter interface
  * @since 1.0.0
  */
+// Type for the Supabase client interface we need
+type SupabaseClientType = {
+  auth: {
+    getSession: () => Promise<{
+      data: {
+        session: { access_token?: string; user?: { id?: string } } | null
+      }
+    }>
+  }
+}
+
 export function createSupabaseAuthAdapter(config: SupabaseAuthAdapterConfig): AuthAdapter {
   if (!config.supabaseUrl || !config.supabaseAnonKey) {
     throw new Error('SupabaseAuthAdapter requires both supabaseUrl and supabaseAnonKey')
   }
 
   // Cache the Supabase client to avoid recreating it on every call
-  let supabaseClient: { auth: { getSession: () => Promise<{ data: { session: { access_token?: string; user?: { id?: string } } | null } }> } } | null = null
-  let clientPromise: Promise<typeof supabaseClient> | null = null
+  let supabaseClient: SupabaseClientType | null = null
+  let clientPromise: Promise<SupabaseClientType> | null = null
 
-  const getSupabaseClient = async () => {
+  const getSupabaseClient = async (): Promise<SupabaseClientType> => {
     if (supabaseClient) {
       return supabaseClient
     }
@@ -81,7 +92,8 @@ export function createSupabaseAuthAdapter(config: SupabaseAuthAdapterConfig): Au
       try {
         // Dynamic import to avoid requiring @supabase/supabase-js if not installed
         const { createClient } = await import('@supabase/supabase-js')
-        supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey) as typeof supabaseClient
+        const client = createClient(config.supabaseUrl, config.supabaseAnonKey) as unknown as SupabaseClientType
+        supabaseClient = client
         return supabaseClient
       } catch {
         // Clear promise on error so we can retry
