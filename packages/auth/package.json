@@ -42,8 +42,8 @@
     "build": "tsup src/index.ts src/supabase.ts src/mock.ts src/next-utils.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
     "test": "vitest run || exit 0",
     "test:watch": "vitest",
-    "lint": "eslint src --ext .ts,.tsx",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix"
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
     "jose": "^5.0.0"

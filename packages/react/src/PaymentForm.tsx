@@ -4,7 +4,6 @@ import { Elements } from '@stripe/react-stripe-js'
 import { useCheckout } from './hooks/useCheckout'
 import { useSubscription } from './hooks/useSubscription'
 import { useSolvaPay } from './hooks/useSolvaPay'
-import { useCustomer } from './hooks/useCustomer'
 import { Spinner } from './components/Spinner'
 import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 import type { PaymentFormProps } from './types'
@@ -76,8 +75,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const validPlanRef = planRef && typeof planRef === 'string' ? planRef : ''
   const checkout = useCheckout(validPlanRef, agentRef)
   const { refetch } = useSubscription()
-  const { processPayment, customerRef } = useSolvaPay()
-  const customer = useCustomer()
+  const { processPayment } = useSolvaPay()
   const hasInitializedRef = useRef(false)
 
   // Auto-start checkout on mount - only once
@@ -161,7 +159,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
                 ...paymentIntent,
                 _processingError: error,
               })
-            } catch (callbackError) {
+            } catch {
               // Ignore callback errors
             }
           }

@@ -8,7 +8,6 @@ import { NextResponse } from 'next/server'
 import {
   getAuthenticatedUserCore,
   type AuthenticatedUser,
-  type ErrorResult,
   isErrorResult,
 } from '@solvapay/server'
 

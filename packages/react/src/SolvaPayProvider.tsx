@@ -415,7 +415,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   // Get the actual functions to use (priority: custom > config > defaults)
   // Use refs to avoid dependency issues - this keeps the function stable
-  const checkSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
+  const _checkSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
     if (checkSubscriptionRef.current) {
       return checkSubscriptionRef.current()
     }

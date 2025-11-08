@@ -73,11 +73,10 @@ function createRequestDeduplicator<T = unknown>(
   const inFlightRequests = new Map<string, Promise<T>>()
   const resultCache = new Map<string, CacheEntry<T>>()
   const cacheInvalidatedAt = new Map<string, number>() // Track when cache was invalidated
-  let cleanupInterval: ReturnType<typeof setInterval> | null = null
 
   // Start cleanup interval if caching is enabled
   if (cacheTTL > 0) {
-    cleanupInterval = setInterval(
+    setInterval(
       () => {
         const now = Date.now()
         const entriesToDelete: string[] = []

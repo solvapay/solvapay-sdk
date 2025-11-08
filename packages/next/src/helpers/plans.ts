@@ -1,12 +1,12 @@
+import { NextResponse } from 'next/server'
+import { listPlansCore, isErrorResult } from '@solvapay/server'
+
 /**
  * Next.js Plans Helper
  *
  * Next.js-specific wrapper for plans helper.
  * This is a public route - no authentication required.
  */
-
-import { NextResponse } from 'next/server'
-import { listPlansCore, type ErrorResult, isErrorResult } from '@solvapay/server'
 
 /**
  * List plans - Next.js wrapper
@@ -16,7 +16,7 @@ import { listPlansCore, type ErrorResult, isErrorResult } from '@solvapay/server
  */
 export async function listPlans(request: globalThis.Request): Promise<
   | {
-      plans: any[]
+      plans: Array<Record<string, unknown>>
       agentRef: string
     }
   | NextResponse

@@ -186,10 +186,18 @@ export async function getUserNameFromRequest(
     })
 
     // Extract name from payload (Supabase stores name in 'user_metadata.full_name' or 'user_metadata.name' or 'name' claim)
+    type PayloadWithMetadata = {
+      user_metadata?: {
+        full_name?: unknown
+        name?: unknown
+      }
+      name?: unknown
+    }
+    const payloadWithMetadata = payload as PayloadWithMetadata
     const name =
-      (payload as any).user_metadata?.full_name ||
-      (payload as any).user_metadata?.name ||
-      (payload as any).name ||
+      (payloadWithMetadata.user_metadata?.full_name as string | undefined) ||
+      (payloadWithMetadata.user_metadata?.name as string | undefined) ||
+      (payloadWithMetadata.name as string | undefined) ||
       null
     return name ? String(name) : null
   } catch {

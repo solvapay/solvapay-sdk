@@ -9,7 +9,6 @@ import type { SolvaPay } from '@solvapay/server'
 import {
   createPaymentIntentCore,
   processPaymentCore,
-  type ErrorResult,
   isErrorResult,
 } from '@solvapay/server'
 import { clearSubscriptionCache } from '../cache'

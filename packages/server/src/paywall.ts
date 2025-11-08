@@ -15,6 +15,8 @@ import type {
   SolvaPayClient,
 } from './types'
 import { withRetry, createRequestDeduplicator } from './utils'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 // Re-export types for convenience
 export type {
@@ -127,8 +129,9 @@ export class SolvaPayPaywall {
       if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
         return undefined
       }
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const pkg = require(process.cwd() + '/package.json')
+      const packageJsonPath = join(process.cwd(), 'package.json')
+      const pkgContent = readFileSync(packageJsonPath, 'utf-8')
+      const pkg = JSON.parse(pkgContent)
       return pkg.name
     } catch {
       return undefined
@@ -649,7 +652,7 @@ async function defaultExtractNextArgs(request: Request, context?: any): Promise<
     ) {
       body = await request.json()
     }
-  } catch (error) {
+  } catch {
     // If parsing fails, continue with empty body
   }
 
@@ -688,7 +691,7 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
       if (payload.sub) {
         return ensureCustomerRef(payload.sub as string)
       }
-    } catch (error) {
+    } catch {
       // Fall through to use header fallback
     }
   }

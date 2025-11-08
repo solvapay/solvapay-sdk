@@ -772,7 +772,7 @@ describe('useSubscriptionStatus', () => {
         refetch: vi.fn(),
       } as any)
 
-      const { result } = renderHook(() => useSubscriptionStatus())
+      const { result: _result } = renderHook(() => useSubscriptionStatus())
 
       // Only paid cancelled subscriptions should be returned
       const cancelledPaid = createSubscription({
