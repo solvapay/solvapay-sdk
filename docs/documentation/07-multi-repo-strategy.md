@@ -26,6 +26,7 @@ solvapay-org/
 **Best Solution: Docusaurus with Git Submodules**
 
 This approach:
+
 - ✅ **Centralized control** - All docs in one place for deployment
 - ✅ **SDK-specific docs** stay in their repos (maintained by SDK teams)
 - ✅ **Automatic sync** - Pull latest from each SDK repo at build time
@@ -37,6 +38,7 @@ This approach:
 ### Option 1: Git Submodules (Recommended)
 
 **How it works:**
+
 1. Central `solvapay-docs` repo contains the Docusaurus site
 2. SDK repos are added as git submodules
 3. Build process pulls latest docs from each SDK repo
@@ -45,6 +47,7 @@ This approach:
 **Setup Steps:**
 
 1. **Create Central Docs Repo:**
+
    ```bash
    # Create new repo: solvapay-docs
    mkdir solvapay-docs
@@ -53,15 +56,16 @@ This approach:
    ```
 
 2. **Add SDK Repos as Submodules:**
+
    ```bash
    cd solvapay-docs
-   
+
    # Add TypeScript SDK as submodule
    git submodule add https://github.com/solvapay/solvapay-sdk.git sdks/typescript
-   
+
    # Add Python SDK as submodule
    git submodule add https://github.com/solvapay/solvapay-sdk-python.git sdks/python
-   
+
    # Add Frontend as submodule (if needed)
    git submodule add https://github.com/solvapay/solvapay-frontend.git frontend
    ```
@@ -73,6 +77,7 @@ This approach:
 4. **Build Script with Submodule Update:**
 
    Add to `package.json` in docs repo:
+
    ```json
    {
      "scripts": {
@@ -86,17 +91,20 @@ This approach:
 ### Option 2: GitHub API / Build-Time Fetch (Alternative)
 
 **How it works:**
+
 1. Central docs repo contains Docusaurus site
 2. Build script fetches docs from SDK repos via GitHub API
 3. Docs are cached locally during build
 4. No submodules needed
 
 **Pros:**
+
 - ✅ No submodule management
 - ✅ Always gets latest from main branch
 - ✅ Simpler git workflow
 
 **Cons:**
+
 - ❌ Requires GitHub API access
 - ❌ More complex build process
 - ❌ No version pinning
@@ -118,11 +126,13 @@ solvapay-monorepo/
 ```
 
 **Pros:**
+
 - ✅ Everything in one place
 - ✅ Easier cross-repo linking
 - ✅ Single build process
 
 **Cons:**
+
 - ❌ Requires repo consolidation
 - ❌ Larger repository
 - ❌ More complex permissions
@@ -179,19 +189,21 @@ solvapay-sdk-python/
 For Python SDK, you can use:
 
 1. **MkDocs** (Recommended for simplicity):
+
    ```bash
    # In Python SDK repo
    pip install mkdocs mkdocs-material mkdocstrings[python]
-   
+
    # Generate markdown from docstrings
    mkdocs build --site-dir docs/api-reference
    ```
 
 2. **Sphinx** (More powerful, standard for Python):
+
    ```bash
    # In Python SDK repo
    pip install sphinx sphinx-rtd-theme myst-parser
-   
+
    # Generate markdown from docstrings
    sphinx-build -b markdown docs/source docs/api-reference
    ```
@@ -206,6 +218,7 @@ For Python SDK, you can use:
 **Between Central Docs and SDK Docs:**
 
 In central docs (`docs/getting-started/installation.md`):
+
 ```markdown
 # SDK Installation
 
@@ -218,10 +231,12 @@ Choose your language:
 **Between SDK Docs:**
 
 In TypeScript SDK docs (`docs/guides/nextjs.md`):
+
 ```markdown
 # Next.js Integration
 
 See also:
+
 - [React Components](/sdks/typescript/api-reference/react)
 - [Next.js Helpers](/sdks/typescript/api-reference/next)
 ```
@@ -232,6 +247,7 @@ See also:
 # Authentication
 
 The authentication flow is similar across all SDKs:
+
 - TypeScript: See [TypeScript Auth Guide](/sdks/typescript/guides/authentication)
 - Python: See [Python Auth Guide](/sdks/python/guides/authentication) (later)
 ```
@@ -239,16 +255,19 @@ The authentication flow is similar across all SDKs:
 ## Auto-Sync Strategy
 
 **Option 1: Scheduled Updates (Recommended)**
+
 - GitHub Actions runs on schedule
 - Updates submodules to latest
 - Rebuilds and deploys if changes detected
 
 **Option 2: Webhook Triggers**
+
 - Each SDK repo sends webhook on docs update
 - Central docs repo rebuilds automatically
 - More responsive but requires webhook setup
 
 **Option 3: Manual Sync**
+
 - Update submodules before deploying
 - Full control over when docs update
 - Good for versioned releases
@@ -327,4 +346,3 @@ docs.solvapay.com/
 ├── /guides (general guides)
 └── /examples (cross-SDK examples)
 ```
-

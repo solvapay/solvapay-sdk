@@ -5,6 +5,7 @@ Universal server SDK for Node.js and edge runtimes. Includes API client, paywall
 **Works in**: Node.js, Vercel Edge Functions, Cloudflare Workers, Deno, Supabase Edge Functions, and more.
 
 ## Install
+
 ```bash
 pnpm add @solvapay/server
 ```
@@ -16,39 +17,39 @@ pnpm add @solvapay/server
 The same imports work in **Node.js and edge runtimes**. The correct implementation is automatically selected:
 
 ```ts
-import { createSolvaPayClient, verifyWebhook } from '@solvapay/server';
+import { createSolvaPayClient, verifyWebhook } from '@solvapay/server'
 
 // Works in Node.js, Edge Functions, Cloudflare Workers, Deno, etc.
-const apiClient = createSolvaPayClient({ 
-  apiKey: process.env.SOLVAPAY_SECRET_KEY! 
-});
+const apiClient = createSolvaPayClient({
+  apiKey: process.env.SOLVAPAY_SECRET_KEY!,
+})
 
 // Auto-selects Node crypto or Web Crypto based on runtime
-const event = await verifyWebhook({ 
-  body, 
-  signature, 
-  secret: process.env.SOLVAPAY_WEBHOOK_SECRET! 
-});
+const event = await verifyWebhook({
+  body,
+  signature,
+  secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
+})
 ```
 
 **Edge Runtime Examples:**
 
 ```ts
 // Supabase Edge Function
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createSolvaPayClient, verifyWebhook } from 'https://esm.sh/@solvapay/server@latest';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createSolvaPayClient, verifyWebhook } from 'https://esm.sh/@solvapay/server@latest'
 
 const solvapay = createSolvaPayClient({
   apiKey: Deno.env.get('SOLVAPAY_SECRET_KEY')!,
-});
+})
 
 // Vercel Edge Function
-import { createSolvaPayClient } from '@solvapay/server';
+import { createSolvaPayClient } from '@solvapay/server'
 
-export const runtime = 'edge';
+export const runtime = 'edge'
 const solvapay = createSolvaPayClient({
   apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-});
+})
 ```
 
 ### Paywall Protection
@@ -59,8 +60,8 @@ Use the unified payable API to protect your endpoints and functions with usage l
 import { createSolvaPay } from '@solvapay/server';
 
 // Create SolvaPay instance with your API key
-const solvaPay = createSolvaPay({ 
-  apiKey: process.env.SOLVAPAY_SECRET_KEY! 
+const solvaPay = createSolvaPay({
+  apiKey: process.env.SOLVAPAY_SECRET_KEY!
 });
 
 // Create a payable with your agent configuration
@@ -88,8 +89,8 @@ const protectedHandler = await payable.function(async (args) => {
   return { result: 'success' };
 });
 
-const result = await protectedHandler({ 
-  auth: { customer_ref: 'customer_123' } 
+const result = await protectedHandler({
+  auth: { customer_ref: 'customer_123' }
 });
 ```
 
@@ -98,27 +99,27 @@ const result = await protectedHandler({
 You can integrate authentication adapters from `@solvapay/auth` with the `getCustomerRef` option:
 
 ```ts
-import { createSolvaPay } from '@solvapay/server';
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { createSolvaPay } from '@solvapay/server'
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
 
 const auth = new SupabaseAuthAdapter({
-  jwtSecret: process.env.SUPABASE_JWT_SECRET!
-});
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!,
+})
 
-const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! });
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
 
 // Use with Next.js adapter
 export const POST = solvaPay.payable({ agent: 'my-api' }).next(
-  async (args) => {
-    return { result: 'success' };
+  async args => {
+    return { result: 'success' }
   },
   {
-    getCustomerRef: async (req) => {
-      const userId = await auth.getUserIdFromRequest(req);
-      return userId ?? 'anonymous';
-    }
-  }
-);
+    getCustomerRef: async req => {
+      const userId = await auth.getUserIdFromRequest(req)
+      return userId ?? 'anonymous'
+    },
+  },
+)
 ```
 
 This automatically extracts the user ID from authentication tokens and uses it as the customer reference for paywall checks.
@@ -175,15 +176,17 @@ This will fetch the OpenAPI spec from `http://localhost:3001/v1/openapi.json` an
 ### Using Generated Types
 
 ```typescript
-import type { paths, components } from './types/generated';
+import type { paths, components } from './types/generated'
 
 // Use path operation types
-type CheckLimitsRequest = paths['/v1/sdk/limits']['post']['requestBody']['content']['application/json'];
-type CheckLimitsResponse = paths['/v1/sdk/limits']['post']['responses']['200']['content']['application/json'];
+type CheckLimitsRequest =
+  paths['/v1/sdk/limits']['post']['requestBody']['content']['application/json']
+type CheckLimitsResponse =
+  paths['/v1/sdk/limits']['post']['responses']['200']['content']['application/json']
 
 // Use component schemas
-type Agent = components['schemas']['Agent'];
-type Plan = components['schemas']['Plan'];
+type Agent = components['schemas']['Agent']
+type Plan = components['schemas']['Plan']
 ```
 
 **Note:** The generated types complement the existing hand-written types in `src/types.ts`. Run `pnpm generate:types` whenever the backend API changes to keep types in sync.
@@ -214,6 +217,7 @@ pnpm test:watch
 ### Unit Tests
 
 Unit tests (`__tests__/paywall.test.ts`) use a mock API client and test:
+
 - Paywall protection logic
 - Handler creation (HTTP, Next.js, MCP)
 - Error handling
@@ -225,6 +229,7 @@ Unit tests (`__tests__/paywall.test.ts`) use a mock API client and test:
 ### Integration Tests
 
 Integration tests (`__tests__/backend.integration.test.ts`) connect to a real SolvaPay backend and test:
+
 - SDK API methods with real responses
 - Actual limit enforcement
 - Real usage tracking
@@ -251,6 +256,7 @@ USE_REAL_BACKEND=true SOLVAPAY_SECRET_KEY=your_key pnpm test:integration
 ### Payment Integration Tests (Stripe)
 
 Payment tests (`__tests__/payment-stripe.integration.test.ts`) verify the complete payment flow with Stripe:
+
 - Creating payment intents
 - Confirming payments with test cards
 - Webhook processing (optional)
@@ -270,24 +276,27 @@ export SOLVAPAY_API_BASE_URL=http://localhost:3001
 The E2E webhook test is skipped by default because it requires Stripe webhooks to be forwarded to your local backend. To enable webhook testing:
 
 1. **Install Stripe CLI:**
+
    ```bash
    # macOS
    brew install stripe/stripe-cli/stripe
-   
+
    # Linux / Windows - see https://stripe.com/docs/stripe-cli
    ```
 
 2. **Login to Stripe:**
+
    ```bash
    stripe login
    ```
 
 3. **Forward webhooks to your local backend:**
+
    ```bash
    # Terminal 1: Start your backend
    cd path/to/solvapay-backend
    pnpm dev
-   
+
    # Terminal 2: Forward Stripe webhooks
    stripe listen --forward-to localhost:3001/webhooks/stripe
    ```

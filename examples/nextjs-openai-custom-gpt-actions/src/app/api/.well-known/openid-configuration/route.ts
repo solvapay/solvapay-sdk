@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
-  const baseUrl = process.env.OAUTH_ISSUER!;
-  
+  const baseUrl = process.env.OAUTH_ISSUER!
+
   return NextResponse.json({
     issuer: baseUrl,
     authorization_endpoint: `${baseUrl}/api/oauth/authorize`,
@@ -15,5 +15,5 @@ export async function GET() {
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['HS256'],
     token_endpoint_auth_methods_supported: ['client_secret_post'],
-  });
+  })
 }

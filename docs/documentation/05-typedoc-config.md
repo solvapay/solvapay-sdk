@@ -22,18 +22,8 @@
   "excludeInternal": true,
   "excludeExternals": true,
   "categorizeByGroup": true,
-  "categoryOrder": [
-    "Core",
-    "Server",
-    "React",
-    "Next.js",
-    "Auth",
-    "*"
-  ],
-  "plugin": [
-    "typedoc-plugin-markdown",
-    "typedoc-plugin-param-names"
-  ],
+  "categoryOrder": ["Core", "Server", "React", "Next.js", "Auth", "*"],
+  "plugin": ["typedoc-plugin-markdown", "typedoc-plugin-param-names"],
   "theme": "default",
   "githubPages": false,
   "gitRevision": "main",
@@ -67,4 +57,3 @@ For better organization, consider separate TypeDoc configs per package:
   }
 }
 ```
-

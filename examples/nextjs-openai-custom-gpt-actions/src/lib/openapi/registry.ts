@@ -1,11 +1,11 @@
-import 'dotenv/config';
-import { config } from 'dotenv';
-import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { z } from 'zod';
+import 'dotenv/config'
+import { config } from 'dotenv'
+import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi'
+import { z } from 'zod'
 
 // Load environment variables
-config({ path: '.env.local' });
-config({ path: '.env' });
+config({ path: '.env.local' })
+config({ path: '.env' })
 import {
   // Task schemas
   TaskSchema,
@@ -13,10 +13,10 @@ import {
   TaskListSchema,
   PaginationQuerySchema,
   TaskParamsSchema,
-  
-  // User schemas  
+
+  // User schemas
   UserPlanSchema,
-  
+
   // OAuth schemas
   OAuthTokenRequestSchema,
   OAuthTokenResponseSchema,
@@ -28,47 +28,54 @@ import {
   OAuthRevokeResponseSchema,
   SignOutResponseSchema,
   // SignInUrlResponseSchema, // EXCLUDED - kept for reference
-  
-  // Common schemas
-  ErrorResponseSchema
-} from '../schemas';
 
-export const registry = new OpenAPIRegistry();
+  // Common schemas
+  ErrorResponseSchema,
+} from '../schemas'
+
+export const registry = new OpenAPIRegistry()
 
 // Register all schemas
-registry.register('Task', TaskSchema);
-registry.register('CreateTaskRequest', CreateTaskRequestSchema);
-registry.register('TaskList', TaskListSchema);
-registry.register('UserPlan', UserPlanSchema);
-registry.register('OAuthTokenResponse', OAuthTokenResponseSchema);
-registry.register('UserInfoResponse', UserInfoResponseSchema);
-registry.register('JWKSResponse', JWKSResponseSchema);
-registry.register('OpenIDConfiguration', OpenIDConfigurationSchema);
-registry.register('OAuthRevokeRequest', OAuthRevokeRequestSchema);
-registry.register('OAuthRevokeResponse', OAuthRevokeResponseSchema);
-registry.register('SignOutResponse', SignOutResponseSchema);
+registry.register('Task', TaskSchema)
+registry.register('CreateTaskRequest', CreateTaskRequestSchema)
+registry.register('TaskList', TaskListSchema)
+registry.register('UserPlan', UserPlanSchema)
+registry.register('OAuthTokenResponse', OAuthTokenResponseSchema)
+registry.register('UserInfoResponse', UserInfoResponseSchema)
+registry.register('JWKSResponse', JWKSResponseSchema)
+registry.register('OpenIDConfiguration', OpenIDConfigurationSchema)
+registry.register('OAuthRevokeRequest', OAuthRevokeRequestSchema)
+registry.register('OAuthRevokeResponse', OAuthRevokeResponseSchema)
+registry.register('SignOutResponse', SignOutResponseSchema)
 // registry.register('SignInUrlResponse', SignInUrlResponseSchema); // EXCLUDED - kept for reference
-registry.register('ErrorResponse', ErrorResponseSchema);
+registry.register('ErrorResponse', ErrorResponseSchema)
 
 // Security scheme for OAuth - support multiple URL sources
 // Priority: PUBLIC_URL > VERCEL_URL (auto-detected on Vercel)
-let baseUrl = process.env.PUBLIC_URL;
+let baseUrl = process.env.PUBLIC_URL
 
 // If running on Vercel and no explicit URL is set, use VERCEL_URL
 if (!baseUrl && process.env.VERCEL_URL) {
-  baseUrl = `https://${process.env.VERCEL_URL}`;
+  baseUrl = `https://${process.env.VERCEL_URL}`
 }
 
 // Use placeholder only during build if no URL is available
 // The actual OpenAPI spec generation will validate and use proper URLs
 if (!baseUrl) {
-  console.warn('⚠️  [OpenAPI Registry] No URL configured, using placeholder. Set PUBLIC_URL for production.');
-  baseUrl = 'https://placeholder.example.com';
+  console.warn(
+    '⚠️  [OpenAPI Registry] No URL configured, using placeholder. Set PUBLIC_URL for production.',
+  )
+  baseUrl = 'https://placeholder.example.com'
 }
 
 // Reject user-provided placeholder URLs
-if (process.env.PUBLIC_URL && (baseUrl.includes('your-domain') || baseUrl.includes('your-subdomain'))) {
-  throw new Error(`Invalid environment variable value: ${baseUrl}. Cannot use placeholder URLs like "your-domain" or "your-subdomain". Please set a real URL.`);
+if (
+  process.env.PUBLIC_URL &&
+  (baseUrl.includes('your-domain') || baseUrl.includes('your-subdomain'))
+) {
+  throw new Error(
+    `Invalid environment variable value: ${baseUrl}. Cannot use placeholder URLs like "your-domain" or "your-subdomain". Please set a real URL.`,
+  )
 }
 
 registry.registerComponent('securitySchemes', 'oauth2', {
@@ -80,11 +87,11 @@ registry.registerComponent('securitySchemes', 'oauth2', {
       scopes: {
         openid: 'OpenID scope',
         email: 'Email access',
-        profile: 'Profile access'
-      }
-    }
-  }
-});
+        profile: 'Profile access',
+      },
+    },
+  },
+})
 
 // API endpoints relevant for OpenAI Custom GPT Actions
 
@@ -130,12 +137,12 @@ registry.registerPath({
       description: 'OpenID Connect configuration',
       content: {
         'application/json': {
-          schema: OpenIDConfigurationSchema
-        }
-      }
-    }
-  }
-});
+          schema: OpenIDConfigurationSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'get',
@@ -146,22 +153,22 @@ registry.registerPath({
   tags: ['OAuth'],
   'x-openai-isConsequential': false,
   request: {
-    query: OAuthAuthorizeQuerySchema
+    query: OAuthAuthorizeQuerySchema,
   },
   responses: {
     302: {
-      description: 'Redirect to authorization page'
+      description: 'Redirect to authorization page',
     },
     400: {
       description: 'Invalid request parameters',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'post',
@@ -175,30 +182,30 @@ registry.registerPath({
     body: {
       content: {
         'application/x-www-form-urlencoded': {
-          schema: OAuthTokenRequestSchema
-        }
-      }
-    }
+          schema: OAuthTokenRequestSchema,
+        },
+      },
+    },
   },
   responses: {
     200: {
       description: 'Access token response',
       content: {
         'application/json': {
-          schema: OAuthTokenResponseSchema
-        }
-      }
+          schema: OAuthTokenResponseSchema,
+        },
+      },
     },
     400: {
       description: 'Invalid request',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'get',
@@ -214,20 +221,20 @@ registry.registerPath({
       description: 'User information',
       content: {
         'application/json': {
-          schema: UserInfoResponseSchema
-        }
-      }
+          schema: UserInfoResponseSchema,
+        },
+      },
     },
     401: {
       description: 'Unauthorized',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'get',
@@ -242,12 +249,12 @@ registry.registerPath({
       description: 'JWKS response',
       content: {
         'application/json': {
-          schema: JWKSResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: JWKSResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'post',
@@ -261,45 +268,46 @@ registry.registerPath({
     body: {
       content: {
         'application/x-www-form-urlencoded': {
-          schema: OAuthRevokeRequestSchema
-        }
-      }
-    }
+          schema: OAuthRevokeRequestSchema,
+        },
+      },
+    },
   },
   responses: {
     200: {
       description: 'Token revoked successfully',
       content: {
         'application/json': {
-          schema: OAuthRevokeResponseSchema
-        }
-      }
+          schema: OAuthRevokeResponseSchema,
+        },
+      },
     },
     400: {
       description: 'Invalid request',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     500: {
       description: 'Internal server error',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'post',
   path: '/api/oauth/signout',
   operationId: 'signOut',
   summary: 'Sign out user',
-  description: 'Convenient sign out endpoint that accepts Bearer token in header or form data. Revokes the access token to sign out the user.',
+  description:
+    'Convenient sign out endpoint that accepts Bearer token in header or form data. Revokes the access token to sign out the user.',
   tags: ['OAuth'],
   security: [{ oauth2: [] }],
   'x-openai-isConsequential': false,
@@ -308,40 +316,46 @@ registry.registerPath({
       content: {
         'application/x-www-form-urlencoded': {
           schema: z.object({
-            token: z.string().optional().describe('Token to revoke (optional if using Bearer header)'),
-            token_type_hint: z.enum(['access_token', 'refresh_token']).optional().describe('Hint about token type')
-          })
-        }
-      }
-    }
+            token: z
+              .string()
+              .optional()
+              .describe('Token to revoke (optional if using Bearer header)'),
+            token_type_hint: z
+              .enum(['access_token', 'refresh_token'])
+              .optional()
+              .describe('Hint about token type'),
+          }),
+        },
+      },
+    },
   },
   responses: {
     200: {
       description: 'Sign out successful',
       content: {
         'application/json': {
-          schema: SignOutResponseSchema
-        }
-      }
+          schema: SignOutResponseSchema,
+        },
+      },
     },
     400: {
       description: 'Invalid request',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     500: {
       description: 'Internal server error',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 // User plan endpoints
 registry.registerPath({
@@ -358,28 +372,28 @@ registry.registerPath({
       description: 'User plan information',
       content: {
         'application/json': {
-          schema: UserPlanSchema
-        }
-      }
+          schema: UserPlanSchema,
+        },
+      },
     },
     401: {
       description: 'Unauthorized',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     500: {
       description: 'Internal server error',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 // Tasks CRUD endpoints - the main functionality for Custom GPT Actions
 registry.registerPath({
@@ -392,35 +406,35 @@ registry.registerPath({
   security: [{ oauth2: [] }],
   'x-openai-isConsequential': false,
   request: {
-    query: PaginationQuerySchema
+    query: PaginationQuerySchema,
   },
   responses: {
     200: {
       description: 'List of tasks',
       content: {
         'application/json': {
-          schema: TaskListSchema
-        }
-      }
+          schema: TaskListSchema,
+        },
+      },
     },
     401: {
       description: 'Unauthorized',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     500: {
       description: 'Internal server error',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'post',
@@ -435,54 +449,54 @@ registry.registerPath({
     body: {
       content: {
         'application/json': {
-          schema: CreateTaskRequestSchema
-        }
-      }
-    }
+          schema: CreateTaskRequestSchema,
+        },
+      },
+    },
   },
   responses: {
     200: {
       description: 'Created task',
       content: {
         'application/json': {
-          schema: TaskSchema
-        }
-      }
+          schema: TaskSchema,
+        },
+      },
     },
     400: {
       description: 'Invalid request body',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     401: {
       description: 'Unauthorized',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     402: {
       description: 'Payment required - upgrade to pro plan',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     500: {
       description: 'Internal server error',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'get',
@@ -494,43 +508,43 @@ registry.registerPath({
   security: [{ oauth2: [] }],
   'x-openai-isConsequential': false,
   request: {
-    params: TaskParamsSchema
+    params: TaskParamsSchema,
   },
   responses: {
     200: {
       description: 'Task details',
       content: {
         'application/json': {
-          schema: TaskSchema
-        }
-      }
+          schema: TaskSchema,
+        },
+      },
     },
     401: {
       description: 'Unauthorized',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     404: {
       description: 'Task not found',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     500: {
       description: 'Internal server error',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 registry.registerPath({
   method: 'delete',
@@ -542,7 +556,7 @@ registry.registerPath({
   security: [{ oauth2: [] }],
   'x-openai-isConsequential': false,
   request: {
-    params: TaskParamsSchema
+    params: TaskParamsSchema,
   },
   responses: {
     200: {
@@ -553,46 +567,46 @@ registry.registerPath({
             type: 'object',
             properties: {
               success: { type: 'boolean' },
-              message: { type: 'string' }
-            }
-          }
-        }
-      }
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
     },
     401: {
       description: 'Unauthorized',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     402: {
       description: 'Payment required - upgrade to pro plan',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     404: {
       description: 'Task not found',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
+          schema: ErrorResponseSchema,
+        },
+      },
     },
     500: {
       description: 'Internal server error',
       content: {
         'application/json': {
-          schema: ErrorResponseSchema
-        }
-      }
-    }
-  }
-});
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
 
 // Export the configured registry for use in the generator
-export default registry;
+export default registry

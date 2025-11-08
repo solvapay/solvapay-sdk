@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs')
+const path = require('path')
 
 // Route files to recreate
 const routes = {
@@ -129,17 +129,17 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}`
-};
+}`,
+}
 
 // Create the files
 Object.entries(routes).forEach(([filePath, content]) => {
-  const dir = path.dirname(filePath);
+  const dir = path.dirname(filePath)
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(dir, { recursive: true })
   }
-  fs.writeFileSync(filePath, content);
-  console.log(`Created ${filePath}`);
-});
+  fs.writeFileSync(filePath, content)
+  console.log(`Created ${filePath}`)
+})
 
-console.log('All route files restored!');
+console.log('All route files restored!')

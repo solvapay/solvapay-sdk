@@ -64,4 +64,3 @@ solvapay-sdk/
 ├── packages/                         # SDK packages
 └── README.md                         # SDK overview
 ```
-

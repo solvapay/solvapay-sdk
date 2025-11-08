@@ -1,91 +1,91 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Form } from './ui/Form';
-import { signUp, signIn, signInWithGoogle, getAccessToken } from '../lib/supabase';
+import { useState } from 'react'
+import { Button } from './ui/Button'
+import { Input } from './ui/Input'
+import { Form } from './ui/Form'
+import { signUp, signIn, signInWithGoogle, getAccessToken } from '../lib/supabase'
 
 export function Auth() {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [signUpSuccess, setSignUpSuccess] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [signUpSuccess, setSignUpSuccess] = useState(false)
 
   const handleGoogleSignIn = async () => {
-    setError(null);
-    setIsLoading(true);
-    
+    setError(null)
+    setIsLoading(true)
+
     try {
-      const { error: googleError } = await signInWithGoogle();
-      if (googleError) throw googleError;
+      const { error: googleError } = await signInWithGoogle()
+      if (googleError) throw googleError
       // OAuth redirect will happen automatically
       // The callback route will handle the rest
     } catch (err: any) {
-      setError(err.message || 'Google sign-in failed');
-      setIsLoading(false);
+      setError(err.message || 'Google sign-in failed')
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-    setSignUpSuccess(false);
+    e.preventDefault()
+    setError(null)
+    setIsLoading(true)
+    setSignUpSuccess(false)
 
     try {
       if (isSignUp) {
         if (!name.trim()) {
-          setError('Name is required');
-          setIsLoading(false);
-          return;
+          setError('Name is required')
+          setIsLoading(false)
+          return
         }
-        const { data, error: signUpError } = await signUp(email, password, name);
-        if (signUpError) throw signUpError;
-        
+        const { data, error: signUpError } = await signUp(email, password, name)
+        if (signUpError) throw signUpError
+
         // Check if user was immediately signed in (no email confirmation required)
         if (data.session) {
           // User is signed in immediately - sync customer in SolvaPay
           try {
-            const accessToken = await getAccessToken();
+            const accessToken = await getAccessToken()
             if (accessToken) {
               // Call sync-customer endpoint to eagerly create customer
               await fetch('/api/sync-customer', {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${accessToken}`,
+                  Authorization: `Bearer ${accessToken}`,
                 },
-              }).catch((err) => {
+              }).catch(err => {
                 // Silent failure - don't block signup if customer creation fails
-                console.warn('Failed to sync customer after signup:', err);
-              });
+                console.warn('Failed to sync customer after signup:', err)
+              })
             }
           } catch (err) {
             // Silent failure - don't block signup if customer creation fails
-            console.warn('Failed to sync customer after signup:', err);
+            console.warn('Failed to sync customer after signup:', err)
           }
           // User is signed in immediately - auth state change will handle navigation
           // Don't set loading to false here, let auth state change handle it
-          setIsLoading(false);
-          return;
+          setIsLoading(false)
+          return
         } else {
           // Email confirmation required
-          setSignUpSuccess(true);
+          setSignUpSuccess(true)
         }
       } else {
-        const { error: signInError } = await signIn(email, password);
-        if (signInError) throw signInError;
+        const { error: signInError } = await signIn(email, password)
+        if (signInError) throw signInError
         // Success - auth state change will trigger re-render in layout
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message || 'Authentication failed')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="flex justify-center items-center min-h-screen px-4">
@@ -141,7 +141,7 @@ export function Auth() {
                   label="Name"
                   placeholder="John Doe"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={e => setName(e.target.value)}
                   required
                   disabled={isLoading}
                 />
@@ -151,7 +151,7 @@ export function Auth() {
                 label="Email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
               />
@@ -160,12 +160,12 @@ export function Auth() {
                 label="Password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
                 minLength={6}
               />
-              
+
               {error && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
                   {error}
@@ -178,12 +178,7 @@ export function Auth() {
                 </div>
               )}
 
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full"
-                isLoading={isLoading}
-              >
+              <Button type="submit" variant="primary" className="w-full" isLoading={isLoading}>
                 {isSignUp ? 'Sign Up' : 'Sign In'}
               </Button>
             </form>
@@ -192,10 +187,10 @@ export function Auth() {
               <button
                 type="button"
                 onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setName('');
-                  setError(null);
-                  setSignUpSuccess(false);
+                  setIsSignUp(!isSignUp)
+                  setName('')
+                  setError(null)
+                  setSignUpSuccess(false)
                 }}
                 className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
                 disabled={isLoading}
@@ -207,6 +202,5 @@ export function Auth() {
         </Form>
       </div>
     </div>
-  );
+  )
 }
-

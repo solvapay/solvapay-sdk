@@ -1,27 +1,29 @@
 /**
  * Supabase Client Setup
- * 
+ *
  * Creates and exports the Supabase client for authentication.
  */
 
-import { createClient, type Session } from '@supabase/supabase-js';
+import { createClient, type Session } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase environment variables not configured. Authentication will not work.');
+  console.warn('Supabase environment variables not configured. Authentication will not work.')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 /**
  * Get the current user's ID from Supabase session
  * Returns null if not authenticated
  */
 export async function getUserId(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user?.id || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.user?.id || null
 }
 
 /**
@@ -29,8 +31,10 @@ export async function getUserId(): Promise<string | null> {
  * Returns null if not authenticated
  */
 export async function getAccessToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.access_token || null
 }
 
 /**
@@ -38,8 +42,10 @@ export async function getAccessToken(): Promise<string | null> {
  * Returns null if not authenticated
  */
 export async function getUserEmail(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user?.email || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.user?.email || null
 }
 
 /**
@@ -47,8 +53,10 @@ export async function getUserEmail(): Promise<string | null> {
  * Returns null if not authenticated
  */
 export async function getUser() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.user || null
 }
 
 /**
@@ -58,12 +66,14 @@ export async function signUp(email: string, password: string, name?: string) {
   return await supabase.auth.signUp({
     email,
     password,
-    options: name ? {
-      data: {
-        full_name: name,
-      },
-    } : undefined,
-  });
+    options: name
+      ? {
+          data: {
+            full_name: name,
+          },
+        }
+      : undefined,
+  })
 }
 
 /**
@@ -73,7 +83,7 @@ export async function signIn(email: string, password: string) {
   return await supabase.auth.signInWithPassword({
     email,
     password,
-  });
+  })
 }
 
 /**
@@ -83,47 +93,49 @@ export async function signIn(email: string, password: string) {
 export async function signOut() {
   try {
     // Check if there's an active session first
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
     if (!session) {
       // No session to sign out from - return success
-      return { data: { user: null }, error: null };
+      return { data: { user: null }, error: null }
     }
-    
+
     // Sign out from Supabase - clears the local session
     // For OAuth providers, this clears the session cookie
-    const result = await supabase.auth.signOut();
-    
+    const result = await supabase.auth.signOut()
+
     if (result.error) {
       // If sign out fails, try to clear local storage anyway
-      console.warn('Sign out error (attempting to clear local state):', result.error);
-      
+      console.warn('Sign out error (attempting to clear local state):', result.error)
+
       // Force clear local session
       if (typeof window !== 'undefined') {
         // Clear Supabase session storage
-        const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`;
-        localStorage.removeItem(storageKey);
-        sessionStorage.clear();
+        const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`
+        localStorage.removeItem(storageKey)
+        sessionStorage.clear()
       }
-      
+
       // Still return success to allow UI to update
-      return { data: { user: null }, error: null };
+      return { data: { user: null }, error: null }
     }
-    
-    return result;
+
+    return result
   } catch (error) {
     // If sign out completely fails, clear local state and return success
-    console.warn('Sign out error (clearing local state):', error);
-    
+    console.warn('Sign out error (clearing local state):', error)
+
     if (typeof window !== 'undefined') {
       // Clear Supabase session storage
-      const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`;
-      localStorage.removeItem(storageKey);
-      sessionStorage.clear();
+      const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`
+      localStorage.removeItem(storageKey)
+      sessionStorage.clear()
     }
-    
+
     // Return success to allow UI to update
-    return { data: { user: null }, error: null };
+    return { data: { user: null }, error: null }
   }
 }
 
@@ -132,14 +144,14 @@ export async function signOut() {
  * Redirects to Google OAuth page, then redirects back to the callback URL
  */
 export async function signInWithGoogle() {
-  const callbackUrl = `${window.location.origin}/auth/callback`;
-  
+  const callbackUrl = `${window.location.origin}/auth/callback`
+
   return await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: callbackUrl,
     },
-  });
+  })
 }
 
 /**
@@ -147,6 +159,5 @@ export async function signInWithGoogle() {
  * Returns an unsubscribe function
  */
 export function onAuthStateChange(callback: (event: string, session: Session | null) => void) {
-  return supabase.auth.onAuthStateChange(callback);
+  return supabase.auth.onAuthStateChange(callback)
 }
-

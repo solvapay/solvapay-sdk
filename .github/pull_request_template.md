@@ -1,7 +1,9 @@
 ## Description
+
 <!-- Provide a brief description of the changes in this PR -->
 
 ## Type of Change
+
 <!-- Mark the relevant option with an "x" -->
 
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
@@ -14,18 +16,22 @@
 - [ ] 🔨 Build/CI changes
 
 ## Related Issues
+
 <!-- Link to related issues using #issue_number -->
+
 Closes #
 Related to #
 
 ## Changes Made
+
 <!-- List the key changes made in this PR -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## Testing
+
 <!-- Describe the tests you ran and how to verify your changes -->
 
 - [ ] Unit tests pass
@@ -34,6 +40,7 @@ Related to #
 - [ ] Tested in relevant environments (Node.js / Edge / etc.)
 
 ## Checklist
+
 <!-- Mark completed items with an "x" -->
 
 - [ ] My code follows the project's style guidelines
@@ -46,8 +53,9 @@ Related to #
 - [ ] Any dependent changes have been merged and published
 
 ## Screenshots / Examples
+
 <!-- If applicable, add screenshots or code examples to help explain your changes -->
 
 ## Additional Notes
-<!-- Any additional information that reviewers should know -->
 
+<!-- Any additional information that reviewers should know -->

@@ -18,14 +18,11 @@ export default defineConfig({
       },
     },
     // Test files are organized in ui and backend folders
-    include: [
-      'src/__tests__/ui/**/*.test.{ts,tsx}',
-      'src/__tests__/backend/**/*.test.{ts,tsx}'
-    ],
+    include: ['src/__tests__/ui/**/*.test.{ts,tsx}', 'src/__tests__/backend/**/*.test.{ts,tsx}'],
     // Use different environments for UI and backend tests
     environmentMatchGlobs: [
       ['src/__tests__/ui/**', 'jsdom'],
-      ['src/__tests__/backend/**', 'node']
+      ['src/__tests__/backend/**', 'node'],
     ],
   },
   resolve: {

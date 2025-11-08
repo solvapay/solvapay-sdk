@@ -5,6 +5,7 @@
 After evaluating modern documentation generators, we recommend a **hybrid approach**:
 
 ### Primary Tool: **TypeDoc** (v0.25+)
+
 - ✅ **TypeScript-native**: Specifically designed for TypeScript projects
 - ✅ **JSDoc Integration**: Automatically extracts JSDoc comments from source code
 - ✅ **Type Safety**: Shows accurate type information from TypeScript definitions
@@ -13,6 +14,7 @@ After evaluating modern documentation generators, we recommend a **hybrid approa
 - ✅ **Active Development**: Well-maintained with regular updates
 
 ### Documentation Site Framework: **Docusaurus v3** (Optional but Recommended)
+
 - ✅ **Modern UI**: Beautiful, responsive design out of the box
 - ✅ **Search**: Built-in Algolia DocSearch integration
 - ✅ **Versioning**: Support for multiple SDK versions
@@ -29,6 +31,7 @@ After evaluating modern documentation generators, we recommend a **hybrid approa
 ### Recommended: **Sphinx** (for Python SDK)
 
 **Why Sphinx:**
+
 - ✅ **Python-native**: Standard tool for Python documentation (used by Python.org, Django, etc.)
 - ✅ **Docstring Integration**: Automatically extracts docstrings from Python code
 - ✅ **reStructuredText or Markdown**: Supports both formats
@@ -37,6 +40,7 @@ After evaluating modern documentation generators, we recommend a **hybrid approa
 - ✅ **CI/CD Ready**: Easy to integrate into build pipelines
 
 ### Alternative: MkDocs (Simpler option)
+
 - ✅ **Markdown-based**: Easier to write than reStructuredText
 - ✅ **Material theme**: Modern, beautiful default theme
 - ✅ **Plugin support**: Extensible with plugins
@@ -51,6 +55,7 @@ Since Docusaurus accepts markdown files, Python docs can be integrated in two wa
 3. **Direct Markdown**: Write Python API docs manually in markdown (simpler but less automated)
 
 **Recommended Approach for Python:**
+
 - Use **MkDocs** to generate markdown from Python docstrings
 - Or use **Sphinx** with markdown support
 - Output markdown files to `docs/` directory in Python SDK repo
@@ -72,19 +77,21 @@ pnpm add -D typedoc typedoc-vitepress-theme
 ## Recommended Tools & Plugins
 
 ### TypeDoc Plugins
+
 - `typedoc-plugin-markdown` - Generate Markdown output
 - `typedoc-plugin-param-names` - Better parameter name extraction
 - `typedoc-plugin-no-inherit` - Control inheritance display
 - `typedoc-plugin-sourcefile-url` - Add source file links
 
 ### Documentation Site Options
+
 1. **TypeDoc Default Theme** - Simple, fast, TypeScript-focused
 2. **Docusaurus** - Full-featured docs site with search, versioning
 3. **VitePress** - Fast, Vue-based docs site
 4. **GitBook** - Modern docs platform (hosted option)
 
 ### Additional Tools
+
 - **Link Checker**: `remark-cli` with `remark-lint` for markdown validation
 - **Code Example Testing**: Automated tests for code examples
 - **Spell Checker**: `cspell` for documentation spelling
-

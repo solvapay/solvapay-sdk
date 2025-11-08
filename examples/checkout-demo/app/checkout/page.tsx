@@ -1,42 +1,43 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { getAccessToken } from '../lib/supabase';
-import { sortPlansByPrice } from './utils/planHelpers';
-import { PlanSelectionSection } from './components/PlanSelectionSection';
-import { PaymentSummary } from './components/PaymentSummary';
-import { SubscriptionNotices } from './components/SubscriptionNotices';
-import { CheckoutActions } from './components/CheckoutActions';
-import { StyledPaymentForm } from './components/StyledPaymentForm';
-import { SuccessMessage } from './components/SuccessMessage';
-import { PaymentFailureMessage } from './components/PaymentFailureMessage';
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { getAccessToken } from '../lib/supabase'
+import { sortPlansByPrice } from './utils/planHelpers'
+import { PlanSelectionSection } from './components/PlanSelectionSection'
+import { PaymentSummary } from './components/PaymentSummary'
+import { SubscriptionNotices } from './components/SubscriptionNotices'
+import { CheckoutActions } from './components/CheckoutActions'
+import { StyledPaymentForm } from './components/StyledPaymentForm'
+import { SuccessMessage } from './components/SuccessMessage'
+import { PaymentFailureMessage } from './components/PaymentFailureMessage'
 
 export default function CheckoutPage() {
-  const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false);
-  const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
-  const [paymentFailed, setPaymentFailed] = useState<boolean>(false);
-  const [isCancelling, setIsCancelling] = useState<boolean>(false);
-  const { refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } = useSubscription();
-  const router = useRouter();
-  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false)
+  const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false)
+  const [paymentFailed, setPaymentFailed] = useState<boolean>(false)
+  const [isCancelling, setIsCancelling] = useState<boolean>(false)
+  const { refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } =
+    useSubscription()
+  const router = useRouter()
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
+  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF
 
   // Stable fetcher function to prevent re-renders
   const plansFetcher = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`);
+    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`)
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to fetch plans');
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to fetch plans')
     }
-    const data = await response.json();
+    const data = await response.json()
     // Sort and limit to first 2 plans in fetcher
-    const sortedPlans = (data.plans || []).sort(sortPlansByPrice).slice(0, 2);
-    return sortedPlans;
-  }, []);
+    const sortedPlans = (data.plans || []).sort(sortPlansByPrice).slice(0, 2)
+    return sortedPlans
+  }, [])
 
   // Fetch plans using the SDK hook
   const {
@@ -50,90 +51,92 @@ export default function CheckoutPage() {
     agentRef: agentRef || '',
     fetcher: plansFetcher,
     autoSelectFirstPaid: true,
-  });
+  })
 
   // Get advanced subscription status helpers
-  const subscriptionStatus = useSubscriptionStatus();
-  
+  const subscriptionStatus = useSubscriptionStatus()
+
   // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
   // Refetch is only called after operations that change subscription state (payment, cancellation)
 
   // Handle payment success
   const handlePaymentSuccess = async (paymentIntent?: any) => {
     // Check if payment processing timed out or had an error
-    const isTimeout = paymentIntent?._processingTimeout === true;
-    const hasError = !!paymentIntent?._processingError;
-    
+    const isTimeout = paymentIntent?._processingTimeout === true
+    const hasError = !!paymentIntent?._processingError
+
     // Refetch subscriptions before showing message
-    await refetch();
-    
+    await refetch()
+
     if (isTimeout || hasError) {
       if (isTimeout) {
-        console.error('[CheckoutPage] Payment processing timed out - webhooks may not be configured');
+        console.error(
+          '[CheckoutPage] Payment processing timed out - webhooks may not be configured',
+        )
       } else if (hasError) {
-        console.error('[CheckoutPage] Payment processing failed:', paymentIntent?._processingError);
+        console.error('[CheckoutPage] Payment processing failed:', paymentIntent?._processingError)
       }
-      
+
       // Show failure message to user (no technical details)
-      setPaymentFailed(true);
+      setPaymentFailed(true)
     } else {
       // Only set success if there was no timeout or error
-      setPaymentSuccess(true);
+      setPaymentSuccess(true)
       redirectTimeoutRef.current = setTimeout(() => {
-        router.push('/');
-      }, 2000);
+        router.push('/')
+      }, 2000)
     }
-  };
+  }
 
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
       if (redirectTimeoutRef.current) {
-        clearTimeout(redirectTimeoutRef.current);
+        clearTimeout(redirectTimeoutRef.current)
       }
-    };
-  }, []);
+    }
+  }, [])
 
   // Handle payment error
   const handlePaymentError = (err: Error) => {
-    console.error('[CheckoutPage] Payment error:', err.message);
-    
+    console.error('[CheckoutPage] Payment error:', err.message)
+
     // Show failure message to user (no technical details)
-    setShowPaymentForm(false);
-    setPaymentFailed(true);
-  };
+    setShowPaymentForm(false)
+    setPaymentFailed(true)
+  }
 
   // Handle continue button click
   const handleContinue = () => {
     if (currentPlan?.price && currentPlan.price > 0) {
-      setShowPaymentForm(true);
+      setShowPaymentForm(true)
     }
-  };
+  }
 
   // Handle cancel plan
   const handleCancelPlan = async () => {
     if (!confirm('Are you sure you want to cancel your plan?')) {
-      return;
+      return
     }
 
     if (!activePaidSubscription) {
-      return;
+      return
     }
 
     if (activePaidSubscription.status !== 'active') {
-      await refetch();
-      return;
+      await refetch()
+      return
     }
 
-    setIsCancelling(true);
+    setIsCancelling(true)
 
     try {
-      const accessToken = await getAccessToken();
-      
+      const accessToken = await getAccessToken()
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
-        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-      };
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+      }
 
       const res = await fetch('/api/cancel-subscription', {
         method: 'POST',
@@ -142,29 +145,29 @@ export default function CheckoutPage() {
           subscriptionRef: activePaidSubscription.reference,
           reason: 'User requested cancellation',
         }),
-      });
+      })
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData.error || 'Failed to cancel subscription';
-        console.error('Cancel subscription error:', errorMessage, errorData);
-        throw new Error(errorMessage);
+        const errorData = await res.json().catch(() => ({}))
+        const errorMessage = errorData.error || 'Failed to cancel subscription'
+        console.error('Cancel subscription error:', errorMessage, errorData)
+        throw new Error(errorMessage)
       }
 
-      await res.json();
-      await new Promise(resolve => setTimeout(resolve, 300));
-      await refetch();
-      window.location.href = '/';
+      await res.json()
+      await new Promise(resolve => setTimeout(resolve, 300))
+      await refetch()
+      window.location.href = '/'
     } catch (err) {
-      console.error('Cancel subscription failed:', err);
-      setIsCancelling(false);
+      console.error('Cancel subscription failed:', err)
+      setIsCancelling(false)
     }
-  };
+  }
 
   // Handle back to plan selection
   const handleBackToSelection = () => {
-    setShowPaymentForm(false);
-  };
+    setShowPaymentForm(false)
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -181,9 +184,7 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your subscription</h2>
 
-            {loading && (
-              <div className="text-center py-8 text-slate-500">Loading plans...</div>
-            )}
+            {loading && <div className="text-center py-8 text-slate-500">Loading plans...</div>}
 
             {error && !loading && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-center">
@@ -242,5 +243,5 @@ export default function CheckoutPage() {
         )}
       </div>
     </div>
-  );
+  )
 }

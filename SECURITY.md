@@ -40,9 +40,9 @@ When using the SolvaPay SDK:
 ## Security Updates
 
 Security updates are published as:
+
 - Patch versions (e.g., `1.0.0` → `1.0.1`) for critical fixes
 - Security advisories on GitHub
 - Release notes in our [CHANGELOG.md](./CHANGELOG.md)
 
 Thanks for helping keep SolvaPay SDK secure! 🔒
-

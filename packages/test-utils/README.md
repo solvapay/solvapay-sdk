@@ -24,7 +24,7 @@ This package will grow to include:
 ## Usage
 
 ```typescript
-import { /* utilities will be added here */ } from '@solvapay/test-utils';
+import {} from /* utilities will be added here */ '@solvapay/test-utils'
 ```
 
 ## Used By
@@ -35,6 +35,7 @@ import { /* utilities will be added here */ } from '@solvapay/test-utils';
 ## Development
 
 This package is for internal use only:
+
 - ✅ Private package (not published)
 - ✅ Used as workspace dependency
 - ✅ Source files imported directly (no build step)

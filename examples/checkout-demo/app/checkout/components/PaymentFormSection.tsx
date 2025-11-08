@@ -1,18 +1,18 @@
-"use client";
-import { PaymentForm, type Plan } from '@solvapay/react';
-import { formatPrice } from '../utils/planHelpers';
+'use client'
+import { PaymentForm, type Plan } from '@solvapay/react'
+import { formatPrice } from '../utils/planHelpers'
 
 interface PaymentFormSectionProps {
-  currentPlan: Plan;
-  agentRef?: string;
-  onSuccess: (paymentIntent?: any) => void;
-  onError: (error: Error) => void;
-  onBack: () => void;
+  currentPlan: Plan
+  agentRef?: string
+  onSuccess: (paymentIntent?: any) => void
+  onError: (error: Error) => void
+  onBack: () => void
 }
 
 /**
  * Payment Form Section Component
- * 
+ *
  * Wraps the PaymentForm SDK component with plan summary and back button.
  * Parent component ensures this is only rendered with valid plan data.
  */
@@ -23,7 +23,7 @@ export function PaymentFormSection({
   onError,
   onBack,
 }: PaymentFormSectionProps) {
-  const price = formatPrice(currentPlan.price);
+  const price = formatPrice(currentPlan.price)
 
   return (
     <div className="space-y-6">
@@ -52,13 +52,9 @@ export function PaymentFormSection({
       />
 
       {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="mt-6 text-sm text-slate-600 hover:text-slate-900 block"
-      >
+      <button onClick={onBack} className="mt-6 text-sm text-slate-600 hover:text-slate-900 block">
         ← Back to plan selection
       </button>
     </div>
-  );
+  )
 }
-

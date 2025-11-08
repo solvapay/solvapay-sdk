@@ -1,7 +1,7 @@
 # SolvaPay Next.js OpenAI Custom GPT Actions Example
 
 > **⚠️ Work in Progress - Untested**
-> 
+>
 > This example is currently under active development and has not been fully tested. The implementation may contain bugs, incomplete features, or breaking changes. Use at your own risk and expect issues. Contributions and feedback are welcome!
 
 This example demonstrates how to integrate SolvaPay with Next.js App Router to create OpenAI Custom GPT Actions with paywall protection. It provides the same functionality as the Fastify/Vite example but uses Next.js 15 with the latest App Router.
@@ -84,10 +84,11 @@ This example uses Supabase for OAuth storage (bare minimum approach). Initialize
 **Option 1: Using the init script (recommended)**
 
 1. Add your Supabase database connection string to `.env.local`:
+
    ```env
    SUPABASE_DB_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
    ```
-   
+
    Get this from: Supabase Dashboard → Settings → Database → Connection string → URI
 
 2. Run the initialization script:
@@ -111,6 +112,7 @@ supabase db push
 This creates the `oauth_refresh_tokens` table needed for storing OAuth refresh tokens.
 
 **Note**: This is a bare minimum OAuth implementation:
+
 - ✅ Authorization codes are JWT-encoded (no storage needed)
 - ✅ Refresh tokens stored in Supabase database
 - ✅ Revoked tokens rely on JWT expiration (no blacklist storage)
@@ -173,11 +175,13 @@ ngrok http 3000
 ### 3. Set the PUBLIC_URL environment variable
 
 Add to your `.env.local`:
+
 ```env
 PUBLIC_URL=https://your-subdomain.ngrok-free.app
 ```
 
 Then restart your Next.js server:
+
 ```bash
 pnpm dev
 ```
@@ -203,6 +207,7 @@ pnpm dev
 ### 5. Test the Integration
 
 Once configured, your Custom GPT will be able to:
+
 - Create, read, update, and delete tasks
 - Enforce usage limits based on subscription plans
 - Redirect users to upgrade when limits are exceeded
@@ -302,52 +307,58 @@ nextjs-openai-custom-gpt-actions/
 Instead of Fastify route handlers, we use Next.js API routes:
 
 **Fastify:**
+
 ```typescript
-app.get('/tasks', async () => ({ tasks: [] }));
+app.get('/tasks', async () => ({ tasks: [] }))
 ```
 
 **Next.js:**
+
 ```typescript
 // app/api/tasks/route.ts
 export async function GET() {
-  return NextResponse.json({ tasks: [] });
+  return NextResponse.json({ tasks: [] })
 }
 ```
 
 ### 2. Middleware
 
 **Fastify:**
+
 ```typescript
-app.addHook('preHandler', async (req) => {
+app.addHook('preHandler', async req => {
   // Add customer reference
-});
+})
 ```
 
 **Next.js:**
+
 ```typescript
 // src/middleware.ts
 export async function middleware(request: NextRequest) {
   // Extract userId from Supabase JWT token
-  const authAdapter = new SupabaseAuthAdapter({ jwtSecret });
-  const userId = await authAdapter.getUserIdFromRequest(request);
-  
+  const authAdapter = new SupabaseAuthAdapter({ jwtSecret })
+  const userId = await authAdapter.getUserIdFromRequest(request)
+
   // Add userId to headers for downstream routes
-  requestHeaders.set('x-user-id', userId);
-  requestHeaders.set('x-customer-ref', userId); // Legacy support
+  requestHeaders.set('x-user-id', userId)
+  requestHeaders.set('x-customer-ref', userId) // Legacy support
 }
 ```
 
 ### 3. CORS Handling
 
 **Fastify:**
+
 ```typescript
 await app.register(import('@fastify/cors'), {
   origin: true,
-  credentials: true
-});
+  credentials: true,
+})
 ```
 
 **Next.js:**
+
 ```typescript
 // next.config.js
 async headers() {
@@ -367,17 +378,23 @@ async headers() {
 ### 4. Form Data Handling
 
 **Fastify:**
+
 ```typescript
-app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (req, body, done) => {
-  // Parse form data
-});
+app.addContentTypeParser(
+  'application/x-www-form-urlencoded',
+  { parseAs: 'string' },
+  (req, body, done) => {
+    // Parse form data
+  },
+)
 ```
 
 **Next.js:**
+
 ```typescript
 // In API route
-const formData = await request.formData();
-const email = formData.get('email') as string;
+const formData = await request.formData()
+const email = formData.get('email') as string
 ```
 
 ## Configuration
@@ -454,12 +471,13 @@ This example is configured for easy deployment to Vercel with monorepo support.
    - Vercel will automatically detect and use the monorepo setup
 
 3. **Set Required Environment Variables**
-   
+
    **⚠️ CRITICAL**: You **must** set these environment variables in Vercel's project settings:
-   
+
    Go to your Vercel project → Settings → Environment Variables and add:
-   
+
    **Required Variables:**
+
    ```env
    SOLVAPAY_SECRET_KEY=your-production-secret-key
    NEXT_PUBLIC_AGENT_REF=your-agent-reference
@@ -468,10 +486,11 @@ This example is configured for easy deployment to Vercel with monorepo support.
    SUPABASE_JWT_SECRET=your-supabase-jwt-secret
    PUBLIC_URL=https://your-app.vercel.app
    ```
-   
+
    **⚠️ IMPORTANT**: `PUBLIC_URL` is critical for OpenAPI generation. Without it, the build will fail. For preview deployments, you can use `https://$VERCEL_URL` as the value.
-   
+
    **Optional (for OpenAI Custom GPT Actions):**
+
    ```env
    OAUTH_ISSUER=https://your-app.vercel.app
    OAUTH_JWKS_SECRET=your-jwks-secret
@@ -488,6 +507,7 @@ This example is configured for easy deployment to Vercel with monorepo support.
 #### Vercel Environment Variables Priority
 
 The OpenAPI generation script uses the following priority:
+
 1. **`PUBLIC_URL`** (recommended for production) - explicitly set in Vercel settings
 2. **`VERCEL_URL`** (fallback) - automatically provided by Vercel
 
@@ -505,6 +525,7 @@ This app uses a modern architecture with:
 - **Customer Portal**: Users can manage subscriptions via SolvaPay's hosted customer portal
 
 This ensures:
+
 - ✅ Secure authentication with Supabase
 - ✅ Centralized subscription management via SolvaPay
 - ✅ No need to handle payment processing directly
@@ -545,6 +566,7 @@ https://your-domain.com/api/docs/json
 ```
 
 The schema includes all CRUD operations for tasks:
+
 - `listTasks` - List all tasks
 - `createTask` - Create a new task
 - `getTask` - Get a specific task
@@ -558,14 +580,16 @@ All endpoints are protected with paywall checks and include proper OAuth 2.0 aut
 > **Note**: This example is currently untested. The test suite may be incomplete or contain failing tests.
 
 ### Run All Tests
+
 ```bash
 npm test           # All tests
-npm run test:backend    # Backend API tests only  
+npm run test:backend    # Backend API tests only
 npm run test:ui-components  # UI component tests only
 npm run test:watch     # Watch mode
 ```
 
 ### Test Coverage
+
 - **Test suite status**: ⚠️ Work in progress - tests may be incomplete or failing
 - **Backend Tests**: Paywall protection, CRUD operations, OAuth flow, checkout functionality
 - **UI Tests**: Component rendering and user interactions
@@ -579,10 +603,10 @@ Always use environment variables for sensitive data:
 
 ```typescript
 // ✅ Good: Environment variables
-const apiKey = process.env.SOLVAPAY_SECRET_KEY!;
+const apiKey = process.env.SOLVAPAY_SECRET_KEY!
 
 // ❌ Bad: Hardcoded values
-const apiKey = 'sp_secret_123...';
+const apiKey = 'sp_secret_123...'
 ```
 
 ### 2. OAuth Security
@@ -592,11 +616,11 @@ Never expose OAuth secrets in client-side code:
 ```typescript
 // ✅ Good: Server-side only
 export async function POST(request: NextRequest) {
-  const clientSecret = process.env.OAUTH_CLIENT_SECRET; // Server-side only
+  const clientSecret = process.env.OAUTH_CLIENT_SECRET // Server-side only
 }
 
 // ❌ Bad: Client-side exposure
-const clientSecret = process.env.NEXT_PUBLIC_OAUTH_SECRET; // Never do this!
+const clientSecret = process.env.NEXT_PUBLIC_OAUTH_SECRET // Never do this!
 ```
 
 ### 3. Error Handling
@@ -608,11 +632,8 @@ export async function POST(request: NextRequest) {
   try {
     // Your logic
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 ```
@@ -634,9 +655,9 @@ PUBLIC_URL=https://your-domain.com
 Use stub client in tests:
 
 ```typescript
-import { createStubClient } from '../../shared/stub-api-client';
+import { createStubClient } from '../../shared/stub-api-client'
 
-const apiClient = createStubClient({ freeTierLimit: 5 });
+const apiClient = createStubClient({ freeTierLimit: 5 })
 ```
 
 ## Troubleshooting
@@ -646,6 +667,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: CORS errors when accessing API from OpenAI Custom GPT Actions.
 
 **Solution**:
+
 1. CORS is configured in `next.config.mjs` - ensure your domain is allowed
 2. Check that `Access-Control-Allow-Origin` header is set correctly
 3. Verify preflight OPTIONS requests are handled
@@ -657,6 +679,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: OAuth flow not working with OpenAI Custom GPT Actions.
 
 **Solution**:
+
 1. Check that all OAuth environment variables are set:
    - `OAUTH_ISSUER`
    - `OAUTH_JWKS_SECRET`
@@ -672,6 +695,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: Build fails with various errors.
 
 **Solution**:
+
 1. Run `pnpm build:deps` to build SolvaPay dependencies first
 2. Ensure `PUBLIC_URL` is set for OpenAPI generation (no placeholders!)
 3. Run `pnpm generate:docs` before building
@@ -685,6 +709,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: Authentication not working.
 
 **Solution**:
+
 1. Verify Supabase credentials are correct:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -701,6 +726,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: Subscription checks failing or incorrect.
 
 **Solution**:
+
 1. Check that `NEXT_PUBLIC_AGENT_REF` matches your SolvaPay agent
 2. Verify `SOLVAPAY_SECRET_KEY` is correct and has proper permissions
 3. Check network tab for API errors and status codes
@@ -714,6 +740,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: OpenAI can't import OpenAPI schema.
 
 **Solution**:
+
 1. Verify `PUBLIC_URL` is set correctly (no placeholders!)
 2. Check that `/api/docs/json` endpoint is accessible
 3. Verify schema includes proper `operationId` for all endpoints
@@ -727,6 +754,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: Database operations failing.
 
 **Solution**:
+
 1. Verify Supabase database connection string is correct
 2. Check that migration has been run: `pnpm init:db`
 3. Verify `oauth_refresh_tokens` table exists
@@ -739,6 +767,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: Port 3000 is already in use.
 
 **Solution**:
+
 1. Stop other processes using port 3000
 2. Use a different port: `PORT=3001 pnpm dev`
 3. Check what's using the port: `lsof -i :3000`
@@ -748,6 +777,7 @@ const apiClient = createStubClient({ freeTierLimit: 5 });
 **Problem**: Errors about missing modules.
 
 **Solution**:
+
 1. Run `pnpm install` to install dependencies
 2. Run `pnpm build:deps` to build SDK packages
 3. Verify workspace dependencies are properly linked
@@ -763,6 +793,7 @@ NODE_ENV=development
 ```
 
 This will show detailed logs for:
+
 - OAuth flow
 - Paywall decisions
 - API requests
@@ -771,12 +802,14 @@ This will show detailed logs for:
 ## Related Documentation
 
 ### Getting Started
+
 - [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
 - [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
 - [Quick Start Guide](../../docs/getting-started/quick-start.md) - Quick setup guide
 - [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
+
 - [Next.js Integration Guide](../../docs/guides/nextjs.md) - Complete Next.js integration guide
 - [MCP Server Integration Guide](../../docs/guides/mcp.md) - MCP server patterns
 - [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
@@ -784,11 +817,13 @@ This will show detailed logs for:
 - [Webhook Handling Guide](../../docs/guides/webhooks.md) - Webhook integration
 
 ### API Reference
+
 - [Server SDK API Reference](../../docs/api/server/) - Complete backend API documentation
 - [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
 - [React SDK API Reference](../../docs/api/react/) - React component documentation
 
 ### Additional Resources
+
 - [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
 - [OpenAI Custom GPT Actions](https://platform.openai.com/docs/actions) - OpenAI documentation
 - [Next.js Documentation](https://nextjs.org/docs) - Next.js framework docs

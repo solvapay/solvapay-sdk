@@ -30,14 +30,16 @@ pnpm generate:types
 Import the generated types in your code:
 
 ```typescript
-import type { paths, components } from './types/generated';
+import type { paths, components } from './types/generated'
 
 // Use path operation types
-type CheckLimitsRequest = paths['/v1/sdk/limits']['post']['requestBody']['content']['application/json'];
-type CheckLimitsResponse = paths['/v1/sdk/limits']['post']['responses']['200']['content']['application/json'];
+type CheckLimitsRequest =
+  paths['/v1/sdk/limits']['post']['requestBody']['content']['application/json']
+type CheckLimitsResponse =
+  paths['/v1/sdk/limits']['post']['responses']['200']['content']['application/json']
 
 // Use component schemas
-type Agent = components['schemas']['Agent'];
+type Agent = components['schemas']['Agent']
 ```
 
 ## Important Notes
@@ -55,4 +57,3 @@ The `types.ts` file provides mapped types that bridge differences between the ge
 
 - `LimitResponseWithPlan` - Extends `LimitResponse` with a required `plan` field
 - `CustomerResponseMapped` - Maps backend's `reference` field to `customerRef` for consistency
-

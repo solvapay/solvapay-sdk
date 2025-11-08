@@ -1,55 +1,51 @@
-'use client';
+'use client'
 
-import { SolvaPayProvider } from '@solvapay/react';
-import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
-import { useState, useEffect, useMemo } from 'react';
-import { getUserId } from '@/lib/supabase';
-import { Auth } from './components/Auth';
+import { SolvaPayProvider } from '@solvapay/react'
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+import { useState, useEffect, useMemo } from 'react'
+import { getUserId } from '@/lib/supabase'
+import { Auth } from './components/Auth'
 import { Inter } from 'next/font/google'
 import Link from 'next/link'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const userId = await getUserId();
-        setIsAuthenticated(!!userId);
+        const userId = await getUserId()
+        setIsAuthenticated(!!userId)
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
-        setIsAuthenticated(false);
+        console.error('Failed to initialize auth:', error)
+        setIsAuthenticated(false)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    initializeAuth();
-  }, []);
+    initializeAuth()
+  }, [])
 
   // Create Supabase auth adapter (only if env vars are available)
   const supabaseAdapter = useMemo(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
     if (!supabaseUrl || !supabaseAnonKey) {
-      return undefined;
+      return undefined
     }
-    
+
     return createSupabaseAuthAdapter({
       supabaseUrl,
       supabaseAnonKey,
-    });
-  }, []);
+    })
+  }, [])
 
   return (
     <html lang="en">
@@ -64,7 +60,9 @@ export default function RootLayout({
           </div>
         ) : isAuthenticated ? (
           // Provider with Supabase adapter (if available)
-          <SolvaPayProvider config={supabaseAdapter ? { auth: { adapter: supabaseAdapter } } : undefined}>
+          <SolvaPayProvider
+            config={supabaseAdapter ? { auth: { adapter: supabaseAdapter } } : undefined}
+          >
             <div className="min-h-screen bg-gray-50">
               <nav className="bg-white shadow-sm border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,25 +73,35 @@ export default function RootLayout({
                       </h1>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <Link href="/" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                      <Link
+                        href="/"
+                        className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                      >
                         Home
                       </Link>
-                      <Link href="/oauth/authorize" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                      <Link
+                        href="/oauth/authorize"
+                        className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                      >
                         OAuth Login
                       </Link>
-                      <Link href="/checkout" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                      <Link
+                        href="/checkout"
+                        className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                      >
                         Checkout
                       </Link>
-                      <Link href="/docs" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                      <Link
+                        href="/docs"
+                        className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                      >
                         API Docs
                       </Link>
                     </div>
                   </div>
                 </div>
               </nav>
-              <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                {children}
-              </main>
+              <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
             </div>
           </SolvaPayProvider>
         ) : (

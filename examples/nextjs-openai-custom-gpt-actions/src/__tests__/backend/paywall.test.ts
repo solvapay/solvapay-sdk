@@ -26,15 +26,15 @@ describe('Example Configuration Tests', () => {
     it('should have user plans file management', () => {
       // Test that user-plans.json can be created and managed
       const testPlan = {
-        'test_user': {
-          plan: 'pro', 
-          upgradedAt: new Date().toISOString()
-        }
+        test_user: {
+          plan: 'pro',
+          upgradedAt: new Date().toISOString(),
+        },
       }
-      
+
       writeFileSync(USER_PLANS_FILE, JSON.stringify(testPlan, null, 2))
       expect(existsSync(USER_PLANS_FILE)).toBe(true)
-      
+
       const content = readFileSync(USER_PLANS_FILE, 'utf-8')
       const parsed = JSON.parse(content)
       expect(parsed.test_user.plan).toBe('pro')
@@ -45,7 +45,7 @@ describe('Example Configuration Tests', () => {
       // The actual paywall functionality is comprehensively tested in the SDK package
       const packageJsonPath = join(process.cwd(), 'package.json')
       const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
-      
+
       // Verify the example depends on the SolvaPay server package
       expect(packageJson.dependencies['@solvapay/server']).toBeDefined()
     })

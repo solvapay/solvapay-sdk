@@ -42,6 +42,7 @@ docs.solvapay.com/
 ## Recommended Solution: Docusaurus + Custom Domain Deployment
 
 **Why Docusaurus:**
+
 - ✅ **Modern, professional UI** out of the box
 - ✅ **Built-in search** (Algolia DocSearch integration available)
 - ✅ **Versioning support** for multiple SDK versions
@@ -51,6 +52,7 @@ docs.solvapay.com/
 - ✅ **Active community** and excellent documentation
 
 **Why NOT GitHub Pages alone:**
+
 - ❌ Limited customization for custom domains
 - ❌ Less control over deployment process
 - ❌ Harder to integrate with SDK build pipeline
@@ -61,6 +63,7 @@ docs.solvapay.com/
 ## Option 1: Docusaurus + Google Cloud Storage + Cloud CDN (Recommended)
 
 **Pros:**
+
 - ✅ **Automatic deployments** from GitHub Actions
 - ✅ **Custom domain** support (docs.solvapay.com)
 - ✅ **Fast CDN** globally distributed via Cloud CDN
@@ -84,12 +87,14 @@ docs.solvapay.com/
 ## Option 2: Docusaurus + Google Cloud Run (Alternative)
 
 **Pros:**
+
 - ✅ **Container-based** deployment
 - ✅ **Automatic scaling** based on traffic
 - ✅ **Custom domain** support
 - ✅ **Integrated** with Google Cloud ecosystem
 
 **Cons:**
+
 - ❌ **More complex** setup than static hosting
 - ❌ **Higher cost** for low traffic (minimum instances)
 - ❌ **Overkill** for static sites (better for dynamic content)
@@ -99,12 +104,14 @@ docs.solvapay.com/
 Firebase Hosting is Google's managed static hosting service. Good alternative if you want a simpler setup than GCS + CDN.
 
 **Pros:**
+
 - ✅ **Simple setup** via Firebase CLI
 - ✅ **Automatic SSL** certificates
 - ✅ **Fast CDN** included
 - ✅ **Free tier** available
 
 **Cons:**
+
 - ❌ **Less control** than GCS + CDN
 - ❌ **Firebase-specific** (not pure GCP)
 
@@ -212,11 +219,13 @@ solvapay-sdk/
 **For Google Cloud Storage + Cloud CDN:**
 
 1. **Create GCS Bucket:**
+
    ```bash
    gsutil mb -p PROJECT_ID -c STANDARD -l US-CENTRAL1 gs://docs-solvapay-com
    ```
 
 2. **Configure Bucket for Website Hosting:**
+
    ```bash
    gsutil web set -m index.html -e 404.html gs://docs-solvapay-com
    gsutil iam ch allUsers:objectViewer gs://docs-solvapay-com
@@ -245,11 +254,13 @@ solvapay-sdk/
 ## Versioning Strategy
 
 **Option 1: Latest Only (Recommended for now)**
+
 - Always show latest version
 - Simple, no version dropdown
 - Good for active development phase
 
 **Option 2: Versioned Docs (Future)**
+
 - When SDK reaches v1.0.0, enable versioning
 - Docusaurus supports versioning out of the box
 - Users can select version from dropdown
@@ -258,12 +269,14 @@ solvapay-sdk/
 ## Search Functionality
 
 **Option 1: Algolia DocSearch (Free for Open Source)**
+
 - Apply at https://docsearch.algolia.com/
 - Free for open source projects
 - Excellent search experience
 - Auto-indexes documentation
 
 **Option 2: Local Search (Docusaurus Built-in)**
+
 - Works out of the box
 - No external dependencies
 - Good for smaller docs sites
@@ -271,11 +284,13 @@ solvapay-sdk/
 ## Maintenance & Updates
 
 **Automated:**
+
 - ✅ API reference auto-updates from TypeDoc
 - ✅ Backend routes auto-updates from OpenAPI spec
 - ✅ Deployments trigger on code changes
 
 **Manual:**
+
 - 📝 Getting started guides
 - 📝 Tutorials and examples
 - 📝 Best practices
@@ -306,4 +321,3 @@ solvapay-sdk/
 7. Configure custom domain (docs.solvapay.com)
 8. Add GitHub Actions workflow for automated builds
 9. Start writing documentation in `docs/` directory
-

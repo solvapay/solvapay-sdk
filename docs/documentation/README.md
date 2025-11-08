@@ -4,13 +4,15 @@
 
 **What:** Set up unified documentation site at `docs.solvapay.com` for all SolvaPay SDKs (TypeScript, Python (later), etc.)
 
-**How:** 
+**How:**
+
 - **Central docs repo** (`solvapay-docs`) with Docusaurus
 - **SDK-specific docs** stay in each SDK repo (`docs/` folder)
 - **Git submodules** pull SDK docs into central site at build time
 - **Auto-deploy** to Google Cloud Storage on every push
 
 **Structure:**
+
 ```
 docs.solvapay.com/
 ├── /getting-started (central docs)
@@ -20,12 +22,14 @@ docs.solvapay.com/
 ```
 
 **Benefits:**
+
 - ✅ Unified site with search across all docs
 - ✅ SDK teams maintain their own docs independently
 - ✅ Automatic sync and deployment
 - ✅ Professional, modern UI with Docusaurus
 
 **Next Steps:**
+
 1. Create `solvapay-docs` repository
 2. Initialize Docusaurus
 3. Add SDK repos as git submodules
@@ -71,6 +75,7 @@ This documentation plan is split into separate, actionable documents:
 ## Success Metrics
 
 ### Documentation Quality
+
 - ✅ All exported functions have JSDoc comments
 - ✅ All functions have at least one code example
 - ✅ All examples are tested and working
@@ -78,6 +83,7 @@ This documentation plan is split into separate, actionable documents:
 - ✅ Getting started guide gets users productive in < 15 minutes
 
 ### Developer Experience
+
 - ✅ Users can find information quickly (< 30 seconds)
 - ✅ Code examples are copy-paste ready
 - ✅ Documentation is accurate and up-to-date
@@ -98,6 +104,7 @@ This plan provides a comprehensive roadmap for creating world-class documentatio
 - ✅ **Follows modern documentation best practices**
 
 The key to success is:
+
 1. **Start with JSDoc comments** in the code
 2. **Generate docs automatically** with TypeDoc
 3. **Add guides and examples** for common use cases
@@ -105,4 +112,3 @@ The key to success is:
 5. **Iterate based on user feedback**
 
 Let's build kick-ass documentation! 🚀
-

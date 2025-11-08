@@ -1,59 +1,61 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { getOrCreateCustomerId } from '../lib/customer';
-import { onAuthStateChange } from '../lib/supabase';
-import { Auth } from './Auth';
-import { Navigation } from './Navigation';
-import { Providers } from './Providers';
+import { useState, useEffect } from 'react'
+import { getOrCreateCustomerId } from '../lib/customer'
+import { onAuthStateChange } from '../lib/supabase'
+import { Auth } from './Auth'
+import { Navigation } from './Navigation'
+import { Providers } from './Providers'
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Initialize auth state
   useEffect(() => {
-    let cancelled = false;
-    
+    let cancelled = false
+
     const initializeAuth = async () => {
       try {
-        const userId = await getOrCreateCustomerId();
+        const userId = await getOrCreateCustomerId()
         if (!cancelled) {
-          setIsAuthenticated(!!userId);
+          setIsAuthenticated(!!userId)
         }
       } catch (error) {
         if (!cancelled) {
-          console.error('Failed to initialize auth:', error);
-          setIsAuthenticated(false);
+          console.error('Failed to initialize auth:', error)
+          setIsAuthenticated(false)
         }
       } finally {
         if (!cancelled) {
-          setIsLoading(false);
+          setIsLoading(false)
         }
       }
-    };
+    }
 
-    initializeAuth();
+    initializeAuth()
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = onAuthStateChange((event, session) => {
       if (!cancelled) {
-        setIsAuthenticated(!!session?.user?.id);
+        setIsAuthenticated(!!session?.user?.id)
       }
-    });
+    })
 
     return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [])
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen text-slate-500">
         Initializing...
       </div>
-    );
+    )
   }
 
   if (isAuthenticated) {
@@ -62,8 +64,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <Navigation />
         {children}
       </Providers>
-    );
+    )
   }
 
-  return <Auth />;
+  return <Auth />
 }

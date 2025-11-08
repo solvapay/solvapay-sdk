@@ -1,47 +1,46 @@
 version: 2
 updates:
   # Enable version updates for npm (packages)
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
     open-pull-requests-limit: 10
     labels:
-      - "dependencies"
-      - "automated"
+      - 'dependencies'
+      - 'automated'
     commit-message:
-      prefix: "chore"
-      include: "scope"
+      prefix: 'chore'
+      include: 'scope'
     # Group updates for dev dependencies
     groups:
       dev-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
     # Ignore major version updates for critical dependencies
     ignore:
-      - dependency-name: "typescript"
+      - dependency-name: 'typescript'
         update-types:
-          - "version-update:semver-major"
-      - dependency-name: "turbo"
+          - 'version-update:semver-major'
+      - dependency-name: 'turbo'
         update-types:
-          - "version-update:semver-major"
-      - dependency-name: "pnpm"
+          - 'version-update:semver-major'
+      - dependency-name: 'pnpm'
         update-types:
-          - "version-update:semver-major"
+          - 'version-update:semver-major'
 
   # Enable version updates for GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "monthly"
+      interval: 'monthly'
     labels:
-      - "github-actions"
-      - "automated"
+      - 'github-actions'
+      - 'automated'
     commit-message:
-      prefix: "ci"
-      include: "scope"
-
+      prefix: 'ci'
+      include: 'scope'

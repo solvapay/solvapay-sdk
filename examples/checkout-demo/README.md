@@ -111,10 +111,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 Use these test card numbers in the checkout form:
 
-| Card Number | Result |
-|------------|--------|
-| 4242 4242 4242 4242 | ✅ Payment succeeds |
-| 4000 0000 0000 0002 | ❌ Payment declined |
+| Card Number         | Result                |
+| ------------------- | --------------------- |
+| 4242 4242 4242 4242 | ✅ Payment succeeds   |
+| 4000 0000 0000 0002 | ❌ Payment declined   |
 | 4000 0000 0000 9995 | ❌ Insufficient funds |
 
 - Use any future expiry date
@@ -127,20 +127,19 @@ Use these test card numbers in the checkout form:
 
 ```tsx
 // app/layout.tsx
-import { SolvaPayProvider } from '@solvapay/react';
-
-<SolvaPayProvider
+import { SolvaPayProvider } from '@solvapay/react'
+;<SolvaPayProvider
   customerRef={customerId}
   createPayment={async ({ planRef, customerRef }) => {
     const res = await fetch('/api/create-payment-intent', {
       method: 'POST',
-      body: JSON.stringify({ planRef, customerRef, agentRef })
-    });
-    return res.json();
+      body: JSON.stringify({ planRef, customerRef, agentRef }),
+    })
+    return res.json()
   }}
-  checkSubscription={async (customerRef) => {
-    const res = await fetch(`/api/check-subscription?customerRef=${customerRef}`);
-    return res.json();
+  checkSubscription={async customerRef => {
+    const res = await fetch(`/api/check-subscription?customerRef=${customerRef}`)
+    return res.json()
   }}
 >
   {children}
@@ -157,24 +156,24 @@ The `middleware.ts` file extracts user IDs from Supabase JWT tokens and sets the
 
 ```tsx
 // middleware.ts
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
 
 const auth = new SupabaseAuthAdapter({
-  jwtSecret: process.env.SUPABASE_JWT_SECRET!
-});
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!,
+})
 
 export async function middleware(request: NextRequest) {
-  const userId = await auth.getUserIdFromRequest(request);
-  
+  const userId = await auth.getUserIdFromRequest(request)
+
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  
+
   // Set userId header for downstream routes
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-user-id', userId);
-  
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-user-id', userId)
+
+  return NextResponse.next({ request: { headers: requestHeaders } })
 }
 ```
 
@@ -184,24 +183,24 @@ You can also use SupabaseAuthAdapter directly in individual routes if you prefer
 
 ```tsx
 // app/api/create-payment-intent/route.ts
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
 
 const auth = new SupabaseAuthAdapter({
-  jwtSecret: process.env.SUPABASE_JWT_SECRET!
-});
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!,
+})
 
 export async function POST(request: NextRequest) {
-  const userId = await auth.getUserIdFromRequest(request);
-  
+  const userId = await auth.getUserIdFromRequest(request)
+
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  
+
   // Use userId as cache key and externalRef
   // The ensureCustomer method returns the SolvaPay backend customer reference
-  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! });
-  const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId);
-  const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef });
+  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
+  const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId)
+  const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef })
   // ...
 }
 ```
@@ -210,48 +209,45 @@ The frontend sends the Supabase access token in the Authorization header:
 
 ```tsx
 // app/layout.tsx
-import { getAccessToken } from './lib/supabase';
+import { getAccessToken } from './lib/supabase'
 
 const handleCreatePayment = async ({ planRef }) => {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken()
   const res = await fetch('/api/create-payment-intent', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
     },
-    body: JSON.stringify({ planRef, agentRef })
-  });
-  return res.json();
-};
+    body: JSON.stringify({ planRef, agentRef }),
+  })
+  return res.json()
+}
 ```
 
 ### 3. Locked Content with SubscriptionGate
 
 ```tsx
 // app/page.tsx
-import { SubscriptionGate, UpgradeButton } from '@solvapay/react';
-
-<SubscriptionGate requirePlan="Pro Plan">
+import { SubscriptionGate, UpgradeButton } from '@solvapay/react'
+;<SubscriptionGate requirePlan="Pro Plan">
   {({ hasAccess, loading }) => {
-    if (loading) return <Skeleton />;
-    
+    if (loading) return <Skeleton />
+
     if (!hasAccess) {
       return (
         <div>
           <h2>🔒 Premium Content</h2>
           <UpgradeButton planRef="pln_pro">
             {({ onClick, loading }) => (
-              <button onClick={onClick}>
-                {loading ? 'Loading...' : 'Upgrade Now'}
-              </button>
+              <button onClick={onClick}>{loading ? 'Loading...' : 'Upgrade Now'}</button>
             )}
           </UpgradeButton>
         </div>
-      );
+      )
     }
-    
-    return <PremiumContent />;
+
+    return <PremiumContent />
   }}
 </SubscriptionGate>
 ```
@@ -267,7 +263,7 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
     const activeSubs = subscriptions.filter(sub => sub.status === 'active');
     return (
       <div>
-        {activeSubs.length > 0 
+        {activeSubs.length > 0
           ? activeSubs.map(sub => <span>✓ {sub.planName}</span>)
           : <span>Free Plan</span>
         }
@@ -288,66 +284,68 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
 ### 5. Backend API Routes
 
 **Check Subscription:**
+
 ```typescript
 // app/api/check-subscription/route.ts
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 // Middleware handles authentication and sets x-user-id header
 
 export async function GET(request: NextRequest) {
   // Get userId from middleware header
-  const userId = request.headers.get('x-user-id');
-  
+  const userId = request.headers.get('x-user-id')
+
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  
+
   const solvapay = createSolvaPay({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY!
-  });
-  
-  const customer = await solvapay.getCustomer({ customerRef: userId });
-  
+    apiKey: process.env.SOLVAPAY_SECRET_KEY!,
+  })
+
+  const customer = await solvapay.getCustomer({ customerRef: userId })
+
   return NextResponse.json({
     customerRef: customer.customerRef,
     email: customer.email,
     name: customer.name,
-    subscriptions: customer.subscriptions || []
-  });
+    subscriptions: customer.subscriptions || [],
+  })
 }
 ```
 
 **Create Payment Intent:**
+
 ```typescript
 // app/api/create-payment-intent/route.ts
 // Middleware handles authentication and sets x-user-id header
 
 export async function POST(request: NextRequest) {
   // Get userId from middleware header
-  const userId = request.headers.get('x-user-id');
-  
+  const userId = request.headers.get('x-user-id')
+
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  
-  const { planRef, agentRef } = await request.json();
-  
+
+  const { planRef, agentRef } = await request.json()
+
   const solvapay = createSolvaPay({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY!
-  });
-  
-  await solvapay.ensureCustomer(userId);
-  
+    apiKey: process.env.SOLVAPAY_SECRET_KEY!,
+  })
+
+  await solvapay.ensureCustomer(userId)
+
   const paymentIntent = await solvapay.createPaymentIntent({
     agentRef,
     planRef,
-    customerRef: userId
-  });
-  
+    customerRef: userId,
+  })
+
   return NextResponse.json({
     clientSecret: paymentIntent.clientSecret,
     publishableKey: paymentIntent.publishableKey,
-    accountId: paymentIntent.accountId
-  });
+    accountId: paymentIntent.accountId,
+  })
 }
 ```
 
@@ -393,6 +391,7 @@ All components use **render props** pattern for maximum flexibility:
 ```
 
 This allows you to:
+
 - Use any CSS framework (Tailwind, CSS Modules, Styled Components)
 - Implement any UI design
 - Control all behavior and state
@@ -401,6 +400,7 @@ This allows you to:
 ### Subscription State Management
 
 The provider automatically:
+
 - Fetches subscription on mount
 - Provides refetch method for updates
 - Exposes helper methods (`hasActiveSubscription`, `hasPlan`)
@@ -409,6 +409,7 @@ The provider automatically:
 ### Authentication
 
 This demo uses Supabase for authentication with Next.js middleware as the default approach:
+
 - Middleware extracts user IDs from Supabase JWT tokens on all `/api/*` routes
 - User IDs are set as `x-user-id` header for downstream routes
 - Middleware returns 401 if authentication fails
@@ -418,6 +419,7 @@ This demo uses Supabase for authentication with Next.js middleware as the defaul
 - Individual routes can optionally use SupabaseAuthAdapter directly (see route comments)
 
 **Sign-in Methods:**
+
 - Email/password authentication
 - Google OAuth (requires Google OAuth setup in Supabase dashboard)
 
@@ -444,26 +446,28 @@ This demo uses Supabase for authentication with Next.js middleware as the defaul
      - Add production URL when deploying: `https://yourdomain.com/auth/callback`
 
 **How it works:**
+
 1. User clicks "Sign in with Google" → redirects to Supabase → Google
 2. Google redirects back to Supabase's callback URL (read-only, handled by Supabase)
 3. Supabase processes the OAuth and redirects to your app's callback URL (`/auth/callback`)
 4. Your app's callback handler receives the session and syncs the customer
 
-**Important:** 
+**Important:**
+
 - The Supabase callback URL (`https://[your-project-ref].supabase.co/auth/v1/callback`) goes in Google Cloud Console
 - Your app's callback URL (`http://localhost:3000/auth/callback`) goes in Supabase dashboard Redirect URLs
 - The Supabase callback URL is read-only - Supabase handles it automatically
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `SOLVAPAY_SECRET_KEY` | Your SolvaPay secret key | Yes |
-| `SOLVAPAY_API_BASE_URL` | Backend URL (defaults to prod) | No |
-| `NEXT_PUBLIC_AGENT_REF` | Agent reference | No |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | Yes |
-| `SUPABASE_JWT_SECRET` | Supabase JWT secret (for server verification) | Yes |
+| Variable                        | Description                                   | Required |
+| ------------------------------- | --------------------------------------------- | -------- |
+| `SOLVAPAY_SECRET_KEY`           | Your SolvaPay secret key                      | Yes      |
+| `SOLVAPAY_API_BASE_URL`         | Backend URL (defaults to prod)                | No       |
+| `NEXT_PUBLIC_AGENT_REF`         | Agent reference                               | No       |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                          | Yes      |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key                      | Yes      |
+| `SUPABASE_JWT_SECRET`           | Supabase JWT secret (for server verification) | Yes      |
 
 ## Customization
 
@@ -475,17 +479,17 @@ Edit `app/checkout/page.tsx`:
 const plans = {
   basic: {
     name: 'Basic Plan',
-    amount: 999,  // $9.99 in cents
+    amount: 999, // $9.99 in cents
     planRef: 'pln_basic',
     features: ['Feature 1', 'Feature 2'],
   },
   enterprise: {
     name: 'Enterprise',
-    amount: 9999,  // $99.99 in cents
+    amount: 9999, // $99.99 in cents
     planRef: 'pln_enterprise',
     features: ['All features', 'Priority support'],
   },
-};
+}
 ```
 
 ### Custom Styling
@@ -496,7 +500,7 @@ All components accept any styling approach:
 // Tailwind
 <UpgradeButton planRef="pro">
   {({ onClick, loading }) => (
-    <button 
+    <button
       onClick={onClick}
       className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
     >
@@ -558,19 +562,19 @@ const handleCreatePayment = async ({ planRef, customerRef }) => {
   try {
     const res = await fetch('/api/create-payment-intent', {
       method: 'POST',
-      body: JSON.stringify({ planRef, customerRef, agentRef })
-    });
-    
+      body: JSON.stringify({ planRef, customerRef, agentRef }),
+    })
+
     if (!res.ok) {
-      throw new Error('Payment intent creation failed');
+      throw new Error('Payment intent creation failed')
     }
-    
-    return res.json();
+
+    return res.json()
   } catch (error) {
-    console.error('Payment error:', error);
-    throw error; // Re-throw to let provider handle it
+    console.error('Payment error:', error)
+    throw error // Re-throw to let provider handle it
   }
-};
+}
 ```
 
 ### 3. Subscription Refetching
@@ -578,12 +582,12 @@ const handleCreatePayment = async ({ planRef, customerRef }) => {
 Always refetch subscription after successful payment:
 
 ```tsx
-const { refetch } = useSubscription();
+const { refetch } = useSubscription()
 
 const handlePaymentSuccess = async () => {
-  await refetch(); // Update subscription status
+  await refetch() // Update subscription status
   // Navigate or show success message
-};
+}
 ```
 
 ### 4. Loading States
@@ -591,10 +595,10 @@ const handlePaymentSuccess = async () => {
 Use loading states from hooks:
 
 ```tsx
-const { loading, subscriptions } = useSubscription();
+const { loading, subscriptions } = useSubscription()
 
 if (loading) {
-  return <Spinner />;
+  return <Spinner />
 }
 ```
 
@@ -603,9 +607,9 @@ if (loading) {
 Use TypeScript types from the SDK:
 
 ```tsx
-import type { SubscriptionStatus } from '@solvapay/react';
+import type { SubscriptionStatus } from '@solvapay/react'
 
-const status: SubscriptionStatus = subscription.status;
+const status: SubscriptionStatus = subscription.status
 ```
 
 ### 6. Environment Variables
@@ -625,6 +629,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 **Problem**: Error about missing secret key.
 
 **Solution**:
+
 1. Ensure `.env.local` exists in the example directory
 2. Copy from `env.example` if needed: `cp env.example .env.local`
 3. Add your SolvaPay secret key to `.env.local`
@@ -636,6 +641,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 **Problem**: Payment intent creation returns an error.
 
 **Solution**:
+
 1. Check your SolvaPay API key is valid in the dashboard
 2. Verify the backend URL is correct (`SOLVAPAY_API_BASE_URL`)
 3. Check network tab for API errors and status codes
@@ -648,10 +654,11 @@ SUPABASE_JWT_SECRET=your_secret_here
 **Problem**: Payment succeeds but subscription status doesn't update.
 
 **Solution**:
+
 1. Check that `refetch()` is called after successful payment:
    ```tsx
-   const { refetch } = useSubscription();
-   await refetch();
+   const { refetch } = useSubscription()
+   await refetch()
    ```
 2. Verify API returns proper subscription format
 3. Check browser console for errors
@@ -664,6 +671,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 **Problem**: SolvaPay components don't appear or throw errors.
 
 **Solution**:
+
 1. Ensure you're inside `<SolvaPayProvider>`:
    ```tsx
    <SolvaPayProvider {...props}>
@@ -680,6 +688,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 **Problem**: API routes return 401 Unauthorized.
 
 **Solution**:
+
 1. Verify Supabase credentials are correct
 2. Check that `SUPABASE_JWT_SECRET` matches your project settings
 3. Ensure middleware is properly extracting user ID
@@ -692,6 +701,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 **Problem**: Clicking upgrade button doesn't show payment form.
 
 **Solution**:
+
 1. Check that `createPayment` callback is provided to provider
 2. Verify callback returns proper format with `clientSecret`
 3. Check browser console for errors
@@ -703,6 +713,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 This error occurs when Google doesn't recognize the redirect URI that Supabase is using.
 
 **The Fix:**
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Navigate to **APIs & Services → Credentials**
 3. Click on your **OAuth 2.0 Client ID**
@@ -714,6 +725,7 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 7. Click **SAVE**
 
 **Important Notes:**
+
 - Google sees Supabase's callback URL (`https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback`), NOT your localhost URL
 - The `redirectTo` option (`localhost:3000/auth/callback`) is where Supabase redirects AFTER processing OAuth
 - You must add the Supabase callback URL to Google Cloud Console, not localhost
@@ -721,29 +733,34 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 - After adding the URI, wait a few minutes for changes to propagate
 
 **For Production:**
+
 - You'll need to add your production Supabase callback URL if different
 - Your app's callback URL (`https://yourdomain.com/auth/callback`) goes in Supabase dashboard Redirect URLs, not Google Cloud Console
 
 ## Related Documentation
 
 ### Getting Started
+
 - [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
 - [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
 - [Quick Start Guide](../../docs/getting-started/quick-start.md) - Quick setup guide
 - [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
+
 - [React Integration Guide](../../docs/guides/react.md) - Complete React integration guide
 - [Next.js Integration Guide](../../docs/guides/nextjs.md) - Next.js specific patterns
 - [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
 - [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
 
 ### API Reference
+
 - [React SDK API Reference](../../docs/api/react/) - Complete React component documentation
 - [Server SDK API Reference](../../docs/api/server/) - Backend API documentation
 - [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
 
 ### Additional Resources
+
 - [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
 - [Headless Components Pattern](https://www.patterns.dev/posts/headless-ui) - Headless UI patterns
 - [Stripe Testing Documentation](https://stripe.com/docs/testing) - Test card numbers
@@ -753,6 +770,7 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 ## Support
 
 For issues or questions:
+
 - GitHub Issues: https://github.com/solvapay/solvapay-sdk/issues
 - Documentation: https://docs.solvapay.com
 - Email: contact@solvapay.com

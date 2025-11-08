@@ -5,6 +5,7 @@ This guide covers setting up Supabase authentication with email/password and Goo
 ## Overview
 
 We'll implement:
+
 1. Supabase client utilities
 2. Authentication middleware
 3. Sign-in/sign-up pages with email/password and Google OAuth
@@ -18,28 +19,30 @@ Create `src/app/lib/supabase.ts`:
 ```typescript
 /**
  * Supabase Client Setup
- * 
+ *
  * Creates and exports the Supabase client for authentication.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase environment variables not configured. Authentication will not work.');
+  console.warn('Supabase environment variables not configured. Authentication will not work.')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 /**
  * Get the current user's ID from Supabase session
  * Returns null if not authenticated
  */
 export async function getUserId(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user?.id || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.user?.id || null
 }
 
 /**
@@ -47,8 +50,10 @@ export async function getUserId(): Promise<string | null> {
  * Returns null if not authenticated
  */
 export async function getAccessToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.access_token || null
 }
 
 /**
@@ -56,8 +61,10 @@ export async function getAccessToken(): Promise<string | null> {
  * Returns null if not authenticated
  */
 export async function getUserEmail(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user?.email || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.user?.email || null
 }
 
 /**
@@ -65,8 +72,10 @@ export async function getUserEmail(): Promise<string | null> {
  * Returns null if not authenticated
  */
 export async function getUser() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user || null;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  return session?.user || null
 }
 
 /**
@@ -76,12 +85,14 @@ export async function signUp(email: string, password: string, name?: string) {
   return await supabase.auth.signUp({
     email,
     password,
-    options: name ? {
-      data: {
-        full_name: name,
-      },
-    } : undefined,
-  });
+    options: name
+      ? {
+          data: {
+            full_name: name,
+          },
+        }
+      : undefined,
+  })
 }
 
 /**
@@ -91,7 +102,7 @@ export async function signIn(email: string, password: string) {
   return await supabase.auth.signInWithPassword({
     email,
     password,
-  });
+  })
 }
 
 /**
@@ -101,47 +112,49 @@ export async function signIn(email: string, password: string) {
 export async function signOut() {
   try {
     // Check if there's an active session first
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
     if (!session) {
       // No session to sign out from - return success
-      return { data: { user: null }, error: null };
+      return { data: { user: null }, error: null }
     }
-    
+
     // Sign out from Supabase - clears the local session
     // For OAuth providers, this clears the session cookie
-    const result = await supabase.auth.signOut();
-    
+    const result = await supabase.auth.signOut()
+
     if (result.error) {
       // If sign out fails, try to clear local storage anyway
-      console.warn('Sign out error (attempting to clear local state):', result.error);
-      
+      console.warn('Sign out error (attempting to clear local state):', result.error)
+
       // Force clear local session
       if (typeof window !== 'undefined') {
         // Clear Supabase session storage
-        const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`;
-        localStorage.removeItem(storageKey);
-        sessionStorage.clear();
+        const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`
+        localStorage.removeItem(storageKey)
+        sessionStorage.clear()
       }
-      
+
       // Still return success to allow UI to update
-      return { data: { user: null }, error: null };
+      return { data: { user: null }, error: null }
     }
-    
-    return result;
+
+    return result
   } catch (error) {
     // If sign out completely fails, clear local state and return success
-    console.warn('Sign out error (clearing local state):', error);
-    
+    console.warn('Sign out error (clearing local state):', error)
+
     if (typeof window !== 'undefined') {
       // Clear Supabase session storage
-      const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`;
-      localStorage.removeItem(storageKey);
-      sessionStorage.clear();
+      const storageKey = `sb-${supabaseUrl.split('//')[1]?.split('.')[0]}-auth-token`
+      localStorage.removeItem(storageKey)
+      sessionStorage.clear()
     }
-    
+
     // Return success to allow UI to update
-    return { data: { user: null }, error: null };
+    return { data: { user: null }, error: null }
   }
 }
 
@@ -150,14 +163,14 @@ export async function signOut() {
  * Redirects to Google OAuth page, then redirects back to the callback URL
  */
 export async function signInWithGoogle() {
-  const callbackUrl = `${window.location.origin}/auth/callback`;
-  
+  const callbackUrl = `${window.location.origin}/auth/callback`
+
   return await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: callbackUrl,
     },
-  });
+  })
 }
 
 /**
@@ -165,7 +178,7 @@ export async function signInWithGoogle() {
  * Returns an unsubscribe function
  */
 export function onAuthStateChange(callback: (event: string, session: any) => void) {
-  return supabase.auth.onAuthStateChange(callback);
+  return supabase.auth.onAuthStateChange(callback)
 }
 ```
 
@@ -176,20 +189,20 @@ Create `src/app/lib/customer.ts`:
 ```typescript
 /**
  * Customer Management Utility
- * 
+ *
  * Handles customer ID retrieval from Supabase authentication.
  * In a production app, customer IDs come from your authentication system.
  */
 
-import { getUserId } from './supabase';
+import { getUserId } from './supabase'
 
 /**
  * Get the current user's ID from Supabase session
  * Returns empty string if not authenticated (for React Provider compatibility)
  */
 export async function getOrCreateCustomerId(): Promise<string> {
-  const userId = await getUserId();
-  return userId || '';
+  const userId = await getUserId()
+  return userId || ''
 }
 
 /**
@@ -206,8 +219,8 @@ export function updateCustomerId(_newCustomerId: string): void {
  * Used for testing purposes or logout functionality
  */
 export async function clearCustomerId(): Promise<void> {
-  const { supabase } = await import('./supabase');
-  await supabase.auth.signOut();
+  const { supabase } = await import('./supabase')
+  await supabase.auth.signOut()
 }
 ```
 
@@ -218,11 +231,11 @@ export async function clearCustomerId(): Promise<void> {
 Create `middleware.ts` in the project root:
 
 ```typescript
-import { createSupabaseAuthMiddleware } from '@solvapay/next';
+import { createSupabaseAuthMiddleware } from '@solvapay/next'
 
 /**
  * Next.js Middleware for Authentication
- * 
+ *
  * Extracts user ID from Supabase JWT tokens and adds it as a header for API routes.
  * This is the recommended approach as it centralizes auth logic and makes it available
  * to all downstream routes.
@@ -230,11 +243,11 @@ import { createSupabaseAuthMiddleware } from '@solvapay/next';
 
 export const middleware = createSupabaseAuthMiddleware({
   publicRoutes: ['/api/list-plans'], // Add any public routes here
-});
+})
 
 export const config = {
   matcher: ['/api/:path*'],
-};
+}
 ```
 
 ### For Next.js 16
@@ -244,22 +257,22 @@ export const config = {
 Create `src/proxy.ts` (or `src/middleware.ts`) in the `src/` folder:
 
 ```typescript
-import { createSupabaseAuthMiddleware } from '@solvapay/next';
+import { createSupabaseAuthMiddleware } from '@solvapay/next'
 
 /**
  * Next.js Proxy for Authentication (Next.js 16)
- * 
+ *
  * Extracts user ID from Supabase JWT tokens and adds it as a header for API routes.
  * This is the recommended approach as it centralizes auth logic and makes it available
  * to all downstream routes.
- * 
+ *
  * Note: Next.js 16 renamed "middleware" to "proxy". Use 'proxy' export to avoid deprecation warnings.
  */
 
 // Recommended: Use 'proxy' export for Next.js 16 (no deprecation warning)
 export const proxy = createSupabaseAuthMiddleware({
   publicRoutes: ['/api/list-plans'], // Add any public routes here
-});
+})
 
 // Alternative: Use 'middleware' export (works but shows deprecation warning in Next.js 16)
 // export const middleware = createSupabaseAuthMiddleware({
@@ -268,15 +281,17 @@ export const proxy = createSupabaseAuthMiddleware({
 
 export const config = {
   matcher: ['/api/:path*'],
-};
+}
 ```
 
 **File Location Summary:**
+
 - **Next.js 15**: `middleware.ts` at project root
-- **Next.js 16 without `src/` folder**:  `proxy.ts` at project root
-- **Next.js 16 with `src/` folder**: `src/proxy.ts` 
+- **Next.js 16 without `src/` folder**: `proxy.ts` at project root
+- **Next.js 16 with `src/` folder**: `src/proxy.ts`
 
 **What this does:**
+
 - Intercepts all `/api/*` routes
 - Extracts user ID from Supabase JWT token in Authorization header
 - Sets `x-user-id` header for downstream API routes
@@ -304,7 +319,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   // Initialize auth state and subscribe to changes
   useEffect(() => {
     let cancelled = false;
-    
+
     const initializeAuth = async () => {
       try {
         const userId = await getOrCreateCustomerId();
@@ -340,9 +355,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   // Redirect unauthenticated users to sign-in (except on auth pages)
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && 
-        pathname !== '/sign-in' && 
-        pathname !== '/sign-up' && 
+    if (!isLoading && !isAuthenticated &&
+        pathname !== '/sign-in' &&
+        pathname !== '/sign-up' &&
         pathname !== '/auth/callback') {
       router.push('/sign-in');
     }
@@ -440,6 +455,7 @@ export default function RootLayout({
 ```
 
 **What this does:**
+
 - **Root layout is a server component** - follows Next.js App Router best practices
 - Checks authentication status on mount
 - Subscribes to Supabase auth state changes using `onAuthStateChange`
@@ -451,12 +467,14 @@ export default function RootLayout({
 - **The Supabase adapter automatically handles subscription checking** - no need for a `checkSubscription` prop
 
 **Key changes for automatic redirects:**
+
 - The layout subscribes to `onAuthStateChange` to detect when users sign in or sign out
 - When auth state changes, the layout automatically updates `isAuthenticated`
 - The existing redirect `useEffect` hooks detect the state change and redirect accordingly
 - No manual redirects needed in the Auth component - the layout handles it automatically
 
 **How subscription checking works:**
+
 - The Supabase adapter gets the access token from the Supabase session
 - `SolvaPayProvider` automatically calls `/api/check-subscription` with the token
 - Subscription state is updated automatically
@@ -498,7 +516,7 @@ export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) 
   const handleGoogleSignIn = async () => {
     setError(null);
     setIsLoading(true);
-    
+
     try {
       const { error: googleError } = await signInWithGoogle();
       if (googleError) throw googleError;
@@ -525,7 +543,7 @@ export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) 
         }
         const { data, error: signUpError } = await signUp(email, password, name);
         if (signUpError) throw signUpError;
-        
+
         // Check if user was immediately signed in (no email confirmation required)
         if (data.session) {
           // User is signed in immediately - sync customer in SolvaPay
@@ -643,7 +661,7 @@ export function Auth({ initialMode = 'sign-in', showToggle = true }: AuthProps) 
                 disabled={isLoading}
                 minLength={6}
               />
-              
+
               {error && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
                   {error}
@@ -736,7 +754,7 @@ import { supabase } from '../../lib/supabase';
 
 /**
  * OAuth Callback Content
- * 
+ *
  * Handles the OAuth callback from Supabase after Google sign-in.
  * Supabase automatically exchanges the code for a session when the callback URL is accessed.
  * We verify the session was created, then redirect.
@@ -752,7 +770,7 @@ function AuthCallbackContent() {
         // Check for error in URL params
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
-        
+
         if (error) {
           console.error('OAuth error:', error, errorDescription);
           // Redirect to home page with error (will show auth form)
@@ -763,9 +781,9 @@ function AuthCallbackContent() {
         // Supabase automatically exchanges the code for a session when the callback URL is accessed
         // Wait a moment for Supabase to process the callback, then check for session
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
           console.error('Session error:', sessionError);
           router.push('/');
@@ -801,7 +819,7 @@ function AuthCallbackContent() {
 
 /**
  * OAuth Callback Page
- * 
+ *
  * Wraps the callback content in Suspense to handle Next.js searchParams
  */
 export default function AuthCallbackPage() {
@@ -825,6 +843,7 @@ export default function AuthCallbackPage() {
 Test your authentication setup:
 
 1. **Start dev server:**
+
    ```bash
    npm run dev
    ```
@@ -852,16 +871,18 @@ Test your authentication setup:
 ## Troubleshooting
 
 ### Auth component not rendering
+
 - Check that UI components exist (`src/app/components/ui/Button.tsx`, etc.)
 - These will be created in the [Styling Guide](./04-styling.md)
 - For now, you can create simple placeholder components
 
 ### Redirect loop
+
 - Ensure your layout correctly checks the pathname before redirecting
 - Make sure the redirect logic excludes `/sign-in`, `/sign-up`, and `/auth/callback` paths
 
 ## Next Steps
 
 Now that authentication is set up, proceed to:
-- **[Step 3: Payments](./03-payments.md)** - Set up SolvaPay hosted checkout
 
+- **[Step 3: Payments](./03-payments.md)** - Set up SolvaPay hosted checkout

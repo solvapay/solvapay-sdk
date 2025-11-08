@@ -6,10 +6,5 @@
     "composite": true
   },
   "include": ["src/**/*"],
-  "references": [
-    { "path": "../core" },
-    { "path": "../server" },
-    { "path": "../auth" }
-  ]
+  "references": [{ "path": "../core" }, { "path": "../server" }, { "path": "../auth" }]
 }
-

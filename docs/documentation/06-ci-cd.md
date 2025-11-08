@@ -17,27 +17,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
-      
+
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 9.6.0
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
       - name: Build packages
         run: pnpm build
-      
+
       - name: Generate documentation
         run: pnpm docs:build
-      
+
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
@@ -70,4 +70,3 @@ Documentation builds independently from SDK packages:
 3. **Both can deploy** independently
 
 See [08-deployment.md](./08-deployment.md) for full deployment workflow with Google Cloud Storage.
-

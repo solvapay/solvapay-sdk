@@ -5,6 +5,7 @@
 **Location**: `docs/getting-started.md` or `docs/getting-started/index.md`
 
 **Sections**:
+
 1. **Introduction**
    - What is SolvaPay SDK?
    - Key features and benefits
@@ -39,6 +40,7 @@
 **Structure** (per package):
 
 ### `@solvapay/server`
+
 - **Main Exports**
   - `createSolvaPay(config?)` - Factory function
   - `createSolvaPayClient(options)` - Direct client creation
@@ -64,6 +66,7 @@
   - `createCustomerSession()` - Create customer portal session
 
 ### `@solvapay/react`
+
 - **Components**
   - `SolvaPayProvider` - Context provider
   - `PaymentForm` - Payment form component
@@ -86,6 +89,7 @@
   - All component and hook types
 
 ### `@solvapay/next`
+
 - **Helpers**
   - `checkSubscription()` - Check subscription with caching
   - `syncCustomer()` - Sync customer data
@@ -105,6 +109,7 @@
   - `createSupabaseAuthMiddleware()` - Create Supabase auth middleware
 
 ### `@solvapay/auth`
+
 - **Adapters**
   - `MockAuthAdapter` - Mock adapter for testing
   - `SupabaseAuthAdapter` - Supabase adapter (from `@solvapay/auth/supabase`)
@@ -115,10 +120,12 @@
   - `getUserNameFromRequest()` - Extract name from Supabase JWT
 
 ### `@solvapay/react-supabase`
+
 - **Exports**
   - `createSupabaseAuthAdapter()` - Create Supabase auth adapter
 
 ### `@solvapay/core`
+
 - **Types & Schemas**
   - All shared types and schemas
   - Error classes
@@ -159,6 +166,7 @@
 **Location**: Enhanced examples with detailed READMEs
 
 Each example should include:
+
 - **Purpose**: What the example demonstrates
 - **Setup Instructions**: Step-by-step setup
 - **Key Features**: Highlighted features
@@ -170,10 +178,10 @@ Each example should include:
 **Location**: `docs/best-practices.md`
 
 Topics:
+
 - Security best practices
 - Performance optimization
 - Error handling patterns
 - Testing strategies
 - Code organization
 - TypeScript usage tips
-

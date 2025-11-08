@@ -7,6 +7,7 @@ This section provides step-by-step instructions for setting up a new `solvapay-d
 ## Step 1: Create New Documentation Repository
 
 1. **Create the repository on GitHub:**
+
    ```bash
    # On GitHub, create a new repository: solvapay-docs
    # Make it public or private (both work with GCS)
@@ -36,6 +37,7 @@ cp docs/publishing.md ../solvapay-docs/docs/reference/
 ```
 
 **Create directory structure:**
+
 ```bash
 cd ../solvapay-docs
 mkdir -p docs/reference docs/getting-started docs/guides
@@ -70,6 +72,7 @@ git submodule add https://github.com/solvapay/solvapay-sdk.git sdks/typescript
 ```
 
 **Note:** If repositories are private, you may need to use SSH URLs:
+
 ```bash
 git submodule add git@github.com:solvapay/solvapay-sdk.git sdks/typescript
 ```
@@ -106,6 +109,7 @@ touch getting-started/installation.md
 ```
 
 **Initial content for `getting-started/introduction.md`:**
+
 ```markdown
 # Introduction to SolvaPay
 
@@ -129,6 +133,7 @@ SolvaPay helps you monetize your AI agents and APIs with usage-based pricing and
 ```
 
 **Initial content for `getting-started/installation.md`:**
+
 ```markdown
 # SDK Installation
 
@@ -143,6 +148,7 @@ Choose your preferred language:
 **In each SDK repository, create `docs/` directory:**
 
 For TypeScript SDK (`solvapay-sdk/docs/`):
+
 ```bash
 cd solvapay-sdk
 mkdir -p docs/api-reference docs/guides docs/examples
@@ -193,6 +199,7 @@ See [08-deployment.md](./08-deployment.md) for deployment workflow. Key points:
 6. Invalidate Cloud CDN cache
 
 **Required GitHub Secrets (for Google Cloud):**
+
 - `GCP_SA_KEY` - Service account key JSON (base64 encoded or raw JSON)
 - `GCS_BUCKET_NAME` - Name of the GCS bucket (e.g., `docs-solvapay-com`)
 - `CDN_URL_MAP` - Name of the Cloud CDN URL map (optional, for cache invalidation)
@@ -203,11 +210,13 @@ See [08-deployment.md](./08-deployment.md) for deployment workflow. Key points:
 **Set Up GCS Bucket:**
 
 1. **Create bucket:**
+
    ```bash
    gsutil mb -p YOUR_PROJECT_ID -c STANDARD -l US-CENTRAL1 gs://docs-solvapay-com
    ```
 
 2. **Configure for website hosting:**
+
    ```bash
    gsutil web set -m index.html -e 404.html gs://docs-solvapay-com
    gsutil iam ch allUsers:objectViewer gs://docs-solvapay-com
@@ -229,6 +238,7 @@ See [08-deployment.md](./08-deployment.md) for deployment workflow. Key points:
    - Wait for DNS propagation
 
 **DNS Configuration:**
+
 ```
 Type: A
 Name: docs
@@ -259,11 +269,13 @@ git push origin main
 ## Step 12: Verify Setup
 
 1. **Check submodules are initialized:**
+
    ```bash
    git submodule status
    ```
 
 2. **Test local build:**
+
    ```bash
    npm run docs:dev
    # Visit http://localhost:3000
@@ -358,17 +370,20 @@ npm run serve
 ## Troubleshooting
 
 **Submodules not updating:**
+
 ```bash
 git submodule update --init --recursive
 git submodule update --remote --merge
 ```
 
 **Build fails with missing SDK docs:**
+
 - Ensure submodules are initialized
 - Check that SDK repos have `docs/` directories
 - Verify paths in `docusaurus.config.ts`
 
 **Deployment fails:**
+
 - Check GitHub Actions logs
 - Verify GCP service account key is correct
 - Ensure service account has `Storage Admin` role
@@ -376,6 +391,7 @@ git submodule update --remote --merge
 - Check GCP project ID is correct
 
 **Custom domain not working:**
+
 - Verify DNS A record points to Load Balancer IP
 - Check Load Balancer is configured correctly
 - Verify SSL certificate is provisioned
@@ -420,4 +436,3 @@ git submodule update --remote --merge
 - [Sphinx Documentation](https://www.sphinx-doc.org/) - For Python (standard tool)
 - [MkDocs Documentation](https://www.mkdocs.org/) - For Python (simpler alternative)
 - [mkdocstrings Documentation](https://mkdocstrings.github.io/) - Auto-generate docs from Python docstrings
-

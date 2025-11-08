@@ -2,27 +2,27 @@
 
 /**
  * Initialize Supabase Database
- * 
+ *
  * This script sets up the OAuth refresh tokens table in Supabase.
  * Run this script once to initialize your database schema.
- * 
+ *
  * Usage:
  *   pnpm init:db
  *   or
  *   tsx scripts/init-db.ts
- * 
+ *
  * Requirements:
  *   - Install pg: pnpm add -D pg @types/pg
  *   - Set SUPABASE_DB_URL or SUPABASE_DB_PASSWORD in .env.local
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { config } from 'dotenv';
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { config } from 'dotenv'
 
 // Load environment variables from .env.local
-config({ path: '.env.local' });
-config({ path: '.env' });
+config({ path: '.env.local' })
+config({ path: '.env' })
 
 /**
  * URL-encode special characters in PostgreSQL connection string password
@@ -31,197 +31,218 @@ config({ path: '.env' });
 function encodePasswordInConnectionString(connectionString: string): string {
   // Find the hostname pattern to locate where password ends
   // Pattern: @db.xxxxx.supabase.co
-  const hostnameMatch = connectionString.match(/@(db\.[^:/]+\.supabase\.co)/);
-  
+  const hostnameMatch = connectionString.match(/@(db\.[^:/]+\.supabase\.co)/)
+
   if (!hostnameMatch) {
-    return connectionString; // Can't find hostname, return as-is
+    return connectionString // Can't find hostname, return as-is
   }
-  
-  const hostnameStart = connectionString.indexOf(hostnameMatch[0]);
-  const beforeHostname = connectionString.substring(0, hostnameStart);
-  
+
+  const hostnameStart = connectionString.indexOf(hostnameMatch[0])
+  const beforeHostname = connectionString.substring(0, hostnameStart)
+
   // Extract password: between the last : and the @ before hostname
   // Format: postgresql://user:password@
-  const passwordMatch = beforeHostname.match(/:\/\/([^:]+):(.+)$/);
-  
+  const passwordMatch = beforeHostname.match(/:\/\/([^:]+):(.+)$/)
+
   if (!passwordMatch) {
-    return connectionString; // Can't parse, return as-is
+    return connectionString // Can't parse, return as-is
   }
-  
-  const [, username, password] = passwordMatch;
-  
+
+  const [, username, password] = passwordMatch
+
   // Check if password needs encoding (has unencoded special chars)
   if (/[@&#%+=\s]/.test(password) && !password.includes('%')) {
     // Has special chars that aren't encoded
-    const encodedPassword = encodeURIComponent(password);
+    const encodedPassword = encodeURIComponent(password)
     return connectionString.replace(
       `://${username}:${password}@`,
-      `://${username}:${encodedPassword}@`
-    );
+      `://${username}:${encodedPassword}@`,
+    )
   }
-  
+
   // If password contains % but also has @, &, # - might be partially encoded
-  if (password.includes('%') && (password.includes('@') || password.includes('&') || password.includes('#'))) {
+  if (
+    password.includes('%') &&
+    (password.includes('@') || password.includes('&') || password.includes('#'))
+  ) {
     // Double-encode might be needed, but let's try encoding the whole thing
-    const encodedPassword = encodeURIComponent(password);
+    const encodedPassword = encodeURIComponent(password)
     return connectionString.replace(
       `://${username}:${password}@`,
-      `://${username}:${encodedPassword}@`
-    );
+      `://${username}:${encodedPassword}@`,
+    )
   }
-  
-  return connectionString;
+
+  return connectionString
 }
 
 async function initDatabase() {
   // Check if pg is available
-  let pg: any;
+  let pg: any
   try {
-    pg = require('pg');
+    pg = require('pg')
   } catch (error) {
-    console.error('❌ Error: pg library is not installed.');
-    console.error('\n📦 Please install it first:');
-    console.error('   pnpm add -D pg @types/pg\n');
-    process.exit(1);
+    console.error('❌ Error: pg library is not installed.')
+    console.error('\n📦 Please install it first:')
+    console.error('   pnpm add -D pg @types/pg\n')
+    process.exit(1)
   }
 
-  const { Client } = pg;
+  const { Client } = pg
 
   // Get database connection details
   // Option 1: Direct database URL (from Supabase Dashboard → Settings → Database → Connection string → URI)
-  let dbUrl = process.env.SUPABASE_DB_URL;
-  
+  let dbUrl = process.env.SUPABASE_DB_URL
+
   // Auto-encode password if needed
   if (dbUrl) {
-    const originalUrl = dbUrl;
-    dbUrl = encodePasswordInConnectionString(dbUrl);
-    
+    const originalUrl = dbUrl
+    dbUrl = encodePasswordInConnectionString(dbUrl)
+
     if (dbUrl !== originalUrl) {
-      console.log('ℹ️  Auto-encoded special characters in password for connection string');
+      console.log('ℹ️  Auto-encoded special characters in password for connection string')
     }
   }
-  
+
   // Option 2: Construct from Supabase project details
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
-  const dbHost = process.env.SUPABASE_DB_HOST;
-  const dbPort = process.env.SUPABASE_DB_PORT || '5432';
-  const dbName = process.env.SUPABASE_DB_NAME || 'postgres';
-  const dbUser = process.env.SUPABASE_DB_USER || 'postgres';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD
+  const dbHost = process.env.SUPABASE_DB_HOST
+  const dbPort = process.env.SUPABASE_DB_PORT || '5432'
+  const dbName = process.env.SUPABASE_DB_NAME || 'postgres'
+  const dbUser = process.env.SUPABASE_DB_USER || 'postgres'
 
   if (!dbUrl && (!supabaseUrl || !dbPassword)) {
-    console.error('❌ Error: Database connection details not found.');
-    console.error('\n📝 Please set one of the following in .env.local:');
-    console.error('   Option 1 (recommended):');
-    console.error('   SUPABASE_DB_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres');
-    console.error('');
-    console.error('   Option 2:');
-    console.error('   SUPABASE_DB_PASSWORD=your_database_password');
-    console.error('   SUPABASE_DB_HOST=db.xxxxx.supabase.co (from Supabase Dashboard)');
-    console.error('   SUPABASE_DB_PORT=5432 (optional, default: 5432)');
-    console.error('   SUPABASE_DB_NAME=postgres (optional, default: postgres)');
-    console.error('   SUPABASE_DB_USER=postgres (optional, default: postgres)');
-    console.error('');
-    console.error('💡 Get these from: Supabase Dashboard → Settings → Database → Connection string\n');
-    process.exit(1);
+    console.error('❌ Error: Database connection details not found.')
+    console.error('\n📝 Please set one of the following in .env.local:')
+    console.error('   Option 1 (recommended):')
+    console.error('   SUPABASE_DB_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres')
+    console.error('')
+    console.error('   Option 2:')
+    console.error('   SUPABASE_DB_PASSWORD=your_database_password')
+    console.error('   SUPABASE_DB_HOST=db.xxxxx.supabase.co (from Supabase Dashboard)')
+    console.error('   SUPABASE_DB_PORT=5432 (optional, default: 5432)')
+    console.error('   SUPABASE_DB_NAME=postgres (optional, default: postgres)')
+    console.error('   SUPABASE_DB_USER=postgres (optional, default: postgres)')
+    console.error('')
+    console.error(
+      '💡 Get these from: Supabase Dashboard → Settings → Database → Connection string\n',
+    )
+    process.exit(1)
   }
 
   // Create database client
-  let client: any;
-  
+  let client: any
+
   if (dbUrl) {
-    console.log('🔌 Connecting to Supabase database via URL...');
-    
+    console.log('🔌 Connecting to Supabase database via URL...')
+
     // Validate connection string format (basic check)
     if (!dbUrl.startsWith('postgresql://') && !dbUrl.startsWith('postgres://')) {
-      console.error('❌ Error: Connection string must start with postgresql:// or postgres://');
-      console.error(`   Got: ${dbUrl.substring(0, 50)}...`);
-      process.exit(1);
+      console.error('❌ Error: Connection string must start with postgresql:// or postgres://')
+      console.error(`   Got: ${dbUrl.substring(0, 50)}...`)
+      process.exit(1)
     }
-    
+
     // Check for placeholder values
-    if (dbUrl.includes('[PASSWORD]') || dbUrl.includes('[PROJECT_REF]') || dbUrl.includes('[HOST]')) {
-      console.error('❌ Error: Connection string contains placeholder values.');
-      console.error('   Please replace [PASSWORD], [PROJECT_REF], and [HOST] with actual values.');
-      console.error('   Format: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres');
-      process.exit(1);
+    if (
+      dbUrl.includes('[PASSWORD]') ||
+      dbUrl.includes('[PROJECT_REF]') ||
+      dbUrl.includes('[HOST]')
+    ) {
+      console.error('❌ Error: Connection string contains placeholder values.')
+      console.error('   Please replace [PASSWORD], [PROJECT_REF], and [HOST] with actual values.')
+      console.error(
+        '   Format: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres',
+      )
+      process.exit(1)
     }
-    
+
     // Extract hostname using regex (find the LAST @ before the hostname pattern)
     // This handles cases where password might contain @ (should be %40 but sometimes isn't)
     // Pattern: @db.xxxxx.supabase.co
-    const hostMatch = dbUrl.match(/@(db\.[^:/]+\.supabase\.co)/);
+    const hostMatch = dbUrl.match(/@(db\.[^:/]+\.supabase\.co)/)
     if (hostMatch) {
-      const hostname = hostMatch[1];
-      console.log(`   Host: ${hostname}`);
+      const hostname = hostMatch[1]
+      console.log(`   Host: ${hostname}`)
     } else {
       // Fallback: try to find any supabase.co hostname
-      const fallbackMatch = dbUrl.match(/@([^:/]*\.supabase\.co)/);
+      const fallbackMatch = dbUrl.match(/@([^:/]*\.supabase\.co)/)
       if (fallbackMatch) {
-        const hostname = fallbackMatch[1];
-        console.log(`   Host: ${hostname}`);
-        
+        const hostname = fallbackMatch[1]
+        console.log(`   Host: ${hostname}`)
+
         if (!hostname.startsWith('db.')) {
-          console.error('❌ Error: Invalid Supabase hostname format.');
-          console.error(`   Got: ${hostname}`);
-          console.error('   Expected format: db.[PROJECT_REF].supabase.co');
-          console.error('   Make sure you\'re using the database connection string, not the API URL.');
-          process.exit(1);
+          console.error('❌ Error: Invalid Supabase hostname format.')
+          console.error(`   Got: ${hostname}`)
+          console.error('   Expected format: db.[PROJECT_REF].supabase.co')
+          console.error(
+            "   Make sure you're using the database connection string, not the API URL.",
+          )
+          process.exit(1)
         }
       } else {
-        console.warn('⚠️  Warning: Could not extract hostname from connection string.');
-        console.warn('   The connection will be attempted anyway, but verify your SUPABASE_DB_URL format.');
+        console.warn('⚠️  Warning: Could not extract hostname from connection string.')
+        console.warn(
+          '   The connection will be attempted anyway, but verify your SUPABASE_DB_URL format.',
+        )
       }
     }
-    
+
     // Extract database name (after the last /, before any ? or end of string)
-    const dbMatch = dbUrl.match(/\/([^/?]+)(?:\?|$)/);
+    const dbMatch = dbUrl.match(/\/([^/?]+)(?:\?|$)/)
     if (dbMatch && dbMatch[1]) {
-      console.log(`   Database: ${dbMatch[1]}`);
+      console.log(`   Database: ${dbMatch[1]}`)
     }
-    
+
     // Warn about potential password encoding issues
     // Check if password contains unencoded special characters
-    const passwordMatch = dbUrl.match(/:\/\/[^:]+:([^@]+)@/);
+    const passwordMatch = dbUrl.match(/:\/\/[^:]+:([^@]+)@/)
     if (passwordMatch) {
-      const passwordPart = passwordMatch[1];
+      const passwordPart = passwordMatch[1]
       // Check for common unencoded special characters
       if (passwordPart.includes('@') && !passwordPart.includes('%40')) {
-        console.warn('⚠️  Warning: Password contains @ character. Make sure it\'s URL-encoded as %40.');
-        console.warn('   If connection fails, try URL-encoding special characters in your password:');
-        console.warn('   @ → %40, # → %23, % → %25, & → %26, + → %2B');
+        console.warn(
+          "⚠️  Warning: Password contains @ character. Make sure it's URL-encoded as %40.",
+        )
+        console.warn(
+          '   If connection fails, try URL-encoding special characters in your password:',
+        )
+        console.warn('   @ → %40, # → %23, % → %25, & → %26, + → %2B')
       }
       if (passwordPart.includes('&') && !passwordPart.includes('%26')) {
-        console.warn('⚠️  Warning: Password contains & character. Consider URL-encoding it as %26.');
+        console.warn('⚠️  Warning: Password contains & character. Consider URL-encoding it as %26.')
       }
     }
-    
-    client = new Client({ 
+
+    client = new Client({
       connectionString: dbUrl,
       ssl: { rejectUnauthorized: false }, // Supabase requires SSL
-    });
+    })
   } else {
     // Extract project reference from Supabase URL to build database host
     // Example: https://abcdefghijklmnop.supabase.co -> db.abcdefghijklmnop.supabase.co
-    let host = dbHost;
+    let host = dbHost
     if (!host && supabaseUrl) {
-      const urlMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+      const urlMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)
       if (urlMatch) {
-        host = `db.${urlMatch[1]}.supabase.co`;
+        host = `db.${urlMatch[1]}.supabase.co`
       } else {
-        throw new Error('Could not extract database host from SUPABASE_URL. Please set SUPABASE_DB_HOST manually.');
+        throw new Error(
+          'Could not extract database host from SUPABASE_URL. Please set SUPABASE_DB_HOST manually.',
+        )
       }
     }
-    
+
     if (!host) {
-      throw new Error('SUPABASE_DB_HOST or NEXT_PUBLIC_SUPABASE_URL must be set');
+      throw new Error('SUPABASE_DB_HOST or NEXT_PUBLIC_SUPABASE_URL must be set')
     }
-    
-    console.log('🔌 Connecting to Supabase database...');
-    console.log(`   Host: ${host}`);
-    console.log(`   Database: ${dbName}`);
-    console.log(`   User: ${dbUser}`);
-    
+
+    console.log('🔌 Connecting to Supabase database...')
+    console.log(`   Host: ${host}`)
+    console.log(`   Database: ${dbName}`)
+    console.log(`   User: ${dbUser}`)
+
     client = new Client({
       host,
       port: parseInt(dbPort),
@@ -229,31 +250,36 @@ async function initDatabase() {
       user: dbUser,
       password: dbPassword,
       ssl: { rejectUnauthorized: false }, // Supabase requires SSL
-    });
+    })
   }
 
   try {
-    await client.connect();
-    console.log('✅ Connected to database\n');
+    await client.connect()
+    console.log('✅ Connected to database\n')
 
     // Read the SQL migration file
-    const migrationPath = join(process.cwd(), 'supabase', 'migrations', '001_oauth_refresh_tokens.sql');
-    let sql: string;
-    
+    const migrationPath = join(
+      process.cwd(),
+      'supabase',
+      'migrations',
+      '001_oauth_refresh_tokens.sql',
+    )
+    let sql: string
+
     try {
-      sql = readFileSync(migrationPath, 'utf-8');
-      console.log(`📄 Read migration file: ${migrationPath}\n`);
+      sql = readFileSync(migrationPath, 'utf-8')
+      console.log(`📄 Read migration file: ${migrationPath}\n`)
     } catch (error) {
-      throw new Error(`Failed to read migration file: ${migrationPath}\n${error}`);
+      throw new Error(`Failed to read migration file: ${migrationPath}\n${error}`)
     }
 
     // Execute the SQL (pg handles multiple statements automatically)
-    console.log('📝 Executing SQL migration...\n');
-    
+    console.log('📝 Executing SQL migration...\n')
+
     try {
-      await client.query(sql);
-      console.log('✅ Migration executed successfully!\n');
-      
+      await client.query(sql)
+      console.log('✅ Migration executed successfully!\n')
+
       // Verify the table was created
       const tableCheck = await client.query(`
         SELECT EXISTS (
@@ -261,125 +287,131 @@ async function initDatabase() {
           WHERE table_schema = 'public' 
           AND table_name = 'oauth_refresh_tokens'
         );
-      `);
-      
+      `)
+
       if (tableCheck.rows[0].exists) {
-        console.log('✅ Verified: oauth_refresh_tokens table exists');
+        console.log('✅ Verified: oauth_refresh_tokens table exists')
       } else {
-        console.warn('⚠️  Warning: Table existence check failed, but migration completed');
+        console.warn('⚠️  Warning: Table existence check failed, but migration completed')
       }
-      
+
       // Check indexes
       const indexCheck = await client.query(`
         SELECT indexname 
         FROM pg_indexes 
         WHERE tablename = 'oauth_refresh_tokens';
-      `);
-      
-      console.log(`✅ Created ${indexCheck.rows.length} indexes`);
-      
+      `)
+
+      console.log(`✅ Created ${indexCheck.rows.length} indexes`)
+
       // Check RLS policies
       const policyCheck = await client.query(`
         SELECT policyname 
         FROM pg_policies 
         WHERE tablename = 'oauth_refresh_tokens';
-      `);
-      
-      console.log(`✅ Created ${policyCheck.rows.length} RLS policies`);
-      
+      `)
+
+      console.log(`✅ Created ${policyCheck.rows.length} RLS policies`)
+
       // Check functions
       const functionCheck = await client.query(`
         SELECT routine_name 
         FROM information_schema.routines 
         WHERE routine_schema = 'public' 
         AND routine_name = 'cleanup_expired_refresh_tokens';
-      `);
-      
+      `)
+
       if (functionCheck.rows.length > 0) {
-        console.log('✅ Created cleanup_expired_refresh_tokens function');
+        console.log('✅ Created cleanup_expired_refresh_tokens function')
       }
-      
-      console.log('\n✨ Database initialization complete!');
-      
+
+      console.log('\n✨ Database initialization complete!')
     } catch (error: any) {
       // Check if error is because table already exists
       if (error.message.includes('already exists') || error.code === '42P07') {
-        console.log('⚠️  Warning: Table or objects already exist');
-        console.log('   This is normal if you\'ve run this script before.');
-        console.log('   Migration will continue...\n');
+        console.log('⚠️  Warning: Table or objects already exist')
+        console.log("   This is normal if you've run this script before.")
+        console.log('   Migration will continue...\n')
       } else {
-        throw error;
+        throw error
       }
     }
-
   } catch (error: any) {
-    console.error('❌ Error initializing database:', error.message);
-    
+    console.error('❌ Error initializing database:', error.message)
+
     if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
-      console.error('\n💡 DNS/Hostname Error - Possible issues:');
-      console.error('   1. Verify the hostname is correct:');
-      console.error('      - Go to Supabase Dashboard → Settings → Database');
-      console.error('      - Check the "Connection string" section');
-      console.error('      - Make sure you\'re using the "URI" format (not Transaction mode)');
-      console.error('      - The hostname should be: db.[PROJECT_REF].supabase.co');
-      console.error('');
-      console.error('   2. Connection String Types:');
-      console.error('      - Use "URI" (Direct connection) for scripts');
-      console.error('      - NOT "Transaction" or "Session" mode (those use pooler.supabase.co)');
-      console.error('');
-      console.error('   3. Verify your project reference:');
-      console.error('      - Check your NEXT_PUBLIC_SUPABASE_URL');
-      console.error('      - Extract the project reference from it');
-      console.error('      - Database host should be: db.[PROJECT_REF].supabase.co');
-      console.error('');
-      console.error('   4. Test DNS resolution:');
-      console.error('      Run: nslookup db.aadmielekvmoikgxhxmr.supabase.co');
-      console.error('      (Replace with your actual hostname)\n');
+      console.error('\n💡 DNS/Hostname Error - Possible issues:')
+      console.error('   1. Verify the hostname is correct:')
+      console.error('      - Go to Supabase Dashboard → Settings → Database')
+      console.error('      - Check the "Connection string" section')
+      console.error('      - Make sure you\'re using the "URI" format (not Transaction mode)')
+      console.error('      - The hostname should be: db.[PROJECT_REF].supabase.co')
+      console.error('')
+      console.error('   2. Connection String Types:')
+      console.error('      - Use "URI" (Direct connection) for scripts')
+      console.error('      - NOT "Transaction" or "Session" mode (those use pooler.supabase.co)')
+      console.error('')
+      console.error('   3. Verify your project reference:')
+      console.error('      - Check your NEXT_PUBLIC_SUPABASE_URL')
+      console.error('      - Extract the project reference from it')
+      console.error('      - Database host should be: db.[PROJECT_REF].supabase.co')
+      console.error('')
+      console.error('   4. Test DNS resolution:')
+      console.error('      Run: nslookup db.aadmielekvmoikgxhxmr.supabase.co')
+      console.error('      (Replace with your actual hostname)\n')
     } else if (error.code === 'ECONNREFUSED' || error.code === 'EHOSTUNREACH') {
-      console.error('\n💡 Connection Error - Possible issues:');
-      console.error('   1. Check your SUPABASE_DB_URL format');
-      console.error('      Expected: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres');
-      console.error('   2. Make sure you\'ve replaced [PASSWORD] and [PROJECT_REF] with actual values');
-      console.error('   3. Verify the connection string from Supabase Dashboard');
-      console.error('      Go to: Settings → Database → Connection string → URI');
-      console.error('   4. Ensure your IP is allowed (check Supabase Dashboard → Settings → Database → Connection pooling)\n');
+      console.error('\n💡 Connection Error - Possible issues:')
+      console.error('   1. Check your SUPABASE_DB_URL format')
+      console.error(
+        '      Expected: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres',
+      )
+      console.error(
+        "   2. Make sure you've replaced [PASSWORD] and [PROJECT_REF] with actual values",
+      )
+      console.error('   3. Verify the connection string from Supabase Dashboard')
+      console.error('      Go to: Settings → Database → Connection string → URI')
+      console.error(
+        '   4. Ensure your IP is allowed (check Supabase Dashboard → Settings → Database → Connection pooling)\n',
+      )
     } else if (error.code === '28P01') {
-      console.error('\n💡 Authentication Error:');
-      console.error('   Your database password is incorrect.');
-      console.error('   Make sure you\'re using the database password, not the API key.\n');
+      console.error('\n💡 Authentication Error:')
+      console.error('   Your database password is incorrect.')
+      console.error("   Make sure you're using the database password, not the API key.\n")
     } else if (error.message.includes('password')) {
-      console.error('\n💡 Password Error:');
-      console.error('   Make sure special characters in your password are URL-encoded.');
-      console.error('   Or use individual connection parameters instead.\n');
+      console.error('\n💡 Password Error:')
+      console.error('   Make sure special characters in your password are URL-encoded.')
+      console.error('   Or use individual connection parameters instead.\n')
     }
-    
+
     // Show connection details for debugging (without password)
     if (dbUrl) {
       // Mask password in connection string
-      const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@');
-      console.error('\n🔍 Debug info:');
-      console.error('   Connection string (masked):', maskedUrl);
-      
+      const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@')
+      console.error('\n🔍 Debug info:')
+      console.error('   Connection string (masked):', maskedUrl)
+
       // Extract and show hostname
-      const hostMatch = dbUrl.match(/@(db\.[^:/]+\.supabase\.co)/);
+      const hostMatch = dbUrl.match(/@(db\.[^:/]+\.supabase\.co)/)
       if (hostMatch) {
-        console.error(`   Hostname being resolved: ${hostMatch[1]}`);
-        console.error('   If DNS resolution fails, verify:');
-        console.error('   1. The hostname matches your project reference');
-        console.error('   2. You\'re using the "URI" connection string (not Transaction/Session mode)');
-        console.error('   3. Your Supabase project is active and not paused');
+        console.error(`   Hostname being resolved: ${hostMatch[1]}`)
+        console.error('   If DNS resolution fails, verify:')
+        console.error('   1. The hostname matches your project reference')
+        console.error(
+          '   2. You\'re using the "URI" connection string (not Transaction/Session mode)',
+        )
+        console.error('   3. Your Supabase project is active and not paused')
       }
     }
-    
-    process.exit(1);
+
+    process.exit(1)
   } finally {
-    await client.end();
-    console.log('🔌 Database connection closed');
+    await client.end()
+    console.log('🔌 Database connection closed')
   }
 }
 
 // Run the initialization
-initDatabase().catch((error) => {
-  console.error('❌ Fatal error:', error);
-  process.exit(1);
-});
+initDatabase().catch(error => {
+  console.error('❌ Fatal error:', error)
+  process.exit(1)
+})

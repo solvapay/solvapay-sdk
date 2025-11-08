@@ -119,10 +119,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 The hosted checkout page accepts standard Stripe test cards:
 
-| Card Number | Result |
-|------------|--------|
-| 4242 4242 4242 4242 | ✅ Payment succeeds |
-| 4000 0000 0000 0002 | ❌ Payment declined |
+| Card Number         | Result                |
+| ------------------- | --------------------- |
+| 4242 4242 4242 4242 | ✅ Payment succeeds   |
+| 4000 0000 0000 0002 | ❌ Payment declined   |
 | 4000 0000 0000 9995 | ❌ Insufficient funds |
 
 - Use any future expiry date
@@ -135,13 +135,12 @@ The hosted checkout page accepts standard Stripe test cards:
 
 ```tsx
 // app/layout.tsx
-import { SolvaPayProvider } from '@solvapay/react';
-
-<SolvaPayProvider
+import { SolvaPayProvider } from '@solvapay/react'
+;<SolvaPayProvider
   customerRef={customerId}
-  checkSubscription={async (customerRef) => {
-    const res = await fetch(`/api/check-subscription?customerRef=${customerRef}`);
-    return res.json();
+  checkSubscription={async customerRef => {
+    const res = await fetch(`/api/check-subscription?customerRef=${customerRef}`)
+    return res.json()
   }}
 >
   {children}
@@ -160,24 +159,24 @@ The `middleware.ts` file extracts user IDs from Supabase JWT tokens and sets the
 
 ```tsx
 // middleware.ts
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
+import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
 
 const auth = new SupabaseAuthAdapter({
-  jwtSecret: process.env.SUPABASE_JWT_SECRET!
-});
+  jwtSecret: process.env.SUPABASE_JWT_SECRET!,
+})
 
 export async function middleware(request: NextRequest) {
-  const userId = await auth.getUserIdFromRequest(request);
-  
+  const userId = await auth.getUserIdFromRequest(request)
+
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  
+
   // Set userId header for downstream routes
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-user-id', userId);
-  
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-user-id', userId)
+
+  return NextResponse.next({ request: { headers: requestHeaders } })
 }
 ```
 
@@ -185,62 +184,62 @@ The frontend sends the Supabase access token in the Authorization header:
 
 ```tsx
 // app/page.tsx
-import { getAccessToken } from './lib/supabase';
+import { getAccessToken } from './lib/supabase'
 
 const handleViewPlans = async () => {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken()
   const res = await fetch('/api/create-checkout-token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
     },
-    body: JSON.stringify({ agentRef })
-  });
-  const { checkoutUrl } = await res.json();
-  window.location.href = checkoutUrl; // Redirect to hosted checkout
-};
+    body: JSON.stringify({ agentRef }),
+  })
+  const { checkoutUrl } = await res.json()
+  window.location.href = checkoutUrl // Redirect to hosted checkout
+}
 ```
 
 ### 3. Hosted Checkout Token Generation
 
 ```typescript
 // app/api/create-checkout-token/route.ts
-import { createSolvaPay } from '@solvapay/server';
-import { requireUserId } from '@solvapay/auth';
+import { createSolvaPay } from '@solvapay/server'
+import { requireUserId } from '@solvapay/auth'
 
 export async function POST(request: NextRequest) {
   // Get userId from middleware
-  const userId = requireUserId(request);
-  
-  const { agentRef, planRef } = await request.json();
-  
-  const solvaPay = createSolvaPay();
-  
+  const userId = requireUserId(request)
+
+  const { agentRef, planRef } = await request.json()
+
+  const solvaPay = createSolvaPay()
+
   // Ensure customer exists
-  const customerRef = await solvaPay.ensureCustomer(userId, userId);
-  
+  const customerRef = await solvaPay.ensureCustomer(userId, userId)
+
   // Call backend API to create checkout token
-  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com';
+  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com'
   const response = await fetch(`${apiBaseUrl}/api/create-checkout-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`,
+      Authorization: `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`,
     },
     body: JSON.stringify({
       agentRef,
       customerRef,
       planRef, // Optional
     }),
-  });
-  
-  const { token } = await response.json();
-  
+  })
+
+  const { token } = await response.json()
+
   return NextResponse.json({
     token,
     checkoutUrl: `https://app.solvapay.com/checkout?token=${token}`,
-  });
+  })
 }
 ```
 
@@ -248,37 +247,37 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/api/create-manage-customer-token/route.ts
-import { createSolvaPay } from '@solvapay/server';
-import { requireUserId } from '@solvapay/auth';
+import { createSolvaPay } from '@solvapay/server'
+import { requireUserId } from '@solvapay/auth'
 
 export async function POST(request: NextRequest) {
   // Get userId from middleware
-  const userId = requireUserId(request);
-  
-  const solvaPay = createSolvaPay();
-  
+  const userId = requireUserId(request)
+
+  const solvaPay = createSolvaPay()
+
   // Ensure customer exists
-  const customerRef = await solvaPay.ensureCustomer(userId, userId);
-  
+  const customerRef = await solvaPay.ensureCustomer(userId, userId)
+
   // Call backend API to create customer management token
-  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com';
+  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com'
   const response = await fetch(`${apiBaseUrl}/api/create-manage-customer-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`,
+      Authorization: `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`,
     },
     body: JSON.stringify({
       customerRef,
     }),
-  });
-  
-  const { token } = await response.json();
-  
+  })
+
+  const { token } = await response.json()
+
   return NextResponse.json({
     token,
     customerUrl: `https://app.solvapay.com/customer?token=${token}`,
-  });
+  })
 }
 ```
 
@@ -288,64 +287,61 @@ export async function POST(request: NextRequest) {
 // app/page.tsx
 const handleViewPlans = async () => {
   try {
-    const accessToken = await getAccessToken();
+    const accessToken = await getAccessToken()
     const response = await fetch('/api/create-checkout-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       },
       body: JSON.stringify({ agentRef }),
-    });
-    
-    const { checkoutUrl } = await response.json();
-    window.location.href = checkoutUrl; // Redirect to hosted checkout
+    })
+
+    const { checkoutUrl } = await response.json()
+    window.location.href = checkoutUrl // Redirect to hosted checkout
   } catch (error) {
     // Handle error
   }
-};
+}
 
 const handleManageSubscription = async () => {
   try {
-    const accessToken = await getAccessToken();
+    const accessToken = await getAccessToken()
     const response = await fetch('/api/create-manage-customer-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       },
-    });
-    
-    const { customerUrl } = await response.json();
-    window.location.href = customerUrl; // Redirect to hosted customer portal
+    })
+
+    const { customerUrl } = await response.json()
+    window.location.href = customerUrl // Redirect to hosted customer portal
   } catch (error) {
     // Handle error
   }
-};
+}
 ```
 
 ### 6. Locked Content with SubscriptionGate
 
 ```tsx
 // app/page.tsx
-import { SubscriptionGate } from '@solvapay/react';
-
-<SubscriptionGate requirePlan="Pro Plan">
+import { SubscriptionGate } from '@solvapay/react'
+;<SubscriptionGate requirePlan="Pro Plan">
   {({ hasAccess, loading }) => {
-    if (loading) return <Skeleton />;
-    
+    if (loading) return <Skeleton />
+
     if (!hasAccess) {
       return (
         <div>
           <h2>🔒 Premium Content</h2>
-          <button onClick={handleViewPlans}>
-            Upgrade Now
-          </button>
+          <button onClick={handleViewPlans}>Upgrade Now</button>
         </div>
-      );
+      )
     }
-    
-    return <PremiumContent />;
+
+    return <PremiumContent />
   }}
 </SubscriptionGate>
 ```
@@ -406,6 +402,7 @@ hosted-checkout-demo/
 ### Hosted Checkout vs Embedded Checkout
 
 **Hosted Checkout (this demo)**:
+
 - Users redirected to `app.solvapay.com` for checkout
 - Payment form handled entirely by SolvaPay
 - Similar to Stripe Checkout hosted pages
@@ -413,6 +410,7 @@ hosted-checkout-demo/
 - Consistent checkout experience
 
 **Embedded Checkout (checkout-demo)**:
+
 - Payment form embedded in your app
 - More customization control
 - Requires more PCI compliance considerations
@@ -421,6 +419,7 @@ hosted-checkout-demo/
 ### Token-Based Access
 
 Tokens are generated server-side and passed as query parameters to hosted pages:
+
 - Checkout tokens: Single-use tokens for checkout sessions
 - Management tokens: Tokens for accessing customer portal
 - Tokens are time-limited and secure (handled by backend)
@@ -428,6 +427,7 @@ Tokens are generated server-side and passed as query parameters to hosted pages:
 ### Subscription State Management
 
 The provider automatically:
+
 - Fetches subscription on mount
 - Provides refetch method for updates
 - Exposes helper methods (`hasActiveSubscription`, `hasPlan`)
@@ -436,6 +436,7 @@ The provider automatically:
 ### Authentication
 
 This demo uses Supabase for authentication:
+
 - Middleware extracts user IDs from Supabase JWT tokens on all `/api/*` routes
 - User IDs are set as `x-user-id` header for downstream routes
 - Middleware returns 401 if authentication fails
@@ -444,6 +445,7 @@ This demo uses Supabase for authentication:
 - The `customerRef` prop passed to `SolvaPayProvider` uses the Supabase user ID as a cache key (the actual SolvaPay backend customer reference is returned from API calls)
 
 **Sign-in Methods:**
+
 - Email/password authentication
 - Google OAuth (requires Google OAuth setup in Supabase dashboard)
 
@@ -466,25 +468,27 @@ This demo uses Supabase for authentication:
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `SOLVAPAY_SECRET_KEY` | Your SolvaPay secret key | Yes |
-| `SOLVAPAY_API_BASE_URL` | Backend URL (defaults to prod) | No |
-| `NEXT_PUBLIC_AGENT_REF` | Agent reference | No |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | Yes |
-| `SUPABASE_JWT_SECRET` | Supabase JWT secret (for server verification) | Yes |
+| Variable                        | Description                                   | Required |
+| ------------------------------- | --------------------------------------------- | -------- |
+| `SOLVAPAY_SECRET_KEY`           | Your SolvaPay secret key                      | Yes      |
+| `SOLVAPAY_API_BASE_URL`         | Backend URL (defaults to prod)                | No       |
+| `NEXT_PUBLIC_AGENT_REF`         | Agent reference                               | No       |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                          | Yes      |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key                      | Yes      |
+| `SUPABASE_JWT_SECRET`           | Supabase JWT secret (for server verification) | Yes      |
 
 ## Backend Endpoints
 
 This demo expects the following backend endpoints to be implemented:
 
 ### Create Checkout Token
+
 - **Endpoint**: `POST /api/create-checkout-token`
 - **Request**: `{ agentRef: string, customerRef: string, planRef?: string }`
 - **Response**: `{ token: string }`
 
 ### Create Manage Customer Token
+
 - **Endpoint**: `POST /api/create-manage-customer-token`
 - **Request**: `{ customerRef: string }`
 - **Response**: `{ token: string }`
@@ -500,13 +504,13 @@ Always generate tokens server-side for security:
 ```typescript
 // ✅ Good: Server-side token generation
 export async function POST(request: NextRequest) {
-  const userId = requireUserId(request);
-  const { token } = await createCheckoutToken(userId);
-  return NextResponse.json({ checkoutUrl: `https://app.solvapay.com/checkout?token=${token}` });
+  const userId = requireUserId(request)
+  const { token } = await createCheckoutToken(userId)
+  return NextResponse.json({ checkoutUrl: `https://app.solvapay.com/checkout?token=${token}` })
 }
 
 // ❌ Bad: Client-side token generation (security risk)
-const token = await generateToken(); // Never do this!
+const token = await generateToken() // Never do this!
 ```
 
 ### 2. Return URL Configuration
@@ -514,7 +518,7 @@ const token = await generateToken(); // Never do this!
 Configure return URLs properly:
 
 ```typescript
-const checkoutUrl = `https://app.solvapay.com/checkout?token=${token}&returnUrl=${encodeURIComponent('https://yourdomain.com/checkout/complete')}`;
+const checkoutUrl = `https://app.solvapay.com/checkout?token=${token}&returnUrl=${encodeURIComponent('https://yourdomain.com/checkout/complete')}`
 ```
 
 ### 3. Subscription Refetching
@@ -525,10 +529,10 @@ Always refetch subscription after returning from hosted checkout:
 // app/checkout/complete/page.tsx
 useEffect(() => {
   const refetchSubscription = async () => {
-    await refetch(); // Update subscription status
-  };
-  refetchSubscription();
-}, []);
+    await refetch() // Update subscription status
+  }
+  refetchSubscription()
+}, [])
 ```
 
 ### 4. Error Handling
@@ -538,13 +542,13 @@ Handle checkout errors gracefully:
 ```tsx
 const handleViewPlans = async () => {
   try {
-    const { checkoutUrl } = await createCheckoutToken();
-    window.location.href = checkoutUrl;
+    const { checkoutUrl } = await createCheckoutToken()
+    window.location.href = checkoutUrl
   } catch (error) {
     // Show error message to user
-    setError('Failed to start checkout. Please try again.');
+    setError('Failed to start checkout. Please try again.')
   }
-};
+}
 ```
 
 ### 5. Customer Portal Access
@@ -553,9 +557,9 @@ Provide easy access to customer portal:
 
 ```tsx
 const handleManageSubscription = async () => {
-  const { customerUrl } = await createCustomerSessionToken();
-  window.location.href = customerUrl;
-};
+  const { customerUrl } = await createCustomerSessionToken()
+  window.location.href = customerUrl
+}
 ```
 
 ## Troubleshooting
@@ -565,6 +569,7 @@ const handleManageSubscription = async () => {
 **Problem**: Error about missing secret key.
 
 **Solution**:
+
 1. Ensure `.env.local` exists in the example directory
 2. Copy from `env.example` if needed: `cp env.example .env.local`
 3. Add your SolvaPay secret key to `.env.local`
@@ -576,6 +581,7 @@ const handleManageSubscription = async () => {
 **Problem**: Checkout token creation fails.
 
 **Solution**:
+
 1. Check your SolvaPay API key is valid in the dashboard
 2. Verify the backend URL is correct (`SOLVAPAY_API_BASE_URL`)
 3. Ensure backend endpoint `/api/create-checkout-token` is implemented
@@ -589,6 +595,7 @@ const handleManageSubscription = async () => {
 **Problem**: Backend response doesn't include token.
 
 **Solution**:
+
 1. Verify backend endpoint is returning `{ token: string }` in response
 2. Check backend logs for errors
 3. Verify response format matches expected structure
@@ -600,11 +607,12 @@ const handleManageSubscription = async () => {
 **Problem**: Payment succeeds but subscription status doesn't update after returning from hosted checkout.
 
 **Solution**:
+
 1. Check that `refetch()` is called after returning from hosted checkout:
    ```tsx
    useEffect(() => {
-     refetch();
-   }, []);
+     refetch()
+   }, [])
    ```
 2. Verify API returns proper subscription format
 3. Check browser console for errors
@@ -618,6 +626,7 @@ const handleManageSubscription = async () => {
 **Problem**: SolvaPay components don't appear or throw errors.
 
 **Solution**:
+
 1. Ensure you're inside `<SolvaPayProvider>`
 2. Check that hooks are called in functional components
 3. Verify all required props are provided
@@ -629,6 +638,7 @@ const handleManageSubscription = async () => {
 **Problem**: After checkout, user is not redirected back to app.
 
 **Solution**:
+
 1. Verify return URL is configured in checkout token creation
 2. Check that return URL matches your app's domain
 3. Ensure return URL is added to allowed redirects in SolvaPay dashboard
@@ -648,23 +658,27 @@ const handleManageSubscription = async () => {
 ## Related Documentation
 
 ### Getting Started
+
 - [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
 - [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
 - [Quick Start Guide](../../docs/getting-started/quick-start.md) - Quick setup guide
 - [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
+
 - [React Integration Guide](../../docs/guides/react.md) - Complete React integration guide
 - [Next.js Integration Guide](../../docs/guides/nextjs.md) - Next.js specific patterns
 - [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
 - [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
 
 ### API Reference
+
 - [React SDK API Reference](../../docs/api/react/) - Complete React component documentation
 - [Server SDK API Reference](../../docs/api/server/) - Backend API documentation
 - [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
 
 ### Additional Resources
+
 - [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
 - [Stripe Checkout Documentation](https://stripe.com/docs/payments/checkout) - Similar hosted checkout pattern
 - [Next.js Documentation](https://nextjs.org/docs) - Next.js framework docs
@@ -673,6 +687,7 @@ const handleManageSubscription = async () => {
 ## Support
 
 For issues or questions:
+
 - GitHub Issues: https://github.com/solvapay/solvapay-sdk/issues
 - Documentation: https://docs.solvapay.com
 - Email: contact@solvapay.com

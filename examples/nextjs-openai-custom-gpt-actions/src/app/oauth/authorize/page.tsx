@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 
 /**
  * OAuth Authorize Page
- * 
+ *
  * Redirects to the API route that will initiate Supabase OAuth flow.
  * This page is kept for compatibility but immediately redirects.
  */
@@ -36,12 +36,8 @@ function OAuthAuthorizeRedirect() {
     <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
       <div className="max-w-md mx-auto py-10 px-5 relative font-sans">
         <div className="text-center mb-10 mt-5">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-            Redirecting...
-          </h1>
-          <p className="text-base text-gray-600">
-            Initiating OAuth flow with Supabase
-          </p>
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">Redirecting...</h1>
+          <p className="text-base text-gray-600">Initiating OAuth flow with Supabase</p>
           <div className="mt-6">
             <div className="w-6 h-6 border-2 border-transparent border-t-blue-600 rounded-full animate-spin mx-auto"></div>
           </div>
@@ -53,20 +49,18 @@ function OAuthAuthorizeRedirect() {
 
 export default function OAuthAuthorizePage() {
   return (
-    <Suspense fallback={
-      <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
-        <div className="max-w-md mx-auto py-10 px-5 relative font-sans">
-          <div className="text-center mb-10 mt-5">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-              OAuth Login
-            </h1>
-            <p className="text-base text-gray-600">
-              Loading...
-            </p>
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
+          <div className="max-w-md mx-auto py-10 px-5 relative font-sans">
+            <div className="text-center mb-10 mt-5">
+              <h1 className="text-3xl font-semibold text-gray-900 mb-2">OAuth Login</h1>
+              <p className="text-base text-gray-600">Loading...</p>
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <OAuthAuthorizeRedirect />
     </Suspense>
   )

@@ -50,6 +50,9 @@ importers:
       nodemon:
         specifier: ^3.1.0
         version: 3.1.10
+      prettier:
+        specifier: ^3.6.2
+        version: 3.6.2
       tsup:
         specifier: ^8.0.1
         version: 8.5.0(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.2)(yaml@2.8.1)
@@ -317,7 +320,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.0.0
-        version: 15.5.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.0
         version: 18.3.1
@@ -4089,6 +4092,11 @@ packages:
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
+
+  prettier@3.6.2:
+    resolution: {integrity: sha512-I7AIg5boAr5R0FFtJ6rCfD+LFsWHp81dolrFD8S79U9tb8Az2nGrJncnMSnys+bpQJfRUzqs9hnA81OAA3hCuQ==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
@@ -8454,7 +8462,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@15.5.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@15.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 15.5.3
       '@swc/helpers': 0.5.15
@@ -8462,7 +8470,7 @@ snapshots:
       postcss: 8.4.31
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      styled-jsx: 5.1.6(@babel/core@7.28.4)(react@18.3.1)
+      styled-jsx: 5.1.6(react@18.3.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.5.3
       '@next/swc-darwin-x64': 15.5.3
@@ -8836,6 +8844,8 @@ snapshots:
       xtend: 4.0.2
 
   prelude-ls@1.2.1: {}
+
+  prettier@3.6.2: {}
 
   pretty-format@27.5.1:
     dependencies:
@@ -9361,12 +9371,10 @@ snapshots:
       '@types/node': 20.19.14
       qs: 6.13.0
 
-  styled-jsx@5.1.6(@babel/core@7.28.4)(react@18.3.1):
+  styled-jsx@5.1.6(react@18.3.1):
     dependencies:
       client-only: 0.0.1
       react: 18.3.1
-    optionalDependencies:
-      '@babel/core': 7.28.4
 
   styled-jsx@5.1.6(react@19.2.0):
     dependencies:

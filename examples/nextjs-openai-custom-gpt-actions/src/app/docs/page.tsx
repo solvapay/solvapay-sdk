@@ -15,7 +15,7 @@ export default function DocsPage() {
     try {
       setLoading(true)
       setError(null)
-      
+
       const response = await fetch('/api/docs/json')
       if (response.ok) {
         const spec = await response.json()
@@ -59,7 +59,11 @@ export default function DocsPage() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <div className="flex items-center">
             <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
             </svg>
             <span className="text-sm font-medium text-red-800">{error}</span>
           </div>
@@ -89,8 +93,7 @@ export default function DocsPage() {
               <h3 className="text-lg font-medium text-gray-900">{openApiSpec.info?.title}</h3>
               <p className="text-gray-600">{openApiSpec.info?.description}</p>
               <p className="text-sm text-gray-500 mt-2">
-                Version: {openApiSpec.info?.version} | 
-                OpenAPI: {openApiSpec.openapi}
+                Version: {openApiSpec.info?.version} | OpenAPI: {openApiSpec.openapi}
               </p>
             </div>
           </div>
@@ -108,16 +111,24 @@ export default function DocsPage() {
                 <div className="space-y-2">
                   {Object.entries(methods).map(([method, details]: [string, any]) => (
                     <div key={method} className="flex items-center space-x-3">
-                      <span className={`text-xs px-2 py-1 rounded font-medium ${
-                        method === 'get' ? 'bg-blue-100 text-blue-800' :
-                        method === 'post' ? 'bg-green-100 text-green-800' :
-                        method === 'put' ? 'bg-yellow-100 text-yellow-800' :
-                        method === 'delete' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded font-medium ${
+                          method === 'get'
+                            ? 'bg-blue-100 text-blue-800'
+                            : method === 'post'
+                              ? 'bg-green-100 text-green-800'
+                              : method === 'put'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : method === 'delete'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
                         {method.toUpperCase()}
                       </span>
-                      <span className="text-sm text-gray-700">{details.summary || details.operationId}</span>
+                      <span className="text-sm text-gray-700">
+                        {details.summary || details.operationId}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -140,7 +151,7 @@ export default function DocsPage() {
             <h3 className="text-sm font-medium text-gray-900">Swagger UI</h3>
             <p className="text-sm text-gray-600">Interactive API documentation</p>
           </a>
-          
+
           <a
             href="/api/docs/json"
             target="_blank"
@@ -150,7 +161,7 @@ export default function DocsPage() {
             <h3 className="text-sm font-medium text-gray-900">OpenAPI JSON</h3>
             <p className="text-sm text-gray-600">Raw OpenAPI specification</p>
           </a>
-          
+
           <a
             href="/api/openapi.json"
             target="_blank"

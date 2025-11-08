@@ -39,11 +39,13 @@ A dropdown will appear with the following inputs:
 ### 4. Fill in the Inputs
 
 **Version** (Required)
+
 - Enter the exact version you want to tag as "latest"
 - Format: `X.Y.Z` or `X.Y.Z-preview.N`
 - Example: `1.0.0-preview.9`
 
 **Dry run** (Optional)
+
 - ☑ Check this box to preview what would be tagged **without making changes**
 - ☐ Leave unchecked to actually tag the version as latest
 - Recommended: Run with dry run first!
@@ -65,15 +67,18 @@ Click the **"Run workflow"** button at the bottom of the dropdown.
 **Scenario:** You want to check if `1.0.0-preview.9` can be tagged as latest.
 
 **Inputs:**
+
 - Version: `1.0.0-preview.9`
 - Dry run: ☑ **Enabled**
 
 **What happens:**
+
 - Shows which packages exist at that version
 - Shows which packages would be skipped (not published)
 - **No changes made to npm**
 
 **Output Example:**
+
 ```
 🔍 DRY RUN MODE - No changes will be made
 
@@ -99,16 +104,19 @@ Checking which versions exist on npm...
 **Scenario:** You've verified with dry run and want to promote the version.
 
 **Inputs:**
+
 - Version: `1.0.0-preview.9`
 - Dry run: ☐ **Disabled**
 
 **What happens:**
+
 - Tags all published packages at that version as "latest"
 - Skips unpublished packages automatically
 - Shows verification of tags
 - **Changes npm dist-tags**
 
 **Output Example:**
+
 ```
 🏷️  Tag as Latest
 
@@ -132,6 +140,7 @@ Tagging @solvapay/react@1.0.0-preview.9 as "latest"...
 You've been testing `1.0.0-preview.9` and it's stable. You want users to get this version when they run `npm install @solvapay/core`.
 
 **Steps:**
+
 1. Run with dry run enabled to verify
 2. Run again with dry run disabled to apply
 
@@ -140,6 +149,7 @@ You've been testing `1.0.0-preview.9` and it's stable. You want users to get thi
 Latest (`1.0.1`) has a bug. You want to rollback to the previous version (`1.0.0`).
 
 **Steps:**
+
 1. Enter version: `1.0.0`
 2. Disable dry run
 3. Run workflow
@@ -149,6 +159,7 @@ Latest (`1.0.1`) has a bug. You want to rollback to the previous version (`1.0.0
 You're not sure if a version exists on npm.
 
 **Steps:**
+
 1. Enter the version you want to check
 2. Enable dry run
 3. Run workflow to see which packages exist
@@ -167,6 +178,7 @@ npm dist-tag ls @solvapay/core
 ```
 
 Or visit npm directly:
+
 - https://www.npmjs.com/package/@solvapay/core?activeTab=versions
 - https://www.npmjs.com/package/@solvapay/react?activeTab=versions
 
@@ -175,6 +187,7 @@ Or visit npm directly:
 ### ❌ "Invalid version format"
 
 **Error:**
+
 ```
 ❌ Invalid version format: 1.0.0preview9
 Expected format: X.Y.Z or X.Y.Z-preview.N
@@ -185,6 +198,7 @@ Expected format: X.Y.Z or X.Y.Z-preview.N
 ### ⚠️ "Version not found"
 
 **Warning:**
+
 ```
 ⚠️ Version 1.0.0-preview.9 not found for @solvapay/react-supabase (skipping)
 ```
@@ -194,11 +208,13 @@ Expected format: X.Y.Z or X.Y.Z-preview.N
 ### ❌ "401 Unauthorized"
 
 **Error:**
+
 ```
 ❌ Failed to tag @solvapay/core: 401 Unauthorized
 ```
 
-**Solution:** 
+**Solution:**
+
 - Check that `NPM_TOKEN` secret is set in repository settings
 - Verify the token has publish permissions
 - Token may have expired - generate a new one
@@ -227,4 +243,3 @@ The workflow includes several safety features:
 - See [Publishing Documentation](../../docs/publishing.md) for more details
 - Check workflow logs for detailed error messages
 - Run with dry run enabled to diagnose issues
-

@@ -4,2588 +4,2588 @@
  */
 
 export interface paths {
-    "/v1/sdk/limits": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Check usage limits for a customer
-         * Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout session ID and URL if payment is required. Checkout URL is based on backend configuration and matches the environment.
-         */
-        post: operations["LimitsSdkController_checkLimit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/usages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record usage event
-         * Records a usage event for a customer action against an agent. This is a high-volume endpoint.
-         */
-        post: operations["UsageSdkController_recordUsage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/usages/bulk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record multiple usage events
-         * Records multiple usage events in a single request for better performance.
-         */
-        post: operations["UsageSdkController_recordBulkUsage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer by reference or externalRef
-         * Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
-         */
-        get: operations["CustomerSdkController_getCustomerByQuery"];
-        put?: never;
-        /**
-         * Create a new customer
-         * Creates a new customer record for the authenticated provider. Customers represent end-users who will use your AI agents. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
-         */
-        post: operations["CustomerSdkController_createCustomer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/{reference}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer by reference
-         * Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
-         */
-        get: operations["CustomerSdkController_getCustomer"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/customer-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a customer session
-         * Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
-         */
-        post: operations["CustomerSdkController_createCustomerSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/customer-sessions/{sessionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer session by sessionId
-         * Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
-         */
-        get: operations["CustomerSdkController_getCustomerSession"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/payment-intents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List payment intents for the provider
-         * Retrieves a paginated list of all payment intents created by the authenticated provider. Supports pagination through limit and offset query parameters.
-         */
-        get: operations["PaymentIntentSdkController_getPaymentIntents"];
-        put?: never;
-        /**
-         * Create a payment intent
-         * Creates a new payment intent for a customer to subscribe to a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
-         */
-        post: operations["PaymentIntentSdkController_createPaymentIntent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/payment-intents/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get a specific payment intent by ID
-         * Retrieves detailed information about a specific payment intent including amount, currency, and client secret for Stripe integration.
-         */
-        get: operations["PaymentIntentSdkController_getPaymentIntent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/payment-intents/{id}/process": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Process payment intent after client-side confirmation
-         * Processes a payment intent that has been confirmed on the client-side using Stripe.js. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
-         */
-        post: operations["PaymentIntentSdkController_processPaymentIntent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/agents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List agents for the provider
-         * Retrieves a paginated list of all agents created by the authenticated provider, including their associated plans. Supports pagination through limit and offset query parameters, and filtering by search, categories, and status.
-         */
-        get: operations["AgentSdkController_listAgents"];
-        put?: never;
-        /**
-         * Create a new agent
-         * Creates a new AI agent that can be offered to customers through plans. The agent will be associated with the authenticated provider.
-         */
-        post: operations["AgentSdkController_createAgent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/agents/avatar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Upload agent avatar
-         * Uploads an avatar image for an agent.
-         */
-        post: operations["AgentSdkController_uploadAvatar"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/agents/{agentRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Update an agent
-         * Updates an existing agent by its reference. Only the authenticated provider can update their own agents.
-         */
-        put: operations["AgentSdkController_updateAgent"];
-        post?: never;
-        /**
-         * Delete an agent
-         * Permanently deletes an agent by its reference. Only the authenticated provider can delete their own agents. This action cannot be undone.
-         */
-        delete: operations["AgentSdkController_deleteAgent"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/agents/{agentRef}/plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List plans for an agent
-         * Retrieves all plans associated with a specific agent. Supports pagination and filtering.
-         */
-        get: operations["PlanSdkController_listPlans"];
-        put?: never;
-        /**
-         * Create a new plan for an agent
-         * Creates a new pricing plan for a specific agent. The plan will be associated with the authenticated provider and the specified agent.
-         */
-        post: operations["PlanSdkController_createPlan"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/agents/{agentRef}/plans/{planRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get a specific plan
-         * Retrieves a specific plan by its reference for the authenticated agent.
-         */
-        get: operations["PlanSdkController_getPlan"];
-        /**
-         * Update a plan
-         * Updates an existing plan by its reference.
-         */
-        put: operations["PlanSdkController_updatePlan"];
-        post?: never;
-        /**
-         * Delete a plan
-         * Deletes a plan by its reference. The plan will be automatically removed from all agents that reference it.
-         */
-        delete: operations["PlanSdkController_deletePlan"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/subscriptions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get all subscriptions for provider
-         * Retrieves all subscriptions for the authenticated provider.
-         */
-        get: operations["SubscriptionSdkController_getSubscriptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/subscriptions/customer/{customerRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get subscriptions by customer reference
-         * Retrieves all subscriptions for a specific customer using their reference ID. Only returns subscriptions owned by the authenticated provider.
-         */
-        get: operations["SubscriptionSdkController_getSubscriptionsByCustomer"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/subscriptions/agent/{agentRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get subscriptions by agent reference
-         * Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
-         */
-        get: operations["SubscriptionSdkController_getSubscriptionsByAgent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/subscriptions/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get subscription by ID
-         * Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
-         */
-        get: operations["SubscriptionSdkController_getSubscriptionById"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/subscriptions/{subscriptionRef}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cancel a subscription
-         * Cancels an active subscription using its reference ID. Only subscriptions owned by the authenticated provider can be cancelled.
-         */
-        post: operations["SubscriptionSdkController_cancelSubscription"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/checkout-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a checkout session for a customer
-         * Creates a checkout session token that can be used to redirect customers to the checkout page. If planRef is provided, a payment intent is also created and the session is ready for immediate payment. If planRef is not provided, the customer will select a plan on the checkout page. Returns the session token and full checkout URL based on backend configuration.
-         */
-        post: operations["CheckoutSessionSdkController_createCheckoutSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
+  '/v1/sdk/limits': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Check usage limits for a customer
+     * Verifies if a customer has remaining quota to perform an action. Returns whether the customer is within limits, how much quota remains, and optionally a checkout session ID and URL if payment is required. Checkout URL is based on backend configuration and matches the environment.
+     */
+    post: operations['LimitsSdkController_checkLimit']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/usages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Record usage event
+     * Records a usage event for a customer action against an agent. This is a high-volume endpoint.
+     */
+    post: operations['UsageSdkController_recordUsage']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/usages/bulk': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Record multiple usage events
+     * Records multiple usage events in a single request for better performance.
+     */
+    post: operations['UsageSdkController_recordBulkUsage']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/customers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get customer by reference or externalRef
+     * Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+     */
+    get: operations['CustomerSdkController_getCustomerByQuery']
+    put?: never
+    /**
+     * Create a new customer
+     * Creates a new customer record for the authenticated provider. Customers represent end-users who will use your AI agents. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
+     */
+    post: operations['CustomerSdkController_createCustomer']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/customers/{reference}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get customer by reference
+     * Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+     */
+    get: operations['CustomerSdkController_getCustomer']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/customers/customer-sessions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Create a customer session
+     * Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
+     */
+    post: operations['CustomerSdkController_createCustomerSession']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/customers/customer-sessions/{sessionId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get customer session by sessionId
+     * Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
+     */
+    get: operations['CustomerSdkController_getCustomerSession']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List payment intents for the provider
+     * Retrieves a paginated list of all payment intents created by the authenticated provider. Supports pagination through limit and offset query parameters.
+     */
+    get: operations['PaymentIntentSdkController_getPaymentIntents']
+    put?: never
+    /**
+     * Create a payment intent
+     * Creates a new payment intent for a customer to subscribe to a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+     */
+    post: operations['PaymentIntentSdkController_createPaymentIntent']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get a specific payment intent by ID
+     * Retrieves detailed information about a specific payment intent including amount, currency, and client secret for Stripe integration.
+     */
+    get: operations['PaymentIntentSdkController_getPaymentIntent']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents/{id}/process': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Process payment intent after client-side confirmation
+     * Processes a payment intent that has been confirmed on the client-side using Stripe.js. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
+     */
+    post: operations['PaymentIntentSdkController_processPaymentIntent']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/agents': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List agents for the provider
+     * Retrieves a paginated list of all agents created by the authenticated provider, including their associated plans. Supports pagination through limit and offset query parameters, and filtering by search, categories, and status.
+     */
+    get: operations['AgentSdkController_listAgents']
+    put?: never
+    /**
+     * Create a new agent
+     * Creates a new AI agent that can be offered to customers through plans. The agent will be associated with the authenticated provider.
+     */
+    post: operations['AgentSdkController_createAgent']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/agents/avatar': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Upload agent avatar
+     * Uploads an avatar image for an agent.
+     */
+    post: operations['AgentSdkController_uploadAvatar']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/agents/{agentRef}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Update an agent
+     * Updates an existing agent by its reference. Only the authenticated provider can update their own agents.
+     */
+    put: operations['AgentSdkController_updateAgent']
+    post?: never
+    /**
+     * Delete an agent
+     * Permanently deletes an agent by its reference. Only the authenticated provider can delete their own agents. This action cannot be undone.
+     */
+    delete: operations['AgentSdkController_deleteAgent']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/agents/{agentRef}/plans': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List plans for an agent
+     * Retrieves all plans associated with a specific agent. Supports pagination and filtering.
+     */
+    get: operations['PlanSdkController_listPlans']
+    put?: never
+    /**
+     * Create a new plan for an agent
+     * Creates a new pricing plan for a specific agent. The plan will be associated with the authenticated provider and the specified agent.
+     */
+    post: operations['PlanSdkController_createPlan']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/agents/{agentRef}/plans/{planRef}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get a specific plan
+     * Retrieves a specific plan by its reference for the authenticated agent.
+     */
+    get: operations['PlanSdkController_getPlan']
+    /**
+     * Update a plan
+     * Updates an existing plan by its reference.
+     */
+    put: operations['PlanSdkController_updatePlan']
+    post?: never
+    /**
+     * Delete a plan
+     * Deletes a plan by its reference. The plan will be automatically removed from all agents that reference it.
+     */
+    delete: operations['PlanSdkController_deletePlan']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/subscriptions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get all subscriptions for provider
+     * Retrieves all subscriptions for the authenticated provider.
+     */
+    get: operations['SubscriptionSdkController_getSubscriptions']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/subscriptions/customer/{customerRef}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get subscriptions by customer reference
+     * Retrieves all subscriptions for a specific customer using their reference ID. Only returns subscriptions owned by the authenticated provider.
+     */
+    get: operations['SubscriptionSdkController_getSubscriptionsByCustomer']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/subscriptions/agent/{agentRef}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get subscriptions by agent reference
+     * Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
+     */
+    get: operations['SubscriptionSdkController_getSubscriptionsByAgent']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/subscriptions/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get subscription by ID
+     * Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
+     */
+    get: operations['SubscriptionSdkController_getSubscriptionById']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/subscriptions/{subscriptionRef}/cancel': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Cancel a subscription
+     * Cancels an active subscription using its reference ID. Only subscriptions owned by the authenticated provider can be cancelled.
+     */
+    post: operations['SubscriptionSdkController_cancelSubscription']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/checkout-sessions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Create a checkout session for a customer
+     * Creates a checkout session token that can be used to redirect customers to the checkout page. If planRef is provided, a payment intent is also created and the session is ready for immediate payment. If planRef is not provided, the customer will select a plan on the checkout page. Returns the session token and full checkout URL based on backend configuration.
+     */
+    post: operations['CheckoutSessionSdkController_createCheckoutSession']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 export interface components {
-    schemas: {
-        CreateSecretKey: Record<string, never>;
-        CheckName: Record<string, never>;
-        CreateAdminAgent: Record<string, never>;
-        UpdateAdminAgent: Record<string, never>;
-        Signup: Record<string, never>;
-        AuthResponse: Record<string, never>;
-        Login: Record<string, never>;
-        ForgotPassword: Record<string, never>;
-        ResetPassword: Record<string, never>;
-        VerifyEmail: Record<string, never>;
-        CreateUser: Record<string, never>;
-        UpdateUser: Record<string, never>;
-        UpdateProfile: Record<string, never>;
-        UpdatePreferences: Record<string, never>;
-        ChangePassword: Record<string, never>;
-        RequestEmailChange: Record<string, never>;
-        CreateConnectedAccount: Record<string, never>;
-        UpdateConnectedAccount: Record<string, never>;
-        CreatePlanRequest: Record<string, never>;
-        UpdatePlanRequest: Record<string, never>;
-        CreateCustomerSessionRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-        };
-        CustomerSessionResponse: {
-            /**
-             * Customer session ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
-             * Public session ID used in customer URL
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            sessionId: string;
-            /**
-             * Session status
-             * @example active
-             */
-            status: string;
-            /**
-             * Customer URL to open the customer page
-             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-             */
-            customerUrl: string;
-        };
-        ExecuteAnalyticsQuery: Record<string, never>;
-        ExecuteMultipleQueries: Record<string, never>;
-        CreateCheckoutSessionRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Agent reference identifier
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef: string;
-            /**
-             * Plan reference identifier (optional)
-             * @example pln_2b3c4d5e6f7g
-             */
-            planRef?: string;
-            /**
-             * URL to redirect to after successful payment (optional)
-             * @example https://example.com/payment-success
-             */
-            returnUrl?: string;
-        };
-        CheckoutSessionResponse: {
-            /**
-             * Checkout session ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
-             * Public session ID used in checkout URL
-             * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
-             */
-            sessionId: string;
-            /**
-             * Amount in cents
-             * @example 2999
-             */
-            amount: number;
-            /**
-             * Currency code
-             * @example USD
-             */
-            currency: string;
-            /**
-             * Session status
-             * @example active
-             */
-            status: string;
-            /**
-             * Checkout URL to open the checkout page
-             * @example https://solvapay.com/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
-             */
-            checkoutUrl: string;
-        };
-        CancelSubscriptionRequest: {
-            /**
-             * Reason for cancellation
-             * @example Customer request
-             */
-            reason?: string;
-        };
-        CheckLimitRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Agent reference identifier
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef: string;
-        };
-        LimitResponse: {
-            /**
-             * Whether the customer is within their usage limits
-             * @example true
-             */
-            withinLimits: boolean;
-            /**
-             * Remaining usage units before hitting the limit
-             * @example 997
-             */
-            remaining: number;
-            /**
-             * Optional checkout session ID/token if payment is required
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            checkoutSessionId?: string;
-            /**
-             * Optional full checkout URL if payment is required (based on backend configuration)
-             * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
-             */
-            checkoutUrl?: string;
-        };
-        UsageEvent: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Agent reference identifier
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef: string;
-            /**
-             * Outcome of the action
-             * @example success
-             * @enum {string}
-             */
-            outcome: "success" | "paywall" | "fail";
-            /**
-             * Optional action identifier
-             * @example generate_text
-             */
-            action?: string;
-            /**
-             * Unique request identifier matching the limits check
-             * @example req_1a2b3c4d5e6f
-             */
-            requestId: string;
-            /**
-             * Duration of the action in milliseconds
-             * @example 1250
-             */
-            actionDuration: number;
-            /**
-             * ISO 8601 timestamp of when the action occurred
-             * @example 2025-10-21T10:30:00.000Z
-             */
-            timestamp: string;
-        };
-        CreateCustomerRequest: {
-            /**
-             * Customer email address (required)
-             * @example customer@example.com
-             */
-            email: string;
-            /**
-             * Customer full name (optional)
-             * @example John Doe
-             */
-            name?: string;
-            /**
-             * External reference ID from your auth system to map this customer to an auth user (optional)
-             * @example auth_user_12345
-             */
-            externalRef?: string;
-        };
-        SubscriptionInfo: {
-            /**
-             * Subscription reference
-             * @example sub_abc123
-             */
-            reference: string;
-            /**
-             * Plan name
-             * @example Pro Plan
-             */
-            planName: string;
-            /**
-             * Agent name
-             * @example AI Assistant
-             */
-            agentName: string;
-            /**
-             * Subscription status
-             * @example active
-             */
-            status: string;
-            /**
-             * Start date
-             * @example 2025-10-27T10:00:00Z
-             */
-            startDate: string;
-            /**
-             * Amount paid in original currency (in cents)
-             * @example 9900
-             */
-            amount: number;
-            /**
-             * Currency code
-             * @example USD
-             */
-            currency: string;
-            /**
-             * End date of subscription
-             * @example 2025-11-27T10:00:00Z
-             */
-            endDate?: string;
-            /**
-             * When subscription was cancelled
-             * @example 2025-10-28T10:00:00Z
-             */
-            cancelledAt?: string;
-            /**
-             * Reason for cancellation
-             * @example Customer request
-             */
-            cancellationReason?: string;
-        };
-        CustomerResponse: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            reference: string;
-            /**
-             * Customer full name
-             * @example John Doe
-             */
-            name: string;
-            /**
-             * Customer email address
-             * @example customer@example.com
-             */
-            email: string;
-            /**
-             * External reference ID from your auth system (if set during creation or update)
-             * @example auth_user_12345
-             */
-            externalRef?: string;
-            /** Active subscriptions */
-            subscriptions?: components["schemas"]["SubscriptionInfo"][];
-        };
-        CreateCustomerSessionResponse: {
-            /**
-             * Customer session ID/token
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            sessionId: string;
-            /**
-             * Full customer URL based on backend configuration (ready to redirect customer)
-             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-             */
-            customerUrl: string;
-        };
-        GetCustomerSessionResponse: {
-            /**
-             * Customer session ID/token
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            sessionId: string;
-            /**
-             * Session status
-             * @example active
-             * @enum {string}
-             */
-            status: "active" | "expired" | "used";
-            /**
-             * Full customer URL based on backend configuration (ready to redirect customer)
-             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-             */
-            customerUrl: string;
-            /**
-             * Session expiration date
-             * @example 2025-01-01T12:00:00.000Z
-             */
-            expiresAt: string;
-            /** Customer object from session data */
-            customer: components["schemas"]["CustomerResponse"];
-            /**
-             * Session creation date
-             * @example 2025-01-01T11:45:00.000Z
-             */
-            createdAt: string;
-            /**
-             * Session last update date
-             * @example 2025-01-01T11:45:00.000Z
-             */
-            updatedAt: string;
-        };
-        Agent: Record<string, never>;
-        CreateAgentRequest: Record<string, never>;
-        UpdateAgentRequest: Record<string, never>;
-        BasePlan: Record<string, never>;
-        SubscriptionResponse: {
-            /**
-             * Subscription reference identifier
-             * @example sub_1a2b3c4d5e6f
-             */
-            reference: string;
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Customer email
-             * @example customer@example.com
-             */
-            customerEmail: string;
-            /**
-             * Customer name
-             * @example John Doe
-             */
-            customerName?: string;
-            /**
-             * Agent reference identifier
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef: string;
-            /**
-             * Agent name
-             * @example My AI Agent
-             */
-            agentName: string;
-            /**
-             * Plan reference identifier
-             * @example pln_1a2b3c4d5e6f
-             */
-            planRef: string;
-            /**
-             * Plan name
-             * @example Premium Plan
-             */
-            planName: string;
-            /**
-             * Plan type
-             * @example recurring
-             * @enum {string}
-             */
-            planType: "recurring" | "usage-based" | "one-time" | "hybrid";
-            /**
-             * Subscription status
-             * @example active
-             * @enum {string}
-             */
-            status: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            /**
-             * Amount paid in original currency (in cents)
-             * @example 9900
-             */
-            amount: number;
-            /**
-             * Currency code
-             * @example USD
-             */
-            currency: string;
-            /**
-             * Start date of subscription
-             * @example 2025-01-01T00:00:00.000Z
-             */
-            startDate: string;
-            /**
-             * End date of subscription (if applicable)
-             * @example 2025-02-01T00:00:00.000Z
-             */
-            endDate?: string;
-            /**
-             * When payment was confirmed
-             * @example 2025-01-01T00:00:00.000Z
-             */
-            paidAt?: string;
-            /** Usage quota information (for usage-based plans) */
-            usageQuota?: Record<string, never>;
-            /**
-             * Whether this is a recurring subscription
-             * @example true
-             */
-            isRecurring: boolean;
-            /**
-             * Next billing date (for recurring subscriptions)
-             * @example 2025-02-01T00:00:00.000Z
-             */
-            nextBillingDate?: string;
-            /**
-             * When subscription was cancelled (if applicable)
-             * @example 2025-01-15T00:00:00.000Z
-             */
-            cancelledAt?: string;
-            /**
-             * Reason for cancellation (if applicable)
-             * @example Customer request
-             */
-            cancellationReason?: string;
-            /**
-             * When subscription was created
-             * @example 2025-01-01T00:00:00.000Z
-             */
-            createdAt: string;
-        };
-        CreateCheckoutSessionResponse: {
-            /**
-             * Checkout session ID/token
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            sessionId: string;
-            /**
-             * Full checkout URL based on backend configuration (ready to redirect customer)
-             * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
-             */
-            checkoutUrl: string;
-        };
-        CreatePageSettings: {
-            /** Page identifier */
-            id: string;
-            /** Page display name */
-            name: string;
-            /** Logo URL */
-            logo?: string;
-            /**
-             * Text color in hex format
-             * @example #2d3748
-             */
-            textColor: string;
-            /**
-             * Button color in hex format
-             * @example #3182ce
-             */
-            buttonColor: string;
-            /**
-             * Left background color in hex format
-             * @example #f7fafc
-             */
-            leftBackgroundColor: string;
-            /**
-             * Right background color in hex format
-             * @example #ffffff
-             */
-            rightBackgroundColor: string;
-            /**
-             * Font family
-             * @example Inter
-             */
-            fontFamily: string;
-            /**
-             * Font size
-             * @example 16px
-             */
-            fontSize: string;
-        };
-    };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+  schemas: {
+    CreateSecretKey: Record<string, never>
+    CheckName: Record<string, never>
+    CreateAdminAgent: Record<string, never>
+    UpdateAdminAgent: Record<string, never>
+    Signup: Record<string, never>
+    AuthResponse: Record<string, never>
+    Login: Record<string, never>
+    ForgotPassword: Record<string, never>
+    ResetPassword: Record<string, never>
+    VerifyEmail: Record<string, never>
+    CreateUser: Record<string, never>
+    UpdateUser: Record<string, never>
+    UpdateProfile: Record<string, never>
+    UpdatePreferences: Record<string, never>
+    ChangePassword: Record<string, never>
+    RequestEmailChange: Record<string, never>
+    CreateConnectedAccount: Record<string, never>
+    UpdateConnectedAccount: Record<string, never>
+    CreatePlanRequest: Record<string, never>
+    UpdatePlanRequest: Record<string, never>
+    CreateCustomerSessionRequest: {
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
+      customerRef: string
+    }
+    CustomerSessionResponse: {
+      /**
+       * Customer session ID
+       * @example 507f1f77bcf86cd799439011
+       */
+      id: string
+      /**
+       * Public session ID used in customer URL
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      sessionId: string
+      /**
+       * Session status
+       * @example active
+       */
+      status: string
+      /**
+       * Customer URL to open the customer page
+       * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+       */
+      customerUrl: string
+    }
+    ExecuteAnalyticsQuery: Record<string, never>
+    ExecuteMultipleQueries: Record<string, never>
+    CreateCheckoutSessionRequest: {
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
+      customerRef: string
+      /**
+       * Agent reference identifier
+       * @example agt_1a2b3c4d5e6f
+       */
+      agentRef: string
+      /**
+       * Plan reference identifier (optional)
+       * @example pln_2b3c4d5e6f7g
+       */
+      planRef?: string
+      /**
+       * URL to redirect to after successful payment (optional)
+       * @example https://example.com/payment-success
+       */
+      returnUrl?: string
+    }
+    CheckoutSessionResponse: {
+      /**
+       * Checkout session ID
+       * @example 507f1f77bcf86cd799439011
+       */
+      id: string
+      /**
+       * Public session ID used in checkout URL
+       * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+       */
+      sessionId: string
+      /**
+       * Amount in cents
+       * @example 2999
+       */
+      amount: number
+      /**
+       * Currency code
+       * @example USD
+       */
+      currency: string
+      /**
+       * Session status
+       * @example active
+       */
+      status: string
+      /**
+       * Checkout URL to open the checkout page
+       * @example https://solvapay.com/customer/checkout?id=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+       */
+      checkoutUrl: string
+    }
+    CancelSubscriptionRequest: {
+      /**
+       * Reason for cancellation
+       * @example Customer request
+       */
+      reason?: string
+    }
+    CheckLimitRequest: {
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
+      customerRef: string
+      /**
+       * Agent reference identifier
+       * @example agt_1a2b3c4d5e6f
+       */
+      agentRef: string
+    }
+    LimitResponse: {
+      /**
+       * Whether the customer is within their usage limits
+       * @example true
+       */
+      withinLimits: boolean
+      /**
+       * Remaining usage units before hitting the limit
+       * @example 997
+       */
+      remaining: number
+      /**
+       * Optional checkout session ID/token if payment is required
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      checkoutSessionId?: string
+      /**
+       * Optional full checkout URL if payment is required (based on backend configuration)
+       * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+       */
+      checkoutUrl?: string
+    }
+    UsageEvent: {
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
+      customerRef: string
+      /**
+       * Agent reference identifier
+       * @example agt_1a2b3c4d5e6f
+       */
+      agentRef: string
+      /**
+       * Outcome of the action
+       * @example success
+       * @enum {string}
+       */
+      outcome: 'success' | 'paywall' | 'fail'
+      /**
+       * Optional action identifier
+       * @example generate_text
+       */
+      action?: string
+      /**
+       * Unique request identifier matching the limits check
+       * @example req_1a2b3c4d5e6f
+       */
+      requestId: string
+      /**
+       * Duration of the action in milliseconds
+       * @example 1250
+       */
+      actionDuration: number
+      /**
+       * ISO 8601 timestamp of when the action occurred
+       * @example 2025-10-21T10:30:00.000Z
+       */
+      timestamp: string
+    }
+    CreateCustomerRequest: {
+      /**
+       * Customer email address (required)
+       * @example customer@example.com
+       */
+      email: string
+      /**
+       * Customer full name (optional)
+       * @example John Doe
+       */
+      name?: string
+      /**
+       * External reference ID from your auth system to map this customer to an auth user (optional)
+       * @example auth_user_12345
+       */
+      externalRef?: string
+    }
+    SubscriptionInfo: {
+      /**
+       * Subscription reference
+       * @example sub_abc123
+       */
+      reference: string
+      /**
+       * Plan name
+       * @example Pro Plan
+       */
+      planName: string
+      /**
+       * Agent name
+       * @example AI Assistant
+       */
+      agentName: string
+      /**
+       * Subscription status
+       * @example active
+       */
+      status: string
+      /**
+       * Start date
+       * @example 2025-10-27T10:00:00Z
+       */
+      startDate: string
+      /**
+       * Amount paid in original currency (in cents)
+       * @example 9900
+       */
+      amount: number
+      /**
+       * Currency code
+       * @example USD
+       */
+      currency: string
+      /**
+       * End date of subscription
+       * @example 2025-11-27T10:00:00Z
+       */
+      endDate?: string
+      /**
+       * When subscription was cancelled
+       * @example 2025-10-28T10:00:00Z
+       */
+      cancelledAt?: string
+      /**
+       * Reason for cancellation
+       * @example Customer request
+       */
+      cancellationReason?: string
+    }
+    CustomerResponse: {
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
+      reference: string
+      /**
+       * Customer full name
+       * @example John Doe
+       */
+      name: string
+      /**
+       * Customer email address
+       * @example customer@example.com
+       */
+      email: string
+      /**
+       * External reference ID from your auth system (if set during creation or update)
+       * @example auth_user_12345
+       */
+      externalRef?: string
+      /** Active subscriptions */
+      subscriptions?: components['schemas']['SubscriptionInfo'][]
+    }
+    CreateCustomerSessionResponse: {
+      /**
+       * Customer session ID/token
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      sessionId: string
+      /**
+       * Full customer URL based on backend configuration (ready to redirect customer)
+       * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+       */
+      customerUrl: string
+    }
+    GetCustomerSessionResponse: {
+      /**
+       * Customer session ID/token
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      sessionId: string
+      /**
+       * Session status
+       * @example active
+       * @enum {string}
+       */
+      status: 'active' | 'expired' | 'used'
+      /**
+       * Full customer URL based on backend configuration (ready to redirect customer)
+       * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+       */
+      customerUrl: string
+      /**
+       * Session expiration date
+       * @example 2025-01-01T12:00:00.000Z
+       */
+      expiresAt: string
+      /** Customer object from session data */
+      customer: components['schemas']['CustomerResponse']
+      /**
+       * Session creation date
+       * @example 2025-01-01T11:45:00.000Z
+       */
+      createdAt: string
+      /**
+       * Session last update date
+       * @example 2025-01-01T11:45:00.000Z
+       */
+      updatedAt: string
+    }
+    Agent: Record<string, never>
+    CreateAgentRequest: Record<string, never>
+    UpdateAgentRequest: Record<string, never>
+    BasePlan: Record<string, never>
+    SubscriptionResponse: {
+      /**
+       * Subscription reference identifier
+       * @example sub_1a2b3c4d5e6f
+       */
+      reference: string
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
+      customerRef: string
+      /**
+       * Customer email
+       * @example customer@example.com
+       */
+      customerEmail: string
+      /**
+       * Customer name
+       * @example John Doe
+       */
+      customerName?: string
+      /**
+       * Agent reference identifier
+       * @example agt_1a2b3c4d5e6f
+       */
+      agentRef: string
+      /**
+       * Agent name
+       * @example My AI Agent
+       */
+      agentName: string
+      /**
+       * Plan reference identifier
+       * @example pln_1a2b3c4d5e6f
+       */
+      planRef: string
+      /**
+       * Plan name
+       * @example Premium Plan
+       */
+      planName: string
+      /**
+       * Plan type
+       * @example recurring
+       * @enum {string}
+       */
+      planType: 'recurring' | 'usage-based' | 'one-time' | 'hybrid'
+      /**
+       * Subscription status
+       * @example active
+       * @enum {string}
+       */
+      status: 'pending' | 'active' | 'expired' | 'cancelled' | 'suspended' | 'refunded'
+      /**
+       * Amount paid in original currency (in cents)
+       * @example 9900
+       */
+      amount: number
+      /**
+       * Currency code
+       * @example USD
+       */
+      currency: string
+      /**
+       * Start date of subscription
+       * @example 2025-01-01T00:00:00.000Z
+       */
+      startDate: string
+      /**
+       * End date of subscription (if applicable)
+       * @example 2025-02-01T00:00:00.000Z
+       */
+      endDate?: string
+      /**
+       * When payment was confirmed
+       * @example 2025-01-01T00:00:00.000Z
+       */
+      paidAt?: string
+      /** Usage quota information (for usage-based plans) */
+      usageQuota?: Record<string, never>
+      /**
+       * Whether this is a recurring subscription
+       * @example true
+       */
+      isRecurring: boolean
+      /**
+       * Next billing date (for recurring subscriptions)
+       * @example 2025-02-01T00:00:00.000Z
+       */
+      nextBillingDate?: string
+      /**
+       * When subscription was cancelled (if applicable)
+       * @example 2025-01-15T00:00:00.000Z
+       */
+      cancelledAt?: string
+      /**
+       * Reason for cancellation (if applicable)
+       * @example Customer request
+       */
+      cancellationReason?: string
+      /**
+       * When subscription was created
+       * @example 2025-01-01T00:00:00.000Z
+       */
+      createdAt: string
+    }
+    CreateCheckoutSessionResponse: {
+      /**
+       * Checkout session ID/token
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      sessionId: string
+      /**
+       * Full checkout URL based on backend configuration (ready to redirect customer)
+       * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+       */
+      checkoutUrl: string
+    }
+    CreatePageSettings: {
+      /** Page identifier */
+      id: string
+      /** Page display name */
+      name: string
+      /** Logo URL */
+      logo?: string
+      /**
+       * Text color in hex format
+       * @example #2d3748
+       */
+      textColor: string
+      /**
+       * Button color in hex format
+       * @example #3182ce
+       */
+      buttonColor: string
+      /**
+       * Left background color in hex format
+       * @example #f7fafc
+       */
+      leftBackgroundColor: string
+      /**
+       * Right background color in hex format
+       * @example #ffffff
+       */
+      rightBackgroundColor: string
+      /**
+       * Font family
+       * @example Inter
+       */
+      fontFamily: string
+      /**
+       * Font size
+       * @example 16px
+       */
+      fontSize: string
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 export interface operations {
-    LimitsSdkController_checkLimit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Limit check request data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckLimitRequest"];
-            };
-        };
-        responses: {
-            /** Limit check completed successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LimitResponse"];
-                };
-            };
-            /** Invalid request data or references not found */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    UsageSdkController_recordUsage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Usage event data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UsageEvent"];
-            };
-        };
-        responses: {
-            /** Usage recorded successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Invalid usage data or references not found */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    UsageSdkController_recordBulkUsage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Array of usage events */
-        requestBody: {
-            content: {
-                "application/json": {
-                    customerRef?: string;
-                    agentRef?: string;
-                    /** @enum {string} */
-                    outcome?: "success" | "fail" | "paywall";
-                    action?: string;
-                    requestId?: string;
-                    actionDuration?: number;
-                    timestamp?: string;
-                }[];
-            };
-        };
-        responses: {
-            /** Bulk usage recorded successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Invalid bulk usage data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_getCustomerByQuery: {
-        parameters: {
-            query?: {
-                /** Customer reference identifier (use this OR externalRef, not both) */
-                reference?: string;
-                /** External reference ID from your auth system (use this OR reference, not both) */
-                externalRef?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Customer retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomerResponse"];
-                };
-            };
-            /** Invalid request - must provide exactly one of reference or externalRef */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_createCustomer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Customer creation data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCustomerRequest"];
-            };
-        };
-        responses: {
-            /** Customer created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomerResponse"];
-                };
-            };
-            /** Invalid email or missing required fields */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_getCustomer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Customer reference identifier */
-                reference: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Customer retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomerResponse"];
-                };
-            };
-            /** Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_createCustomerSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Customer session creation request data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCustomerSessionRequest"];
-            };
-        };
-        responses: {
-            /** Customer session created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateCustomerSessionResponse"];
-                };
-            };
-            /** Invalid request data or customer not found */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_getCustomerSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Customer session ID/token */
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Customer session retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GetCustomerSessionResponse"];
-                };
-            };
-            /** Customer session not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PaymentIntentSdkController_getPaymentIntents: {
-        parameters: {
-            query?: {
-                /** Maximum number of results */
-                limit?: number;
-                /** Pagination offset */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Payment intents retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PaymentIntentSdkController_createPaymentIntent: {
-        parameters: {
-            query?: never;
-            header: {
-                /** Unique idempotency key to prevent duplicate payments (required) */
-                "idempotency-key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        /** Payment intent creation data */
-        requestBody: {
-            content: {
-                "application/json": {
-                    /**
-                     * Plan reference to subscribe to
-                     * @example pln_2b3c4d5e6f7g
-                     */
-                    planRef: string;
-                    /**
-                     * Agent reference that owns the plan
-                     * @example agt_1a2b3c4d5e6f
-                     */
-                    agentRef: string;
-                    /**
-                     * Customer reference identifier
-                     * @example cus_3c4d5e6f7g8h
-                     */
-                    customerReference: string;
-                };
-            };
-        };
-        responses: {
-            /** Payment intent created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Missing required fields or invalid data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PaymentIntentSdkController_getPaymentIntent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Payment intent ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Payment intent retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PaymentIntentSdkController_processPaymentIntent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Stripe payment intent ID (format: pi_xxx) */
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Payment processing data */
-        requestBody: {
-            content: {
-                "application/json": {
-                    /**
-                     * Agent reference that owns the plan/product
-                     * @example agt_123
-                     */
-                    agentRef: string;
-                    /**
-                     * Customer reference identifier
-                     * @example cus_456
-                     */
-                    customerRef: string;
-                    /**
-                     * Plan reference - helps determine if payment is for subscription
-                     * @example pln_789
-                     */
-                    planRef?: string;
-                };
-            };
-        };
-        responses: {
-            /** Payment intent status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /**
-                         * Payment intent status
-                         * @example succeeded
-                         * @enum {string}
-                         */
-                        status?: "succeeded" | "timeout" | "failed" | "cancelled";
-                        /**
-                         * Optional message, only present for timeout status
-                         * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to Stripe webhooks not being configured correctly.
-                         */
-                        message?: string;
-                    };
-                };
-            };
-            /** Payment not succeeded or invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    AgentSdkController_listAgents: {
-        parameters: {
-            query?: {
-                /** Maximum number of agents to return (1-100) */
-                limit?: number;
-                /** Number of agents to skip for pagination */
-                offset?: number;
-                /** Search term to filter agents by name, description, reference, or categories (case-insensitive) */
-                search?: string;
-                /** Comma-separated list of categories to filter by (e.g., "ai,chat,automation") */
-                categories?: string;
-                /** Filter by agent status */
-                status?: "published" | "unpublished" | "all";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
+  LimitsSdkController_checkLimit: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Limit check request data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CheckLimitRequest']
+      }
+    }
+    responses: {
+      /** Limit check completed successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['LimitResponse']
+        }
+      }
+      /** Invalid request data or references not found */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  UsageSdkController_recordUsage: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Usage event data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UsageEvent']
+      }
+    }
+    responses: {
+      /** Usage recorded successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Invalid usage data or references not found */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  UsageSdkController_recordBulkUsage: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Array of usage events */
+    requestBody: {
+      content: {
+        'application/json': {
+          customerRef?: string
+          agentRef?: string
+          /** @enum {string} */
+          outcome?: 'success' | 'fail' | 'paywall'
+          action?: string
+          requestId?: string
+          actionDuration?: number
+          timestamp?: string
+        }[]
+      }
+    }
+    responses: {
+      /** Bulk usage recorded successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Invalid bulk usage data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  CustomerSdkController_getCustomerByQuery: {
+    parameters: {
+      query?: {
+        /** Customer reference identifier (use this OR externalRef, not both) */
+        reference?: string
+        /** External reference ID from your auth system (use this OR reference, not both) */
+        externalRef?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Customer retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CustomerResponse']
+        }
+      }
+      /** Invalid request - must provide exactly one of reference or externalRef */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Customer not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  CustomerSdkController_createCustomer: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Customer creation data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateCustomerRequest']
+      }
+    }
+    responses: {
+      /** Customer created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CustomerResponse']
+        }
+      }
+      /** Invalid email or missing required fields */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  CustomerSdkController_getCustomer: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Customer reference identifier */
+        reference: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Customer retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CustomerResponse']
+        }
+      }
+      /** Customer not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  CustomerSdkController_createCustomerSession: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Customer session creation request data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateCustomerSessionRequest']
+      }
+    }
+    responses: {
+      /** Customer session created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CreateCustomerSessionResponse']
+        }
+      }
+      /** Invalid request data or customer not found */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Customer not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  CustomerSdkController_getCustomerSession: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Customer session ID/token */
+        sessionId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Customer session retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GetCustomerSessionResponse']
+        }
+      }
+      /** Customer session not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_getPaymentIntents: {
+    parameters: {
+      query?: {
+        /** Maximum number of results */
+        limit?: number
+        /** Pagination offset */
+        offset?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Payment intents retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_createPaymentIntent: {
+    parameters: {
+      query?: never
+      header: {
+        /** Unique idempotency key to prevent duplicate payments (required) */
+        'idempotency-key': string
+      }
+      path?: never
+      cookie?: never
+    }
+    /** Payment intent creation data */
+    requestBody: {
+      content: {
+        'application/json': {
+          /**
+           * Plan reference to subscribe to
+           * @example pln_2b3c4d5e6f7g
+           */
+          planRef: string
+          /**
+           * Agent reference that owns the plan
+           * @example agt_1a2b3c4d5e6f
+           */
+          agentRef: string
+          /**
+           * Customer reference identifier
+           * @example cus_3c4d5e6f7g8h
+           */
+          customerReference: string
+        }
+      }
+    }
+    responses: {
+      /** Payment intent created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Missing required fields or invalid data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_getPaymentIntent: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Payment intent ID */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Payment intent retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_processPaymentIntent: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Stripe payment intent ID (format: pi_xxx) */
+        id: string
+      }
+      cookie?: never
+    }
+    /** Payment processing data */
+    requestBody: {
+      content: {
+        'application/json': {
+          /**
+           * Agent reference that owns the plan/product
+           * @example agt_123
+           */
+          agentRef: string
+          /**
+           * Customer reference identifier
+           * @example cus_456
+           */
+          customerRef: string
+          /**
+           * Plan reference - helps determine if payment is for subscription
+           * @example pln_789
+           */
+          planRef?: string
+        }
+      }
+    }
+    responses: {
+      /** Payment intent status */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
             /**
-             * Agents retrieved successfully
-             * @example [
-             *       {
-             *         "id": "agt_1234567890abcdef",
-             *         "reference": "agt_1234567890abcdef",
-             *         "name": "ChatGPT Agent",
-             *         "description": "AI-powered conversational agent",
-             *         "categories": [
-             *           "chat",
-             *           "ai"
-             *         ],
-             *         "avatarUrl": "https://example.com/avatar.png",
-             *         "capabilities": [
-             *           "text_generation",
-             *           "conversation"
-             *         ],
-             *         "publisher": {
-             *           "name": "OpenAI",
-             *           "website": "https://openai.com",
-             *           "contact": "support@openai.com"
-             *         },
-             *         "pricing": {
-             *           "model": "usage-based",
-             *           "currency": "USD",
-             *           "currencySymbol": "$"
-             *         },
-             *         "reputation": {
-             *           "rating": 4.8,
-             *           "totalReviews": 1250,
-             *           "verified": true
-             *         },
-             *         "balance": 1000,
-             *         "totalTransactions": 150,
-             *         "createdAt": "2024-01-15T10:30:00Z"
-             *       }
-             *     ]
+             * Payment intent status
+             * @example succeeded
+             * @enum {string}
              */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "id": "agt_1234567890abcdef",
-                     *         "reference": "agt_1234567890abcdef",
-                     *         "name": "ChatGPT Agent",
-                     *         "description": "AI-powered conversational agent",
-                     *         "categories": [
-                     *           "chat",
-                     *           "ai"
-                     *         ],
-                     *         "avatarUrl": "https://example.com/avatar.png",
-                     *         "capabilities": [
-                     *           "text_generation",
-                     *           "conversation"
-                     *         ],
-                     *         "publisher": {
-                     *           "name": "OpenAI",
-                     *           "website": "https://openai.com",
-                     *           "contact": "support@openai.com"
-                     *         },
-                     *         "pricing": {
-                     *           "model": "usage-based",
-                     *           "currency": "USD",
-                     *           "currencySymbol": "$"
-                     *         },
-                     *         "reputation": {
-                     *           "rating": 4.8,
-                     *           "totalReviews": 1250,
-                     *           "verified": true
-                     *         },
-                     *         "balance": 1000,
-                     *         "totalTransactions": 150,
-                     *         "createdAt": "2024-01-15T10:30:00Z"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["Agent"][];
-                };
-            };
-            /** Invalid request parameters or validation errors */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 400 */
-                        statusCode?: number;
-                        /** @example Invalid limit or offset parameter */
-                        message?: string;
-                        /** @example Bad Request */
-                        error?: string;
-                        details?: {
-                            /** @example limit */
-                            property?: string;
-                            /** @example limit must be between 1 and 100 */
-                            message?: string;
-                        }[];
-                    };
-                };
-            };
-            /** Invalid, missing, or expired secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 401 */
-                        statusCode?: number;
-                        /** @example Invalid or expired secret key */
-                        message?: string;
-                        /** @example Unauthorized */
-                        error?: string;
-                    };
-                };
-            };
-        };
-    };
-    AgentSdkController_createAgent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Agent creation data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateAgentRequest"];
-            };
-        };
-        responses: {
+            status?: 'succeeded' | 'timeout' | 'failed' | 'cancelled'
             /**
-             * Agent created successfully
-             * @example {
-             *       "id": "agt_1234567890abcdef",
-             *       "reference": "agt_1234567890abcdef",
-             *       "name": "ChatGPT Agent",
-             *       "description": "AI-powered conversational agent",
-             *       "categories": [
-             *         "chat",
-             *         "ai"
-             *       ],
-             *       "avatarUrl": "https://example.com/avatar.png",
-             *       "capabilities": [
-             *         "text_generation",
-             *         "conversation"
-             *       ],
-             *       "version": "1.0.0",
-             *       "endpoint": "https://api.openai.com/v1/chat/completions",
-             *       "authentication": "api-key",
-             *       "operations": [
-             *         {
-             *           "name": "generate_text",
-             *           "description": "Generate text content",
-             *           "parameters": {
-             *             "prompt": "string",
-             *             "max_length": "number"
-             *           }
-             *         }
-             *       ],
-             *       "limits": {
-             *         "maxTransactions": 1000,
-             *         "maxCalls": 500,
-             *         "maxHours": 24
-             *       },
-             *       "auth": {
-             *         "type": "api-key",
-             *         "required": true,
-             *         "methods": [
-             *           "header"
-             *         ]
-             *       },
-             *       "protocol": {
-             *         "version": "1.0",
-             *         "supportedFormats": [
-             *           "json",
-             *           "xml"
-             *         ]
-             *       },
-             *       "observability": {
-             *         "logging": true,
-             *         "metrics": true,
-             *         "expectsRequestId": true
-             *       },
-             *       "published": false,
-             *       "balance": 0,
-             *       "totalTransactions": 0,
-             *       "createdAt": "2024-01-15T10:30:00Z",
-             *       "updatedAt": "2024-01-15T10:30:00Z"
-             *     }
+             * Optional message, only present for timeout status
+             * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to Stripe webhooks not being configured correctly.
              */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": "agt_1234567890abcdef",
-                     *       "reference": "agt_1234567890abcdef",
-                     *       "name": "ChatGPT Agent",
-                     *       "description": "AI-powered conversational agent",
-                     *       "categories": [
-                     *         "chat",
-                     *         "ai"
-                     *       ],
-                     *       "avatarUrl": "https://example.com/avatar.png",
-                     *       "capabilities": [
-                     *         "text_generation",
-                     *         "conversation"
-                     *       ],
-                     *       "version": "1.0.0",
-                     *       "endpoint": "https://api.openai.com/v1/chat/completions",
-                     *       "authentication": "api-key",
-                     *       "operations": [
-                     *         {
-                     *           "name": "generate_text",
-                     *           "description": "Generate text content",
-                     *           "parameters": {
-                     *             "prompt": "string",
-                     *             "max_length": "number"
-                     *           }
-                     *         }
-                     *       ],
-                     *       "limits": {
-                     *         "maxTransactions": 1000,
-                     *         "maxCalls": 500,
-                     *         "maxHours": 24
-                     *       },
-                     *       "auth": {
-                     *         "type": "api-key",
-                     *         "required": true,
-                     *         "methods": [
-                     *           "header"
-                     *         ]
-                     *       },
-                     *       "protocol": {
-                     *         "version": "1.0",
-                     *         "supportedFormats": [
-                     *           "json",
-                     *           "xml"
-                     *         ]
-                     *       },
-                     *       "observability": {
-                     *         "logging": true,
-                     *         "metrics": true,
-                     *         "expectsRequestId": true
-                     *       },
-                     *       "published": false,
-                     *       "balance": 0,
-                     *       "totalTransactions": 0,
-                     *       "createdAt": "2024-01-15T10:30:00Z",
-                     *       "updatedAt": "2024-01-15T10:30:00Z"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["Agent"];
-                };
-            };
-            /** Invalid request data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    AgentSdkController_uploadAvatar: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    avatar?: string;
-                };
-            };
-        };
-        responses: {
-            /** Avatar uploaded successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        avatarUrl?: string;
-                    };
-                };
-            };
-            /** Invalid file or request data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AgentSdkController_updateAgent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Agent reference identifier */
-                agentRef: string;
-            };
-            cookie?: never;
-        };
-        /** Agent update data - only provided fields will be updated */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateAgentRequest"];
-            };
-        };
-        responses: {
-            /**
-             * Agent updated successfully
-             * @example {
-             *       "id": "agt_1234567890abcdef",
-             *       "reference": "agt_1234567890abcdef",
-             *       "name": "Updated Agent Name",
-             *       "description": "Updated description",
-             *       "categories": [
-             *         "ai",
-             *         "automation"
-             *       ],
-             *       "avatarUrl": "https://example.com/avatar.png",
-             *       "capabilities": [
-             *         "text_generation",
-             *         "conversation"
-             *       ],
-             *       "version": "2.1.0",
-             *       "endpoint": "https://api.example.com/agent/v2",
-             *       "authentication": "oauth2",
-             *       "operations": [
-             *         {
-             *           "name": "generate_text",
-             *           "description": "Generate text content",
-             *           "parameters": {
-             *             "prompt": "string",
-             *             "max_length": "number"
-             *           }
-             *         }
-             *       ],
-             *       "limits": {
-             *         "maxTransactions": 2000,
-             *         "maxCalls": 1000,
-             *         "maxHours": 48
-             *       },
-             *       "auth": {
-             *         "type": "oauth2",
-             *         "required": true,
-             *         "methods": [
-             *           "header",
-             *           "query"
-             *         ]
-             *       },
-             *       "protocol": {
-             *         "version": "1.0",
-             *         "supportedFormats": [
-             *           "json",
-             *           "xml"
-             *         ]
-             *       },
-             *       "observability": {
-             *         "logging": true,
-             *         "metrics": true,
-             *         "expectsRequestId": true
-             *       },
-             *       "published": true,
-             *       "balance": 0,
-             *       "totalTransactions": 0,
-             *       "createdAt": "2024-01-15T10:30:00Z",
-             *       "updatedAt": "2024-01-15T11:45:00Z"
-             *     }
-             */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": "agt_1234567890abcdef",
-                     *       "reference": "agt_1234567890abcdef",
-                     *       "name": "Updated Agent Name",
-                     *       "description": "Updated description",
-                     *       "categories": [
-                     *         "ai",
-                     *         "automation"
-                     *       ],
-                     *       "avatarUrl": "https://example.com/avatar.png",
-                     *       "capabilities": [
-                     *         "text_generation",
-                     *         "conversation"
-                     *       ],
-                     *       "version": "2.1.0",
-                     *       "endpoint": "https://api.example.com/agent/v2",
-                     *       "authentication": "oauth2",
-                     *       "operations": [
-                     *         {
-                     *           "name": "generate_text",
-                     *           "description": "Generate text content",
-                     *           "parameters": {
-                     *             "prompt": "string",
-                     *             "max_length": "number"
-                     *           }
-                     *         }
-                     *       ],
-                     *       "limits": {
-                     *         "maxTransactions": 2000,
-                     *         "maxCalls": 1000,
-                     *         "maxHours": 48
-                     *       },
-                     *       "auth": {
-                     *         "type": "oauth2",
-                     *         "required": true,
-                     *         "methods": [
-                     *           "header",
-                     *           "query"
-                     *         ]
-                     *       },
-                     *       "protocol": {
-                     *         "version": "1.0",
-                     *         "supportedFormats": [
-                     *           "json",
-                     *           "xml"
-                     *         ]
-                     *       },
-                     *       "observability": {
-                     *         "logging": true,
-                     *         "metrics": true,
-                     *         "expectsRequestId": true
-                     *       },
-                     *       "published": true,
-                     *       "balance": 0,
-                     *       "totalTransactions": 0,
-                     *       "createdAt": "2024-01-15T10:30:00Z",
-                     *       "updatedAt": "2024-01-15T11:45:00Z"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["Agent"];
-                };
-            };
-            /** Invalid request data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Agent not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    AgentSdkController_deleteAgent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Agent reference identifier */
-                agentRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Agent deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Agent not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PlanSdkController_listPlans: {
-        parameters: {
-            query?: {
-                /** Maximum number of results to return */
-                limit?: number;
-                /** Pagination offset */
-                offset?: number;
-                /** Search term to filter plans by name, description, or reference */
-                search?: string;
-                /** Filter by plan type */
-                type?: string;
-                /** Filter by plan status */
-                status?: string;
-            };
-            header?: never;
-            path: {
-                /** Agent reference identifier */
-                agentRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /**
-             * Plans retrieved successfully
-             * @example [
-             *       {
-             *         "_id": "pln_1234567890abcdef",
-             *         "reference": "pln_1234567890abcdef",
-             *         "name": "Basic Plan",
-             *         "description": "Basic usage plan",
-             *         "price": 999,
-             *         "currency": "USD",
-             *         "currencySymbol": "$",
-             *         "setupFee": 0,
-             *         "trialDays": 7,
-             *         "freeUnits": 100,
-             *         "billingCycle": "monthly",
-             *         "billingModel": "pre-paid",
-             *         "pricePerUnit": 0.01,
-             *         "unit": "API calls",
-             *         "quota": 1000,
-             *         "rolloverUnusedUnits": true,
-             *         "limits": {
-             *           "maxTransactions": 1000,
-             *           "maxCalls": 500,
-             *           "maxHours": 24
-             *         },
-             *         "features": {
-             *           "apiAccess": true,
-             *           "prioritySupport": false,
-             *           "advancedFeatures": false,
-             *           "customIntegrations": false
-             *         },
-             *         "isFreeTier": false,
-             *         "requiresPayment": true,
-             *         "isActive": true,
-             *         "maxActiveUsers": 10,
-             *         "accessExpiryDays": 30,
-             *         "status": "active",
-             *         "providerId": "prov_1234567890abcdef",
-             *         "agentId": "agt_1234567890abcdef",
-             *         "createdAt": "2024-01-15T10:30:00Z",
-             *         "updatedAt": "2024-01-15T10:30:00Z"
-             *       }
-             *     ]
-             */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "_id": "pln_1234567890abcdef",
-                     *         "reference": "pln_1234567890abcdef",
-                     *         "name": "Basic Plan",
-                     *         "description": "Basic usage plan",
-                     *         "price": 999,
-                     *         "currency": "USD",
-                     *         "currencySymbol": "$",
-                     *         "setupFee": 0,
-                     *         "trialDays": 7,
-                     *         "freeUnits": 100,
-                     *         "billingCycle": "monthly",
-                     *         "billingModel": "pre-paid",
-                     *         "pricePerUnit": 0.01,
-                     *         "unit": "API calls",
-                     *         "quota": 1000,
-                     *         "rolloverUnusedUnits": true,
-                     *         "limits": {
-                     *           "maxTransactions": 1000,
-                     *           "maxCalls": 500,
-                     *           "maxHours": 24
-                     *         },
-                     *         "features": {
-                     *           "apiAccess": true,
-                     *           "prioritySupport": false,
-                     *           "advancedFeatures": false,
-                     *           "customIntegrations": false
-                     *         },
-                     *         "isFreeTier": false,
-                     *         "requiresPayment": true,
-                     *         "isActive": true,
-                     *         "maxActiveUsers": 10,
-                     *         "accessExpiryDays": 30,
-                     *         "status": "active",
-                     *         "providerId": "prov_1234567890abcdef",
-                     *         "agentId": "agt_1234567890abcdef",
-                     *         "createdAt": "2024-01-15T10:30:00Z",
-                     *         "updatedAt": "2024-01-15T10:30:00Z"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["BasePlan"][];
-                };
-            };
-            /** Invalid request parameters */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Agent not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PlanSdkController_createPlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Agent reference identifier */
-                agentRef: string;
-            };
-            cookie?: never;
-        };
-        /** Plan creation data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePlanRequest"];
-            };
-        };
-        responses: {
-            /**
-             * Plan created successfully
-             * @example {
-             *       "id": "plan_1234567890abcdef",
-             *       "reference": "plan_1234567890abcdef",
-             *       "name": "Basic Plan",
-             *       "description": "Basic recurring plan with monthly billing",
-             *       "price": 29.99,
-             *       "currency": "USD",
-             *       "currencySymbol": "$",
-             *       "setupFee": 0,
-             *       "trialDays": 7,
-             *       "billingCycle": "monthly",
-             *       "billingModel": "post-paid",
-             *       "pricePerUnit": 0,
-             *       "unit": "month",
-             *       "quota": 1000,
-             *       "rolloverUnusedUnits": false,
-             *       "basePrice": 29.99,
-             *       "limits": {
-             *         "maxTransactions": 1000,
-             *         "maxCalls": 500,
-             *         "maxHours": 24,
-             *         "maxStorage": 1000,
-             *         "maxUsers": 10
-             *       },
-             *       "features": {
-             *         "apiAccess": true,
-             *         "prioritySupport": false,
-             *         "advancedFeatures": false,
-             *         "customIntegrations": false
-             *       },
-             *       "isFreeTier": false,
-             *       "requiresPayment": true,
-             *       "isActive": true,
-             *       "maxActiveUsers": 10,
-             *       "accessExpiryDays": 30,
-             *       "status": "active",
-             *       "createdAt": "2024-01-15T10:30:00Z",
-             *       "updatedAt": "2024-01-15T10:30:00Z"
-             *     }
-             */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": "plan_1234567890abcdef",
-                     *       "reference": "plan_1234567890abcdef",
-                     *       "name": "Basic Plan",
-                     *       "description": "Basic recurring plan with monthly billing",
-                     *       "price": 29.99,
-                     *       "currency": "USD",
-                     *       "currencySymbol": "$",
-                     *       "setupFee": 0,
-                     *       "trialDays": 7,
-                     *       "billingCycle": "monthly",
-                     *       "billingModel": "post-paid",
-                     *       "pricePerUnit": 0,
-                     *       "unit": "month",
-                     *       "quota": 1000,
-                     *       "rolloverUnusedUnits": false,
-                     *       "basePrice": 29.99,
-                     *       "limits": {
-                     *         "maxTransactions": 1000,
-                     *         "maxCalls": 500,
-                     *         "maxHours": 24,
-                     *         "maxStorage": 1000,
-                     *         "maxUsers": 10
-                     *       },
-                     *       "features": {
-                     *         "apiAccess": true,
-                     *         "prioritySupport": false,
-                     *         "advancedFeatures": false,
-                     *         "customIntegrations": false
-                     *       },
-                     *       "isFreeTier": false,
-                     *       "requiresPayment": true,
-                     *       "isActive": true,
-                     *       "maxActiveUsers": 10,
-                     *       "accessExpiryDays": 30,
-                     *       "status": "active",
-                     *       "createdAt": "2024-01-15T10:30:00Z",
-                     *       "updatedAt": "2024-01-15T10:30:00Z"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["BasePlan"];
-                };
-            };
-            /** Invalid request data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Agent not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PlanSdkController_getPlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Agent reference identifier */
-                agentRef: string;
-                /** Plan reference identifier */
-                planRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Plan retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BasePlan"];
-                };
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Plan not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    PlanSdkController_updatePlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Agent reference */
-                agentRef: string;
-                /** Plan reference */
-                planRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePlanRequest"];
-            };
-        };
-        responses: {
-            /** Plan updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BasePlan"];
-                };
-            };
-            /** Invalid request data */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** Plan not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PlanSdkController_deletePlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Agent reference */
-                agentRef: string;
-                /** Plan reference */
-                planRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Plan deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** Invalid or missing secret key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** Plan not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Subscriptions retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
-                };
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptionsByCustomer: {
-        parameters: {
-            query?: {
-                /** Filter by subscription status */
-                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            };
-            header?: never;
-            path: {
-                /** Customer reference identifier */
-                customerRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Customer subscriptions retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
-                };
-            };
-            /** Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptionsByAgent: {
-        parameters: {
-            query?: {
-                /** Filter by subscription status */
-                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            };
-            header?: never;
-            path: {
-                /** Agent reference identifier */
-                agentRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Agent subscriptions retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
-                };
-            };
-            /** Agent not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptionById: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Subscription ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** Subscription retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"];
-                };
-            };
-            /** Subscription not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SubscriptionSdkController_cancelSubscription: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** Subscription reference identifier */
-                subscriptionRef: string;
-            };
-            cookie?: never;
-        };
-        /** Cancellation details */
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["CancelSubscriptionRequest"];
-            };
-        };
-        responses: {
-            /** Subscription cancelled successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"];
-                };
-            };
-            /** Subscription cannot be cancelled or does not belong to provider */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** Subscription not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    CheckoutSessionSdkController_createCheckoutSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Checkout session creation request data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCheckoutSessionRequest"];
-            };
-        };
-        responses: {
-            /** Checkout session created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateCheckoutSessionResponse"];
-                };
-            };
-            /** Invalid request data or references not found */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** Agent or plan not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
+            message?: string
+          }
+        }
+      }
+      /** Payment not succeeded or invalid request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  AgentSdkController_listAgents: {
+    parameters: {
+      query?: {
+        /** Maximum number of agents to return (1-100) */
+        limit?: number
+        /** Number of agents to skip for pagination */
+        offset?: number
+        /** Search term to filter agents by name, description, reference, or categories (case-insensitive) */
+        search?: string
+        /** Comma-separated list of categories to filter by (e.g., "ai,chat,automation") */
+        categories?: string
+        /** Filter by agent status */
+        status?: 'published' | 'unpublished' | 'all'
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /**
+       * Agents retrieved successfully
+       * @example [
+       *       {
+       *         "id": "agt_1234567890abcdef",
+       *         "reference": "agt_1234567890abcdef",
+       *         "name": "ChatGPT Agent",
+       *         "description": "AI-powered conversational agent",
+       *         "categories": [
+       *           "chat",
+       *           "ai"
+       *         ],
+       *         "avatarUrl": "https://example.com/avatar.png",
+       *         "capabilities": [
+       *           "text_generation",
+       *           "conversation"
+       *         ],
+       *         "publisher": {
+       *           "name": "OpenAI",
+       *           "website": "https://openai.com",
+       *           "contact": "support@openai.com"
+       *         },
+       *         "pricing": {
+       *           "model": "usage-based",
+       *           "currency": "USD",
+       *           "currencySymbol": "$"
+       *         },
+       *         "reputation": {
+       *           "rating": 4.8,
+       *           "totalReviews": 1250,
+       *           "verified": true
+       *         },
+       *         "balance": 1000,
+       *         "totalTransactions": 150,
+       *         "createdAt": "2024-01-15T10:30:00Z"
+       *       }
+       *     ]
+       */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          /**
+           * @example [
+           *       {
+           *         "id": "agt_1234567890abcdef",
+           *         "reference": "agt_1234567890abcdef",
+           *         "name": "ChatGPT Agent",
+           *         "description": "AI-powered conversational agent",
+           *         "categories": [
+           *           "chat",
+           *           "ai"
+           *         ],
+           *         "avatarUrl": "https://example.com/avatar.png",
+           *         "capabilities": [
+           *           "text_generation",
+           *           "conversation"
+           *         ],
+           *         "publisher": {
+           *           "name": "OpenAI",
+           *           "website": "https://openai.com",
+           *           "contact": "support@openai.com"
+           *         },
+           *         "pricing": {
+           *           "model": "usage-based",
+           *           "currency": "USD",
+           *           "currencySymbol": "$"
+           *         },
+           *         "reputation": {
+           *           "rating": 4.8,
+           *           "totalReviews": 1250,
+           *           "verified": true
+           *         },
+           *         "balance": 1000,
+           *         "totalTransactions": 150,
+           *         "createdAt": "2024-01-15T10:30:00Z"
+           *       }
+           *     ]
+           */
+          'application/json': components['schemas']['Agent'][]
+        }
+      }
+      /** Invalid request parameters or validation errors */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @example 400 */
+            statusCode?: number
+            /** @example Invalid limit or offset parameter */
+            message?: string
+            /** @example Bad Request */
+            error?: string
+            details?: {
+              /** @example limit */
+              property?: string
+              /** @example limit must be between 1 and 100 */
+              message?: string
+            }[]
+          }
+        }
+      }
+      /** Invalid, missing, or expired secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @example 401 */
+            statusCode?: number
+            /** @example Invalid or expired secret key */
+            message?: string
+            /** @example Unauthorized */
+            error?: string
+          }
+        }
+      }
+    }
+  }
+  AgentSdkController_createAgent: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Agent creation data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateAgentRequest']
+      }
+    }
+    responses: {
+      /**
+       * Agent created successfully
+       * @example {
+       *       "id": "agt_1234567890abcdef",
+       *       "reference": "agt_1234567890abcdef",
+       *       "name": "ChatGPT Agent",
+       *       "description": "AI-powered conversational agent",
+       *       "categories": [
+       *         "chat",
+       *         "ai"
+       *       ],
+       *       "avatarUrl": "https://example.com/avatar.png",
+       *       "capabilities": [
+       *         "text_generation",
+       *         "conversation"
+       *       ],
+       *       "version": "1.0.0",
+       *       "endpoint": "https://api.openai.com/v1/chat/completions",
+       *       "authentication": "api-key",
+       *       "operations": [
+       *         {
+       *           "name": "generate_text",
+       *           "description": "Generate text content",
+       *           "parameters": {
+       *             "prompt": "string",
+       *             "max_length": "number"
+       *           }
+       *         }
+       *       ],
+       *       "limits": {
+       *         "maxTransactions": 1000,
+       *         "maxCalls": 500,
+       *         "maxHours": 24
+       *       },
+       *       "auth": {
+       *         "type": "api-key",
+       *         "required": true,
+       *         "methods": [
+       *           "header"
+       *         ]
+       *       },
+       *       "protocol": {
+       *         "version": "1.0",
+       *         "supportedFormats": [
+       *           "json",
+       *           "xml"
+       *         ]
+       *       },
+       *       "observability": {
+       *         "logging": true,
+       *         "metrics": true,
+       *         "expectsRequestId": true
+       *       },
+       *       "published": false,
+       *       "balance": 0,
+       *       "totalTransactions": 0,
+       *       "createdAt": "2024-01-15T10:30:00Z",
+       *       "updatedAt": "2024-01-15T10:30:00Z"
+       *     }
+       */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          /**
+           * @example {
+           *       "id": "agt_1234567890abcdef",
+           *       "reference": "agt_1234567890abcdef",
+           *       "name": "ChatGPT Agent",
+           *       "description": "AI-powered conversational agent",
+           *       "categories": [
+           *         "chat",
+           *         "ai"
+           *       ],
+           *       "avatarUrl": "https://example.com/avatar.png",
+           *       "capabilities": [
+           *         "text_generation",
+           *         "conversation"
+           *       ],
+           *       "version": "1.0.0",
+           *       "endpoint": "https://api.openai.com/v1/chat/completions",
+           *       "authentication": "api-key",
+           *       "operations": [
+           *         {
+           *           "name": "generate_text",
+           *           "description": "Generate text content",
+           *           "parameters": {
+           *             "prompt": "string",
+           *             "max_length": "number"
+           *           }
+           *         }
+           *       ],
+           *       "limits": {
+           *         "maxTransactions": 1000,
+           *         "maxCalls": 500,
+           *         "maxHours": 24
+           *       },
+           *       "auth": {
+           *         "type": "api-key",
+           *         "required": true,
+           *         "methods": [
+           *           "header"
+           *         ]
+           *       },
+           *       "protocol": {
+           *         "version": "1.0",
+           *         "supportedFormats": [
+           *           "json",
+           *           "xml"
+           *         ]
+           *       },
+           *       "observability": {
+           *         "logging": true,
+           *         "metrics": true,
+           *         "expectsRequestId": true
+           *       },
+           *       "published": false,
+           *       "balance": 0,
+           *       "totalTransactions": 0,
+           *       "createdAt": "2024-01-15T10:30:00Z",
+           *       "updatedAt": "2024-01-15T10:30:00Z"
+           *     }
+           */
+          'application/json': components['schemas']['Agent']
+        }
+      }
+      /** Invalid request data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  AgentSdkController_uploadAvatar: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /** Format: binary */
+          avatar?: string
+        }
+      }
+    }
+    responses: {
+      /** Avatar uploaded successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            avatarUrl?: string
+          }
+        }
+      }
+      /** Invalid file or request data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  AgentSdkController_updateAgent: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Agent reference identifier */
+        agentRef: string
+      }
+      cookie?: never
+    }
+    /** Agent update data - only provided fields will be updated */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateAgentRequest']
+      }
+    }
+    responses: {
+      /**
+       * Agent updated successfully
+       * @example {
+       *       "id": "agt_1234567890abcdef",
+       *       "reference": "agt_1234567890abcdef",
+       *       "name": "Updated Agent Name",
+       *       "description": "Updated description",
+       *       "categories": [
+       *         "ai",
+       *         "automation"
+       *       ],
+       *       "avatarUrl": "https://example.com/avatar.png",
+       *       "capabilities": [
+       *         "text_generation",
+       *         "conversation"
+       *       ],
+       *       "version": "2.1.0",
+       *       "endpoint": "https://api.example.com/agent/v2",
+       *       "authentication": "oauth2",
+       *       "operations": [
+       *         {
+       *           "name": "generate_text",
+       *           "description": "Generate text content",
+       *           "parameters": {
+       *             "prompt": "string",
+       *             "max_length": "number"
+       *           }
+       *         }
+       *       ],
+       *       "limits": {
+       *         "maxTransactions": 2000,
+       *         "maxCalls": 1000,
+       *         "maxHours": 48
+       *       },
+       *       "auth": {
+       *         "type": "oauth2",
+       *         "required": true,
+       *         "methods": [
+       *           "header",
+       *           "query"
+       *         ]
+       *       },
+       *       "protocol": {
+       *         "version": "1.0",
+       *         "supportedFormats": [
+       *           "json",
+       *           "xml"
+       *         ]
+       *       },
+       *       "observability": {
+       *         "logging": true,
+       *         "metrics": true,
+       *         "expectsRequestId": true
+       *       },
+       *       "published": true,
+       *       "balance": 0,
+       *       "totalTransactions": 0,
+       *       "createdAt": "2024-01-15T10:30:00Z",
+       *       "updatedAt": "2024-01-15T11:45:00Z"
+       *     }
+       */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          /**
+           * @example {
+           *       "id": "agt_1234567890abcdef",
+           *       "reference": "agt_1234567890abcdef",
+           *       "name": "Updated Agent Name",
+           *       "description": "Updated description",
+           *       "categories": [
+           *         "ai",
+           *         "automation"
+           *       ],
+           *       "avatarUrl": "https://example.com/avatar.png",
+           *       "capabilities": [
+           *         "text_generation",
+           *         "conversation"
+           *       ],
+           *       "version": "2.1.0",
+           *       "endpoint": "https://api.example.com/agent/v2",
+           *       "authentication": "oauth2",
+           *       "operations": [
+           *         {
+           *           "name": "generate_text",
+           *           "description": "Generate text content",
+           *           "parameters": {
+           *             "prompt": "string",
+           *             "max_length": "number"
+           *           }
+           *         }
+           *       ],
+           *       "limits": {
+           *         "maxTransactions": 2000,
+           *         "maxCalls": 1000,
+           *         "maxHours": 48
+           *       },
+           *       "auth": {
+           *         "type": "oauth2",
+           *         "required": true,
+           *         "methods": [
+           *           "header",
+           *           "query"
+           *         ]
+           *       },
+           *       "protocol": {
+           *         "version": "1.0",
+           *         "supportedFormats": [
+           *           "json",
+           *           "xml"
+           *         ]
+           *       },
+           *       "observability": {
+           *         "logging": true,
+           *         "metrics": true,
+           *         "expectsRequestId": true
+           *       },
+           *       "published": true,
+           *       "balance": 0,
+           *       "totalTransactions": 0,
+           *       "createdAt": "2024-01-15T10:30:00Z",
+           *       "updatedAt": "2024-01-15T11:45:00Z"
+           *     }
+           */
+          'application/json': components['schemas']['Agent']
+        }
+      }
+      /** Invalid request data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Agent not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  AgentSdkController_deleteAgent: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Agent reference identifier */
+        agentRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Agent deleted successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Agent not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PlanSdkController_listPlans: {
+    parameters: {
+      query?: {
+        /** Maximum number of results to return */
+        limit?: number
+        /** Pagination offset */
+        offset?: number
+        /** Search term to filter plans by name, description, or reference */
+        search?: string
+        /** Filter by plan type */
+        type?: string
+        /** Filter by plan status */
+        status?: string
+      }
+      header?: never
+      path: {
+        /** Agent reference identifier */
+        agentRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /**
+       * Plans retrieved successfully
+       * @example [
+       *       {
+       *         "_id": "pln_1234567890abcdef",
+       *         "reference": "pln_1234567890abcdef",
+       *         "name": "Basic Plan",
+       *         "description": "Basic usage plan",
+       *         "price": 999,
+       *         "currency": "USD",
+       *         "currencySymbol": "$",
+       *         "setupFee": 0,
+       *         "trialDays": 7,
+       *         "freeUnits": 100,
+       *         "billingCycle": "monthly",
+       *         "billingModel": "pre-paid",
+       *         "pricePerUnit": 0.01,
+       *         "unit": "API calls",
+       *         "quota": 1000,
+       *         "rolloverUnusedUnits": true,
+       *         "limits": {
+       *           "maxTransactions": 1000,
+       *           "maxCalls": 500,
+       *           "maxHours": 24
+       *         },
+       *         "features": {
+       *           "apiAccess": true,
+       *           "prioritySupport": false,
+       *           "advancedFeatures": false,
+       *           "customIntegrations": false
+       *         },
+       *         "isFreeTier": false,
+       *         "requiresPayment": true,
+       *         "isActive": true,
+       *         "maxActiveUsers": 10,
+       *         "accessExpiryDays": 30,
+       *         "status": "active",
+       *         "providerId": "prov_1234567890abcdef",
+       *         "agentId": "agt_1234567890abcdef",
+       *         "createdAt": "2024-01-15T10:30:00Z",
+       *         "updatedAt": "2024-01-15T10:30:00Z"
+       *       }
+       *     ]
+       */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          /**
+           * @example [
+           *       {
+           *         "_id": "pln_1234567890abcdef",
+           *         "reference": "pln_1234567890abcdef",
+           *         "name": "Basic Plan",
+           *         "description": "Basic usage plan",
+           *         "price": 999,
+           *         "currency": "USD",
+           *         "currencySymbol": "$",
+           *         "setupFee": 0,
+           *         "trialDays": 7,
+           *         "freeUnits": 100,
+           *         "billingCycle": "monthly",
+           *         "billingModel": "pre-paid",
+           *         "pricePerUnit": 0.01,
+           *         "unit": "API calls",
+           *         "quota": 1000,
+           *         "rolloverUnusedUnits": true,
+           *         "limits": {
+           *           "maxTransactions": 1000,
+           *           "maxCalls": 500,
+           *           "maxHours": 24
+           *         },
+           *         "features": {
+           *           "apiAccess": true,
+           *           "prioritySupport": false,
+           *           "advancedFeatures": false,
+           *           "customIntegrations": false
+           *         },
+           *         "isFreeTier": false,
+           *         "requiresPayment": true,
+           *         "isActive": true,
+           *         "maxActiveUsers": 10,
+           *         "accessExpiryDays": 30,
+           *         "status": "active",
+           *         "providerId": "prov_1234567890abcdef",
+           *         "agentId": "agt_1234567890abcdef",
+           *         "createdAt": "2024-01-15T10:30:00Z",
+           *         "updatedAt": "2024-01-15T10:30:00Z"
+           *       }
+           *     ]
+           */
+          'application/json': components['schemas']['BasePlan'][]
+        }
+      }
+      /** Invalid request parameters */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Agent not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PlanSdkController_createPlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Agent reference identifier */
+        agentRef: string
+      }
+      cookie?: never
+    }
+    /** Plan creation data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePlanRequest']
+      }
+    }
+    responses: {
+      /**
+       * Plan created successfully
+       * @example {
+       *       "id": "plan_1234567890abcdef",
+       *       "reference": "plan_1234567890abcdef",
+       *       "name": "Basic Plan",
+       *       "description": "Basic recurring plan with monthly billing",
+       *       "price": 29.99,
+       *       "currency": "USD",
+       *       "currencySymbol": "$",
+       *       "setupFee": 0,
+       *       "trialDays": 7,
+       *       "billingCycle": "monthly",
+       *       "billingModel": "post-paid",
+       *       "pricePerUnit": 0,
+       *       "unit": "month",
+       *       "quota": 1000,
+       *       "rolloverUnusedUnits": false,
+       *       "basePrice": 29.99,
+       *       "limits": {
+       *         "maxTransactions": 1000,
+       *         "maxCalls": 500,
+       *         "maxHours": 24,
+       *         "maxStorage": 1000,
+       *         "maxUsers": 10
+       *       },
+       *       "features": {
+       *         "apiAccess": true,
+       *         "prioritySupport": false,
+       *         "advancedFeatures": false,
+       *         "customIntegrations": false
+       *       },
+       *       "isFreeTier": false,
+       *       "requiresPayment": true,
+       *       "isActive": true,
+       *       "maxActiveUsers": 10,
+       *       "accessExpiryDays": 30,
+       *       "status": "active",
+       *       "createdAt": "2024-01-15T10:30:00Z",
+       *       "updatedAt": "2024-01-15T10:30:00Z"
+       *     }
+       */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          /**
+           * @example {
+           *       "id": "plan_1234567890abcdef",
+           *       "reference": "plan_1234567890abcdef",
+           *       "name": "Basic Plan",
+           *       "description": "Basic recurring plan with monthly billing",
+           *       "price": 29.99,
+           *       "currency": "USD",
+           *       "currencySymbol": "$",
+           *       "setupFee": 0,
+           *       "trialDays": 7,
+           *       "billingCycle": "monthly",
+           *       "billingModel": "post-paid",
+           *       "pricePerUnit": 0,
+           *       "unit": "month",
+           *       "quota": 1000,
+           *       "rolloverUnusedUnits": false,
+           *       "basePrice": 29.99,
+           *       "limits": {
+           *         "maxTransactions": 1000,
+           *         "maxCalls": 500,
+           *         "maxHours": 24,
+           *         "maxStorage": 1000,
+           *         "maxUsers": 10
+           *       },
+           *       "features": {
+           *         "apiAccess": true,
+           *         "prioritySupport": false,
+           *         "advancedFeatures": false,
+           *         "customIntegrations": false
+           *       },
+           *       "isFreeTier": false,
+           *       "requiresPayment": true,
+           *       "isActive": true,
+           *       "maxActiveUsers": 10,
+           *       "accessExpiryDays": 30,
+           *       "status": "active",
+           *       "createdAt": "2024-01-15T10:30:00Z",
+           *       "updatedAt": "2024-01-15T10:30:00Z"
+           *     }
+           */
+          'application/json': components['schemas']['BasePlan']
+        }
+      }
+      /** Invalid request data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Agent not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PlanSdkController_getPlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Agent reference identifier */
+        agentRef: string
+        /** Plan reference identifier */
+        planRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Plan retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BasePlan']
+        }
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Plan not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PlanSdkController_updatePlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Agent reference */
+        agentRef: string
+        /** Plan reference */
+        planRef: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdatePlanRequest']
+      }
+    }
+    responses: {
+      /** Plan updated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BasePlan']
+        }
+      }
+      /** Invalid request data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** Plan not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PlanSdkController_deletePlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Agent reference */
+        agentRef: string
+        /** Plan reference */
+        planRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Plan deleted successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** Invalid or missing secret key */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** Plan not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  SubscriptionSdkController_getSubscriptions: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Subscriptions retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SubscriptionResponse'][]
+        }
+      }
+    }
+  }
+  SubscriptionSdkController_getSubscriptionsByCustomer: {
+    parameters: {
+      query?: {
+        /** Filter by subscription status */
+        status?: 'pending' | 'active' | 'expired' | 'cancelled' | 'suspended' | 'refunded'
+      }
+      header?: never
+      path: {
+        /** Customer reference identifier */
+        customerRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Customer subscriptions retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SubscriptionResponse'][]
+        }
+      }
+      /** Customer not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  SubscriptionSdkController_getSubscriptionsByAgent: {
+    parameters: {
+      query?: {
+        /** Filter by subscription status */
+        status?: 'pending' | 'active' | 'expired' | 'cancelled' | 'suspended' | 'refunded'
+      }
+      header?: never
+      path: {
+        /** Agent reference identifier */
+        agentRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Agent subscriptions retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SubscriptionResponse'][]
+        }
+      }
+      /** Agent not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  SubscriptionSdkController_getSubscriptionById: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Subscription ID */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** Subscription retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SubscriptionResponse']
+        }
+      }
+      /** Subscription not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  SubscriptionSdkController_cancelSubscription: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** Subscription reference identifier */
+        subscriptionRef: string
+      }
+      cookie?: never
+    }
+    /** Cancellation details */
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['CancelSubscriptionRequest']
+      }
+    }
+    responses: {
+      /** Subscription cancelled successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SubscriptionResponse']
+        }
+      }
+      /** Subscription cannot be cancelled or does not belong to provider */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** Subscription not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  CheckoutSessionSdkController_createCheckoutSession: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Checkout session creation request data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateCheckoutSessionRequest']
+      }
+    }
+    responses: {
+      /** Checkout session created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CreateCheckoutSessionResponse']
+        }
+      }
+      /** Invalid request data or references not found */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** Agent or plan not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
 }

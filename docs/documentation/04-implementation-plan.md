@@ -90,6 +90,7 @@
 ## Next Steps
 
 ### Immediate Actions
+
 1. ✅ **Review this plan** with the team
 2. ✅ **Choose documentation tool** (TypeDoc recommended)
 3. ✅ **Set up TypeDoc configuration**
@@ -97,14 +98,15 @@
 5. ✅ **Start adding JSDoc comments** to key functions
 
 ### Short-term Goals
+
 - Complete JSDoc comments for all packages
 - Generate initial API documentation
 - Write framework-specific guides
 - Set up CI/CD for documentation
 
 ### Long-term Goals
+
 - Add interactive examples (CodeSandbox/StackBlitz)
 - Create video tutorials
 - Add internationalization (i18n) support
 - Implement user feedback collection
-
