@@ -100,10 +100,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: pnpm build:packages
-        # Packages must be built before validating docs since TypeDoc needs compiled types
-
       - name: Validate documentation links
         id: validate-links
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.skip_link_validation != 'true'
