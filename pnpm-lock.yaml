@@ -57,8 +57,8 @@ importers:
         specifier: ^11.0.3
         version: 11.0.3
       jose:
-        specifier: ^5.9.3
-        version: 5.10.0
+        specifier: ^6.1.1
+        version: 6.1.1
       nodemon:
         specifier: ^3.1.0
         version: 3.1.10
@@ -120,8 +120,8 @@ importers:
         specifier: ^2.39.0
         version: 2.80.0
       jose:
-        specifier: ^5.9.3
-        version: 5.10.0
+        specifier: ^6.1.1
+        version: 6.1.1
       next:
         specifier: ^15.1.3
         version: 15.5.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -224,8 +224,8 @@ importers:
         specifier: ^2.39.0
         version: 2.80.0
       jose:
-        specifier: ^5.9.3
-        version: 5.10.0
+        specifier: ^6.1.1
+        version: 6.1.1
       next:
         specifier: ^15.1.3
         version: 15.5.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -331,8 +331,8 @@ importers:
         specifier: ^16.0.0
         version: 16.6.1
       jose:
-        specifier: ^5.10.0
-        version: 5.10.0
+        specifier: ^6.1.1
+        version: 6.1.1
       next:
         specifier: ^15.0.0
         version: 15.5.6(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -3453,6 +3453,9 @@ packages:
 
   jose@5.10.0:
     resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
+
+  jose@6.1.1:
+    resolution: {integrity: sha512-GWSqjfOPf4cWOkBzw5THBjtGPhXKqYnfRBzh4Ni+ArTrQQ9unvmsA3oFLqaYKoKe5sjWmGu5wVKg9Ft1i+LQfg==}
 
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
@@ -8213,6 +8216,8 @@ snapshots:
   jiti@2.6.1: {}
 
   jose@5.10.0: {}
+
+  jose@6.1.1: {}
 
   joycon@3.1.1: {}
 
