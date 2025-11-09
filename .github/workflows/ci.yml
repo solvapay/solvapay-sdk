@@ -100,6 +100,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build packages
+        run: pnpm build:packages
+        # Packages must be built for TypeDoc to resolve subpath exports (e.g., @solvapay/auth/supabase)
+        # which point to dist/ files. TypeDoc uses TypeScript's module resolution which needs these files.
+
       - name: Validate documentation links
         id: validate-links
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.skip_link_validation != 'true'
