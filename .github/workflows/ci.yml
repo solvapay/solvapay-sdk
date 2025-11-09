@@ -3,8 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [main, dev]
-  push:
-    branches: [main, dev]
+  # Removed 'push' event to prevent duplicate runs when pushing to PR branches
+  # pull_request event handles all PR validation
+  # For direct pushes to main/dev, consider using branch protection rules
+  # or rely on PR-only workflow (recommended: all changes via PR)
   workflow_dispatch:
     inputs:
       skip_link_validation:
