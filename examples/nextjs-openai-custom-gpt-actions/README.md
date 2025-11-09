@@ -60,7 +60,7 @@ Then edit `.env.local` with your actual values. Required variables:
 ```env
 # SolvaPay Configuration
 SOLVAPAY_SECRET_KEY=sp_sandbox_your_secret_key_here
-SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+SOLVAPAY_API_BASE_URL=https://api.solvapay.com
 NEXT_PUBLIC_AGENT_REF=agt_your_agent_ref
 
 # Supabase Configuration
@@ -408,7 +408,7 @@ Copy `env.example` to `.env.local` and fill in your values:
 ```env
 # SolvaPay Configuration
 SOLVAPAY_SECRET_KEY=sp_sandbox_your_secret_key_here
-SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+SOLVAPAY_API_BASE_URL=https://api.solvapay.com
 NEXT_PUBLIC_AGENT_REF=agt_your_agent_ref
 
 # Supabase Configuration
@@ -495,7 +495,7 @@ This example is configured for easy deployment to Vercel with monorepo support.
    OAUTH_ISSUER=https://your-app.vercel.app
    OAUTH_JWKS_SECRET=your-jwks-secret
    OAUTH_CLIENT_ID=your-oauth-client-id
-   SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+   SOLVAPAY_API_BASE_URL=https://api.solvapay.com
    ```
 
 4. **Deploy**

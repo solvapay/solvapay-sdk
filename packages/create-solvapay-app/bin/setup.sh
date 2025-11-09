@@ -314,7 +314,7 @@ echo "Creating .env.local file..."
 cat > .env.local << 'EOF'
 # SolvaPay Configuration
 SOLVAPAY_SECRET_KEY=sp_sandbox_your_secret_key_here
-SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+SOLVAPAY_API_BASE_URL=https://api.solvapay.com
 NEXT_PUBLIC_AGENT_REF=agt_your_agent_ref
 
 # Supabase Configuration

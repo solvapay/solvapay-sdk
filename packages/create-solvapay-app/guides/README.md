@@ -101,7 +101,7 @@ The guides are designed to be copied directly into Cursor, where the AI assistan
 
 ### Key Concepts
 
-- **Hosted Checkout**: Users are redirected to `app.solvapay.com` for checkout (similar to Stripe Checkout)
+- **Hosted Checkout**: Users are redirected to `solvapay.com` for checkout (similar to Stripe Checkout)
 - **Middleware Pattern**: Authentication handled in middleware, making user ID available to all API routes
 - **Supabase Adapter**: React provider automatically handles Supabase session management and subscription checking
 - **Automatic Subscription Checking**: The Supabase adapter automatically calls `/api/check-subscription` - no manual setup needed
