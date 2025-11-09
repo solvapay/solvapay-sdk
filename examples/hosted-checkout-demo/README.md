@@ -22,7 +22,7 @@ Complete payment integration demo showcasing SolvaPay's hosted checkout flow wit
 
 ## Features
 
-- 🎯 **Hosted Checkout**: Secure checkout hosted on app.solvapay.com (similar to Stripe Checkout)
+- 🎯 **Hosted Checkout**: Secure checkout hosted on solvapay.com (similar to Stripe Checkout)
 - 🔒 **Content Gating**: Lock premium features behind subscriptions
 - 📊 **Subscription Management**: Real-time subscription status checking
 - 🔐 **Customer Portal**: Hosted subscription management page (similar to Stripe Customer Portal)
@@ -31,21 +31,21 @@ Complete payment integration demo showcasing SolvaPay's hosted checkout flow wit
 
 ## Architecture
 
-This demo uses **hosted checkout** - users are redirected to `app.solvapay.com` for checkout and subscription management, similar to Stripe Checkout and Stripe Customer Portal.
+This demo uses **hosted checkout** - users are redirected to `solvapay.com` for checkout and subscription management, similar to Stripe Checkout and Stripe Customer Portal.
 
 ### Flow Overview
 
 1. **Checkout Flow**:
    - User clicks "View Plans" or "Upgrade"
    - Frontend calls `/api/create-checkout-token` to generate a secure token
-   - User is redirected to `app.solvapay.com/checkout?token=<token>`
+   - User is redirected to `solvapay.com/checkout?token=<token>`
    - User completes checkout on hosted page
    - User is redirected back to app after successful checkout
 
 2. **Subscription Management Flow**:
    - User clicks "Manage Subscription"
    - Frontend calls `/api/create-manage-customer-token` to generate a secure token
-   - User is redirected to `app.solvapay.com/customer?token=<token>`
+   - User is redirected to `solvapay.com/customer?token=<token>`
    - User manages subscription on hosted page
    - User is redirected back to app when done
 
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
   const customerRef = await solvaPay.ensureCustomer(userId, userId)
 
   // Call backend API to create checkout token
-  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com'
+  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
   const response = await fetch(`${apiBaseUrl}/api/create-checkout-token`, {
     method: 'POST',
     headers: {
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     token,
-    checkoutUrl: `https://app.solvapay.com/checkout?token=${token}`,
+    checkoutUrl: `https://solvapay.com/checkout?token=${token}`,
   })
 }
 ```
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
   const customerRef = await solvaPay.ensureCustomer(userId, userId)
 
   // Call backend API to create customer management token
-  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com'
+  const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
   const response = await fetch(`${apiBaseUrl}/api/create-manage-customer-token`, {
     method: 'POST',
     headers: {
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     token,
-    customerUrl: `https://app.solvapay.com/customer?token=${token}`,
+    customerUrl: `https://solvapay.com/customer?token=${token}`,
   })
 }
 ```
@@ -403,7 +403,7 @@ hosted-checkout-demo/
 
 **Hosted Checkout (this demo)**:
 
-- Users redirected to `app.solvapay.com` for checkout
+- Users redirected to `solvapay.com` for checkout
 - Payment form handled entirely by SolvaPay
 - Similar to Stripe Checkout hosted pages
 - Lower PCI compliance burden
@@ -506,7 +506,7 @@ Always generate tokens server-side for security:
 export async function POST(request: NextRequest) {
   const userId = requireUserId(request)
   const { token } = await createCheckoutToken(userId)
-  return NextResponse.json({ checkoutUrl: `https://app.solvapay.com/checkout?token=${token}` })
+  return NextResponse.json({ checkoutUrl: `https://solvapay.com/checkout?token=${token}` })
 }
 
 // ❌ Bad: Client-side token generation (security risk)
@@ -518,7 +518,7 @@ const token = await generateToken() // Never do this!
 Configure return URLs properly:
 
 ```typescript
-const checkoutUrl = `https://app.solvapay.com/checkout?token=${token}&returnUrl=${encodeURIComponent('https://yourdomain.com/checkout/complete')}`
+const checkoutUrl = `https://solvapay.com/checkout?token=${token}&returnUrl=${encodeURIComponent('https://yourdomain.com/checkout/complete')}`
 ```
 
 ### 3. Subscription Refetching

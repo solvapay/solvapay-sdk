@@ -20,7 +20,7 @@ export type ServerClientOptions = {
 
   /**
    * Base URL for the SolvaPay API (optional)
-   * Defaults to https://api-dev.solvapay.com
+   * Defaults to https://api.solvapay.com
    */
   apiBaseUrl?: string
 }
@@ -60,7 +60,7 @@ export type ServerClientOptions = {
  * @since 1.0.0
  */
 export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient {
-  const base = opts.apiBaseUrl ?? 'https://api-dev.solvapay.com'
+  const base = opts.apiBaseUrl ?? 'https://api.solvapay.com'
   if (!opts.apiKey) throw new SolvaPayError('Missing apiKey')
 
   const headers = {

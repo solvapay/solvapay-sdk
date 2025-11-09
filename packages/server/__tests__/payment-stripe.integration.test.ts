@@ -103,7 +103,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
     console.log('║     Payment Integration Tests - Stripe Flow              ║')
     console.log('╚═══════════════════════════════════════════════════════════╝')
     console.log()
-    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com')
+    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com')
     console.log('🔑 Secret Key:', SOLVAPAY_SECRET_KEY.substring(0, 50) + '...')
     console.log('💳 Stripe:', STRIPE_TEST_SECRET_KEY.substring(0, 15) + '...')
     console.log()

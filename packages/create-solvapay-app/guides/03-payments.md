@@ -350,7 +350,7 @@ export default function HomePage() {
 
 2. **User is redirected**
    - `window.location.href = checkoutUrl`
-   - User completes payment on `app.solvapay.com`
+   - User completes payment on `solvapay.com`
    - After payment, user is redirected back to your app
 
 3. **Subscription status updates**

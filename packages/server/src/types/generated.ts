@@ -598,7 +598,7 @@ export interface components {
       checkoutSessionId?: string
       /**
        * Optional full checkout URL if payment is required (based on backend configuration)
-       * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+       * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
        */
       checkoutUrl?: string
     }

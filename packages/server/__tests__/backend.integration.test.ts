@@ -51,7 +51,7 @@ import { createTask, getTask, listTasks, deleteTask, clearAllTasks } from '@solv
  *
  * - `USE_REAL_BACKEND=true` - Enable integration tests (otherwise skipped)
  * - `SOLVAPAY_SECRET_KEY` - Secret key for test provider (required)
- * - `SOLVAPAY_API_BASE_URL` - Backend URL (optional, defaults to api-dev.solvapay.com)
+ * - `SOLVAPAY_API_BASE_URL` - Backend URL (optional, defaults to api.solvapay.com)
  */
 
 const USE_REAL_BACKEND = process.env.USE_REAL_BACKEND === 'true'
@@ -81,7 +81,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
     console.log('║           (With Fetched Default Agent/Plan)              ║')
     console.log('╚═══════════════════════════════════════════════════════════╝')
     console.log()
-    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL || 'https://api-dev.solvapay.com')
+    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com')
     console.log('🔑 Secret Key:', SOLVAPAY_SECRET_KEY.substring(0, 15) + '...')
     console.log()
 

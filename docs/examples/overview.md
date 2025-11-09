@@ -76,7 +76,7 @@ This document provides an overview of all available examples in the SolvaPay SDK
 
 **Key Features**:
 
-- Hosted checkout (redirects to app.solvapay.com)
+- Hosted checkout (redirects to solvapay.com)
 - Hosted customer portal
 - Token-based access control
 - Supabase authentication
