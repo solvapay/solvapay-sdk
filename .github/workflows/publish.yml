@@ -3,6 +3,11 @@ name: Publish to NPM
 # Auto-publish disabled - trigger manually via GitHub Actions UI when ready
 on:
   workflow_dispatch:
+    inputs:
+      start_from_version:
+        description: 'Optional: Exact version to publish (e.g., 1.0.1). If not provided, auto-detects and bumps patch from latest git tag'
+        required: false
+        type: string
   # push:
   #   branches:
   #     - main
@@ -61,57 +66,118 @@ jobs:
           # Fetch all tags
           git fetch --tags
           
-          # Get latest stable tag (exclude preview tags)
-          LATEST_STABLE_TAG=$(git tag -l "v*" | grep -v "preview" | sort -V | tail -1)
-          
-          if [ -z "$LATEST_STABLE_TAG" ]; then
-            # No stable tags yet, read from package.json and strip preview if present
-            echo "No stable tags found, reading from package.json"
-            CURRENT_VERSION=$(node -p "require('./packages/core/package.json').version")
-            BASE_VERSION=$(echo "${CURRENT_VERSION}" | sed 's/-preview\.[0-9]*$//')
-            echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-            echo "Using base version from package.json: ${BASE_VERSION}"
+          # Check if exact version was provided manually
+          if [ -n "${{ inputs.start_from_version }}" ]; then
+            EXACT_VERSION="${{ inputs.start_from_version }}"
+            # Strip 'v' prefix if present
+            EXACT_VERSION=$(echo "${EXACT_VERSION}" | sed 's/^v//')
+            # Strip preview suffix if present (e.g., 1.0.0-preview.18 -> 1.0.0)
+            EXACT_VERSION=$(echo "${EXACT_VERSION}" | sed 's/-preview\.[0-9]*$//')
+            echo "Using manually specified exact version: ${EXACT_VERSION}"
+            echo "exact_version=${EXACT_VERSION}" >> $GITHUB_OUTPUT
+            echo "use_exact_version=true" >> $GITHUB_OUTPUT
           else
-            # Extract version from tag (e.g., v1.0.1 -> 1.0.1)
-            BASE_VERSION=$(echo "${LATEST_STABLE_TAG}" | sed 's/^v//')
-            echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-            echo "Latest stable tag: ${LATEST_STABLE_TAG}"
-            echo "Base version: ${BASE_VERSION}"
+            # Auto-detect from git tags or package.json
+            echo "No version specified, auto-detecting from git tags..."
+            echo "use_exact_version=false" >> $GITHUB_OUTPUT
+            
+            # Get latest stable tag (exclude preview tags)
+            LATEST_STABLE_TAG=$(git tag -l "v*" | grep -v "preview" | sort -V | tail -1)
+            
+            if [ -z "$LATEST_STABLE_TAG" ]; then
+              # No stable tags yet, read from package.json and strip preview if present
+              echo "No stable tags found, reading from package.json"
+              CURRENT_VERSION=$(node -p "require('./packages/core/package.json').version")
+              BASE_VERSION=$(echo "${CURRENT_VERSION}" | sed 's/-preview\.[0-9]*$//')
+              echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+              echo "Using base version from package.json: ${BASE_VERSION}"
+            else
+              # Extract version from tag (e.g., v1.0.1 -> 1.0.1)
+              BASE_VERSION=$(echo "${LATEST_STABLE_TAG}" | sed 's/^v//')
+              echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+              echo "Latest stable tag: ${LATEST_STABLE_TAG}"
+              echo "Base version: ${BASE_VERSION}"
+            fi
           fi
 
-      - name: Bump version and generate changelog
+      - name: Set version and generate changelog
         run: |
-          BASE_VERSION="${{ steps.get-version.outputs.base_version }}"
+          USE_EXACT="${{ steps.get-version.outputs.use_exact_version }}"
           
-          # Update package.json to base version first (in case it has preview)
-          echo "Setting package.json to base version: ${BASE_VERSION}"
-          pnpm exec tsx -e "
-            const fs = require('fs');
-            const packages = [
-              'packages/core/package.json',
-              'packages/react/package.json',
-              'packages/react-supabase/package.json',
-              'packages/server/package.json',
-              'packages/auth/package.json',
-              'packages/next/package.json',
-              'packages/create-solvapay-app/package.json'
-            ];
-            packages.forEach(pkg => {
-              const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
-              pkgJson.version = '${BASE_VERSION}';
-              fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
-            });
-          "
-          
-          # Now bump patch version using existing script
-          echo "Bumping patch version from ${BASE_VERSION}..."
-          pnpm version:bump
+          if [ "${USE_EXACT}" == "true" ]; then
+            # Use the exact version specified manually
+            EXACT_VERSION="${{ steps.get-version.outputs.exact_version }}"
+            echo "Setting package.json to exact version: ${EXACT_VERSION}"
+            pnpm exec tsx -e "
+              const fs = require('fs');
+              const packages = [
+                'packages/core/package.json',
+                'packages/react/package.json',
+                'packages/react-supabase/package.json',
+                'packages/server/package.json',
+                'packages/auth/package.json',
+                'packages/next/package.json',
+                'packages/create-solvapay-app/package.json'
+              ];
+              packages.forEach(pkg => {
+                const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
+                pkgJson.version = '${EXACT_VERSION}';
+                fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
+              });
+            "
+          else
+            # Auto-detect and bump
+            BASE_VERSION="${{ steps.get-version.outputs.base_version }}"
+            
+            # Update package.json to base version first (in case it has preview)
+            echo "Setting package.json to base version: ${BASE_VERSION}"
+            pnpm exec tsx -e "
+              const fs = require('fs');
+              const packages = [
+                'packages/core/package.json',
+                'packages/react/package.json',
+                'packages/react-supabase/package.json',
+                'packages/server/package.json',
+                'packages/auth/package.json',
+                'packages/next/package.json',
+                'packages/create-solvapay-app/package.json'
+              ];
+              packages.forEach(pkg => {
+                const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
+                pkgJson.version = '${BASE_VERSION}';
+                fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
+              });
+            "
+            
+            # Now bump patch version using existing script
+            echo "Bumping patch version from ${BASE_VERSION}..."
+            pnpm version:bump
+          fi
           
           NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          echo "New version: ${NEW_VERSION}"
+          echo "Stable version to publish: ${NEW_VERSION}"
           
           # Note: Version changes are NOT committed back to git
           # Versions are tracked via git tags only to avoid branch divergence
+
+      - name: Show version summary
+        run: |
+          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 Stable Release Version Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Will publish: ${NEW_VERSION}"
+          
+          if [ -n "${{ inputs.start_from_version }}" ]; then
+            echo ""
+            echo "ℹ️  Using manually specified exact version: ${{ inputs.start_from_version }}"
+          else
+            BASE_VERSION="${{ steps.get-version.outputs.base_version }}"
+            echo ""
+            echo "Previous stable version: ${BASE_VERSION}"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Create git tag
         run: |
