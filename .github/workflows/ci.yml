@@ -14,8 +14,8 @@ on:
         default: false
 
 jobs:
-  lint-and-test:
-    name: Lint, Type Check & Test
+  lint-build-test:
+    name: Lint, Build & Test
     runs-on: ubuntu-latest
 
     permissions:
@@ -65,6 +65,10 @@ jobs:
   documentation:
     name: Documentation Validation
     runs-on: ubuntu-latest
+    needs: lint-build-test
+    # Runs after lint-build-test which already builds packages
+    # We still need to install dependencies and build here because GitHub Actions
+    # jobs run on separate runners and can't share filesystem state
 
     permissions:
       contents: read
@@ -104,6 +108,8 @@ jobs:
         run: pnpm build:packages
         # Packages must be built for TypeDoc to resolve subpath exports (e.g., @solvapay/auth/supabase)
         # which point to dist/ files. TypeDoc uses TypeScript's module resolution which needs these files.
+        # Note: This runs after lint-and-test completes, but we still need to build here because
+        # GitHub Actions jobs run on separate runners and can't share build artifacts without explicit upload/download
 
       - name: Validate documentation links
         id: validate-links
