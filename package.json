@@ -75,7 +75,7 @@
     "nodemon": "^3.1.0",
     "prettier": "^3.6.2",
     "tsup": "^8.0.1",
-    "tsx": "^4.19.0",
+    "tsx": "^4.20.6",
     "turbo": "^2.0.6",
     "typedoc": "^0.28.14",
     "typedoc-plugin-markdown": "^4.9.0",
