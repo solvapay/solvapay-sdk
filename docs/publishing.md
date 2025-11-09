@@ -5,6 +5,7 @@ This document describes the automated publishing and release process for SolvaPa
 ## Overview
 
 The SolvaPay SDK uses an automated publishing workflow that:
+
 - Publishes seven packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `create-solvapay-app`
 - Uses **fixed versioning** - all packages share the same version number
 - Auto-increments the **patch** version on every push to `main` branch
@@ -28,6 +29,7 @@ The SolvaPay SDK uses an automated publishing workflow that:
 ### Automatic (Default)
 
 Every push to `main` automatically increments the patch version:
+
 - `0.1.0` → `0.1.1` → `0.1.2` → `0.1.3` ...
 
 This is ideal for the preview/alpha release phase with frequent changes.
@@ -45,6 +47,7 @@ pnpm version:bump:major
 ```
 
 These commands will:
+
 1. Update all seven package.json files with the new version
 2. Generate changelog based on conventional commits
 3. Show you the next steps (commit and push)
@@ -154,6 +157,7 @@ All workflows require the following GitHub secret:
 - **`NPM_TOKEN`** - NPM access token with publish permissions
 
 To set up:
+
 1. Go to GitHub repository → Settings → Secrets and variables → Actions
 2. Add `NPM_TOKEN` with your npm access token
 
@@ -184,6 +188,7 @@ This stores your credentials in `~/.npmrc` globally, so you don't need to authen
 ### Steps
 
 1. **Bump version** (if needed):
+
 ```bash
 pnpm version:bump        # patch
 pnpm version:bump:minor  # minor
@@ -191,16 +196,19 @@ pnpm version:bump:major  # major
 ```
 
 2. **Build packages**:
+
 ```bash
 pnpm build:packages
 ```
 
 3. **Publish**:
+
 ```bash
 pnpm publish:packages
 ```
 
 4. **Commit and push**:
+
 ```bash
 git add .
 git commit -m "chore: bump version to X.X.X"
@@ -211,6 +219,7 @@ git push origin main --tags
 ## Package Access
 
 All packages are published with **public access**:
+
 - `@solvapay/core`
 - `@solvapay/react`
 - `@solvapay/react-supabase`
@@ -224,18 +233,21 @@ All packages are published with **public access**:
 The SDK uses a clean dual-authentication strategy:
 
 ### Local Development (npm CLI)
+
 - Use `npm login` to authenticate once
 - Credentials stored in `~/.npmrc` globally
 - No environment variables needed
 - Simple and secure
 
 ### CI/CD (GitHub Actions)
+
 - Use `NPM_TOKEN` as a GitHub secret
 - `setup-node` action handles authentication automatically
 - Uses `NODE_AUTH_TOKEN` environment variable
 - Industry standard approach
 
 **Why this is clean:**
+
 - No `.npmrc` auth token needed in the repository
 - Local devs don't manage environment variables
 - CI/CD uses secure secret management
@@ -282,6 +294,7 @@ Preview versions use the format `X.Y.Z-preview.N` (e.g., `0.1.0-preview.1`, `0.1
 ### When to Use Preview Versions
 
 Use preview versions when you want to:
+
 - Share in-progress work with team members or early adopters
 - Test features in real environments before merging to `main`
 - Iterate quickly on experimental features
@@ -296,6 +309,7 @@ Preview versions can be published in two ways:
 #### Option A: Automated Publishing (Recommended)
 
 Every push to the `dev` branch automatically:
+
 1. Runs tests
 2. Bumps the preview version
 3. Publishes to npm with `preview` tag
@@ -327,6 +341,7 @@ pnpm version:bump:preview
 ```
 
 This will:
+
 - Detect your current version (e.g., `0.1.0`)
 - Increment to next preview (e.g., `0.1.0-preview.1`)
 - If already a preview, increment the number (e.g., `0.1.0-preview.1` → `0.1.0-preview.2`)
@@ -398,6 +413,7 @@ Sometimes you may want to make a preview version the "latest" version on npm (e.
 7. Click **Run workflow**
 
 **What it does:**
+
 - Validates the version format
 - Checks which packages exist on npm at that version
 - Tags all published @solvapay packages at that version as "latest"
@@ -408,11 +424,13 @@ Sometimes you may want to make a preview version the "latest" version on npm (e.
 **Dry Run Mode:**
 
 Enable the dry run option to see what would be tagged without actually making changes. This is useful for:
+
 - Verifying which packages exist at a specific version
 - Testing before actually changing the tags
 - Previewing the impact
 
 **Benefits:**
+
 - ✅ No need to be logged in to npm locally
 - ✅ Consistent environment (same as publishing)
 - ✅ Audit trail in GitHub Actions logs
@@ -430,12 +448,14 @@ npm dist-tag ls @solvapay/react
 ```
 
 You should see something like:
+
 ```
 latest: 1.0.0-preview.9
 preview: 1.0.0-preview.9
 ```
 
 **Important Notes:**
+
 - Only published versions can be tagged - the script will skip packages/versions that don't exist on npm
 - This changes what users get when they run `npm install @solvapay/core` (without a version/tag)
 - Use this carefully during the preview phase
@@ -489,4 +509,3 @@ Note: Both automated workflows already add `[skip ci]` to version bump commits t
 
 - This workflow is optimized for rapid iteration during the preview/alpha phase (0.x versions)
 - Future improvements (release branches, pre-releases, etc.) will be added when moving to v1.0+
-

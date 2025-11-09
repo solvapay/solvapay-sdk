@@ -5,6 +5,7 @@ This guide covers setting up SolvaPay hosted checkout for subscription payments.
 ## Overview
 
 We'll implement:
+
 1. API route to create checkout sessions
 2. API route to check subscription status
 3. API route to create customer sessions (for subscription management)
@@ -16,18 +17,19 @@ We'll implement:
 Create `src/app/api/create-checkout-session/route.ts`:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { createCheckoutSession } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json();
+  const { planRef, agentRef } = await request.json()
 
-  const result = await createCheckoutSession(request, { agentRef, planRef });
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await createCheckoutSession(request, { agentRef, planRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
 **What this does:**
+
 - Uses the `createCheckoutSession` helper from `@solvapay/next`
 - Automatically extracts user ID from request (set by middleware)
 - Gets user email and name from Supabase token
@@ -40,16 +42,17 @@ export async function POST(request: NextRequest) {
 Create `src/app/api/check-subscription/route.ts`:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { checkSubscription } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request);
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await checkSubscription(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
 **What this does:**
+
 - Uses the `checkSubscription` helper from `@solvapay/next`
 - Automatically extracts user ID from request (set by middleware)
 - Gets user email and name from Supabase token
@@ -62,16 +65,17 @@ export async function GET(request: NextRequest) {
 Create `src/app/api/create-customer-session/route.ts`:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { createCustomerSession } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { createCustomerSession } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const result = await createCustomerSession(request);
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await createCustomerSession(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
 **What this does:**
+
 - Uses the `createCustomerSession` helper from `@solvapay/next`
 - Automatically extracts user ID from request (set by middleware)
 - Gets user email and name from Supabase token
@@ -85,24 +89,25 @@ export async function POST(request: NextRequest) {
 Create `src/app/api/sync-customer/route.ts`:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { syncCustomer } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { syncCustomer } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const customerRef = await syncCustomer(request);
-  
+  const customerRef = await syncCustomer(request)
+
   if (customerRef instanceof NextResponse) {
-    return customerRef;
+    return customerRef
   }
-  
+
   return NextResponse.json({
     customerRef,
     success: true,
-  });
+  })
 }
 ```
 
 **What this does:**
+
 - Uses the `syncCustomer` helper from `@solvapay/next`
 - Automatically extracts user ID from request (set by middleware)
 - Gets user email and name from Supabase token
@@ -115,6 +120,7 @@ export async function POST(request: NextRequest) {
 The layout is already set up correctly from Step 2. The `SolvaPayProvider` with the Supabase adapter automatically handles subscription checking - no additional configuration needed!
 
 **Important:** The Supabase adapter automatically:
+
 - Gets the access token from Supabase session using `supabase.auth.getSession()`
 - Calls `/api/check-subscription` with the Authorization header
 - Updates subscription state in the provider
@@ -137,10 +143,10 @@ export default function HomePage() {
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Get subscription helpers from SDK
   const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
-  
+
   // Refetch subscriptions on mount to ensure we have latest data after navigation
   // This is especially important when creating a new account or after account changes
   // Empty dependency array ensures this only runs once on mount, preventing stale data
@@ -151,7 +157,7 @@ export default function HomePage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run on mount to ensure fresh data on page load
-  
+
   // Get advanced subscription status helpers
   const {
     cancelledSubscription,
@@ -172,11 +178,11 @@ export default function HomePage() {
 
     try {
       const accessToken = await getAccessToken();
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
@@ -223,11 +229,11 @@ export default function HomePage() {
 
     try {
       const accessToken = await getAccessToken();
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
@@ -329,6 +335,7 @@ export default function HomePage() {
 ```
 
 **What this does:**
+
 - Displays subscription status
 - Shows "Upgrade" button if no subscription
 - Shows "Manage Subscription" button if subscribed
@@ -343,7 +350,7 @@ export default function HomePage() {
 
 2. **User is redirected**
    - `window.location.href = checkoutUrl`
-   - User completes payment on `app.solvapay.com`
+   - User completes payment on `solvapay.com`
    - After payment, user is redirected back to your app
 
 3. **Subscription status updates**
@@ -355,10 +362,10 @@ export default function HomePage() {
 
 Use these test card numbers on the hosted checkout page:
 
-| Card Number | Result |
-|------------|--------|
-| 4242 4242 4242 4242 | ✅ Payment succeeds |
-| 4000 0000 0000 0002 | ❌ Payment declined |
+| Card Number         | Result                |
+| ------------------- | --------------------- |
+| 4242 4242 4242 4242 | ✅ Payment succeeds   |
+| 4000 0000 0000 0002 | ❌ Payment declined   |
 | 4000 0000 0000 9995 | ❌ Insufficient funds |
 
 - Use any future expiry date
@@ -370,6 +377,7 @@ Use these test card numbers on the hosted checkout page:
 Test your payment setup:
 
 1. **Start dev server:**
+
    ```bash
    npm run dev
    ```
@@ -390,11 +398,13 @@ Test your payment setup:
 ## Troubleshooting
 
 ### Subscription not updating after checkout
+
 - Ensure `refetch()` is called after returning from checkout
 - Check that `/api/check-subscription` returns correct format
 - Verify customerRef matches between checkout and subscription check
 
 ### "Unauthorized" errors
+
 - Verify middleware is properly extracting user ID
 - Check that Authorization header is being sent
 - Ensure user is authenticated before calling checkout
@@ -428,27 +438,27 @@ The subscription tracking system follows this flow:
 ### Using Subscription Hooks
 
 ```typescript
-import { useSubscription, useSubscriptionStatus } from '@solvapay/react';
+import { useSubscription, useSubscriptionStatus } from '@solvapay/react'
 
 function MyComponent() {
   // Basic subscription data
-  const { 
-    subscriptions,           // Array of subscription objects
-    loading,                 // Loading state
-    hasActiveSubscription,   // Boolean: has any active subscription
-    refetch                  // Function to force refresh
-  } = useSubscription();
-  
+  const {
+    subscriptions, // Array of subscription objects
+    loading, // Loading state
+    hasActiveSubscription, // Boolean: has any active subscription
+    refetch, // Function to force refresh
+  } = useSubscription()
+
   // Helper utilities for subscription logic
   const {
-    hasPaidSubscription,      // Boolean: has active paid plan
-    activePaidSubscription,   // Most recent paid subscription
-    cancelledSubscription,    // Most recent cancelled subscription
+    hasPaidSubscription, // Boolean: has active paid plan
+    activePaidSubscription, // Most recent paid subscription
+    cancelledSubscription, // Most recent cancelled subscription
     shouldShowCancelledNotice, // Should show cancellation notice
-    formatDate,               // Format dates for display
-    getDaysUntilExpiration    // Calculate days until expiration
-  } = useSubscriptionStatus([]); // Pass array of plan definitions
-  
+    formatDate, // Format dates for display
+    getDaysUntilExpiration, // Calculate days until expiration
+  } = useSubscriptionStatus([]) // Pass array of plan definitions
+
   // Use these values to control UI
 }
 ```
@@ -456,6 +466,7 @@ function MyComponent() {
 ### Subscription Filtering
 
 The SDK automatically filters subscriptions:
+
 - ✅ **Included**: Active subscriptions
 - ✅ **Included**: Cancelled subscriptions with future `endDate`
 - ❌ **Excluded**: Cancelled subscriptions without `endDate`
@@ -466,22 +477,23 @@ The SDK automatically filters subscriptions:
 Force a refresh when subscription status might have changed:
 
 ```typescript
-const { refetch } = useSubscription();
+const { refetch } = useSubscription()
 
 // After successful payment
 const handlePaymentSuccess = async () => {
-  await refetch();
-};
+  await refetch()
+}
 
 // Auto-refetch on mount to ensure fresh data
 useEffect(() => {
-  refetch().catch(console.error);
-}, [refetch]);
+  refetch().catch(console.error)
+}, [refetch])
 ```
 
 ### Common Patterns
 
 **Feature Gating:**
+
 ```typescript
 const { hasPaidSubscription } = useSubscriptionStatus([]);
 if (!hasPaidSubscription) {
@@ -491,6 +503,7 @@ return <PremiumContent />;
 ```
 
 **Status Display:**
+
 ```typescript
 const { activePaidSubscription, cancelledSubscription, shouldShowCancelledNotice } = useSubscriptionStatus([]);
 
@@ -508,5 +521,5 @@ For more details on subscription status tracking, see the complete example in [S
 ## Next Steps
 
 Now that payments are set up, proceed to:
-- **[Step 4: Styling](./04-styling.md)** - Create UI components and styling system
 
+- **[Step 4: Styling](./04-styling.md)** - Create UI components and styling system

@@ -14,6 +14,7 @@
     "baseUrl": ".",
     "paths": {
       "@solvapay/core": ["packages/core/src"],
+      "@solvapay/auth": ["packages/auth/src"],
       "@solvapay/server": ["packages/server/src"],
       "@solvapay/react": ["packages/react/src"]
     }

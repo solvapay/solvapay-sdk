@@ -1,14 +1,14 @@
-"use client";
-import React from 'react';
-import { useSubscription } from '../hooks/useSubscription';
-import type { SubscriptionGateProps } from '../types';
+'use client'
+import React from 'react'
+import { useSubscription } from '../hooks/useSubscription'
+import type { SubscriptionGateProps } from '../types'
 
 /**
  * Headless Subscription Gate Component
- * 
+ *
  * Controls access to content based on subscription status.
  * Uses render props to give developers full control over locked/unlocked states.
- * 
+ *
  * @example
  * ```tsx
  * <SubscriptionGate requirePlan="Pro Plan">
@@ -20,13 +20,12 @@ import type { SubscriptionGateProps } from '../types';
  * </SubscriptionGate>
  * ```
  */
-export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({
-  requirePlan,
-  children,
-}) => {
-  const { subscriptions, loading, hasPlan } = useSubscription();
+export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({ requirePlan, children }) => {
+  const { subscriptions, loading, hasPlan } = useSubscription()
 
-  const hasAccess = requirePlan ? hasPlan(requirePlan) : subscriptions.some(sub => sub.status === 'active');
+  const hasAccess = requirePlan
+    ? hasPlan(requirePlan)
+    : subscriptions.some(sub => sub.status === 'active')
 
   return (
     <>
@@ -36,6 +35,5 @@ export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({
         loading,
       })}
     </>
-  );
-};
-
+  )
+}

@@ -80,12 +80,11 @@ Add subscription and auth to my app using these instructions
 ```
 
 **Then drag these guide files into the chat as references:**
+
 - `00-app-description.md` - Your app description (use this to customize the HomePage)
 - `02-authentication.md` - Supabase authentication setup
 - `03-payments.md` - SolvaPay hosted checkout setup
 - `04-styling.md` - UI components and styling
 - `05-complete-example.md` - Complete working implementation (will use app description to customize HomePage)
 
-
 Cursor will help you implement each step automatically. When implementing `05-complete-example.md`, it will use your app description to customize the HomePage, feature cards, and messaging to match your app's specific needs!
-

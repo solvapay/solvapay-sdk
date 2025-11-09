@@ -34,14 +34,16 @@
     "react-dom": "^18.2.0 || ^19.0.0"
   },
   "dependencies": {
-    "@stripe/react-stripe-js": "^2.9.0",
-    "@stripe/stripe-js": "^4.8.0"
+    "@stripe/react-stripe-js": "^5.3.0",
+    "@stripe/stripe-js": "^8.3.0"
   },
   "scripts": {
     "build": "tsup src/index.tsx src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint src --config ../../eslint.config.react.mjs",
+    "lint:fix": "eslint src --config ../../eslint.config.react.mjs --fix"
   },
   "devDependencies": {
     "@solvapay/server": "workspace:*",

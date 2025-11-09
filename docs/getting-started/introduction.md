@@ -12,13 +12,13 @@ Protect your API endpoints, functions, and MCP tools with a single line of code:
 
 ```typescript
 // Express.js
-app.post('/tasks', payable.http(createTask));
+app.post('/tasks', payable.http(createTask))
 
 // Next.js App Router
-export const POST = payable.next(createTask);
+export const POST = payable.next(createTask)
 
 // MCP Server
-const handler = payable.mcp(createTask);
+const handler = payable.mcp(createTask)
 ```
 
 ### 💳 Headless React Components
@@ -26,18 +26,18 @@ const handler = payable.mcp(createTask);
 Build beautiful payment flows with headless React components that work with any design system:
 
 ```tsx
-import { PaymentForm, useSubscription } from '@solvapay/react';
+import { PaymentForm, useSubscription } from '@solvapay/react'
 
 function CheckoutPage() {
-  const { hasPaidSubscription } = useSubscription();
-  
+  const { hasPaidSubscription } = useSubscription()
+
   return (
     <PaymentForm
       planRef="pln_premium"
       agentRef="agt_myapi"
       onSuccess={() => router.push('/dashboard')}
     />
-  );
+  )
 }
 ```
 
@@ -62,17 +62,20 @@ function CheckoutPage() {
 Protect your REST or GraphQL APIs with usage limits and subscription checks:
 
 ```typescript
-const solvaPay = createSolvaPay();
+const solvaPay = createSolvaPay()
 const payable = solvaPay.payable({
   agent: 'agt_myapi',
-  plan: 'pln_premium'
-});
+  plan: 'pln_premium',
+})
 
 // Protect any endpoint
-app.post('/api/generate', payable.http(async (req) => {
-  // Your business logic here
-  return { result: 'generated content' };
-}));
+app.post(
+  '/api/generate',
+  payable.http(async req => {
+    // Your business logic here
+    return { result: 'generated content' }
+  }),
+)
 ```
 
 ### AI Agents
@@ -81,10 +84,13 @@ Monetize AI agent interactions with pay-per-use or subscription models:
 
 ```typescript
 // Protect agent endpoints
-app.post('/agent/chat', payable.http(async (req) => {
-  const response = await aiAgent.chat(req.body.message);
-  return { response };
-}));
+app.post(
+  '/agent/chat',
+  payable.http(async req => {
+    const response = await aiAgent.chat(req.body.message)
+    return { response }
+  }),
+)
 ```
 
 ### MCP Servers
@@ -92,19 +98,19 @@ app.post('/agent/chat', payable.http(async (req) => {
 Protect MCP tools with paywall protection:
 
 ```typescript
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
-const solvaPay = createSolvaPay();
+const solvaPay = createSolvaPay()
 const payable = solvaPay.payable({
   agent: 'agt_mcptools',
-  plan: 'pln_pro'
-});
+  plan: 'pln_pro',
+})
 
 // Protect MCP tools
-const handler = payable.mcp(async (args) => {
+const handler = payable.mcp(async args => {
   // Tool implementation
-  return { result: 'tool output' };
-});
+  return { result: 'tool output' }
+})
 ```
 
 ## Architecture Overview
@@ -150,4 +156,3 @@ Return Paywall Error (with checkout URL)
 - [Quick Start](./quick-start.md) - Get up and running in 5 minutes
 - [Core Concepts](./core-concepts.md) - Understand agents, plans, and the paywall flow
 - [Architecture Guide](../guides/architecture.md) - Detailed technical architecture and package design
-

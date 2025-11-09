@@ -14,18 +14,18 @@ vi.mock('../../app/api/tasks/route', async () => {
   const { createTask, listTasks } = await import('@solvapay/demo-services')
   const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
   const { createSolvaPay } = await import('@solvapay/server')
-  
-  const stubClient = new StubSolvaPayClient({ 
+
+  const stubClient = new StubSolvaPayClient({
     useFileStorage: true,
     freeTierLimit: 1000,
-    debug: false
+    debug: false,
   })
   const solvaPay = createSolvaPay({ apiClient: stubClient })
   const payable = solvaPay.payable({ agent: 'crud-basic' })
-  
+
   return {
     GET: payable.next(listTasks),
-    POST: payable.next(createTask)
+    POST: payable.next(createTask),
   }
 })
 
@@ -33,18 +33,18 @@ vi.mock('../../app/api/tasks/[id]/route', async () => {
   const { getTask, deleteTask } = await import('@solvapay/demo-services')
   const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
   const { createSolvaPay } = await import('@solvapay/server')
-  
-  const stubClient = new StubSolvaPayClient({ 
+
+  const stubClient = new StubSolvaPayClient({
     useFileStorage: true,
     freeTierLimit: 1000,
-    debug: false
+    debug: false,
   })
   const solvaPay = createSolvaPay({ apiClient: stubClient })
   const payable = solvaPay.payable({ agent: 'crud-basic' })
-  
+
   return {
     GET: payable.next(getTask),
-    DELETE: payable.next(deleteTask)
+    DELETE: payable.next(deleteTask),
   }
 })
 
@@ -57,32 +57,32 @@ describe('Integration Tests', () => {
   const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
   const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
   const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
-  
+
   beforeEach(async () => {
     // Ensure demo data directory exists
     if (!existsSync(DEMO_DATA_DIR)) {
       mkdirSync(DEMO_DATA_DIR, { recursive: true })
     }
-    
+
     // Set up test customers with pro plans
-    const customers = existsSync(CUSTOMERS_FILE) 
+    const customers = existsSync(CUSTOMERS_FILE)
       ? JSON.parse(readFileSync(CUSTOMERS_FILE, 'utf-8'))
       : {}
-    
+
     customers['demo_user'] = {
       credits: 100,
       email: 'demo@example.com',
       name: 'Demo User',
-      plan: 'pro'
+      plan: 'pro',
     }
-    
+
     writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2))
-    
+
     // Clean up user plans file
     if (existsSync(USER_PLANS_FILE)) {
       unlinkSync(USER_PLANS_FILE)
     }
-    
+
     // Clear all tasks
     clearAllTasks()
   })
@@ -96,10 +96,10 @@ describe('Integration Tests', () => {
     it('should handle complete user journey from task CRUD operations', async () => {
       // Ensure demo_user has pro plan
       const proPlans = {
-        'demo_user': {
+        demo_user: {
           plan: 'pro',
-          upgradedAt: new Date().toISOString()
-        }
+          upgradedAt: new Date().toISOString(),
+        },
       }
       writeFileSync(USER_PLANS_FILE, JSON.stringify(proPlans, null, 2))
 
@@ -108,12 +108,12 @@ describe('Integration Tests', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-customer-ref': 'demo_user'
+          'x-customer-ref': 'demo_user',
         },
         body: JSON.stringify({
           title: 'Integration Test Task',
-          description: 'A task created during integration test'
-        })
+          description: 'A task created during integration test',
+        }),
       })
 
       const createResponse = await createTaskPOST(createRequest)
@@ -129,8 +129,8 @@ describe('Integration Tests', () => {
       // 2. List tasks
       const listRequest = new NextRequest('http://localhost:3000/api/tasks', {
         headers: {
-          'x-customer-ref': 'demo_user'
-        }
+          'x-customer-ref': 'demo_user',
+        },
       })
 
       const listResponse = await listTasksGET(listRequest)
@@ -144,8 +144,8 @@ describe('Integration Tests', () => {
       // 3. Get specific task
       const getRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         headers: {
-          'x-customer-ref': 'demo_user'
-        }
+          'x-customer-ref': 'demo_user',
+        },
       })
 
       const getResponse = await getTaskGET(getRequest, { params: Promise.resolve({ id: taskId }) })
@@ -160,11 +160,13 @@ describe('Integration Tests', () => {
       const deleteRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
-          'x-customer-ref': 'demo_user'
-        }
+          'x-customer-ref': 'demo_user',
+        },
       })
 
-      const deleteResponse = await deleteTaskDELETE(deleteRequest, { params: Promise.resolve({ id: taskId }) })
+      const deleteResponse = await deleteTaskDELETE(deleteRequest, {
+        params: Promise.resolve({ id: taskId }),
+      })
       const deleteData = await deleteResponse.json()
       expect(deleteResponse.status).toBe(200)
       expect(deleteData.success).toBe(true)
@@ -174,4 +176,3 @@ describe('Integration Tests', () => {
     })
   })
 })
-

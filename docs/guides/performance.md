@@ -17,13 +17,13 @@ This guide covers performance optimization strategies for SolvaPay SDK, includin
 SolvaPay SDK automatically caches customer lookups to reduce API calls:
 
 ```typescript
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
-const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY });
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
 
 // Customer lookups are automatically cached for 60 seconds
 // Multiple concurrent requests share the same promise
-const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
+const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
 ```
 
 ### Subscription Caching (Next.js)
@@ -31,18 +31,18 @@ const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
 Use subscription caching to reduce API calls:
 
 ```typescript
-import { checkSubscription, clearSubscriptionCache } from '@solvapay/next';
+import { checkSubscription, clearSubscriptionCache } from '@solvapay/next'
 
 // Check subscription (cached automatically)
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request);
-  return NextResponse.json(result);
+  const result = await checkSubscription(request)
+  return NextResponse.json(result)
 }
 
 // Clear cache when subscription changes
 export async function POST(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
-  await clearSubscriptionCache(userId);
+  const userId = getUserIdFromRequest(request)
+  await clearSubscriptionCache(userId)
   // ... handle subscription update
 }
 ```
@@ -52,12 +52,12 @@ export async function POST(request: NextRequest) {
 Monitor cache performance:
 
 ```typescript
-import { getSubscriptionCacheStats } from '@solvapay/next';
+import { getSubscriptionCacheStats } from '@solvapay/next'
 
-const stats = await getSubscriptionCacheStats();
-console.log('Cache hits:', stats.hits);
-console.log('Cache misses:', stats.misses);
-console.log('Cache size:', stats.size);
+const stats = await getSubscriptionCacheStats()
+console.log('Cache hits:', stats.hits)
+console.log('Cache misses:', stats.misses)
+console.log('Cache size:', stats.size)
 ```
 
 ## Request Deduplication
@@ -71,10 +71,10 @@ const promises = [
   payable.http(createTask)(req1, res1),
   payable.http(createTask)(req2, res2),
   payable.http(createTask)(req3, res3),
-];
+]
 
 // Only one API call is made, all requests share the result
-await Promise.all(promises);
+await Promise.all(promises)
 ```
 
 ### How It Works
@@ -91,13 +91,13 @@ The `@solvapay/next` package includes built-in subscription caching:
 
 ```typescript
 // app/api/check-subscription/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { checkSubscription } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
   // Automatically cached per user ID
-  const result = await checkSubscription(request);
-  return NextResponse.json(result);
+  const result = await checkSubscription(request)
+  return NextResponse.json(result)
 }
 ```
 
@@ -108,16 +108,16 @@ import {
   clearSubscriptionCache,
   clearAllSubscriptionCache,
   getSubscriptionCacheStats,
-} from '@solvapay/next';
+} from '@solvapay/next'
 
 // Clear cache for specific user
-await clearSubscriptionCache(userId);
+await clearSubscriptionCache(userId)
 
 // Clear all caches
-await clearAllSubscriptionCache();
+await clearAllSubscriptionCache()
 
 // Get cache statistics
-const stats = await getSubscriptionCacheStats();
+const stats = await getSubscriptionCacheStats()
 ```
 
 ### Cache Invalidation
@@ -127,14 +127,14 @@ Invalidate cache when subscription changes:
 ```typescript
 // After successful payment
 export async function POST(request: NextRequest) {
-  const userId = getUserIdFromRequest(request);
-  
+  const userId = getUserIdFromRequest(request)
+
   // Process payment...
-  
+
   // Clear cache to force refresh
-  await clearSubscriptionCache(userId);
-  
-  return NextResponse.json({ success: true });
+  await clearSubscriptionCache(userId)
+
+  return NextResponse.json({ success: true })
 }
 ```
 
@@ -147,10 +147,10 @@ Create a single SolvaPay instance and reuse it:
 ```typescript
 // ✅ Good: Single instance
 // lib/solvapay.ts
-export const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY });
+export const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
 
 // ❌ Bad: Creating new instances
-const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY }); // In each file
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY }) // In each file
 ```
 
 ### 2. Use Subscription Caching
@@ -159,11 +159,11 @@ Enable subscription caching in Next.js:
 
 ```typescript
 // ✅ Good: Use cached subscription checks
-import { checkSubscription } from '@solvapay/next';
+import { checkSubscription } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request); // Cached automatically
-  return NextResponse.json(result);
+  const result = await checkSubscription(request) // Cached automatically
+  return NextResponse.json(result)
 }
 ```
 
@@ -176,11 +176,11 @@ Batch multiple operations when possible:
 const [subscription, customer] = await Promise.all([
   checkSubscription(request),
   getCustomer(request),
-]);
+])
 
 // ❌ Bad: Sequential operations
-const subscription = await checkSubscription(request);
-const customer = await getCustomer(request);
+const subscription = await checkSubscription(request)
+const customer = await getCustomer(request)
 ```
 
 ### 4. Minimize API Calls
@@ -200,12 +200,12 @@ Use Edge-compatible patterns:
 
 ```typescript
 // ✅ Good: Edge-compatible
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
-export const runtime = 'edge';
+export const runtime = 'edge'
 
 export async function GET(request: Request) {
-  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY });
+  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
   // Works in Edge runtime
 }
 ```
@@ -215,36 +215,36 @@ export async function GET(request: Request) {
 ### Measure API Call Latency
 
 ```typescript
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
-const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY });
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
 
 async function measurePerformance() {
-  const start = Date.now();
-  
+  const start = Date.now()
+
   await solvaPay.checkLimits({
     customerRef: 'user_123',
     agentRef: 'agt_myapi',
-  });
-  
-  const latency = Date.now() - start;
-  console.log(`API call took ${latency}ms`);
+  })
+
+  const latency = Date.now() - start
+  console.log(`API call took ${latency}ms`)
 }
 ```
 
 ### Monitor Cache Hit Rates
 
 ```typescript
-import { getSubscriptionCacheStats } from '@solvapay/next';
+import { getSubscriptionCacheStats } from '@solvapay/next'
 
 async function monitorCache() {
-  const stats = await getSubscriptionCacheStats();
-  const hitRate = stats.hits / (stats.hits + stats.misses);
-  
-  console.log(`Cache hit rate: ${(hitRate * 100).toFixed(2)}%`);
-  
+  const stats = await getSubscriptionCacheStats()
+  const hitRate = stats.hits / (stats.hits + stats.misses)
+
+  console.log(`Cache hit rate: ${(hitRate * 100).toFixed(2)}%`)
+
   if (hitRate < 0.5) {
-    console.warn('Low cache hit rate - consider increasing cache TTL');
+    console.warn('Low cache hit rate - consider increasing cache TTL')
   }
 }
 ```
@@ -258,7 +258,7 @@ async function monitorCache() {
 const solvaPay = createSolvaPay({
   apiKey: process.env.SOLVAPAY_SECRET_KEY,
   debug: true, // Enable debug logging
-});
+})
 ```
 
 ## Advanced Optimization
@@ -268,26 +268,26 @@ const solvaPay = createSolvaPay({
 For advanced use cases, implement custom caching:
 
 ```typescript
-import { createSolvaPay } from '@solvapay/server';
-import { LRUCache } from 'lru-cache';
+import { createSolvaPay } from '@solvapay/server'
+import { LRUCache } from 'lru-cache'
 
 // Custom subscription cache
 const subscriptionCache = new LRUCache<string, any>({
   max: 1000,
   ttl: 60000, // 60 seconds
-});
+})
 
 async function getCachedSubscription(userId: string) {
-  const cached = subscriptionCache.get(userId);
+  const cached = subscriptionCache.get(userId)
   if (cached) {
-    return cached;
+    return cached
   }
-  
+
   // Fetch from API
-  const subscription = await checkSubscription(request);
-  subscriptionCache.set(userId, subscription);
-  
-  return subscription;
+  const subscription = await checkSubscription(request)
+  subscriptionCache.set(userId, subscription)
+
+  return subscription
 }
 ```
 
@@ -297,15 +297,13 @@ Batch multiple customer lookups:
 
 ```typescript
 async function batchCustomerLookups(userIds: string[]) {
-  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY });
-  
+  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
+
   // Batch lookups (SolvaPay handles deduplication)
-  const promises = userIds.map(userId =>
-    solvaPay.ensureCustomer(userId, userId)
-  );
-  
-  const results = await Promise.all(promises);
-  return results;
+  const promises = userIds.map(userId => solvaPay.ensureCustomer(userId, userId))
+
+  const results = await Promise.all(promises)
+  return results
 }
 ```
 
@@ -328,4 +326,3 @@ async function batchCustomerLookups(userIds: string[]) {
 - [Testing with Stub Mode](./testing.md) - Test performance
 - [Next.js Integration Guide](./nextjs.md) - Next.js performance tips
 - [API Reference](../api/server/src/README.md) - Full API documentation
-

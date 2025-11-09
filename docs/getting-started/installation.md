@@ -112,6 +112,7 @@ SolvaPay SDK works in **stub mode** when no API key is provided. This is perfect
 - Prototyping
 
 In stub mode:
+
 - All subscription checks return "free tier" (no subscription)
 - Payment flows are simulated
 - No actual API calls are made
@@ -119,10 +120,10 @@ In stub mode:
 To use stub mode, simply don't set `SOLVAPAY_SECRET_KEY`:
 
 ```typescript
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
 // Works without API key (stub mode)
-const solvaPay = createSolvaPay();
+const solvaPay = createSolvaPay()
 ```
 
 ## Verification Steps
@@ -133,10 +134,10 @@ Create a test file to verify the installation:
 
 ```typescript
 // test-installation.ts
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
-const solvaPay = createSolvaPay();
-console.log('✅ SolvaPay SDK installed successfully!');
+const solvaPay = createSolvaPay()
+console.log('✅ SolvaPay SDK installed successfully!')
 ```
 
 Run it:
@@ -150,9 +151,9 @@ npx tsx test-installation.ts
 If using TypeScript, verify types are available:
 
 ```typescript
-import type { SolvaPay, PayableFunction } from '@solvapay/server';
+import type { SolvaPay, PayableFunction } from '@solvapay/server'
 
-const solvaPay: SolvaPay = createSolvaPay();
+const solvaPay: SolvaPay = createSolvaPay()
 // Type checking should work without errors
 ```
 
@@ -161,19 +162,19 @@ const solvaPay: SolvaPay = createSolvaPay();
 Test that stub mode works without an API key:
 
 ```typescript
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
-const solvaPay = createSolvaPay(); // No API key needed
+const solvaPay = createSolvaPay() // No API key needed
 
 const payable = solvaPay.payable({
   agent: 'agt_test',
-  plan: 'pln_test'
-});
+  plan: 'pln_test',
+})
 
 // This should work in stub mode
 const handler = payable.http(async () => {
-  return { message: 'Hello from stub mode!' };
-});
+  return { message: 'Hello from stub mode!' }
+})
 ```
 
 ## Framework-Specific Setup
@@ -215,4 +216,3 @@ See [MCP Server Integration Guide](../guides/mcp.md) for detailed setup.
 - [Quick Start Guide](./quick-start.md) - Get up and running in 5 minutes
 - [Core Concepts](./core-concepts.md) - Understand the key concepts
 - [Framework Guides](../guides/express.md) - Framework-specific integration guides
-

@@ -17,20 +17,16 @@ yarn add @solvapay/react-supabase @supabase/supabase-js
 Use the Supabase adapter with `SolvaPayProvider`:
 
 ```tsx
-import { SolvaPayProvider } from '@solvapay/react';
-import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { SolvaPayProvider } from '@solvapay/react'
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 
 const adapter = createSupabaseAuthAdapter({
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-});
+})
 
 export default function RootLayout({ children }) {
-  return (
-    <SolvaPayProvider config={{ auth: { adapter } }}>
-      {children}
-    </SolvaPayProvider>
-  );
+  return <SolvaPayProvider config={{ auth: { adapter } }}>{children}</SolvaPayProvider>
 }
 ```
 
@@ -41,6 +37,7 @@ export default function RootLayout({ children }) {
 Creates a Supabase auth adapter instance.
 
 **Parameters:**
+
 - `config.supabaseUrl` (string, required) - Your Supabase project URL
 - `config.supabaseAnonKey` (string, required) - Your Supabase anonymous/public key
 
@@ -49,6 +46,7 @@ Creates a Supabase auth adapter instance.
 ## How It Works
 
 The adapter:
+
 1. Creates a Supabase client using your credentials
 2. Gets the current session using `supabase.auth.getSession()`
 3. Extracts the access token and user ID from the session
@@ -59,26 +57,24 @@ The adapter handles errors gracefully and never throws - it returns `null` when 
 ## Example: Full Setup
 
 ```tsx
-'use client';
+'use client'
 
-import { SolvaPayProvider } from '@solvapay/react';
-import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { SolvaPayProvider } from '@solvapay/react'
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 
 export default function RootLayout({ children }) {
   const adapter = createSupabaseAuthAdapter({
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  });
+  })
 
   return (
     <html>
       <body>
-        <SolvaPayProvider config={{ auth: { adapter } }}>
-          {children}
-        </SolvaPayProvider>
+        <SolvaPayProvider config={{ auth: { adapter } }}>{children}</SolvaPayProvider>
       </body>
     </html>
-  );
+  )
 }
 ```
 
@@ -100,4 +96,3 @@ const myAuthAdapter: AuthAdapter = {
 
 <SolvaPayProvider config={{ auth: { adapter: myAuthAdapter } }}>
 ```
-

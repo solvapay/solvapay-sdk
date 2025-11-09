@@ -18,18 +18,19 @@ pnpm add @solvapay/react
 ### Zero-Config Usage (Recommended)
 
 ```tsx
-import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react';
+import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react'
 
 export default function App() {
   return (
     <SolvaPayProvider>
       <CheckoutPage />
     </SolvaPayProvider>
-  );
+  )
 }
 ```
 
 By default, `SolvaPayProvider` uses:
+
 - `/api/check-subscription` for subscription checks
 - `/api/create-payment-intent` for payment creation
 - `/api/process-payment` for payment processing
@@ -37,7 +38,7 @@ By default, `SolvaPayProvider` uses:
 ### Custom API Routes
 
 ```tsx
-import { SolvaPayProvider, PaymentForm } from '@solvapay/react';
+import { SolvaPayProvider, PaymentForm } from '@solvapay/react'
 
 export default function App() {
   return (
@@ -52,34 +53,34 @@ export default function App() {
     >
       <CheckoutPage />
     </SolvaPayProvider>
-  );
+  )
 }
 ```
 
 ### With Supabase Authentication
 
 ```tsx
-import { SolvaPayProvider } from '@solvapay/react';
-import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { SolvaPayProvider } from '@solvapay/react'
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 
 export default function App() {
   const adapter = createSupabaseAuthAdapter({
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  });
+  })
 
   return (
     <SolvaPayProvider config={{ auth: { adapter } }}>
       <CheckoutPage />
     </SolvaPayProvider>
-  );
+  )
 }
 ```
 
 ### Fully Custom Implementation
 
 ```tsx
-import { SolvaPayProvider } from '@solvapay/react';
+import { SolvaPayProvider } from '@solvapay/react'
 
 export default function App() {
   return (
@@ -88,19 +89,19 @@ export default function App() {
         const res = await fetch('/api/custom/payment', {
           method: 'POST',
           body: JSON.stringify({ planRef, agentRef }),
-        });
-        if (!res.ok) throw new Error('Failed to create payment');
-        return res.json();
+        })
+        if (!res.ok) throw new Error('Failed to create payment')
+        return res.json()
       }}
-      checkSubscription={async (customerRef) => {
-        const res = await fetch(`/api/custom/subscription?customerRef=${customerRef}`);
-        if (!res.ok) throw new Error('Failed to check subscription');
-        return res.json();
+      checkSubscription={async customerRef => {
+        const res = await fetch(`/api/custom/subscription?customerRef=${customerRef}`)
+        if (!res.ok) throw new Error('Failed to check subscription')
+        return res.json()
       }}
     >
       <CheckoutPage />
     </SolvaPayProvider>
-  );
+  )
 }
 ```
 
@@ -111,6 +112,7 @@ export default function App() {
 Headless context provider that manages subscription state, payment methods, and customer references.
 
 **Features:**
+
 - Zero-config with sensible defaults
 - Auto-fetches subscriptions on mount
 - Built-in localStorage caching with user validation
@@ -118,6 +120,7 @@ Headless context provider that manages subscription state, payment methods, and 
 - Customizable API routes via config
 
 **Props:**
+
 - `config?: SolvaPayConfig` - Configuration object (optional)
   - `config.api?` - Custom API route paths
   - `config.auth?` - Auth adapter configuration
@@ -127,18 +130,19 @@ Headless context provider that manages subscription state, payment methods, and 
 - `children: React.ReactNode` - Child components
 
 **Config Options:**
+
 ```tsx
 interface SolvaPayConfig {
   api?: {
-    checkSubscription?: string;      // Default: '/api/check-subscription'
-    createPayment?: string;           // Default: '/api/create-payment-intent'
-    processPayment?: string;          // Default: '/api/process-payment'
-  };
+    checkSubscription?: string // Default: '/api/check-subscription'
+    createPayment?: string // Default: '/api/create-payment-intent'
+    processPayment?: string // Default: '/api/process-payment'
+  }
   auth?: {
-    adapter?: AuthAdapter;           // Auth adapter for extracting user ID/token
-    getToken?: () => Promise<string | null>;  // Deprecated: use adapter
-    getUserId?: () => Promise<string | null>; // Deprecated: use adapter
-  };
+    adapter?: AuthAdapter // Auth adapter for extracting user ID/token
+    getToken?: () => Promise<string | null> // Deprecated: use adapter
+    getUserId?: () => Promise<string | null> // Deprecated: use adapter
+  }
 }
 ```
 
@@ -147,6 +151,7 @@ interface SolvaPayConfig {
 Component for selecting and displaying available plans.
 
 **Props:**
+
 - `agentRef?: string` - Agent reference to filter plans
 - `fetcher?: (agentRef: string) => Promise<Plan[]>` - Custom plan fetcher function
 - `onPlanSelect?: (plan: Plan) => void` - Callback when plan is selected
@@ -154,19 +159,18 @@ Component for selecting and displaying available plans.
 - `className?: string` - Container className
 
 **Example:**
+
 ```tsx
-import { PlanSelector, usePlans } from '@solvapay/react';
+import { PlanSelector, usePlans } from '@solvapay/react'
 
 function PlansPage() {
-  const { plans, loading } = usePlans({ agentRef: 'my-agent' });
-  
+  const { plans, loading } = usePlans({ agentRef: 'my-agent' })
+
   return (
     <div>
-      {loading ? 'Loading...' : plans.map(plan => (
-        <div key={plan.reference}>{plan.name}</div>
-      ))}
+      {loading ? 'Loading...' : plans.map(plan => <div key={plan.reference}>{plan.name}</div>)}
     </div>
-  );
+  )
 }
 ```
 
@@ -175,6 +179,7 @@ function PlansPage() {
 Payment form component using Stripe PaymentElement. Automatically handles Stripe Elements provider setup.
 
 **Props:**
+
 - `planRef: string` - Plan reference for the payment
 - `agentRef?: string` - Optional agent reference
 - `onSuccess?: (paymentIntent: PaymentIntent) => void` - Callback on successful payment
@@ -186,8 +191,9 @@ Payment form component using Stripe PaymentElement. Automatically handles Stripe
 - `buttonClassName?: string` - Submit button className
 
 **Example:**
+
 ```tsx
-import { PaymentForm } from '@solvapay/react';
+import { PaymentForm } from '@solvapay/react'
 
 function CheckoutPage() {
   return (
@@ -196,7 +202,7 @@ function CheckoutPage() {
       agentRef="agt_YOUR_AGENT"
       onSuccess={() => console.log('Payment successful!')}
     />
-  );
+  )
 }
 ```
 
@@ -205,11 +211,13 @@ function CheckoutPage() {
 Displays current subscription plan with render props or className pattern.
 
 **Props:**
+
 - `children?: (props) => React.ReactNode` - Render prop function
 - `as?: React.ElementType` - Component to render (default: "div")
 - `className?: string | ((props) => string)` - ClassName or function
 
 **Example:**
+
 ```tsx
 <PlanBadge className="badge badge-primary" />
 ```
@@ -219,16 +227,18 @@ Displays current subscription plan with render props or className pattern.
 Controls access to content based on subscription status.
 
 **Props:**
+
 - `requirePlan?: string` - Optional plan name to require
 - `children: (props) => React.ReactNode` - Render prop function
 
 **Example:**
+
 ```tsx
 <SubscriptionGate requirePlan="Pro Plan">
   {({ hasAccess, loading, subscriptions }) => {
-    if (loading) return <Loading />;
-    if (!hasAccess) return <Paywall />;
-    return <PremiumContent />;
+    if (loading) return <Loading />
+    if (!hasAccess) return <Paywall />
+    return <PremiumContent />
   }}
 </SubscriptionGate>
 ```
@@ -240,13 +250,13 @@ Controls access to content based on subscription status.
 Access subscription status, active subscriptions, and helper functions.
 
 ```tsx
-const { 
-  subscriptions,           // Array of all subscriptions
-  loading,                 // Loading state
-  hasPaidSubscription,    // Boolean: has any paid subscription
-  activeSubscription,      // Most recent active subscription
-  refetch                  // Function to refetch subscriptions
-} = useSubscription();
+const {
+  subscriptions, // Array of all subscriptions
+  loading, // Loading state
+  hasPaidSubscription, // Boolean: has any paid subscription
+  activeSubscription, // Most recent active subscription
+  refetch, // Function to refetch subscriptions
+} = useSubscription()
 ```
 
 ### usePlans
@@ -254,15 +264,15 @@ const {
 Fetch and manage available plans.
 
 ```tsx
-const { 
-  plans,                   // Array of available plans
-  loading,                 // Loading state
-  error,                   // Error object if fetch failed
-  refetch                  // Function to refetch plans
-} = usePlans({ 
-  agentRef: 'my-agent',   // Optional agent reference
-  fetcher: customFetcher  // Optional custom fetcher function
-});
+const {
+  plans, // Array of available plans
+  loading, // Loading state
+  error, // Error object if fetch failed
+  refetch, // Function to refetch plans
+} = usePlans({
+  agentRef: 'my-agent', // Optional agent reference
+  fetcher: customFetcher, // Optional custom fetcher function
+})
 ```
 
 ### useSubscriptionStatus
@@ -271,11 +281,11 @@ Advanced subscription status helpers.
 
 ```tsx
 const {
-  cancelledSubscription,      // Most recent cancelled subscription
-  shouldShowCancelledNotice,   // Boolean: should show cancellation notice
-  formatDate,                  // Helper to format dates
-  getDaysUntilExpiration       // Helper to get days until expiration
-} = useSubscriptionStatus();
+  cancelledSubscription, // Most recent cancelled subscription
+  shouldShowCancelledNotice, // Boolean: should show cancellation notice
+  formatDate, // Helper to format dates
+  getDaysUntilExpiration, // Helper to get days until expiration
+} = useSubscriptionStatus()
 ```
 
 ### useCheckout
@@ -283,7 +293,7 @@ const {
 Manage checkout flow for a specific plan.
 
 ```tsx
-const { loading, error, startCheckout, reset } = useCheckout('plan_ref');
+const { loading, error, startCheckout, reset } = useCheckout('plan_ref')
 ```
 
 ### useSolvaPay
@@ -291,14 +301,14 @@ const { loading, error, startCheckout, reset } = useCheckout('plan_ref');
 Access SolvaPay context directly.
 
 ```tsx
-const { 
-  subscriptionData,      // Full subscription data
-  loading,                // Loading state
-  createPayment,         // Payment creation function
-  processPayment,        // Payment processing function
-  customerRef,           // Current customer reference
-  updateCustomerRef      // Function to update customer reference
-} = useSolvaPay();
+const {
+  subscriptionData, // Full subscription data
+  loading, // Loading state
+  createPayment, // Payment creation function
+  processPayment, // Payment processing function
+  customerRef, // Current customer reference
+  updateCustomerRef, // Function to update customer reference
+} = useSolvaPay()
 ```
 
 ## TypeScript
@@ -306,7 +316,7 @@ const {
 All components and hooks are fully typed. Import types as needed:
 
 ```tsx
-import type { PaymentFormProps, SubscriptionStatus, PaymentIntentResult } from '@solvapay/react';
+import type { PaymentFormProps, SubscriptionStatus, PaymentIntentResult } from '@solvapay/react'
 ```
 
 ## More Information

@@ -4,11 +4,6 @@
     "composite": true,
     "outDir": "dist"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    { "path": "../react" }
-  ]
+  "include": ["src"],
+  "references": [{ "path": "../react" }]
 }
-

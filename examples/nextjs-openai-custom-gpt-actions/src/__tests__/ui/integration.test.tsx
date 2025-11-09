@@ -10,16 +10,16 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: (key: string) => {
       const params: Record<string, string> = {
-        'plan': 'pro',
-        'return_url': 'http://localhost:3000'
+        plan: 'pro',
+        return_url: 'http://localhost:3000',
       }
       return params[key] || null
-    }
+    },
   }),
   useRouter: () => ({
     push: vi.fn(),
-    back: vi.fn()
-  })
+    back: vi.fn(),
+  }),
 }))
 
 // Mock Supabase functions
@@ -27,8 +27,8 @@ vi.mock('@/lib/supabase', () => ({
   getUserId: vi.fn(() => Promise.resolve('test-user-id')),
   getAccessToken: vi.fn(() => Promise.resolve('test-token')),
   onAuthStateChange: vi.fn(() => ({
-    data: { subscription: { unsubscribe: vi.fn() } }
-  }))
+    data: { subscription: { unsubscribe: vi.fn() } },
+  })),
 }))
 
 // Mock fetch globally
@@ -40,9 +40,9 @@ Object.defineProperty(window, 'location', {
     href: '',
     assign: vi.fn(),
     replace: vi.fn(),
-    reload: vi.fn()
+    reload: vi.fn(),
   },
-  writable: true
+  writable: true,
 })
 
 describe('Integration Tests - User Flows', () => {
@@ -50,14 +50,14 @@ describe('Integration Tests - User Flows', () => {
     vi.clearAllMocks()
     ;(global.fetch as any).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ ok: true })
+      json: () => Promise.resolve({ ok: true }),
     })
   })
 
   describe('Checkout Flow', () => {
     it('displays checkout page with redirect message', () => {
       render(<CheckoutPage />)
-      
+
       // The checkout page now redirects immediately, showing a loading/redirect message
       expect(screen.getByText('Redirecting to Checkout')).toBeInTheDocument()
       expect(screen.getByText(/Please wait while we redirect you/i)).toBeInTheDocument()
@@ -68,18 +68,17 @@ describe('Integration Tests - User Flows', () => {
     it('completes successful API task check', async () => {
       const user = userEvent.setup()
       global.alert = vi.fn()
-
       ;(global.fetch as any).mockImplementation((url: string) => {
         if (url.includes('/api/tasks')) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ success: true, tasks: [] })
+            json: () => Promise.resolve({ success: true, tasks: [] }),
           })
         }
         if (url.includes('/api/check-subscription')) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ subscriptions: [] })
+            json: () => Promise.resolve({ subscriptions: [] }),
           })
         }
         return Promise.resolve({ ok: true })
@@ -94,12 +93,12 @@ describe('Integration Tests - User Flows', () => {
           checkSubscription={vi.fn(() => Promise.resolve({ subscriptions: [] }))}
         >
           <HomePage />
-        </SolvaPayProvider>
+        </SolvaPayProvider>,
       )
-      
+
       const testTasksButton = screen.getByRole('button', { name: 'List Tasks' })
       await user.click(testTasksButton)
-      
+
       await waitFor(() => {
         expect(global.alert).toHaveBeenCalledWith(expect.stringContaining('Tasks List'))
       })

@@ -4,10 +4,6 @@
     "composite": true,
     "outDir": "dist"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    { "path": "../server" }
-  ]
+  "include": ["src"],
+  "references": [{ "path": "../server" }]
 }

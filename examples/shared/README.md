@@ -9,6 +9,7 @@ This folder contains shared utilities used across multiple examples in the Solva
 A demo implementation of the SolvaPay API client that simulates backend behavior for local development and testing.
 
 **Features:**
+
 - ✅ Free tier tracking with configurable daily limits
 - ✅ Customer management (create, retrieve)
 - ✅ In-memory or file-based persistence
@@ -18,27 +19,27 @@ A demo implementation of the SolvaPay API client that simulates backend behavior
 **Usage:**
 
 ```typescript
-import { createStubClient } from '../shared/stub-api-client';
+import { createStubClient } from '../shared/stub-api-client'
 
 // Simple in-memory client (default)
-const apiClient = createStubClient();
+const apiClient = createStubClient()
 
 // With file persistence (survives server restarts)
-const apiClient = createStubClient({ 
-  useFileStorage: true 
-});
+const apiClient = createStubClient({
+  useFileStorage: true,
+})
 
 // With custom configuration
 const apiClient = createStubClient({
   useFileStorage: true,
-  freeTierLimit: 10,  // 10 free calls per day
-  debug: true,        // Enable logging
+  freeTierLimit: 10, // 10 free calls per day
+  debug: true, // Enable logging
   delays: {
     checkLimits: 100, // Simulate 100ms API delay
     trackUsage: 50,
-    customer: 50
-  }
-});
+    customer: 50,
+  },
+})
 ```
 
 **Why use this?**
@@ -51,12 +52,12 @@ const apiClient = createStubClient({
 **When to use production client:**
 
 ```typescript
-import { createSolvaPayClient } from '@solvapay/server';
+import { createSolvaPayClient } from '@solvapay/server'
 
 const apiClient = createSolvaPayClient({
   apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-  apiBaseUrl: 'https://api.solvapay.com'
-});
+  apiBaseUrl: 'https://api.solvapay.com',
+})
 ```
 
 ## Examples Using This
@@ -86,14 +87,14 @@ The stub client includes additional helper methods for testing:
 
 ```typescript
 // Add credits to a customer
-await apiClient.addCredits('customer_123', 100);
+await apiClient.addCredits('customer_123', 100)
 
 // Get customer credits
-const credits = await apiClient.getCredits('customer_123');
+const credits = await apiClient.getCredits('customer_123')
 
 // Reset usage counters
-await apiClient.resetUsage('customer_123'); // Reset specific customer
-await apiClient.resetUsage(); // Reset all
+await apiClient.resetUsage('customer_123') // Reset specific customer
+await apiClient.resetUsage() // Reset all
 ```
 
 ## File Storage
@@ -111,4 +112,3 @@ Add `.demo-data/` to your `.gitignore` to avoid committing test data.
 ## License
 
 MIT - Part of the SolvaPay SDK
-

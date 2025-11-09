@@ -27,16 +27,19 @@ When you implement the guides (especially `05-complete-example.md`), the AI will
 ## Core Features
 
 ### Free Tier Features
+
 - Basic Analytics - View your daily stats and basic metrics
 - Standard Reports - Generate monthly reports with key insights
 
 ### Premium Tier Features
+
 - Advanced Analytics - Real-time data analysis with custom dashboards
 - Priority Support - Get help from our team within 24 hours
 
 ## Branding & Tone
 
-**Brand Colors:** 
+**Brand Colors:**
+
 - Primary: Slate/Gray tones (professional, modern)
 - Accent: Blue (trust, reliability)
 
@@ -47,6 +50,7 @@ When you implement the guides (especially `05-complete-example.md`), the AI will
 ## HomePage Requirements
 
 The HomePage should:
+
 - Display a welcoming header with subscription status
 - Show feature cards that differentiate free vs premium features
 - Include clear call-to-action buttons for upgrading or managing subscriptions
@@ -67,6 +71,7 @@ To customize this template for your specific app:
 ## Example Customizations
 
 ### E-commerce Analytics App
+
 ```
 App Name: SalesDash Analytics
 App Type: E-commerce analytics platform
@@ -77,6 +82,7 @@ Premium Tier: Advanced analytics, custom dashboards, unlimited data retention, A
 ```
 
 ### Content Creation Tool
+
 ```
 App Name: WritePro
 App Type: Content creation and writing assistant
@@ -89,4 +95,3 @@ Premium Tier: AI-powered suggestions, unlimited documents, collaboration tools, 
 ---
 
 **Note:** When implementing the guides, especially `05-complete-example.md`, copy this file into Cursor AI along with the guide content. The AI will use this description to customize the HomePage and feature cards to match your app's specific needs.
-

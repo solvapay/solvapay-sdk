@@ -3,6 +3,7 @@
 A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and subscription management.
 
 **✨ Key Features:**
+
 - 🛡️ **One-line paywall protection** for Express, Next.js, and MCP servers
 - 💳 **Headless React components** for subscription checkout flows
 - 🚀 **Works out of the box** with stub mode (no API key needed for testing)
@@ -67,23 +68,23 @@ See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed 
 ### Server-Side: Paywall Protection
 
 ```typescript
-import { createSolvaPay } from '@solvapay/server';
+import { createSolvaPay } from '@solvapay/server'
 
 // Create SolvaPay instance
-const solvaPay = createSolvaPay({ 
-  apiKey: process.env.SOLVAPAY_SECRET_KEY 
-});
+const solvaPay = createSolvaPay({
+  apiKey: process.env.SOLVAPAY_SECRET_KEY,
+})
 
 // Create payable handlers for your agent
-const payable = solvaPay.payable({ 
-  agent: 'agt_YOUR_AGENT', 
-  plan: 'pln_YOUR_PLAN' 
-});
+const payable = solvaPay.payable({
+  agent: 'agt_YOUR_AGENT',
+  plan: 'pln_YOUR_PLAN',
+})
 
 // Protect endpoints with framework-specific adapters:
-app.post('/tasks', payable.http(createTask));      // Express/Fastify
-export const POST = payable.next(createTask);      // Next.js App Router
-const handler = payable.mcp(createTask);           // MCP servers
+app.post('/tasks', payable.http(createTask)) // Express/Fastify
+export const POST = payable.next(createTask) // Next.js App Router
+const handler = payable.mcp(createTask) // MCP servers
 ```
 
 ### Client-Side: Payment Flow
@@ -91,18 +92,18 @@ const handler = payable.mcp(createTask);           // MCP servers
 Wrap your app with `SolvaPayProvider` and use `PaymentForm` for checkout:
 
 ```tsx
-import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react';
-import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react'
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 
 function RootLayout({ children }) {
   // Optional: Use Supabase auth adapter
   const supabaseAdapter = createSupabaseAuthAdapter({
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  });
+  })
 
   return (
-    <SolvaPayProvider 
+    <SolvaPayProvider
       config={{
         // Optional: Custom API routes (defaults to /api/check-subscription and /api/create-payment-intent)
         api: {
@@ -111,24 +112,24 @@ function RootLayout({ children }) {
           processPayment: '/api/process-payment',
         },
         // Optional: Supabase auth adapter (auto-extracts user ID and token)
-        auth: { adapter: supabaseAdapter }
+        auth: { adapter: supabaseAdapter },
       }}
     >
       {children}
     </SolvaPayProvider>
-  );
+  )
 }
 
 function CheckoutPage() {
-  const { subscriptions, hasPaidSubscription } = useSubscription();
-  
+  const { subscriptions, hasPaidSubscription } = useSubscription()
+
   return (
     <PaymentForm
       planRef="pln_YOUR_PLAN"
       agentRef="agt_YOUR_AGENT"
       onSuccess={() => console.log('Payment successful!')}
     />
-  );
+  )
 }
 ```
 
@@ -136,66 +137,60 @@ function CheckoutPage() {
 
 ```typescript
 // /api/check-subscription/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { checkSubscription } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request);
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await checkSubscription(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
 // /api/create-payment-intent/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { createPaymentIntent } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json();
-  
+  const { planRef, agentRef } = await request.json()
+
   if (!planRef || !agentRef) {
-    return NextResponse.json(
-      { error: 'Missing required parameters' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await createPaymentIntent(request, { planRef, agentRef });
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await createPaymentIntent(request, { planRef, agentRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
 // /api/process-payment/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { processPayment } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { processPayment } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { paymentIntentId, agentRef, planRef } = await request.json();
-  
+  const { paymentIntentId, agentRef, planRef } = await request.json()
+
   if (!paymentIntentId || !agentRef) {
-    return NextResponse.json(
-      { error: 'Missing required parameters' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await processPayment(request, { paymentIntentId, agentRef, planRef });
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await processPayment(request, { paymentIntentId, agentRef, planRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
 // /api/list-plans/route.ts (public route)
-import { NextRequest, NextResponse } from 'next/server';
-import { listPlans } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { listPlans } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await listPlans(request);
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await listPlans(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
 // /api/sync-customer/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { syncCustomer } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { syncCustomer } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const result = await syncCustomer(request);
-  return result instanceof NextResponse ? result : NextResponse.json({ customerRef: result });
+  const result = await syncCustomer(request)
+  return result instanceof NextResponse ? result : NextResponse.json({ customerRef: result })
 }
 ```
 
@@ -203,27 +198,27 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // /api/create-payment-intent/route.ts
-import { createSolvaPay } from '@solvapay/server';
-import { requireUserId } from '@solvapay/auth';
+import { createSolvaPay } from '@solvapay/server'
+import { requireUserId } from '@solvapay/auth'
 
-const solvaPay = createSolvaPay({ 
-  apiKey: process.env.SOLVAPAY_SECRET_KEY 
-});
+const solvaPay = createSolvaPay({
+  apiKey: process.env.SOLVAPAY_SECRET_KEY,
+})
 
 export async function POST(req: Request) {
-  const userIdOrError = requireUserId(req);
+  const userIdOrError = requireUserId(req)
   if (userIdOrError instanceof Response) {
-    return userIdOrError;
+    return userIdOrError
   }
-  
-  const { planRef, agentRef } = await req.json();
+
+  const { planRef, agentRef } = await req.json()
   const paymentIntent = await solvaPay.createPaymentIntent({
     planRef,
     customerRef: userIdOrError, // Use userId as customerRef
-    agentRef
-  });
-  
-  return Response.json(paymentIntent);
+    agentRef,
+  })
+
+  return Response.json(paymentIntent)
 }
 ```
 
@@ -232,29 +227,36 @@ export async function POST(req: Request) {
 The `@solvapay/next` package provides helper functions for common API route patterns:
 
 **Subscription Helpers:**
+
 - `checkSubscription(request, options?)` - Check user subscription (with deduplication & caching)
 - `cancelSubscription(request, body, options?)` - Cancel a subscription
 
 **Customer Helpers:**
+
 - `syncCustomer(request, options?)` - Sync customer with SolvaPay backend
 
 **Payment Helpers:**
+
 - `createPaymentIntent(request, body, options?)` - Create Stripe payment intent
 - `processPayment(request, body, options?)` - Process payment after Stripe confirmation
 
 **Checkout Helpers:**
+
 - `createCheckoutSession(request, body, options?)` - Create hosted checkout session
 - `createCustomerSession(request, options?)` - Create customer portal session
 
 **Plans Helpers:**
+
 - `listPlans(request)` - List available plans (public route)
 
 **Cache Management:**
+
 - `clearSubscriptionCache(userId)` - Clear cache for specific user
 - `clearAllSubscriptionCache()` - Clear all cache entries
 - `getSubscriptionCacheStats()` - Get cache statistics
 
 **Authentication Helpers:**
+
 - `getAuthenticatedUser(request, options?)` - Get authenticated user info (userId, email, name)
 
 ### Auth Utilities Reference
@@ -262,12 +264,14 @@ The `@solvapay/next` package provides helper functions for common API route patt
 The `@solvapay/auth` package provides utilities for extracting user information:
 
 **Next.js Route Utilities:**
+
 - `getUserIdFromRequest(request, options?)` - Extract user ID from `x-user-id` header
 - `requireUserId(request, options?)` - Require user ID or return error response
 - `getUserEmailFromRequest(request, options?)` - Extract email from Supabase JWT token
 - `getUserNameFromRequest(request, options?)` - Extract name from Supabase JWT token
 
 **Server-Side Adapters:**
+
 - `SupabaseAuthAdapter` - For Supabase JWT token validation (server-side)
 - `MockAuthAdapter` - For testing and development
 
@@ -278,7 +282,9 @@ See [`packages/next/README.md`](./packages/next/README.md) and [`packages/auth/R
 The [`examples/`](./examples) directory contains working demonstrations:
 
 ### 🚀 [express-basic](./examples/express-basic)
+
 Simple Express.js API with paywall protection:
+
 - Protect CRUD endpoints with `.http()` adapter
 - Customer identification via headers
 - Free tier limits with automatic checkout URLs
@@ -289,7 +295,9 @@ cd examples/express-basic && pnpm dev
 ```
 
 ### 💳 [checkout-demo](./examples/checkout-demo)
+
 Full-featured Next.js checkout flow:
+
 - Complete subscription management using `SolvaPayProvider`
 - Plan selection UI with `PaymentForm` and `usePlans` hook
 - Customer session management
@@ -302,7 +310,9 @@ cd examples/checkout-demo && pnpm dev
 ```
 
 ### 🤖 [nextjs-openai-custom-gpt-actions](./examples/nextjs-openai-custom-gpt-actions)
+
 OpenAI Custom GPT Actions integration:
+
 - OAuth 2.0 authentication flow
 - Paywall-protected API endpoints
 - OpenAPI schema generation
@@ -313,7 +323,9 @@ cd examples/nextjs-openai-custom-gpt-actions && pnpm dev
 ```
 
 ### 🔌 [mcp-basic](./examples/mcp-basic)
+
 Model Context Protocol server with paywall:
+
 - Protect MCP tools with `.mcp()` adapter
 - Integration with Claude Desktop and other MCP clients
 - Pay-per-use pricing model
@@ -329,6 +341,7 @@ See [`examples/README.md`](./examples/README.md) for detailed setup instructions
 This is a **monorepo** with 5 published packages built using Turborepo, tsup, and pnpm workspaces.
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for:
+
 - Detailed package design and boundaries
 - Runtime detection strategy (Node vs Edge)
 - Build system and testing approach
@@ -374,6 +387,8 @@ See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflo
 - Webhook signature verification included
 - Automatic runtime detection prevents environment mismatches
 
+**Found a security vulnerability?** Please report it responsibly - see our [Security Policy](./SECURITY.md) for details.
+
 ## 📝 License
 
 MIT License - see [LICENSE.md](./LICENSE.md) for details.
@@ -381,4 +396,10 @@ MIT License - see [LICENSE.md](./LICENSE.md) for details.
 ## 🤝 Support
 
 - **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
-- **Email**: support@solvapay.com
+- **Email**: contact@solvapay.com
+
+## 📋 Additional Resources
+
+- **[Contributing Guide](./CONTRIBUTING.md)** - How to contribute to the project
+- **[Code of Conduct](./CODE_OF_CONDUCT.md)** - Community guidelines
+- **[Security Policy](./SECURITY.md)** - How to report security vulnerabilities

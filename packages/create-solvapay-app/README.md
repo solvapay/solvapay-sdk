@@ -54,4 +54,3 @@ This package should be published separately from the other @solvapay packages. I
 cd packages/create-solvapay-app
 npm publish --access public
 ```
-

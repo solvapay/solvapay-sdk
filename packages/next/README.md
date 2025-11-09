@@ -19,23 +19,24 @@ All helpers return either a success result or a `NextResponse` error, making the
 Check user subscription status with built-in request deduplication and caching:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { checkSubscription } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request);
-  
+  const result = await checkSubscription(request)
+
   // If result is a NextResponse, it's an error response - return it
   if (result instanceof NextResponse) {
-    return result;
+    return result
   }
-  
+
   // Otherwise, return the subscription data
-  return NextResponse.json(result);
+  return NextResponse.json(result)
 }
 ```
 
 **Features:**
+
 - **Automatic Deduplication**: Prevents duplicate API calls by deduplicating concurrent requests
 - **Caching**: Caches results for 2 seconds to prevent duplicate sequential requests
 - **Automatic Cleanup**: Expired cache entries are automatically cleaned up
@@ -46,17 +47,17 @@ export async function GET(request: NextRequest) {
 Sync customer with SolvaPay backend (ensures customer exists and returns customer reference):
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { syncCustomer } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { syncCustomer } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const result = await syncCustomer(request);
-  
+  const result = await syncCustomer(request)
+
   if (result instanceof NextResponse) {
-    return result;
+    return result
   }
-  
-  return NextResponse.json({ customerRef: result });
+
+  return NextResponse.json({ customerRef: result })
 }
 ```
 
@@ -65,21 +66,18 @@ export async function POST(request: NextRequest) {
 Create a Stripe payment intent for checkout:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { createPaymentIntent } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json();
-  
+  const { planRef, agentRef } = await request.json()
+
   if (!planRef || !agentRef) {
-    return NextResponse.json(
-      { error: 'Missing required parameters' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
-  
-  const result = await createPaymentIntent(request, { planRef, agentRef });
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+
+  const result = await createPaymentIntent(request, { planRef, agentRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -88,21 +86,18 @@ export async function POST(request: NextRequest) {
 Process payment after Stripe confirmation:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { processPayment } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { processPayment } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { paymentIntentId, agentRef, planRef } = await request.json();
-  
+  const { paymentIntentId, agentRef, planRef } = await request.json()
+
   if (!paymentIntentId || !agentRef) {
-    return NextResponse.json(
-      { error: 'Missing required parameters' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
-  
-  const result = await processPayment(request, { paymentIntentId, agentRef, planRef });
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+
+  const result = await processPayment(request, { paymentIntentId, agentRef, planRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -111,12 +106,12 @@ export async function POST(request: NextRequest) {
 List available plans (public route, no authentication required):
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { listPlans } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { listPlans } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await listPlans(request);
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await listPlans(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -125,21 +120,18 @@ export async function GET(request: NextRequest) {
 Cancel a user's subscription:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { cancelSubscription } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { cancelSubscription } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { subscriptionRef, reason } = await request.json();
-  
+  const { subscriptionRef, reason } = await request.json()
+
   if (!subscriptionRef) {
-    return NextResponse.json(
-      { error: 'Missing subscriptionRef' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing subscriptionRef' }, { status: 400 })
   }
-  
-  const result = await cancelSubscription(request, { subscriptionRef, reason });
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+
+  const result = await cancelSubscription(request, { subscriptionRef, reason })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -148,21 +140,18 @@ export async function POST(request: NextRequest) {
 Create a hosted checkout session:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { createCheckoutSession } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { agentRef, planRef } = await request.json();
-  
+  const { agentRef, planRef } = await request.json()
+
   if (!agentRef) {
-    return NextResponse.json(
-      { error: 'Missing agentRef' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing agentRef' }, { status: 400 })
   }
-  
-  const result = await createCheckoutSession(request, { agentRef, planRef });
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+
+  const result = await createCheckoutSession(request, { agentRef, planRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -171,12 +160,12 @@ export async function POST(request: NextRequest) {
 Create a customer portal session:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { createCustomerSession } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { createCustomerSession } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const result = await createCustomerSession(request);
-  return result instanceof NextResponse ? result : NextResponse.json(result);
+  const result = await createCustomerSession(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -185,52 +174,54 @@ export async function POST(request: NextRequest) {
 Get authenticated user information (userId, email, name):
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@solvapay/next';
+import { NextRequest, NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
   const result = await getAuthenticatedUser(request, {
     includeEmail: true,
     includeName: true,
-  });
-  
+  })
+
   if (result instanceof NextResponse) {
-    return result;
+    return result
   }
-  
-  return NextResponse.json(result);
+
+  return NextResponse.json(result)
 }
 ```
 
 ### Cache Management
 
 ```typescript
-import { 
-  clearSubscriptionCache, 
+import {
+  clearSubscriptionCache,
   clearAllSubscriptionCache,
-  getSubscriptionCacheStats 
-} from '@solvapay/next';
+  getSubscriptionCacheStats,
+} from '@solvapay/next'
 
 // Clear cache for a specific user
-clearSubscriptionCache(userId);
+clearSubscriptionCache(userId)
 
 // Clear all cache entries
-clearAllSubscriptionCache();
+clearAllSubscriptionCache()
 
 // Get cache statistics
-const stats = getSubscriptionCacheStats();
-console.log(`In-flight: ${stats.inFlight}, Cached: ${stats.cached}`);
+const stats = getSubscriptionCacheStats()
+console.log(`In-flight: ${stats.inFlight}, Cached: ${stats.cached}`)
 ```
 
 ## Helper Functions Reference
 
 All helper functions follow the same pattern:
+
 - Take a `Request` or `NextRequest` as the first parameter
 - Return either the success result or a `NextResponse` error
 - Automatically extract user information from request headers (set by middleware)
 - Support optional configuration options
 
 **Available Helpers:**
+
 - `checkSubscription(request, options?)` - Check subscription with caching
 - `syncCustomer(request, options?)` - Sync customer with backend
 - `createPaymentIntent(request, body, options?)` - Create payment intent
@@ -242,6 +233,7 @@ All helper functions follow the same pattern:
 - `getAuthenticatedUser(request, options?)` - Get user info
 
 **Common Options:**
+
 - `solvaPay?: SolvaPay` - Custom SolvaPay instance
 - `includeEmail?: boolean` - Include user email (default: true)
 - `includeName?: boolean` - Include user name (default: true)
@@ -264,35 +256,38 @@ These helpers expect the user ID to be set in the `x-user-id` header by your Nex
 The easiest way is to use `createSupabaseAuthMiddleware`:
 
 **For Next.js 15:**
+
 ```typescript
 // middleware.ts (at project root)
-import { createSupabaseAuthMiddleware } from '@solvapay/next';
+import { createSupabaseAuthMiddleware } from '@solvapay/next'
 
 export const middleware = createSupabaseAuthMiddleware({
   publicRoutes: ['/api/list-plans'],
-});
+})
 
 export const config = {
   matcher: ['/api/:path*'],
-};
+}
 ```
 
 **For Next.js 16 with `src/` folder:**
+
 ```typescript
 // src/proxy.ts (in src/ folder, not project root)
-import { createSupabaseAuthMiddleware } from '@solvapay/next';
+import { createSupabaseAuthMiddleware } from '@solvapay/next'
 
 // Use 'proxy' export for Next.js 16 (no deprecation warning)
 export const proxy = createSupabaseAuthMiddleware({
   publicRoutes: ['/api/list-plans'],
-});
+})
 
 export const config = {
   matcher: ['/api/:path*'],
-};
+}
 ```
 
 **File Location Notes:**
+
 - **Next.js 15**: Place `middleware.ts` at project root
 - **Next.js 16 without `src/` folder**: Place `middleware.ts` or `proxy.ts` at project root
 - **Next.js 16 with `src/` folder**: Place `src/proxy.ts` or `src/middleware.ts` (in `src/` folder, not root)
@@ -305,24 +300,23 @@ Alternatively, you can create your own middleware:
 
 ```typescript
 // middleware.ts (or src/proxy.ts for Next.js 16)
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   // Extract user ID from your auth system
-  const userId = await getUserIdFromAuth(request);
-  
+  const userId = await getUserIdFromAuth(request)
+
   // Clone request and add user ID header
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-user-id', userId);
-  
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-user-id', userId)
+
   return NextResponse.next({
     request: {
       headers: requestHeaders,
     },
-  });
+  })
 }
 ```
 
 You can also use the `requireUserId` utility from `@solvapay/auth` in your middleware.
-

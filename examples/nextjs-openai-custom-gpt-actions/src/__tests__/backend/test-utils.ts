@@ -1,28 +1,41 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { existsSync, unlinkSync } from 'fs'
+import { join } from 'path'
 
 // Test utilities for common test patterns
 export const createMockRequest = (url: string, options: RequestInit = {}) => {
-  return new NextRequest(url, options.method ? options as any : { method: 'GET', ...options } as any)
+  return new NextRequest(
+    url,
+    options.method ? (options as any) : ({ method: 'GET', ...options } as any),
+  )
 }
 
-export const createMockRequestWithAuth = (url: string, token: string, options: RequestInit = {}) => {
+export const createMockRequestWithAuth = (
+  url: string,
+  token: string,
+  options: RequestInit = {},
+) => {
   const headers = new Headers(options.headers)
   headers.set('Authorization', `Bearer ${token}`)
   return new NextRequest(url, {
     method: options.method || 'GET',
     headers,
-    ...options
+    ...options,
   } as any)
 }
 
-export const createMockRequestWithCustomer = (url: string, customerRef: string, options: RequestInit = {}) => {
+export const createMockRequestWithCustomer = (
+  url: string,
+  customerRef: string,
+  options: RequestInit = {},
+) => {
   const headers = new Headers(options.headers)
   headers.set('x-customer-ref', customerRef)
   return new NextRequest(url, {
     method: options.method || 'GET',
     headers,
-    ...options
+    ...options,
   } as any)
 }
 
@@ -30,7 +43,11 @@ export const expectSuccessfulResponse = (response: Response, expectedStatus = 20
   expect(response.status).toBe(expectedStatus)
 }
 
-export const expectErrorResponse = (response: Response, expectedStatus: number, expectedError: string) => {
+export const expectErrorResponse = (
+  response: Response,
+  expectedStatus: number,
+  expectedError: string,
+) => {
   expect(response.status).toBe(expectedStatus)
   return response.json().then(data => {
     expect(data.error).toBe(expectedError)
@@ -58,20 +75,20 @@ export const expectJsonResponse = (response: Response, expectedStatus = 200) => 
 // Mock JWT token creation (for OAuth token testing)
 export const createMockJWT = async (payload: any = {}) => {
   const { SignJWT } = await import('jose')
-  
+
   // Ensure the secret is set
   if (!process.env.OAUTH_JWKS_SECRET) {
     throw new Error('OAUTH_JWKS_SECRET environment variable is not set')
   }
-  
+
   const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET)
-  
+
   return await new SignJWT({
     sub: 'user_1',
     iss: process.env.OAUTH_ISSUER!,
     aud: process.env.OAUTH_CLIENT_ID || 'test-client-id',
     scope: 'openid email profile',
-    ...payload
+    ...payload,
   })
     .setProtectedHeader({ alg: 'HS256', kid: 'demo-key' })
     .setIssuedAt()
@@ -83,14 +100,11 @@ export const createMockJWT = async (payload: any = {}) => {
 export const createTestThing = (overrides: any = {}) => ({
   name: 'Test Thing',
   description: 'A test thing for testing',
-  ...overrides
+  ...overrides,
 })
 
 // Cleanup utilities
 export const cleanupUserPlans = () => {
-  const { writeFileSync, existsSync, unlinkSync } = require('fs')
-  const { join } = require('path')
-  
   const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
   if (existsSync(USER_PLANS_FILE)) {
     unlinkSync(USER_PLANS_FILE)

@@ -3,6 +3,7 @@
 ## Publishing
 
 1. **Version bump** (if needed):
+
    ```bash
    cd packages/create-solvapay-app
    npm version patch|minor|major
@@ -83,4 +84,3 @@ create-solvapay-app/
 - Guide files are bundled with the package and copied to the project root
 - The script handles opening the project in Cursor or VS Code
 - Environment variables are created with placeholder values (users need to update them)
-

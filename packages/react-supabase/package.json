@@ -25,7 +25,9 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint src --config ../../eslint.config.react.mjs",
+    "lint:fix": "eslint src --config ../../eslint.config.react.mjs --fix"
   },
   "devDependencies": {
     "@solvapay/react": "workspace:*",

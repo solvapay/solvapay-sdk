@@ -1,29 +1,29 @@
 /**
  * @solvapay/react - Payment components for SolvaPay
- * 
+ *
  * Provides headless React components and hooks for handling payment flows.
  */
 
 // Core Provider
-export { SolvaPayProvider } from './SolvaPayProvider';
+export { SolvaPayProvider } from './SolvaPayProvider'
 
 // Payment Form
-export { PaymentForm } from './PaymentForm';
+export { PaymentForm } from './PaymentForm'
 
 // Headless Components
-export { PlanBadge } from './components/PlanBadge';
-export { SubscriptionGate } from './components/SubscriptionGate';
-export { PlanSelector } from './components/PlanSelector';
-export { Spinner } from './components/Spinner';
-export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper';
+export { PlanBadge } from './components/PlanBadge'
+export { SubscriptionGate } from './components/SubscriptionGate'
+export { PlanSelector } from './components/PlanSelector'
+export { Spinner } from './components/Spinner'
+export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 
 // Hooks
-export { useSubscription } from './hooks/useSubscription';
-export { useCustomer } from './hooks/useCustomer';
-export { useCheckout } from './hooks/useCheckout';
-export { useSolvaPay } from './hooks/useSolvaPay';
-export { usePlans } from './hooks/usePlans';
-export { useSubscriptionStatus } from './hooks/useSubscriptionStatus';
+export { useSubscription } from './hooks/useSubscription'
+export { useCustomer } from './hooks/useCustomer'
+export { useCheckout } from './hooks/useCheckout'
+export { useSolvaPay } from './hooks/useSolvaPay'
+export { usePlans } from './hooks/usePlans'
+export { useSubscriptionStatus } from './hooks/useSubscriptionStatus'
 
 // Types
 export type {
@@ -43,12 +43,12 @@ export type {
   UsePlansOptions,
   UsePlansReturn,
   SubscriptionStatusReturn,
-} from './types';
-export type { CustomerInfo } from './hooks/useCustomer';
+} from './types'
+export type { CustomerInfo } from './hooks/useCustomer'
 
 // Adapters
-export type { AuthAdapter } from './adapters/auth';
-export { defaultAuthAdapter } from './adapters/auth';
+export type { AuthAdapter } from './adapters/auth'
+export { defaultAuthAdapter } from './adapters/auth'
 
 // Utilities
 export {
@@ -58,4 +58,4 @@ export {
   getMostRecentSubscription,
   getPrimarySubscription,
   isPaidSubscription,
-} from './utils/subscriptions';
+} from './utils/subscriptions'

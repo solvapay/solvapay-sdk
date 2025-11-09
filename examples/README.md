@@ -17,7 +17,9 @@ See [`shared/README.md`](./shared/README.md) for detailed documentation.
 ## Available Examples
 
 ### Express Basic (`express-basic`)
+
 A simple Express.js server demonstrating:
+
 - Paywall protection for CRUD API endpoints
 - Customer identification via headers
 - Free tier limits with automatic checkout URLs
@@ -25,6 +27,7 @@ A simple Express.js server demonstrating:
 - Production mode with real backend API
 
 **Run the example:**
+
 ```bash
 cd examples/express-basic
 pnpm install
@@ -32,6 +35,7 @@ pnpm dev  # Runs in stub mode by default (no API key needed)
 ```
 
 To use production mode:
+
 ```bash
 # Set up environment
 cp .env.example .env
@@ -43,6 +47,7 @@ pnpm dev
 The server will start on `http://localhost:3001`
 
 **API Endpoints:**
+
 - `GET /` - API info and usage instructions
 - `GET /health` - Server status
 - `POST /tasks` - Create a task (protected)
@@ -51,13 +56,16 @@ The server will start on `http://localhost:3001`
 - `DELETE /tasks/:id` - Delete a task (protected)
 
 ### Next.js OpenAI Custom GPT Actions (`nextjs-openai-custom-gpt-actions`)
+
 A Next.js application with React payment components demonstrating:
+
 - Payment flow using `SolvaPayProvider` and `PaymentForm`
 - Stripe integration for payment processing
 - Interactive checkout UI
 - OpenAI Custom GPT Actions integration
 
 **Run the example:**
+
 ```bash
 cd examples/nextjs-openai-custom-gpt-actions
 pnpm install
@@ -67,7 +75,9 @@ pnpm dev
 The application will start on `http://localhost:3000`
 
 ### Checkout Demo (`checkout-demo`)
+
 A full-featured Next.js checkout application demonstrating:
+
 - Complete checkout flow with plan selection
 - Customer authentication and session management
 - Subscription status checking
@@ -75,6 +85,7 @@ A full-featured Next.js checkout application demonstrating:
 - Modern UI with Tailwind CSS
 
 **Run the example:**
+
 ```bash
 cd examples/checkout-demo
 pnpm install
@@ -84,12 +95,15 @@ pnpm dev
 The application will start on `http://localhost:3000`
 
 ### MCP Basic (`mcp-basic`)
+
 A Model Context Protocol (MCP) server integration demonstrating:
+
 - Paywall protection for MCP server endpoints
 - Integration with OpenAI and other MCP-compatible tools
 - Payment flow for MCP server usage
 
 **Run the example:**
+
 ```bash
 cd examples/mcp-basic
 pnpm install
@@ -99,6 +113,7 @@ pnpm dev
 The Express example requires environment variables for configuration:
 
 ### Express Example
+
 ```bash
 cd examples/express-basic
 cp .env.example .env
@@ -108,6 +123,7 @@ cp .env.example .env
 ### Environment Variables
 
 **Express Example (.env):**
+
 ```bash
 # Optional: Enable real backend (defaults to stub mode)
 USE_REAL_BACKEND=false
@@ -127,11 +143,13 @@ PORT=3001
 ## Development Workflow
 
 1. **Build packages first:**
+
    ```bash
    pnpm build:packages
    ```
 
 2. **Run examples in development mode:**
+
    ```bash
    # Express example (runs in stub mode by default)
    cd examples/express-basic

@@ -45,6 +45,7 @@ pnpm dev
 ```
 
 **Demo Mode:**
+
 - No backend required
 - 5 free calls per day per plan
 - Local usage tracking (resets daily)
@@ -121,8 +122,8 @@ curl -X POST http://localhost:3001/tasks \
 ## Environment Variables
 
 | Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PORT` | No | `3001` | Server port |
+| -------- | -------- | ------- | ----------- |
+| `PORT`   | No       | `3001`  | Server port |
 
 ## Architecture
 
@@ -169,32 +170,32 @@ The example uses a stub client for local development, which simulates the SolvaP
 
 ```typescript
 // src/index.ts
-import { createSolvaPay } from '@solvapay/server';
-import { createStubClient } from '../../shared/stub-api-client';
+import { createSolvaPay } from '@solvapay/server'
+import { createStubClient } from '../../shared/stub-api-client'
 
 // Create stub client for demo (no backend required)
 const apiClient = createStubClient({
-  freeTierLimit: 5,  // 5 free calls per day
-  debug: true         // Enable debug logging
-});
+  freeTierLimit: 5, // 5 free calls per day
+  debug: true, // Enable debug logging
+})
 
 // Initialize SolvaPay with the stub client
 const solvaPay = createSolvaPay({
-  apiClient
-});
+  apiClient,
+})
 ```
 
 **For Production**: Replace the stub client with a real API client:
 
 ```typescript
-import { createSolvaPayClient } from '@solvapay/server';
+import { createSolvaPayClient } from '@solvapay/server'
 
 const apiClient = createSolvaPayClient({
   apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-  baseUrl: process.env.SOLVAPAY_API_BASE_URL
-});
+  baseUrl: process.env.SOLVAPAY_API_BASE_URL,
+})
 
-const solvaPay = createSolvaPay({ apiClient });
+const solvaPay = createSolvaPay({ apiClient })
 ```
 
 ### Step 2: Create Payable Handler
@@ -203,10 +204,10 @@ Create a payable handler that will protect your endpoints:
 
 ```typescript
 // Create payable handler with agent and plan configuration
-const payable = solvaPay.payable({ 
-  agent: 'agt_NO8WYSX5',  // Your agent reference
-  plan: 'pln_MUKDWQZZ'    // Your plan reference
-});
+const payable = solvaPay.payable({
+  agent: 'agt_NO8WYSX5', // Your agent reference
+  plan: 'pln_MUKDWQZZ', // Your plan reference
+})
 ```
 
 **Note**: The agent and plan references should match what you've configured in your SolvaPay dashboard.
@@ -217,13 +218,13 @@ Wrap your business logic functions with the HTTP adapter:
 
 ```typescript
 // Import business logic functions
-import { createTask, getTask, listTasks, deleteTask } from '@solvapay/demo-services';
+import { createTask, getTask, listTasks, deleteTask } from '@solvapay/demo-services'
 
 // Protect endpoints using the HTTP adapter
-app.post('/tasks', payable.http(createTask));
-app.get('/tasks/:id', payable.http(getTask));
-app.get('/tasks', payable.http(listTasks));
-app.delete('/tasks/:id', payable.http(deleteTask));
+app.post('/tasks', payable.http(createTask))
+app.get('/tasks/:id', payable.http(getTask))
+app.get('/tasks', payable.http(listTasks))
+app.delete('/tasks/:id', payable.http(deleteTask))
 ```
 
 ### Step 4: Business Logic Functions
@@ -233,28 +234,29 @@ Your business logic functions receive parsed request data and authentication inf
 ```typescript
 // Example business logic function signature
 async function createTask(args: {
-  title: string;
-  description?: string;
+  title: string
+  description?: string
   auth?: {
-    customer_ref?: string;  // Extracted from x-customer-ref header
-  };
+    customer_ref?: string // Extracted from x-customer-ref header
+  }
 }): Promise<{ success: boolean; task: Task }> {
   // Your business logic here
   const task = {
     id: `task_${Date.now()}`,
     title: args.title,
     description: args.description,
-    createdAt: new Date().toISOString()
-  };
-  
+    createdAt: new Date().toISOString(),
+  }
+
   return {
     success: true,
-    task
-  };
+    task,
+  }
 }
 ```
 
 **Key Points**:
+
 - The `auth` object contains customer identification extracted from headers
 - The function receives parsed JSON body and route parameters
 - Return value is automatically formatted as JSON response
@@ -295,6 +297,7 @@ The adapter automatically handles errors:
 ### Using the HTTP Adapter
 
 The HTTP adapter (`payable.http()`) is a middleware function that:
+
 - Parses request body and route parameters
 - Extracts customer reference from headers
 - Checks subscription limits
@@ -311,6 +314,7 @@ curl -H "x-customer-ref: user_123" http://localhost:3001/tasks
 ```
 
 **Production Tip**: In production, you'd typically extract this from:
+
 - JWT tokens
 - Session data
 - Authentication middleware
@@ -321,19 +325,20 @@ Each endpoint can use the same plan or different plans:
 
 ```typescript
 // Same plan for all endpoints
-const payable = solvaPay.payable({ agent: 'my-agent', plan: 'my-plan' });
+const payable = solvaPay.payable({ agent: 'my-agent', plan: 'my-plan' })
 
 // Different plans per endpoint
-const createPayable = solvaPay.payable({ agent: 'my-agent', plan: 'create-plan' });
-const readPayable = solvaPay.payable({ agent: 'my-agent', plan: 'read-plan' });
+const createPayable = solvaPay.payable({ agent: 'my-agent', plan: 'create-plan' })
+const readPayable = solvaPay.payable({ agent: 'my-agent', plan: 'read-plan' })
 
-app.post('/tasks', createPayable.http(createTask));
-app.get('/tasks', readPayable.http(listTasks));
+app.post('/tasks', createPayable.http(createTask))
+app.get('/tasks', readPayable.http(listTasks))
 ```
 
 ### Business Logic Functions
 
 Your functions should:
+
 - Accept parsed arguments (body + params + auth)
 - Return a result object
 - Handle business logic errors
@@ -386,8 +391,8 @@ Always use the stub client during development to avoid API rate limits and costs
 ```typescript
 const apiClient = createStubClient({
   freeTierLimit: 5,
-  debug: true
-});
+  debug: true,
+})
 ```
 
 ### 2. Separate Business Logic
@@ -396,12 +401,15 @@ Keep your business logic separate from route handlers:
 
 ```typescript
 // ✅ Good: Business logic in separate function
-app.post('/tasks', payable.http(createTask));
+app.post('/tasks', payable.http(createTask))
 
 // ❌ Bad: Business logic in route handler
-app.post('/tasks', payable.http(async (args) => {
-  // Logic here makes testing harder
-}));
+app.post(
+  '/tasks',
+  payable.http(async args => {
+    // Logic here makes testing harder
+  }),
+)
 ```
 
 ### 3. Handle Missing Customer Reference
@@ -409,12 +417,9 @@ app.post('/tasks', payable.http(async (args) => {
 Always validate that customer reference is present:
 
 ```typescript
-async function createTask(args: {
-  title: string;
-  auth?: { customer_ref?: string };
-}) {
+async function createTask(args: { title: string; auth?: { customer_ref?: string } }) {
   if (!args.auth?.customer_ref) {
-    throw new Error('Customer reference required');
+    throw new Error('Customer reference required')
   }
   // ... rest of logic
 }
@@ -426,13 +431,14 @@ Store configuration in environment variables:
 
 ```typescript
 const solvaPay = createSolvaPay({
-  apiClient: process.env.USE_STUB_CLIENT === 'true'
-    ? createStubClient({ freeTierLimit: 5 })
-    : createSolvaPayClient({
-        apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-        baseUrl: process.env.SOLVAPAY_API_BASE_URL
-      })
-});
+  apiClient:
+    process.env.USE_STUB_CLIENT === 'true'
+      ? createStubClient({ freeTierLimit: 5 })
+      : createSolvaPayClient({
+          apiKey: process.env.SOLVAPAY_SECRET_KEY!,
+          baseUrl: process.env.SOLVAPAY_API_BASE_URL,
+        }),
+})
 ```
 
 ### 5. Error Handling
@@ -445,9 +451,9 @@ async function createTask(args: CreateTaskArgs) {
     // Your logic
   } catch (error) {
     if (error instanceof ValidationError) {
-      throw error; // Adapter will format as 400
+      throw error // Adapter will format as 400
     }
-    throw error; // Adapter will format as 500
+    throw error // Adapter will format as 500
   }
 }
 ```
@@ -457,10 +463,10 @@ async function createTask(args: CreateTaskArgs) {
 Use the stub client in tests for fast, reliable testing:
 
 ```typescript
-import { createStubClient } from '../../shared/stub-api-client';
+import { createStubClient } from '../../shared/stub-api-client'
 
-const apiClient = createStubClient({ freeTierLimit: 5 });
-const solvaPay = createSolvaPay({ apiClient });
+const apiClient = createStubClient({ freeTierLimit: 5 })
+const solvaPay = createSolvaPay({ apiClient })
 ```
 
 ## Troubleshooting
@@ -498,7 +504,8 @@ Then restart the example server.
 
 **Problem**: Making requests but paywall never triggers.
 
-**Solution**: 
+**Solution**:
+
 1. Check that you're using the same `x-customer-ref` header value
 2. Verify the stub client is configured correctly
 3. Check console logs for debug information
@@ -508,7 +515,8 @@ Then restart the example server.
 
 **Problem**: Getting 402 but no `checkoutUrl` in response.
 
-**Solution**: 
+**Solution**:
+
 1. Check that agent and plan references are correct
 2. Verify stub client configuration
 3. In production, ensure API key is valid
@@ -519,6 +527,7 @@ Then restart the example server.
 **Problem**: Requests return errors before reaching business logic.
 
 **Solution**:
+
 1. Check that `x-customer-ref` header is present
 2. Verify function signature matches expected format
 3. Check that function returns a Promise
@@ -529,6 +538,7 @@ Then restart the example server.
 **Problem**: Tests are failing with various errors.
 
 **Solution**:
+
 1. Ensure stub client is used in tests
 2. Check that test data is cleaned up between runs
 3. Verify test environment variables are set
@@ -539,6 +549,7 @@ Then restart the example server.
 **Problem**: Type errors in business logic functions.
 
 **Solution**:
+
 1. Ensure function signature matches `PayableFunction` type
 2. Check that return type is a Promise
 3. Verify argument types match what adapter provides
@@ -593,21 +604,25 @@ For comprehensive backend integration tests of the SolvaPay SDK itself, see the 
 ## Related Documentation
 
 ### Getting Started
+
 - [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
 - [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
 - [Quick Start Guide](../../docs/getting-started/quick-start.md) - 5-minute Express setup
 - [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
+
 - [Express.js Integration Guide](../../docs/guides/express.md) - Complete Express integration guide
 - [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
 - [Testing Guide](../../docs/guides/testing.md) - Testing with stub mode
 
 ### API Reference
+
 - [Server SDK API Reference](../../docs/api/server/) - Complete API documentation
 - [Server SDK README](../../packages/server/README.md) - Package documentation
 
 ### Additional Resources
+
 - [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
 - [Express.js Documentation](https://expressjs.com) - Express.js framework docs
 - [GitHub Repository](https://github.com/solvapay/solvapay-sdk) - Source code and issues
@@ -615,4 +630,3 @@ For comprehensive backend integration tests of the SolvaPay SDK itself, see the 
 ## License
 
 See the root LICENSE file.
-

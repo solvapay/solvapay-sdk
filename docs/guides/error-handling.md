@@ -19,11 +19,11 @@ SolvaPay SDK uses several error types:
 Thrown when a paywall is triggered (subscription required or usage limit exceeded):
 
 ```typescript
-import { PaywallError } from '@solvapay/server';
+import { PaywallError } from '@solvapay/server'
 
 class PaywallError extends Error {
-  message: string;
-  structuredContent: PaywallStructuredContent;
+  message: string
+  structuredContent: PaywallStructuredContent
 }
 ```
 
@@ -32,7 +32,7 @@ class PaywallError extends Error {
 Base error class for SolvaPay SDK errors:
 
 ```typescript
-import { SolvaPayError } from '@solvapay/core';
+import { SolvaPayError } from '@solvapay/core'
 
 class SolvaPayError extends Error {
   // Base error for SDK errors
@@ -48,6 +48,7 @@ Regular JavaScript errors from your business logic or network issues.
 ### Understanding PaywallError
 
 `PaywallError` is thrown when:
+
 - Customer doesn't have required subscription
 - Customer has exceeded usage limits
 - Customer needs to upgrade their plan
@@ -56,23 +57,23 @@ It includes structured content with checkout URLs and metadata:
 
 ```typescript
 interface PaywallStructuredContent {
-  kind: 'payment_required';
-  agent: string;
-  checkoutUrl: string;
-  message: string;
-  plan?: string;
-  remaining?: number;
+  kind: 'payment_required'
+  agent: string
+  checkoutUrl: string
+  message: string
+  plan?: string
+  remaining?: number
 }
 ```
 
 ### Basic Handling
 
 ```typescript
-import { PaywallError } from '@solvapay/server';
+import { PaywallError } from '@solvapay/server'
 
 try {
-  const result = await payable.http(createTask)(req, res);
-  return result;
+  const result = await payable.http(createTask)(req, res)
+  return result
 } catch (error) {
   if (error instanceof PaywallError) {
     // Handle paywall error
@@ -80,11 +81,11 @@ try {
       error: 'Payment required',
       checkoutUrl: error.structuredContent.checkoutUrl,
       message: error.structuredContent.message,
-    });
+    })
   }
-  
+
   // Handle other errors
-  throw error;
+  throw error
 }
 ```
 
@@ -95,13 +96,13 @@ try {
 #### Basic Error Handling
 
 ```typescript
-import express from 'express';
-import { PaywallError } from '@solvapay/server';
+import express from 'express'
+import { PaywallError } from '@solvapay/server'
 
-const app = express();
+const app = express()
 
 // Protected route
-app.post('/api/tasks', payable.http(createTask));
+app.post('/api/tasks', payable.http(createTask))
 
 // Global error handler
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -111,13 +112,13 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
       checkoutUrl: error.structuredContent.checkoutUrl,
       agent: error.structuredContent.agent,
       message: error.structuredContent.message,
-    });
+    })
   }
-  
+
   // Log other errors
-  console.error('Unhandled error:', error);
-  res.status(500).json({ error: 'Internal server error' });
-});
+  console.error('Unhandled error:', error)
+  res.status(500).json({ error: 'Internal server error' })
+})
 ```
 
 #### Custom Error Middleware
@@ -127,7 +128,7 @@ function paywallErrorHandler(
   error: Error,
   req: express.Request,
   res: express.Response,
-  next: express.NextFunction
+  next: express.NextFunction,
 ) {
   if (error instanceof PaywallError) {
     // Custom paywall response
@@ -141,13 +142,13 @@ function paywallErrorHandler(
         plan: error.structuredContent.plan,
         remaining: error.structuredContent.remaining,
       },
-    });
+    })
   }
-  
-  next(error);
+
+  next(error)
 }
 
-app.use(paywallErrorHandler);
+app.use(paywallErrorHandler)
 ```
 
 #### Per-Route Error Handling
@@ -156,23 +157,23 @@ app.use(paywallErrorHandler);
 async function handleWithErrorHandling(
   req: express.Request,
   res: express.Response,
-  next: express.NextFunction
+  next: express.NextFunction,
 ) {
   try {
-    const handler = payable.http(createTask);
-    await handler(req, res);
+    const handler = payable.http(createTask)
+    await handler(req, res)
   } catch (error) {
     if (error instanceof PaywallError) {
       return res.status(402).json({
         error: 'Payment required',
         checkoutUrl: error.structuredContent.checkoutUrl,
-      });
+      })
     }
-    next(error);
+    next(error)
   }
 }
 
-app.post('/api/tasks', handleWithErrorHandling);
+app.post('/api/tasks', handleWithErrorHandling)
 ```
 
 ### Next.js
@@ -180,13 +181,13 @@ app.post('/api/tasks', handleWithErrorHandling);
 #### API Route Error Handling
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { PaywallError } from '@solvapay/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { PaywallError } from '@solvapay/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const handler = payable.next(createTask);
-    return await handler(request);
+    const handler = payable.next(createTask)
+    return await handler(request)
   } catch (error) {
     if (error instanceof PaywallError) {
       return NextResponse.json(
@@ -195,15 +196,12 @@ export async function POST(request: NextRequest) {
           checkoutUrl: error.structuredContent.checkoutUrl,
           message: error.structuredContent.message,
         },
-        { status: 402 }
-      );
+        { status: 402 },
+      )
     }
-    
-    console.error('Unhandled error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+
+    console.error('Unhandled error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 ```
@@ -211,19 +209,19 @@ export async function POST(request: NextRequest) {
 #### Using Helper Functions
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { checkSubscription } from '@solvapay/next';
-import { isErrorResult, handleRouteError } from '@solvapay/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { checkSubscription } from '@solvapay/next'
+import { isErrorResult, handleRouteError } from '@solvapay/server'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request);
-  
+  const result = await checkSubscription(request)
+
   // Check if result is an error
   if (isErrorResult(result)) {
-    return NextResponse.json(result, { status: result.status || 500 });
+    return NextResponse.json(result, { status: result.status || 500 })
   }
-  
-  return NextResponse.json(result);
+
+  return NextResponse.json(result)
 }
 ```
 
@@ -231,8 +229,8 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // lib/error-handler.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { PaywallError } from '@solvapay/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { PaywallError } from '@solvapay/server'
 
 export function handleApiError(error: unknown, request: NextRequest) {
   if (error instanceof PaywallError) {
@@ -243,31 +241,25 @@ export function handleApiError(error: unknown, request: NextRequest) {
         agent: error.structuredContent.agent,
         message: error.structuredContent.message,
       },
-      { status: 402 }
-    );
+      { status: 402 },
+    )
   }
-  
+
   if (error instanceof Error) {
-    console.error('API Error:', error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    console.error('API Error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  
-  return NextResponse.json(
-    { error: 'Internal server error' },
-    { status: 500 }
-  );
+
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
 }
 
 // Usage
 export async function POST(request: NextRequest) {
   try {
-    const handler = payable.next(createTask);
-    return await handler(request);
+    const handler = payable.next(createTask)
+    return await handler(request)
   } catch (error) {
-    return handleApiError(error, request);
+    return handleApiError(error, request)
   }
 }
 ```
@@ -277,60 +269,56 @@ export async function POST(request: NextRequest) {
 #### Component Error Handling
 
 ```tsx
-import { PaymentForm } from '@solvapay/react';
-import { useState } from 'react';
+import { PaymentForm } from '@solvapay/react'
+import { useState } from 'react'
 
 function CheckoutPage() {
-  const [error, setError] = useState<string | null>(null);
-  
+  const [error, setError] = useState<string | null>(null)
+
   return (
     <div>
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
       <PaymentForm
         planRef="pln_premium"
         agentRef="agt_myapi"
         onSuccess={() => {
-          setError(null);
+          setError(null)
           // Handle success
         }}
-        onError={(error) => {
-          setError(error.message || 'Payment failed');
+        onError={error => {
+          setError(error.message || 'Payment failed')
         }}
       />
     </div>
-  );
+  )
 }
 ```
 
 #### Hook Error Handling
 
 ```tsx
-import { useCheckout } from '@solvapay/react';
+import { useCheckout } from '@solvapay/react'
 
 function CustomCheckout() {
   const { createPayment, processPayment, error, isLoading } = useCheckout(
     'pln_premium',
-    'agt_myapi'
-  );
-  
+    'agt_myapi',
+  )
+
   const handleCheckout = async () => {
     try {
-      const intent = await createPayment();
-      const result = await processPayment(intent.paymentIntentId);
-      
+      const intent = await createPayment()
+      const result = await processPayment(intent.paymentIntentId)
+
       if (!result.success) {
-        throw new Error(result.error || 'Payment failed');
+        throw new Error(result.error || 'Payment failed')
       }
     } catch (error) {
-      console.error('Checkout error:', error);
+      console.error('Checkout error:', error)
       // Handle error
     }
-  };
-  
+  }
+
   return (
     <div>
       {error && <div>Error: {error.message}</div>}
@@ -338,7 +326,7 @@ function CustomCheckout() {
         Checkout
       </button>
     </div>
-  );
+  )
 }
 ```
 
@@ -347,17 +335,17 @@ function CustomCheckout() {
 #### Tool Error Handling
 
 ```typescript
-import { PaywallError } from '@solvapay/server';
-import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { PaywallError } from '@solvapay/server'
+import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  
+server.setRequestHandler(CallToolRequestSchema, async request => {
+  const { name, arguments: args } = request.params
+
   try {
     switch (name) {
       case 'create_task': {
-        const handler = payable.mcp(createTask);
-        const result = await handler(args);
+        const handler = payable.mcp(createTask)
+        const result = await handler(args)
         return {
           content: [
             {
@@ -365,11 +353,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify(result),
             },
           ],
-        };
+        }
       }
-      
+
       default:
-        throw new Error(`Unknown tool: ${name}`);
+        throw new Error(`Unknown tool: ${name}`)
     }
   } catch (error) {
     if (error instanceof PaywallError) {
@@ -388,9 +376,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           },
         ],
         isError: true,
-      };
+      }
     }
-    
+
     // Handle other errors
     return {
       content: [
@@ -402,9 +390,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         },
       ],
       isError: true,
-    };
+    }
   }
-});
+})
 ```
 
 ## Best Practices
@@ -433,7 +421,7 @@ if (error instanceof PaywallError) {
     error: 'Subscription required',
     message: 'Please subscribe to access this feature.',
     checkoutUrl: error.structuredContent.checkoutUrl,
-  });
+  })
 }
 ```
 
@@ -455,7 +443,7 @@ catch (error) {
 ### 4. Use Error Boundaries (React)
 
 ```tsx
-import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorBoundary } from 'react-error-boundary'
 
 function ErrorFallback({ error, resetErrorBoundary }) {
   if (error.message.includes('Payment')) {
@@ -465,15 +453,15 @@ function ErrorFallback({ error, resetErrorBoundary }) {
         <p>Please subscribe to access this feature.</p>
         <button onClick={resetErrorBoundary}>Try Again</button>
       </div>
-    );
+    )
   }
-  
+
   return (
     <div>
       <h2>Something went wrong</h2>
       <button onClick={resetErrorBoundary}>Try Again</button>
     </div>
-  );
+  )
 }
 
 function App() {
@@ -481,34 +469,34 @@ function App() {
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <YourApp />
     </ErrorBoundary>
-  );
+  )
 }
 ```
 
 ### 5. Retry Logic for Transient Errors
 
 ```typescript
-import { withRetry } from '@solvapay/server';
+import { withRetry } from '@solvapay/server'
 
 async function createTaskWithRetry(req: express.Request) {
   return withRetry(
     async () => {
-      const handler = payable.http(createTask);
-      return await handler(req, res);
+      const handler = payable.http(createTask)
+      return await handler(req, res)
     },
     {
       maxRetries: 3,
       retryDelay: 1000,
-      shouldRetry: (error) => {
+      shouldRetry: error => {
         // Don't retry paywall errors
         if (error instanceof PaywallError) {
-          return false;
+          return false
         }
         // Retry network errors
-        return error instanceof NetworkError;
+        return error instanceof NetworkError
       },
-    }
-  );
+    },
+  )
 }
 ```
 
@@ -517,17 +505,17 @@ async function createTaskWithRetry(req: express.Request) {
 ### Express.js Complete Example
 
 ```typescript
-import express from 'express';
-import { createSolvaPay, PaywallError } from '@solvapay/server';
+import express from 'express'
+import { createSolvaPay, PaywallError } from '@solvapay/server'
 
-const app = express();
-app.use(express.json());
+const app = express()
+app.use(express.json())
 
-const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY });
-const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
+const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
 
 // Protected route
-app.post('/api/tasks', payable.http(createTask));
+app.post('/api/tasks', payable.http(createTask))
 
 // Error handling middleware
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -541,17 +529,17 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
         agent: error.structuredContent.agent,
         plan: error.structuredContent.plan,
       },
-    });
+    })
   }
-  
+
   // Log unexpected errors
   console.error('Unhandled error:', {
     message: error.message,
     stack: error.stack,
     path: req.path,
     method: req.method,
-  });
-  
+  })
+
   // Don't expose internal errors to client
   res.status(500).json({
     success: false,
@@ -559,31 +547,31 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
       type: 'internal',
       message: 'An internal error occurred',
     },
-  });
-});
+  })
+})
 
-app.listen(3000);
+app.listen(3000)
 ```
 
 ### Next.js Complete Example
 
 ```typescript
 // app/api/tasks/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { createSolvaPay, PaywallError } from '@solvapay/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { createSolvaPay, PaywallError } from '@solvapay/server'
 
-const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY });
-const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
+const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
 
 async function createTask(req: NextRequest) {
-  const body = await req.json();
-  return { success: true, task: { title: body.title } };
+  const body = await req.json()
+  return { success: true, task: { title: body.title } }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const handler = payable.next(createTask);
-    return await handler(request);
+    const handler = payable.next(createTask)
+    return await handler(request)
   } catch (error) {
     if (error instanceof PaywallError) {
       return NextResponse.json(
@@ -596,11 +584,11 @@ export async function POST(request: NextRequest) {
             agent: error.structuredContent.agent,
           },
         },
-        { status: 402 }
-      );
+        { status: 402 },
+      )
     }
-    
-    console.error('API Error:', error);
+
+    console.error('API Error:', error)
     return NextResponse.json(
       {
         success: false,
@@ -609,8 +597,8 @@ export async function POST(request: NextRequest) {
           message: 'An internal error occurred',
         },
       },
-      { status: 500 }
-    );
+      { status: 500 },
+    )
   }
 }
 ```
@@ -621,4 +609,3 @@ export async function POST(request: NextRequest) {
 - [Next.js Integration Guide](./nextjs.md) - Learn Next.js integration
 - [Custom Authentication Adapters](./custom-auth.md) - Handle auth errors
 - [API Reference](../api/server/src/README.md) - Full API documentation
-

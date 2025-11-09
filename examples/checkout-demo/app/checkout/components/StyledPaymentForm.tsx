@@ -1,19 +1,19 @@
-"use client";
-import { PaymentForm, useCustomer, type Plan } from '@solvapay/react';
-import { formatPrice } from '../utils/planHelpers';
-import '../payment-form.css';
+'use client'
+import { PaymentForm, useCustomer, type Plan } from '@solvapay/react'
+import { formatPrice } from '../utils/planHelpers'
+import '../payment-form.css'
 
 interface StyledPaymentFormProps {
-  currentPlan: Plan;
-  agentRef?: string;
-  onSuccess: (paymentIntent?: any) => void;
-  onError: (error: Error) => void;
-  onBack: () => void;
+  currentPlan: Plan
+  agentRef?: string
+  onSuccess: (paymentIntent?: any) => void
+  onError: (error: Error) => void
+  onBack: () => void
 }
 
 /**
  * Styled Payment Form Component
- * 
+ *
  * Wraps the headless PaymentForm SDK component with full styling and structure.
  * Demonstrates how to style the SDK components in your own application.
  */
@@ -24,8 +24,8 @@ export function StyledPaymentForm({
   onError,
   onBack,
 }: StyledPaymentFormProps) {
-  const price = formatPrice(currentPlan.price);
-  const customer = useCustomer();
+  const price = formatPrice(currentPlan.price)
+  const customer = useCustomer()
 
   return (
     <div className="space-y-6">
@@ -47,15 +47,11 @@ export function StyledPaymentForm({
         <div className="space-y-3">
           <div>
             <div className="text-xs text-slate-500 mb-1">Email</div>
-            <div className="text-sm text-slate-900">
-              {customer.email || '—'}
-            </div>
+            <div className="text-sm text-slate-900">{customer.email || '—'}</div>
           </div>
           <div>
             <div className="text-xs text-slate-500 mb-1">Name</div>
-            <div className="text-sm text-slate-900">
-              {customer.name || '—'}
-            </div>
+            <div className="text-sm text-slate-900">{customer.name || '—'}</div>
           </div>
         </div>
       </div>
@@ -63,7 +59,7 @@ export function StyledPaymentForm({
       {/* Payment Section */}
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-slate-900">Payment</h2>
-        
+
         <PaymentForm
           key={currentPlan.reference}
           planRef={currentPlan.reference}
@@ -80,23 +76,15 @@ export function StyledPaymentForm({
       <div className="pt-4 border-t border-slate-200 space-y-2">
         <p className="text-xs text-slate-400 text-center">Powered by SolvaPay</p>
         <div className="flex justify-center space-x-4 text-xs text-slate-400">
-          <button className="hover:text-slate-600 transition-colors">
-            Terms
-          </button>
-          <button className="hover:text-slate-600 transition-colors">
-            Privacy
-          </button>
+          <button className="hover:text-slate-600 transition-colors">Terms</button>
+          <button className="hover:text-slate-600 transition-colors">Privacy</button>
         </div>
       </div>
 
       {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="text-sm text-slate-600 hover:text-slate-900 block"
-      >
+      <button onClick={onBack} className="text-sm text-slate-600 hover:text-slate-900 block">
         ← Back to plan selection
       </button>
     </div>
-  );
+  )
 }
-
