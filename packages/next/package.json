@@ -47,7 +47,7 @@
     "@solvapay/test-utils": "workspace:*",
     "next": "^15.0.0",
     "tsup": "^8.0.1",
-    "typescript": "^5.5.4",
+    "typescript": "^5.9.3",
     "vitest": "^2.0.5"
   }
 }
