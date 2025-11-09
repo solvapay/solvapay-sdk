@@ -55,18 +55,69 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Configure Git
+      - name: Get latest stable version from git tags
+        id: get-version
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Fetch all tags
+          git fetch --tags
+          
+          # Get latest stable tag (exclude preview tags)
+          LATEST_STABLE_TAG=$(git tag -l "v*" | grep -v "preview" | sort -V | tail -1)
+          
+          if [ -z "$LATEST_STABLE_TAG" ]; then
+            # No stable tags yet, read from package.json and strip preview if present
+            echo "No stable tags found, reading from package.json"
+            CURRENT_VERSION=$(node -p "require('./packages/core/package.json').version")
+            BASE_VERSION=$(echo "${CURRENT_VERSION}" | sed 's/-preview\.[0-9]*$//')
+            echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+            echo "Using base version from package.json: ${BASE_VERSION}"
+          else
+            # Extract version from tag (e.g., v1.0.1 -> 1.0.1)
+            BASE_VERSION=$(echo "${LATEST_STABLE_TAG}" | sed 's/^v//')
+            echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+            echo "Latest stable tag: ${LATEST_STABLE_TAG}"
+            echo "Base version: ${BASE_VERSION}"
+          fi
 
       - name: Bump version and generate changelog
         run: |
+          BASE_VERSION="${{ steps.get-version.outputs.base_version }}"
+          
+          # Update package.json to base version first (in case it has preview)
+          echo "Setting package.json to base version: ${BASE_VERSION}"
+          pnpm exec tsx -e "
+            const fs = require('fs');
+            const packages = [
+              'packages/core/package.json',
+              'packages/react/package.json',
+              'packages/react-supabase/package.json',
+              'packages/server/package.json',
+              'packages/auth/package.json',
+              'packages/next/package.json',
+              'packages/create-solvapay-app/package.json'
+            ];
+            packages.forEach(pkg => {
+              const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
+              pkgJson.version = '${BASE_VERSION}';
+              fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
+            });
+          "
+          
+          # Now bump patch version using existing script
+          echo "Bumping patch version from ${BASE_VERSION}..."
           pnpm version:bump
-          git add .
+          
           NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          git commit -m "chore: bump version to ${NEW_VERSION} [skip ci]"
+          echo "New version: ${NEW_VERSION}"
+          
+          # Note: Version changes are NOT committed back to git
+          # Versions are tracked via git tags only to avoid branch divergence
+
+      - name: Create git tag
+        run: |
+          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
           git tag "v${NEW_VERSION}"
+          echo "Created tag: v${NEW_VERSION}"
 
       - name: Build packages
         run: pnpm build:packages
@@ -79,9 +130,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Push changes and tags
+      - name: Push git tag
         run: |
-          git push origin main
+          # Only push the tag, not version commits
+          # This prevents branch divergence and version conflicts
           git push origin --tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

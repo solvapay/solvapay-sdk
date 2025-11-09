@@ -54,18 +54,97 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Configure Git
+      - name: Get latest preview version from git tags
+        id: get-preview-version
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Fetch all tags
+          git fetch --tags
+          
+          # Read base version from package.json (to know which base version we're using)
+          CURRENT_VERSION=$(node -p "require('./packages/core/package.json').version")
+          BASE_VERSION=$(echo "${CURRENT_VERSION}" | sed 's/-preview\.[0-9]*$//')
+          echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Get latest preview tag for this base version (e.g., v1.0.0-preview.18)
+          LATEST_PREVIEW_TAG=$(git tag -l "v${BASE_VERSION}-preview.*" | sort -V | tail -1)
+          
+          if [ -z "$LATEST_PREVIEW_TAG" ]; then
+            # No preview tags for this base version yet, start from preview.1
+            echo "No preview tags found for ${BASE_VERSION}, starting from preview.1"
+            echo "has_existing_preview=false" >> $GITHUB_OUTPUT
+          else
+            # Extract preview number (e.g., v1.0.0-preview.18 -> 18)
+            PREVIEW_NUM=$(echo "${LATEST_PREVIEW_TAG}" | sed 's/.*-preview\.\([0-9]*\)$/\1/')
+            echo "Latest preview tag: ${LATEST_PREVIEW_TAG}"
+            echo "Preview number: ${PREVIEW_NUM}"
+            echo "has_existing_preview=true" >> $GITHUB_OUTPUT
+            echo "latest_preview_num=${PREVIEW_NUM}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Bump preview version
         run: |
+          BASE_VERSION="${{ steps.get-preview-version.outputs.base_version }}"
+          HAS_EXISTING="${{ steps.get-preview-version.outputs.has_existing_preview }}"
+          
+          if [ "${HAS_EXISTING}" == "true" ]; then
+            # Update package.json to latest preview version first
+            LATEST_PREVIEW_NUM="${{ steps.get-preview-version.outputs.latest_preview_num }}"
+            LATEST_PREVIEW_VERSION="${BASE_VERSION}-preview.${LATEST_PREVIEW_NUM}"
+            echo "Setting package.json to latest preview: ${LATEST_PREVIEW_VERSION}"
+            pnpm exec tsx -e "
+              const fs = require('fs');
+              const packages = [
+                'packages/core/package.json',
+                'packages/react/package.json',
+                'packages/react-supabase/package.json',
+                'packages/server/package.json',
+                'packages/auth/package.json',
+                'packages/next/package.json',
+                'packages/create-solvapay-app/package.json'
+              ];
+              packages.forEach(pkg => {
+                const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
+                pkgJson.version = '${LATEST_PREVIEW_VERSION}';
+                fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
+              });
+            "
+          else
+            # No existing preview tags, set to base version first
+            echo "Setting package.json to base version: ${BASE_VERSION}"
+            pnpm exec tsx -e "
+              const fs = require('fs');
+              const packages = [
+                'packages/core/package.json',
+                'packages/react/package.json',
+                'packages/react-supabase/package.json',
+                'packages/server/package.json',
+                'packages/auth/package.json',
+                'packages/next/package.json',
+                'packages/create-solvapay-app/package.json'
+              ];
+              packages.forEach(pkg => {
+                const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
+                pkgJson.version = '${BASE_VERSION}';
+                fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
+              });
+            "
+          fi
+          
+          # Now bump preview version using existing script
+          echo "Bumping preview version..."
           pnpm version:bump:preview
-          git add .
+          
           NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          git commit -m "chore: bump preview to ${NEW_VERSION} [skip ci]"
+          echo "New preview version: ${NEW_VERSION}"
+          
+          # Note: Version changes are NOT committed back to git
+          # Versions are tracked via git tags only to avoid branch divergence
+
+      - name: Create git tag
+        run: |
+          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
           git tag "v${NEW_VERSION}"
+          echo "Created tag: v${NEW_VERSION}"
 
       - name: Build packages
         run: pnpm build:packages
@@ -78,9 +157,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Push changes and tags
+      - name: Push git tag
         run: |
-          git push origin dev
+          # Only push the tag, not version commits
+          # This prevents branch divergence and version conflicts
           git push origin --tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

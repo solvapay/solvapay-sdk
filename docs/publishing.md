@@ -20,19 +20,30 @@ The SolvaPay SDK uses an automated publishing workflow that:
 ### Workflow
 
 1. Develop features and fixes in the `dev` branch
-2. When ready to publish, merge `dev` into `main`
-3. Push to `main` triggers the automated publishing workflow
+2. When ready to publish, merge `dev` into `main` (via PR with squash merge)
+3. Trigger the publish workflow manually via GitHub Actions UI
 4. A new patch version is automatically created and published to npm
+5. Version is tracked via git tag (not committed to git)
 
 ## Versioning
 
-### Automatic (Default)
+### Version Bump Strategy
 
-Every push to `main` automatically increments the patch version:
+**Important**: Version bumps are **NOT committed back to git**. Versions are tracked via git tags only. This prevents:
+- Branch divergence between `dev` and `main`
+- Version conflicts when merging `dev` → `main`
+- Lockfile conflicts from version changes
+- Complex merge cycles
 
-- `0.1.0` → `0.1.1` → `0.1.2` → `0.1.3` ...
+**How it works:**
+- When publishing, the workflow reads the current version from `package.json`
+- Strips preview suffix if present (e.g., `1.0.0-preview.18` → `1.0.0`)
+- Bumps the version (patch increment for stable, preview increment for preview)
+- Publishes with the new version
+- Creates a git tag (e.g., `v1.0.1`)
+- **Does NOT commit version changes back to git**
 
-This is ideal for the preview/alpha release phase with frequent changes.
+This means `package.json` versions in git may not match published versions, but versions are accurately tracked via git tags and npm.
 
 ### Manual Version Bumps
 
@@ -113,31 +124,35 @@ The SDK uses three automated workflows:
 
 ### 1. Stable Release Workflow (`.github/workflows/publish.yml`)
 
-Runs on every push to `main` branch:
+Runs manually via GitHub Actions UI (or on push to `main` if enabled):
 
 1. **Checks out** the repository with full git history
 2. **Installs** dependencies using pnpm
 3. **Runs tests** to ensure quality
 4. **Bumps version** and generates changelog (patch increment)
+   - Strips preview suffix if present (e.g., `1.0.0-preview.18` → `1.0.0`)
+   - Increments patch version (e.g., `1.0.0` → `1.0.1`)
 5. **Builds** all packages
 6. **Publishes** to npm registry (default `latest` tag)
-7. **Commits** version changes back to main
-8. **Creates git tag** (e.g., `v0.1.1`)
-9. **Pushes** changes and tags
+7. **Creates git tag** (e.g., `v1.0.1`)
+8. **Pushes git tag** (version changes are NOT committed back to git)
+
+**Important**: Version changes are tracked via git tags only, not commits. This prevents branch divergence and version conflicts when merging `dev` → `main`.
 
 ### 2. Preview Release Workflow (`.github/workflows/publish-preview.yml`)
 
-Runs on every push to `dev` branch:
+Runs manually via GitHub Actions UI (or on push to `dev` if enabled):
 
 1. **Checks out** the repository with full git history
 2. **Installs** dependencies using pnpm
 3. **Runs tests** to ensure quality
-4. **Bumps preview version** (e.g., `0.1.0-preview.1`)
+4. **Bumps preview version** (e.g., `0.1.0-preview.1` → `0.1.0-preview.2`)
 5. **Builds** all packages
 6. **Publishes** to npm registry with `preview` tag
-7. **Commits** version changes back to dev
-8. **Creates git tag** (e.g., `v0.1.0-preview.1`)
-9. **Pushes** changes and tags
+7. **Creates git tag** (e.g., `v0.1.0-preview.2`)
+8. **Pushes git tag** (version changes are NOT committed back to git)
+
+**Important**: Version changes are tracked via git tags only, not commits. This prevents branch divergence and version conflicts when merging `dev` → `main`.
 
 ### 3. Tag as Latest Workflow (`.github/workflows/tag-as-latest.yml`)
 
@@ -264,20 +279,14 @@ The SDK uses a clean dual-authentication strategy:
 
 ### Version Already Published
 
-If a version already exists on npm, you'll need to bump to the next version:
-
-```bash
-pnpm version:bump
-git add .
-git commit -m "chore: bump version"
-git push origin main
-```
+If a version already exists on npm, trigger the publish workflow again - it will automatically bump to the next version. No manual version bumping or commits needed.
 
 ### Workflow Not Triggering
 
-1. Check that you pushed to the `main` branch (not `dev`)
+1. Workflows are currently set to manual trigger (`workflow_dispatch`) - use GitHub Actions UI to run them
 2. Verify GitHub Actions are enabled in repository settings
 3. Check workflow file syntax in `.github/workflows/publish.yml`
+4. Ensure you have the required `NPM_TOKEN` secret configured
 
 ## Preview Versions
 
@@ -308,20 +317,18 @@ Preview versions can be published in two ways:
 
 #### Option A: Automated Publishing (Recommended)
 
-Every push to the `dev` branch automatically:
+Trigger the preview publish workflow manually via GitHub Actions UI:
 
-1. Runs tests
-2. Bumps the preview version
-3. Publishes to npm with `preview` tag
-4. Commits version changes back to `dev`
+1. Go to **Actions** tab in GitHub
+2. Select **Publish Preview to NPM** workflow
+3. Click **Run workflow**
+4. The workflow will:
+   - Run tests
+   - Bump the preview version
+   - Publish to npm with `preview` tag
+   - Create and push a git tag (version changes are NOT committed back to git)
 
-Simply push your changes to `dev`:
-
-```bash
-git push origin dev
-```
-
-The GitHub Actions workflow handles the rest!
+**Note**: Version changes are tracked via git tags only to prevent branch divergence.
 
 #### Option B: Manual Publishing
 
@@ -490,20 +497,18 @@ The stable version will supersede all preview versions of that base version.
 ## Best Practices
 
 1. **Always use conventional commits** for better changelogs
-2. **Test locally** before pushing to main
+2. **Test locally** before merging dev → main
 3. **Review the changelog** before publishing major versions
 4. **Update documentation** when adding features
-5. **Keep dev and main in sync** - merge dev → main regularly during preview phase
+5. **Merge dev → main regularly** - use squash merges for clean history
+6. **Never merge main → dev** - this creates cycles and conflicts
+7. **Versions are tracked via tags** - don't manually commit version changes
 
 ## Skipping Publishing
 
-To push to `main` or `dev` without triggering a publish (e.g., for docs-only changes), add `[skip ci]` to your commit message:
+Since workflows are manually triggered, you can push to `main` or `dev` without triggering a publish. The workflows only run when manually triggered via GitHub Actions UI.
 
-```bash
-git commit -m "docs: update README [skip ci]"
-```
-
-Note: Both automated workflows already add `[skip ci]` to version bump commits to prevent infinite loops.
+**Note**: Version bump commits are no longer created, so there's no risk of infinite loops.
 
 ## Notes
 
