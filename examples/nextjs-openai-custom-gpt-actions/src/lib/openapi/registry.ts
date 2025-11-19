@@ -17,18 +17,6 @@ import {
   // User schemas
   UserPlanSchema,
 
-  // OAuth schemas
-  OAuthTokenRequestSchema,
-  OAuthTokenResponseSchema,
-  UserInfoResponseSchema,
-  OAuthAuthorizeQuerySchema,
-  JWKSResponseSchema,
-  OpenIDConfigurationSchema,
-  OAuthRevokeRequestSchema,
-  OAuthRevokeResponseSchema,
-  SignOutResponseSchema,
-  // SignInUrlResponseSchema, // EXCLUDED - kept for reference
-
   // Common schemas
   ErrorResponseSchema,
 } from '../schemas'
@@ -40,14 +28,6 @@ registry.register('Task', TaskSchema)
 registry.register('CreateTaskRequest', CreateTaskRequestSchema)
 registry.register('TaskList', TaskListSchema)
 registry.register('UserPlan', UserPlanSchema)
-registry.register('OAuthTokenResponse', OAuthTokenResponseSchema)
-registry.register('UserInfoResponse', UserInfoResponseSchema)
-registry.register('JWKSResponse', JWKSResponseSchema)
-registry.register('OpenIDConfiguration', OpenIDConfigurationSchema)
-registry.register('OAuthRevokeRequest', OAuthRevokeRequestSchema)
-registry.register('OAuthRevokeResponse', OAuthRevokeResponseSchema)
-registry.register('SignOutResponse', SignOutResponseSchema)
-// registry.register('SignInUrlResponse', SignInUrlResponseSchema); // EXCLUDED - kept for reference
 registry.register('ErrorResponse', ErrorResponseSchema)
 
 // Security scheme for OAuth - support multiple URL sources
@@ -78,280 +58,20 @@ if (
   )
 }
 
+// Use generic OAuth2 security scheme pointing to standard OAuth endpoints
+// Users will configure these to point to their Supabase project's OAuth endpoints
 registry.registerComponent('securitySchemes', 'oauth2', {
   type: 'oauth2',
   flows: {
     authorizationCode: {
-      authorizationUrl: `${baseUrl}/api/oauth/authorize`,
-      tokenUrl: `${baseUrl}/api/oauth/token`,
+      authorizationUrl: `https://<YOUR-PROJECT-REF>.supabase.co/auth/v1/authorize`,
+      tokenUrl: `https://<YOUR-PROJECT-REF>.supabase.co/auth/v1/token`,
       scopes: {
-        openid: 'OpenID scope',
-        email: 'Email access',
-        profile: 'Profile access',
-      },
-    },
-  },
-})
-
-// API endpoints relevant for OpenAI Custom GPT Actions
-
-// Sign-in helper endpoint (EXCLUDED from OpenAPI schema - kept for reference)
-// registry.registerPath({
-//   method: 'get',
-//   path: '/api/auth/signin-url',
-//   operationId: 'getSignInUrl',
-//   summary: 'Get sign-in URL',
-//   description: 'Get the OAuth authorization URL for signing in. This public endpoint helps AI agents guide users through the authentication process without requiring prior authentication.',
-//   tags: ['OAuth'],
-//   responses: {
-//     200: {
-//       description: 'Sign-in URL and instructions',
-//       content: {
-//         'application/json': {
-//           schema: SignInUrlResponseSchema
-//         }
-//       }
-//     },
-//     500: {
-//       description: 'Internal server error',
-//       content: {
-//         'application/json': {
-//           schema: ErrorResponseSchema
-//         }
-//       }
-//     }
-//   }
-// });
-
-// OAuth endpoints for Custom GPT authentication
-registry.registerPath({
-  method: 'get',
-  path: '/api/.well-known/openid-configuration',
-  operationId: 'getOpenIdConfiguration',
-  summary: 'OpenID Connect discovery',
-  description: 'Get OpenID Connect configuration for OAuth setup',
-  tags: ['OAuth'],
-  'x-openai-isConsequential': false,
-  responses: {
-    200: {
-      description: 'OpenID Connect configuration',
-      content: {
-        'application/json': {
-          schema: OpenIDConfigurationSchema,
-        },
-      },
-    },
-  },
-})
-
-registry.registerPath({
-  method: 'get',
-  path: '/api/oauth/authorize',
-  operationId: 'authorizeOAuth',
-  summary: 'OAuth authorization endpoint',
-  description: 'Start OAuth authorization flow',
-  tags: ['OAuth'],
-  'x-openai-isConsequential': false,
-  request: {
-    query: OAuthAuthorizeQuerySchema,
-  },
-  responses: {
-    302: {
-      description: 'Redirect to authorization page',
-    },
-    400: {
-      description: 'Invalid request parameters',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
-})
-
-registry.registerPath({
-  method: 'post',
-  path: '/api/oauth/token',
-  operationId: 'exchangeOAuthToken',
-  summary: 'OAuth token exchange',
-  description: 'Exchange authorization code for access token',
-  tags: ['OAuth'],
-  'x-openai-isConsequential': false,
-  request: {
-    body: {
-      content: {
-        'application/x-www-form-urlencoded': {
-          schema: OAuthTokenRequestSchema,
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: 'Access token response',
-      content: {
-        'application/json': {
-          schema: OAuthTokenResponseSchema,
-        },
-      },
-    },
-    400: {
-      description: 'Invalid request',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
-})
-
-registry.registerPath({
-  method: 'get',
-  path: '/api/oauth/userinfo',
-  operationId: 'getUserInfo',
-  summary: 'Get user information',
-  description: 'Get authenticated user information',
-  tags: ['OAuth'],
-  security: [{ oauth2: [] }],
-  'x-openai-isConsequential': false,
-  responses: {
-    200: {
-      description: 'User information',
-      content: {
-        'application/json': {
-          schema: UserInfoResponseSchema,
-        },
-      },
-    },
-    401: {
-      description: 'Unauthorized',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
-})
-
-registry.registerPath({
-  method: 'get',
-  path: '/api/oauth/jwks',
-  operationId: 'getJwks',
-  summary: 'JSON Web Key Set',
-  description: 'Get public keys for token verification',
-  tags: ['OAuth'],
-  'x-openai-isConsequential': false,
-  responses: {
-    200: {
-      description: 'JWKS response',
-      content: {
-        'application/json': {
-          schema: JWKSResponseSchema,
-        },
-      },
-    },
-  },
-})
-
-registry.registerPath({
-  method: 'post',
-  path: '/api/oauth/revoke',
-  operationId: 'revokeOAuthToken',
-  summary: 'Revoke OAuth token',
-  description: 'Revoke an access token or refresh token to sign out the user',
-  tags: ['OAuth'],
-  'x-openai-isConsequential': false,
-  request: {
-    body: {
-      content: {
-        'application/x-www-form-urlencoded': {
-          schema: OAuthRevokeRequestSchema,
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: 'Token revoked successfully',
-      content: {
-        'application/json': {
-          schema: OAuthRevokeResponseSchema,
-        },
-      },
-    },
-    400: {
-      description: 'Invalid request',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
-})
-
-registry.registerPath({
-  method: 'post',
-  path: '/api/oauth/signout',
-  operationId: 'signOut',
-  summary: 'Sign out user',
-  description:
-    'Convenient sign out endpoint that accepts Bearer token in header or form data. Revokes the access token to sign out the user.',
-  tags: ['OAuth'],
-  security: [{ oauth2: [] }],
-  'x-openai-isConsequential': false,
-  request: {
-    body: {
-      content: {
-        'application/x-www-form-urlencoded': {
-          schema: z.object({
-            token: z
-              .string()
-              .optional()
-              .describe('Token to revoke (optional if using Bearer header)'),
-            token_type_hint: z
-              .enum(['access_token', 'refresh_token'])
-              .optional()
-              .describe('Hint about token type'),
-          }),
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: 'Sign out successful',
-      content: {
-        'application/json': {
-          schema: SignOutResponseSchema,
-        },
-      },
-    },
-    400: {
-      description: 'Invalid request',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
+        // Default Supabase scopes (optional to list here, but good for docs)
+        email: 'Access to email address',
+        phone: 'Access to phone number',
+        openid: 'OpenID Connect support',
+        profile: 'Access to user profile',
       },
     },
   },
