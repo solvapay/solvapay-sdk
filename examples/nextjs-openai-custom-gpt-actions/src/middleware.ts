@@ -1,9 +1,18 @@
 import { createSupabaseAuthMiddleware } from '@solvapay/next'
 import { NextRequest, NextResponse } from 'next/server'
+import { jwtVerify } from 'jose'
 
 const authMiddleware = createSupabaseAuthMiddleware({
   // Public routes that don't require authentication
-  publicRoutes: ['/api/docs/json', '/api/docs', '/api/config/url'],
+  publicRoutes: [
+    '/api/docs/json', 
+    '/api/docs', 
+    '/api/config/url', 
+    '/api/oauth/authorize', // OAuth endpoints must be public (handle their own auth)
+    '/api/oauth/token',
+    '/api/.well-known/openid-configuration',
+    '/login' // Login page
+  ],
 })
 
 export async function middleware(request: NextRequest) {
@@ -19,9 +28,40 @@ export async function middleware(request: NextRequest) {
     })
   }
 
+  // Check for Custom OAuth Token (Bearer)
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.split(' ')[1]
+      const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!)
+      
+      const { payload } = await jwtVerify(token, jwtSecret)
+      
+      // Token is valid!
+      // Add user info to headers for downstream API routes to use
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-user-id', payload.sub as string)
+      
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
+    } catch (error) {
+      // Invalid token
+      console.error('Invalid OAuth token:', error)
+      return new NextResponse(
+        JSON.stringify({ error: 'invalid_token', message: 'Invalid or expired token' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+  }
+
+  // Fallback to Standard Supabase Auth (Cookies)
   return authMiddleware(request as any)
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  // Match all API routes and login page
+  matcher: ['/api/:path*', '/login'],
 }

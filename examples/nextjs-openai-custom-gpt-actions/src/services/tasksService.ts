@@ -1,4 +1,18 @@
-import { supabase } from '@/lib/supabase'
+import { supabase as defaultSupabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+// Helper to get appropriate Supabase client
+function getSupabase() {
+  // If we have a service role key, use it to bypass RLS (server-side)
+  // This is necessary for custom OAuth flows where we don't have a Supabase session
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+  }
+  return defaultSupabase
+}
 
 export interface Task {
   id: string
@@ -39,36 +53,39 @@ export async function createTask(args: {
   auth?: { customer_ref?: string } // Keep for SolvaPay compatibility
   userId?: string
 }): Promise<{ success: boolean; task: Task }> {
-  const { title, description, userId } = args
+  const { title, description } = args
+  
+  // Determine user ID
+  // 1. Explicit userId (from Custom OAuth middleware)
+  // 2. SolvaPay auth context
+  let targetUserId = args.userId
+  if (!targetUserId && args.auth?.customer_ref) {
+    targetUserId = args.auth.customer_ref
+  }
 
   if (!title) {
     throw new Error('Title is required')
   }
 
-  // If we have a userId passed (e.g. from SolvaPay context), use it
-  // Otherwise, try to get it from the current session (for direct calls)
-  let targetUserId = userId
-  if (!targetUserId && args.auth?.customer_ref) {
-    targetUserId = args.auth.customer_ref
-  }
-
-  // In a real server-side context with RLS, we might rely on the auth context.
-  // But since we're using the service role or authenticated client, we need to ensure we have the user ID.
-  // For this demo, we assume the Supabase client is already scoped or we pass the ID.
+  const supabase = getSupabase()
   
-  // NOTE: When using SolvaPay's `payable`, the `auth` object is populated from the request headers.
-  // However, SolvaPay server-side execution might not have the Supabase session context unless we forward it.
-  // For this demo, we'll use the authenticated client if available, or rely on RLS.
+  // If using service role (implied by getSupabase returning a new client),
+  // we must ensure we have a user ID to assign ownership.
+  // If using default client (anon key), RLS will handle it (uses auth.uid())
+  // BUT: `insert` with RLS requires the user to be authenticated.
+  
+  // Construct query
+  let query = supabase.from('tasks').insert({
+    title,
+    description,
+    // If we have an explicit targetUserId, use it.
+    // This works with Service Role (bypasses RLS).
+    // If using Anon Key + RLS, 'user_id' column is usually set automatically by default 
+    // or triggers, OR we set it here and RLS ensures it matches auth.uid().
+    ...(targetUserId ? { user_id: targetUserId } : {})
+  })
 
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert({
-      title,
-      description,
-      user_id: targetUserId, // Explicitly set if using service role, or let RLS handle if using auth client
-    })
-    .select()
-    .single()
+  const { data, error } = await query.select().single()
 
   if (error) {
     console.error('Error creating task:', error)
@@ -87,14 +104,21 @@ export async function createTask(args: {
 export async function getTask(args: {
   id: string
   auth?: { customer_ref?: string }
+  userId?: string
 }): Promise<{ success: boolean; task: Task }> {
-  const { id } = args
+  const { id, userId } = args
+  let targetUserId = userId || args.auth?.customer_ref
 
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const supabase = getSupabase()
+  
+  let query = supabase.from('tasks').select('*').eq('id', id)
+  
+  // Enforce ownership if we have a target user (Service Role usage)
+  if (targetUserId) {
+    query = query.eq('user_id', targetUserId)
+  }
+
+  const { data, error } = await query.single()
 
   if (error) {
     throw new Error('Task not found')
@@ -113,24 +137,40 @@ export async function listTasks(args: {
   limit?: number
   offset?: number
   auth?: { customer_ref?: string }
+  userId?: string
 }): Promise<{ success: boolean; tasks: Task[]; total: number; limit: number; offset: number }> {
-  const { limit = 10, offset = 0 } = args
+  const { limit = 10, offset = 0, userId } = args
+  let targetUserId = userId || args.auth?.customer_ref
 
-  // Get total count
-  const { count, error: countError } = await supabase
-    .from('tasks')
-    .select('*', { count: 'exact', head: true })
+  const supabase = getSupabase()
+
+  // Start building query
+  let countQuery = supabase.from('tasks').select('*', { count: 'exact', head: true })
+  
+  // If we are using service role (implied by passing userId), we MUST filter by user_id
+  // otherwise we list everyone's tasks.
+  if (targetUserId) {
+    countQuery = countQuery.eq('user_id', targetUserId)
+  }
+
+  const { count, error: countError } = await countQuery
 
   if (countError) {
     throw new Error(`Failed to count tasks: ${countError.message}`)
   }
 
-  // Get paginated data
-  const { data, error } = await supabase
+  // Data query
+  let dataQuery = supabase
     .from('tasks')
     .select('*')
     .range(offset, offset + limit - 1)
     .order('created_at', { ascending: false })
+    
+  if (targetUserId) {
+    dataQuery = dataQuery.eq('user_id', targetUserId)
+  }
+
+  const { data, error } = await dataQuery
 
   if (error) {
     throw new Error(`Failed to list tasks: ${error.message}`)
@@ -151,24 +191,32 @@ export async function listTasks(args: {
 export async function deleteTask(args: {
   id: string
   auth?: { customer_ref?: string }
+  userId?: string
 }): Promise<{ success: boolean; message: string; deletedTask: Task }> {
-  const { id } = args
+  const { id, userId } = args
+  let targetUserId = userId || args.auth?.customer_ref
 
-  // Get task first to return it
-  const { data: taskData, error: getError } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const supabase = getSupabase()
+
+  // Get task first to return it (and verify ownership)
+  let getQuery = supabase.from('tasks').select('*').eq('id', id)
+  if (targetUserId) {
+    getQuery = getQuery.eq('user_id', targetUserId)
+  }
+  
+  const { data: taskData, error: getError } = await getQuery.single()
 
   if (getError) {
     throw new Error('Task not found')
   }
 
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', id)
+  // Delete
+  let deleteQuery = supabase.from('tasks').delete().eq('id', id)
+  if (targetUserId) {
+    deleteQuery = deleteQuery.eq('user_id', targetUserId)
+  }
+
+  const { error } = await deleteQuery
 
   if (error) {
     throw new Error(`Failed to delete task: ${error.message}`)
@@ -185,10 +233,11 @@ export async function deleteTask(args: {
  * Clear all tasks (utility function for testing - careful!)
  */
 export async function clearAllTasks(): Promise<void> {
-  // This should probably only be allowed in test environments
   if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
     throw new Error('Clear all tasks is only available in test/dev environments')
   }
   
-  await supabase.from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  // Use default supabase client (usually has RLS or needs admin key)
+  // For tests, we often want to clear everything, so use getSupabase()
+  await getSupabase().from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000')
 }

@@ -8,11 +8,19 @@ function getSolvaPay() {
 export const GET = async (request: Request, context?: any) => {
   const solvaPay = getSolvaPay()
   const basicPayable = solvaPay.payable({ agent: 'crud-basic' })
-  return basicPayable.next(getTask)(request, context)
+  
+  // Extract user ID from custom header (set by middleware for OAuth)
+  const userId = request.headers.get('x-user-id') || undefined
+
+  return basicPayable.next((args) => getTask({ ...args, userId }))(request, context)
 }
 
 export const DELETE = async (request: Request, context?: any) => {
   const solvaPay = getSolvaPay()
   const premiumPayable = solvaPay.payable({ agent: 'crud-premium' })
-  return premiumPayable.next(deleteTask)(request, context)
+  
+  // Extract user ID from custom header (set by middleware for OAuth)
+  const userId = request.headers.get('x-user-id') || undefined
+
+  return premiumPayable.next((args) => deleteTask({ ...args, userId }))(request, context)
 }
