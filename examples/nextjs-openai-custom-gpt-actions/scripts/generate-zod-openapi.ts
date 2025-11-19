@@ -4,12 +4,14 @@ import { config } from 'dotenv'
 import { writeFileSync, mkdirSync } from 'fs'
 import { dirname } from 'path'
 import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi'
-import registry from '../src/lib/openapi/registry'
 
 // Load environment variables from .env files (for local development only)
 // On Vercel, environment variables are already available in process.env
 config({ path: '.env.local' })
 config({ path: '.env' })
+
+// Import registry AFTER loading environment variables
+import registry from '../src/lib/openapi/registry'
 
 /**
  * Generate OpenAPI specification from Zod schemas
@@ -27,12 +29,25 @@ async function generateOpenApiSpec() {
   console.log('   - NODE_ENV:', process.env.NODE_ENV)
   console.log('   - VERCEL:', process.env.VERCEL)
   console.log('   - PUBLIC_URL:', process.env.PUBLIC_URL ? '✓ Set' : '✗ Missing')
+  console.log('   - NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓ Set' : '✗ Missing')
+  console.log('   - SUPABASE_URL:', process.env.SUPABASE_URL ? '✓ Set' : '✗ Missing')
+
+  // Check for Supabase URL
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  if (!supabaseUrl) {
+    console.error('❌ Missing Supabase URL!')
+    console.error('   You need to set NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL in your .env.local')
+    console.error('   Example: NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co')
+    throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL')
+  }
+
+  console.log('🔐 Supabase URL:', supabaseUrl)
 
   // Use PUBLIC_URL if set, otherwise fallback to localhost for development
-  const serverUrl = process.env.PUBLIC_URL || 'http://localhost:3000'
+  const serverUrl = process.env.PUBLIC_URL || 'http://localhost:3002'
 
   if (!process.env.PUBLIC_URL) {
-    console.warn('⚠️  PUBLIC_URL not set, using fallback: http://localhost:3000')
+    console.warn('⚠️  PUBLIC_URL not set, using fallback: http://localhost:3002')
     console.warn('')
     console.warn('💡 For production deployments, set PUBLIC_URL in environment variables:')
     console.warn('   - Vercel: Add PUBLIC_URL in project settings')
@@ -90,8 +105,8 @@ async function generateOpenApiSpec() {
           description: 'User account and subscription management',
         },
         {
-          name: 'Things',
-          description: 'CRUD operations for things with paywall protection',
+          name: 'Tasks',
+          description: 'CRUD operations for tasks with paywall protection',
         },
       ],
       externalDocs: {

@@ -112,8 +112,9 @@ export interface AuthMiddlewareOptions {
 export function createAuthMiddleware(options: AuthMiddlewareOptions) {
   const { adapter, publicRoutes = [], userIdHeader = 'x-user-id' } = options
 
-  return async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl
+  return async function middleware(request: any) {
+    const req = request as NextRequest
+    const { pathname } = req.nextUrl
 
     // Only process API routes
     if (!pathname.startsWith('/api')) {
@@ -124,11 +125,11 @@ export function createAuthMiddleware(options: AuthMiddlewareOptions) {
     const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
     // Extract userId from request using the adapter
-    const userId = await adapter.getUserIdFromRequest(request)
+    const userId = await adapter.getUserIdFromRequest(req)
 
     // For public routes, allow access even without auth, but still set userId if available
     if (isPublicRoute) {
-      const requestHeaders = new Headers(request.headers)
+      const requestHeaders = new Headers(req.headers)
       if (userId) {
         requestHeaders.set(userIdHeader, userId)
       }
@@ -148,7 +149,7 @@ export function createAuthMiddleware(options: AuthMiddlewareOptions) {
     }
 
     // Clone request headers and add userId for downstream routes
-    const requestHeaders = new Headers(request.headers)
+    const requestHeaders = new Headers(req.headers)
     requestHeaders.set(userIdHeader, userId)
 
     return NextResponse.next({

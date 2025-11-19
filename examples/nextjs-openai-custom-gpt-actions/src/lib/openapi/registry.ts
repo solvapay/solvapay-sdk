@@ -3,6 +3,9 @@ import { config } from 'dotenv'
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi'
 import { z } from 'zod'
 
+// Use z to prevent unused variable error, even if just for type inference
+void z
+
 // Load environment variables
 config({ path: '.env.local' })
 config({ path: '.env' })
@@ -59,13 +62,21 @@ if (
 }
 
 // Use generic OAuth2 security scheme pointing to standard OAuth endpoints
-// Users will configure these to point to their Supabase project's OAuth endpoints
+// Get Supabase URL from environment
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+
+if (!supabaseUrl) {
+  throw new Error(
+    'NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL environment variable is required for OAuth configuration',
+  )
+}
+
 registry.registerComponent('securitySchemes', 'oauth2', {
   type: 'oauth2',
   flows: {
     authorizationCode: {
-      authorizationUrl: `https://<YOUR-PROJECT-REF>.supabase.co/auth/v1/authorize`,
-      tokenUrl: `https://<YOUR-PROJECT-REF>.supabase.co/auth/v1/token`,
+      authorizationUrl: `${supabaseUrl}/auth/v1/authorize`,
+      tokenUrl: `${supabaseUrl}/auth/v1/token`,
       scopes: {
         // Default Supabase scopes (optional to list here, but good for docs)
         email: 'Access to email address',
@@ -164,7 +175,7 @@ registry.registerPath({
   description: 'Create a new task. This endpoint is protected by paywall.',
   tags: ['Tasks'],
   security: [{ oauth2: [] }],
-  'x-openai-isConsequential': false,
+  'x-openai-isConsequential': true,
   request: {
     body: {
       content: {
@@ -274,7 +285,7 @@ registry.registerPath({
   description: 'Delete a specific task. This endpoint is protected by paywall.',
   tags: ['Tasks'],
   security: [{ oauth2: [] }],
-  'x-openai-isConsequential': false,
+  'x-openai-isConsequential': true,
   request: {
     params: TaskParamsSchema,
   },

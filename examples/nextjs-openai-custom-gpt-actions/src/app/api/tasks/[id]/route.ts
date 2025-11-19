@@ -1,4 +1,4 @@
-import { getTask, deleteTask } from '@solvapay/demo-services'
+import { getTask, deleteTask } from '@/services/tasksService'
 import { createSolvaPay } from '@solvapay/server'
 
 function getSolvaPay() {

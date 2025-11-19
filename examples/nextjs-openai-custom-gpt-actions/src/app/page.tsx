@@ -7,8 +7,21 @@ export default function Home() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    // Get the current window URL to build the full API URL
-    setApiUrl(`${window.location.origin}/api/docs/json`)
+    // Fetch the public URL from the server
+    fetch('/api/config/url')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.url) {
+          setApiUrl(`${data.url}/api/docs/json`)
+        } else {
+          // Fallback to current origin
+          setApiUrl(`${window.location.origin}/api/docs/json`)
+        }
+      })
+      .catch(() => {
+        // Fallback to current origin
+        setApiUrl(`${window.location.origin}/api/docs/json`)
+      })
   }, [])
 
   const copyToClipboard = () => {
@@ -59,7 +72,7 @@ export default function Home() {
             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">2</div>
             <div>
               <h3 className="font-semibold text-gray-900">Add Action</h3>
-              <p className="text-gray-600">In the "Configure" tab, click "Create new action" and select "Import from URL".</p>
+              <p className="text-gray-600">In the &quot;Configure&quot; tab, click &quot;Create new action&quot; and select &quot;Import from URL&quot;.</p>
             </div>
           </div>
 

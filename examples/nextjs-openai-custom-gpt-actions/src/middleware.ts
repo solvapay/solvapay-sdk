@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const authMiddleware = createSupabaseAuthMiddleware({
   // Public routes that don't require authentication
-  publicRoutes: ['/api/docs/json'],
+  publicRoutes: ['/api/docs/json', '/api/docs', '/api/config/url'],
 })
 
 export async function middleware(request: NextRequest) {
@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
     })
   }
 
-  return authMiddleware(request)
+  return authMiddleware(request as any)
 }
 
 export const config = {
