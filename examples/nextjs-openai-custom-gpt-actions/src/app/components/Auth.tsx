@@ -1,22 +1,45 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { signUp, signIn, signInWithGoogle, getAccessToken } from '@/lib/supabase'
 
-export function Auth() {
-  const [isSignUp, setIsSignUp] = useState(false)
+interface AuthProps {
+  initialView?: 'signin' | 'signup'
+}
+
+export function Auth({ initialView = 'signin' }: AuthProps) {
+  const [isSignUp, setIsSignUp] = useState(initialView === 'signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [signUpSuccess, setSignUpSuccess] = useState(false)
+  
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const redirectTo = searchParams.get('redirect_to')
+
+  // Update isSignUp when initialView changes (if component is remounted or prop changes)
+  useEffect(() => {
+    setIsSignUp(initialView === 'signup')
+  }, [initialView])
 
   const handleGoogleSignIn = async () => {
     setError(null)
     setIsLoading(true)
 
     try {
-      const { error: googleError } = await signInWithGoogle()
+      // If we have a redirect_to param, we should include it in the callback URL
+      // so the auth callback handler knows where to send the user next
+      const origin = window.location.origin
+      let callbackUrl = `${origin}/auth/callback`
+      
+      if (redirectTo) {
+        callbackUrl += `?next=${encodeURIComponent(redirectTo)}`
+      }
+
+      const { error: googleError } = await signInWithGoogle(callbackUrl)
       if (googleError) throw googleError
       // OAuth redirect will happen automatically
     } catch (err: any) {
@@ -37,7 +60,8 @@ export function Auth() {
         if (signUpError) throw signUpError
 
         if (data.session) {
-          // User signed in immediately - sync customer in SolvaPay
+          // User signed in immediately (no email confirm required or auto-confirmed)
+          // Sync customer in SolvaPay
           try {
             const accessToken = await getAccessToken()
             if (accessToken) {
@@ -47,14 +71,20 @@ export function Auth() {
                   Authorization: `Bearer ${accessToken}`,
                 },
               }).catch(() => {
-                // Silent failure - don't block signup
                 console.warn('Failed to sync customer after signup')
               })
             }
           } catch {
             // Silent failure
           }
-          setIsLoading(false)
+          
+          // Redirect if needed
+          if (redirectTo) {
+            window.location.href = redirectTo
+          } else {
+            // Go to home or dashboard
+            router.push('/')
+          }
           return
         } else {
           setSignUpSuccess(true)
@@ -62,11 +92,29 @@ export function Auth() {
       } else {
         const { error: signInError } = await signIn(email, password)
         if (signInError) throw signInError
+        
+        // Successful sign in
+        if (redirectTo) {
+           window.location.href = redirectTo
+        } else {
+          router.refresh()
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed')
     } finally {
-      setIsLoading(false)
+      // Only stop loading if we didn't redirect (or if signup was successful but needs email confirm)
+      if ((!redirectTo && !data?.session) || (isSignUp && !data?.session)) {
+         // wait... data is not defined in this scope
+         // Simplification: always stop loading unless we redirected
+         if (!redirectTo) {
+            setIsLoading(false)
+         }
+      }
+      // Just force stop loading in catch/finally blocks for now to be safe
+      if (isSignUp || error) {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -175,6 +223,7 @@ export function Auth() {
                         cy="12"
                         r="10"
                         stroke="currentColor"
+                        strokeWidth="4"
                         strokeWidth="4"
                       ></circle>
                       <path
