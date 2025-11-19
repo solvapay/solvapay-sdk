@@ -19,6 +19,8 @@ import {
 
   // User schemas
   UserPlanSchema,
+  UserInfoSchema,
+  SignOutResponseSchema,
 
   // Common schemas
   ErrorResponseSchema,
@@ -31,6 +33,8 @@ registry.register('Task', TaskSchema)
 registry.register('CreateTaskRequest', CreateTaskRequestSchema)
 registry.register('TaskList', TaskListSchema)
 registry.register('UserPlan', UserPlanSchema)
+registry.register('UserInfo', UserInfoSchema)
+registry.register('SignOutResponse', SignOutResponseSchema)
 registry.register('ErrorResponse', ErrorResponseSchema)
 
 // Security scheme for OAuth - support multiple URL sources
@@ -88,7 +92,65 @@ registry.registerComponent('securitySchemes', 'oauth2', {
   },
 })
 
-// User plan endpoints
+// User endpoints
+registry.registerPath({
+  method: 'get',
+  path: '/api/me',
+  operationId: 'getCurrentUser',
+  summary: 'Get current user',
+  description: 'Get information about the currently authenticated user',
+  tags: ['User'],
+  security: [{ oauth2: [] }],
+  'x-openai-isConsequential': false,
+  responses: {
+    200: {
+      description: 'User information',
+      content: {
+        'application/json': {
+          schema: UserInfoSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/auth/signout',
+  operationId: 'signOut',
+  summary: 'Sign out',
+  description: 'Sign out the current user and revoke their session. The GPT will need to re-authenticate on the next action.',
+  tags: ['Auth'],
+  security: [{ oauth2: [] }],
+  'x-openai-isConsequential': true,
+  responses: {
+    200: {
+      description: 'Successfully signed out',
+      content: {
+        'application/json': {
+          schema: SignOutResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: 'Internal server error',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
+
 registry.registerPath({
   method: 'get',
   path: '/api/user/plan',

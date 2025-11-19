@@ -7,20 +7,19 @@ function getSolvaPay() {
 
 export const GET = async (request: Request, context?: any) => {
   const solvaPay = getSolvaPay()
-  const basicPayable = solvaPay.payable({ agent: 'crud-basic' })
   
-  // Extract user ID from custom header (set by middleware for OAuth)
-  const userId = request.headers.get('x-user-id') || undefined
+  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  const basicPayable = solvaPay.payable(agent ? { agent } : {})
 
-  return basicPayable.next((args) => getTask({ ...args, userId }))(request, context)
+  return basicPayable.next(getTask)(request, context)
 }
 
 export const DELETE = async (request: Request, context?: any) => {
   const solvaPay = getSolvaPay()
-  const premiumPayable = solvaPay.payable({ agent: 'crud-premium' })
   
-  // Extract user ID from custom header (set by middleware for OAuth)
-  const userId = request.headers.get('x-user-id') || undefined
+  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  // For delete, we ideally want a premium agent, but we'll use the configured one if set
+  const premiumPayable = solvaPay.payable(agent ? { agent } : {})
 
-  return premiumPayable.next((args) => deleteTask({ ...args, userId }))(request, context)
+  return premiumPayable.next(deleteTask)(request, context)
 }

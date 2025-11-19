@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 export default function Home() {
   const [baseUrl, setBaseUrl] = useState('')
@@ -8,9 +9,11 @@ export default function Home() {
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedAuthUrl, setCopiedAuthUrl] = useState(false)
   const [copiedTokenUrl, setCopiedTokenUrl] = useState(false)
+  const [user, setUser] = useState<{ email?: string } | null>(null)
+  const [loadingUser, setLoadingUser] = useState(true)
 
   useEffect(() => {
-    // Fetch the public URL from the server
+    // Fetch public URL configuration
     fetch('/api/config/url')
       .then((res) => res.json())
       .then((data) => {
@@ -23,6 +26,25 @@ export default function Home() {
         setBaseUrl(origin)
         setApiUrl(`${origin}/api/docs/json`)
       })
+
+    // Check if user is logged in
+    fetch('/api/me')
+      .then((res) => {
+        if (res.ok) return res.json()
+        return null
+      })
+      .then((data) => {
+        if (data && data.authenticated) {
+          setUser(data.user)
+        } else {
+          setUser(null)
+        }
+        setLoadingUser(false)
+      })
+      .catch(() => {
+        setUser(null)
+        setLoadingUser(false)
+      })
   }, [])
 
   const copyToClipboard = (text: string, setCopiedState: (val: boolean) => void) => {
@@ -31,8 +53,41 @@ export default function Home() {
     setTimeout(() => setCopiedState(false), 2000)
   }
 
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' })
+      // Reload the page to clear state
+      window.location.reload()
+    } catch (error) {
+      console.error('Sign out failed:', error)
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8 md:p-24 max-w-4xl mx-auto">
+      <div className="absolute top-4 right-4 flex items-center gap-4">
+        {!loadingUser && (
+          user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">Signed in as <strong>{user.email}</strong></span>
+              <button 
+                onClick={handleSignOut}
+                className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link 
+              href="/login" 
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              Log In
+            </Link>
+          )
+        )}
+      </div>
+
       <h1 className="text-4xl font-bold mb-4 text-center">SolvaPay Custom GPT Actions API</h1>
       <p className="text-xl mb-12 text-center text-gray-600 max-w-2xl">
         This is a backend API for OpenAI Custom GPT Actions.

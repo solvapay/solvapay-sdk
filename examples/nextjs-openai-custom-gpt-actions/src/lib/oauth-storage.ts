@@ -37,6 +37,7 @@ export const authCodes = {
   async set(data: {
     code: string
     userId: string
+    email: string
     clientId: string
     redirectUri: string
     scope: string
@@ -46,6 +47,7 @@ export const authCodes = {
     const { error } = await supabase.from('oauth_codes').insert({
       code: data.code,
       user_id: data.userId,
+      email: data.email,
       client_id: data.clientId,
       redirect_uri: data.redirectUri,
       scope: data.scope,
@@ -63,6 +65,7 @@ export const authCodes = {
    */
   async consume(code: string): Promise<{
     userId: string
+    email: string
     clientId: string
     redirectUri: string
     scope: string
@@ -91,6 +94,7 @@ export const authCodes = {
 
     return {
       userId: data.user_id,
+      email: data.email || '',
       clientId: data.client_id,
       redirectUri: data.redirect_uri,
       scope: data.scope,

@@ -22,27 +22,86 @@ export default function AuthCallbackPage() {
       }
 
       if (session) {
-        // Set cookies for server-side middleware compatibility
-        // We match the names used in our middleware/authorize route
-        const maxAge = 60 * 60 * 24 * 30 // 30 days
-        
-        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${maxAge}; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure' : ''}`
-        document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=${maxAge}; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure' : ''}`
+        // Set cookies via server-side endpoint for better reliability
+        try {
+          const response = await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token,
+            }),
+          })
 
-        // Force hard navigation to ensure cookies are sent and API route is hit correctly
-        window.location.href = next
+          if (!response.ok) {
+            throw new Error('Failed to set session cookies')
+          }
+
+          // Sync customer with SolvaPay (idempotent - safe to call on every login)
+          // This ensures customer is created/updated in SolvaPay
+          // Uses Bearer token directly since cookies may not propagate immediately
+          try {
+            const syncResponse = await fetch('/api/sync-customer', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+            })
+            
+            if (!syncResponse.ok) {
+              // Log but don't block the flow
+              console.warn('Customer sync warning (non-blocking):', await syncResponse.text())
+            }
+          } catch (syncError) {
+            // Don't block the auth flow if sync fails - it can retry on next login
+            console.warn('Failed to sync customer (will retry on next login):', syncError)
+          }
+
+          // Navigate to destination
+          window.location.href = next
+        } catch (err: any) {
+          console.error('Failed to set session:', err)
+          setError(err.message || 'Failed to complete sign in')
+        }
       } else {
         // No session found yet, listen for changes
-        // This handles the case where the hash parsing happens slightly after mount
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           if (event === 'SIGNED_IN' && session) {
-             const maxAge = 60 * 60 * 24 * 30 // 30 days
-        
-            document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${maxAge}; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure' : ''}`
-            document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=${maxAge}; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure' : ''}`
-            
-            // Force hard navigation to ensure cookies are sent and API route is hit correctly
-            window.location.href = next
+            try {
+              const response = await fetch('/api/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  accessToken: session.access_token,
+                  refreshToken: session.refresh_token,
+                }),
+              })
+
+              if (!response.ok) {
+                throw new Error('Failed to set session cookies')
+              }
+
+              // Sync customer with SolvaPay (idempotent)
+              try {
+                const syncResponse = await fetch('/api/sync-customer', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                  },
+                })
+                
+                if (!syncResponse.ok) {
+                  console.warn('Customer sync warning (non-blocking):', await syncResponse.text())
+                }
+              } catch (syncError) {
+                console.warn('Failed to sync customer (will retry on next login):', syncError)
+              }
+
+              window.location.href = next
+            } catch (err: any) {
+              console.error('Failed to set session:', err)
+              setError(err.message || 'Failed to complete sign in')
+            }
           }
         })
 
@@ -53,7 +112,7 @@ export default function AuthCallbackPage() {
     }
 
     handleAuthCallback()
-  }, [router, next])
+  }, [next])
 
   if (error) {
     return (
@@ -81,4 +140,3 @@ export default function AuthCallbackPage() {
     </div>
   )
 }
-

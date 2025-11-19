@@ -7,20 +7,24 @@ function getSolvaPay() {
 
 export const GET = async (request: Request, context?: any) => {
   const solvaPay = getSolvaPay()
-  const payable = solvaPay.payable({ agent: 'crud-basic' })
   
-  // Extract user ID from custom header (set by middleware for OAuth)
-  const userId = request.headers.get('x-user-id') || undefined
+  // Use configured agent ref if available
+  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  
+  // We don't need to manually pass userId here.
+  // The middleware sets 'x-user-id', and solvaPay.payable() automatically 
+  // extracts it and populates args.auth.customer_ref
+  const payable = solvaPay.payable(agent ? { agent } : {})
 
-  return payable.next((args) => listTasks({ ...args, userId }))(request, context)
+  return payable.next(listTasks)(request, context)
 }
 
 export const POST = async (request: Request, context?: any) => {
   const solvaPay = getSolvaPay()
-  const payable = solvaPay.payable({ agent: 'crud-basic' })
   
-  // Extract user ID from custom header (set by middleware for OAuth)
-  const userId = request.headers.get('x-user-id') || undefined
+  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  
+  const payable = solvaPay.payable(agent ? { agent } : {})
 
-  return payable.next((args) => createTask({ ...args, userId }))(request, context)
+  return payable.next(createTask)(request, context)
 }

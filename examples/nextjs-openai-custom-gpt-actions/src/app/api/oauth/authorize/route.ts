@@ -30,6 +30,24 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Validate Redirect URI (security check)
+  // Only allow redirects to OpenAI domains
+  const allowedRedirectDomains = ['chat.openai.com', 'chatgpt.com']
+  try {
+    const redirectUrl = new URL(redirectUri)
+    if (!allowedRedirectDomains.includes(redirectUrl.hostname)) {
+      return NextResponse.json(
+        { error: 'invalid_request', error_description: 'Unauthorized redirect URI' },
+        { status: 400 }
+      )
+    }
+  } catch (e) {
+    return NextResponse.json(
+      { error: 'invalid_request', error_description: 'Invalid redirect URI format' },
+      { status: 400 }
+    )
+  }
+
   // 2. Check for existing Supabase session
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,6 +64,7 @@ export async function GET(request: NextRequest) {
   const refreshToken = request.cookies.get('sb-refresh-token')?.value
 
   let userId: string | null = null
+  let userEmail: string | null = null
 
   if (accessToken && refreshToken) {
     const { data: { user } } = await supabase.auth.setSession({
@@ -53,12 +72,14 @@ export async function GET(request: NextRequest) {
       refresh_token: refreshToken,
     })
     userId = user?.id || null
+    userEmail = user?.email || null
   } else {
     // Try getting user from auth header if available (e.g. during dev testing)
     const authHeader = request.headers.get('Authorization')
     if (authHeader?.startsWith('Bearer ')) {
        const { data: { user } } = await supabase.auth.getUser(authHeader.split(' ')[1])
        userId = user?.id || null
+       userEmail = user?.email || null
     }
   }
 
@@ -79,7 +100,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // 4. User is authenticated - Generate Authorization Code
+  // 4. Generate Authorization Code
   const code = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
@@ -87,6 +108,7 @@ export async function GET(request: NextRequest) {
     await authCodes.set({
       code,
       userId,
+      email: userEmail || '',
       clientId,
       redirectUri,
       scope,

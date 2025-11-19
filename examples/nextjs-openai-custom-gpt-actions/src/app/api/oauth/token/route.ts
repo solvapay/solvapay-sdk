@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
 
     const accessToken = await new SignJWT({
       sub: codeData.userId,
+      email: codeData.email,
       iss: issuer,
       aud: clientId || 'openai-gpt',
       scope: codeData.scope,

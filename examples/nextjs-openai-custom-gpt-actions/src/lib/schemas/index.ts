@@ -80,6 +80,25 @@ export const UserPlanSchema = z
   })
   .openapi('UserPlan')
 
+// User Info schema (for /me endpoint)
+export const UserInfoSchema = z
+  .object({
+    authenticated: z.boolean().describe('Whether the user is authenticated'),
+    user: z.object({
+      id: z.string().describe('User unique identifier'),
+      email: z.string().email().optional().describe('User email address'),
+    }).optional().describe('User information'),
+  })
+  .openapi('UserInfo')
+
+// Sign Out Response schema
+export const SignOutResponseSchema = z
+  .object({
+    success: z.boolean().describe('Whether the sign out was successful'),
+    message: z.string().describe('Sign out message'),
+  })
+  .openapi('SignOutResponse')
+
 // Type exports for use in API routes
 export type Task = z.infer<typeof TaskSchema>
 export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>

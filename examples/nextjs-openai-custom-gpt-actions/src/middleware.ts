@@ -11,7 +11,9 @@ const authMiddleware = createSupabaseAuthMiddleware({
     '/api/oauth/authorize', // OAuth endpoints must be public (handle their own auth)
     '/api/oauth/token',
     '/api/.well-known/openid-configuration',
-    '/login' // Login page
+    '/api/auth/session', // Session management endpoint (used during login flow)
+    '/login', // Login page
+    '/signup' // Sign up page
   ],
 })
 
@@ -41,6 +43,9 @@ export async function middleware(request: NextRequest) {
       // Add user info to headers for downstream API routes to use
       const requestHeaders = new Headers(request.headers)
       requestHeaders.set('x-user-id', payload.sub as string)
+      if (payload.email) {
+        requestHeaders.set('x-user-email', payload.email as string)
+      }
       
       return NextResponse.next({
         request: {
