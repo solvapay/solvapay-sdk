@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     })
     
     return response
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to set session' },
       { status: 500 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
-import { POST as signoutPOST } from '../../app/api/oauth/signout/route'
+import { POST as signoutPOST } from '../../app/api/auth/signout/route'
 import { createMockJWT } from './test-utils'
 
 describe('Sign Out API', () => {
@@ -20,11 +20,11 @@ describe('Sign Out API', () => {
     // For now, tests rely on JWT expiration validation only
   })
 
-  describe('/api/oauth/signout', () => {
+  describe('/api/auth/signout', () => {
     it('should sign out using Bearer token in header', async () => {
       const testToken = await createMockJWT()
 
-      const signoutRequest = new NextRequest('http://localhost:3000/api/oauth/signout', {
+      const signoutRequest = new NextRequest('http://localhost:3000/api/auth/signout', {
         method: 'POST',
         headers: {
           authorization: `Bearer ${testToken}`,

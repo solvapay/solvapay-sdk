@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { data: { user }, error } = await supabase.auth.setSession({
+    const { data: { user } } = await supabase.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
     })
 
-    if (error || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Invalid session', authenticated: false },
         { status: 401 }
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         email: user.email,
       },
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch user', authenticated: false },
       { status: 500 }

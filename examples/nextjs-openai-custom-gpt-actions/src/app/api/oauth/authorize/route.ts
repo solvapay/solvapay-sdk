@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       )
     }
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: 'invalid_request', error_description: 'Invalid redirect URI format' },
       { status: 400 }

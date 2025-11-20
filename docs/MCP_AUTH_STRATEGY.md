@@ -116,7 +116,9 @@ I have reviewed the implementation in `examples/nextjs-openai-custom-gpt-actions
 | **Authorize Endpoint** | `src/app/api/oauth/authorize/route.ts` | **Coupled**: Directly accesses `sb-access-token` cookie. Needs abstraction for other providers. |
 | **Token Endpoint** | `src/app/api/oauth/token/route.ts` | **Decoupled**: Uses standard JWT signing with `OAUTH_JWKS_SECRET`. |
 | **Storage Layer** | `src/lib/oauth-storage.ts` | **Coupled**: Uses Supabase DB (`oauth_codes` table). Needs abstraction (e.g. Redis/SQL adapters). |
-| **User Info** | `src/app/api/gpt-auth/me/route.ts` | **Coupled**: Uses `SUPABASE_SERVICE_ROLE_KEY` to fetch user details. |
+| **User Info** | `src/app/api/me/route.ts` | **Decoupled**: Uses standard OAuth token for user identification. |
+
+> **Note:** The `/api/gpt-auth/*` routes mentioned in earlier versions have been deprecated and removed. The current implementation uses the standard OAuth flow with `/api/oauth/authorize` and `/api/oauth/token` endpoints.
 
 ### 4.2 Identified Issues / Action Items
 

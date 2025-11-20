@@ -17,7 +17,7 @@ export const GET = async (request: Request, context?: any) => {
   const payable = solvaPay.payable(agent ? { agent } : {})
 
   return payable.next(listTasks, {
-    extractArgs: async (req: Request, ctx?: any) => {
+    extractArgs: async (req: Request) => {
       const url = new URL(req.url)
       const query = Object.fromEntries(url.searchParams.entries())
       
@@ -41,7 +41,7 @@ export const POST = async (request: Request, context?: any) => {
   const payable = solvaPay.payable(agent ? { agent } : {})
 
   return payable.next(createTask, {
-    extractArgs: async (req: Request, ctx?: any) => {
+    extractArgs: async (req: Request) => {
       const url = new URL(req.url)
       const query = Object.fromEntries(url.searchParams.entries())
       

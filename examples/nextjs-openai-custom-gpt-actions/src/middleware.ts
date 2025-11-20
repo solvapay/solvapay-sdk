@@ -14,9 +14,6 @@ const authMiddleware = createSupabaseAuthMiddleware({
     '/api/auth/session', // Session management endpoint (used during login flow)
     '/login', // Login page
     '/signup', // Sign up page
-    '/api/gpt-auth/me',
-    '/api/gpt-auth/start-signin',
-    '/api/gpt-auth/signout'
   ],
 })
 

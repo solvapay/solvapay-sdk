@@ -28,7 +28,7 @@ export function SignOutButton({
 
       if (accessToken) {
         // Use Bearer token in header
-        response = await fetch('/api/oauth/signout', {
+        response = await fetch('/api/auth/signout', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -48,7 +48,7 @@ export function SignOutButton({
         formData.append('token', storedToken)
         formData.append('token_type_hint', 'access_token')
 
-        response = await fetch('/api/oauth/signout', {
+        response = await fetch('/api/auth/signout', {
           method: 'POST',
           body: formData,
         })

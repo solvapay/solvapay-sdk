@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     const text = await request.text()
     body = new URLSearchParams(text)
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { error: 'invalid_request', error_description: 'Invalid request body' },
       { status: 400 }
