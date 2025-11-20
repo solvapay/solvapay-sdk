@@ -79,8 +79,8 @@ registry.registerComponent('securitySchemes', 'oauth2', {
   type: 'oauth2',
   flows: {
     authorizationCode: {
-      authorizationUrl: `${supabaseUrl}/auth/v1/authorize`,
-      tokenUrl: `${supabaseUrl}/auth/v1/token`,
+      authorizationUrl: `${baseUrl}/api/oauth/authorize`,
+      tokenUrl: `${baseUrl}/api/oauth/token`,
       scopes: {
         // Default Supabase scopes (optional to list here, but good for docs)
         email: 'Access to email address',

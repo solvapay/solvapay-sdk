@@ -50,17 +50,33 @@ export async function middleware(request: NextRequest) {
         requestHeaders.set('x-user-email', payload.email as string)
       }
       
-      return NextResponse.next({
+      // Explicitly add CORS headers to the success response to ensure they are present
+      // even if next.config.js fails or is bypassed for some reason
+      const response = NextResponse.next({
         request: {
           headers: requestHeaders,
         },
       })
+      
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-gpt-user-id')
+      
+      return response
     } catch (error) {
       // Invalid token
       console.error('Invalid OAuth token:', error)
       return new NextResponse(
         JSON.stringify({ error: 'invalid_token', message: 'Invalid or expired token' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-gpt-user-id',
+          } 
+        }
       )
     }
   }
