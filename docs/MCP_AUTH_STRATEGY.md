@@ -104,9 +104,37 @@ The Shim needs to be agnostic to the underlying session:
 **Recommendation:**
 The SolvaPay SDK should define a standard `IdentityProvider` interface that simply answers: *"Is there a user currently logged in on this request? If so, give me their ID."* The OAuth Shim then handles the rest (issuing the code/token for the Agent).
 
-## 4. Summary
+## 4. Verification of Current Implementation
 
-*   **Standard Apps** (`checkout-demo`) are simple because the browser handles the session.
-*   **MCP/GPT Apps** require a **custom OAuth Server** because the Agent is a third-party client.
-*   **Solution**: We should abstract this "OAuth Server" logic into the SDK to prevent every developer from rewriting complex OAuth state machines.
+I have reviewed the implementation in `examples/nextjs-openai-custom-gpt-actions` and confirmed it aligns with the "Shim" architecture described above.
 
+### 4.1 Component Mapping
+
+| Component | File | Implementation Status |
+| :--- | :--- | :--- |
+| **Middleware** | `src/middleware.ts` | **Hybrid**: Handles both Custom Bearer Tokens (for GPT) and Standard Cookies (for Browser). Correctly decouples auth logic. |
+| **Authorize Endpoint** | `src/app/api/oauth/authorize/route.ts` | **Coupled**: Directly accesses `sb-access-token` cookie. Needs abstraction for other providers. |
+| **Token Endpoint** | `src/app/api/oauth/token/route.ts` | **Decoupled**: Uses standard JWT signing with `OAUTH_JWKS_SECRET`. |
+| **Storage Layer** | `src/lib/oauth-storage.ts` | **Coupled**: Uses Supabase DB (`oauth_codes` table). Needs abstraction (e.g. Redis/SQL adapters). |
+| **User Info** | `src/app/api/gpt-auth/me/route.ts` | **Coupled**: Uses `SUPABASE_SERVICE_ROLE_KEY` to fetch user details. |
+
+### 4.2 Identified Issues / Action Items
+
+1.  **Tight Coupling**: The current example is tightly coupled to Supabase for storage and initial session verification. This confirms the need for the `IdentityProvider` and `StorageAdapter` interfaces proposed in Section 3.2.
+2.  **Security Model**: The middleware correctly prioritizes the Bearer token verification, ensuring that the custom JWTs minted by our Shim are respected even when Supabase sessions aren't present.
+
+## 5. Security Analysis
+
+The current "Shim" architecture is sound but shifts significant security responsibility to the developer.
+
+### 5.1 Key Risks
+*   **Token Forgery**: Reliance on `OAUTH_JWKS_SECRET` means if this key leaks, the entire auth system is compromised.
+*   **Refresh Token Storage**: Tokens are currently random strings but should ideally be hashed in the database.
+*   **Scope Validation**: No explicit user consent screen means scopes are "trusted" rather than "granted".
+
+### 5.2 PKCE (Proof Key for Code Exchange)
+*   **Requirement**: PKCE is highly recommended for public clients to prevent code interception.
+*   **Tool Call Confirmation**: While PKCE secures the auth flow, **it does not automatically remove the need for tool call confirmations**. OpenAI's "Always Allow" feature is separate and depends on their specific trust/verification model for the GPT Action.
+*   **Implementation Difficulty**: Medium. Requires:
+    1.  Storing `code_challenge` and `code_challenge_method` in the `auth_codes` table during the Authorize step.
+    2.  Validating the `code_verifier` (hashed matches the stored challenge) during the Token Exchange step.
