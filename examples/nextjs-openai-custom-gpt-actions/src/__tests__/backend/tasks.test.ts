@@ -1,30 +1,121 @@
 // Set environment variables before importing modules that depend on them
 process.env.SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY || 'test-api-key'
 process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
-import { join } from 'path'
 import { setupTestEnvironment } from './test-utils'
 
-// Mock the route module to use stub client
-vi.mock('../../app/api/tasks/route', async () => {
-  const { createTask, listTasks } = await import('@solvapay/demo-services')
-  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
-  const { createSolvaPay } = await import('@solvapay/server')
+// Mock Supabase client before importing anything that uses it
+const mockTasksData = [] as any[]
 
-  const stubClient = new StubSolvaPayClient({
-    useFileStorage: true,
-    freeTierLimit: 1000,
-    debug: false,
-  })
-  const solvaPay = createSolvaPay({ apiClient: stubClient })
-  const payable = solvaPay.payable({ agent: 'crud-basic' })
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({
+    from: vi.fn((table: string) => {
+      if (table === 'tasks') {
+        return {
+          insert: vi.fn((data: any) => ({
+            select: vi.fn(() => ({
+              single: vi.fn(() => {
+                const task = {
+                  id: `task-${Date.now()}`,
+                  title: data.title,
+                  description: data.description || null,
+                  completed: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  user_id: data.user_id,
+                }
+                mockTasksData.push(task)
+                return Promise.resolve({ data: task, error: null })
+              }),
+            })),
+          })),
+          select: vi.fn((columns: string, options?: any) => {
+            // Handle count query
+            if (options?.count === 'exact') {
+              return {
+                eq: vi.fn((col: string, val: any) => {
+                  const filteredTasks = mockTasksData.filter(t => t[col] === val)
+                  return Promise.resolve({ count: filteredTasks.length, error: null })
+                }),
+              }
+            }
+            
+            // Handle regular select
+            if (columns === '*') {
+              return {
+                range: vi.fn(() => ({
+                  order: vi.fn(() => ({
+                    eq: vi.fn((col: string, val: any) => {
+                      const filteredTasks = mockTasksData.filter(t => t[col] === val)
+                      return Promise.resolve({ data: filteredTasks, error: null })
+                    }),
+                  })),
+                })),
+                eq: vi.fn((col: string, val: any) => ({
+                  eq: vi.fn((col2: string, val2: any) => {
+                    const filteredTasks = mockTasksData.filter(t => t[col] === val && (!col2 || t[col2] === val2))
+                    return Promise.resolve({ data: filteredTasks, error: null })
+                  }),
+                })),
+              }
+            }
+            
+            return {}
+          }),
+        }
+      }
+      return {}
+    }),
+  })),
+}))
 
+// Mock the supabase lib
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({})),
+  },
+}))
+
+// Mock the @solvapay/server package to avoid real API calls
+vi.mock('@solvapay/server', async () => {
+  const actual = await vi.importActual('@solvapay/server')
   return {
-    GET: payable.next(listTasks),
-    POST: payable.next(createTask),
+    ...actual,
+    createSolvaPay: vi.fn(() => ({
+      payable: vi.fn(() => ({
+        next: vi.fn((handler: any, options?: any) => {
+          // Return a wrapper that calls the handler directly without paywall checks
+          return async (req: Request, context?: any) => {
+            try {
+              // Extract args if provided
+              let args = {}
+              if (options?.extractArgs) {
+                args = await options.extractArgs(req)
+              }
+              
+              // Call the handler directly
+              const result = await handler(args)
+              
+              // Return as NextResponse
+              return new Response(JSON.stringify(result), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+              })
+            } catch (error: any) {
+              return new Response(
+                JSON.stringify({ error: error.message }),
+                { status: 500, headers: { 'Content-Type': 'application/json' } }
+              )
+            }
+          }
+        }),
+      })),
+    })),
   }
 })
 
@@ -33,39 +124,17 @@ import { GET as listTasksGET, POST as createTaskPOST } from '../../app/api/tasks
 
 describe('Tasks CRUD Endpoints', () => {
   setupTestEnvironment()
-  const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
-  const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
 
   beforeEach(async () => {
-    // Ensure demo data directory exists
-    if (!existsSync(DEMO_DATA_DIR)) {
-      mkdirSync(DEMO_DATA_DIR, { recursive: true })
-    }
-
-    // Set up test customers with pro plans
-    const customers = existsSync(CUSTOMERS_FILE)
-      ? JSON.parse(readFileSync(CUSTOMERS_FILE, 'utf-8'))
-      : {}
-
-    customers['demo_user'] = {
-      credits: 100,
-      email: 'demo@example.com',
-      name: 'Demo User',
-      plan: 'pro',
-    }
-
-    writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2))
-  })
-
-  afterEach(async () => {
-    // Clean up after tests
+    vi.clearAllMocks()
+    mockTasksData.length = 0 // Clear the mock data
   })
 
   describe('/api/tasks', () => {
     it('should list tasks', async () => {
       const request = new NextRequest('http://localhost:3000/api/tasks', {
         headers: {
-          'x-customer-ref': 'demo_user',
+          'x-user-id': 'test-user-id',
         },
       })
 
@@ -83,7 +152,7 @@ describe('Tasks CRUD Endpoints', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-customer-ref': 'demo_user',
+          'x-user-id': 'test-user-id',
         },
         body: JSON.stringify({
           title: 'Test Task',

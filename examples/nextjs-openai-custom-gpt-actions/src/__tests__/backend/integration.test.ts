@@ -1,50 +1,157 @@
 // Set environment variables before importing modules that depend on them
 process.env.SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY || 'test-api-key'
 process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { writeFileSync, existsSync, unlinkSync, mkdirSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { clearAllTasks } from '@solvapay/demo-services'
 import { setupTestEnvironment } from './test-utils'
 
-// Mock the route modules to use stub client
-vi.mock('../../app/api/tasks/route', async () => {
-  const { createTask, listTasks } = await import('@solvapay/demo-services')
-  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
-  const { createSolvaPay } = await import('@solvapay/server')
+// Mock Supabase client before importing anything that uses it
+const mockTasksStore = {
+  tasks: [] as any[],
+  nextId: 1,
+}
 
-  const stubClient = new StubSolvaPayClient({
-    useFileStorage: true,
-    freeTierLimit: 1000,
-    debug: false,
-  })
-  const solvaPay = createSolvaPay({ apiClient: stubClient })
-  const payable = solvaPay.payable({ agent: 'crud-basic' })
-
+// Helper to create a query builder that tracks filters
+function createQueryBuilder(filters: Record<string, any> = {}) {
   return {
-    GET: payable.next(listTasks),
-    POST: payable.next(createTask),
+    eq: (col: string, val: any) => createQueryBuilder({ ...filters, [col]: val }),
+    single: () => {
+      const task = mockTasksStore.tasks.find(t => 
+        Object.entries(filters).every(([key, value]) => t[key] === value)
+      )
+      return Promise.resolve({
+        data: task,
+        error: task ? null : { message: 'Not found' }
+      })
+    },
+    range: (start: number, end: number) => createRangeBuilder(filters, start, end),
   }
-})
+}
 
-vi.mock('../../app/api/tasks/[id]/route', async () => {
-  const { getTask, deleteTask } = await import('@solvapay/demo-services')
-  const { StubSolvaPayClient } = await import('../../../../shared/stub-api-client')
-  const { createSolvaPay } = await import('@solvapay/server')
-
-  const stubClient = new StubSolvaPayClient({
-    useFileStorage: true,
-    freeTierLimit: 1000,
-    debug: false,
-  })
-  const solvaPay = createSolvaPay({ apiClient: stubClient })
-  const payable = solvaPay.payable({ agent: 'crud-basic' })
-
+function createRangeBuilder(filters: Record<string, any>, start: number, end: number) {
   return {
-    GET: payable.next(getTask),
-    DELETE: payable.next(deleteTask),
+    order: (col: string, opts?: any) => ({
+      eq: (col2: string, val2: any) => {
+        const allFilters = { ...filters, [col2]: val2 }
+        const tasks = mockTasksStore.tasks.filter(t =>
+          Object.entries(allFilters).every(([key, value]) => t[key] === value)
+        )
+        return Promise.resolve({ data: tasks, error: null })
+      },
+    }),
+  }
+}
+
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({
+    from: vi.fn((table: string) => {
+      if (table === 'tasks') {
+        return {
+          insert: vi.fn((data: any) => ({
+            select: vi.fn(() => ({
+              single: vi.fn(() => {
+                const task = {
+                  id: `task-${mockTasksStore.nextId++}`,
+                  title: data.title,
+                  description: data.description || null,
+                  completed: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  user_id: data.user_id,
+                }
+                mockTasksStore.tasks.push(task)
+                return Promise.resolve({ data: task, error: null })
+              }),
+            })),
+          })),
+          select: vi.fn((columns: string, options?: any) => {
+            // Handle count query
+            if (options?.count === 'exact') {
+              return {
+                eq: vi.fn((col: string, val: any) => {
+                  const filteredTasks = mockTasksStore.tasks.filter(t => t[col] === val)
+                  return Promise.resolve({ count: filteredTasks.length, error: null })
+                }),
+              }
+            }
+            
+            // Handle regular select - return query builder
+            if (columns === '*') {
+              return createQueryBuilder()
+            }
+            
+            return {}
+          }),
+          delete: vi.fn(() => ({
+            eq: vi.fn((col: string, val: any) => {
+              const filters = { [col]: val }
+              return {
+                eq: vi.fn((col2: string, val2: any) => {
+                  const allFilters = { ...filters, [col2]: val2 }
+                  const index = mockTasksStore.tasks.findIndex(t =>
+                    Object.entries(allFilters).every(([key, value]) => t[key] === value)
+                  )
+                  if (index !== -1) {
+                    mockTasksStore.tasks.splice(index, 1)
+                  }
+                  return Promise.resolve({ error: null })
+                }),
+              }
+            }),
+          })),
+        }
+      }
+      return {}
+    }),
+  })),
+}))
+
+// Mock the supabase lib
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({})),
+  },
+}))
+
+// Mock the @solvapay/server package to avoid real API calls
+vi.mock('@solvapay/server', async () => {
+  const actual = await vi.importActual('@solvapay/server')
+  return {
+    ...actual,
+    createSolvaPay: vi.fn(() => ({
+      payable: vi.fn(() => ({
+        next: vi.fn((handler: any, options?: any) => {
+          // Return a wrapper that calls the handler directly without paywall checks
+          return async (req: Request, context?: any) => {
+            try {
+              // Extract args if provided
+              let args = {}
+              if (options?.extractArgs) {
+                args = await options.extractArgs(req, context)
+              }
+              
+              // Call the handler directly
+              const result = await handler(args)
+              
+              // Return as NextResponse
+              return new Response(JSON.stringify(result), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+              })
+            } catch (error: any) {
+              return new Response(
+                JSON.stringify({ error: error.message }),
+                { status: 500, headers: { 'Content-Type': 'application/json' } }
+              )
+            }
+          }
+        }),
+      })),
+    })),
   }
 })
 
@@ -54,61 +161,24 @@ import { GET as getTaskGET, DELETE as deleteTaskDELETE } from '../../app/api/tas
 
 describe('Integration Tests', () => {
   setupTestEnvironment()
-  const DEMO_DATA_DIR = join(process.cwd(), '.demo-data')
-  const CUSTOMERS_FILE = join(DEMO_DATA_DIR, 'customers.json')
-  const USER_PLANS_FILE = join(process.cwd(), 'user-plans.json')
 
   beforeEach(async () => {
-    // Ensure demo data directory exists
-    if (!existsSync(DEMO_DATA_DIR)) {
-      mkdirSync(DEMO_DATA_DIR, { recursive: true })
-    }
-
-    // Set up test customers with pro plans
-    const customers = existsSync(CUSTOMERS_FILE)
-      ? JSON.parse(readFileSync(CUSTOMERS_FILE, 'utf-8'))
-      : {}
-
-    customers['demo_user'] = {
-      credits: 100,
-      email: 'demo@example.com',
-      name: 'Demo User',
-      plan: 'pro',
-    }
-
-    writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2))
-
-    // Clean up user plans file
-    if (existsSync(USER_PLANS_FILE)) {
-      unlinkSync(USER_PLANS_FILE)
-    }
-
-    // Clear all tasks
-    clearAllTasks()
-  })
-
-  afterEach(async () => {
-    // Clean up after tests
-    clearAllTasks()
+    vi.clearAllMocks()
+    // Clear the mock store
+    mockTasksStore.tasks = []
+    mockTasksStore.nextId = 1
   })
 
   describe('Complete User Journey', () => {
     it('should handle complete user journey from task CRUD operations', async () => {
-      // Ensure demo_user has pro plan
-      const proPlans = {
-        demo_user: {
-          plan: 'pro',
-          upgradedAt: new Date().toISOString(),
-        },
-      }
-      writeFileSync(USER_PLANS_FILE, JSON.stringify(proPlans, null, 2))
+      const userId = 'test-user-id'
 
       // 1. Create a task
       const createRequest = new NextRequest('http://localhost:3000/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-customer-ref': 'demo_user',
+          'x-user-id': userId,
         },
         body: JSON.stringify({
           title: 'Integration Test Task',
@@ -129,7 +199,7 @@ describe('Integration Tests', () => {
       // 2. List tasks
       const listRequest = new NextRequest('http://localhost:3000/api/tasks', {
         headers: {
-          'x-customer-ref': 'demo_user',
+          'x-user-id': userId,
         },
       })
 
@@ -144,7 +214,7 @@ describe('Integration Tests', () => {
       // 3. Get specific task
       const getRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         headers: {
-          'x-customer-ref': 'demo_user',
+          'x-user-id': userId,
         },
       })
 
@@ -160,7 +230,7 @@ describe('Integration Tests', () => {
       const deleteRequest = new NextRequest(`http://localhost:3000/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
-          'x-customer-ref': 'demo_user',
+          'x-user-id': userId,
         },
       })
 

@@ -38,7 +38,7 @@ describe('Sign Out API', () => {
 
       const signoutData = await signoutResponse.json()
       expect(signoutData.success).toBe(true)
-      expect(signoutData.message).toContain('Successfully signed out')
+      expect(signoutData.message).toContain('Signed out successfully')
     })
   })
 })
