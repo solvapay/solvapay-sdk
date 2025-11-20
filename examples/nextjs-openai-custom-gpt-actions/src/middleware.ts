@@ -13,7 +13,10 @@ const authMiddleware = createSupabaseAuthMiddleware({
     '/api/.well-known/openid-configuration',
     '/api/auth/session', // Session management endpoint (used during login flow)
     '/login', // Login page
-    '/signup' // Sign up page
+    '/signup', // Sign up page
+    '/api/gpt-auth/me',
+    '/api/gpt-auth/start-signin',
+    '/api/gpt-auth/signout'
   ],
 })
 
@@ -25,7 +28,7 @@ export async function middleware(request: NextRequest) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-gpt-user-id',
       },
     })
   }
