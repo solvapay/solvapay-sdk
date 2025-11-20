@@ -13,6 +13,7 @@ import {
   // Task schemas
   TaskSchema,
   CreateTaskRequestSchema,
+  UpdateTaskRequestSchema,
   TaskListSchema,
   PaginationQuerySchema,
   TaskParamsSchema,
@@ -314,6 +315,77 @@ registry.registerPath({
     },
     401: {
       description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: 'Task not found',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: 'Internal server error',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/tasks/{id}',
+  operationId: 'updateTask',
+  summary: 'Update task',
+  description: 'Update a specific task (title, description, or completion status). This endpoint is protected by paywall.',
+  tags: ['Tasks'],
+  security: [{ oauth2: [] }],
+  'x-openai-isConsequential': true,
+  request: {
+    params: TaskParamsSchema,
+    body: {
+      content: {
+        'application/json': {
+          schema: UpdateTaskRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Updated task',
+      content: {
+        'application/json': {
+          schema: TaskSchema,
+        },
+      },
+    },
+    400: {
+      description: 'Invalid request body',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+    402: {
+      description: 'Payment required - upgrade to pro plan',
       content: {
         'application/json': {
           schema: ErrorResponseSchema,

@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   if (customerRef instanceof NextResponse) {
     return customerRef
   }
-
+  
   return NextResponse.json({
     customerRef,
     success: true,

@@ -11,12 +11,23 @@ export const GET = async (request: Request, context?: any) => {
   // Use configured agent ref if available
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
   
-  // We don't need to manually pass userId here.
-  // The middleware sets 'x-user-id', and solvaPay.payable() automatically 
-  // extracts it and populates args.auth.customer_ref
+  // Extract raw user ID from middleware-set header (Supabase UUID without prefix)
+  const rawUserId = request.headers.get('x-user-id')
+  
   const payable = solvaPay.payable(agent ? { agent } : {})
 
-  return payable.next(listTasks)(request, context)
+  return payable.next(listTasks, {
+    extractArgs: async (req: Request, ctx?: any) => {
+      const url = new URL(req.url)
+      const query = Object.fromEntries(url.searchParams.entries())
+      
+      return {
+        ...query,
+        // Pass raw userId to the service (for Supabase queries)
+        userId: rawUserId || undefined,
+      }
+    }
+  })(request, context)
 }
 
 export const POST = async (request: Request, context?: any) => {
@@ -24,7 +35,32 @@ export const POST = async (request: Request, context?: any) => {
   
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
   
+  // Extract raw user ID from middleware-set header
+  const rawUserId = request.headers.get('x-user-id')
+  
   const payable = solvaPay.payable(agent ? { agent } : {})
 
-  return payable.next(createTask)(request, context)
+  return payable.next(createTask, {
+    extractArgs: async (req: Request, ctx?: any) => {
+      const url = new URL(req.url)
+      const query = Object.fromEntries(url.searchParams.entries())
+      
+      // Parse body
+      let body = {}
+      try {
+        if (req.method !== 'GET' && req.headers.get('content-type')?.includes('application/json')) {
+          body = await req.json()
+        }
+      } catch {
+        // Continue with empty body
+      }
+      
+      return {
+        ...body,
+        ...query,
+        // Pass raw userId to the service (for Supabase queries)
+        userId: rawUserId || undefined,
+      }
+    }
+  })(request, context)
 }

@@ -80,6 +80,10 @@ export async function POST(request: NextRequest) {
     const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!)
     const issuer = process.env.OAUTH_ISSUER || process.env.PUBLIC_URL || 'https://solvapay.com'
 
+    // NOTE: Access token expiry is set to 1 hour
+    // Trade-off: Longer expiry = better UX (fewer refreshes) but slower logout
+    // If immediate logout is critical, consider reducing to 5-15 minutes
+    // and implementing a token blacklist (see /api/gpt-auth/signout for details)
     const accessToken = await new SignJWT({
       sub: codeData.userId,
       email: codeData.email,
@@ -89,7 +93,7 @@ export async function POST(request: NextRequest) {
     })
       .setProtectedHeader({ alg: 'HS256', kid: '1' })
       .setIssuedAt()
-      .setExpirationTime('1h')
+      .setExpirationTime('1h') // 1 hour expiry
       .sign(jwtSecret)
 
     // 3. Generate Refresh Token
@@ -109,7 +113,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       access_token: accessToken,
       token_type: 'Bearer',
-      expires_in: 3600,
+      expires_in: 3600, // Must match JWT expiration (1 hour = 3600 seconds)
       refresh_token: refreshToken,
       scope: codeData.scope,
     })

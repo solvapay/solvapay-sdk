@@ -75,7 +75,7 @@ export async function createTask(args: {
   // BUT: `insert` with RLS requires the user to be authenticated.
   
   // Construct query
-  let query = supabase.from('tasks').insert({
+  const query = supabase.from('tasks').insert({
     title,
     description,
     // If we have an explicit targetUserId, use it.
@@ -107,7 +107,7 @@ export async function getTask(args: {
   userId?: string
 }): Promise<{ success: boolean; task: Task }> {
   const { id, userId } = args
-  let targetUserId = userId || args.auth?.customer_ref
+  const targetUserId = userId || args.auth?.customer_ref
 
   const supabase = getSupabase()
   
@@ -140,7 +140,7 @@ export async function listTasks(args: {
   userId?: string
 }): Promise<{ success: boolean; tasks: Task[]; total: number; limit: number; offset: number }> {
   const { limit = 10, offset = 0, userId } = args
-  let targetUserId = userId || args.auth?.customer_ref
+  const targetUserId = userId || args.auth?.customer_ref
 
   const supabase = getSupabase()
 
@@ -186,6 +186,57 @@ export async function listTasks(args: {
 }
 
 /**
+ * Update a task by ID
+ */
+export async function updateTask(args: {
+  id: string
+  title?: string
+  description?: string
+  completed?: boolean
+  auth?: { customer_ref?: string }
+  userId?: string
+}): Promise<{ success: boolean; task: Task }> {
+  const { id, userId, title, description, completed } = args
+  const targetUserId = userId || args.auth?.customer_ref
+
+  const supabase = getSupabase()
+
+  // Build update object with only provided fields
+  const updates: Record<string, unknown> = {}
+  if (title !== undefined) updates.title = title
+  if (description !== undefined) updates.description = description
+  if (completed !== undefined) updates.completed = completed
+  
+  // Always update the updated_at timestamp
+  updates.updated_at = new Date().toISOString()
+
+  if (Object.keys(updates).length === 1) {
+    // Only updated_at was set, nothing else to update
+    throw new Error('No fields to update')
+  }
+
+  // Update query
+  let query = supabase.from('tasks').update(updates).eq('id', id)
+  
+  // Enforce ownership if we have a target user (Service Role usage)
+  if (targetUserId) {
+    query = query.eq('user_id', targetUserId)
+  }
+
+  const { data, error } = await query.select().single()
+
+  if (error) {
+    console.error('Error updating task:', error)
+    throw new Error(`Failed to update task: ${error.message}`)
+  }
+
+  return {
+    success: true,
+    task: mapTask(data),
+  }
+}
+
+/**
  * Delete a task by ID
  */
 export async function deleteTask(args: {
@@ -194,7 +245,7 @@ export async function deleteTask(args: {
   userId?: string
 }): Promise<{ success: boolean; message: string; deletedTask: Task }> {
   const { id, userId } = args
-  let targetUserId = userId || args.auth?.customer_ref
+  const targetUserId = userId || args.auth?.customer_ref
 
   const supabase = getSupabase()
 

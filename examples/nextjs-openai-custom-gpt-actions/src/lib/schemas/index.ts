@@ -41,6 +41,14 @@ export const CreateTaskRequestSchema = z
   })
   .openapi('CreateTaskRequest')
 
+export const UpdateTaskRequestSchema = z
+  .object({
+    title: z.string().min(1).optional().describe('Updated title of the task'),
+    description: z.string().optional().describe('Updated description of the task'),
+    completed: z.boolean().optional().describe('Updated completion status of the task'),
+  })
+  .openapi('UpdateTaskRequest')
+
 export const TaskListSchema = z
   .object({
     tasks: z.array(TaskSchema).describe('Array of tasks'),
@@ -102,6 +110,7 @@ export const SignOutResponseSchema = z
 // Type exports for use in API routes
 export type Task = z.infer<typeof TaskSchema>
 export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>
+export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>
 export type TaskList = z.infer<typeof TaskListSchema>
 export type UserPlan = z.infer<typeof UserPlanSchema>
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>

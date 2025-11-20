@@ -106,6 +106,22 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // 3.5. Sync customer with SolvaPay backend to ensure externalRef is set
+  // This is critical to prevent 409/404 loops
+  try {
+    const { createSolvaPay } = await import('@solvapay/server')
+    const solvaPay = createSolvaPay()
+    
+    // Manually call ensureCustomer with userId as both customerRef and externalRef
+    // Pass email to avoid conflicts
+    await solvaPay.ensureCustomer(userId, userId, {
+      email: userEmail || undefined,
+    })
+  } catch (syncError) {
+    // Don't block OAuth flow if sync fails, just log
+    console.error('❌ Failed to sync customer during OAuth flow:', syncError)
+  }
+
   // 4. Generate Authorization Code
   const code = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes

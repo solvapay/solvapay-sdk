@@ -177,6 +177,14 @@ export const refreshTokens = {
   async delete(token: string) {
     const supabase = getSupabaseClient()
     await supabase.from('oauth_refresh_tokens').delete().eq('token', token)
+  },
+
+  /**
+   * Delete all refresh tokens for a user (for signout)
+   */
+  async deleteAllForUser(userId: string) {
+    const supabase = getSupabaseClient()
+    await supabase.from('oauth_refresh_tokens').delete().eq('user_id', userId)
   }
 }
 

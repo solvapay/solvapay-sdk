@@ -128,7 +128,7 @@ export default function Home() {
         <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <h2 className="font-semibold text-gray-900">2. OAuth Configuration</h2>
-            <p className="text-sm text-gray-500">Use these details in the "Authentication" settings of your Custom GPT</p>
+            <p className="text-sm text-gray-500">Use these details in the &quot;Authentication&quot; settings of your Custom GPT</p>
           </div>
           <div className="p-6 space-y-6">
             {/* Authorization URL */}

@@ -163,7 +163,8 @@ export class SolvaPayPaywall {
         : args.auth?.customer_ref || 'anonymous'
 
       // Auto-create customer if needed and get the backend reference
-      const backendCustomerRef = await this.ensureCustomer(inputCustomerRef)
+      // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
+      const backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
 
       try {
         // Check limits with backend using the backend customer reference
@@ -328,8 +329,9 @@ export class SolvaPayPaywall {
       try {
         // Prepare customer creation params
         // Use provided email/name, or fallback to auto-generated values
+        // Use a timestamp-based email to avoid conflicts with old orphaned records
         const createParams: any = {
-          email: options?.email || `${customerRef}@auto-created.local`,
+          email: options?.email || `${customerRef}-${Date.now()}@auto-created.local`,
         }
 
         // Only include name if explicitly provided (don't fallback to customerRef)
@@ -357,23 +359,17 @@ export class SolvaPayPaywall {
         // If customer already exists, we should try to fetch it to get the correct backend ID
         if (error.message && (error.message.includes('409') || error.message.includes('already exists'))) {
            // Try to lookup by externalRef first if available
-           try {
-             // Search for the customer using the externalRef (which is the user ID)
-             // Use apiClient directly and type cast to avoid TS errors with optional methods
-             const client = this.apiClient as any
-             if (client.getCustomer) {
-                const searchResult = await client.getCustomer({ customerRef: externalRef || customerRef })
-                if (searchResult) {
-                  const foundRef = searchResult.customerRef || searchResult.id || searchResult.reference
-                  if (foundRef) {
-                    this.customerRefMapping.set(customerRef, foundRef)
-                    return foundRef
-                  }
-                }
+           if (externalRef && this.apiClient.getCustomerByExternalRef) {
+             try {
+               const searchResult = await this.apiClient.getCustomerByExternalRef({ externalRef })
+               if (searchResult && searchResult.customerRef) {
+                 this.customerRefMapping.set(customerRef, searchResult.customerRef)
+                 return searchResult.customerRef
+               }
+             } catch (lookupError: any) {
+               // Fallback to original behavior if lookup fails
+               this.log(`⚠️ Failed to lookup existing customer by externalRef after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
              }
-           } catch (lookupError: any) {
-             // Fallback to original behavior if lookup fails
-             this.log(`⚠️ Failed to lookup existing customer after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
            }
         }
 
