@@ -33,6 +33,14 @@ export async function middleware(request: NextRequest) {
     })
   }
 
+  // Check for force_login or account_select parameter on /login route
+  // If present, allow access even if user is authenticated
+  const url = new URL(request.url)
+  if (url.pathname === '/login' && (url.searchParams.get('force_login') === 'true' || url.searchParams.get('account_select') === 'true')) {
+    // Allow access to login page, skip auth middleware
+    return NextResponse.next()
+  }
+
   // Check for Custom OAuth Token (Bearer)
   const authHeader = request.headers.get('Authorization')
   if (authHeader?.startsWith('Bearer ')) {

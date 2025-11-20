@@ -48,7 +48,31 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // 2. Check for existing Supabase session
+  // 2. Authentication & Consent Handling
+  // Always redirect to login page if "confirmed" param is missing.
+  // This ensures the user explicitly confirms their identity and can switch accounts.
+  const confirmed = searchParams.get('confirmed') === 'true'
+  
+  if (!confirmed) {
+    // Construct login URL with return path
+    const currentUrl = new URL(request.url)
+    // Append confirmed=true to the return URL so that when they come back, we skip this block
+    currentUrl.searchParams.set('confirmed', 'true')
+    
+    // Ensure we use the public URL for the redirect
+    const baseUrl = process.env.PUBLIC_URL || `https://${request.headers.get('host')}`
+    const loginUrl = new URL('/login', baseUrl)
+    
+    // Pass the return URL
+    loginUrl.searchParams.set('redirect_to', currentUrl.pathname + currentUrl.search)
+    
+    // Always force login to ensure user sees the login screen
+    loginUrl.searchParams.set('force_login', 'true')
+    
+    return NextResponse.redirect(loginUrl)
+  }
+
+  // 3. Check for existing Supabase session (after user confirmed via login page)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -73,31 +97,13 @@ export async function GET(request: NextRequest) {
     })
     userId = user?.id || null
     userEmail = user?.email || null
-  } else {
-    // Try getting user from auth header if available (e.g. during dev testing)
-    const authHeader = request.headers.get('Authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-       const { data: { user } } = await supabase.auth.getUser(authHeader.split(' ')[1])
-       userId = user?.id || null
-       userEmail = user?.email || null
-    }
   }
 
-  // 3. If not authenticated, redirect to login
   if (!userId) {
-    // Construct login URL with return path
-    // We need to encode the current URL as the 'next' or 'redirect_to' param
-    // so the login page knows where to send the user back to after login
-    const currentUrl = new URL(request.url)
-    // Ensure we use the public URL for the redirect
-    const baseUrl = process.env.PUBLIC_URL || `https://${request.headers.get('host')}`
-    const loginUrl = new URL('/login', baseUrl)
-    
-    // Pass the current full URL as the destination after login
-    // The login page logic (in Auth.tsx) should handle this 'redirect_to' query param
-    loginUrl.searchParams.set('redirect_to', currentUrl.pathname + currentUrl.search)
-    
-    return NextResponse.redirect(loginUrl)
+    return NextResponse.json(
+      { error: 'access_denied', error_description: 'User not authenticated after login' },
+      { status: 401 }
+    )
   }
 
   // 4. Generate Authorization Code

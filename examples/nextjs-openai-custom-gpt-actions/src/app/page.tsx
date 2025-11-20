@@ -55,8 +55,18 @@ export default function Home() {
 
   const handleSignOut = async () => {
     try {
+      // Sign out from Supabase (clears cookies)
       await fetch('/api/auth/signout', { method: 'POST' })
-      // Reload the page to clear state
+      
+      // Also try client-side sign out if Supabase client is available
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        await supabase.auth.signOut()
+      } catch (e) {
+        console.warn('Client-side sign out failed', e)
+      }
+
+      // Reload to clear state
       window.location.reload()
     } catch (error) {
       console.error('Sign out failed:', error)

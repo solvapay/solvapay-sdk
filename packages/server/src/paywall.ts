@@ -352,7 +352,31 @@ export class SolvaPayPaywall {
         this.customerRefMapping.set(customerRef, ref)
 
         return ref
-      } catch (error) {
+      } catch (error: any) {
+        // Handle existing customer conflict (409)
+        // If customer already exists, we should try to fetch it to get the correct backend ID
+        if (error.message && (error.message.includes('409') || error.message.includes('already exists'))) {
+           // Try to lookup by externalRef first if available
+           try {
+             // Search for the customer using the externalRef (which is the user ID)
+             // Use apiClient directly and type cast to avoid TS errors with optional methods
+             const client = this.apiClient as any
+             if (client.getCustomer) {
+                const searchResult = await client.getCustomer({ customerRef: externalRef || customerRef })
+                if (searchResult) {
+                  const foundRef = searchResult.customerRef || searchResult.id || searchResult.reference
+                  if (foundRef) {
+                    this.customerRefMapping.set(customerRef, foundRef)
+                    return foundRef
+                  }
+                }
+             }
+           } catch (lookupError: any) {
+             // Fallback to original behavior if lookup fails
+             this.log(`⚠️ Failed to lookup existing customer after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
+           }
+        }
+
         this.log(
           `❌ Failed to auto-create customer ${customerRef}:`,
           error instanceof Error ? error.message : error,

@@ -18,11 +18,15 @@ export async function POST(request: NextRequest) {
       const supabase = createClient(supabaseUrl, serviceRoleKey)
       
       // Delete all refresh tokens for this user (effectively signs them out from Custom GPT)
-      await supabase
+      const { error } = await supabase
         .from('oauth_refresh_tokens')
         .delete()
         .eq('user_id', userId)
       
+      if (error) {
+        console.error('Supabase delete error:', error)
+      }
+
       return NextResponse.json({ 
         success: true, 
         message: 'Signed out successfully. Your access token will expire in 1 hour.' 

@@ -19,11 +19,27 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const redirectTo = searchParams.get('redirect_to')
+  const forceLogin = searchParams.get('force_login') === 'true'
 
   // Update isSignUp when initialView changes (if component is remounted or prop changes)
   useEffect(() => {
     setIsSignUp(initialView === 'signup')
   }, [initialView])
+
+  // Handle force login (sign out existing user)
+  useEffect(() => {
+    const checkSession = async () => {
+      if (forceLogin) {
+        try {
+          await import('@/lib/supabase').then(m => m.supabase.auth.signOut())
+        } catch {
+          // Ignore errors during signout
+        }
+      }
+    }
+    
+    checkSession()
+  }, [forceLogin])
 
   const handleGoogleSignIn = async () => {
     setError(null)
@@ -94,6 +110,25 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
         if (signInError) throw signInError
         
         // Successful sign in
+        // Sync customer with SolvaPay using externalRef (Supabase user ID) to ensure they are linked
+        try {
+          const { data: { session } } = await import('@/lib/supabase').then(m => m.supabase.auth.getSession())
+          const accessToken = session?.access_token
+          
+          if (accessToken) {
+            await fetch('/api/sync-customer', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }).catch(() => {
+              console.warn('Failed to sync customer after signin')
+            })
+          }
+        } catch {
+          // Silent failure
+        }
+
         if (redirectTo) {
            window.location.href = redirectTo
         } else {
