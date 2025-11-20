@@ -59,9 +59,9 @@ function AuthCallbackContent() {
 
           // Navigate to destination
           window.location.href = next
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error('Failed to set session:', err)
-          setError(err.message || 'Failed to complete sign in')
+          setError(err instanceof Error ? err.message : 'Failed to complete sign in')
         }
       } else {
         // No session found yet, listen for changes
@@ -98,9 +98,9 @@ function AuthCallbackContent() {
               }
 
               window.location.href = next
-            } catch (err: any) {
+            } catch (err: unknown) {
               console.error('Failed to set session:', err)
-              setError(err.message || 'Failed to complete sign in')
+              setError(err instanceof Error ? err.message : 'Failed to complete sign in')
             }
           }
         })

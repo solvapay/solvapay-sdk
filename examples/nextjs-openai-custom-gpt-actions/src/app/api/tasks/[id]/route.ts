@@ -5,7 +5,12 @@ function getSolvaPay() {
   return createSolvaPay()
 }
 
-export const GET = async (request: Request, context?: any) => {
+// Next.js 15 route context type
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+export const GET = async (request: Request, context: RouteContext) => {
   const solvaPay = getSolvaPay()
   
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
@@ -16,10 +21,10 @@ export const GET = async (request: Request, context?: any) => {
   const basicPayable = solvaPay.payable(agent ? { agent } : {})
 
   return basicPayable.next(getTask, {
-    extractArgs: async (req: Request, ctx?: any) => {
+    extractArgs: async (req: Request, ctx: RouteContext) => {
       // Extract task ID from route params (Next.js 15+ requires awaiting params)
-      const params = await ctx?.params
-      const id = params?.id
+      const params = await ctx.params
+      const id = params.id
       
       return {
         id,
@@ -30,7 +35,7 @@ export const GET = async (request: Request, context?: any) => {
   })(request, context)
 }
 
-export const PUT = async (request: Request, context?: any) => {
+export const PUT = async (request: Request, context: RouteContext) => {
   const solvaPay = getSolvaPay()
   
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
@@ -41,10 +46,10 @@ export const PUT = async (request: Request, context?: any) => {
   const payable = solvaPay.payable(agent ? { agent } : {})
 
   return payable.next(updateTask, {
-    extractArgs: async (req: Request, ctx?: any) => {
+    extractArgs: async (req: Request, ctx: RouteContext) => {
       // Extract task ID from route params (Next.js 15+ requires awaiting params)
-      const params = await ctx?.params
-      const id = params?.id
+      const params = await ctx.params
+      const id = params.id
       
       // Parse body
       let body = {}
@@ -66,7 +71,7 @@ export const PUT = async (request: Request, context?: any) => {
   })(request, context)
 }
 
-export const DELETE = async (request: Request, context?: any) => {
+export const DELETE = async (request: Request, context: RouteContext) => {
   const solvaPay = getSolvaPay()
   
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
@@ -78,10 +83,10 @@ export const DELETE = async (request: Request, context?: any) => {
   const premiumPayable = solvaPay.payable(agent ? { agent } : {})
 
   return premiumPayable.next(deleteTask, {
-    extractArgs: async (req: Request, ctx?: any) => {
+    extractArgs: async (req: Request, ctx: RouteContext) => {
       // Extract task ID from route params (Next.js 15+ requires awaiting params)
-      const params = await ctx?.params
-      const id = params?.id
+      const params = await ctx.params
+      const id = params.id
       
       return {
         id,

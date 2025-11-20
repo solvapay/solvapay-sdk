@@ -24,7 +24,7 @@ global.fetch = vi.fn()
 describe('Integration Tests - User Flows', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(global.fetch as any).mockResolvedValue({
+    ;(global.fetch as typeof fetch).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ 
         url: 'http://localhost:3000',

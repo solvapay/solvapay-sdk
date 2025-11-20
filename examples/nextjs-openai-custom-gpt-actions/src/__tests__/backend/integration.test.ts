@@ -10,15 +10,25 @@ import { NextRequest } from 'next/server'
 import { setupTestEnvironment } from './test-utils'
 
 // Mock Supabase client before importing anything that uses it
+interface MockTask {
+  id: string
+  title: string
+  description: string | null
+  completed: boolean
+  created_at: string
+  updated_at: string
+  user_id: string
+}
+
 const mockTasksStore = {
-  tasks: [] as any[],
+  tasks: [] as MockTask[],
   nextId: 1,
 }
 
 // Helper to create a query builder that tracks filters
-function createQueryBuilder(filters: Record<string, any> = {}) {
+function createQueryBuilder(filters: Record<string, unknown> = {}) {
   return {
-    eq: (col: string, val: any) => createQueryBuilder({ ...filters, [col]: val }),
+    eq: (col: string, val: unknown) => createQueryBuilder({ ...filters, [col]: val }),
     single: () => {
       const task = mockTasksStore.tasks.find(t => 
         Object.entries(filters).every(([key, value]) => t[key] === value)
@@ -32,10 +42,10 @@ function createQueryBuilder(filters: Record<string, any> = {}) {
   }
 }
 
-function createRangeBuilder(filters: Record<string, any>, start: number, end: number) {
+function createRangeBuilder(filters: Record<string, unknown>, _start: number, _end: number) {
   return {
-    order: (col: string, opts?: any) => ({
-      eq: (col2: string, val2: any) => {
+    order: (_col: string, _opts?: unknown) => ({
+      eq: (col2: string, val2: unknown) => {
         const allFilters = { ...filters, [col2]: val2 }
         const tasks = mockTasksStore.tasks.filter(t =>
           Object.entries(allFilters).every(([key, value]) => t[key] === value)
@@ -51,7 +61,7 @@ vi.mock('@supabase/supabase-js', () => ({
     from: vi.fn((table: string) => {
       if (table === 'tasks') {
         return {
-          insert: vi.fn((data: any) => ({
+          insert: vi.fn((data: Partial<MockTask> & { title: string; user_id: string }) => ({
             select: vi.fn(() => ({
               single: vi.fn(() => {
                 const task = {
@@ -68,11 +78,11 @@ vi.mock('@supabase/supabase-js', () => ({
               }),
             })),
           })),
-          select: vi.fn((columns: string, options?: any) => {
+          select: vi.fn((columns: string, options?: { count?: string }) => {
             // Handle count query
             if (options?.count === 'exact') {
               return {
-                eq: vi.fn((col: string, val: any) => {
+                eq: vi.fn((col: string, val: unknown) => {
                   const filteredTasks = mockTasksStore.tasks.filter(t => t[col] === val)
                   return Promise.resolve({ count: filteredTasks.length, error: null })
                 }),
@@ -87,10 +97,10 @@ vi.mock('@supabase/supabase-js', () => ({
             return {}
           }),
           delete: vi.fn(() => ({
-            eq: vi.fn((col: string, val: any) => {
+            eq: vi.fn((col: string, val: unknown) => {
               const filters = { [col]: val }
               return {
-                eq: vi.fn((col2: string, val2: any) => {
+                eq: vi.fn((col2: string, val2: unknown) => {
                   const allFilters = { ...filters, [col2]: val2 }
                   const index = mockTasksStore.tasks.findIndex(t =>
                     Object.entries(allFilters).every(([key, value]) => t[key] === value)
@@ -124,14 +134,14 @@ vi.mock('@solvapay/server', async () => {
     ...actual,
     createSolvaPay: vi.fn(() => ({
       payable: vi.fn(() => ({
-        next: vi.fn((handler: any, options?: any) => {
+        next: vi.fn((handler: (args: unknown) => Promise<unknown>, options?: { extractArgs?: (req: Request, context?: unknown) => Promise<unknown> }) => {
           // Return a wrapper that calls the handler directly without paywall checks
-          return async (req: Request, context?: any) => {
+          return async (req: Request, _context?: unknown) => {
             try {
               // Extract args if provided
-              let args = {}
+              let args: unknown = {}
               if (options?.extractArgs) {
-                args = await options.extractArgs(req, context)
+                args = await options.extractArgs(req, _context)
               }
               
               // Call the handler directly
@@ -142,9 +152,9 @@ vi.mock('@solvapay/server', async () => {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
               })
-            } catch (error: any) {
+            } catch (error: unknown) {
               return new Response(
-                JSON.stringify({ error: error.message }),
+                JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
                 { status: 500, headers: { 'Content-Type': 'application/json' } }
               )
             }

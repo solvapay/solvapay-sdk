@@ -87,7 +87,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Fallback to Standard Supabase Auth (Cookies)
-  return authMiddleware(request as any)
+  // Type assertion needed due to Next.js version differences in monorepo
+  return authMiddleware(request as unknown as Parameters<typeof authMiddleware>[0])
 }
 
 export const config = {

@@ -5,7 +5,7 @@ function getSolvaPay() {
   return createSolvaPay()
 }
 
-export const GET = async (request: Request, context?: any) => {
+export const GET = async (request: Request) => {
   const solvaPay = getSolvaPay()
   
   // Use configured agent ref if available
@@ -27,10 +27,10 @@ export const GET = async (request: Request, context?: any) => {
         userId: rawUserId || undefined,
       }
     }
-  })(request, context)
+  })(request)
 }
 
-export const POST = async (request: Request, context?: any) => {
+export const POST = async (request: Request) => {
   const solvaPay = getSolvaPay()
   
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
@@ -62,5 +62,5 @@ export const POST = async (request: Request, context?: any) => {
         userId: rawUserId || undefined,
       }
     }
-  })(request, context)
+  })(request)
 }

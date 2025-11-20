@@ -58,8 +58,8 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
       const { error: googleError } = await signInWithGoogle(callbackUrl)
       if (googleError) throw googleError
       // OAuth redirect will happen automatically
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Google sign-in failed')
       setIsLoading(false)
     }
   }
@@ -135,8 +135,8 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
           router.refresh()
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Authentication failed')
     } finally {
       // Always stop loading unless we redirected
       if (!redirectTo) {

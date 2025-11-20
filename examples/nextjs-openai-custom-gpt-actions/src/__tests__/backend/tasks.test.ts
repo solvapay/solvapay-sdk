@@ -10,14 +10,24 @@ import { NextRequest } from 'next/server'
 import { setupTestEnvironment } from './test-utils'
 
 // Mock Supabase client before importing anything that uses it
-const mockTasksData = [] as any[]
+interface MockTask {
+  id: string
+  title: string
+  description: string | null
+  completed: boolean
+  created_at: string
+  updated_at: string
+  user_id: string
+}
+
+const mockTasksData = [] as MockTask[]
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
       if (table === 'tasks') {
         return {
-          insert: vi.fn((data: any) => ({
+          insert: vi.fn((data: Partial<MockTask> & { title: string; user_id: string }) => ({
             select: vi.fn(() => ({
               single: vi.fn(() => {
                 const task = {
@@ -34,11 +44,11 @@ vi.mock('@supabase/supabase-js', () => ({
               }),
             })),
           })),
-          select: vi.fn((columns: string, options?: any) => {
+          select: vi.fn((columns: string, options?: { count?: string }) => {
             // Handle count query
             if (options?.count === 'exact') {
               return {
-                eq: vi.fn((col: string, val: any) => {
+                eq: vi.fn((col: string, val: unknown) => {
                   const filteredTasks = mockTasksData.filter(t => t[col] === val)
                   return Promise.resolve({ count: filteredTasks.length, error: null })
                 }),
@@ -50,14 +60,14 @@ vi.mock('@supabase/supabase-js', () => ({
               return {
                 range: vi.fn(() => ({
                   order: vi.fn(() => ({
-                    eq: vi.fn((col: string, val: any) => {
+                    eq: vi.fn((col: string, val: unknown) => {
                       const filteredTasks = mockTasksData.filter(t => t[col] === val)
                       return Promise.resolve({ data: filteredTasks, error: null })
                     }),
                   })),
                 })),
-                eq: vi.fn((col: string, val: any) => ({
-                  eq: vi.fn((col2: string, val2: any) => {
+                eq: vi.fn((col: string, val: unknown) => ({
+                  eq: vi.fn((col2: string, val2: unknown) => {
                     const filteredTasks = mockTasksData.filter(t => t[col] === val && (!col2 || t[col2] === val2))
                     return Promise.resolve({ data: filteredTasks, error: null })
                   }),
@@ -88,12 +98,12 @@ vi.mock('@solvapay/server', async () => {
     ...actual,
     createSolvaPay: vi.fn(() => ({
       payable: vi.fn(() => ({
-        next: vi.fn((handler: any, options?: any) => {
+        next: vi.fn((handler: (args: unknown) => Promise<unknown>, options?: { extractArgs?: (req: Request) => Promise<unknown> }) => {
           // Return a wrapper that calls the handler directly without paywall checks
-          return async (req: Request, context?: any) => {
+          return async (req: Request, _context?: unknown) => {
             try {
               // Extract args if provided
-              let args = {}
+              let args: unknown = {}
               if (options?.extractArgs) {
                 args = await options.extractArgs(req)
               }
@@ -106,9 +116,9 @@ vi.mock('@solvapay/server', async () => {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
               })
-            } catch (error: any) {
+            } catch (error: unknown) {
               return new Response(
-                JSON.stringify({ error: error.message }),
+                JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
                 { status: 500, headers: { 'Content-Type': 'application/json' } }
               )
             }
