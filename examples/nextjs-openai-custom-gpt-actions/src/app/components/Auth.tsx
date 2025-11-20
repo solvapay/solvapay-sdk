@@ -70,6 +70,8 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
     setIsLoading(true)
     setSignUpSuccess(false)
 
+    let shouldRedirect = false
+
     try {
       if (isSignUp) {
         const { data, error: signUpError } = await signUp(email, password)
@@ -95,6 +97,7 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
           }
           
           // Redirect if needed
+          shouldRedirect = true
           if (redirectTo) {
             window.location.href = redirectTo
           } else {
@@ -130,7 +133,8 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
         }
 
         if (redirectTo) {
-           window.location.href = redirectTo
+          shouldRedirect = true
+          window.location.href = redirectTo
         } else {
           router.refresh()
         }
@@ -138,12 +142,8 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
     } finally {
-      // Always stop loading unless we redirected
-      if (!redirectTo) {
-        setIsLoading(false)
-      }
-      // Force stop loading in error cases
-      if (error) {
+      // Only stop loading if we're not redirecting
+      if (!shouldRedirect) {
         setIsLoading(false)
       }
     }
