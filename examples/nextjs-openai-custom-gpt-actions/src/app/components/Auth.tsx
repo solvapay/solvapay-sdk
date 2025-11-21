@@ -201,7 +201,7 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
 
             {/* Email/Password Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+              <div suppressHydrationWarning>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
@@ -214,7 +214,7 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
                 />
               </div>
 
-              <div>
+              <div suppressHydrationWarning>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                 <input
                   type="password"
