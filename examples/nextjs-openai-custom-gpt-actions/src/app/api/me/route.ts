@@ -1,68 +1,40 @@
+import { authClient, SOLVAPAY_USERINFO_URL } from '@/lib/auth-client'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  // Check if user info is from OAuth token (set by middleware)
+  // Check for header set by middleware (userId)
   const userId = request.headers.get('x-user-id')
-  const userEmail = request.headers.get('x-user-email')
   
-  if (userId) {
-    // OAuth flow - user info from JWT claims
-    return NextResponse.json({
-      authenticated: true,
-      user: {
-        id: userId,
-        email: userEmail || undefined,
-      },
-    })
-  }
+  // Also check cookie to fetch full user info
+  const cookieStore = await cookies()
+  const token = cookieStore.get('solvapay_token')?.value
 
-  // Web UI flow - user info from Supabase session
-  // Middleware already verified the session, so we can trust the cookies
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-    },
-  })
-
-  const accessToken = request.cookies.get('sb-access-token')?.value
-  const refreshToken = request.cookies.get('sb-refresh-token')?.value
-
-  if (!accessToken || !refreshToken) {
-    return NextResponse.json(
+  if (!userId || !token) {
+     return NextResponse.json(
       { error: 'Not authenticated', authenticated: false },
       { status: 401 }
     )
   }
 
   try {
-    const { data: { user } } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid session', authenticated: false },
-        { status: 401 }
-      )
-    }
+    // Fetch full user info from SolvaPay
+    const userInfo = await authClient.getUserInfo(token, SOLVAPAY_USERINFO_URL)
 
     return NextResponse.json({
       authenticated: true,
       user: {
-        id: user.id,
-        email: user.email,
+        id: userId,
+        email: userInfo.email,
+        name: userInfo.name,
       },
     })
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch user info:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch user', authenticated: false },
+      { error: 'Failed to fetch user info', authenticated: false },
       { status: 500 }
     )
   }

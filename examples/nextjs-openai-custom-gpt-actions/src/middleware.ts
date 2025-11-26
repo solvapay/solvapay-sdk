@@ -1,97 +1,120 @@
-import { createSupabaseAuthMiddleware } from '@solvapay/next'
-import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { SolvapayAuthAdapter } from '@solvapay/auth'
 
-const authMiddleware = createSupabaseAuthMiddleware({
-  // Public routes that don't require authentication
-  publicRoutes: [
-    '/api/docs/json', 
-    '/api/docs', 
-    '/api/config/url', 
-    '/api/oauth/authorize', // OAuth endpoints must be public (handle their own auth)
-    '/api/oauth/token',
-    '/api/.well-known/openid-configuration',
-    '/api/auth/session', // Session management endpoint (used during login flow)
-    '/login', // Login page
-    '/signup', // Sign up page
-  ],
+const adapter = new SolvapayAuthAdapter({
+  apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com',
 })
 
+const PUBLIC_PATHS = [
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/auth/callback',
+  '/api/docs',
+  '/api/config/url',
+  '/api/.well-known/openid-configuration',
+]
+
 export async function middleware(request: NextRequest) {
-  // Handle CORS preflight for OpenAI Custom GPT Actions
+  // 1. Handle CORS preflight
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, {
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-gpt-user-id',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-gpt-user-id, x-user-id',
       },
     })
   }
 
-  // Check for force_login or account_select parameter on /login route
-  // If present, allow access even if user is authenticated
-  const url = new URL(request.url)
-  if (url.pathname === '/login' && (url.searchParams.get('force_login') === 'true' || url.searchParams.get('account_select') === 'true')) {
-    // Allow access to login page, skip auth middleware
+  const { pathname } = request.nextUrl
+
+  // 2. Skip static assets and public paths
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/static') ||
+    pathname.includes('.') || // files
+    PUBLIC_PATHS.some(path => pathname.startsWith(path))
+  ) {
     return NextResponse.next()
   }
 
-  // Check for Custom OAuth Token (Bearer)
+  // 3. Extract Token (Bearer Header OR Cookie)
+  let token = request.cookies.get('solvapay_token')?.value
   const authHeader = request.headers.get('Authorization')
+
   if (authHeader?.startsWith('Bearer ')) {
-    try {
-      const token = authHeader.split(' ')[1]
-      const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!)
-      
-      const { payload } = await jwtVerify(token, jwtSecret)
-      
-      // Token is valid!
-      // Add user info to headers for downstream API routes to use
-      const requestHeaders = new Headers(request.headers)
-      requestHeaders.set('x-user-id', payload.sub as string)
-      if (payload.email) {
-        requestHeaders.set('x-user-email', payload.email as string)
-      }
-      
-      // Explicitly add CORS headers to the success response to ensure they are present
-      // even if next.config.js fails or is bypassed for some reason
-      const response = NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      })
-      
-      response.headers.set('Access-Control-Allow-Origin', '*')
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-gpt-user-id')
-      
-      return response
-    } catch (error) {
-      // Invalid token
-      console.error('Invalid OAuth token:', error)
-      return new NextResponse(
-        JSON.stringify({ error: 'invalid_token', message: 'Invalid or expired token' }),
-        { 
-          status: 401, 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-gpt-user-id',
-          } 
-        }
-      )
-    }
+    token = authHeader.split(' ')[1]
   }
 
-  // Fallback to Standard Supabase Auth (Cookies)
-  // Type assertion needed due to Next.js version differences in monorepo
-  return authMiddleware(request as unknown as Parameters<typeof authMiddleware>[0])
+  // 4. Validate Token & Get User ID
+  let userId: string | null = null
+
+  if (token) {
+    // Adapter expects an object with headers.get()
+    userId = await adapter.getUserIdFromRequest({
+      headers: {
+        get: (name: string) => {
+          if (name.toLowerCase() === 'authorization') {
+            return `Bearer ${token}`
+          }
+          return null
+        }
+      }
+    })
+  }
+
+  // 5. Handle Auth Result
+  
+  // If we have a user ID, set the header and proceed
+  if (userId) {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-user-id', userId)
+    
+    const response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+    
+    // Add CORS headers to response
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-gpt-user-id, x-user-id')
+    
+    return response
+  }
+
+  // If no user ID:
+  
+  // A) For API routes: Return 401
+  if (pathname.startsWith('/api')) {
+    return new NextResponse(
+      JSON.stringify({ error: 'unauthorized', message: 'Authentication required' }),
+      { 
+        status: 401, 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        } 
+      }
+    )
+  }
+
+  // B) For Page routes (e.g. /):
+  // If it's the landing page ('/'), we allow it (it will show "Sign In" button)
+  if (pathname === '/') {
+    return NextResponse.next()
+  }
+
+  // C) For other protected pages: Redirect to Login
+  // Note: We don't have other protected pages in this example yet, but good practice.
+  const loginUrl = new URL('/api/auth/login', request.url)
+  // Store return URL in state or cookie if needed, but for now simple redirect
+  return NextResponse.redirect(loginUrl)
 }
 
 export const config = {
-  // Match all API routes and login page
-  matcher: ['/api/:path*', '/login'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

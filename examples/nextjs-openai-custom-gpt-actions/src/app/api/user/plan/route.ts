@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
     
     const { userId } = userResult
     
-    // Get customer details directly using the external reference (Supabase User ID)
-    // We rely on the customer being synced during login/signup (see /api/sync-customer)
-    // This avoids the overhead of "ensuring" customer existence on every plan check
-    // Keep userId as-is (with hyphens) to match what was stored
+    // Get customer details
+    // In the SolvaPay Hosted OAuth flow, the authenticated user ID (from the token)
+    // corresponds to the Customer Reference (or ID) in the SolvaPay system.
+    // We use customerRef to identify the customer.
     const customer = await solvaPay.getCustomer({ 
-      externalRef: userId 
+      customerRef: userId 
     })
     
     // Return actual subscription data from backend (no hardcoded mapping)

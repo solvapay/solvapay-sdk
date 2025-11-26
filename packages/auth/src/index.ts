@@ -12,6 +12,10 @@ export type { AuthAdapter, RequestLike } from './adapter'
 export { MockAuthAdapter } from './mock'
 export type { MockAuthAdapter as MockAuthAdapterType } from './mock'
 
+// Export SolvaPay adapter and client
+export { SolvapayAuthAdapter, SolvapayOAuthClient } from './solvapay'
+export type { SolvapayAuthAdapterConfig, SolvapayOAuthConfig, TokenResponse } from './solvapay'
+
 // Export Next.js route utilities
 export {
   getUserIdFromRequest,

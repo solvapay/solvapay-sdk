@@ -1,29 +1,31 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 
 export default function Home() {
-  const [baseUrl, setBaseUrl] = useState('')
   const [apiUrl, setApiUrl] = useState('')
+  const [authConfig, setAuthConfig] = useState<{ authUrl: string; tokenUrl: string } | null>(null)
+  
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedAuthUrl, setCopiedAuthUrl] = useState(false)
   const [copiedTokenUrl, setCopiedTokenUrl] = useState(false)
-  const [user, setUser] = useState<{ email?: string } | null>(null)
+  
+  const [user, setUser] = useState<{ email?: string; name?: string } | null>(null)
   const [loadingUser, setLoadingUser] = useState(true)
 
   useEffect(() => {
-    // Fetch public URL configuration
+    // Fetch configuration
     fetch('/api/config/url')
       .then((res) => res.json())
       .then((data) => {
         const origin = data.url || window.location.origin
-        setBaseUrl(origin)
         setApiUrl(`${origin}/api/docs/json`)
+        if (data.oauth) {
+          setAuthConfig(data.oauth)
+        }
       })
       .catch(() => {
         const origin = window.location.origin
-        setBaseUrl(origin)
         setApiUrl(`${origin}/api/docs/json`)
       })
 
@@ -55,18 +57,7 @@ export default function Home() {
 
   const handleSignOut = async () => {
     try {
-      // Sign out from Supabase (clears cookies)
-      await fetch('/api/auth/signout', { method: 'POST' })
-      
-      // Also try client-side sign out if Supabase client is available
-      try {
-        const { supabase } = await import('@/lib/supabase')
-        await supabase.auth.signOut()
-      } catch (e) {
-        console.warn('Client-side sign out failed', e)
-      }
-
-      // Reload to clear state
+      await fetch('/api/auth/logout', { method: 'POST' })
       window.location.reload()
     } catch (error) {
       console.error('Sign out failed:', error)
@@ -79,7 +70,9 @@ export default function Home() {
         {!loadingUser && (
           user ? (
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Signed in as <strong>{user.email}</strong></span>
+              <span className="text-sm text-gray-600">
+                Signed in as <strong>{user.email || 'User'}</strong>
+              </span>
               <button 
                 onClick={handleSignOut}
                 className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
@@ -88,12 +81,12 @@ export default function Home() {
               </button>
             </div>
           ) : (
-            <Link 
-              href="/login" 
+            <a 
+              href="/api/auth/login" 
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               Log In
-            </Link>
+            </a>
           )
         )}
       </div>
@@ -101,7 +94,7 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-4 text-center">SolvaPay Custom GPT Actions API</h1>
       <p className="text-xl mb-12 text-center text-gray-600 max-w-2xl">
         This is a backend API for OpenAI Custom GPT Actions.
-        It provides a Tasks API secured by Supabase Auth and monetized with SolvaPay.
+        It provides a Tasks API secured by SolvaPay OAuth and monetized with SolvaPay.
       </p>
 
       <div className="grid gap-8 w-full mb-12">
@@ -136,10 +129,10 @@ export default function Home() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Authorization URL</label>
               <div className="flex flex-col md:flex-row gap-4 items-center">
                 <code className="flex-1 p-3 bg-gray-100 rounded-lg text-sm font-mono break-all w-full">
-                  {baseUrl ? `${baseUrl}/api/oauth/authorize` : 'Loading...'}
+                  {authConfig ? authConfig.authUrl : 'Loading...'}
                 </code>
                 <button
-                  onClick={() => copyToClipboard(`${baseUrl}/api/oauth/authorize`, setCopiedAuthUrl)}
+                  onClick={() => copyToClipboard(authConfig?.authUrl || '', setCopiedAuthUrl)}
                   className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap text-sm font-medium min-w-[100px]"
                 >
                   {copiedAuthUrl ? 'Copied!' : 'Copy'}
@@ -152,10 +145,10 @@ export default function Home() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Token URL</label>
               <div className="flex flex-col md:flex-row gap-4 items-center">
                 <code className="flex-1 p-3 bg-gray-100 rounded-lg text-sm font-mono break-all w-full">
-                  {baseUrl ? `${baseUrl}/api/oauth/token` : 'Loading...'}
+                  {authConfig ? authConfig.tokenUrl : 'Loading...'}
                 </code>
                 <button
-                  onClick={() => copyToClipboard(`${baseUrl}/api/oauth/token`, setCopiedTokenUrl)}
+                  onClick={() => copyToClipboard(authConfig?.tokenUrl || '', setCopiedTokenUrl)}
                   className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap text-sm font-medium min-w-[100px]"
                 >
                   {copiedTokenUrl ? 'Copied!' : 'Copy'}
@@ -180,7 +173,7 @@ export default function Home() {
             </div>
 
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
-              <strong>Note:</strong> For <strong>Client ID</strong> and <strong>Client Secret</strong>, use the values you configured in your <code>.env.local</code> file (<code>OAUTH_CLIENT_ID</code> and <code>OAUTH_CLIENT_SECRET</code>).
+              <strong>Note:</strong> Get your <strong>Client ID</strong> and <strong>Client Secret</strong> from the SolvaPay Dashboard.
             </div>
           </div>
         </div>

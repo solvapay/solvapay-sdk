@@ -201,7 +201,12 @@ async function initDatabase() {
 
     // Read the SQL migration files
     const migrationsDir = join(process.cwd(), 'supabase', 'migrations')
-    const migrationFiles = ['001_create_tasks_table.sql', '002_create_oauth_tables.sql', '003_add_email_to_oauth_codes.sql']
+    const migrationFiles = [
+      '001_create_tasks_table.sql',
+      '002_create_oauth_tables.sql',
+      '003_add_email_to_oauth_codes.sql',
+      '004_update_tasks_user_id.sql'
+    ]
 
     for (const file of migrationFiles) {
       const migrationPath = join(migrationsDir, file)

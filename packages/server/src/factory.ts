@@ -440,7 +440,10 @@ export interface SolvaPay {
    * });
    * ```
    */
-  getCustomer(params: { customerRef?: string; externalRef?: string }): Promise<CustomerResponseMapped>
+  getCustomer(params: {
+    customerRef?: string
+    externalRef?: string
+  }): Promise<CustomerResponseMapped>
 
   /**
    * Create a hosted checkout session for a customer.

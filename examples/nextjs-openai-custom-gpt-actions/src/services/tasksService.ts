@@ -156,6 +156,7 @@ export async function listTasks(args: {
   const { count, error: countError } = await countQuery
 
   if (countError) {
+    console.error('Count error details:', JSON.stringify(countError, null, 2))
     throw new Error(`Failed to count tasks: ${countError.message}`)
   }
 
