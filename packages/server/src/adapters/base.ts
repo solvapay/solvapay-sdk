@@ -45,11 +45,7 @@ export class AdapterUtils {
       return 'anonymous'
     }
 
-    // Ensure customer ref is properly formatted
-    if (!customerRef.startsWith('customer_') && !customerRef.startsWith('demo_')) {
-      return `customer_${customerRef.replace(/[^a-zA-Z0-9]/g, '_')}`
-    }
-
+    // Return customer ref as-is (preserve UUIDs with hyphens, etc.)
     return customerRef
   }
 

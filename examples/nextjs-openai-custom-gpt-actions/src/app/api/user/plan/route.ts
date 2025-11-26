@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSolvaPay } from '@solvapay/server'
+import { createSolvaPay, getAuthenticatedUserCore, isErrorResult } from '@solvapay/server'
 
 function getSolvaPay() {
   return createSolvaPay()
@@ -8,51 +8,56 @@ function getSolvaPay() {
 export async function GET(request: NextRequest) {
   try {
     const solvaPay = getSolvaPay()
-    const userId = request.headers.get('x-user-id')
     
-    if (!userId) {
+    // Use SDK helper to extract user ID from request
+    const userResult = await getAuthenticatedUserCore(request)
+    
+    if (isErrorResult(userResult)) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: userResult.error },
+        { status: userResult.status }
       )
     }
     
-    // Get customer information which includes subscriptions
-    const customer = await solvaPay.getCustomer({ customerRef: userId })
+    const { userId } = userResult
     
-    // Determine plan from subscriptions
-    const hasActiveSubscription = customer.subscriptions?.some(
+    // Get customer details directly using the external reference (Supabase User ID)
+    // We rely on the customer being synced during login/signup (see /api/sync-customer)
+    // This avoids the overhead of "ensuring" customer existence on every plan check
+    // Keep userId as-is (with hyphens) to match what was stored
+    const customer = await solvaPay.getCustomer({ 
+      externalRef: userId 
+    })
+    
+    // Return actual subscription data from backend (no hardcoded mapping)
+    // Find the first active or trialing subscription
+    const activeSubscription = customer.subscriptions?.find(
       (sub) => sub.status === 'active' || sub.status === 'trialing'
     )
     
     return NextResponse.json({
-      plan: hasActiveSubscription ? 'pro' : 'free',
-      usage: {
-        api_calls: 0, // This could be tracked separately if needed
-        last_reset: new Date().toISOString(),
+      // Return actual plan data from backend
+      subscription: activeSubscription || null,
+      subscriptions: customer.subscriptions || [],
+      customer: {
+        customerRef: customer.customerRef,
+        email: customer.email,
+        externalRef: customer.externalRef,
       },
-      limits: {
-        api_calls: hasActiveSubscription ? -1 : 10, // -1 for unlimited
-        reset_period: 'monthly',
-      },
-      upgradedAt: customer.subscriptions?.[0]?.startDate,
     })
   } catch (error) {
     console.error('Error getting user plan:', error)
     
-    // Return a default free plan if there's an error
-    // This prevents the Custom GPT from completely failing
-    return NextResponse.json({
-      plan: 'free',
-      usage: {
-        api_calls: 0,
-        last_reset: new Date().toISOString(),
+    // Return an error response instead of a default free plan
+    // This provides better transparency about what went wrong
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch customer data',
+        subscription: null,
+        subscriptions: [],
       },
-      limits: {
-        api_calls: 10,
-        reset_period: 'monthly',
-      },
-    })
+      { status: 500 }
+    )
   }
 }
 

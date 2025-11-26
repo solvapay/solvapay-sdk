@@ -423,20 +423,24 @@ export interface SolvaPay {
    * all active subscriptions, usage history, and customer metadata.
    *
    * @param params - Customer lookup parameters
-   * @param params.customerRef - Customer reference
+   * @param params.customerRef - Optional customer reference (SolvaPay ID)
+   * @param params.externalRef - Optional external reference (e.g., Supabase ID)
    * @returns Customer details with subscriptions and metadata
    *
    * @example
    * ```typescript
+   * // Lookup by SolvaPay customer ID
    * const customer = await solvaPay.getCustomer({
-   *   customerRef: 'user_123'
+   *   customerRef: 'cust_123'
    * });
    *
-   * console.log('Active subscriptions:', customer.subscriptions);
-   * console.log('Email:', customer.email);
+   * // Lookup by external ID (e.g. Supabase user ID)
+   * const customer = await solvaPay.getCustomer({
+   *   externalRef: 'user_123'
+   * });
    * ```
    */
-  getCustomer(params: { customerRef: string }): Promise<CustomerResponseMapped>
+  getCustomer(params: { customerRef?: string; externalRef?: string }): Promise<CustomerResponseMapped>
 
   /**
    * Create a hosted checkout session for a customer.
@@ -627,9 +631,6 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
     },
 
     getCustomer(params) {
-      if (!apiClient.getCustomer) {
-        throw new SolvaPayError('getCustomer is not available on this API client')
-      }
       return apiClient.getCustomer(params)
     },
 

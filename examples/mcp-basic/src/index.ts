@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
 import 'dotenv/config'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -10,9 +11,6 @@ import { createSolvaPay } from '@solvapay/server'
 import { createStubClient } from '../../shared/stub-api-client'
 import { createTask, getTask, listTasks, deleteTask } from '@solvapay/demo-services'
 import type {
-  MCPToolArgs,
-  MCPToolResult,
-  Task,
   CreateTaskArgs,
   GetTaskArgs,
   ListTasksArgs,

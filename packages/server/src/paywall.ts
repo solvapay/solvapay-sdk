@@ -276,9 +276,9 @@ export class SolvaPayPaywall {
     // Use shared deduplicator (handles both concurrent requests and cache)
     const backendRef = await sharedCustomerLookupDeduplicator.deduplicate(cacheKey, async () => {
       // If externalRef is provided, try to lookup existing customer first
-      if (externalRef && this.apiClient.getCustomerByExternalRef) {
+      if (externalRef) {
         try {
-          const existingCustomer = await this.apiClient.getCustomerByExternalRef({ externalRef })
+          const existingCustomer = await this.apiClient.getCustomer({ externalRef })
 
           if (existingCustomer && existingCustomer.customerRef) {
             const ref = existingCustomer.customerRef
@@ -359,9 +359,9 @@ export class SolvaPayPaywall {
         // If customer already exists, we should try to fetch it to get the correct backend ID
         if (error.message && (error.message.includes('409') || error.message.includes('already exists'))) {
            // Try to lookup by externalRef first if available
-           if (externalRef && this.apiClient.getCustomerByExternalRef) {
+           if (externalRef) {
              try {
-               const searchResult = await this.apiClient.getCustomerByExternalRef({ externalRef })
+               const searchResult = await this.apiClient.getCustomer({ externalRef })
                if (searchResult && searchResult.customerRef) {
                  this.customerRefMapping.set(customerRef, searchResult.customerRef)
                  return searchResult.customerRef

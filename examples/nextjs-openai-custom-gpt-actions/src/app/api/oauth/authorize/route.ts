@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     const { createSolvaPay } = await import('@solvapay/server')
     const solvaPay = createSolvaPay()
     
-    // Manually call ensureCustomer with userId as both customerRef and externalRef
+    // Use userId as-is (with hyphens) for both customerRef and externalRef
     // Pass email to avoid conflicts
     await solvaPay.ensureCustomer(userId, userId, {
       email: userEmail || undefined,

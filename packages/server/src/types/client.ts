@@ -82,11 +82,11 @@ export interface SolvaPayClient {
     params: components['schemas']['CreateCustomerRequest'],
   ): Promise<{ customerRef: string }>
 
-  // GET: /v1/sdk/customers/{reference}
-  getCustomer?(params: { customerRef: string }): Promise<CustomerResponseMapped>
-
-  // GET: /v1/sdk/customers?externalRef={externalRef}
-  getCustomerByExternalRef?(params: { externalRef: string }): Promise<CustomerResponseMapped>
+  // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
+  getCustomer(params: {
+    customerRef?: string
+    externalRef?: string
+  }): Promise<CustomerResponseMapped>
 
   // Management methods (primarily for integration tests)
 

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       sub: codeData.userId,
       email: codeData.email,
       iss: issuer,
-      aud: clientId || 'openai-gpt',
+      aud: clientId!,
       scope: codeData.scope,
     })
       .setProtectedHeader({ alg: 'HS256', kid: '1' })
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     await refreshTokens.set({
       token: refreshToken,
       userId: codeData.userId,
-      clientId: clientId || 'openai-gpt',
+      clientId: clientId!,
       scope: codeData.scope,
       issuedAt: new Date(),
       expiresAt: refreshTokenExpiresAt

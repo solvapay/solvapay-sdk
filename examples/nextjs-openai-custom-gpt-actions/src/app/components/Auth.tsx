@@ -98,7 +98,7 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
           
           // Redirect if needed
           shouldRedirect = true
-          if (redirectTo) {
+          if (redirectTo && redirectTo.startsWith('/')) {
             window.location.href = redirectTo
           } else {
             // Go to home or dashboard
@@ -132,7 +132,7 @@ export function Auth({ initialView = 'signin' }: AuthProps) {
           // Silent failure
         }
 
-        if (redirectTo) {
+        if (redirectTo && redirectTo.startsWith('/')) {
           shouldRedirect = true
           window.location.href = redirectTo
         } else {

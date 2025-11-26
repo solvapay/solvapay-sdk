@@ -76,6 +76,12 @@ export class NextAdapter implements Adapter<NextContext, Response> {
       }
     }
 
+    // Try x-user-id header (set by middleware, e.g., Supabase auth)
+    const userId = request.headers.get('x-user-id')
+    if (userId) {
+      return AdapterUtils.ensureCustomerRef(userId)
+    }
+
     // Fallback to x-customer-ref header
     const headerRef = request.headers.get('x-customer-ref')
     if (headerRef) {

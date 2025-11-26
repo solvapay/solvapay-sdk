@@ -135,9 +135,19 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // GET: /v1/sdk/customers/{reference}
+    // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
     async getCustomer(params) {
-      const url = `${base}/v1/sdk/customers/${params.customerRef}`
+      let url
+      let isByExternalRef = false
+
+      if (params.externalRef) {
+        url = `${base}/v1/sdk/customers?externalRef=${encodeURIComponent(params.externalRef)}`
+        isByExternalRef = true
+      } else if (params.customerRef) {
+        url = `${base}/v1/sdk/customers/${params.customerRef}`
+      } else {
+        throw new SolvaPayError('Either customerRef or externalRef must be provided')
+      }
 
       const res = await fetch(url, {
         method: 'GET',
@@ -152,37 +162,15 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       const result = await res.json()
 
-      // Map response fields to expected format
-      // Note: subscriptions may include additional fields like endDate, cancelledAt
-      // even though they're not in the SubscriptionInfo type definition
-      return {
-        customerRef: result.reference || result.customerRef,
-        email: result.email,
-        name: result.name,
-        externalRef: result.externalRef,
-        subscriptions: result.subscriptions || [],
+      // If getting by externalRef, the result might be an array or wrapped object
+      let customer = result
+      if (isByExternalRef) {
+        const customers = Array.isArray(result) ? result : result.customers || []
+        if (customers.length === 0) {
+          throw new SolvaPayError(`No customer found with externalRef: ${params.externalRef}`)
+        }
+        customer = customers[0]
       }
-    },
-
-    // GET: /v1/sdk/customers?externalRef={externalRef}
-    async getCustomerByExternalRef(params) {
-      const url = `${base}/v1/sdk/customers?externalRef=${encodeURIComponent(params.externalRef)}`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get customer by externalRef failed (${res.status}): ${error}`)
-      }
-
-      const result = await res.json()
-
-      // Handle array response (if backend returns array)
-      const customer = Array.isArray(result) ? result[0] : result
 
       // Map response fields to expected format
       // Note: subscriptions may include additional fields like endDate, cancelledAt
