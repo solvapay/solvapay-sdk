@@ -164,7 +164,17 @@ export class SolvaPayPaywall {
 
       // Auto-create customer if needed and get the backend reference
       // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
-      const backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
+      let backendCustomerRef: string
+
+      // If the input ref is already a SolvaPay customer ID (starts with 'cus_'), 
+      // use it directly without attempting lookup/creation by externalRef.
+      if (inputCustomerRef.startsWith('cus_')) {
+        backendCustomerRef = inputCustomerRef
+      } else {
+        // Auto-create customer if needed and get the backend reference
+        // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
+        backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
+      }
 
       try {
         // Check limits with backend using the backend customer reference
@@ -260,6 +270,13 @@ export class SolvaPayPaywall {
 
     // Skip for anonymous users
     if (customerRef === 'anonymous') {
+      return customerRef
+    }
+
+    // If customerRef is already a SolvaPay ID (starts with 'cus_'),
+    // return it directly. We cannot "ensure" (create) a customer with a specific ID,
+    // and using it as an externalRef causes issues.
+    if (customerRef.startsWith('cus_')) {
       return customerRef
     }
 
@@ -723,7 +740,11 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
 
 export function ensureCustomerRef(customerRef: string): string {
   // Ensure customer ref is properly formatted
-  if (!customerRef.startsWith('customer_') && !customerRef.startsWith('demo_')) {
+  if (
+    !customerRef.startsWith('customer_') &&
+    !customerRef.startsWith('demo_') &&
+    !customerRef.startsWith('cus_')
+  ) {
     return `customer_${customerRef.replace(/[^a-zA-Z0-9]/g, '_')}`
   }
   return customerRef
