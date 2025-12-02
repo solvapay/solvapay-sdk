@@ -84,11 +84,137 @@ POST / api / create - checkout
 
 ### Run the MCP Server
 
+#### Stdio Mode (Default)
+
+The server runs in stdio mode by default, which is used by MCP clients:
+
 ```bash
-pnpm start
+pnpm dev
 ```
 
 The server will start and listen for MCP client connections via stdio.
+
+#### Streamable HTTP Mode (External Access)
+
+To expose the MCP server externally via the **MCP Streamable HTTP transport** (protocol version 2025-11-25), set the `MCP_TRANSPORT` environment variable:
+
+```bash
+MCP_TRANSPORT=http MCP_PORT=3000 pnpm dev
+```
+
+Or create a `.env` file:
+
+```bash
+MCP_TRANSPORT=http
+MCP_PORT=3000
+MCP_HOST=localhost  # or 0.0.0.0 to bind to all interfaces
+MCP_ENDPOINT_PATH=/mcp  # MCP endpoint path (default: /mcp)
+MCP_ALLOWED_ORIGINS=*  # or comma-separated list of allowed origins
+MCP_AUTH_TOKEN=your-secret-token  # optional, for authentication
+```
+
+**Features:**
+- ✅ Full MCP Streamable HTTP transport (2025-11-25)
+- ✅ Single MCP endpoint supporting POST and GET
+- ✅ Server-Sent Events (SSE) streaming support
+- ✅ Session management with `MCP-Session-Id` header
+- ✅ Protocol version negotiation
+- ✅ Origin validation for security
+- ✅ Resumable connections with `Last-Event-ID`
+
+**MCP Endpoint:**
+- `POST /mcp` - Send JSON-RPC messages (requests, notifications, responses)
+- `GET /mcp` - Open SSE stream for server-to-client messages
+- `DELETE /mcp` - Terminate session (with `MCP-Session-Id` header)
+
+**Example usage with MCP client:**
+
+```bash
+# 1. Initialize the MCP session
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+        "name": "example-client",
+        "version": "1.0.0"
+      }
+    }
+  }'
+
+# Response will include MCP-Session-Id header
+# Save the session ID for subsequent requests
+
+# 2. List available tools
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -H "MCP-Session-Id: <session-id-from-initialize>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }'
+
+# 3. Call a tool
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -H "MCP-Session-Id: <session-id>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "list_tasks",
+      "arguments": {
+        "auth": {
+          "customer_ref": "user_123"
+        }
+      }
+    }
+  }'
+```
+
+**SSE Streaming Example:**
+
+For requests that accept SSE, the server will return a stream:
+
+```bash
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -H "MCP-Session-Id: <session-id>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "list_tasks",
+      "arguments": {
+        "auth": {
+          "customer_ref": "user_123"
+        }
+      }
+    }
+  }' \
+  --no-buffer
+```
+
+**Additional Endpoints:**
+- `GET /health` - Health check
+- `GET /` - Server information
 
 ### Run Tests
 

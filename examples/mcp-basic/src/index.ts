@@ -225,13 +225,53 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 // Start the server
 async function main() {
-  const transport = new StdioServerTransport()
-  await server.connect(transport)
+  const transportMode = process.env.MCP_TRANSPORT || 'stdio' // 'stdio' or 'http'
+  const port = parseInt(process.env.MCP_PORT || '3000', 10)
+  const host = process.env.MCP_HOST || 'localhost'
 
-  console.error('🚀 SolvaPay CRUD MCP Server started')
-  console.error('📝 Available tools: create_task, get_task, list_tasks, delete_task')
-  console.error('💰 Paywall: 3 free operations per day, then €5.00 for credits')
-  console.error('🔧 Demo mode: Using stub API client')
+  if (transportMode === 'http') {
+    // Streamable HTTP mode - full MCP 2025-11-25 implementation
+    // This implements the official MCP Streamable HTTP transport specification
+    const { StreamableHTTPTransport } = await import('./transport/streamable-http.js')
+    const httpTransport = new StreamableHTTPTransport(server, {
+      port,
+      host,
+      allowedOrigins: process.env.MCP_ALLOWED_ORIGINS?.split(',') || ['*'],
+      requireAuth: process.env.MCP_AUTH_TOKEN !== undefined,
+      authToken: process.env.MCP_AUTH_TOKEN,
+      endpointPath: process.env.MCP_ENDPOINT_PATH || '/mcp',
+    })
+
+    await httpTransport.start()
+
+    console.error('🚀 SolvaPay CRUD MCP Server started (Streamable HTTP mode)')
+    console.error('📝 Available tools: create_task, get_task, list_tasks, delete_task')
+    console.error('💰 Paywall: 3 free operations per day, then €5.00 for credits')
+    console.error('🔧 Demo mode: Using stub API client')
+    console.error('📡 Protocol: MCP Streamable HTTP (2025-11-25)')
+    console.error('')
+    console.error('💡 MCP Endpoint:', `http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/mcp`)
+    console.error('')
+    console.error('📖 Example usage with MCP client:')
+    console.error(`   POST http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/mcp`)
+    console.error('   Headers:')
+    console.error('     Accept: application/json, text/event-stream')
+    console.error('     MCP-Protocol-Version: 2025-11-25')
+    console.error('   Body: {"jsonrpc":"2.0","id":1,"method":"initialize","params":{...}}')
+    console.error('')
+    console.error('📚 See README.md for full MCP transport documentation')
+  } else {
+    // Stdio mode - default for MCP clients
+    const transport = new StdioServerTransport()
+    await server.connect(transport)
+
+    console.error('🚀 SolvaPay CRUD MCP Server started (stdio mode)')
+    console.error('📝 Available tools: create_task, get_task, list_tasks, delete_task')
+    console.error('💰 Paywall: 3 free operations per day, then €5.00 for credits')
+    console.error('🔧 Demo mode: Using stub API client')
+    console.error('')
+    console.error('💡 To use HTTP mode, set: MCP_TRANSPORT=http MCP_PORT=3000')
+  }
 }
 
 main().catch(error => {
