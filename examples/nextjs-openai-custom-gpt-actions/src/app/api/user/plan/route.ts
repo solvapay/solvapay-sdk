@@ -35,10 +35,18 @@ export async function GET(request: NextRequest) {
       (sub) => sub.status === 'active' || sub.status === 'trialing'
     )
     
+    // Transform subscription to simplified plan info for OpenAPI
+    const plan = activeSubscription ? {
+      planRef: activeSubscription.planRef,
+      planName: activeSubscription.planName,
+      planType: activeSubscription.planType,
+      status: activeSubscription.status,
+      isActive: activeSubscription.status === 'active' || activeSubscription.status === 'trialing',
+      isRecurring: activeSubscription.isRecurring,
+    } : null
+    
     return NextResponse.json({
-      // Return actual plan data from backend
-      subscription: activeSubscription || null,
-      subscriptions: customer.subscriptions || [],
+      plan,
       customer: {
         customerRef: customer.customerRef,
         email: customer.email,
@@ -53,8 +61,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { 
         error: 'Failed to fetch customer data',
-        subscription: null,
-        subscriptions: [],
+        plan: null,
       },
       { status: 500 }
     )

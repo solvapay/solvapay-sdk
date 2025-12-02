@@ -15,7 +15,7 @@ export const GET = async (request: Request, context: RouteContext) => {
   
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
   
-  // Extract raw user ID from middleware-set header (Supabase UUID without prefix)
+  // Extract user ID from middleware-set header
   const rawUserId = request.headers.get('x-user-id')
   
   const basicPayable = solvaPay.payable(agent ? { agent } : {})
@@ -28,7 +28,7 @@ export const GET = async (request: Request, context: RouteContext) => {
       
       return {
         id,
-        // Pass raw userId to the service (for Supabase queries)
+        // Pass userId to the service
         userId: rawUserId || undefined,
       }
     }
@@ -64,7 +64,7 @@ export const PUT = async (request: Request, context: RouteContext) => {
       return {
         id,
         ...body,
-        // Pass raw userId to the service (for Supabase queries)
+        // Pass userId to the service
         userId: rawUserId || undefined,
       }
     }
@@ -90,7 +90,7 @@ export const DELETE = async (request: Request, context: RouteContext) => {
       
       return {
         id,
-        // Pass raw userId to the service (for Supabase queries)
+        // Pass userId to the service
         userId: rawUserId || undefined,
       }
     }

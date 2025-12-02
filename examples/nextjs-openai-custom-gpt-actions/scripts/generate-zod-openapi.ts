@@ -97,10 +97,6 @@ async function generateOpenApiSpec() {
       ],
       tags: [
         {
-          name: 'OAuth',
-          description: 'OAuth 2.0 authentication endpoints for OpenAI Custom GPT integration',
-        },
-        {
           name: 'User',
           description: 'User account and subscription management',
         },

@@ -7,12 +7,8 @@ const adapter = new SolvapayAuthAdapter({
 })
 
 const PUBLIC_PATHS = [
-  '/api/auth/login',
-  '/api/auth/logout',
-  '/auth/callback',
   '/api/docs',
   '/api/config/url',
-  '/api/.well-known/openid-configuration',
 ]
 
 export async function middleware(request: NextRequest) {
@@ -103,16 +99,23 @@ export async function middleware(request: NextRequest) {
   }
 
   // B) For Page routes (e.g. /):
-  // If it's the landing page ('/'), we allow it (it will show "Sign In" button)
+  // If it's the landing page ('/'), we allow it
   if (pathname === '/') {
     return NextResponse.next()
   }
 
-  // C) For other protected pages: Redirect to Login
-  // Note: We don't have other protected pages in this example yet, but good practice.
-  const loginUrl = new URL('/api/auth/login', request.url)
-  // Store return URL in state or cookie if needed, but for now simple redirect
-  return NextResponse.redirect(loginUrl)
+  // C) For other protected pages: Return 401
+  // Since OAuth is handled by a separate frontend, we don't redirect to login
+  return new NextResponse(
+    JSON.stringify({ error: 'unauthorized', message: 'Authentication required' }),
+    { 
+      status: 401, 
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      } 
+    }
+  )
 }
 
 export const config = {

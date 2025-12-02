@@ -15,13 +15,15 @@ import {
   CreateTaskRequestSchema,
   UpdateTaskRequestSchema,
   TaskListSchema,
+  TaskResponseSchema,
+  DeleteTaskResponseSchema,
   PaginationQuerySchema,
   TaskParamsSchema,
 
   // User schemas
   UserPlanSchema,
   UserInfoSchema,
-  SignOutResponseSchema,
+  UserPlanInfoSchema,
 
   // Common schemas
   ErrorResponseSchema,
@@ -33,70 +35,18 @@ export const registry = new OpenAPIRegistry()
 registry.register('Task', TaskSchema)
 registry.register('CreateTaskRequest', CreateTaskRequestSchema)
 registry.register('TaskList', TaskListSchema)
+registry.register('TaskResponse', TaskResponseSchema)
+registry.register('DeleteTaskResponse', DeleteTaskResponseSchema)
+registry.register('UserPlanInfo', UserPlanInfoSchema)
 registry.register('UserPlan', UserPlanSchema)
 registry.register('UserInfo', UserInfoSchema)
-registry.register('SignOutResponse', SignOutResponseSchema)
 registry.register('ErrorResponse', ErrorResponseSchema)
 
-// Security scheme for OAuth - support multiple URL sources
-// Priority: PUBLIC_URL > VERCEL_URL (auto-detected on Vercel)
-let baseUrl = process.env.PUBLIC_URL
-
-// If running on Vercel and no explicit URL is set, use VERCEL_URL
-if (!baseUrl && process.env.VERCEL_URL) {
-  baseUrl = `https://${process.env.VERCEL_URL}`
-}
-
-// Use placeholder only during build if no URL is available
-// The actual OpenAPI spec generation will validate and use proper URLs
-if (!baseUrl) {
-  console.warn(
-    '⚠️  [OpenAPI Registry] No URL configured, using placeholder. Set PUBLIC_URL for production.',
-  )
-  baseUrl = 'https://placeholder.example.com'
-}
-
-// Reject user-provided placeholder URLs
-if (
-  process.env.PUBLIC_URL &&
-  (baseUrl.includes('your-domain') || baseUrl.includes('your-subdomain'))
-) {
-  throw new Error(
-    `Invalid environment variable value: ${baseUrl}. Cannot use placeholder URLs like "your-domain" or "your-subdomain". Please set a real URL.`,
-  )
-}
-
-// Use generic OAuth2 security scheme pointing to standard OAuth endpoints
-// Get Supabase URL from environment
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-
-if (!supabaseUrl) {
-  throw new Error(
-    'NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL environment variable is required for OAuth configuration',
-  )
-}
-
-registry.registerComponent('securitySchemes', 'oauth2', {
-  type: 'oauth2',
-  flows: {
-    authorizationCode: {
-      authorizationUrl: `${baseUrl}/api/oauth/authorize`,
-      tokenUrl: `${baseUrl}/api/oauth/token`,
-      scopes: {
-        // Default Supabase scopes (optional to list here, but good for docs)
-        email: 'Access to email address',
-        phone: 'Access to phone number',
-        openid: 'OpenID Connect support',
-        profile: 'Access to user profile',
-      },
-    },
-  },
-})
 
 // User endpoints
 registry.registerPath({
   method: 'get',
-  path: '/api/me',
+  path: '/api/user/info',
   operationId: 'getCurrentUser',
   summary: 'Get current user',
   description: 'Get information about the currently authenticated user',
@@ -114,35 +64,6 @@ registry.registerPath({
     },
     401: {
       description: 'Unauthorized',
-      content: {
-        'application/json': {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
-})
-
-registry.registerPath({
-  method: 'post',
-  path: '/api/auth/signout',
-  operationId: 'signOut',
-  summary: 'Sign out',
-  description: 'Sign out the current user and revoke their session. The GPT will need to re-authenticate on the next action.',
-  tags: ['Auth'],
-  security: [{ oauth2: [] }],
-  'x-openai-isConsequential': true,
-  responses: {
-    200: {
-      description: 'Successfully signed out',
-      content: {
-        'application/json': {
-          schema: SignOutResponseSchema,
-        },
-      },
-    },
-    500: {
-      description: 'Internal server error',
       content: {
         'application/json': {
           schema: ErrorResponseSchema,
@@ -211,6 +132,14 @@ registry.registerPath({
         },
       },
     },
+    402: {
+      description: 'Payment required - upgrade to pro plan',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
     401: {
       description: 'Unauthorized',
       content: {
@@ -253,7 +182,7 @@ registry.registerPath({
       description: 'Created task',
       content: {
         'application/json': {
-          schema: TaskSchema,
+          schema: TaskResponseSchema,
         },
       },
     },
@@ -309,7 +238,7 @@ registry.registerPath({
       description: 'Task details',
       content: {
         'application/json': {
-          schema: TaskSchema,
+          schema: TaskResponseSchema,
         },
       },
     },
@@ -364,7 +293,7 @@ registry.registerPath({
       description: 'Updated task',
       content: {
         'application/json': {
-          schema: TaskSchema,
+          schema: TaskResponseSchema,
         },
       },
     },
@@ -428,13 +357,7 @@ registry.registerPath({
       description: 'Task deleted successfully',
       content: {
         'application/json': {
-          schema: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-            },
-          },
+          schema: DeleteTaskResponseSchema,
         },
       },
     },

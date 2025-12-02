@@ -51,12 +51,29 @@ export const UpdateTaskRequestSchema = z
 
 export const TaskListSchema = z
   .object({
+    success: z.boolean().describe('Whether the request was successful'),
     tasks: z.array(TaskSchema).describe('Array of tasks'),
     total: z.number().describe('Total number of tasks available'),
     limit: z.number().describe('Number of items per page'),
     offset: z.number().describe('Number of items skipped'),
   })
   .openapi('TaskList')
+
+// Task response schemas with success wrapper
+export const TaskResponseSchema = z
+  .object({
+    success: z.boolean().describe('Whether the request was successful'),
+    task: TaskSchema.describe('The task object'),
+  })
+  .openapi('TaskResponse')
+
+export const DeleteTaskResponseSchema = z
+  .object({
+    success: z.boolean().describe('Whether the request was successful'),
+    message: z.string().describe('Success message'),
+    deletedTask: TaskSchema.describe('The deleted task object'),
+  })
+  .openapi('DeleteTaskResponse')
 
 // Query parameter schemas
 export const PaginationQuerySchema = z.object({
@@ -68,49 +85,52 @@ export const TaskParamsSchema = z.object({
   id: z.string().describe('The unique identifier of the task'),
 })
 
-// User Plan schemas
+// Simplified plan info schema for OpenAPI (exposes only what users need to know)
+export const UserPlanInfoSchema = z
+  .object({
+    planRef: z.string().describe('Plan reference identifier'),
+    planName: z.string().describe('Plan name'),
+    planType: z.enum(['recurring', 'usage-based', 'one-time', 'hybrid']).describe('Plan type'),
+    status: z.enum(['pending', 'active', 'expired', 'cancelled', 'suspended', 'refunded']).describe('Subscription status'),
+    isActive: z.boolean().describe('Whether the plan is currently active (status is active or trialing)'),
+    isRecurring: z.boolean().describe('Whether this is a recurring subscription'),
+  })
+  .openapi('UserPlanInfo')
+
+// User Plan schema (for /api/user/plan endpoint)
 export const UserPlanSchema = z
   .object({
-    plan: z.enum(['free', 'pro']).describe('Current subscription plan'),
-    usage: z
-      .object({
-        api_calls: z.number().describe('Number of API calls made'),
-        last_reset: z.string().datetime().describe('Last usage reset timestamp'),
-      })
-      .describe('Current usage statistics'),
-    limits: z
-      .object({
-        api_calls: z.number().describe('Maximum API calls allowed'),
-        reset_period: z.string().describe('Usage reset period'),
-      })
-      .describe('Plan limits'),
-    upgradedAt: z.string().datetime().optional().describe('Timestamp when plan was upgraded'),
+    plan: UserPlanInfoSchema.nullable().describe('Active or trialing plan information, or null if user has no active plan'),
+    customer: z.object({
+      customerRef: z.string().describe('Customer reference identifier'),
+      email: z.string().optional().describe('Customer email'),
+      externalRef: z.string().optional().describe('External reference (e.g., Supabase user ID)'),
+    }).optional().describe('Customer information (not present on error)'),
+    error: z.string().optional().describe('Error message if request failed'),
   })
   .openapi('UserPlan')
 
-// User Info schema (for /me endpoint)
+// User Info schema (for /api/user/info endpoint)
 export const UserInfoSchema = z
   .object({
     authenticated: z.boolean().describe('Whether the user is authenticated'),
     user: z.object({
       id: z.string().describe('User unique identifier'),
       email: z.string().email().optional().describe('User email address'),
+      name: z.string().optional().describe('User name'),
     }).optional().describe('User information'),
+    error: z.string().optional().describe('Error message if authentication failed'),
   })
   .openapi('UserInfo')
-
-// Sign Out Response schema
-export const SignOutResponseSchema = z
-  .object({
-    success: z.boolean().describe('Whether the sign out was successful'),
-    message: z.string().describe('Sign out message'),
-  })
-  .openapi('SignOutResponse')
 
 // Type exports for use in API routes
 export type Task = z.infer<typeof TaskSchema>
 export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>
 export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>
 export type TaskList = z.infer<typeof TaskListSchema>
+export type TaskResponse = z.infer<typeof TaskResponseSchema>
+export type DeleteTaskResponse = z.infer<typeof DeleteTaskResponseSchema>
+export type UserPlanInfo = z.infer<typeof UserPlanInfoSchema>
 export type UserPlan = z.infer<typeof UserPlanSchema>
+export type UserInfo = z.infer<typeof UserInfoSchema>
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>

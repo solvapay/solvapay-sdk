@@ -11,7 +11,7 @@ src/__tests__/
 │   ├── home.test.tsx             # Home page tests
 │   ├── integration.test.tsx      # User flow integration tests
 │   └── simple-render.test.tsx    # Simple component render tests
-└── backend/              # Backend/API tests (11 files)
+└── backend/              # Backend/API tests (10 files)
     ├── api.test.ts               # API endpoint tests
     ├── basic.test.ts             # Basic API functionality tests
     ├── checkout.test.ts          # Checkout flow tests
@@ -21,7 +21,6 @@ src/__tests__/
     ├── tasks.test.ts             # Task CRUD operations tests
     ├── user-plans.test.ts        # User plan management tests (blue sky only)
     ├── integration.test.ts       # Backend integration tests (blue sky only)
-    ├── signout.test.ts           # Sign out endpoint tests (blue sky only)
     └── test-utils.ts             # Shared test utilities
 ```
 

@@ -11,7 +11,7 @@ export const GET = async (request: Request) => {
   // Use configured agent ref if available
   const agent = process.env.NEXT_PUBLIC_AGENT_REF
   
-  // Extract raw user ID from middleware-set header (Supabase UUID without prefix)
+  // Extract user ID from middleware-set header
   const rawUserId = request.headers.get('x-user-id')
   
   const payable = solvaPay.payable(agent ? { agent } : {})
@@ -23,7 +23,7 @@ export const GET = async (request: Request) => {
       
       return {
         ...query,
-        // Pass raw userId to the service (for Supabase queries)
+        // Pass userId to the service
         userId: rawUserId || undefined,
       }
     }
@@ -58,7 +58,7 @@ export const POST = async (request: Request) => {
       return {
         ...body,
         ...query,
-        // Pass raw userId to the service (for Supabase queries)
+        // Pass userId to the service
         userId: rawUserId || undefined,
       }
     }

@@ -30,7 +30,7 @@ export default function Home() {
       })
 
     // Check if user is logged in
-    fetch('/api/me')
+    fetch('/api/user/info')
       .then((res) => {
         if (res.ok) return res.json()
         return null
@@ -55,41 +55,15 @@ export default function Home() {
     setTimeout(() => setCopiedState(false), 2000)
   }
 
-  const handleSignOut = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      window.location.reload()
-    } catch (error) {
-      console.error('Sign out failed:', error)
-    }
-  }
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8 md:p-24 max-w-4xl mx-auto">
-      <div className="absolute top-4 right-4 flex items-center gap-4">
-        {!loadingUser && (
-          user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                Signed in as <strong>{user.email || 'User'}</strong>
-              </span>
-              <button 
-                onClick={handleSignOut}
-                className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            <a 
-              href="/api/auth/login" 
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              Log In
-            </a>
-          )
-        )}
-      </div>
+      {!loadingUser && user && (
+        <div className="absolute top-4 right-4">
+          <span className="text-sm text-gray-600">
+            Signed in as <strong>{user.email || 'User'}</strong>
+          </span>
+        </div>
+      )}
 
       <h1 className="text-4xl font-bold mb-4 text-center">SolvaPay Custom GPT Actions API</h1>
       <p className="text-xl mb-12 text-center text-gray-600 max-w-2xl">
@@ -124,57 +98,32 @@ export default function Home() {
             <p className="text-sm text-gray-500">Use these details in the &quot;Authentication&quot; settings of your Custom GPT</p>
           </div>
           <div className="p-6 space-y-6">
-            {/* Authorization URL */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Authorization URL</label>
-              <div className="flex flex-col md:flex-row gap-4 items-center">
-                <code className="flex-1 p-3 bg-gray-100 rounded-lg text-sm font-mono break-all w-full">
-                  {authConfig ? authConfig.authUrl : 'Loading...'}
-                </code>
-                <button
-                  onClick={() => copyToClipboard(authConfig?.authUrl || '', setCopiedAuthUrl)}
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap text-sm font-medium min-w-[100px]"
+            {/* Instructions for getting OAuth credentials */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+              <h3 className="font-semibold text-amber-900">Get Your OAuth Credentials</h3>
+              <p className="text-sm text-amber-800">
+                Copy all OAuth credentials from the SolvaPay console. You&apos;ll need:
+              </p>
+              <ul className="text-sm text-amber-800 list-disc list-inside space-y-1 ml-2">
+                <li><strong>Client ID</strong></li>
+                <li><strong>Client Secret</strong></li>
+                <li><strong>Authorization URL</strong></li>
+                <li><strong>Token URL</strong></li>
+              </ul>
+              <div className="flex items-center gap-2">
+                <a 
+                  href="http://localhost:3000/provider/settings?tab=oauth" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-amber-900 hover:text-amber-700 underline font-medium"
                 >
-                  {copiedAuthUrl ? 'Copied!' : 'Copy'}
-                </button>
+                  Open SolvaPay Console →
+                </a>
               </div>
+         
             </div>
 
-            {/* Token URL */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Token URL</label>
-              <div className="flex flex-col md:flex-row gap-4 items-center">
-                <code className="flex-1 p-3 bg-gray-100 rounded-lg text-sm font-mono break-all w-full">
-                  {authConfig ? authConfig.tokenUrl : 'Loading...'}
-                </code>
-                <button
-                  onClick={() => copyToClipboard(authConfig?.tokenUrl || '', setCopiedTokenUrl)}
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap text-sm font-medium min-w-[100px]"
-                >
-                  {copiedTokenUrl ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
-            {/* Other Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Scope</label>
-                <code className="block w-full p-3 bg-gray-100 rounded-lg text-sm font-mono">
-                  openid email profile
-                </code>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Token Exchange Method</label>
-                <div className="block w-full p-3 bg-gray-100 rounded-lg text-sm text-gray-600">
-                  Default (POST request)
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
-              <strong>Note:</strong> Get your <strong>Client ID</strong> and <strong>Client Secret</strong> from the SolvaPay Dashboard.
-            </div>
+    
           </div>
         </div>
       </div>
