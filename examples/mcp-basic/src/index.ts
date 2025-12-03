@@ -2,11 +2,12 @@
 import 'dotenv/config'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
+  isInitializeRequest,
 } from '@modelcontextprotocol/sdk/types.js'
 import { createSolvaPay } from '@solvapay/server'
 import { createStubClient } from '../../shared/stub-api-client'
@@ -17,8 +18,11 @@ import type {
   ListTasksArgs,
   DeleteTaskArgs,
 } from './types/mcp'
-import express from 'express'
+import express, { Request, Response } from 'express'
 import cors from 'cors'
+import { randomUUID } from 'node:crypto'
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
+import type { EventStore, StreamId, EventId } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 
 // Initialize paywall system (using shared stub client)
 // Use in-memory storage for tests (file storage gets cleaned up by tests anyway)
@@ -228,6 +232,106 @@ function createMCPServer() {
   return server
 }
 
+// Simple in-memory event store for resumability support
+class SimpleEventStore implements EventStore {
+  private events: Map<StreamId, Array<{ eventId: EventId; message: JSONRPCMessage }>> = new Map()
+
+  /**
+   * Generates a unique event ID for a given stream ID
+   */
+  private generateEventId(streamId: StreamId): EventId {
+    return `${streamId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+  }
+
+  /**
+   * Extracts the stream ID from an event ID (format: streamId-timestamp-random)
+   */
+  private getStreamIdFromEventId(eventId: EventId): StreamId | undefined {
+    const parts = eventId.split('-')
+    if (parts.length >= 3) {
+      // Remove timestamp and random parts, rejoin the rest
+      return parts.slice(0, -2).join('-')
+    }
+    return undefined
+  }
+
+  /**
+   * Stores an event with a generated event ID
+   */
+  async storeEvent(streamId: StreamId, message: JSONRPCMessage): Promise<EventId> {
+    if (!this.events.has(streamId)) {
+      this.events.set(streamId, [])
+    }
+    const eventId = this.generateEventId(streamId)
+    this.events.get(streamId)!.push({ eventId, message })
+    return eventId
+  }
+
+  /**
+   * Get the stream ID associated with a given event ID
+   */
+  async getStreamIdForEventId(eventId: EventId): Promise<StreamId | undefined> {
+    return this.getStreamIdFromEventId(eventId)
+  }
+
+  /**
+   * Replays events that occurred after a specific event ID
+   */
+  async replayEventsAfter(
+    lastEventId: EventId,
+    { send }: { send: (eventId: EventId, message: JSONRPCMessage) => Promise<void> }
+  ): Promise<StreamId> {
+    const streamId = this.getStreamIdFromEventId(lastEventId)
+    if (!streamId) {
+      throw new Error(`Cannot determine stream ID for event ID: ${lastEventId}`)
+    }
+
+    const events = this.events.get(streamId) || []
+    const lastIndex = events.findIndex(e => e.eventId === lastEventId)
+
+    if (lastIndex < 0) {
+      // Event not found, return stream ID anyway
+      return streamId
+    }
+
+    // Replay events after the last event ID
+    for (let i = lastIndex + 1; i < events.length; i++) {
+      await send(events[i].eventId, events[i].message)
+    }
+
+    return streamId
+  }
+
+  clear(streamId: StreamId): void {
+    this.events.delete(streamId)
+  }
+}
+
+// Validate Origin header to prevent DNS rebinding attacks
+function validateOrigin(origin: string | undefined, host: string): boolean {
+  if (!origin) {
+    // Allow requests without Origin header (e.g., from same origin or curl)
+    return true
+  }
+
+  try {
+    const originUrl = new URL(origin)
+    // For localhost, allow localhost and 127.0.0.1
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return (
+        originUrl.hostname === 'localhost' ||
+        originUrl.hostname === '127.0.0.1' ||
+        originUrl.hostname === '[::1]'
+      )
+    }
+    // For production, validate against allowed origins
+    // You should configure this based on your deployment
+    return originUrl.hostname === host
+  } catch {
+    return false
+  }
+}
+
 // Start the server
 async function main() {
   const transportMode = process.env.MCP_TRANSPORT || 'stdio' // 'stdio' or 'http'
@@ -237,58 +341,215 @@ async function main() {
   if (transportMode === 'http') {
     const app = express()
     
-    // Allow CORS
-    app.use(cors())
-
-    const transports = new Map<string, SSEServerTransport>()
-
-    // SSE Endpoint
-    app.get('/mcp', async (req, res) => {
-      // Create a new transport for this connection
-      // The endpoint '/message' is where the client will post to
-      const transport = new SSEServerTransport('/message', res)
-      const server = createMCPServer()
-      
-      const sessionId = transport.sessionId
-      transports.set(sessionId, transport)
-
-      transport.onclose = () => {
-        transports.delete(sessionId)
+    // Parse JSON bodies
+    app.use(express.json())
+    
+    // CORS configuration - validate Origin header
+    app.use((req, res, next) => {
+      const origin = req.headers.origin
+      if (origin && !validateOrigin(origin, host)) {
+        res.status(403).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Invalid origin',
+          },
+          id: null,
+        })
+        return
       }
-
-      await server.connect(transport)
+      // Set CORS headers
+      if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin)
+      }
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, MCP-Session-Id, MCP-Protocol-Version, Last-Event-ID')
+      res.setHeader('Access-Control-Allow-Credentials', 'true')
+      
+      if (req.method === 'OPTIONS') {
+        res.status(204).end()
+        return
+      }
+      next()
     })
 
-    // Message Endpoint
-    app.post('/message', async (req, res) => {
-      const sessionId = req.query.sessionId as string
-      const transport = transports.get(sessionId)
+    // Map to store transports by session ID
+    const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {}
+    const eventStore = new SimpleEventStore()
 
-      if (!transport) {
-        res.status(404).end('Session not found')
+    // POST endpoint - handles JSON-RPC messages
+    app.post('/mcp', async (req: Request, res: Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined
+      const protocolVersion = req.headers['mcp-protocol-version'] as string | undefined
+
+      // Validate protocol version
+      if (protocolVersion && !['2024-11-05', '2025-03-26', '2025-11-25'].includes(protocolVersion)) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Unsupported protocol version',
+          },
+          id: null,
+        })
         return
       }
 
-      await transport.handlePostMessage(req, res)
+      try {
+        let transport: StreamableHTTPServerTransport
+
+        if (sessionId && transports[sessionId]) {
+          // Reuse existing transport for existing session
+          transport = transports[sessionId]
+        } else if (!sessionId && isInitializeRequest(req.body)) {
+          // New initialization request - create new transport
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            eventStore, // Enable resumability
+            onsessioninitialized: (sid) => {
+              console.log(`Session initialized with ID: ${sid}`)
+              transports[sid] = transport
+            },
+          })
+
+          // Set up cleanup handler
+          transport.onclose = () => {
+            const sid = transport.sessionId
+            if (sid && transports[sid]) {
+              console.log(`Transport closed for session ${sid}, cleaning up`)
+              delete transports[sid]
+              eventStore.clear(sid)
+            }
+          }
+
+          // Connect transport to server BEFORE handling request
+          const server = createMCPServer()
+          await server.connect(transport)
+
+          // Handle the initialization request
+          await transport.handleRequest(req, res, req.body)
+          return
+        } else {
+          // Invalid request - no session ID or not initialization
+          res.status(400).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32000,
+              message: 'Bad Request: No valid session ID provided',
+            },
+            id: null,
+          })
+          return
+        }
+
+        // Handle request with existing transport
+        await transport.handleRequest(req, res, req.body)
+      } catch (error) {
+        console.error('Error handling MCP request:', error)
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32603,
+              message: 'Internal server error',
+            },
+            id: null,
+          })
+        }
+      }
     })
 
-    // Helpful error for POST /mcp (old endpoint)
-    app.post('/mcp', (req, res) => {
-      res.status(400).json({
-        error: 'Invalid endpoint',
-        message: 'MCP HTTP transport has changed. Please use GET /mcp to establish an SSE connection, then POST to the URL provided in the "endpoint" event.'
-      })
+    // GET endpoint - opens SSE stream for server-to-client messages
+    app.get('/mcp', async (req: Request, res: Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined
+      const lastEventId = req.headers['last-event-id'] as string | undefined
+
+      if (!sessionId || !transports[sessionId]) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Invalid or missing session ID',
+          },
+          id: null,
+        })
+        return
+      }
+
+      if (lastEventId) {
+        console.log(`Client reconnecting with Last-Event-ID: ${lastEventId}`)
+      } else {
+        console.log(`Establishing new SSE stream for session ${sessionId}`)
+      }
+
+      const transport = transports[sessionId]
+      await transport.handleRequest(req, res)
+    })
+
+    // DELETE endpoint - session termination
+    app.delete('/mcp', async (req: Request, res: Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined
+
+      if (!sessionId || !transports[sessionId]) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Invalid or missing session ID',
+          },
+          id: null,
+        })
+        return
+      }
+
+      console.log(`Received session termination request for session ${sessionId}`)
+
+      try {
+        const transport = transports[sessionId]
+        await transport.handleRequest(req, res)
+        // Cleanup will happen in onclose handler
+      } catch (error) {
+        console.error('Error handling session termination:', error)
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32603,
+              message: 'Internal server error',
+            },
+            id: null,
+          })
+        }
+      }
     })
     
     // Health check endpoint
     app.get('/health', (_req, res) => {
-      res.json({ status: 'ok', transport: 'http-sse' })
+      res.json({ status: 'ok', transport: 'streamable-http' })
     })
 
-    app.listen(port, host, () => {
-      console.error(`🚀 SolvaPay CRUD MCP Server started (HTTP SSE mode)`)
-      console.error(`💡 MCP Endpoint: http://${host}:${port}/mcp`)
+    // Bind to localhost for security (unless explicitly configured otherwise)
+    const bindHost = host === '0.0.0.0' ? '127.0.0.1' : host
+
+    app.listen(port, bindHost, () => {
+      console.error(`🚀 SolvaPay CRUD MCP Server started (Streamable HTTP mode)`)
+      console.error(`💡 MCP Endpoint: http://${bindHost}:${port}/mcp`)
       console.error(`📝 Available tools: create_task, get_task, list_tasks, delete_task`)
+      console.error(`🔒 Security: Origin validation enabled, bound to ${bindHost}`)
+    })
+
+    // Handle server shutdown
+    process.on('SIGINT', async () => {
+      console.log('Shutting down server...')
+      for (const sessionId in transports) {
+        try {
+          await transports[sessionId].close()
+          delete transports[sessionId]
+        } catch (error) {
+          console.error(`Error closing transport for session ${sessionId}:`, error)
+        }
+      }
+      process.exit(0)
     })
 
   } else {

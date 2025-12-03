@@ -1,9 +1,10 @@
 /**
  * Test Client for SolvaPay MCP Server
  * 
- * This script demonstrates how to connect to the MCP server using the official SDK client.
+ * This script demonstrates how to connect to the MCP server using the official SDK client
+ * with the new Streamable HTTP transport pattern.
  * It simulates a full user flow:
- * 1. Connecting via SSE
+ * 1. Connecting via Streamable HTTP
  * 2. Initializing the session
  * 3. Listing tools
  * 4. Calling tools (free tier)
@@ -14,22 +15,17 @@
  */
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
-import { EventSource } from 'eventsource'
-
-// Polyfill EventSource for Node.js
-// @ts-ignore
-global.EventSource = EventSource
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 const PORT = process.env.MCP_PORT || 3003
 const HOST = process.env.MCP_HOST || 'localhost'
 const BASE_URL = `http://${HOST}:${PORT}`
 
 async function main() {
-  console.log('🔌 Connecting to MCP Server...')
+  console.log('🔌 Connecting to MCP Server (Streamable HTTP)...')
   
-  // Create transport
-  const transport = new SSEClientTransport(new URL(`${BASE_URL}/mcp`))
+  // Create transport using Streamable HTTP
+  const transport = new StreamableHTTPClientTransport(new URL(`${BASE_URL}/mcp`))
   
   // Create client
   const client = new Client(
@@ -116,11 +112,7 @@ async function main() {
   } finally {
     // Cleanup
     console.log('\n🧹 Closing connection...')
-    // @ts-ignore
-    if (transport._eventSource) {
-        // @ts-ignore
-        transport._eventSource.close()
-    }
+    await transport.close()
   }
 }
 

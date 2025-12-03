@@ -1,11 +1,12 @@
 # Testing MCP Server with Postman
 
-This guide explains how to test the SolvaPay MCP server using Postman.
+This guide explains how to test the SolvaPay MCP server using Postman with the **Streamable HTTP transport** (MCP spec 2025-11-25).
 
-> **⚠️ Important Change**: This example now uses the official `@modelcontextprotocol/sdk` which implements the standard MCP HTTP/SSE transport. This means:
-> 1. You must keep an **SSE (Server-Sent Events) connection open** to receive responses.
-> 2. `POST` requests now return `202 Accepted` immediately (empty body).
-> 3. Actual JSON-RPC responses are sent asynchronously over the SSE connection.
+> **✅ Updated**: This example now uses the official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport which implements the current MCP specification. This means:
+> 1. Single `/mcp` endpoint for all operations (POST/GET/DELETE)
+> 2. Session management via `MCP-Session-Id` header (not query parameters)
+> 3. Protocol version via `MCP-Protocol-Version` header
+> 4. Responses can be sent via SSE stream or directly in HTTP response
 
 ## Prerequisites
 
@@ -23,57 +24,73 @@ This guide explains how to test the SolvaPay MCP server using Postman.
 
 ## Testing Flow
 
-Testing requires two parallel operations:
-1. **Listening**: A long-lived connection to receive events.
-2. **Sending**: Individual HTTP POST requests to trigger actions.
+### Step 1: Initialize Session and Get Session ID
 
-### Step 1: Establish SSE Connection and Get Session ID
-
-1. In Postman, open the collection and run **"1. Connect SSE (Get Session ID)"**.
-2. **Keep this request tab open** - you'll see a stream of events in the response body.
-3. Look for the first event that looks like:
+1. In Postman, create a new **POST** request to `http://localhost:3003/mcp`
+2. **Headers**:
+   - `Content-Type: application/json`
+   - `Accept: application/json, text/event-stream`
+   - `MCP-Protocol-Version: 2025-11-25`
+3. **Body**:
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {},
+       "clientInfo": { "name": "postman", "version": "1.0.0" }
+     }
+   }
    ```
-   event: endpoint
-   data: /message?sessionId=b9a8c7d6-e5f4-4321-9876-abcdef123456
-   ```
-4. **Copy the sessionId** - in the example above, it's `b9a8c7d6-e5f4-4321-9876-abcdef123456` (the part after `sessionId=`).
-5. **Set the collection variable**:
+4. **Send the request**
+5. **Check the response headers** - Look for `MCP-Session-Id` header
+6. **Copy the session ID** from the header
+7. **Set the collection variable**:
    - Click the three dots (⋯) next to the collection name → **Edit**
    - Find the `session_id` variable
-   - Paste your copied session ID into the **Current Value** field
+   - Paste your session ID into the **Current Value** field
    - Click **Save**
-6. **Alternative**: Check the Postman Console (View → Show Postman Console) - the test script may have automatically extracted it.
+8. **Check the response body** - You should see the JSON-RPC initialize response
 
-⚠️ **Important**: The SSE connection must stay open for you to receive responses to your POST requests!
+### Step 2: Open SSE Stream (Optional but Recommended)
 
-### Step 2: Send JSON-RPC Messages
+1. Create a new **GET** request to `http://localhost:3003/mcp`
+2. **Headers**:
+   - `Accept: text/event-stream`
+   - `MCP-Session-Id: <YOUR_SESSION_ID>` (from Step 1)
+   - `MCP-Protocol-Version: 2025-11-25`
+3. **Keep this request tab open** - You'll see server notifications and responses here
+4. This stream allows you to receive server-initiated messages
+
+### Step 3: Send JSON-RPC Messages
 
 Now you can send commands using the session ID from Step 1.
 
-**Base URL**: `http://localhost:3003/message?sessionId=<YOUR_SESSION_ID>`
+**Base URL**: `http://localhost:3003/mcp`
 
-#### Initialize
+#### List Tools
 
 **Request:**
 - **Method**: `POST`
-- **URL**: `http://localhost:3003/message?sessionId=<SESSION_ID>`
-- **Headers**: `Content-Type: application/json`
+- **URL**: `http://localhost:3003/mcp`
+- **Headers**: 
+  - `Content-Type: application/json`
+  - `Accept: application/json, text/event-stream`
+  - `MCP-Session-Id: <SESSION_ID>` (from Step 1)
+  - `MCP-Protocol-Version: 2025-11-25`
 - **Body**:
   ```json
   {
     "jsonrpc": "2.0",
-    "id": 1,
-    "method": "initialize",
-    "params": {
-      "protocolVersion": "2024-11-05",
-      "capabilities": {},
-      "clientInfo": { "name": "postman", "version": "1.0.0" }
-    }
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
   }
   ```
 
-**Response (HTTP)**: `202 Accepted`
-**Response (SSE Stream)**: Look at your Step 1 tab to see the JSON-RPC response.
+**Response**: JSON-RPC response in the HTTP response body (or via SSE stream if stream was opened)
 
 #### List Tools
 
@@ -94,7 +111,12 @@ Now you can send commands using the session ID from Step 1.
 
 **Request:**
 - **Method**: `POST`
-- **URL**: `http://localhost:3003/message?sessionId=<SESSION_ID>`
+- **URL**: `http://localhost:3003/mcp`
+- **Headers**: 
+  - `Content-Type: application/json`
+  - `Accept: application/json, text/event-stream`
+  - `MCP-Session-Id: <SESSION_ID>` (from Step 1)
+  - `MCP-Protocol-Version: 2025-11-25`
 - **Body**:
   ```json
   {
@@ -113,75 +135,100 @@ Now you can send commands using the session ID from Step 1.
 
 ## Testing Paywall
 
-Since responses come via SSE, you'll need to watch the stream to see the paywall error.
-
-1. Make 3 requests (free tier).
-2. Make a 4th request.
-3. Check the SSE stream. You should see a response like:
+1. Make 3 requests (free tier) using the same `customer_ref`.
+2. Make a 4th request with the same `customer_ref`.
+3. Check the response. You should see a JSON-RPC error response like:
    ```json
    {
      "jsonrpc": "2.0",
      "id": 4,
-     "result": {
-       "content": [{
-         "type": "text",
-         "text": "{\"error\":\"Payment required\",\"checkoutUrl\":\"...\"}"
-       }],
-       "isError": true
+     "error": {
+       "code": -32000,
+       "message": "Payment required",
+       "data": {
+         "checkoutUrl": "...",
+         "agent": "basic-crud",
+         "remaining": 0
+       }
      }
    }
    ```
 
 ## Troubleshooting
 
-### "Session not found" Error
+### "Invalid or missing session ID" Error
 
-If you get a `404 Session not found` error when trying to initialize:
+If you get a `400 Bad Request` with "Invalid or missing session ID":
 
-1. **Check that you've completed Step 1**: Make sure you've run the "1. Connect SSE" request first
+1. **Check that you've completed Step 1**: Make sure you've initialized the session first
 2. **Verify the session_id variable**: 
    - Go to collection settings (three dots → Edit)
-   - Check that `session_id` has a value (not empty, not "REPLACE_WITH_ID_FROM_SSE")
+   - Check that `session_id` has a value
    - The session ID should look like: `b9a8c7d6-e5f4-4321-9876-abcdef123456`
-3. **Check the SSE connection**: The "1. Connect SSE" request must still be running/open
-4. **Verify the URL**: Make sure `base_url` is set to `http://localhost:3003`
-5. **Check Postman Console**: View → Show Postman Console to see if the test script extracted the session ID
+3. **Check the headers**: Make sure `MCP-Session-Id` header is included in your request
+4. **Verify the URL**: Make sure you're using `http://localhost:3003/mcp` (not `/message`)
 
-### SSE Connection Closed
+### "Invalid origin" Error
 
-If responses stop appearing:
-- The SSE connection may have timed out
-- Re-run "1. Connect SSE" to get a new session ID
-- Update the `session_id` variable with the new ID
+If you get a `403 Forbidden` with "Invalid origin":
 
-### No Response in SSE Stream
+- The server validates the `Origin` header for security
+- Make sure your requests include a valid `Origin` header
+- For localhost testing, use `Origin: http://localhost:3003` or omit it
 
-- Make sure the "1. Connect SSE" request tab is still open
-- Check that the server is running: `GET http://localhost:3003/health`
-- Look at the server console logs for errors
+### Session Expired
+
+If your session expires:
+
+- Re-initialize by sending a new `initialize` request (without `MCP-Session-Id` header)
+- Copy the new session ID from the response headers
+- Update the `session_id` variable
 
 ## Alternative: Testing with Curl
 
-It is often easier to test SSE with `curl` in a terminal:
-
-**Terminal 1 (Listen):**
+**Terminal 1 (Initialize and get session ID):**
 ```bash
-curl -N -H "Accept: text/event-stream" http://localhost:3003/mcp
-```
-
-**Terminal 2 (Send):**
-```bash
-# Replace SESSION_ID with the one from Terminal 1
-curl -X POST "http://localhost:3003/message?sessionId=SESSION_ID" \
+# Initialize session
+RESPONSE=$(curl -i -X POST "http://localhost:3003/mcp" \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
     "method": "initialize",
     "params": {
-      "protocolVersion": "2024-11-05",
+      "protocolVersion": "2025-11-25",
       "capabilities": {},
       "clientInfo": {"name": "curl", "version": "1.0.0"}
     }
+  }')
+
+# Extract session ID from headers
+SESSION_ID=$(echo "$RESPONSE" | grep -i "mcp-session-id" | cut -d' ' -f2 | tr -d '\r')
+echo "Session ID: $SESSION_ID"
+```
+
+**Terminal 2 (Open SSE stream - optional):**
+```bash
+curl -N "http://localhost:3003/mcp" \
+  -H "Accept: text/event-stream" \
+  -H "MCP-Session-Id: $SESSION_ID" \
+  -H "MCP-Protocol-Version: 2025-11-25"
+```
+
+**Terminal 3 (Send requests):**
+```bash
+# Replace SESSION_ID with the one from Terminal 1
+curl -X POST "http://localhost:3003/mcp" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "MCP-Session-Id: $SESSION_ID" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
   }'
 ```

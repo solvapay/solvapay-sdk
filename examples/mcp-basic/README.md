@@ -96,7 +96,7 @@ The server will start and listen for MCP client connections via stdio.
 
 #### Streamable HTTP Mode (External Access)
 
-To expose the MCP server externally via HTTP SSE (Server-Sent Events), set the `MCP_TRANSPORT` environment variable:
+To expose the MCP server externally via Streamable HTTP transport (MCP spec 2025-11-25), set the `MCP_TRANSPORT` environment variable:
 
 ```bash
 MCP_TRANSPORT=http MCP_PORT=3003 pnpm dev
@@ -111,45 +111,64 @@ MCP_HOST=localhost  # or 0.0.0.0 to bind to all interfaces
 ```
 
 **Features:**
-- ✅ Uses official `@modelcontextprotocol/sdk` SSEServerTransport
+- ✅ Uses official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport
+- ✅ Implements MCP Streamable HTTP transport (spec 2025-11-25)
+- ✅ Single `/mcp` endpoint for all operations (POST/GET/DELETE)
+- ✅ Header-based session management (`MCP-Session-Id`)
+- ✅ Protocol version negotiation (`MCP-Protocol-Version`)
+- ✅ Origin header validation for security
+- ✅ Resumability support with `Last-Event-ID`
 - ✅ Server-Sent Events (SSE) streaming support
-- ✅ Session management (handled by SDK)
-- ✅ Standard Express integration
 
 **MCP Endpoint:**
-- `GET /mcp` - Open SSE stream. Returns `endpoint` event with session-specific POST URL.
-- `POST /message?sessionId=...` - Send JSON-RPC messages (SDK handles routing).
+- `POST /mcp` - Send JSON-RPC messages (initialize, tool calls, etc.)
+- `GET /mcp` - Open SSE stream for server-to-client messages
+- `DELETE /mcp` - Terminate session
 
 **Example usage with MCP client:**
 
-For HTTP/SSE, the client flow is:
+For Streamable HTTP, the client flow is:
 
-1. **Connect to SSE Endpoint**:
+1. **Initialize Session** (POST to `/mcp`):
    ```bash
-   curl -N http://localhost:3003/mcp
-   ```
-   Server responds with an `endpoint` event containing the POST URL:
-   ```
-   event: endpoint
-   data: /message?sessionId=<UUID>
-   ```
-
-2. **Send Requests**:
-   Use the URL provided in the `data` field (e.g., `http://localhost:3003/message?sessionId=<UUID>`) to send JSON-RPC requests via POST.
-
-   ```bash
-   curl -X POST "http://localhost:3003/message?sessionId=<UUID>" \
+   curl -X POST "http://localhost:3003/mcp" \
      -H "Content-Type: application/json" \
+     -H "Accept: application/json, text/event-stream" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
      -d '{
        "jsonrpc": "2.0",
        "id": 1,
        "method": "initialize",
        "params": {
-         "protocolVersion": "2024-11-05",
+         "protocolVersion": "2025-11-25",
          "capabilities": {},
          "clientInfo": { "name": "test-client", "version": "1.0.0" }
        }
      }'
+   ```
+   Server responds with `MCP-Session-Id` header and JSON-RPC response.
+
+2. **Send Subsequent Requests** (include session ID):
+   ```bash
+   curl -X POST "http://localhost:3003/mcp" \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json, text/event-stream" \
+     -H "MCP-Session-Id: <SESSION_ID_FROM_INIT>" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 2,
+       "method": "tools/list",
+       "params": {}
+     }'
+   ```
+
+3. **Open SSE Stream** (GET to `/mcp`):
+   ```bash
+   curl -N "http://localhost:3003/mcp" \
+     -H "Accept: text/event-stream" \
+     -H "MCP-Session-Id: <SESSION_ID>" \
+     -H "MCP-Protocol-Version: 2025-11-25"
    ```
 
 **Additional Endpoints:**
