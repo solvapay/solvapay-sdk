@@ -344,7 +344,34 @@ export class StreamableHTTPTransport extends EventEmitter {
     try {
       // Access the MCP server's internal request handlers
       const serverInternal = this.mcpServer as any
-      const requestHandlers = serverInternal._requestHandlers || serverInternal.requestHandlers
+      
+      // Check if server has a request processing method we can use
+      if (typeof serverInternal.handleRequest === 'function') {
+        try {
+          const response = await serverInternal.handleRequest(request)
+          if (response) {
+            return response
+          }
+        } catch (e) {
+          // Fall through to manual handler lookup
+        }
+      }
+      
+      // Try multiple possible locations for handlers
+      let requestHandlers = serverInternal._requestHandlers 
+        || serverInternal.requestHandlers
+        || serverInternal.handlers
+        || (serverInternal._transport && serverInternal._transport._requestHandlers)
+      
+      // If still not found, try to get it from the server's internal state
+      if (!requestHandlers && serverInternal._state) {
+        requestHandlers = serverInternal._state.requestHandlers
+      }
+      
+      // Try accessing via _router or similar
+      if (!requestHandlers && serverInternal._router) {
+        requestHandlers = serverInternal._router._requestHandlers
+      }
 
       let result: any
 
@@ -382,16 +409,42 @@ export class StreamableHTTPTransport extends EventEmitter {
 
       // Handle other methods
       if (request.method === 'tools/list') {
-        const handler = requestHandlers?.get('tools/list')
+        let handler: any = null
+        
+        if (requestHandlers) {
+          // Handlers are stored with string keys, not schema objects
+          handler = requestHandlers.get('tools/list')
+          
+          // Fallback: try by index (usually index 2: ping, initialize, tools/list, tools/call)
+          if (!handler && requestHandlers.size >= 3) {
+            const handlers = Array.from(requestHandlers.values())
+            handler = handlers[2] // tools/list is usually the 3rd handler
+          }
+        }
+        
         if (handler) {
-          result = await handler({ params: {} })
+          // Handlers expect the full request object, not just params
+          result = await handler(request)
         } else {
           throw new Error('List tools handler not found')
         }
       } else if (request.method === 'tools/call') {
-        const handler = requestHandlers?.get('tools/call')
+        let handler: any = null
+        
+        if (requestHandlers) {
+          // Handlers are stored with string keys, not schema objects
+          handler = requestHandlers.get('tools/call')
+          
+          // Fallback: try by index (usually index 3: ping, initialize, tools/list, tools/call)
+          if (!handler && requestHandlers.size >= 4) {
+            const handlers = Array.from(requestHandlers.values())
+            handler = handlers[3] // tools/call is usually the 4th handler
+          }
+        }
+        
         if (handler) {
-          result = await handler({ params: request.params })
+          // Handlers expect the full request object, not just params
+          result = await handler(request)
         } else {
           throw new Error('Call tool handler not found')
         }

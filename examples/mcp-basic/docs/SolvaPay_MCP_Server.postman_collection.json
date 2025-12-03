@@ -1,0 +1,440 @@
+{
+	"info": {
+		"_postman_id": "solvapay-mcp-server",
+		"name": "SolvaPay MCP Server",
+		"description": "Collection for testing the SolvaPay MCP Server via HTTP transport",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Initialize Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Save session ID from response headers",
+							"const sessionId = pm.response.headers.get('MCP-Session-Id');",
+							"if (sessionId) {",
+							"    pm.collectionVariables.set('session_id', sessionId);",
+							"    console.log('Session ID saved:', sessionId);",
+							"}",
+							"",
+							"// Verify response",
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Response is JSON-RPC 2.0', function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-11-25\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman-client\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Initialize the MCP session. This must be called first to get a session ID."
+			},
+			"response": []
+		},
+		{
+			"name": "2. List Tools",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Response contains tools', function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.result).to.have.property('tools');",
+							"    pm.expect(jsonData.result.tools).to.be.an('array');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "List all available tools in the MCP server."
+			},
+			"response": []
+		},
+		{
+			"name": "3. Create Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"// Save task ID if successful",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.result && jsonData.result.content && jsonData.result.content[0]) {",
+							"    try {",
+							"        const taskData = JSON.parse(jsonData.result.content[0].text);",
+							"        if (taskData.task && taskData.task.id) {",
+							"            pm.collectionVariables.set('task_id', taskData.task.id);",
+							"            console.log('Task ID saved:', taskData.task.id);",
+							"        }",
+							"    } catch (e) {",
+							"        console.log('Could not parse task data');",
+							"    }",
+							"}",
+							"",
+							"// Check for paywall error",
+							"if (jsonData.error && jsonData.error.code === -32000) {",
+							"    console.log('Paywall triggered - checkout URL:', jsonData.error.data?.checkoutUrl);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"create_task\",\n    \"arguments\": {\n      \"title\": \"Test Task from Postman\",\n      \"description\": \"This is a test task created via Postman\",\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Create a new task. Requires auth.customer_ref. After 3 free calls, will return paywall error."
+			},
+			"response": []
+		},
+		{
+			"name": "4. List Tasks",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.result && jsonData.result.content) {",
+							"    console.log('Tasks retrieved successfully');",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"list_tasks\",\n    \"arguments\": {\n      \"limit\": 10,\n      \"offset\": 0,\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "List all tasks with pagination support."
+			},
+			"response": []
+		},
+		{
+			"name": "5. Get Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"get_task\",\n    \"arguments\": {\n      \"id\": \"{{task_id}}\",\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Get a specific task by ID. Requires task_id variable to be set (from Create Task response)."
+			},
+			"response": []
+		},
+		{
+			"name": "6. Delete Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"delete_task\",\n    \"arguments\": {\n      \"id\": \"{{task_id}}\",\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Delete a task by ID. Requires task_id variable to be set."
+			},
+			"response": []
+		},
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check if the server is running and healthy."
+			},
+			"response": []
+		},
+		{
+			"name": "Server Info",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						""
+					]
+				},
+				"description": "Get server information and capabilities."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "session_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "task_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "customer_ref",
+			"value": "user_123",
+			"type": "string"
+		}
+	]
+}
+
