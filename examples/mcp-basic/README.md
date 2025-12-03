@@ -96,125 +96,64 @@ The server will start and listen for MCP client connections via stdio.
 
 #### Streamable HTTP Mode (External Access)
 
-To expose the MCP server externally via the **MCP Streamable HTTP transport** (protocol version 2025-11-25), set the `MCP_TRANSPORT` environment variable:
+To expose the MCP server externally via HTTP SSE (Server-Sent Events), set the `MCP_TRANSPORT` environment variable:
 
 ```bash
-MCP_TRANSPORT=http MCP_PORT=3000 pnpm dev
+MCP_TRANSPORT=http MCP_PORT=3003 pnpm dev
 ```
 
 Or create a `.env` file:
 
 ```bash
 MCP_TRANSPORT=http
-MCP_PORT=3000
+MCP_PORT=3003
 MCP_HOST=localhost  # or 0.0.0.0 to bind to all interfaces
-MCP_ENDPOINT_PATH=/mcp  # MCP endpoint path (default: /mcp)
-MCP_ALLOWED_ORIGINS=*  # or comma-separated list of allowed origins
-MCP_AUTH_TOKEN=your-secret-token  # optional, for authentication
 ```
 
 **Features:**
-- ✅ Full MCP Streamable HTTP transport (2025-11-25)
-- ✅ Single MCP endpoint supporting POST and GET
+- ✅ Uses official `@modelcontextprotocol/sdk` SSEServerTransport
 - ✅ Server-Sent Events (SSE) streaming support
-- ✅ Session management with `MCP-Session-Id` header
-- ✅ Protocol version negotiation
-- ✅ Origin validation for security
-- ✅ Resumable connections with `Last-Event-ID`
+- ✅ Session management (handled by SDK)
+- ✅ Standard Express integration
 
 **MCP Endpoint:**
-- `POST /mcp` - Send JSON-RPC messages (requests, notifications, responses)
-- `GET /mcp` - Open SSE stream for server-to-client messages
-- `DELETE /mcp` - Terminate session (with `MCP-Session-Id` header)
+- `GET /mcp` - Open SSE stream. Returns `endpoint` event with session-specific POST URL.
+- `POST /message?sessionId=...` - Send JSON-RPC messages (SDK handles routing).
 
 **Example usage with MCP client:**
 
-```bash
-# 1. Initialize the MCP session
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "initialize",
-    "params": {
-      "protocolVersion": "2025-11-25",
-      "capabilities": {},
-      "clientInfo": {
-        "name": "example-client",
-        "version": "1.0.0"
-      }
-    }
-  }'
+For HTTP/SSE, the client flow is:
 
-# Response will include MCP-Session-Id header
-# Save the session ID for subsequent requests
+1. **Connect to SSE Endpoint**:
+   ```bash
+   curl -N http://localhost:3003/mcp
+   ```
+   Server responds with an `endpoint` event containing the POST URL:
+   ```
+   event: endpoint
+   data: /message?sessionId=<UUID>
+   ```
 
-# 2. List available tools
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -H "MCP-Session-Id: <session-id-from-initialize>" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 2,
-    "method": "tools/list",
-    "params": {}
-  }'
+2. **Send Requests**:
+   Use the URL provided in the `data` field (e.g., `http://localhost:3003/message?sessionId=<UUID>`) to send JSON-RPC requests via POST.
 
-# 3. Call a tool
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -H "MCP-Session-Id: <session-id>" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 3,
-    "method": "tools/call",
-    "params": {
-      "name": "list_tasks",
-      "arguments": {
-        "auth": {
-          "customer_ref": "user_123"
-        }
-      }
-    }
-  }'
-```
-
-**SSE Streaming Example:**
-
-For requests that accept SSE, the server will return a stream:
-
-```bash
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -H "MCP-Session-Id: <session-id>" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 4,
-    "method": "tools/call",
-    "params": {
-      "name": "list_tasks",
-      "arguments": {
-        "auth": {
-          "customer_ref": "user_123"
-        }
-      }
-    }
-  }' \
-  --no-buffer
-```
+   ```bash
+   curl -X POST "http://localhost:3003/message?sessionId=<UUID>" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 1,
+       "method": "initialize",
+       "params": {
+         "protocolVersion": "2024-11-05",
+         "capabilities": {},
+         "clientInfo": { "name": "test-client", "version": "1.0.0" }
+       }
+     }'
+   ```
 
 **Additional Endpoints:**
 - `GET /health` - Health check
-- `GET /` - Server information
 
 ### Run Tests
 
@@ -544,7 +483,23 @@ const apiClient = createStubClient({
 
 This example includes comprehensive tests for MCP integration.
 
-### Running Tests
+### Automated Client Test
+
+We provide a script to simulate a client connecting to the server:
+
+```bash
+# 1. Start the server (terminal 1)
+MCP_TRANSPORT=http MCP_PORT=3003 pnpm dev
+
+# 2. Run the test client (terminal 2)
+MCP_PORT=3003 pnpm test:client
+```
+
+### Manual Testing with Postman/Curl
+
+See [Testing with Postman](docs/POSTMAN_TESTING.md) for detailed instructions on how to test the SSE-based transport.
+
+### Running Automated Tests
 
 ```bash
 # Run all tests

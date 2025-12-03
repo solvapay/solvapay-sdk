@@ -11,13 +11,13 @@
  *   pnpm test:run http-transport-paywall
  * 
  * This test:
- * 1. Starts the MCP server in HTTP mode on port 3003
+ * 1. Starts the MCP server in HTTP mode on port 3006
  * 2. Makes HTTP requests to the /mcp endpoint
  * 3. Tests the full MCP protocol flow
  * 4. Verifies free tier works (first 3 calls succeed)
  * 5. Verifies paywall triggers after free tier (4th call returns checkout URL)
  * 
- * Note: The server is spawned as a separate process. Make sure port 3003 is available.
+ * Note: The server is spawned as a separate process. Make sure port 3006 is available.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
@@ -25,7 +25,7 @@ import { spawn, ChildProcess } from 'child_process'
 import { promises as fs } from 'fs'
 import path from 'path'
 
-const MCP_PORT = 3003 // Use different port to avoid conflicts
+const MCP_PORT = 3008 // Use different port to avoid conflicts
 const MCP_ENDPOINT = `http://localhost:${MCP_PORT}/mcp`
 const TEST_TIMEOUT = 60000 // Increased timeout for server startup
 
@@ -49,7 +49,9 @@ interface JSONRPCResponse {
 
 describe('MCP Streamable HTTP Transport with Paywall', () => {
   let serverProcess: ChildProcess | null = null
-  let sessionId: string | null = null
+  let sseController: AbortController | null = null
+  let postEndpoint: string | null = null
+  const pendingRequests = new Map<string | number, (response: JSONRPCResponse) => void>()
 
   beforeAll(async () => {
     // Clean up demo data for test isolation
@@ -94,32 +96,26 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
       })
 
       serverProcess.on('exit', (code, signal) => {
-        // Only reject if we haven't resolved yet and it's not a normal exit
-        // The server might exit after starting if there's an error, but we should
-        // check if it started successfully first
-        if (code !== null && code !== 0 && !serverOutput.includes('MCP Server listening')) {
+        if (code !== null && code !== 0 && !serverOutput.includes('SolvaPay CRUD MCP Server started')) {
           console.error('Server exited with code:', code, 'Output:', serverOutput)
           reject(new Error(`Server exited with code ${code} before starting. Output: ${serverOutput}`))
         }
-        // If server started but then exited, we'll catch it in the health check
       })
       const timeout = setTimeout(() => {
         console.error('Server output:', serverOutput)
         if (serverProcess) {
-          serverProcess.kill()
+          serverProcess.kill('SIGKILL')
         }
         reject(new Error(`Server failed to start within 20 seconds. Output: ${serverOutput}`))
       }, 20000)
 
       let attempts = 0
-      const maxAttempts = 200 // 20 seconds with 100ms intervals
+      const maxAttempts = 200 
 
       const checkServer = async () => {
         attempts++
         try {
-          // First, wait for server output to indicate it's listening
-          if (!serverOutput.includes('MCP Server listening') && !serverOutput.includes('listening on')) {
-            // Server hasn't started yet, keep waiting
+          if (!serverOutput.includes('SolvaPay CRUD MCP Server started')) {
             if (attempts < maxAttempts) {
               setTimeout(checkServer, 100)
               return
@@ -127,15 +123,13 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
               clearTimeout(timeout)
               console.error('Server never started. Output:', serverOutput)
               if (serverProcess) {
-                serverProcess.kill()
+                serverProcess.kill('SIGKILL')
               }
               reject(new Error(`Server never indicated it was listening. Output: ${serverOutput}`))
               return
             }
           }
 
-          // Server has indicated it's listening, now check health endpoint
-          // Give it a moment to fully start accepting connections
           if (attempts === 1 || (attempts % 5 === 0)) {
             await new Promise(resolve => setTimeout(resolve, 200))
           }
@@ -154,7 +148,6 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
             return
           }
         } catch (error: any) {
-          // Server not ready yet, try again
           if (attempts < maxAttempts) {
             setTimeout(checkServer, 100)
           } else {
@@ -162,26 +155,30 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
             console.error('Server output:', serverOutput)
             console.error('Last error:', error?.message || error)
             if (serverProcess) {
-              serverProcess.kill()
+              serverProcess.kill('SIGKILL')
             }
             reject(new Error(`Server health check failed after ${attempts} attempts. Output: ${serverOutput}`))
           }
         }
       }
 
-      // Start checking immediately
       checkServer()
     })
   }, TEST_TIMEOUT)
 
   afterAll(async () => {
+    // Close SSE connection
+    if (sseController) {
+        sseController.abort()
+    }
+
     // Clean up server process
     if (serverProcess) {
-      serverProcess.kill()
+      serverProcess.kill('SIGKILL')
       await new Promise<void>((resolve) => {
         if (serverProcess) {
           serverProcess.on('exit', () => resolve())
-          setTimeout(() => resolve(), 1000) // Force resolve after 1s
+          setTimeout(() => resolve(), 1000) 
         } else {
           resolve()
         }
@@ -198,24 +195,137 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
 
   beforeEach(() => {
     // Reset session for each test
-    sessionId = null
+    if (sseController) {
+        sseController.abort()
+        sseController = null
+    }
+    postEndpoint = null
+    pendingRequests.clear()
   })
+
+  async function connectSSE() {
+    sseController = new AbortController()
+    const response = await fetch(MCP_ENDPOINT, {
+        headers: { 'Accept': 'text/event-stream' },
+        signal: sseController.signal,
+    })
+
+    if (!response.ok) throw new Error(`Failed to connect to SSE: ${response.status}`)
+    if (!response.body) throw new Error('No response body')
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    
+    // Start background reader
+    const readLoop = async () => {
+        try {
+            while (true) {
+                const { value, done } = await reader.read()
+                if (done) break
+                
+                buffer += decoder.decode(value, { stream: true })
+                
+                const events = buffer.split('\n\n')
+                // If buffer ends with \n\n, last element is empty string.
+                // If not, last element is partial event.
+                // We should keep the last element as buffer if it's not empty, or if we are not at done?
+                // Split logic: 'a\n\nb'.split('\n\n') -> ['a', 'b']
+                // If buffer is 'data: foo\n\n', split -> ['data: foo', '']
+                // So if last element is empty, we have complete events.
+                // If last element is not empty, it's partial.
+                
+                // Better approach:
+                // Check if buffer ends with \n\n.
+                // But partial read is tricky.
+                
+                // Simplified:
+                // Just process what we have.
+                if (events.length > 1) {
+                     // We have at least one complete event
+                     const completeEvents = events.slice(0, -1)
+                     buffer = events[events.length - 1]
+                     
+                     for (const eventBlock of completeEvents) {
+                        const lines = eventBlock.split('\n')
+                        let eventType = 'message'
+                        let data = ''
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('event: ')) {
+                                eventType = line.substring(7).trim()
+                            } else if (line.startsWith('data: ')) {
+                                data = line.substring(6).trim()
+                            }
+                        }
+                        
+                        if (eventType === 'endpoint') {
+                            if (data.includes('?sessionId=')) {
+                                 // data format: /message?sessionId=UUID
+                                 const trimmed = data.trim()
+                                 if (trimmed.startsWith('/')) {
+                                     postEndpoint = `http://localhost:${MCP_PORT}${trimmed}`
+                                 } else {
+                                     postEndpoint = trimmed
+                                 }
+                            }
+                        } else if (eventType === 'message' && data) {
+                            try {
+                                const msg = JSON.parse(data)
+                                if (msg.id !== undefined && pendingRequests.has(msg.id)) {
+                                    pendingRequests.get(msg.id)!(msg)
+                                    pendingRequests.delete(msg.id)
+                                }
+                            } catch (e) { console.error('Failed to parse message', e) }
+                        }
+                     }
+                }
+            }
+        } catch (e: any) {
+            if (e.name !== 'AbortError') console.error('SSE Read Error', e)
+        }
+    }
+    
+    // Start reading but don't await loop (it's infinite until closed)
+    readLoop()
+    
+    // Wait for endpoint
+    let attempts = 0
+    while (!postEndpoint && attempts < 20) {
+        await new Promise(r => setTimeout(r, 100))
+        attempts++
+    }
+    
+    if (!postEndpoint) throw new Error('Timeout waiting for endpoint event')
+  }
 
   /**
    * Helper to send JSON-RPC requests to the MCP server
    */
   async function sendRequest(request: JSONRPCRequest): Promise<JSONRPCResponse> {
+    if (!postEndpoint) {
+        await connectSSE()
+    }
+    
+    if (!postEndpoint) throw new Error('Failed to establish SSE connection and get endpoint')
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json, text/event-stream',
-      'MCP-Protocol-Version': '2025-11-25',
+      'MCP-Protocol-Version': '2024-11-05',
     }
+    
+    const responsePromise = new Promise<JSONRPCResponse>((resolve, reject) => {
+        pendingRequests.set(request.id, resolve)
+        setTimeout(() => {
+            if (pendingRequests.has(request.id)) {
+                pendingRequests.delete(request.id)
+                reject(new Error(`Timeout waiting for response to request ${request.id}`))
+            }
+        }, 5000)
+    })
 
-    if (sessionId) {
-      headers['MCP-Session-Id'] = sessionId
-    }
-
-    const response = await fetch(MCP_ENDPOINT, {
+    const response = await fetch(postEndpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(request),
@@ -224,14 +334,9 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${await response.text()}`)
     }
-
-    // Check for session ID in response headers
-    const newSessionId = response.headers.get('MCP-Session-Id')
-    if (newSessionId && !sessionId) {
-      sessionId = newSessionId
-    }
-
-    return response.json()
+    
+    // The response body of POST is "Accepted", we wait for the SSE message
+    return responsePromise
   }
 
   describe('Server Initialization', () => {
@@ -241,7 +346,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: {
             name: 'test-client',
@@ -254,7 +359,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
       expect(response.id).toBe(1)
       expect(response.error).toBeUndefined()
       expect(response.result).toBeDefined()
-      expect(response.result.protocolVersion).toBe('2025-11-25')
+      expect(response.result.protocolVersion).toBe('2024-11-05')
       expect(response.result.capabilities).toBeDefined()
       expect(response.result.serverInfo).toBeDefined()
       expect(response.result.serverInfo.name).toBe('solvapay-crud-mcp-server')
@@ -269,7 +374,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: { name: 'test', version: '1.0.0' },
         },
@@ -307,7 +412,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: { name: 'test', version: '1.0.0' },
         },
@@ -375,7 +480,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: { name: 'test', version: '1.0.0' },
         },
@@ -460,7 +565,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: { name: 'test', version: '1.0.0' },
         },
@@ -526,7 +631,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: { name: 'test', version: '1.0.0' },
         },
@@ -581,7 +686,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: { name: 'test', version: '1.0.0' },
         },
@@ -612,7 +717,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-25',
+          protocolVersion: '2024-11-05',
           capabilities: {},
           clientInfo: { name: 'test', version: '1.0.0' },
         },
@@ -636,4 +741,3 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
     })
   })
 })
-

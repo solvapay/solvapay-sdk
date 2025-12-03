@@ -2,392 +2,102 @@
 
 This guide explains how to test the SolvaPay MCP server using Postman.
 
+> **⚠️ Important Change**: This example now uses the official `@modelcontextprotocol/sdk` which implements the standard MCP HTTP/SSE transport. This means:
+> 1. You must keep an **SSE (Server-Sent Events) connection open** to receive responses.
+> 2. `POST` requests now return `202 Accepted` immediately (empty body).
+> 3. Actual JSON-RPC responses are sent asynchronously over the SSE connection.
+
 ## Prerequisites
 
 1. **Start the server in HTTP mode**:
+   
+   We recommend using port **3003** to avoid conflicts with other local development servers (like Next.js on 3000).
+
    ```bash
    cd examples/mcp-basic
-   MCP_TRANSPORT=http MCP_PORT=3000 pnpm dev
-   ```
-
-   Or create a `.env` file:
-   ```env
-   MCP_TRANSPORT=http
-   MCP_PORT=3000
-   MCP_HOST=localhost
+   MCP_TRANSPORT=http MCP_PORT=3003 pnpm dev
    ```
 
 2. **Verify the server is running**:
-   - Health check: `GET http://localhost:3000/health`
-   - Server info: `GET http://localhost:3000/`
+   - Health check: `GET http://localhost:3003/health`
 
-## Postman Setup
+## Testing Flow
 
-### Base Configuration
+Testing requires two parallel operations:
+1. **Listening**: A long-lived connection to receive events.
+2. **Sending**: Individual HTTP POST requests to trigger actions.
 
-- **Base URL**: `http://localhost:3000`
-- **MCP Endpoint**: `http://localhost:3000/mcp`
+### Step 1: Establish SSE Connection and Get Session ID
 
-### Required Headers
-
-For all MCP requests, include these headers:
-
-```
-Content-Type: application/json
-MCP-Protocol-Version: 2025-11-25
-Accept: application/json
-```
-
-After initialization, also include:
-```
-MCP-Session-Id: <session-id-from-initialize-response>
-```
-
-## Step-by-Step Testing
-
-### Step 1: Initialize the MCP Session
-
-**Request:**
-- **Method**: `POST`
-- **URL**: `http://localhost:3000/mcp`
-- **Headers**:
-  ```
-  Content-Type: application/json
-  MCP-Protocol-Version: 2025-11-25
-  Accept: application/json
-  ```
-- **Body** (raw JSON):
-  ```json
-  {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "initialize",
-    "params": {
-      "protocolVersion": "2025-11-25",
-      "capabilities": {},
-      "clientInfo": {
-        "name": "postman-client",
-        "version": "1.0.0"
-      }
-    }
-  }
-  ```
-
-**Response:**
-- Status: `200 OK`
-- Headers: Look for `MCP-Session-Id` in the response headers
-- Body: JSON response with server capabilities
-
-**Important**: Copy the `MCP-Session-Id` from the response headers for subsequent requests.
-
-### Step 2: List Available Tools
-
-**Request:**
-- **Method**: `POST`
-- **URL**: `http://localhost:3000/mcp`
-- **Headers**:
-  ```
-  Content-Type: application/json
-  MCP-Protocol-Version: 2025-11-25
-  Accept: application/json
-  MCP-Session-Id: <session-id-from-step-1>
-  ```
-- **Body** (raw JSON):
-  ```json
-  {
-    "jsonrpc": "2.0",
-    "id": 2,
-    "method": "tools/list",
-    "params": {}
-  }
-  ```
-
-**Response:**
-- Should return a list of available tools: `create_task`, `get_task`, `list_tasks`, `delete_task`
-
-### Step 3: Call a Tool (Within Free Tier)
-
-**Request:**
-- **Method**: `POST`
-- **URL**: `http://localhost:3000/mcp`
-- **Headers**:
-  ```
-  Content-Type: application/json
-  MCP-Protocol-Version: 2025-11-25
-  Accept: application/json
-  MCP-Session-Id: <session-id>
-  ```
-- **Body** (raw JSON) - Create Task:
-  ```json
-  {
-    "jsonrpc": "2.0",
-    "id": 3,
-    "method": "tools/call",
-    "params": {
-      "name": "create_task",
-      "arguments": {
-        "title": "Test Task from Postman",
-        "description": "This is a test task created via Postman",
-        "auth": {
-          "customer_ref": "user_123"
-        }
-      }
-    }
-  }
-  ```
-
-**Response:**
-- Should return success with task details
-
-### Step 4: Test Other Tools
-
-#### List Tasks
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 4,
-  "method": "tools/call",
-  "params": {
-    "name": "list_tasks",
-    "arguments": {
-      "limit": 10,
-      "offset": 0,
-      "auth": {
-        "customer_ref": "user_123"
-      }
-    }
-  }
-}
-```
-
-#### Get Task
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 5,
-  "method": "tools/call",
-  "params": {
-    "name": "get_task",
-    "arguments": {
-      "id": "<task-id-from-create>",
-      "auth": {
-        "customer_ref": "user_123"
-      }
-    }
-  }
-}
-```
-
-#### Delete Task
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 6,
-  "method": "tools/call",
-  "params": {
-    "name": "delete_task",
-    "arguments": {
-      "id": "<task-id-to-delete>",
-      "auth": {
-        "customer_ref": "user_123"
-      }
-    }
-  }
-}
-```
-
-### Step 5: Test Paywall (After Free Tier Limit)
-
-After making 3 requests (the free tier limit), the next request should return a paywall error:
-
-**Request**: Same as Step 3 (create_task)
-
-**Expected Response**:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 7,
-  "error": {
-    "code": -32000,
-    "message": "Payment required",
-    "data": {
-      "checkoutUrl": "https://checkout.solvapay.com/...",
-      "agent": "basic-crud",
-      "remaining": 0
-    }
-  }
-}
-```
-
-## Postman Collection Setup
-
-### Creating a Postman Collection
-
-1. **Create a new Collection** named "SolvaPay MCP Server"
-
-2. **Set Collection Variables**:
-   - `base_url`: `http://localhost:3000`
-   - `mcp_endpoint`: `{{base_url}}/mcp`
-   - `session_id`: (will be set automatically)
-
-3. **Create Requests**:
-
-   #### Request 1: Initialize
-   - Name: `1. Initialize Session`
-   - Method: `POST`
-   - URL: `{{mcp_endpoint}}`
-   - Headers:
-     - `Content-Type`: `application/json`
-     - `MCP-Protocol-Version`: `2025-11-25`
-     - `Accept`: `application/json`
-   - Body: Use the initialize JSON from Step 1
-   - **Tests Tab** (to save session ID):
-     ```javascript
-     if (pm.response.headers.get("MCP-Session-Id")) {
-         pm.collectionVariables.set("session_id", pm.response.headers.get("MCP-Session-Id"));
-     }
-     ```
-
-   #### Request 2: List Tools
-   - Name: `2. List Tools`
-   - Method: `POST`
-   - URL: `{{mcp_endpoint}}`
-   - Headers:
-     - `Content-Type`: `application/json`
-     - `MCP-Protocol-Version`: `2025-11-25`
-     - `Accept`: `application/json`
-     - `MCP-Session-Id`: `{{session_id}}`
-   - Body: Use the tools/list JSON from Step 2
-
-   #### Request 3: Create Task
-   - Name: `3. Create Task`
-   - Method: `POST`
-   - URL: `{{mcp_endpoint}}`
-   - Headers:
-     - `Content-Type`: `application/json`
-     - `MCP-Protocol-Version`: `2025-11-25`
-     - `Accept`: `application/json`
-     - `MCP-Session-Id`: `{{session_id}}`
-   - Body: Use the create_task JSON from Step 3
-   - **Tests Tab** (to save task ID):
-     ```javascript
-     const response = pm.response.json();
-     if (response.result && response.result.content && response.result.content[0]) {
-         const task = JSON.parse(response.result.content[0].text);
-         if (task.task && task.task.id) {
-             pm.collectionVariables.set("task_id", task.task.id);
-         }
-     }
-     ```
-
-   #### Request 4: List Tasks
-   - Name: `4. List Tasks`
-   - Method: `POST`
-   - URL: `{{mcp_endpoint}}`
-   - Headers: Same as Request 3
-   - Body: Use the list_tasks JSON from Step 4
-
-   #### Request 5: Get Task
-   - Name: `5. Get Task`
-   - Method: `POST`
-   - URL: `{{mcp_endpoint}}`
-   - Headers: Same as Request 3
-   - Body: Use the get_task JSON from Step 4, with `{{task_id}}` variable
-
-   #### Request 6: Delete Task
-   - Name: `6. Delete Task`
-   - Method: `POST`
-   - URL: `{{mcp_endpoint}}`
-   - Headers: Same as Request 3
-   - Body: Use the delete_task JSON from Step 4, with `{{task_id}}` variable
-
-## Testing Paywall
-
-To test the paywall:
-
-1. **Reset free tier** (if needed):
-   ```bash
-   rm -rf .demo-data
+1. In Postman, open the collection and run **"1. Connect SSE (Get Session ID)"**.
+2. **Keep this request tab open** - you'll see a stream of events in the response body.
+3. Look for the first event that looks like:
    ```
+   event: endpoint
+   data: /message?sessionId=b9a8c7d6-e5f4-4321-9876-abcdef123456
+   ```
+4. **Copy the sessionId** - in the example above, it's `b9a8c7d6-e5f4-4321-9876-abcdef123456` (the part after `sessionId=`).
+5. **Set the collection variable**:
+   - Click the three dots (⋯) next to the collection name → **Edit**
+   - Find the `session_id` variable
+   - Paste your copied session ID into the **Current Value** field
+   - Click **Save**
+6. **Alternative**: Check the Postman Console (View → Show Postman Console) - the test script may have automatically extracted it.
 
-2. **Make 3 requests** using the same `customer_ref` (e.g., "user_123")
+⚠️ **Important**: The SSE connection must stay open for you to receive responses to your POST requests!
 
-3. **Make a 4th request** - should return paywall error with checkout URL
+### Step 2: Send JSON-RPC Messages
 
-4. **Try different customer_ref** (e.g., "user_456") - should have fresh free tier
+Now you can send commands using the session ID from Step 1.
 
-## Server-Sent Events (SSE) Testing
+**Base URL**: `http://localhost:3003/message?sessionId=<YOUR_SESSION_ID>`
 
-For SSE streaming, change the `Accept` header to:
-```
-Accept: application/json, text/event-stream
-```
+#### Initialize
 
-Postman will display the SSE stream in the response. Note that Postman's SSE support may be limited - for full SSE testing, consider using `curl` or a dedicated SSE client.
-
-## Troubleshooting
-
-### Server Not Responding
-- Check server is running: `GET http://localhost:3000/health`
-- Verify `MCP_TRANSPORT=http` is set
-- Check console logs for errors
-
-### Session ID Not Working
-- Make sure to initialize first
-- Copy the `MCP-Session-Id` from response headers exactly
-- Sessions expire after inactivity (default timeout)
-
-### Paywall Not Triggering
-- Verify you're using the same `customer_ref` in `auth.customer_ref`
-- Check that you've made 3+ requests (free tier limit)
-- Review server console logs for debug information
-
-### CORS Errors
-- If testing from browser, ensure `MCP_ALLOWED_ORIGINS` includes your origin
-- Postman typically doesn't have CORS issues
-
-## Example cURL Commands
-
-For reference, here are equivalent cURL commands:
-
-```bash
-# Initialize
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -H "Accept: application/json" \
-  -d '{
+**Request:**
+- **Method**: `POST`
+- **URL**: `http://localhost:3003/message?sessionId=<SESSION_ID>`
+- **Headers**: `Content-Type: application/json`
+- **Body**:
+  ```json
+  {
     "jsonrpc": "2.0",
     "id": 1,
     "method": "initialize",
     "params": {
-      "protocolVersion": "2025-11-25",
+      "protocolVersion": "2024-11-05",
       "capabilities": {},
-      "clientInfo": {"name": "curl-client", "version": "1.0.0"}
+      "clientInfo": { "name": "postman", "version": "1.0.0" }
     }
-  }' \
-  -i
+  }
+  ```
 
-# List Tools (replace SESSION_ID)
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -H "Accept: application/json" \
-  -H "MCP-Session-Id: SESSION_ID" \
-  -d '{
+**Response (HTTP)**: `202 Accepted`
+**Response (SSE Stream)**: Look at your Step 1 tab to see the JSON-RPC response.
+
+#### List Tools
+
+**Request:**
+- **Method**: `POST`
+- **URL**: `http://localhost:3003/message?sessionId=<SESSION_ID>`
+- **Body**:
+  ```json
+  {
     "jsonrpc": "2.0",
     "id": 2,
     "method": "tools/list",
     "params": {}
-  }'
+  }
+  ```
 
-# Create Task (replace SESSION_ID)
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "MCP-Protocol-Version: 2025-11-25" \
-  -H "Accept: application/json" \
-  -H "MCP-Session-Id: SESSION_ID" \
-  -d '{
+#### Call Tool (Create Task)
+
+**Request:**
+- **Method**: `POST`
+- **URL**: `http://localhost:3003/message?sessionId=<SESSION_ID>`
+- **Body**:
+  ```json
+  {
     "jsonrpc": "2.0",
     "id": 3,
     "method": "tools/call",
@@ -395,9 +105,83 @@ curl -X POST http://localhost:3000/mcp \
       "name": "create_task",
       "arguments": {
         "title": "Test Task",
-        "auth": {"customer_ref": "user_123"}
+        "auth": { "customer_ref": "user_123" }
       }
+    }
+  }
+  ```
+
+## Testing Paywall
+
+Since responses come via SSE, you'll need to watch the stream to see the paywall error.
+
+1. Make 3 requests (free tier).
+2. Make a 4th request.
+3. Check the SSE stream. You should see a response like:
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "result": {
+       "content": [{
+         "type": "text",
+         "text": "{\"error\":\"Payment required\",\"checkoutUrl\":\"...\"}"
+       }],
+       "isError": true
+     }
+   }
+   ```
+
+## Troubleshooting
+
+### "Session not found" Error
+
+If you get a `404 Session not found` error when trying to initialize:
+
+1. **Check that you've completed Step 1**: Make sure you've run the "1. Connect SSE" request first
+2. **Verify the session_id variable**: 
+   - Go to collection settings (three dots → Edit)
+   - Check that `session_id` has a value (not empty, not "REPLACE_WITH_ID_FROM_SSE")
+   - The session ID should look like: `b9a8c7d6-e5f4-4321-9876-abcdef123456`
+3. **Check the SSE connection**: The "1. Connect SSE" request must still be running/open
+4. **Verify the URL**: Make sure `base_url` is set to `http://localhost:3003`
+5. **Check Postman Console**: View → Show Postman Console to see if the test script extracted the session ID
+
+### SSE Connection Closed
+
+If responses stop appearing:
+- The SSE connection may have timed out
+- Re-run "1. Connect SSE" to get a new session ID
+- Update the `session_id` variable with the new ID
+
+### No Response in SSE Stream
+
+- Make sure the "1. Connect SSE" request tab is still open
+- Check that the server is running: `GET http://localhost:3003/health`
+- Look at the server console logs for errors
+
+## Alternative: Testing with Curl
+
+It is often easier to test SSE with `curl` in a terminal:
+
+**Terminal 1 (Listen):**
+```bash
+curl -N -H "Accept: text/event-stream" http://localhost:3003/mcp
+```
+
+**Terminal 2 (Send):**
+```bash
+# Replace SESSION_ID with the one from Terminal 1
+curl -X POST "http://localhost:3003/message?sessionId=SESSION_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "curl", "version": "1.0.0"}
     }
   }'
 ```
-

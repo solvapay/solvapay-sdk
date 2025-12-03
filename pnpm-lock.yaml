@@ -294,6 +294,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^2.0.5
         version: 2.1.9(vitest@2.1.9(@types/node@20.19.24)(jsdom@23.2.0))
+      eventsource:
+        specifier: ^4.1.0
+        version: 4.1.0
       nodemon:
         specifier: ^3.1.0
         version: 3.1.10
@@ -341,7 +344,7 @@ importers:
         version: 5.10.0
       next:
         specifier: ^15.0.0
-        version: 15.5.6(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.5.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.0
         version: 18.3.1
@@ -2874,6 +2877,14 @@ packages:
   etag@1.8.1:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
+
+  eventsource-parser@3.0.6:
+    resolution: {integrity: sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg==}
+    engines: {node: '>=18.0.0'}
+
+  eventsource@4.1.0:
+    resolution: {integrity: sha512-2GuF51iuHX6A9xdTccMTsNb7VO0lHZihApxhvQzJB5A03DvHDd2FQepodbMaztPBmBcE/ox7o2gqaxGhYB9LhQ==}
+    engines: {node: '>=20.0.0'}
 
   execa@8.0.1:
     resolution: {integrity: sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg==}
@@ -7507,6 +7518,12 @@ snapshots:
 
   etag@1.8.1: {}
 
+  eventsource-parser@3.0.6: {}
+
+  eventsource@4.1.0:
+    dependencies:
+      eventsource-parser: 3.0.6
+
   execa@8.0.1:
     dependencies:
       cross-spawn: 7.0.6
@@ -8420,7 +8437,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@15.5.6(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@15.5.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 15.5.6
       '@swc/helpers': 0.5.15
@@ -8428,7 +8445,7 @@ snapshots:
       postcss: 8.4.31
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      styled-jsx: 5.1.6(@babel/core@7.28.5)(react@18.3.1)
+      styled-jsx: 5.1.6(react@18.3.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.5.6
       '@next/swc-darwin-x64': 15.5.6
@@ -9324,12 +9341,10 @@ snapshots:
       '@types/node': 20.19.24
       qs: 6.14.0
 
-  styled-jsx@5.1.6(@babel/core@7.28.5)(react@18.3.1):
+  styled-jsx@5.1.6(react@18.3.1):
     dependencies:
       client-only: 0.0.1
       react: 18.3.1
-    optionalDependencies:
-      '@babel/core': 7.28.5
 
   styled-jsx@5.1.6(react@19.2.0):
     dependencies:
