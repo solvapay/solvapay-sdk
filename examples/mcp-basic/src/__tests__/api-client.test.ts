@@ -16,10 +16,8 @@ describe('StubSolvaPayClient', () => {
 
       // First call should be within free tier
       const result1 = await apiClient.checkLimits({
-        requestId: 'test_request_1',
         customerRef,
         agentRef: planRef,
-        planRef: 'test_endpoint',
       })
       expect(result1.withinLimits).toBe(true)
       expect(result1.plan).toBe('free')
@@ -27,10 +25,8 @@ describe('StubSolvaPayClient', () => {
 
       // Second call should still be within free tier
       const result2 = await apiClient.checkLimits({
-        requestId: 'test_request_2',
         customerRef,
         agentRef: planRef,
-        planRef: 'test_endpoint',
       })
       expect(result2.withinLimits).toBe(true)
       expect(result2.plan).toBe('free')
@@ -44,10 +40,8 @@ describe('StubSolvaPayClient', () => {
       // This is a simplified test - in real implementation,
       // the daily reset logic would be more complex
       const result = await apiClient.checkLimits({
-        requestId: 'test_request_3',
         customerRef,
         agentRef: planRef,
-        planRef: 'test_endpoint',
       })
       expect(result.withinLimits).toBe(true)
       expect(result.plan).toBe('free')
@@ -57,10 +51,8 @@ describe('StubSolvaPayClient', () => {
   describe('Receipt Verification', () => {
     it('should return paid plan for customers with credits', async () => {
       const result = await apiClient.checkLimits({
-        requestId: 'test_request_4',
         customerRef: 'demo_customer',
         agentRef: 'test_product',
-        planRef: 'test_endpoint',
       })
       expect(result.withinLimits).toBe(true)
       expect(result.plan).toBe('paid')
@@ -69,10 +61,8 @@ describe('StubSolvaPayClient', () => {
 
     it('should return free plan for customers without credits', async () => {
       const result = await apiClient.checkLimits({
-        requestId: 'test_request_5',
         customerRef: 'test_customer',
         agentRef: 'test_product',
-        planRef: 'test_endpoint',
       })
       expect(result.withinLimits).toBe(true) // Within free tier
       expect(result.plan).toBe('free')
@@ -82,10 +72,8 @@ describe('StubSolvaPayClient', () => {
       apiClient.addCredits('test_customer', 50)
 
       const result = await apiClient.checkLimits({
-        requestId: 'test_request_6',
         customerRef: 'test_customer',
         agentRef: 'test_product',
-        planRef: 'test_endpoint',
       })
       expect(result.withinLimits).toBe(true)
       expect(result.plan).toBe('paid')

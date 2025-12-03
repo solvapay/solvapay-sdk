@@ -340,7 +340,7 @@ export class StreamableHTTPTransport extends EventEmitter {
     request: JSONRPCRequest,
     sessionId?: string,
     protocolVersion?: string
-  ): Promise<JSONRPCResponse> {
+  ): Promise<JSONRPCResponse & { _mcpSessionId?: string }> {
     try {
       // Access the MCP server's internal request handlers
       const serverInternal = this.mcpServer as any
@@ -404,7 +404,7 @@ export class StreamableHTTPTransport extends EventEmitter {
           id: request.id,
           result,
           _mcpSessionId: actualSessionId, // Custom field for transport
-        }
+        } as JSONRPCResponse & { _mcpSessionId?: string }
       }
 
       // Handle other methods
@@ -456,14 +456,14 @@ export class StreamableHTTPTransport extends EventEmitter {
             code: -32601,
             message: 'Method not found',
           },
-        }
+        } as unknown as JSONRPCResponse & { _mcpSessionId?: string }
       }
 
       return {
         jsonrpc: '2.0',
         id: request.id,
         result,
-      }
+      } as JSONRPCResponse & { _mcpSessionId?: string }
     } catch (error: any) {
       return {
         jsonrpc: '2.0',
@@ -473,7 +473,7 @@ export class StreamableHTTPTransport extends EventEmitter {
           message: 'Internal error',
           data: error.message,
         },
-      }
+      } as unknown as JSONRPCResponse & { _mcpSessionId?: string }
     }
   }
 

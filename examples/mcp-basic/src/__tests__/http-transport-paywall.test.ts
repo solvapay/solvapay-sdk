@@ -82,6 +82,11 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
 
     // Wait for server to be ready
     await new Promise<void>((resolve, reject) => {
+      if (!serverProcess) {
+        reject(new Error('Failed to start server: process is null'))
+        return
+      }
+
       // Handle process errors and exit
       serverProcess.on('error', (error) => {
         console.error('Server process error:', error)

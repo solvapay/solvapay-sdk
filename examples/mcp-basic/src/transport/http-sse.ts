@@ -176,7 +176,7 @@ export class HTTPServerWrapper {
             code: -32601,
             message: 'Method not found',
           },
-        }
+        } as unknown as JSONRPCResponse
       }
 
       return {
@@ -193,7 +193,7 @@ export class HTTPServerWrapper {
           message: 'Internal error',
           data: error.message,
         },
-      }
+      } as unknown as JSONRPCResponse
     }
   }
 
