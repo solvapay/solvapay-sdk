@@ -155,6 +155,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         credits: 100,
         email: 'demo@example.com',
         name: 'Demo Customer',
+        externalRef: 'demo_customer',
       },
     }
   }
@@ -534,9 +535,20 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Get customer details
    */
-  async getCustomer(params: { customerRef: string }): Promise<CustomerResponseMapped> {
+  async getCustomer(params: {
+    customerRef?: string
+    externalRef?: string
+  }): Promise<CustomerResponseMapped> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    if (params.externalRef) {
+      return this.getCustomerByExternalRef({ externalRef: params.externalRef })
+    }
+
+    if (!params.customerRef) {
+      throw new Error('Either customerRef or externalRef must be provided')
+    }
 
     this.log(`📡 Stub Request: GET /v1/sdk/customers/${params.customerRef}`)
 

@@ -49,25 +49,26 @@ export function registerMCPHandlers(server: Server): void {
   }
 
   const callToolHandler = async (request: unknown): Promise<unknown> => {
-    console.log('DEBUG: callToolHandler request:', JSON.stringify(request, null, 2))
     const { params } = request as CallToolRequest
     const { name, arguments: args } = params
+    // Default to empty object if arguments is undefined
+    const toolArgs = (args ?? {}) as unknown
 
     switch (name) {
       case 'create_task': {
-        return await toolHandlers.create_task(args as CreateTaskArgs)
+        return await toolHandlers.create_task(toolArgs as CreateTaskArgs)
       }
 
       case 'get_task': {
-        return await toolHandlers.get_task(args as GetTaskArgs)
+        return await toolHandlers.get_task(toolArgs as GetTaskArgs)
       }
 
       case 'list_tasks': {
-        return await toolHandlers.list_tasks(args as ListTasksArgs)
+        return await toolHandlers.list_tasks(toolArgs as ListTasksArgs)
       }
 
       case 'delete_task': {
-        return await toolHandlers.delete_task(args as DeleteTaskArgs)
+        return await toolHandlers.delete_task(toolArgs as DeleteTaskArgs)
       }
 
       default:
