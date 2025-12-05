@@ -37,12 +37,12 @@ export async function GET(request: NextRequest) {
     
     // Transform subscription to simplified plan info for OpenAPI
     const plan = activeSubscription ? {
-      planRef: activeSubscription.planRef,
+      // planRef: activeSubscription.planRef, // TODO: review if we need to add planRef
       planName: activeSubscription.planName,
-      planType: activeSubscription.planType,
+      // planType: activeSubscription.planType, // TODO: review if we need to add planType
       status: activeSubscription.status,
       isActive: activeSubscription.status === 'active' || activeSubscription.status === 'trialing',
-      isRecurring: activeSubscription.isRecurring,
+      // isRecurring: activeSubscription.isRecurring, // TODO: review if we need to add isRecurring
     } : null
     
     return NextResponse.json({

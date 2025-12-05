@@ -4,11 +4,8 @@ import { useState, useEffect } from 'react'
 
 export default function Home() {
   const [apiUrl, setApiUrl] = useState('')
-  const [authConfig, setAuthConfig] = useState<{ authUrl: string; tokenUrl: string } | null>(null)
   
   const [copiedUrl, setCopiedUrl] = useState(false)
-  const [copiedAuthUrl, setCopiedAuthUrl] = useState(false)
-  const [copiedTokenUrl, setCopiedTokenUrl] = useState(false)
   
   const [user, setUser] = useState<{ email?: string; name?: string } | null>(null)
   const [loadingUser, setLoadingUser] = useState(true)
@@ -20,9 +17,6 @@ export default function Home() {
       .then((data) => {
         const origin = data.url || window.location.origin
         setApiUrl(`${origin}/api/docs/json`)
-        if (data.oauth) {
-          setAuthConfig(data.oauth)
-        }
       })
       .catch(() => {
         const origin = window.location.origin
