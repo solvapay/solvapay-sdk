@@ -1,9 +1,12 @@
-node_modules
-.next
-dist
-build
+**/node_modules
+**/.next
+**/dist
+**/build
 .git
 .DS_Store
 .env.local
 .env
 
+# Ignore large media files in docs
+docs/api/_media
+docs/api/_media/**

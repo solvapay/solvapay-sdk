@@ -15,11 +15,17 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 # Copy the entire monorepo source (relying on .dockerignore to exclude node_modules)
 COPY . .
 
+# Prune unneeded packages
+RUN npm install -g turbo
+RUN turbo prune --scope=@example/nextjs-openai-custom-gpt-actions --docker
+
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
+# We need the full source again for build because prune removes necessary devDependencies
+# Alternatively, we could be more surgical with prune --docker above, but copying source is safer for now
 COPY --from=deps /app ./
 
 # Build arguments - NEXT_PUBLIC_* variables (embedded at build time)
@@ -65,10 +71,52 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_STANDALONE_OUTPUT=1
 
 # Build the specific application
+# We also need to build local dependencies since they are workspaces
+RUN pnpm --filter @solvapay/auth... build
+RUN pnpm --filter @solvapay/core... build
+RUN pnpm --filter @solvapay/next... build
+RUN pnpm --filter @solvapay/react... build
+RUN pnpm --filter @solvapay/server... build
 RUN pnpm --filter @example/nextjs-openai-custom-gpt-actions build
 
 FROM base AS runner
 WORKDIR /app
+
+# Build arguments for runner
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_AGENT_REF
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
+ARG SOLVAPAY_SECRET_KEY
+ARG SOLVAPAY_API_BASE_URL
+ARG SOLVAPAY_CLIENT_ID
+ARG SOLVAPAY_CLIENT_SECRET
+ARG SOLVAPAY_AUTH_URL
+ARG SOLVAPAY_TOKEN_URL
+ARG SOLVAPAY_USERINFO_URL
+ARG SUPABASE_JWT_SECRET
+ARG SUPABASE_DB_URL
+ARG SUPABASE_SERVICE_ROLE_KEY
+ARG PUBLIC_URL
+
+# Set environment variables
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_AGENT_REF=$NEXT_PUBLIC_AGENT_REF
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
+ENV SOLVAPAY_SECRET_KEY=$SOLVAPAY_SECRET_KEY
+ENV SOLVAPAY_API_BASE_URL=$SOLVAPAY_API_BASE_URL
+ENV SOLVAPAY_CLIENT_ID=$SOLVAPAY_CLIENT_ID
+ENV SOLVAPAY_CLIENT_SECRET=$SOLVAPAY_CLIENT_SECRET
+ENV SOLVAPAY_AUTH_URL=$SOLVAPAY_AUTH_URL
+ENV SOLVAPAY_TOKEN_URL=$SOLVAPAY_TOKEN_URL
+ENV SOLVAPAY_USERINFO_URL=$SOLVAPAY_USERINFO_URL
+ENV SUPABASE_JWT_SECRET=$SUPABASE_JWT_SECRET
+ENV SUPABASE_DB_URL=$SUPABASE_DB_URL
+ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+ENV PUBLIC_URL=$PUBLIC_URL
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
