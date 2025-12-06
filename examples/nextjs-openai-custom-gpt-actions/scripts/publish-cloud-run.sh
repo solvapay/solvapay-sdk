@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Cloud Run Publish Script for Next.js OpenAI Custom GPT Actions Example
-# Usage: ./scripts/publish-cloud-run.sh [--cloud-build] [project-id]
+# Usage: ./scripts/publish-cloud-run.sh [--cloud-build] [--skip-build] [project-id]
 #   --cloud-build: Use Cloud Build instead of local Docker build (default: local build)
+#   --skip-build: Skip Docker build and use existing local image (default: build new image)
 #   project-id: Optional project ID (auto-detected if not provided)
 # Run from the example directory or from the repo root
 #
@@ -14,11 +15,16 @@ set -e
 
 # Parse arguments
 BUILD_LOCAL=true  # Default to local builds
+SKIP_BUILD=false  # Default to build new image
 PROJECT_ID_ARG=""
 for arg in "$@"; do
     case $arg in
         --cloud-build)
             BUILD_LOCAL=false
+            shift
+            ;;
+        --skip-build)
+            SKIP_BUILD=true
             shift
             ;;
         *)
@@ -217,41 +223,46 @@ if [ "$BUILD_LOCAL" = true ]; then
     echo "   - $IMAGE_TAG_LATEST"
     echo ""
     
-    # Build Docker image with all build arguments
-    echo "🔨 Building Docker image..."
-    DOCKER_BUILD_ARGS=(
-        "build"
-        "-t" "$IMAGE_TAG_SHA"
-        "-t" "$IMAGE_TAG_LATEST"
-        "-f" "$EXAMPLE_DIR/Dockerfile.cloudrun"
-    )
-    
-    # Add build args for NEXT_PUBLIC_* variables
-    [ -n "$NEXT_PUBLIC_API_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL")
-    [ -n "$NEXT_PUBLIC_AGENT_REF" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_AGENT_REF=$NEXT_PUBLIC_AGENT_REF")
-    [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL")
-    [ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY")
-    [ -n "$NEXT_PUBLIC_GA_MEASUREMENT_ID" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID")
-    
-    # Add build args for server-side variables
-    [ -n "$SOLVAPAY_SECRET_KEY" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_SECRET_KEY=$SOLVAPAY_SECRET_KEY")
-    [ -n "$SOLVAPAY_API_BASE_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_API_BASE_URL=$SOLVAPAY_API_BASE_URL")
-    [ -n "$SOLVAPAY_CLIENT_ID" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_CLIENT_ID=$SOLVAPAY_CLIENT_ID")
-    [ -n "$SOLVAPAY_CLIENT_SECRET" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_CLIENT_SECRET=$SOLVAPAY_CLIENT_SECRET")
-    [ -n "$SOLVAPAY_AUTH_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_AUTH_URL=$SOLVAPAY_AUTH_URL")
-    [ -n "$SOLVAPAY_TOKEN_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_TOKEN_URL=$SOLVAPAY_TOKEN_URL")
-    [ -n "$SOLVAPAY_USERINFO_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_USERINFO_URL=$SOLVAPAY_USERINFO_URL")
-    [ -n "$SUPABASE_JWT_SECRET" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SUPABASE_JWT_SECRET=$SUPABASE_JWT_SECRET")
-    [ -n "$SUPABASE_DB_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SUPABASE_DB_URL=$SUPABASE_DB_URL")
-    [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY")
-    [ -n "$PUBLIC_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "PUBLIC_URL=$PUBLIC_URL")
-    
-    DOCKER_BUILD_ARGS+=(".")
-    
-    if ! docker "${DOCKER_BUILD_ARGS[@]}"; then
-        echo ""
-        echo "❌ Docker build failed"
-        exit 1
+    if [ "$SKIP_BUILD" = false ]; then
+        # Build Docker image with all build arguments
+        echo "🔨 Building Docker image..."
+        DOCKER_BUILD_ARGS=(
+            "build"
+            "--platform" "linux/amd64"
+            "-t" "$IMAGE_TAG_SHA"
+            "-t" "$IMAGE_TAG_LATEST"
+            "-f" "$EXAMPLE_DIR/Dockerfile.cloudrun"
+        )
+        
+        # Add build args for NEXT_PUBLIC_* variables
+        [ -n "$NEXT_PUBLIC_API_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL")
+        [ -n "$NEXT_PUBLIC_AGENT_REF" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_AGENT_REF=$NEXT_PUBLIC_AGENT_REF")
+        [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL")
+        [ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY")
+        [ -n "$NEXT_PUBLIC_GA_MEASUREMENT_ID" ] && DOCKER_BUILD_ARGS+=("--build-arg" "NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID")
+        
+        # Add build args for server-side variables
+        [ -n "$SOLVAPAY_SECRET_KEY" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_SECRET_KEY=$SOLVAPAY_SECRET_KEY")
+        [ -n "$SOLVAPAY_API_BASE_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_API_BASE_URL=$SOLVAPAY_API_BASE_URL")
+        [ -n "$SOLVAPAY_CLIENT_ID" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_CLIENT_ID=$SOLVAPAY_CLIENT_ID")
+        [ -n "$SOLVAPAY_CLIENT_SECRET" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_CLIENT_SECRET=$SOLVAPAY_CLIENT_SECRET")
+        [ -n "$SOLVAPAY_AUTH_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_AUTH_URL=$SOLVAPAY_AUTH_URL")
+        [ -n "$SOLVAPAY_TOKEN_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_TOKEN_URL=$SOLVAPAY_TOKEN_URL")
+        [ -n "$SOLVAPAY_USERINFO_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SOLVAPAY_USERINFO_URL=$SOLVAPAY_USERINFO_URL")
+        [ -n "$SUPABASE_JWT_SECRET" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SUPABASE_JWT_SECRET=$SUPABASE_JWT_SECRET")
+        [ -n "$SUPABASE_DB_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SUPABASE_DB_URL=$SUPABASE_DB_URL")
+        [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && DOCKER_BUILD_ARGS+=("--build-arg" "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY")
+        [ -n "$PUBLIC_URL" ] && DOCKER_BUILD_ARGS+=("--build-arg" "PUBLIC_URL=$PUBLIC_URL")
+        
+        DOCKER_BUILD_ARGS+=(".")
+        
+        if ! docker "${DOCKER_BUILD_ARGS[@]}"; then
+            echo ""
+            echo "❌ Docker build failed"
+            exit 1
+        fi
+    else
+        echo "⏭️  Skipping build, using existing local image..."
     fi
     
     echo ""
