@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 
 export default function Home() {
   const [apiUrl, setApiUrl] = useState('')
+  const [solvaPayConsoleUrl, setSolvaPayConsoleUrl] = useState('http://localhost:3000')
   
   const [copiedUrl, setCopiedUrl] = useState(false)
   
@@ -17,6 +18,9 @@ export default function Home() {
       .then((data) => {
         const origin = data.url || window.location.origin
         setApiUrl(`${origin}/api/docs/json`)
+        if (data.solvaPayConsoleUrl) {
+          setSolvaPayConsoleUrl(data.solvaPayConsoleUrl)
+        }
       })
       .catch(() => {
         const origin = window.location.origin
@@ -106,7 +110,7 @@ export default function Home() {
               </ul>
               <div className="flex items-center gap-2">
                 <a 
-                  href="http://localhost:3000/provider/settings?tab=oauth" 
+                  href={`${solvaPayConsoleUrl}/provider/settings?tab=oauth`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm text-amber-900 hover:text-amber-700 underline font-medium"

@@ -41,6 +41,8 @@ steps:
       - '--build-arg'
       - 'SOLVAPAY_USERINFO_URL=$_SOLVAPAY_USERINFO_URL'
       - '--build-arg'
+      - 'SOLVAPAY_FRONTEND_URL=$_SOLVAPAY_FRONTEND_URL'
+      - '--build-arg'
       - 'SUPABASE_JWT_SECRET=$_SUPABASE_JWT_SECRET'
       - '--build-arg'
       - 'SUPABASE_DB_URL=$_SUPABASE_DB_URL'
