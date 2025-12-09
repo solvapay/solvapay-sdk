@@ -167,7 +167,7 @@ export class SolvapayOAuthClient {
   /**
    * Get user info using access token
    */
-  async getUserInfo(accessToken: string, userInfoUrl?: string): Promise<any> {
+  async getUserInfo(accessToken: string, userInfoUrl?: string): Promise<Record<string, unknown>> {
       // If userInfoUrl is not provided, try to guess from tokenUrl or config
       // But typically this client is used alongside the adapter which knows the base URL
       if (!userInfoUrl) {

@@ -42,12 +42,11 @@ export function getCancelledSubscriptionsWithEndDate(
 ): SubscriptionInfo[] {
   const now = new Date()
   return subscriptions.filter(sub => {
-    const subAny = sub as any // Type assertion to access optional properties
     return (
       sub.status === 'active' &&
-      subAny.cancelledAt &&
-      subAny.endDate &&
-      new Date(subAny.endDate) > now
+      sub.cancelledAt &&
+      sub.endDate &&
+      new Date(sub.endDate) > now
     )
   })
 }

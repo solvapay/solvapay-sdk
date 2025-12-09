@@ -5,7 +5,7 @@ import { formatPrice } from '../utils/planHelpers'
 interface PaymentFormSectionProps {
   currentPlan: Plan
   agentRef?: string
-  onSuccess: (paymentIntent?: any) => void
+  onSuccess: (paymentIntent?: unknown) => void
   onError: (error: Error) => void
   onBack: () => void
 }

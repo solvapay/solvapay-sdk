@@ -6,7 +6,7 @@ import '../payment-form.css'
 interface StyledPaymentFormProps {
   currentPlan: Plan
   agentRef?: string
-  onSuccess: (paymentIntent?: any) => void
+  onSuccess: (paymentIntent?: unknown) => void
   onError: (error: Error) => void
   onBack: () => void
 }

@@ -334,7 +334,7 @@ export class SolvaPayPaywall {
 
       // Skip if createCustomer is not available
       if (!this.apiClient.createCustomer) {
-        // eslint-disable-next-line no-console
+         
         console.warn(
           `⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`,
         )
@@ -434,12 +434,12 @@ export class SolvaPayPaywall {
         initialDelay: 500,
         shouldRetry: error => error.message.includes('Customer not found'), // TODO: review if this is needed and what to check for
         onRetry: (error, attempt) => {
-          // eslint-disable-next-line no-console
+           
           console.warn(`⚠️  Customer not found (attempt ${attempt + 1}/3), retrying in 500ms...`)
         },
       },
     ).catch(error => {
-      // eslint-disable-next-line no-console
+       
       console.error('Usage tracking failed:', error)
       // Don't throw - tracking is not critical
     })

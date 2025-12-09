@@ -4,7 +4,7 @@
  * Creates and exports the Supabase client for authentication.
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, Session } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -158,6 +158,6 @@ export async function signInWithGoogle() {
  * Subscribe to auth state changes
  * Returns an unsubscribe function
  */
-export function onAuthStateChange(callback: (event: string, session: any) => void) {
+export function onAuthStateChange(callback: (event: string, session: Session | null) => void) {
   return supabase.auth.onAuthStateChange(callback)
 }

@@ -73,7 +73,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   // CRITICAL: Always call hooks unconditionally FIRST, before any early returns
   // Use a safe fallback for planRef to ensure hooks always receive valid input
   const validPlanRef = planRef && typeof planRef === 'string' ? planRef : ''
-  const checkout = useCheckout(validPlanRef, agentRef)
+  const {
+    loading: checkoutLoading,
+    error: checkoutError,
+    clientSecret,
+    startCheckout,
+    stripePromise,
+  } = useCheckout(validPlanRef, agentRef)
   const { refetch } = useSubscription()
   const { processPayment } = useSolvaPay()
   const hasInitializedRef = useRef(false)
@@ -83,39 +89,34 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     if (
       !hasInitializedRef.current &&
       validPlanRef &&
-      !checkout.loading &&
-      !checkout.error &&
-      !checkout.clientSecret
+      !checkoutLoading &&
+      !checkoutError &&
+      !clientSecret
     ) {
       hasInitializedRef.current = true
-      checkout.startCheckout().catch(() => {
+      startCheckout().catch(() => {
         // Error handled by useCheckout hook
         hasInitializedRef.current = false // Allow retry on error
       })
     }
     // Reset initialization flag if planRef changes
-    if (validPlanRef && checkout.clientSecret) {
+    if (validPlanRef && clientSecret) {
       hasInitializedRef.current = true
     }
-  }, [
-    validPlanRef,
-    checkout.loading,
-    checkout.error,
-    checkout.clientSecret,
-    checkout.startCheckout,
-  ])
+  }, [validPlanRef, checkoutLoading, checkoutError, clientSecret, startCheckout])
 
   // Handle successful payment
   const handleSuccess = useCallback(
-    async (paymentIntent: any) => {
+    async (paymentIntent: unknown) => {
       let processingTimeout = false
-      let processingResult: any = null
+      let processingResult: unknown = null
+      const paymentIntentAny = paymentIntent as Record<string, unknown>
 
       // Process payment if we have the necessary data (customerRef is handled internally)
       if (processPayment && agentRef) {
         try {
           const result = await processPayment({
-            paymentIntentId: paymentIntent.id,
+            paymentIntentId: paymentIntentAny.id as string,
             agentRef: agentRef,
             planRef: planRef,
           })
@@ -123,7 +124,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
           // Check if the result indicates a timeout
           // The API can return status: 'timeout' even though TypeScript types say 'completed'
-          const isTimeout = (result as any)?.status === 'timeout'
+          const isTimeout = (result as Record<string, unknown>)?.status === 'timeout'
           processingTimeout = isTimeout
 
           if (isTimeout) {
@@ -137,7 +138,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             // Call onSuccess with timeout info first (so CheckoutPage can show failure page)
             if (onSuccess) {
               await onSuccess({
-                ...paymentIntent,
+                ...paymentIntentAny,
                 _processingTimeout: processingTimeout,
                 _processingResult: processingResult,
               })
@@ -156,7 +157,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           if (onSuccess) {
             try {
               await onSuccess({
-                ...paymentIntent,
+                ...paymentIntentAny,
                 _processingError: error,
               })
             } catch {
@@ -175,7 +176,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       // Call onSuccess callback (only if we haven't already called it for timeout case)
       if (onSuccess && !processingTimeout) {
         await onSuccess({
-          ...paymentIntent,
+          ...paymentIntentAny,
           _processingTimeout: processingTimeout,
           _processingResult: processingResult,
         })
@@ -201,14 +202,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const isValidPlanRef = planRef && typeof planRef === 'string'
 
   // Determine render state
-  const hasError = !!checkout.error
-  const hasStripeData = !!(checkout.stripePromise && checkout.clientSecret)
+  const hasError = !!checkoutError
+  const hasStripeData = !!(stripePromise && clientSecret)
 
   // Memoize Elements options to maintain stable identity while clientSecret stays the same
   const elementsOptions = useMemo(() => {
-    if (!checkout.clientSecret) return undefined
-    return { clientSecret: checkout.clientSecret }
-  }, [checkout.clientSecret])
+    if (!clientSecret) return undefined
+    return { clientSecret: clientSecret }
+  }, [clientSecret])
 
   // Track if Elements has ever been mounted for this planRef to prevent unmounting
   // Reset when planRef changes (component will remount due to key prop)
@@ -224,7 +225,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   // Only mount Elements once we have both stripePromise and clientSecret
   // Once mounted, keep it mounted to maintain hook consistency
   const shouldRenderElements =
-    hasStripeData || (hasMountedElements && checkout.stripePromise && checkout.clientSecret)
+    hasStripeData || (hasMountedElements && stripePromise && clientSecret)
 
   // Always return the same JSX structure to maintain hook consistency
   // Once Elements is rendered, it should never unmount to avoid hook count issues
@@ -235,14 +236,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       ) : hasError ? (
         <div>
           <div>Payment initialization failed</div>
-          <div>{checkout.error?.message || 'Unknown error'}</div>
+          <div>{checkoutError?.message || 'Unknown error'}</div>
         </div>
-      ) : shouldRenderElements && checkout.stripePromise && elementsOptions ? (
+      ) : shouldRenderElements && stripePromise && elementsOptions ? (
         // Once we have Stripe data, always render Elements to maintain hook consistency
         // This prevents hook count mismatches when transitioning between states
         <Elements
-          key={checkout.clientSecret!}
-          stripe={checkout.stripePromise}
+          key={clientSecret!}
+          stripe={stripePromise}
           options={elementsOptions}
         >
           <StripePaymentFormWrapper
@@ -251,7 +252,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             returnUrl={finalReturnUrl}
             submitButtonText={submitButtonText}
             buttonClassName={buttonClassName}
-            clientSecret={checkout.clientSecret!}
+            clientSecret={clientSecret!}
           />
         </Elements>
       ) : (

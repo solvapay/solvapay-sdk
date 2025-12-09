@@ -208,7 +208,7 @@ export interface Plan {
   interval?: string
   features?: string[]
   isFreeTier?: boolean
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 /**

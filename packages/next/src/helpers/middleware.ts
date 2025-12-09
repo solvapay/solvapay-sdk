@@ -112,8 +112,8 @@ export interface AuthMiddlewareOptions {
 export function createAuthMiddleware(options: AuthMiddlewareOptions) {
   const { adapter, publicRoutes = [], userIdHeader = 'x-user-id' } = options
 
-  return async function middleware(request: any) {
-    const req = request as NextRequest
+  return async function middleware(request: NextRequest) {
+    const req = request
     const { pathname } = req.nextUrl
 
     // Only process API routes

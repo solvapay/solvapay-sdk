@@ -364,7 +364,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       paymentIntentId: string
       agentRef: string
       planRef?: string
-    }): Promise<any> => {
+    }): Promise<unknown> => {
       const currentConfig = configRef.current
       const adapter = getAuthAdapter(currentConfig)
       const token = await adapter.getToken()
@@ -424,7 +424,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     }
     // Fallback (shouldn't happen, but TypeScript needs it)
     return buildDefaultCheckSubscription()
-  }, [])
+  }, [buildDefaultCheckSubscription])
 
   const createPayment = useCallback(
     async (params: { planRef: string; agentRef?: string }): Promise<PaymentIntentResult> => {
@@ -441,7 +441,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       paymentIntentId: string
       agentRef: string
       planRef?: string
-    }): Promise<any> => {
+    }): Promise<unknown> => {
       if (processPaymentRef.current) {
         return processPaymentRef.current(params)
       }

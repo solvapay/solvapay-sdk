@@ -31,9 +31,8 @@ export function useSubscriptionStatus(): SubscriptionStatusReturn {
   // Backend keeps cancelled subscriptions as 'active' until expiration, tracked via cancelledAt
   const subscriptionData = useMemo(() => {
     const cancelledPaidSubscriptions = subscriptions.filter(sub => {
-      const subAny = sub as any // Type assertion to access optional properties
       // Look for subscriptions with cancelledAt set and status === 'active'
-      return sub.status === 'active' && subAny.cancelledAt && isPaidSubscription(sub)
+      return sub.status === 'active' && sub.cancelledAt && isPaidSubscription(sub)
     })
 
     const cancelledSubscription =

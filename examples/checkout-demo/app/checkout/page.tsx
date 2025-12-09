@@ -14,6 +14,12 @@ import { StyledPaymentForm } from './components/StyledPaymentForm'
 import { SuccessMessage } from './components/SuccessMessage'
 import { PaymentFailureMessage } from './components/PaymentFailureMessage'
 
+interface PaymentIntentResult {
+  _processingTimeout?: boolean
+  _processingError?: string
+  [key: string]: unknown
+}
+
 export default function CheckoutPage() {
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false)
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false)
@@ -60,10 +66,11 @@ export default function CheckoutPage() {
   // Refetch is only called after operations that change subscription state (payment, cancellation)
 
   // Handle payment success
-  const handlePaymentSuccess = async (paymentIntent?: any) => {
+  const handlePaymentSuccess = async (paymentIntent?: unknown) => {
+    const result = paymentIntent as PaymentIntentResult | undefined
     // Check if payment processing timed out or had an error
-    const isTimeout = paymentIntent?._processingTimeout === true
-    const hasError = !!paymentIntent?._processingError
+    const isTimeout = result?._processingTimeout === true
+    const hasError = !!result?._processingError
 
     // Refetch subscriptions before showing message
     await refetch()
@@ -74,7 +81,7 @@ export default function CheckoutPage() {
           '[CheckoutPage] Payment processing timed out - webhooks may not be configured',
         )
       } else if (hasError) {
-        console.error('[CheckoutPage] Payment processing failed:', paymentIntent?._processingError)
+        console.error('[CheckoutPage] Payment processing failed:', result?._processingError)
       }
 
       // Show failure message to user (no technical details)
