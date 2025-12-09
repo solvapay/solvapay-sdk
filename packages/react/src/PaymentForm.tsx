@@ -124,7 +124,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
           // Check if the result indicates a timeout
           // The API can return status: 'timeout' even though TypeScript types say 'completed'
-          const isTimeout = (result as Record<string, unknown>)?.status === 'timeout'
+          const isTimeout = (result as unknown as Record<string, unknown>)?.status === 'timeout'
           processingTimeout = isTimeout
 
           if (isTimeout) {
@@ -141,7 +141,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
                 ...paymentIntentAny,
                 _processingTimeout: processingTimeout,
                 _processingResult: processingResult,
-              })
+              } as unknown as any)
             }
 
             // Then throw error to signal timeout to StripePaymentFormWrapper
@@ -159,7 +159,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
               await onSuccess({
                 ...paymentIntentAny,
                 _processingError: error,
-              })
+              } as unknown as any)
             } catch {
               // Ignore callback errors
             }
@@ -179,7 +179,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           ...paymentIntentAny,
           _processingTimeout: processingTimeout,
           _processingResult: processingResult,
-        })
+        } as unknown as any)
       }
     },
     [processPayment, agentRef, planRef, refetch, onSuccess],
@@ -238,7 +238,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           <div>Payment initialization failed</div>
           <div>{checkoutError?.message || 'Unknown error'}</div>
         </div>
-      ) : shouldRenderElements && stripePromise && elementsOptions ? (
+      ) : shouldRenderElements && elementsOptions ? (
         // Once we have Stripe data, always render Elements to maintain hook consistency
         // This prevents hook count mismatches when transitioning between states
         <Elements

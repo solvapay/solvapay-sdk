@@ -364,7 +364,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       paymentIntentId: string
       agentRef: string
       planRef?: string
-    }): Promise<unknown> => {
+    }): Promise<ProcessPaymentResult> => {
       const currentConfig = configRef.current
       const adapter = getAuthAdapter(currentConfig)
       const token = await adapter.getToken()
@@ -408,7 +408,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         throw error
       }
 
-      return res.json()
+      return res.json() as Promise<ProcessPaymentResult>
     },
     [],
   )
@@ -441,7 +441,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       paymentIntentId: string
       agentRef: string
       planRef?: string
-    }): Promise<unknown> => {
+    }): Promise<ProcessPaymentResult> => {
       if (processPaymentRef.current) {
         return processPaymentRef.current(params)
       }
