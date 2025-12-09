@@ -107,6 +107,7 @@ export default function Home() {
                 <li><strong>Client Secret</strong></li>
                 <li><strong>Authorization URL</strong></li>
                 <li><strong>Token URL</strong></li>
+                <li><strong>Scope:</strong> <code className="text-xs bg-amber-100 px-1 rounded">openid email profile</code></li>
               </ul>
               <div className="flex items-center gap-2">
                 <a 
