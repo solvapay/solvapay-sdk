@@ -186,7 +186,7 @@ export class SolvapayOAuthClient {
         throw new Error(`Failed to fetch user info: ${response.status}`)
       }
 
-      return response.json()
+      return response.json() as Promise<Record<string, unknown>>
   }
 }
 

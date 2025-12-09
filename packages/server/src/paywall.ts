@@ -740,12 +740,9 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
 
 export function ensureCustomerRef(customerRef: string): string {
   // Ensure customer ref is properly formatted
-  if (
-    !customerRef.startsWith('customer_') &&
-    !customerRef.startsWith('demo_') &&
-    !customerRef.startsWith('cus_')
-  ) {
-    return `customer_${customerRef.replace(/[^a-zA-Z0-9]/g, '_')}`
+  // Return customer ref as-is (preserve UUIDs with hyphens, etc.)
+  if (!customerRef || customerRef === 'anonymous') {
+    return 'anonymous'
   }
   return customerRef
 }
