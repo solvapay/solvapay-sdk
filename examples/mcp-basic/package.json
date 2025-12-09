@@ -11,7 +11,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.24.2",
+    "@modelcontextprotocol/sdk": "^1.24.3",
     "@solvapay/core": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/server": "workspace:*",
