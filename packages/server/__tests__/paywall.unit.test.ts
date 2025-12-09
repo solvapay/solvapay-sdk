@@ -187,7 +187,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           name: 'test',
           id: '123',
           limit: '10',
-          auth: { customer_ref: 'customer_http_user' },
+          auth: { customer_ref: 'http_user' },
         }),
       )
     })
@@ -241,7 +241,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           name: 'test',
           limit: '5',
-          auth: { customer_ref: 'customer_next_user' },
+          auth: { customer_ref: 'next_user' },
         }),
       )
     })
@@ -310,7 +310,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
           input: 'test',
-          auth: { customer_ref: 'customer_mcp_user' },
+          auth: { customer_ref: 'mcp_user' },
         }),
       )
     })
@@ -348,7 +348,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(response.status).toBe(200)
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          auth: { customer_ref: 'customer_jwt_user_123' },
+          auth: { customer_ref: 'jwt_user_123' },
         }),
       )
     })
@@ -370,7 +370,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(response.status).toBe(200)
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          auth: { customer_ref: 'customer_jwt_user_123' },
+          auth: { customer_ref: 'jwt_user_123' },
         }),
       )
     })
