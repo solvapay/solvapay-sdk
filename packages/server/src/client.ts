@@ -173,14 +173,14 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       // Map response fields to expected format
-      // Note: subscriptions may include additional fields like endDate, cancelledAt
-      // even though they're not in the SubscriptionInfo type definition
+      // Note: purchases may include additional fields like endDate, cancelledAt
+      // even though they're not in the PurchaseInfo type definition
       return {
         customerRef: customer.reference || customer.customerRef,
         email: customer.email,
         name: customer.name,
         externalRef: customer.externalRef,
-        subscriptions: customer.subscriptions || [],
+        purchases: customer.purchases || [],
       }
     },
 
@@ -381,9 +381,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
-    async cancelSubscription(params) {
-      const url = `${base}/v1/sdk/subscriptions/${params.subscriptionRef}/cancel`
+    // POST: /v1/sdk/purchases/{purchaseRef}/cancel
+    async cancelPurchase(params) {
+      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/cancel`
 
       // Prepare request options
       const requestOptions: RequestInit = {
@@ -403,16 +403,16 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         log(`❌ API Error: ${res.status} - ${error}`)
 
         if (res.status === 404) {
-          throw new SolvaPayError(`Subscription not found: ${error}`)
+          throw new SolvaPayError(`Purchase not found: ${error}`)
         }
 
         if (res.status === 400) {
           throw new SolvaPayError(
-            `Subscription cannot be cancelled or does not belong to provider: ${error}`,
+            `Purchase cannot be cancelled or does not belong to provider: ${error}`,
           )
         }
 
-        throw new SolvaPayError(`Cancel subscription failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`Cancel purchase failed (${res.status}): ${error}`)
       }
 
       // Get response text first to debug any parsing issues
@@ -424,32 +424,32 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       } catch (parseError) {
         log(`❌ Failed to parse response as JSON: ${parseError}`)
         throw new SolvaPayError(
-          `Invalid JSON response from cancel subscription endpoint: ${responseText.substring(0, 200)}`,
+          `Invalid JSON response from cancel purchase endpoint: ${responseText.substring(0, 200)}`,
         )
       }
 
       // Validate response structure
       if (!responseData || typeof responseData !== 'object') {
         log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
-        throw new SolvaPayError(`Invalid response structure from cancel subscription endpoint`)
+        throw new SolvaPayError(`Invalid response structure from cancel purchase endpoint`)
       }
 
-      // Backend returns nested structure: { subscription: {...}, message: "..." }
-      // Extract the subscription object from the response
+      // Backend returns nested structure: { purchase: {...}, message: "..." }
+      // Extract the purchase object from the response
       let result
-      if (responseData.subscription && typeof responseData.subscription === 'object') {
-        result = responseData.subscription
+      if (responseData.purchase && typeof responseData.purchase === 'object') {
+        result = responseData.purchase
       } else if (responseData.reference) {
         result = responseData
       } else {
         // Try to extract anyway or use the whole response
-        result = responseData.subscription || responseData
+        result = responseData.purchase || responseData
       }
 
       // Check if response has expected fields
       if (!result || typeof result !== 'object') {
-        log(`❌ Invalid subscription data in response. Full response:`, responseData)
-        throw new SolvaPayError(`Invalid subscription data in cancel subscription response`)
+        log(`❌ Invalid purchase data in response. Full response:`, responseData)
+        throw new SolvaPayError(`Invalid purchase data in cancel purchase response`)
       }
 
       return result

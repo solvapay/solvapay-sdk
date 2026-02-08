@@ -35,9 +35,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Subscribe to auth state changes
+    // Purchase to auth state changes
     const {
-      data: { subscription },
+      data: { purchase },
     } = onAuthStateChange((event, session) => {
       if (!cancelled) {
         setIsAuthenticated(!!session?.user?.id)
@@ -46,7 +46,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true
-      subscription.unsubscribe()
+      purchase.unsubscribe()
     }
   }, [])
 

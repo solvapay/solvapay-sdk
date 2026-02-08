@@ -12,7 +12,7 @@ import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
 
 /**
- * Create a Stripe payment intent for a customer to subscribe to a plan.
+ * Create a Stripe payment intent for a customer to purchase to a plan.
  *
  * This is a framework-agnostic helper that:
  * 1. Extracts authenticated user from the request
@@ -20,11 +20,11 @@ import { syncCustomerCore } from './customer'
  * 3. Creates a payment intent for the specified plan
  *
  * The payment intent can then be confirmed on the client side using Stripe.js.
- * After confirmation, use `processPaymentCore()` to complete the subscription.
+ * After confirmation, use `processPaymentCore()` to complete the purchase.
  *
  * @param request - Standard Web API Request object
  * @param body - Payment intent parameters
- * @param body.planRef - Plan reference to subscribe to (required)
+ * @param body.planRef - Plan reference to purchase to (required)
  * @param body.agentRef - Agent reference (required)
  * @param options - Configuration options
  * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
@@ -121,7 +121,7 @@ export async function createPaymentIntentCore(
  * Process a payment intent after client-side Stripe confirmation.
  *
  * This helper processes a payment intent that has been confirmed on the client
- * side using Stripe.js. It creates the subscription or purchase immediately,
+ * side using Stripe.js. It creates the purchase or purchase immediately,
  * eliminating webhook delay.
  *
  * Call this after the client has confirmed the payment intent with Stripe.js.
@@ -133,7 +133,7 @@ export async function createPaymentIntentCore(
  * @param body.planRef - Optional plan reference (if not in payment intent)
  * @param options - Configuration options
  * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
- * @returns Process payment result with subscription details, or error result
+ * @returns Process payment result with purchase details, or error result
  *
  * @example
  * ```typescript
@@ -147,7 +147,7 @@ export async function createPaymentIntentCore(
  *   }
  *
  *   if (result.success) {
- *     console.log('Subscription created:', result.subscriptionRef);
+ *     console.log('Purchase created:', result.purchaseRef);
  *   }
  *
  *   return Response.json(result);

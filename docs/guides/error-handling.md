@@ -16,7 +16,7 @@ SolvaPay SDK uses several error types:
 
 ### PaywallError
 
-Thrown when a paywall is triggered (subscription required or usage limit exceeded):
+Thrown when a paywall is triggered (purchase required or usage limit exceeded):
 
 ```typescript
 import { PaywallError } from '@solvapay/server'
@@ -49,7 +49,7 @@ Regular JavaScript errors from your business logic or network issues.
 
 `PaywallError` is thrown when:
 
-- Customer doesn't have required subscription
+- Customer doesn't have required purchase
 - Customer has exceeded usage limits
 - Customer needs to upgrade their plan
 
@@ -210,11 +210,11 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 import { isErrorResult, handleRouteError } from '@solvapay/server'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
 
   // Check if result is an error
   if (isErrorResult(result)) {
@@ -418,8 +418,8 @@ try {
 ```typescript
 if (error instanceof PaywallError) {
   return res.status(402).json({
-    error: 'Subscription required',
-    message: 'Please subscribe to access this feature.',
+    error: 'Purchase required',
+    message: 'Please purchase a plan to access this feature.',
     checkoutUrl: error.structuredContent.checkoutUrl,
   })
 }
@@ -450,7 +450,7 @@ function ErrorFallback({ error, resetErrorBoundary }) {
     return (
       <div>
         <h2>Payment Required</h2>
-        <p>Please subscribe to access this feature.</p>
+        <p>Please purchase a plan to access this feature.</p>
         <button onClick={resetErrorBoundary}>Try Again</button>
       </div>
     )

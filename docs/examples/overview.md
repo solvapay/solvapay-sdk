@@ -54,9 +54,9 @@ This document provides an overview of all available examples in the SolvaPay SDK
 
 - Headless React components with render props
 - Embedded Stripe payment form
-- Content gating with subscription gates
+- Content gating with purchase gates
 - Supabase authentication
-- Real-time subscription status checking
+- Real-time purchase status checking
 - Full payment flow implementation
 
 **Best For**:
@@ -241,7 +241,7 @@ pnpm dev
 **Features Demonstrated**:
 
 - Embedded payment form
-- React components (SolvaPayProvider, PaymentForm, SubscriptionGate)
+- React components (SolvaPayProvider, PaymentForm, PurchaseGate)
 - Supabase authentication
 - Content gating
 

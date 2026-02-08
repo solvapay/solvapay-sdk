@@ -91,9 +91,9 @@ export const UserPlanInfoSchema = z
     planRef: z.string().describe('Plan reference identifier'),
     planName: z.string().describe('Plan name'),
     planType: z.enum(['recurring', 'usage-based', 'one-time', 'hybrid']).describe('Plan type'),
-    status: z.enum(['pending', 'active', 'expired', 'cancelled', 'suspended', 'refunded']).describe('Subscription status'),
+    status: z.enum(['pending', 'active', 'expired', 'cancelled', 'suspended', 'refunded']).describe('Purchase status'),
     isActive: z.boolean().describe('Whether the plan is currently active (status is active or trialing)'),
-    isRecurring: z.boolean().describe('Whether this is a recurring subscription'),
+    isRecurring: z.boolean().describe('Whether this is a recurring purchase'),
   })
   .openapi('UserPlanInfo')
 

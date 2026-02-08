@@ -1,7 +1,7 @@
 /**
- * Subscription Helpers (Core)
+ * Purchase Helpers (Core)
  *
- * Generic helpers for subscription operations.
+ * Generic helpers for purchase operations.
  * Works with standard Web API Request (works everywhere).
  */
 
@@ -12,17 +12,17 @@ import { SolvaPayError } from '@solvapay/core'
 import { handleRouteError } from './error'
 
 /**
- * Cancel subscription - core implementation
+ * Cancel purchase - core implementation
  *
  * @param request - Standard Web API Request
  * @param body - Cancellation parameters
  * @param options - Configuration options
- * @returns Cancelled subscription response or error result
+ * @returns Cancelled purchase response or error result
  */
-export async function cancelSubscriptionCore(
+export async function cancelPurchaseCore(
   request: Request,
   body: {
-    subscriptionRef: string
+    purchaseRef: string
     reason?: string
   },
   options: {
@@ -31,9 +31,9 @@ export async function cancelSubscriptionCore(
 ): Promise<any | ErrorResult> {
   try {
     // Validate required parameters
-    if (!body.subscriptionRef) {
+    if (!body.purchaseRef) {
       return {
-        error: 'Missing required parameter: subscriptionRef is required',
+        error: 'Missing required parameter: purchaseRef is required',
         status: 400,
       }
     }
@@ -41,48 +41,48 @@ export async function cancelSubscriptionCore(
     // Use provided SolvaPay instance or create new one
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    // Use the SDK client to cancel the subscription
-    if (!solvaPay.apiClient.cancelSubscription) {
+    // Use the SDK client to cancel the purchase
+    if (!solvaPay.apiClient.cancelPurchase) {
       return {
-        error: 'Cancel subscription method not available on SDK client',
+        error: 'Cancel purchase method not available on SDK client',
         status: 500,
       }
     }
 
-    let cancelledSubscription = await solvaPay.apiClient.cancelSubscription({
-      subscriptionRef: body.subscriptionRef,
+    let cancelledPurchase = await solvaPay.apiClient.cancelPurchase({
+      purchaseRef: body.purchaseRef,
       reason: body.reason,
     })
 
-    // Validate response (client should already extract subscription from nested response)
-    if (!cancelledSubscription || typeof cancelledSubscription !== 'object') {
+    // Validate response (client should already extract purchase from nested response)
+    if (!cancelledPurchase || typeof cancelledPurchase !== 'object') {
       return {
-        error: 'Invalid response from cancel subscription endpoint',
+        error: 'Invalid response from cancel purchase endpoint',
         status: 500,
       }
     }
 
-    // Fallback: Extract subscription from nested response if client didn't already do it
-    const responseAny = cancelledSubscription as any
-    if (responseAny.subscription && typeof responseAny.subscription === 'object') {
-      cancelledSubscription = responseAny.subscription
+    // Fallback: Extract purchase from nested response if client didn't already do it
+    const responseAny = cancelledPurchase as any
+    if (responseAny.purchase && typeof responseAny.purchase === 'object') {
+      cancelledPurchase = responseAny.purchase
     }
 
     // Validate required fields
-    if (!cancelledSubscription.reference) {
+    if (!cancelledPurchase.reference) {
       return {
-        error: 'Cancel subscription response missing required fields',
+        error: 'Cancel purchase response missing required fields',
         status: 500,
       }
     }
 
-    // Check if subscription was actually cancelled
+    // Check if purchase was actually cancelled
     const isCancelled =
-      cancelledSubscription.status === 'cancelled' || cancelledSubscription.cancelledAt
+      cancelledPurchase.status === 'cancelled' || cancelledPurchase.cancelledAt
 
     if (!isCancelled) {
       return {
-        error: `Subscription cancellation failed: backend returned status '${cancelledSubscription.status}' without cancelledAt timestamp`,
+        error: `Purchase cancellation failed: backend returned status '${cancelledPurchase.status}' without cancelledAt timestamp`,
         status: 500,
       }
     }
@@ -90,16 +90,16 @@ export async function cancelSubscriptionCore(
     // Add a small delay to allow backend to fully process the cancellation
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    return cancelledSubscription
+    return cancelledPurchase
   } catch (error: unknown) {
     // Handle SolvaPay errors and map to appropriate HTTP status codes
     if (error instanceof SolvaPayError) {
       const errorMessage = error.message
 
       // Map specific error messages to HTTP status codes
-      if (errorMessage.includes('Subscription not found')) {
+      if (errorMessage.includes('Purchase not found')) {
         return {
-          error: 'Subscription not found',
+          error: 'Purchase not found',
           status: 404,
           details: errorMessage,
         }
@@ -110,7 +110,7 @@ export async function cancelSubscriptionCore(
         errorMessage.includes('does not belong to provider')
       ) {
         return {
-          error: 'Subscription cannot be cancelled or does not belong to provider',
+          error: 'Purchase cannot be cancelled or does not belong to provider',
           status: 400,
           details: errorMessage,
         }
@@ -124,6 +124,6 @@ export async function cancelSubscriptionCore(
       }
     }
 
-    return handleRouteError(error, 'Cancel subscription', 'Failed to cancel subscription')
+    return handleRouteError(error, 'Cancel purchase', 'Failed to cancel purchase')
   }
 }

@@ -45,8 +45,8 @@ export type { ServerClientOptions } from './client'
  *     });
  *
  *     // Handle webhook event
- *     if (payload.type === 'subscription.created') {
- *       // Process subscription creation
+ *     if (payload.type === 'purchase.created') {
+ *       // Process purchase creation
  *     }
  *
  *     res.json({ received: true });
@@ -105,7 +105,7 @@ export {
   processPaymentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
-  cancelSubscriptionCore,
+  cancelPurchaseCore,
   listPlansCore,
   isErrorResult,
   handleRouteError,

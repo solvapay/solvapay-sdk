@@ -1,7 +1,7 @@
 {
   "name": "solvapay-sdk-monorepo",
   "version": "1.0.0",
-  "description": "A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and subscription management",
+  "description": "A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and purchase management",
   "private": true,
   "packageManager": "pnpm@9.6.0",
   "repository": {
@@ -17,7 +17,7 @@
     "sdk",
     "typescript",
     "paywall",
-    "subscription",
+    "purchase",
     "payment",
     "monetization",
     "api",

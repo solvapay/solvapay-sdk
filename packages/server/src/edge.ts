@@ -44,7 +44,7 @@ export {
   processPaymentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
-  cancelSubscriptionCore,
+  cancelPurchaseCore,
   listPlansCore,
   isErrorResult,
   handleRouteError,

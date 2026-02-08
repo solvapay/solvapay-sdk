@@ -1,20 +1,20 @@
 'use client'
 import React, { useCallback, useMemo } from 'react'
 import { usePlans } from '../hooks/usePlans'
-import { useSubscription } from '../hooks/useSubscription'
+import { usePurchase } from '../hooks/usePurchase'
 import type { PlanSelectorProps } from '../types'
 
 /**
  * Headless Plan Selector Component
  *
  * Provides plan selection logic with complete styling control via render props.
- * Integrates plan fetching, subscription status, and selection state management.
+ * Integrates plan fetching, purchase status, and selection state management.
  *
  * Features:
  * - Fetches and manages plans
  * - Tracks selected plan
  * - Provides helpers for checking if plan is current/paid
- * - Integrates with subscription context
+ * - Integrates with purchase context
  *
  * @example
  * ```tsx
@@ -57,7 +57,7 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
   autoSelectFirstPaid,
   children,
 }) => {
-  const { subscriptions } = useSubscription()
+  const { purchases } = usePurchase()
 
   const plansHook = usePlans({
     agentRef,
@@ -78,29 +78,29 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
     [plans],
   )
 
-  // Get active subscription plan name
-  const activeSubscription = useMemo(() => {
-    const activeSubs = subscriptions.filter(sub => sub.status === 'active')
+  // Get active purchase plan name
+  const activePurchase = useMemo(() => {
+    const activeSubs = purchases.filter(sub => sub.status === 'active')
     return (
       activeSubs.sort(
         (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
       )[0] || null
     )
-  }, [subscriptions])
+  }, [purchases])
 
-  // Helper to check if a plan is the current subscription
+  // Helper to check if a plan is the current purchase
   const isCurrentPlan = useCallback(
     (planName: string): boolean => {
-      return activeSubscription?.planName === planName
+      return activePurchase?.planName === planName
     },
-    [activeSubscription],
+    [activePurchase],
   )
 
   return (
     <>
       {children({
         ...plansHook,
-        subscriptions,
+        purchases,
         isPaidPlan,
         isCurrentPlan,
       })}

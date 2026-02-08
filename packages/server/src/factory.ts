@@ -251,15 +251,15 @@ export interface SolvaPay {
   ): Promise<string>
 
   /**
-   * Create a Stripe payment intent for a customer to subscribe to a plan.
+   * Create a Stripe payment intent for a customer to purchase to a plan.
    *
    * This creates a payment intent that can be confirmed on the client side
    * using Stripe.js. After confirmation, call `processPayment()` to complete
-   * the subscription.
+   * the purchase.
    *
    * @param params - Payment intent parameters
    * @param params.agentRef - Agent reference
-   * @param params.planRef - Plan reference to subscribe to
+   * @param params.planRef - Plan reference to purchase to
    * @param params.customerRef - Customer reference
    * @param params.idempotencyKey - Optional idempotency key for retry safety
    * @returns Payment intent with client secret and publishable key
@@ -291,7 +291,7 @@ export interface SolvaPay {
   /**
    * Process a payment intent after client-side Stripe confirmation.
    *
-   * Creates subscription or purchase immediately, eliminating webhook delay.
+   * Creates purchase or purchase immediately, eliminating webhook delay.
    * Call this after the client has confirmed the payment intent with Stripe.js.
    *
    * @param params - Payment processing parameters
@@ -299,7 +299,7 @@ export interface SolvaPay {
    * @param params.agentRef - Agent reference
    * @param params.customerRef - Customer reference
    * @param params.planRef - Optional plan reference (if not in payment intent)
-   * @returns Payment processing result with subscription details
+   * @returns Payment processing result with purchase details
    *
    * @example
    * ```typescript
@@ -312,7 +312,7 @@ export interface SolvaPay {
    * });
    *
    * if (result.success) {
-   *   console.log('Subscription created:', result.subscriptionRef);
+   *   console.log('Purchase created:', result.purchaseRef);
    * }
    * ```
    */
@@ -326,7 +326,7 @@ export interface SolvaPay {
   /**
    * Check if customer is within usage limits for an agent.
    *
-   * This method checks subscription status and usage limits without
+   * This method checks purchase status and usage limits without
    * executing business logic. Use `payable()` for automatic protection.
    *
    * @param params - Limit check parameters
@@ -417,15 +417,15 @@ export interface SolvaPay {
   createCustomer(params: { email: string; name?: string }): Promise<{ customerRef: string }>
 
   /**
-   * Get customer details including subscriptions and usage.
+   * Get customer details including purchases and usage.
    *
    * Returns full customer information from the SolvaPay backend, including
-   * all active subscriptions, usage history, and customer metadata.
+   * all active purchases, usage history, and customer metadata.
    *
    * @param params - Customer lookup parameters
    * @param params.customerRef - Optional customer reference (SolvaPay ID)
    * @param params.externalRef - Optional external reference (e.g., Supabase ID)
-   * @returns Customer details with subscriptions and metadata
+   * @returns Customer details with purchases and metadata
    *
    * @example
    * ```typescript
@@ -482,10 +482,10 @@ export interface SolvaPay {
   }>
 
   /**
-   * Create a customer portal session for managing subscriptions.
+   * Create a customer portal session for managing purchases.
    *
    * This creates a Stripe Customer Portal session that allows customers
-   * to manage their subscriptions, update payment methods, and view invoices.
+   * to manage their purchases, update payment methods, and view invoices.
    *
    * @param params - Customer session parameters
    * @param params.customerRef - Customer reference
@@ -526,7 +526,7 @@ export interface SolvaPay {
  *
  * This factory function creates a SolvaPay instance that can be used to
  * protect API endpoints, functions, and MCP tools with usage limits and
- * subscription checks.
+ * purchase checks.
  *
  * @param config - Optional configuration object
  * @param config.apiKey - API key for production use (defaults to `SOLVAPAY_SECRET_KEY` env var)

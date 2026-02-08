@@ -28,10 +28,10 @@ export type {
 }
 
 /**
- * Error thrown when a paywall is triggered (subscription required or usage limit exceeded).
+ * Error thrown when a paywall is triggered (purchase required or usage limit exceeded).
  *
  * This error is automatically thrown by the paywall protection system when:
- * - Customer doesn't have required subscription
+ * - Customer doesn't have required purchase
  * - Customer has exceeded usage limits
  * - Customer needs to upgrade their plan
  *
@@ -201,7 +201,7 @@ export class SolvaPayPaywall {
             kind: 'payment_required',
             agent,
             checkoutUrl: limitsCheck.checkoutUrl || '',
-            message: `Plan subscription required. Remaining: ${limitsCheck.remaining}`,
+            message: `Plan purchase required. Remaining: ${limitsCheck.remaining}`,
           })
         }
 

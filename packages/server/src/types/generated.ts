@@ -87,7 +87,7 @@ export interface paths {
         put?: never;
         /**
          * Create a payment intent
-         * @description Creates a new payment intent for a customer to subscribe to a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+         * @description Creates a new payment intent for a customer to purchase to a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
          */
         post: operations["PaymentIntentSdkController_createPaymentIntent"];
         delete?: never;
@@ -217,7 +217,7 @@ export interface paths {
         };
         /**
          * Get customer by reference or externalRef
-         * @description Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+         * @description Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
          */
         get: operations["CustomerSdkController_getCustomerByQuery"];
         put?: never;
@@ -241,7 +241,7 @@ export interface paths {
         };
         /**
          * Get customer by reference
-         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
          */
         get: operations["CustomerSdkController_getCustomer"];
         put?: never;
@@ -281,7 +281,7 @@ export interface paths {
         };
         /**
          * Get customer session by sessionId
-         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
+         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and purchases. The session must belong to the authenticated provider.
          */
         get: operations["CustomerSdkController_getCustomerSession"];
         put?: never;
@@ -292,7 +292,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions": {
+    "/v1/sdk/purchases": {
         parameters: {
             query?: never;
             header?: never;
@@ -300,10 +300,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get all subscriptions for provider
-         * @description Retrieves all subscriptions for the authenticated provider.
+         * Get all purchases for provider
+         * @description Retrieves all purchases for the authenticated provider.
          */
-        get: operations["SubscriptionSdkController_getSubscriptions"];
+        get: operations["PurchaseSdkController_getPurchases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -312,7 +312,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions/customer/{customerRef}": {
+    "/v1/sdk/purchases/customer/{customerRef}": {
         parameters: {
             query?: never;
             header?: never;
@@ -320,10 +320,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get subscriptions by customer reference
-         * @description Retrieves all subscriptions for a specific customer using their reference ID. Only returns subscriptions owned by the authenticated provider.
+         * Get purchases by customer reference
+         * @description Retrieves all purchases for a specific customer using their reference ID. Only returns purchases owned by the authenticated provider.
          */
-        get: operations["SubscriptionSdkController_getSubscriptionsByCustomer"];
+        get: operations["PurchaseSdkController_getPurchasesByCustomer"];
         put?: never;
         post?: never;
         delete?: never;
@@ -332,7 +332,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions/agent/{agentRef}": {
+    "/v1/sdk/purchases/agent/{agentRef}": {
         parameters: {
             query?: never;
             header?: never;
@@ -340,10 +340,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get subscriptions by agent reference
-         * @description Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
+         * Get purchases by agent reference
+         * @description Retrieves all purchases for a specific agent using their reference ID. Only returns purchases for agents owned by the authenticated provider.
          */
-        get: operations["SubscriptionSdkController_getSubscriptionsByAgent"];
+        get: operations["PurchaseSdkController_getPurchasesByAgent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -352,7 +352,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions/{id}": {
+    "/v1/sdk/purchases/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -360,10 +360,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get subscription by ID
-         * @description Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
+         * Get purchase by ID
+         * @description Retrieves a specific purchase by its ID. Only returns purchases owned by the authenticated provider.
          */
-        get: operations["SubscriptionSdkController_getSubscriptionById"];
+        get: operations["PurchaseSdkController_getPurchaseById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -372,7 +372,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions/{subscriptionRef}/cancel": {
+    "/v1/sdk/purchases/{purchaseRef}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -382,10 +382,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cancel a subscription
-         * @description Cancels an active subscription using its reference ID. Only subscriptions owned by the authenticated provider can be cancelled.
+         * Cancel a purchase
+         * @description Cancels an active purchase using its reference ID. Only purchases owned by the authenticated provider can be cancelled.
          */
-        post: operations["SubscriptionSdkController_cancelSubscription"];
+        post: operations["PurchaseSdkController_cancelPurchase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -530,7 +530,7 @@ export interface components {
              */
             checkoutUrl: string;
         };
-        CancelSubscriptionRequest: {
+        CancelPurchaseRequest: {
             /**
              * Reason for cancellation
              * @example Customer request
@@ -733,9 +733,9 @@ export interface components {
              */
             externalRef?: string;
         };
-        SubscriptionInfo: {
+        PurchaseInfo: {
             /**
-             * Subscription reference
+             * Purchase reference
              * @example sub_abc123
              */
             reference: string;
@@ -750,7 +750,7 @@ export interface components {
              */
             agentName: string;
             /**
-             * Subscription status
+             * Purchase status
              * @example active
              */
             status: string;
@@ -770,12 +770,12 @@ export interface components {
              */
             currency: string;
             /**
-             * End date of subscription
+             * End date of purchase
              * @example 2025-11-27T10:00:00Z
              */
             endDate?: string;
             /**
-             * When subscription was cancelled
+             * When purchase was cancelled
              * @example 2025-10-28T10:00:00Z
              */
             cancelledAt?: string;
@@ -806,8 +806,8 @@ export interface components {
              * @example auth_user_12345
              */
             externalRef?: string;
-            /** @description Active subscriptions */
-            subscriptions?: components["schemas"]["SubscriptionInfo"][];
+            /** @description Active purchases */
+            purchases?: components["schemas"]["PurchaseInfo"][];
         };
         CreateCustomerSessionResponse: {
             /**
@@ -876,9 +876,9 @@ export interface components {
         };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
-        SubscriptionResponse: {
+        PurchaseResponse: {
             /**
-             * Subscription reference identifier
+             * Purchase reference identifier
              * @example sub_1a2b3c4d5e6f
              */
             reference: string;
@@ -924,7 +924,7 @@ export interface components {
              */
             planType: "recurring" | "usage-based" | "one-time" | "hybrid";
             /**
-             * Subscription status
+             * Purchase status
              * @example active
              * @enum {string}
              */
@@ -940,12 +940,12 @@ export interface components {
              */
             currency: string;
             /**
-             * Start date of subscription
+             * Start date of purchase
              * @example 2025-01-01T00:00:00.000Z
              */
             startDate: string;
             /**
-             * End date of subscription (if applicable)
+             * End date of purchase (if applicable)
              * @example 2025-02-01T00:00:00.000Z
              */
             endDate?: string;
@@ -957,17 +957,17 @@ export interface components {
             /** @description Usage quota information (for usage-based plans) */
             usageQuota?: Record<string, never>;
             /**
-             * Whether this is a recurring subscription
+             * Whether this is a recurring purchase
              * @example true
              */
             isRecurring: boolean;
             /**
-             * Next billing date (for recurring subscriptions)
+             * Next billing date (for recurring purchases)
              * @example 2025-02-01T00:00:00.000Z
              */
             nextBillingDate?: string;
             /**
-             * When subscription was cancelled (if applicable)
+             * When purchase was cancelled (if applicable)
              * @example 2025-01-15T00:00:00.000Z
              */
             cancelledAt?: string;
@@ -977,7 +977,7 @@ export interface components {
              */
             cancellationReason?: string;
             /**
-             * When subscription was created
+             * When purchase was created
              * @example 2025-01-01T00:00:00.000Z
              */
             createdAt: string;
@@ -1714,7 +1714,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * Plan reference to subscribe to
+                     * Plan reference to purchase to
                      * @example pln_2b3c4d5e6f7g
                      */
                     planRef: string;
@@ -1800,7 +1800,7 @@ export interface operations {
                      */
                     customerRef: string;
                     /**
-                     * Plan reference - helps determine if payment is for subscription
+                     * Plan reference - helps determine if payment is for purchase
                      * @example pln_789
                      */
                     planRef?: string;
@@ -2481,7 +2481,7 @@ export interface operations {
             };
         };
     };
-    SubscriptionSdkController_getSubscriptions: {
+    PurchaseSdkController_getPurchases: {
         parameters: {
             query?: never;
             header?: never;
@@ -2490,21 +2490,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Subscriptions retrieved successfully */
+            /** @description Purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
+                    "application/json": components["schemas"]["PurchaseResponse"][];
                 };
             };
         };
     };
-    SubscriptionSdkController_getSubscriptionsByCustomer: {
+    PurchaseSdkController_getPurchasesByCustomer: {
         parameters: {
             query?: {
-                /** @description Filter by subscription status */
+                /** @description Filter by purchase status */
                 status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
             };
             header?: never;
@@ -2516,13 +2516,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Customer subscriptions retrieved successfully */
+            /** @description Customer purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
+                    "application/json": components["schemas"]["PurchaseResponse"][];
                 };
             };
             /** @description Customer not found */
@@ -2534,10 +2534,10 @@ export interface operations {
             };
         };
     };
-    SubscriptionSdkController_getSubscriptionsByAgent: {
+    PurchaseSdkController_getPurchasesByAgent: {
         parameters: {
             query?: {
-                /** @description Filter by subscription status */
+                /** @description Filter by purchase status */
                 status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
             };
             header?: never;
@@ -2549,13 +2549,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Agent subscriptions retrieved successfully */
+            /** @description Agent purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
+                    "application/json": components["schemas"]["PurchaseResponse"][];
                 };
             };
             /** @description Agent not found */
@@ -2567,28 +2567,28 @@ export interface operations {
             };
         };
     };
-    SubscriptionSdkController_getSubscriptionById: {
+    PurchaseSdkController_getPurchaseById: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Subscription ID */
+                /** @description Purchase ID */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Subscription retrieved successfully */
+            /** @description Purchase retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"];
+                    "application/json": components["schemas"]["PurchaseResponse"];
                 };
             };
-            /** @description Subscription not found */
+            /** @description Purchase not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2597,40 +2597,40 @@ export interface operations {
             };
         };
     };
-    SubscriptionSdkController_cancelSubscription: {
+    PurchaseSdkController_cancelPurchase: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Subscription reference identifier */
-                subscriptionRef: string;
+                /** @description Purchase reference identifier */
+                purchaseRef: string;
             };
             cookie?: never;
         };
         /** @description Cancellation details */
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["CancelSubscriptionRequest"];
+                "application/json": components["schemas"]["CancelPurchaseRequest"];
             };
         };
         responses: {
-            /** @description Subscription cancelled successfully */
+            /** @description Purchase cancelled successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"];
+                    "application/json": components["schemas"]["PurchaseResponse"];
                 };
             };
-            /** @description Subscription cannot be cancelled or does not belong to provider */
+            /** @description Purchase cannot be cancelled or does not belong to provider */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Subscription not found */
+            /** @description Purchase not found */
             404: {
                 headers: {
                     [name: string]: unknown;

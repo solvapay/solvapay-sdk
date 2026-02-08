@@ -1,5 +1,5 @@
 interface CheckoutActionsProps {
-  hasPaidSubscription: boolean
+  hasPaidPurchase: boolean
   shouldShowCancelledNotice: boolean
   onContinue: () => void
   onCancel: () => void
@@ -11,10 +11,10 @@ interface CheckoutActionsProps {
 /**
  * Checkout Actions Component
  *
- * Renders Continue or Cancel Plan buttons based on subscription state
+ * Renders Continue or Cancel Plan buttons based on purchase state
  */
 export function CheckoutActions({
-  hasPaidSubscription,
+  hasPaidPurchase,
   shouldShowCancelledNotice,
   onContinue,
   onCancel,
@@ -22,7 +22,7 @@ export function CheckoutActions({
   isCancelling,
   className = '',
 }: CheckoutActionsProps) {
-  const showCancelButton = hasPaidSubscription && !shouldShowCancelledNotice
+  const showCancelButton = hasPaidPurchase && !shouldShowCancelledNotice
 
   if (showCancelButton) {
     return (

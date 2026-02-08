@@ -1,11 +1,11 @@
 # SolvaPay SDK
 
-A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and subscription management.
+A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and purchase management.
 
 **✨ Key Features:**
 
 - 🛡️ **One-line paywall protection** for Express, Next.js, and MCP servers
-- 💳 **Headless React components** for subscription checkout flows
+- 💳 **Headless React components** for purchase checkout flows
 - 🚀 **Works out of the box** with stub mode (no API key needed for testing)
 - 🔒 **Secure by default** - API keys never exposed to the browser
 - ⚡ **Edge runtime support** for global low-latency deployments
@@ -92,7 +92,7 @@ const handler = payable.mcp(createTask) // MCP servers
 Wrap your app with `SolvaPayProvider` and use `PaymentForm` for checkout:
 
 ```tsx
-import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react'
+import { SolvaPayProvider, PaymentForm, usePurchase } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 
 function RootLayout({ children }) {
@@ -105,9 +105,9 @@ function RootLayout({ children }) {
   return (
     <SolvaPayProvider
       config={{
-        // Optional: Custom API routes (defaults to /api/check-subscription and /api/create-payment-intent)
+        // Optional: Custom API routes (defaults to /api/check-purchase and /api/create-payment-intent)
         api: {
-          checkSubscription: '/api/check-subscription',
+          checkPurchase: '/api/check-purchase',
           createPayment: '/api/create-payment-intent',
           processPayment: '/api/process-payment',
         },
@@ -121,7 +121,7 @@ function RootLayout({ children }) {
 }
 
 function CheckoutPage() {
-  const { subscriptions, hasPaidSubscription } = useSubscription()
+  const { purchases, hasPaidPurchase } = usePurchase()
 
   return (
     <PaymentForm
@@ -136,12 +136,12 @@ function CheckoutPage() {
 **Backend API routes** using Next.js helpers (recommended):
 
 ```typescript
-// /api/check-subscription/route.ts
+// /api/check-purchase/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
@@ -226,10 +226,10 @@ export async function POST(req: Request) {
 
 The `@solvapay/next` package provides helper functions for common API route patterns:
 
-**Subscription Helpers:**
+**Purchase Helpers:**
 
-- `checkSubscription(request, options?)` - Check user subscription (with deduplication & caching)
-- `cancelSubscription(request, body, options?)` - Cancel a subscription
+- `checkPurchase(request, options?)` - Check user purchase (with deduplication & caching)
+- `cancelPurchase(request, body, options?)` - Cancel a purchase
 
 **Customer Helpers:**
 
@@ -251,9 +251,9 @@ The `@solvapay/next` package provides helper functions for common API route patt
 
 **Cache Management:**
 
-- `clearSubscriptionCache(userId)` - Clear cache for specific user
-- `clearAllSubscriptionCache()` - Clear all cache entries
-- `getSubscriptionCacheStats()` - Get cache statistics
+- `clearPurchaseCache(userId)` - Clear cache for specific user
+- `clearAllPurchaseCache()` - Clear all cache entries
+- `getPurchaseCacheStats()` - Get cache statistics
 
 **Authentication Helpers:**
 
@@ -298,12 +298,12 @@ cd examples/express-basic && pnpm dev
 
 Full-featured Next.js checkout flow:
 
-- Complete subscription management using `SolvaPayProvider`
+- Complete purchase management using `SolvaPayProvider`
 - Plan selection UI with `PaymentForm` and `usePlans` hook
 - Customer session management
-- Subscription status checking with `useSubscription` and `useSubscriptionStatus` hooks
+- Purchase status checking with `usePurchase` and `usePurchaseStatus` hooks
 - Supabase authentication integration
-- API routes using Next.js helpers (`checkSubscription`, `createPaymentIntent`, `processPayment`, `listPlans`, `syncCustomer`)
+- API routes using Next.js helpers (`checkPurchase`, `createPaymentIntent`, `processPayment`, `listPlans`, `syncCustomer`)
 
 ```bash
 cd examples/checkout-demo && pnpm dev

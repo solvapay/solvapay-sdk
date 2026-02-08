@@ -2,7 +2,7 @@
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react'
 import { Elements } from '@stripe/react-stripe-js'
 import { useCheckout } from './hooks/useCheckout'
-import { useSubscription } from './hooks/useSubscription'
+import { usePurchase } from './hooks/usePurchase'
 import { useSolvaPay } from './hooks/useSolvaPay'
 import { Spinner } from './components/Spinner'
 import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
@@ -20,10 +20,10 @@ import type { PaymentFormProps } from './types'
  * - Payment intent creation on mount
  * - Card input and validation
  * - Payment processing with error handling
- * - Automatic subscription refresh after payment
+ * - Automatic purchase refresh after payment
  *
  * @param props - Payment form configuration
- * @param props.planRef - Plan reference to subscribe to (required)
+ * @param props.planRef - Plan reference to purchase to (required)
  * @param props.agentRef - Agent reference for usage tracking (required)
  * @param props.onSuccess - Callback when payment succeeds
  * @param props.onError - Callback when payment fails
@@ -80,7 +80,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     startCheckout,
     stripePromise,
   } = useCheckout(validPlanRef, agentRef)
-  const { refetch } = useSubscription()
+  const { refetch } = usePurchase()
   const { processPayment } = useSolvaPay()
   const hasInitializedRef = useRef(false)
 
@@ -128,7 +128,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           processingTimeout = isTimeout
 
           if (isTimeout) {
-            // Poll for subscription up to 5 times with increasing delays
+            // Poll for purchase up to 5 times with increasing delays
             for (let attempt = 1; attempt <= 5; attempt++) {
               const delay = attempt * 1000 // 1s, 2s, 3s, 4s, 5s
               await new Promise(resolve => setTimeout(resolve, delay))

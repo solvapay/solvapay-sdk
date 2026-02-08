@@ -1,6 +1,6 @@
 # Express.js Integration Guide
 
-This guide shows you how to integrate SolvaPay SDK with Express.js to protect your API endpoints with paywall protection and subscription management.
+This guide shows you how to integrate SolvaPay SDK with Express.js to protect your API endpoints with paywall protection and purchase management.
 
 ## Table of Contents
 
@@ -75,7 +75,7 @@ app.post('/api/tasks', payable.http(createTask))
 
 That's it! The endpoint is now protected. The paywall will:
 
-- Check if the customer has a valid subscription
+- Check if the customer has a valid purchase
 - Track usage and enforce limits
 - Return a paywall error with checkout URL if needed
 

@@ -17,8 +17,8 @@ export { createPaymentIntent, processPayment } from './payment'
 // Export checkout helpers
 export { createCheckoutSession, createCustomerSession } from './checkout'
 
-// Export subscription helpers
-export { cancelSubscription } from './subscription'
+// Export purchase helpers
+export { cancelPurchase } from './purchase'
 
 // Export plans helpers
 export { listPlans } from './plans'

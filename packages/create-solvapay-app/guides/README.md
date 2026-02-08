@@ -7,9 +7,9 @@ Complete step-by-step guide for integrating SolvaPay hosted checkout and Supabas
 This guide will help you build a Next.js application with:
 
 - ✅ **Supabase Authentication** - Email/password and Google OAuth sign-in
-- ✅ **SolvaPay Hosted Checkout** - Secure subscription payments hosted on SolvaPay
+- ✅ **SolvaPay Hosted Checkout** - Secure purchase payments hosted on SolvaPay
 - ✅ **Modern UI Components** - Beautiful, accessible components with Tailwind CSS
-- ✅ **Subscription Management** - Hosted customer portal for managing subscriptions
+- ✅ **Purchase Management** - Hosted customer portal for managing purchases
 
 ## Guide Structure
 
@@ -70,7 +70,7 @@ After creating your project, use these guides with Cursor AI:
 
 2. **Then, copy the implementation guides** into Cursor with:
    ```
-   Add subscription to my app using these instructions
+   Add purchase to my app using these instructions
    ```
    Then paste the contents of:
    - `00-app-description.md` - Your app description (for customizing HomePage)
@@ -97,14 +97,14 @@ The guides are designed to be copied directly into Cursor, where the AI assistan
 3. Server creates SolvaPay checkout session
 4. User is redirected to hosted checkout page
 5. After payment, user returns to app
-6. Subscription status is checked and displayed
+6. Purchase status is checked and displayed
 
 ### Key Concepts
 
 - **Hosted Checkout**: Users are redirected to `solvapay.com` for checkout (similar to Stripe Checkout)
 - **Middleware Pattern**: Authentication handled in middleware, making user ID available to all API routes
-- **Supabase Adapter**: React provider automatically handles Supabase session management and subscription checking
-- **Automatic Subscription Checking**: The Supabase adapter automatically calls `/api/check-subscription` - no manual setup needed
+- **Supabase Adapter**: React provider automatically handles Supabase session management and purchase checking
+- **Automatic Purchase Checking**: The Supabase adapter automatically calls `/api/check-purchase` - no manual setup needed
 - **Customer Sync**: Customer is created in SolvaPay when user signs up
 
 ## Support

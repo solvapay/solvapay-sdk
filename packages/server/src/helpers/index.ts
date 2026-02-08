@@ -25,8 +25,8 @@ export { createPaymentIntentCore, processPaymentCore } from './payment'
 // Export checkout helpers
 export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout'
 
-// Export subscription helpers
-export { cancelSubscriptionCore } from './subscription'
+// Export purchase helpers
+export { cancelPurchaseCore } from './purchase'
 
 // Export plans helpers
 export { listPlansCore } from './plans'

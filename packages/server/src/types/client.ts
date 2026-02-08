@@ -14,9 +14,9 @@ export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { p
 /**
  * Extended CustomerResponse with proper field mapping
  *
- * Note: The backend API may return subscriptions with additional fields beyond SubscriptionInfo
- * (e.g., amount, endDate, cancelledAt, cancellationReason) as defined in SubscriptionResponse.
- * These additional fields are preserved in the subscriptions array.
+ * Note: The backend API may return purchases with additional fields beyond PurchaseInfo
+ * (e.g., amount, endDate, cancelledAt, cancellationReason) as defined in PurchaseResponse.
+ * These additional fields are preserved in the purchases array.
  */
 export type CustomerResponseMapped = {
   customerRef: string
@@ -24,11 +24,11 @@ export type CustomerResponseMapped = {
   name?: string
   externalRef?: string
   plan?: string
-  subscriptions?: Array<
-    components['schemas']['SubscriptionInfo'] &
+  purchases?: Array<
+    components['schemas']['PurchaseInfo'] &
       Partial<
         Pick<
-          components['schemas']['SubscriptionResponse'],
+          components['schemas']['PurchaseResponse'],
           | 'amount'
           | 'currency'
           | 'endDate'
@@ -57,9 +57,8 @@ export interface PurchaseInfo {
  * Result from processing a payment intent
  */
 export interface ProcessPaymentResult {
-  type: 'subscription' | 'purchase'
-  subscription?: components['schemas']['SubscriptionInfo']
-  purchase?: PurchaseInfo
+  type: 'purchase'
+  purchase?: components['schemas']['PurchaseInfo'] | PurchaseInfo
   status: 'completed'
 }
 
@@ -146,11 +145,11 @@ export interface SolvaPayClient {
     accountId?: string
   }>
 
-  // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
-  cancelSubscription?(params: {
-    subscriptionRef: string
+  // POST: /v1/sdk/purchases/{purchaseRef}/cancel
+  cancelPurchase?(params: {
+    purchaseRef: string
     reason?: string
-  }): Promise<components['schemas']['SubscriptionResponse']>
+  }): Promise<components['schemas']['PurchaseResponse']>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
   processPayment?(params: {

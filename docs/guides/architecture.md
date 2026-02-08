@@ -62,15 +62,15 @@ The SDK consists of **6 published packages** focused on clear use cases:
 
 ### `@solvapay/react` (payment components)
 
-- **SolvaPayProvider**: Headless context provider that manages subscription state, payment methods, and customer references.
-  - Zero-config with sensible defaults (uses `/api/check-subscription` and `/api/create-payment-intent`)
+- **SolvaPayProvider**: Headless context provider that manages purchase state, payment methods, and customer references.
+  - Zero-config with sensible defaults (uses `/api/check-purchase` and `/api/create-payment-intent`)
   - Supports custom API routes via config
-  - Auto-fetches subscriptions on mount
+  - Auto-fetches purchases on mount
   - Built-in localStorage caching with user validation
   - Supports auth adapters for extracting user IDs and tokens
 - **PaymentForm**: Stripe payment form component for checkout flows.
-- **Hooks**: `useSubscription`, `useCheckout`, `usePlans`, `useSubscriptionStatus`, `useSolvaPay`
-- **Headless Components**: `PlanBadge`, `SubscriptionGate`, `PlanSelector`, `StripePaymentFormWrapper`
+- **Hooks**: `usePurchase`, `useCheckout`, `usePlans`, `usePurchaseStatus`, `useSolvaPay`
+- **Headless Components**: `PlanBadge`, `PurchaseGate`, `PlanSelector`, `StripePaymentFormWrapper`
 - Handles Stripe integration for payment processing.
 - Includes default styling for payment forms.
 - Peer deps: `react`, `react-dom`.
@@ -96,9 +96,9 @@ The SDK consists of **6 published packages** focused on clear use cases:
 ### `@solvapay/next` (Next.js utilities)
 
 - Next.js-specific route helpers that wrap server SDK functions with Next.js types and optimizations.
-- **Subscription helpers**:
-  - `checkSubscription(request, options?)` - Check user subscription with built-in deduplication and caching
-  - `cancelSubscription(request, body, options?)` - Cancel a subscription
+- **Purchase helpers**:
+  - `checkPurchase(request, options?)` - Check user purchase with built-in deduplication and caching
+  - `cancelPurchase(request, body, options?)` - Cancel a purchase
 - **Authentication helpers**:
   - `getAuthenticatedUser(request, options?)` - Get authenticated user info (userId, email, name)
 - **Customer helpers**:
@@ -112,9 +112,9 @@ The SDK consists of **6 published packages** focused on clear use cases:
 - **Plans helpers**:
   - `listPlans(request)` - List available plans (public route, no auth required)
 - **Cache management**:
-  - `clearSubscriptionCache(userId)` - Clear cache for specific user
-  - `clearAllSubscriptionCache()` - Clear all cache entries
-  - `getSubscriptionCacheStats()` - Get cache statistics
+  - `clearPurchaseCache(userId)` - Clear cache for specific user
+  - `clearAllPurchaseCache()` - Clear all cache entries
+  - `getPurchaseCacheStats()` - Get cache statistics
 - All helpers return `NextResponse` for errors, making them easy to use in Next.js API routes.
 - Built-in request deduplication and short-term caching (2 seconds) prevent duplicate API calls.
 - Automatic cache clearing after payment operations.
@@ -159,7 +159,7 @@ export const POST = payable.next(handler) // Next.js
 const mcpHandler = payable.mcp(handler) // MCP servers
 
 // React payment components:
-import { SolvaPayProvider, PaymentForm, useSubscription, usePlans } from '@solvapay/react'
+import { SolvaPayProvider, PaymentForm, usePurchase, usePlans } from '@solvapay/react'
 
 // Supabase React adapter:
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
@@ -178,15 +178,15 @@ import {
 
 // Next.js utilities:
 import {
-  checkSubscription,
+  checkPurchase,
   syncCustomer,
   createPaymentIntent,
   processPayment,
   createCheckoutSession,
   createCustomerSession,
-  cancelSubscription,
+  cancelPurchase,
   listPlans,
-  clearSubscriptionCache,
+  clearPurchaseCache,
   getAuthenticatedUser,
 } from '@solvapay/next'
 ```

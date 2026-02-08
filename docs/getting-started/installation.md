@@ -26,7 +26,7 @@ pnpm add @solvapay/server
 
 ### React Components
 
-For client-side payment flows and subscription management:
+For client-side payment flows and purchase management:
 
 ```bash
 npm install @solvapay/react
@@ -113,7 +113,7 @@ SolvaPay SDK works in **stub mode** when no API key is provided. This is perfect
 
 In stub mode:
 
-- All subscription checks return "free tier" (no subscription)
+- All purchase checks return "free tier" (no purchase)
 - Payment flows are simulated
 - No actual API calls are made
 

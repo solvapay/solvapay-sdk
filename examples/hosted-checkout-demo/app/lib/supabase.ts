@@ -155,7 +155,7 @@ export async function signInWithGoogle() {
 }
 
 /**
- * Subscribe to auth state changes
+ * Purchase to auth state changes
  * Returns an unsubscribe function
  */
 export function onAuthStateChange(callback: (event: string, session: Session | null) => void) {

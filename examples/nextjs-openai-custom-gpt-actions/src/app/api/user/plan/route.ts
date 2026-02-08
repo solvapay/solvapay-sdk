@@ -29,20 +29,20 @@ export async function GET(request: NextRequest) {
       customerRef: userId 
     })
     
-    // Return actual subscription data from backend (no hardcoded mapping)
-    // Find the first active or trialing subscription
-    const activeSubscription = customer.subscriptions?.find(
+    // Return actual purchase data from backend (no hardcoded mapping)
+    // Find the first active or trialing purchase
+    const activePurchase = customer.purchases?.find(
       (sub) => sub.status === 'active' || sub.status === 'trialing'
     )
     
-    // Transform subscription to simplified plan info for OpenAPI
-    const plan = activeSubscription ? {
-      // planRef: activeSubscription.planRef, // TODO: review if we need to add planRef
-      planName: activeSubscription.planName,
-      // planType: activeSubscription.planType, // TODO: review if we need to add planType
-      status: activeSubscription.status,
-      isActive: activeSubscription.status === 'active' || activeSubscription.status === 'trialing',
-      // isRecurring: activeSubscription.isRecurring, // TODO: review if we need to add isRecurring
+    // Transform purchase to simplified plan info for OpenAPI
+    const plan = activePurchase ? {
+      // planRef: activePurchase.planRef, // TODO: review if we need to add planRef
+      planName: activePurchase.planName,
+      // planType: activePurchase.planType, // TODO: review if we need to add planType
+      status: activePurchase.status,
+      isActive: activePurchase.status === 'active' || activePurchase.status === 'trialing',
+      // isRecurring: activePurchase.isRecurring, // TODO: review if we need to add isRecurring
     } : null
     
     return NextResponse.json({

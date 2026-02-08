@@ -1,34 +1,34 @@
 import { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { cancelSubscriptionCore, isErrorResult } from '@solvapay/server'
-import { clearSubscriptionCache } from '../cache'
+import { cancelPurchaseCore, isErrorResult } from '@solvapay/server'
+import { clearPurchaseCache } from '../cache'
 import { getAuthenticatedUserCore } from '@solvapay/server'
 
 /**
- * Next.js Subscription Helpers
+ * Next.js Purchase Helpers
  *
- * Next.js-specific wrappers for subscription helpers.
+ * Next.js-specific wrappers for purchase helpers.
  */
 
 /**
- * Cancel subscription - Next.js wrapper
+ * Cancel purchase - Next.js wrapper
  *
  * @param request - Next.js request object
  * @param body - Cancellation parameters
  * @param options - Configuration options
- * @returns Cancelled subscription response or NextResponse error
+ * @returns Cancelled purchase response or NextResponse error
  */
-export async function cancelSubscription(
+export async function cancelPurchase(
   request: globalThis.Request,
   body: {
-    subscriptionRef: string
+    purchaseRef: string
     reason?: string
   },
   options: {
     solvaPay?: SolvaPay
   } = {},
 ): Promise<Record<string, unknown> | NextResponse> {
-  const result = await cancelSubscriptionCore(request, body, options)
+  const result = await cancelPurchaseCore(request, body, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(
@@ -37,11 +37,11 @@ export async function cancelSubscription(
     )
   }
 
-  // Clear subscription cache to ensure fresh data on next check
+  // Clear purchase cache to ensure fresh data on next check
   try {
     const userResult = await getAuthenticatedUserCore(request)
     if (!isErrorResult(userResult)) {
-      clearSubscriptionCache(userResult.userId)
+      clearPurchaseCache(userResult.userId)
     }
   } catch {
     // Ignore errors in cache clearing

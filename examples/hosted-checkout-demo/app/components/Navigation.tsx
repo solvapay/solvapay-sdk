@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { PlanBadge, useSubscription } from '@solvapay/react'
+import { PlanBadge, usePurchase } from '@solvapay/react'
 import { Button } from './ui/Button'
 import { signOut, getAccessToken } from '../lib/supabase'
 import { useState, useCallback } from 'react'
@@ -12,14 +12,14 @@ import { useState, useCallback } from 'react'
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { loading: subscriptionsLoading, hasPaidSubscription } = useSubscription()
+  const { loading: purchasesLoading, hasPaidPurchase } = usePurchase()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
 
   const agentRef = process.env.NEXT_PUBLIC_AGENT_REF
 
-  // Show upgrade button when subscriptions are loaded and user doesn't have paid subscription
-  const showUpgradeButton = !subscriptionsLoading && !hasPaidSubscription
+  // Show upgrade button when purchases are loaded and user doesn't have paid purchase
+  const showUpgradeButton = !purchasesLoading && !hasPaidPurchase
 
   // Handle redirect to hosted checkout page
   const handleUpgrade = useCallback(async () => {

@@ -464,7 +464,7 @@ export default function RootLayout({
 - Redirects unauthenticated users to `/sign-in` (except on auth pages)
 - Redirects authenticated users away from auth pages to home
 - Wraps app in `SolvaPayProvider` with Supabase adapter if authenticated
-- **The Supabase adapter automatically handles subscription checking** - no need for a `checkSubscription` prop
+- **The Supabase adapter automatically handles purchase checking** - no need for a `checkPurchase` prop
 
 **Key changes for automatic redirects:**
 
@@ -473,12 +473,12 @@ export default function RootLayout({
 - The existing redirect `useEffect` hooks detect the state change and redirect accordingly
 - No manual redirects needed in the Auth component - the layout handles it automatically
 
-**How subscription checking works:**
+**How purchase checking works:**
 
 - The Supabase adapter gets the access token from the Supabase session
-- `SolvaPayProvider` automatically calls `/api/check-subscription` with the token
-- Subscription state is updated automatically
-- You can use `useSubscription()` hook anywhere in your app to access subscription data
+- `SolvaPayProvider` automatically calls `/api/check-purchase` with the token
+- Purchase state is updated automatically
+- You can use `usePurchase()` hook anywhere in your app to access purchase data
 
 ## Step 7: Create Auth Component
 

@@ -406,7 +406,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   // ============================================================================
 
   describe('Credit Management - Free Units & Deduction', () => {
-    it('should auto-create subscription with free units when plan has freeUnits > 0', async () => {
+    it('should auto-create purchase with free units when plan has freeUnits > 0', async () => {
       if ((global as any).__SKIP_PAYMENT_TESTS__) {
         console.log('⏭️  Skipping: Stripe not configured')
         return
@@ -421,12 +421,12 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       const freeUnitsExpected = parseInt(planToUse.freeUnits || '0')
 
       console.log(
-        `\n📋 Testing subscription auto-creation: "${planToUse.name}" with ${freeUnitsExpected} free units`,
+        `\n📋 Testing purchase auto-creation: "${planToUse.name}" with ${freeUnitsExpected} free units`,
       )
 
       expect(planToUse.reference).toBeDefined()
 
-      // Create customer and check subscription
+      // Create customer and check purchase
       const testCustomerRef = `test_free_units_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
 
@@ -438,7 +438,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       expect(limitsCheck.remaining).toBeGreaterThanOrEqual(freeUnitsExpected)
       expect(limitsCheck.withinLimits).toBe(true)
 
-      console.log(`✅ Subscription verified: ${limitsCheck.remaining} units available`)
+      console.log(`✅ Purchase verified: ${limitsCheck.remaining} units available`)
     }, 15000)
 
     it('should deduct exactly 1 credit per trackUsage call', async () => {
