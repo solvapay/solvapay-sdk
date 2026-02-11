@@ -245,7 +245,7 @@ export {
   processPayment,
   createCheckoutSession,
   createCustomerSession,
-  cancelSubscription,
+  cancelRenewal,
   listPlans,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,

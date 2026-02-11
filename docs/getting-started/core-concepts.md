@@ -181,10 +181,10 @@ Subscriptions can be in different states:
 const customer = await solvaPay.getCustomer({ customerRef: 'user_123' })
 const subscriptions = customer.subscriptions
 
-// Cancel subscription
-await solvaPay.cancelSubscription({
+// Cancel renewal
+await solvaPay.cancelRenewal({
   customerRef: 'user_123',
-  subscriptionRef: 'sub_...',
+  purchaseRef: 'sub_...',
 })
 ```
 

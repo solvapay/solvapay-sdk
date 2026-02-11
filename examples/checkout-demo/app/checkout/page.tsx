@@ -145,19 +145,19 @@ export default function CheckoutPage() {
         ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       }
 
-      const res = await fetch('/api/cancel-subscription', {
+      const res = await fetch('/api/cancel-renewal', {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          subscriptionRef: activePaidSubscription.reference,
+          purchaseRef: activePaidSubscription.reference,
           reason: 'User requested cancellation',
         }),
       })
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        const errorMessage = errorData.error || 'Failed to cancel subscription'
-        console.error('Cancel subscription error:', errorMessage, errorData)
+        const errorMessage = errorData.error || 'Failed to cancel renewal'
+        console.error('Cancel renewal error:', errorMessage, errorData)
         throw new Error(errorMessage)
       }
 
@@ -166,7 +166,7 @@ export default function CheckoutPage() {
       await refetch()
       window.location.href = '/'
     } catch (err) {
-      console.error('Cancel subscription failed:', err)
+      console.error('Cancel renewal failed:', err)
       setIsCancelling(false)
     }
   }

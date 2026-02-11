@@ -372,7 +372,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions/{subscriptionRef}/cancel": {
+    "/v1/sdk/purchases/{purchaseRef}/cancel-renewal": {
         parameters: {
             query?: never;
             header?: never;
@@ -382,10 +382,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cancel a subscription
-         * @description Cancels an active subscription using its reference ID. Only subscriptions owned by the authenticated provider can be cancelled.
+         * Cancel renewal of a purchase
+         * @description Cancels renewal of an active purchase using its reference ID. Only purchases owned by the authenticated provider can have their renewal cancelled.
          */
-        post: operations["SubscriptionSdkController_cancelSubscription"];
+        post: operations["PurchaseSdkController_cancelRenewal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -530,7 +530,7 @@ export interface components {
              */
             checkoutUrl: string;
         };
-        CancelSubscriptionRequest: {
+        CancelRenewalRequest: {
             /**
              * Reason for cancellation
              * @example Customer request
@@ -2597,24 +2597,24 @@ export interface operations {
             };
         };
     };
-    SubscriptionSdkController_cancelSubscription: {
+    PurchaseSdkController_cancelRenewal: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Subscription reference identifier */
-                subscriptionRef: string;
+                /** @description Purchase reference identifier */
+                purchaseRef: string;
             };
             cookie?: never;
         };
         /** @description Cancellation details */
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["CancelSubscriptionRequest"];
+                "application/json": components["schemas"]["CancelRenewalRequest"];
             };
         };
         responses: {
-            /** @description Subscription cancelled successfully */
+            /** @description Renewal cancelled successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2623,14 +2623,14 @@ export interface operations {
                     "application/json": components["schemas"]["SubscriptionResponse"];
                 };
             };
-            /** @description Subscription cannot be cancelled or does not belong to provider */
+            /** @description Renewal cannot be cancelled or purchase does not belong to provider */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Subscription not found */
+            /** @description Purchase not found */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -98,7 +98,7 @@ The SDK consists of **6 published packages** focused on clear use cases:
 - Next.js-specific route helpers that wrap server SDK functions with Next.js types and optimizations.
 - **Subscription helpers**:
   - `checkSubscription(request, options?)` - Check user subscription with built-in deduplication and caching
-  - `cancelSubscription(request, body, options?)` - Cancel a subscription
+  - `cancelRenewal(request, body, options?)` - Cancel a renewal
 - **Authentication helpers**:
   - `getAuthenticatedUser(request, options?)` - Get authenticated user info (userId, email, name)
 - **Customer helpers**:
@@ -184,7 +184,7 @@ import {
   processPayment,
   createCheckoutSession,
   createCustomerSession,
-  cancelSubscription,
+  cancelRenewal,
   listPlans,
   clearSubscriptionCache,
   getAuthenticatedUser,

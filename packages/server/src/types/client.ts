@@ -146,9 +146,9 @@ export interface SolvaPayClient {
     accountId?: string
   }>
 
-  // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
-  cancelSubscription?(params: {
-    subscriptionRef: string
+  // POST: /v1/sdk/purchases/{purchaseRef}/cancel-renewal
+  cancelRenewal?(params: {
+    purchaseRef: string
     reason?: string
   }): Promise<components['schemas']['SubscriptionResponse']>
 

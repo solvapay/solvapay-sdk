@@ -105,7 +105,7 @@ export {
   processPaymentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
-  cancelSubscriptionCore,
+  cancelRenewalCore,
   listPlansCore,
   isErrorResult,
   handleRouteError,

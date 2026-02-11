@@ -1,34 +1,34 @@
 import { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { cancelSubscriptionCore, isErrorResult } from '@solvapay/server'
+import { cancelRenewalCore, isErrorResult } from '@solvapay/server'
 import { clearSubscriptionCache } from '../cache'
 import { getAuthenticatedUserCore } from '@solvapay/server'
 
 /**
- * Next.js Subscription Helpers
+ * Next.js Renewal Helpers
  *
- * Next.js-specific wrappers for subscription helpers.
+ * Next.js-specific wrappers for renewal helpers.
  */
 
 /**
- * Cancel subscription - Next.js wrapper
+ * Cancel renewal - Next.js wrapper
  *
  * @param request - Next.js request object
  * @param body - Cancellation parameters
  * @param options - Configuration options
- * @returns Cancelled subscription response or NextResponse error
+ * @returns Cancelled purchase response or NextResponse error
  */
-export async function cancelSubscription(
+export async function cancelRenewal(
   request: globalThis.Request,
   body: {
-    subscriptionRef: string
+    purchaseRef: string
     reason?: string
   },
   options: {
     solvaPay?: SolvaPay
   } = {},
 ): Promise<Record<string, unknown> | NextResponse> {
-  const result = await cancelSubscriptionCore(request, body, options)
+  const result = await cancelRenewalCore(request, body, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(

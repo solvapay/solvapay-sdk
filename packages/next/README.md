@@ -121,16 +121,16 @@ Cancel a user's subscription:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { cancelSubscription } from '@solvapay/next'
+import { cancelRenewal } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { subscriptionRef, reason } = await request.json()
+  const { purchaseRef, reason } = await request.json()
 
-  if (!subscriptionRef) {
-    return NextResponse.json({ error: 'Missing subscriptionRef' }, { status: 400 })
+  if (!purchaseRef) {
+    return NextResponse.json({ error: 'Missing purchaseRef' }, { status: 400 })
   }
 
-  const result = await cancelSubscription(request, { subscriptionRef, reason })
+  const result = await cancelRenewal(request, { purchaseRef, reason })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -227,7 +227,7 @@ All helper functions follow the same pattern:
 - `createPaymentIntent(request, body, options?)` - Create payment intent
 - `processPayment(request, body, options?)` - Process payment
 - `listPlans(request)` - List available plans (public)
-- `cancelSubscription(request, body, options?)` - Cancel subscription
+- `cancelRenewal(request, body, options?)` - Cancel renewal
 - `createCheckoutSession(request, body, options?)` - Create hosted checkout
 - `createCustomerSession(request, options?)` - Create customer portal
 - `getAuthenticatedUser(request, options?)` - Get user info

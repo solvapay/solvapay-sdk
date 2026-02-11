@@ -229,7 +229,7 @@ The `@solvapay/next` package provides helper functions for common API route patt
 **Subscription Helpers:**
 
 - `checkSubscription(request, options?)` - Check user subscription (with deduplication & caching)
-- `cancelSubscription(request, body, options?)` - Cancel a subscription
+- `cancelRenewal(request, body, options?)` - Cancel a renewal
 
 **Customer Helpers:**
 
