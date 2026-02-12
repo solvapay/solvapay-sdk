@@ -3,37 +3,37 @@ name: Subscription to Purchase Rename
 overview: Rename all "subscription" terminology to "purchase" across the SDK's React, Next.js, and server packages -- covering types, hooks, components, utilities, tests, exports, and examples -- to align with the backend data model change.
 todos:
   - id: phase1-server-types
-    content: "Phase 1: Server package -- rename types in client.ts, update client.ts, factory.ts, payment.ts, paywall.ts, index.ts"
+    content: 'Phase 1: Server package -- rename types in client.ts, update client.ts, factory.ts, payment.ts, paywall.ts, index.ts'
     status: pending
   - id: phase2-react-types
-    content: "Phase 2: React types/index.ts -- rename all Subscription* types to Purchase* equivalents"
+    content: 'Phase 2: React types/index.ts -- rename all Subscription* types to Purchase* equivalents'
     status: pending
   - id: phase3-react-utils
-    content: "Phase 3: Rename utils/subscriptions.ts to purchases.ts, rename all 6 utility functions"
+    content: 'Phase 3: Rename utils/subscriptions.ts to purchases.ts, rename all 6 utility functions'
     status: pending
   - id: phase4-react-hooks
-    content: "Phase 4: Rename useSubscription.ts to usePurchase.ts, useSubscriptionStatus.ts to usePurchaseStatus.ts, update useSolvaPay/useCustomer/useCheckout"
+    content: 'Phase 4: Rename useSubscription.ts to usePurchase.ts, useSubscriptionStatus.ts to usePurchaseStatus.ts, update useSolvaPay/useCustomer/useCheckout'
     status: pending
   - id: phase5-react-components
-    content: "Phase 5: Rename SubscriptionGate to PurchaseGate, update PlanBadge, PlanSelector, PaymentForm"
+    content: 'Phase 5: Rename SubscriptionGate to PurchaseGate, update PlanBadge, PlanSelector, PaymentForm'
     status: pending
   - id: phase6-react-provider
-    content: "Phase 6: Update SolvaPayProvider.tsx -- all internal state, refs, callbacks, context value"
+    content: 'Phase 6: Update SolvaPayProvider.tsx -- all internal state, refs, callbacks, context value'
     status: pending
   - id: phase7-react-exports
-    content: "Phase 7: Update packages/react/src/index.tsx barrel exports"
+    content: 'Phase 7: Update packages/react/src/index.tsx barrel exports'
     status: pending
   - id: phase8-next-package
-    content: "Phase 8: Update @solvapay/next -- cache.ts, index.ts, helpers/renewal.ts"
+    content: 'Phase 8: Update @solvapay/next -- cache.ts, index.ts, helpers/renewal.ts'
     status: pending
   - id: phase9-tests
-    content: "Phase 9: Rename and update all 3 test files, update vitest.config.ts, update integration test"
+    content: 'Phase 9: Rename and update all 3 test files, update vitest.config.ts, update integration test'
     status: pending
   - id: phase10-examples
-    content: "Phase 10: Update checkout-demo, openai example, shared stub"
+    content: 'Phase 10: Update checkout-demo, openai example, shared stub'
     status: pending
   - id: phase11-docs
-    content: "Phase 11: Update guides, docs, and READMEs"
+    content: 'Phase 11: Update guides, docs, and READMEs'
     status: pending
   - id: validation
     content: Run vitest, tsc --noEmit, and grep for remaining 'subscription' references
@@ -301,4 +301,3 @@ After all changes:
 - Run `npx vitest` in `packages/react` to verify all renamed tests pass
 - Run `npx tsc --noEmit` in each package to verify type correctness
 - Grep for any remaining "subscription" references (excluding `node_modules`, `.git`, `generated.ts`)
-
