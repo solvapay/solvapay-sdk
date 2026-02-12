@@ -14,8 +14,8 @@ export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { p
 /**
  * Extended CustomerResponse with proper field mapping
  *
- * Note: The backend API may return subscriptions with additional fields beyond SubscriptionInfo
- * (e.g., amount, endDate, cancelledAt, cancellationReason) as defined in SubscriptionResponse.
+ * Note: The backend API may return subscriptions with additional fields beyond PurchaseInfo
+ * (e.g., amount, endDate, cancelledAt, cancellationReason) as defined in PurchaseResponse.
  * These additional fields are preserved in the subscriptions array.
  */
 export type CustomerResponseMapped = {
@@ -25,10 +25,10 @@ export type CustomerResponseMapped = {
   externalRef?: string
   plan?: string
   subscriptions?: Array<
-    components['schemas']['SubscriptionInfo'] &
+    components['schemas']['PurchaseInfo'] &
       Partial<
         Pick<
-          components['schemas']['SubscriptionResponse'],
+          components['schemas']['PurchaseResponse'],
           | 'amount'
           | 'currency'
           | 'endDate'
@@ -58,7 +58,7 @@ export interface PurchaseInfo {
  */
 export interface ProcessPaymentResult {
   type: 'subscription' | 'purchase'
-  subscription?: components['schemas']['SubscriptionInfo']
+  subscription?: components['schemas']['PurchaseInfo']
   purchase?: PurchaseInfo
   status: 'completed'
 }
@@ -150,7 +150,7 @@ export interface SolvaPayClient {
   cancelRenewal?(params: {
     purchaseRef: string
     reason?: string
-  }): Promise<components['schemas']['SubscriptionResponse']>
+  }): Promise<components['schemas']['PurchaseResponse']>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
   processPayment?(params: {

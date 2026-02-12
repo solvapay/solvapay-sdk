@@ -87,7 +87,7 @@ export interface paths {
         put?: never;
         /**
          * Create a payment intent
-         * @description Creates a new payment intent for a customer to subscribe to a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+         * @description Creates a new payment intent for a customer to purchase a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
          */
         post: operations["PaymentIntentSdkController_createPaymentIntent"];
         delete?: never;
@@ -208,7 +208,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/customers": {
+    "/v1/sdk/purchases": {
         parameters: {
             query?: never;
             header?: never;
@@ -216,34 +216,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get customer by reference or externalRef
-         * @description Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
+         * Get all purchases for provider
+         * @description Retrieves all purchases for the authenticated provider.
          */
-        get: operations["CustomerSdkController_getCustomerByQuery"];
-        put?: never;
-        /**
-         * Create a new customer
-         * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will use your AI agents. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
-         */
-        post: operations["CustomerSdkController_createCustomer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/{reference}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer by reference
-         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active subscriptions. Only customers owned by the authenticated provider can be accessed.
-         */
-        get: operations["CustomerSdkController_getCustomer"];
+        get: operations["PurchaseSdkController_getPurchases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -252,27 +228,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/customers/customer-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a customer session
-         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
-         */
-        post: operations["CustomerSdkController_createCustomerSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/customer-sessions/{sessionId}": {
+    "/v1/sdk/purchases/customer/{customerRef}": {
         parameters: {
             query?: never;
             header?: never;
@@ -280,10 +236,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get customer session by sessionId
-         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and subscriptions. The session must belong to the authenticated provider.
+         * Get purchases by customer reference
+         * @description Retrieves all purchases for a specific customer using their reference ID. Only returns purchases owned by the authenticated provider.
          */
-        get: operations["CustomerSdkController_getCustomerSession"];
+        get: operations["PurchaseSdkController_getPurchasesByCustomer"];
         put?: never;
         post?: never;
         delete?: never;
@@ -292,7 +248,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions": {
+    "/v1/sdk/purchases/agent/{agentRef}": {
         parameters: {
             query?: never;
             header?: never;
@@ -300,10 +256,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get all subscriptions for provider
-         * @description Retrieves all subscriptions for the authenticated provider.
+         * Get purchases by agent reference
+         * @description Retrieves all purchases for a specific agent using their reference ID. Only returns purchases for agents owned by the authenticated provider.
          */
-        get: operations["SubscriptionSdkController_getSubscriptions"];
+        get: operations["PurchaseSdkController_getPurchasesByAgent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -312,7 +268,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/subscriptions/customer/{customerRef}": {
+    "/v1/sdk/purchases/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -320,50 +276,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get subscriptions by customer reference
-         * @description Retrieves all subscriptions for a specific customer using their reference ID. Only returns subscriptions owned by the authenticated provider.
+         * Get purchase by ID
+         * @description Retrieves a specific purchase by its ID. Only returns purchases owned by the authenticated provider.
          */
-        get: operations["SubscriptionSdkController_getSubscriptionsByCustomer"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/subscriptions/agent/{agentRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get subscriptions by agent reference
-         * @description Retrieves all subscriptions for a specific agent using their reference ID. Only returns subscriptions for agents owned by the authenticated provider.
-         */
-        get: operations["SubscriptionSdkController_getSubscriptionsByAgent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/subscriptions/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get subscription by ID
-         * @description Retrieves a specific subscription by its ID. Only returns subscriptions owned by the authenticated provider.
-         */
-        get: operations["SubscriptionSdkController_getSubscriptionById"];
+        get: operations["PurchaseSdkController_getPurchaseById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -452,16 +368,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer by reference or externalRef
+         * @description Retrieves a customer's details using either their unique reference ID or externalRef. Use query parameter 'reference' to look up by customer reference, or 'externalRef' to look up by external auth ID. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomerByQuery"];
+        put?: never;
+        /**
+         * Create a new customer
+         * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will use your AI agents. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
+         */
+        post: operations["CustomerSdkController_createCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/{reference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer by reference
+         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a customer session
+         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
+         */
+        post: operations["CustomerSdkController_createCustomerSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer session by sessionId
+         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and purchases. The session must belong to the authenticated provider.
+         */
+        get: operations["CustomerSdkController_getCustomerSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        UpdateProviderProfileDto: Record<string, never>;
+        UpdateProviderDto: Record<string, never>;
         CreateSecretKey: Record<string, never>;
         CheckName: Record<string, never>;
         CreateAdminAgent: Record<string, never>;
         UpdateAdminAgent: Record<string, never>;
-        SdkAgentResponse: Record<string, never>;
+        Agent: Record<string, never>;
         CreateAgentRequest: Record<string, never>;
         UpdateAgentRequest: Record<string, never>;
         Signup: Record<string, never>;
@@ -537,7 +537,6 @@ export interface components {
              */
             reason?: string;
         };
-        CreateConnectedAccount: Record<string, never>;
         UpdateConnectedAccount: Record<string, never>;
         CreateCheckoutSessionResponse: {
             /**
@@ -600,8 +599,6 @@ export interface components {
              * @example 100
              */
             freeUnits?: number;
-            /** @description Optional agent ID to associate plan with (not stored on plan, only used for initial association) */
-            agentId?: string;
             /**
              * Billing model for usage-based plans
              * @example pre-paid
@@ -677,8 +674,6 @@ export interface components {
             accessExpiryDays?: number;
             /** @description Additional metadata */
             metadata?: Record<string, never>;
-            /** @description Usage tracking (internal use, not validated) */
-            customerUsage?: Record<string, never>;
             /**
              * Whether this is the default plan
              * @example false
@@ -687,6 +682,199 @@ export interface components {
         };
         UpdatePlanRequest: Record<string, never>;
         BasePlan: Record<string, never>;
+        PurchaseResponse: {
+            /**
+             * Purchase reference identifier
+             * @example sub_1a2b3c4d5e6f
+             */
+            reference: string;
+            /**
+             * Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+            /**
+             * Customer email
+             * @example customer@example.com
+             */
+            customerEmail: string;
+            /**
+             * Customer name
+             * @example John Doe
+             */
+            customerName?: string;
+            /**
+             * Agent reference identifier
+             * @example agt_1a2b3c4d5e6f
+             */
+            agentRef?: string;
+            /**
+             * Agent name
+             * @example My AI Agent
+             */
+            agentName?: string;
+            /**
+             * MCP Server reference identifier
+             * @example mcp_1a2b3c4d5e6f
+             */
+            mcpServerRef?: string;
+            /**
+             * MCP Server name
+             * @example My MCP Server
+             */
+            mcpServerName?: string;
+            /**
+             * Plan reference identifier
+             * @example pln_1a2b3c4d5e6f
+             */
+            planRef: string;
+            /**
+             * Plan name
+             * @example Premium Plan
+             */
+            planName: string;
+            /**
+             * Plan type
+             * @example recurring
+             * @enum {string}
+             */
+            planType: "recurring" | "usage-based" | "one-time" | "hybrid";
+            /**
+             * Purchase status
+             * @example active
+             * @enum {string}
+             */
+            status: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
+            /**
+             * Amount paid in original currency (in cents)
+             * @example 9900
+             */
+            amount: number;
+            /**
+             * Currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * Start date of purchase
+             * @example 2025-01-01T00:00:00.000Z
+             */
+            startDate: string;
+            /**
+             * End date of purchase (if applicable)
+             * @example 2025-02-01T00:00:00.000Z
+             */
+            endDate?: string;
+            /**
+             * When payment was confirmed
+             * @example 2025-01-01T00:00:00.000Z
+             */
+            paidAt?: string;
+            /** @description Usage quota information (for usage-based plans) */
+            usageQuota?: Record<string, never>;
+            /**
+             * Whether this is a recurring purchase
+             * @example true
+             */
+            isRecurring: boolean;
+            /**
+             * Next billing date (for recurring purchases)
+             * @example 2025-02-01T00:00:00.000Z
+             */
+            nextBillingDate?: string;
+            /**
+             * When purchase was cancelled (if applicable)
+             * @example 2025-01-15T00:00:00.000Z
+             */
+            cancelledAt?: string;
+            /**
+             * Reason for cancellation (if applicable)
+             * @example Customer request
+             */
+            cancellationReason?: string;
+            /**
+             * When purchase was created
+             * @example 2025-01-01T00:00:00.000Z
+             */
+            createdAt: string;
+        };
+        CheckLimitRequest: {
+            /**
+             * Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+            /**
+             * Agent reference identifier (provide either agentRef or mcpServerRef)
+             * @example agt_1a2b3c4d5e6f
+             */
+            agentRef?: string;
+            /**
+             * MCP Server reference identifier (provide either agentRef or mcpServerRef)
+             * @example mcp_1a2b3c4d5e6f
+             */
+            mcpServerRef?: string;
+        };
+        LimitResponse: {
+            /**
+             * Whether the customer is within their usage limits
+             * @example true
+             */
+            withinLimits: boolean;
+            /**
+             * Remaining usage units before hitting the limit
+             * @example 997
+             */
+            remaining: number;
+            /**
+             * Optional checkout session ID/token if payment is required
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutSessionId?: string;
+            /**
+             * Optional full checkout URL if payment is required (based on backend configuration)
+             * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutUrl?: string;
+        };
+        UsageEvent: {
+            /**
+             * Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+            /**
+             * Agent reference identifier
+             * @example agt_1a2b3c4d5e6f
+             */
+            agentRef: string;
+            /**
+             * Outcome of the action
+             * @example success
+             * @enum {string}
+             */
+            outcome: "success" | "paywall" | "fail";
+            /**
+             * Optional action identifier
+             * @example generate_text
+             */
+            action?: string;
+            /**
+             * Unique request identifier matching the limits check
+             * @example req_1a2b3c4d5e6f
+             */
+            requestId: string;
+            /**
+             * Duration of the action in milliseconds
+             * @example 1250
+             */
+            actionDuration: number;
+            /**
+             * ISO 8601 timestamp of when the action occurred
+             * @example 2025-10-21T10:30:00.000Z
+             */
+            timestamp: string;
+        };
         CreateCustomerSessionRequest: {
             /**
              * Customer reference identifier
@@ -733,9 +921,9 @@ export interface components {
              */
             externalRef?: string;
         };
-        SubscriptionInfo: {
+        PurchaseInfo: {
             /**
-             * Subscription reference
+             * Purchase reference
              * @example sub_abc123
              */
             reference: string;
@@ -745,12 +933,17 @@ export interface components {
              */
             planName: string;
             /**
-             * Agent name
+             * Agent name (optional if MCP server purchase)
              * @example AI Assistant
              */
-            agentName: string;
+            agentName?: string;
             /**
-             * Subscription status
+             * MCP server name (optional if agent purchase)
+             * @example Calculator MCP
+             */
+            mcpServerName?: string;
+            /**
+             * Purchase status
              * @example active
              */
             status: string;
@@ -770,12 +963,12 @@ export interface components {
              */
             currency: string;
             /**
-             * End date of subscription
+             * End date of purchase
              * @example 2025-11-27T10:00:00Z
              */
             endDate?: string;
             /**
-             * When subscription was cancelled
+             * When purchase was cancelled
              * @example 2025-10-28T10:00:00Z
              */
             cancelledAt?: string;
@@ -806,8 +999,8 @@ export interface components {
              * @example auth_user_12345
              */
             externalRef?: string;
-            /** @description Active subscriptions */
-            subscriptions?: components["schemas"]["SubscriptionInfo"][];
+            /** @description Active purchases */
+            purchases?: components["schemas"]["PurchaseInfo"][];
         };
         CreateCustomerSessionResponse: {
             /**
@@ -856,8 +1049,76 @@ export interface components {
              */
             updatedAt: string;
         };
-        CreateOAuthClientDto: Record<string, never>;
-        UpdateOAuthClientDto: Record<string, never>;
+        DynamicClientRegistrationDto: {
+            /** @example My AI Agent */
+            client_name: string;
+            /**
+             * @example [
+             *       "https://agent.example.com/callback"
+             *     ]
+             */
+            redirect_uris: string[];
+            /**
+             * @example [
+             *       "authorization_code",
+             *       "refresh_token"
+             *     ]
+             */
+            grant_types?: string[];
+            /**
+             * @example [
+             *       "code"
+             *     ]
+             */
+            response_types?: string[];
+            /** @example agent-123 */
+            software_id?: string;
+            /** @example 1.0.0 */
+            software_version?: string;
+            /** @example https://example.com/logo.png */
+            logo_uri?: string;
+            /** @example https://example.com/tos */
+            tos_uri?: string;
+            /** @example https://example.com/policy */
+            policy_uri?: string;
+            /** @example https://example.com */
+            client_uri?: string;
+        };
+        DynamicClientRegistrationResponseDto: {
+            /** @example client-id-123 */
+            client_id: string;
+            /** @example client-secret-456 */
+            client_secret: string;
+            /** @example 1734567890 */
+            client_id_issued_at: number;
+            /** @example 0 */
+            client_secret_expires_at: number;
+            /** @example My AI Agent */
+            client_name: string;
+            /**
+             * @example [
+             *       "https://agent.example.com/callback"
+             *     ]
+             */
+            redirect_uris: string[];
+            /**
+             * @example [
+             *       "authorization_code",
+             *       "refresh_token"
+             *     ]
+             */
+            grant_types: string[];
+            /**
+             * @example [
+             *       "code"
+             *     ]
+             */
+            response_types: string[];
+            /** @example openid profile email */
+            scope: string;
+            /** @example client_secret_basic */
+            token_endpoint_auth_method: string;
+        };
         GoogleLoginDto: {
             /** @description The authorization code returned by Google */
             code: string;
@@ -876,184 +1137,6 @@ export interface components {
         };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
-        SubscriptionResponse: {
-            /**
-             * Subscription reference identifier
-             * @example sub_1a2b3c4d5e6f
-             */
-            reference: string;
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Customer email
-             * @example customer@example.com
-             */
-            customerEmail: string;
-            /**
-             * Customer name
-             * @example John Doe
-             */
-            customerName?: string;
-            /**
-             * Agent reference identifier
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef: string;
-            /**
-             * Agent name
-             * @example My AI Agent
-             */
-            agentName: string;
-            /**
-             * Plan reference identifier
-             * @example pln_1a2b3c4d5e6f
-             */
-            planRef: string;
-            /**
-             * Plan name
-             * @example Premium Plan
-             */
-            planName: string;
-            /**
-             * Plan type
-             * @example recurring
-             * @enum {string}
-             */
-            planType: "recurring" | "usage-based" | "one-time" | "hybrid";
-            /**
-             * Subscription status
-             * @example active
-             * @enum {string}
-             */
-            status: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            /**
-             * Amount paid in original currency (in cents)
-             * @example 9900
-             */
-            amount: number;
-            /**
-             * Currency code
-             * @example USD
-             */
-            currency: string;
-            /**
-             * Start date of subscription
-             * @example 2025-01-01T00:00:00.000Z
-             */
-            startDate: string;
-            /**
-             * End date of subscription (if applicable)
-             * @example 2025-02-01T00:00:00.000Z
-             */
-            endDate?: string;
-            /**
-             * When payment was confirmed
-             * @example 2025-01-01T00:00:00.000Z
-             */
-            paidAt?: string;
-            /** @description Usage quota information (for usage-based plans) */
-            usageQuota?: Record<string, never>;
-            /**
-             * Whether this is a recurring subscription
-             * @example true
-             */
-            isRecurring: boolean;
-            /**
-             * Next billing date (for recurring subscriptions)
-             * @example 2025-02-01T00:00:00.000Z
-             */
-            nextBillingDate?: string;
-            /**
-             * When subscription was cancelled (if applicable)
-             * @example 2025-01-15T00:00:00.000Z
-             */
-            cancelledAt?: string;
-            /**
-             * Reason for cancellation (if applicable)
-             * @example Customer request
-             */
-            cancellationReason?: string;
-            /**
-             * When subscription was created
-             * @example 2025-01-01T00:00:00.000Z
-             */
-            createdAt: string;
-        };
-        CheckLimitRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Agent reference identifier
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef: string;
-        };
-        LimitResponse: {
-            /**
-             * Whether the customer is within their usage limits
-             * @example true
-             */
-            withinLimits: boolean;
-            /**
-             * Remaining usage units before hitting the limit
-             * @example 997
-             */
-            remaining: number;
-            /**
-             * Optional checkout session ID/token if payment is required
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            checkoutSessionId?: string;
-            /**
-             * Optional full checkout URL if payment is required (based on backend configuration)
-             * @example https://app.solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
-             */
-            checkoutUrl?: string;
-        };
-        UsageEvent: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Agent reference identifier
-             * @example agt_1a2b3c4d5e6f
-             */
-            agentRef: string;
-            /**
-             * Outcome of the action
-             * @example success
-             * @enum {string}
-             */
-            outcome: "success" | "paywall" | "fail";
-            /**
-             * Optional action identifier
-             * @example generate_text
-             */
-            action?: string;
-            /**
-             * Unique request identifier matching the limits check
-             * @example req_1a2b3c4d5e6f
-             */
-            requestId: string;
-            /**
-             * Duration of the action in milliseconds
-             * @example 1250
-             */
-            actionDuration: number;
-            /**
-             * ISO 8601 timestamp of when the action occurred
-             * @example 2025-10-21T10:30:00.000Z
-             */
-            timestamp: string;
-        };
         UpdateThemePreferenceDto: {
             /**
              * Selected UI theme mode
@@ -1062,46 +1145,77 @@ export interface components {
              */
             mode: "light" | "dark";
         };
-        CreatePageSettings: {
-            /** @description Page identifier */
-            id: string;
-            /** @description Page display name */
-            name: string;
-            /** @description Logo URL */
-            logo?: string;
+        ThemeModeColorsDto: {
             /**
-             * Text color in hex format
-             * @example #2d3748
+             * Page background color
+             * @example #f7f7f8
              */
-            textColor: string;
+            background?: string;
             /**
-             * Button color in hex format
-             * @example #3182ce
-             */
-            buttonColor: string;
-            /**
-             * Left background color in hex format
-             * @example #f7fafc
-             */
-            leftBackgroundColor: string;
-            /**
-             * Right background color in hex format
+             * Card/surface background color
              * @example #ffffff
              */
-            rightBackgroundColor: string;
+            surface?: string;
             /**
-             * Font family
+             * Primary text color
+             * @example #181818
+             */
+            text?: string;
+            /**
+             * Secondary/muted text color
+             * @example #5c5c5c
+             */
+            secondary?: string;
+        };
+        ThemeOverridesDto: {
+            /** @description Light mode color overrides */
+            light?: components["schemas"]["ThemeModeColorsDto"];
+            /** @description Dark mode color overrides */
+            dark?: components["schemas"]["ThemeModeColorsDto"];
+        };
+        UpdateBrandThemeDto: {
+            /**
+             * Provider's brand name displayed on hosted pages
+             * @example Acme Corp
+             */
+            brandName: string;
+            /**
+             * Primary/accent color in hex format
+             * @example #3182ce
+             */
+            primaryColor: string;
+            /**
+             * Font family for hosted pages
+             * @default Inter
              * @example Inter
              */
             fontFamily: string;
             /**
-             * Font size
+             * Base font size
+             * @default 16px
              * @example 16px
              */
             fontSize: string;
+            /** @description Per-mode color overrides for light and dark themes */
+            themes?: components["schemas"]["ThemeOverridesDto"];
         };
         CreateWebhookEndpointDto: Record<string, never>;
         UpdateWebhookEndpointDto: Record<string, never>;
+        CreatePreregistrationDto: {
+            /** @example jane@company.com */
+            email: string;
+            /** @example Jane Smith */
+            fullName: string;
+            /** @example Acme Corp */
+            companyName: string;
+            /** @example SaaS */
+            businessType?: string;
+            /** @example Purchase billing for our platform */
+            useCase?: string;
+            customFields?: {
+                [key: string]: string;
+            };
+        };
     };
     responses: never;
     parameters: never;
@@ -1144,25 +1258,6 @@ export interface operations {
              *           "ai"
              *         ],
              *         "avatarUrl": "https://example.com/avatar.png",
-             *         "capabilities": [
-             *           "text_generation",
-             *           "conversation"
-             *         ],
-             *         "publisher": {
-             *           "name": "OpenAI",
-             *           "website": "https://openai.com",
-             *           "contact": "support@openai.com"
-             *         },
-             *         "pricing": {
-             *           "model": "usage-based",
-             *           "currency": "USD",
-             *           "currencySymbol": "$"
-             *         },
-             *         "reputation": {
-             *           "rating": 4.8,
-             *           "totalReviews": 1250,
-             *           "verified": true
-             *         },
              *         "balance": 1000,
              *         "totalTransactions": 150,
              *         "createdAt": "2024-01-15T10:30:00Z"
@@ -1186,32 +1281,13 @@ export interface operations {
                      *           "ai"
                      *         ],
                      *         "avatarUrl": "https://example.com/avatar.png",
-                     *         "capabilities": [
-                     *           "text_generation",
-                     *           "conversation"
-                     *         ],
-                     *         "publisher": {
-                     *           "name": "OpenAI",
-                     *           "website": "https://openai.com",
-                     *           "contact": "support@openai.com"
-                     *         },
-                     *         "pricing": {
-                     *           "model": "usage-based",
-                     *           "currency": "USD",
-                     *           "currencySymbol": "$"
-                     *         },
-                     *         "reputation": {
-                     *           "rating": 4.8,
-                     *           "totalReviews": 1250,
-                     *           "verified": true
-                     *         },
                      *         "balance": 1000,
                      *         "totalTransactions": 150,
                      *         "createdAt": "2024-01-15T10:30:00Z"
                      *       }
                      *     ]
                      */
-                    "application/json": components["schemas"]["SdkAgentResponse"][];
+                    "application/json": components["schemas"]["Agent"][];
                 };
             };
             /** @description Invalid request parameters or validation errors */
@@ -1280,23 +1356,9 @@ export interface operations {
              *         "ai"
              *       ],
              *       "avatarUrl": "https://example.com/avatar.png",
-             *       "capabilities": [
-             *         "text_generation",
-             *         "conversation"
-             *       ],
              *       "version": "1.0.0",
              *       "endpoint": "https://api.openai.com/v1/chat/completions",
              *       "authentication": "api-key",
-             *       "operations": [
-             *         {
-             *           "name": "generate_text",
-             *           "description": "Generate text content",
-             *           "parameters": {
-             *             "prompt": "string",
-             *             "max_length": "number"
-             *           }
-             *         }
-             *       ],
              *       "limits": {
              *         "maxTransactions": 1000,
              *         "maxCalls": 500,
@@ -1307,13 +1369,6 @@ export interface operations {
              *         "required": true,
              *         "methods": [
              *           "header"
-             *         ]
-             *       },
-             *       "protocol": {
-             *         "version": "1.0",
-             *         "supportedFormats": [
-             *           "json",
-             *           "xml"
              *         ]
              *       },
              *       "observability": {
@@ -1344,23 +1399,9 @@ export interface operations {
                      *         "ai"
                      *       ],
                      *       "avatarUrl": "https://example.com/avatar.png",
-                     *       "capabilities": [
-                     *         "text_generation",
-                     *         "conversation"
-                     *       ],
                      *       "version": "1.0.0",
                      *       "endpoint": "https://api.openai.com/v1/chat/completions",
                      *       "authentication": "api-key",
-                     *       "operations": [
-                     *         {
-                     *           "name": "generate_text",
-                     *           "description": "Generate text content",
-                     *           "parameters": {
-                     *             "prompt": "string",
-                     *             "max_length": "number"
-                     *           }
-                     *         }
-                     *       ],
                      *       "limits": {
                      *         "maxTransactions": 1000,
                      *         "maxCalls": 500,
@@ -1371,13 +1412,6 @@ export interface operations {
                      *         "required": true,
                      *         "methods": [
                      *           "header"
-                     *         ]
-                     *       },
-                     *       "protocol": {
-                     *         "version": "1.0",
-                     *         "supportedFormats": [
-                     *           "json",
-                     *           "xml"
                      *         ]
                      *       },
                      *       "observability": {
@@ -1392,7 +1426,7 @@ export interface operations {
                      *       "updatedAt": "2024-01-15T10:30:00Z"
                      *     }
                      */
-                    "application/json": components["schemas"]["SdkAgentResponse"];
+                    "application/json": components["schemas"]["Agent"];
                 };
             };
             /** @description Invalid request data */
@@ -1487,23 +1521,9 @@ export interface operations {
              *         "automation"
              *       ],
              *       "avatarUrl": "https://example.com/avatar.png",
-             *       "capabilities": [
-             *         "text_generation",
-             *         "conversation"
-             *       ],
              *       "version": "2.1.0",
              *       "endpoint": "https://api.example.com/agent/v2",
              *       "authentication": "oauth2",
-             *       "operations": [
-             *         {
-             *           "name": "generate_text",
-             *           "description": "Generate text content",
-             *           "parameters": {
-             *             "prompt": "string",
-             *             "max_length": "number"
-             *           }
-             *         }
-             *       ],
              *       "limits": {
              *         "maxTransactions": 2000,
              *         "maxCalls": 1000,
@@ -1515,13 +1535,6 @@ export interface operations {
              *         "methods": [
              *           "header",
              *           "query"
-             *         ]
-             *       },
-             *       "protocol": {
-             *         "version": "1.0",
-             *         "supportedFormats": [
-             *           "json",
-             *           "xml"
              *         ]
              *       },
              *       "observability": {
@@ -1552,23 +1565,9 @@ export interface operations {
                      *         "automation"
                      *       ],
                      *       "avatarUrl": "https://example.com/avatar.png",
-                     *       "capabilities": [
-                     *         "text_generation",
-                     *         "conversation"
-                     *       ],
                      *       "version": "2.1.0",
                      *       "endpoint": "https://api.example.com/agent/v2",
                      *       "authentication": "oauth2",
-                     *       "operations": [
-                     *         {
-                     *           "name": "generate_text",
-                     *           "description": "Generate text content",
-                     *           "parameters": {
-                     *             "prompt": "string",
-                     *             "max_length": "number"
-                     *           }
-                     *         }
-                     *       ],
                      *       "limits": {
                      *         "maxTransactions": 2000,
                      *         "maxCalls": 1000,
@@ -1580,13 +1579,6 @@ export interface operations {
                      *         "methods": [
                      *           "header",
                      *           "query"
-                     *         ]
-                     *       },
-                     *       "protocol": {
-                     *         "version": "1.0",
-                     *         "supportedFormats": [
-                     *           "json",
-                     *           "xml"
                      *         ]
                      *       },
                      *       "observability": {
@@ -1601,7 +1593,7 @@ export interface operations {
                      *       "updatedAt": "2024-01-15T11:45:00Z"
                      *     }
                      */
-                    "application/json": components["schemas"]["SdkAgentResponse"];
+                    "application/json": components["schemas"]["Agent"];
                 };
             };
             /** @description Invalid request data */
@@ -1714,7 +1706,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * Plan reference to subscribe to
+                     * Plan reference to purchase
                      * @example pln_2b3c4d5e6f7g
                      */
                     planRef: string;
@@ -1728,6 +1720,11 @@ export interface operations {
                      * @example cus_3c4d5e6f7g8h
                      */
                     customerReference: string;
+                    /**
+                     * Name of the pricing tier to purchase (for plans with pricingTiers). If not specified, uses the plan base price.
+                     * @example Pro
+                     */
+                    pricingTier?: string;
                 };
             };
         };
@@ -1800,7 +1797,7 @@ export interface operations {
                      */
                     customerRef: string;
                     /**
-                     * Plan reference - helps determine if payment is for subscription
+                     * Plan reference - helps determine if payment is for purchase
                      * @example pln_789
                      */
                     planRef?: string;
@@ -2297,6 +2294,275 @@ export interface operations {
             };
         };
     };
+    PurchaseSdkController_getPurchases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchases retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseResponse"][];
+                };
+            };
+        };
+    };
+    PurchaseSdkController_getPurchasesByCustomer: {
+        parameters: {
+            query?: {
+                /** @description Filter by purchase status */
+                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
+            };
+            header?: never;
+            path: {
+                /** @description Customer reference identifier */
+                customerRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer purchases retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseResponse"][];
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PurchaseSdkController_getPurchasesByAgent: {
+        parameters: {
+            query?: {
+                /** @description Filter by purchase status */
+                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
+            };
+            header?: never;
+            path: {
+                /** @description Agent reference identifier */
+                agentRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Agent purchases retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseResponse"][];
+                };
+            };
+            /** @description Agent not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PurchaseSdkController_getPurchaseById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Purchase ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchase retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseResponse"];
+                };
+            };
+            /** @description Purchase not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PurchaseSdkController_cancelRenewal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Purchase reference identifier */
+                purchaseRef: string;
+            };
+            cookie?: never;
+        };
+        /** @description Cancellation details */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CancelRenewalRequest"];
+            };
+        };
+        responses: {
+            /** @description Renewal cancelled successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseResponse"];
+                };
+            };
+            /** @description Renewal cannot be cancelled or purchase does not belong to provider */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Purchase not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LimitsSdkController_checkLimit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Limit check request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckLimitRequest"];
+            };
+        };
+        responses: {
+            /** @description Limit check completed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LimitResponse"];
+                };
+            };
+            /** @description Invalid request data or references not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    UsageSdkController_recordUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Usage event data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsageEvent"];
+            };
+        };
+        responses: {
+            /** @description Usage recorded successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Invalid usage data or references not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    UsageSdkController_recordBulkUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Array of usage events */
+        requestBody: {
+            content: {
+                "application/json": {
+                    customerRef?: string;
+                    agentRef?: string;
+                    /** @enum {string} */
+                    outcome?: "success" | "fail" | "paywall";
+                    action?: string;
+                    requestId?: string;
+                    actionDuration?: number;
+                    timestamp?: string;
+                }[];
+            };
+        };
+        responses: {
+            /** @description Bulk usage recorded successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Invalid bulk usage data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     CustomerSdkController_getCustomerByQuery: {
         parameters: {
             query?: {
@@ -2472,275 +2738,6 @@ export interface operations {
             };
             /** @description Customer session not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Subscriptions retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
-                };
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptionsByCustomer: {
-        parameters: {
-            query?: {
-                /** @description Filter by subscription status */
-                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            };
-            header?: never;
-            path: {
-                /** @description Customer reference identifier */
-                customerRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Customer subscriptions retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
-                };
-            };
-            /** @description Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptionsByAgent: {
-        parameters: {
-            query?: {
-                /** @description Filter by subscription status */
-                status?: "pending" | "active" | "expired" | "cancelled" | "suspended" | "refunded";
-            };
-            header?: never;
-            path: {
-                /** @description Agent reference identifier */
-                agentRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Agent subscriptions retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"][];
-                };
-            };
-            /** @description Agent not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SubscriptionSdkController_getSubscriptionById: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Subscription ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Subscription retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"];
-                };
-            };
-            /** @description Subscription not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PurchaseSdkController_cancelRenewal: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Purchase reference identifier */
-                purchaseRef: string;
-            };
-            cookie?: never;
-        };
-        /** @description Cancellation details */
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["CancelRenewalRequest"];
-            };
-        };
-        responses: {
-            /** @description Renewal cancelled successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionResponse"];
-                };
-            };
-            /** @description Renewal cannot be cancelled or purchase does not belong to provider */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Purchase not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    LimitsSdkController_checkLimit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Limit check request data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckLimitRequest"];
-            };
-        };
-        responses: {
-            /** @description Limit check completed successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LimitResponse"];
-                };
-            };
-            /** @description Invalid request data or references not found */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    UsageSdkController_recordUsage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Usage event data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UsageEvent"];
-            };
-        };
-        responses: {
-            /** @description Usage recorded successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Invalid usage data or references not found */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    UsageSdkController_recordBulkUsage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Array of usage events */
-        requestBody: {
-            content: {
-                "application/json": {
-                    customerRef?: string;
-                    agentRef?: string;
-                    /** @enum {string} */
-                    outcome?: "success" | "fail" | "paywall";
-                    action?: string;
-                    requestId?: string;
-                    actionDuration?: number;
-                    timestamp?: string;
-                }[];
-            };
-        };
-        responses: {
-            /** @description Bulk usage recorded successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Invalid bulk usage data */
-            400: {
                 headers: {
                     [name: string]: unknown;
                 };
