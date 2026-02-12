@@ -10,7 +10,7 @@
     "packages/core/src/index.ts"
   ],
   "out": "docs/api",
-  "readme": "README.md",
+  "readme": "none",
   "name": "SolvaPay SDK",
   "includeVersion": true,
   "excludePrivate": true,

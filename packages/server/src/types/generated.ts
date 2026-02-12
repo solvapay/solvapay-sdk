@@ -672,7 +672,7 @@ export interface components {
              * @example 30
              */
             accessExpiryDays?: number;
-            /** @description Additional metadata */
+            /** Additional metadata */
             metadata?: Record<string, never>;
             /**
              * Whether this is the default plan
@@ -770,7 +770,7 @@ export interface components {
              * @example 2025-01-01T00:00:00.000Z
              */
             paidAt?: string;
-            /** @description Usage quota information (for usage-based plans) */
+            /** Usage quota information (for usage-based plans) */
             usageQuota?: Record<string, never>;
             /**
              * Whether this is a recurring purchase
