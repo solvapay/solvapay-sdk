@@ -10,11 +10,11 @@ A demo implementation of the SolvaPay API client that simulates backend behavior
 
 **Features:**
 
-- ✅ Free tier tracking with configurable daily limits
-- ✅ Customer management (create, retrieve)
-- ✅ In-memory or file-based persistence
-- ✅ Simulates realistic API delays
-- ✅ Debug logging
+- Free tier tracking with configurable daily limits
+- Customer management (create, retrieve)
+- In-memory or file-based persistence
+- Simulates realistic API delays
+- Debug logging
 
 **Usage:**
 

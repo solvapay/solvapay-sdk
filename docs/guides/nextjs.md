@@ -415,9 +415,9 @@ import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { hasPaidSubscription, isLoading } = useSubscription();
+  const { hasPaidSubscription, loading } = useSubscription();
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading...</div>;
   }
 
@@ -550,9 +550,9 @@ import { useSubscription } from '@solvapay/react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { hasPaidSubscription, isLoading, subscription } = useSubscription();
+  const { hasPaidSubscription, loading, activeSubscription } = useSubscription();
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading...</div>;
   }
 
@@ -563,8 +563,8 @@ export default function DashboardPage() {
       {hasPaidSubscription ? (
         <div>
           <p className="text-green-600">You have an active subscription!</p>
-          {subscription?.plan && (
-            <p>Plan: {subscription.plan.name}</p>
+          {activeSubscription && (
+            <p>Plan: {activeSubscription.planName}</p>
           )}
         </div>
       ) : (

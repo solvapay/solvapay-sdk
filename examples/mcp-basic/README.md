@@ -18,20 +18,20 @@ This example demonstrates how to integrate SolvaPay paywall functionality with a
 
 ## Features
 
-### 🔒 **Agent-Based Access Control**
+### Agent-Based Access Control
 
 - Uses `agent` to identify the service/tool suite
 - Supports both free tier and paid plan access
 - Backend-configurable plans (no hardcoded pricing in SDK)
 
-### 📊 **Persistent Free Tier Tracking**
+### Persistent Free Tier Tracking
 
 - **Production-ready demo**: Free tier usage persists across server restarts
 - **File-based storage**: Simulates database persistence using JSON files
 - **Daily reset logic**: Automatically resets counters each day
 - **Concurrent safe**: Handles multiple API calls properly
 
-### 📈 **Usage Analytics**
+### Usage Analytics
 
 - Tracks feature usage with `trackUsage()` (not tied to plans)
 - Clean separation: Plans control access, features track usage
@@ -61,10 +61,10 @@ POST / api / create - checkout
 
 ## Key Benefits
 
-✅ **Server restart resilience** - Free tier counts persist  
-✅ **Multi-instance compatible** - Shared storage approach  
-✅ **Development realistic** - Mirrors production behavior  
-✅ **Alpha launch ready** - Transparent about requirements
+- **Server restart resilience** - Free tier counts persist
+- **Multi-instance compatible** - Shared storage approach
+- **Development realistic** - Mirrors production behavior
+- **Alpha launch ready** - Transparent about requirements
 
 ## Quick Start
 
@@ -111,14 +111,14 @@ MCP_HOST=localhost  # or 0.0.0.0 to bind to all interfaces
 ```
 
 **Features:**
-- ✅ Uses official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport
-- ✅ Implements MCP Streamable HTTP transport (spec 2025-11-25)
-- ✅ Single `/mcp` endpoint for all operations (POST/GET/DELETE)
-- ✅ Header-based session management (`MCP-Session-Id`)
-- ✅ Protocol version negotiation (`MCP-Protocol-Version`)
-- ✅ Origin header validation for security
-- ✅ Resumability support with `Last-Event-ID`
-- ✅ Server-Sent Events (SSE) streaming support
+- Uses official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport
+- Implements MCP Streamable HTTP transport (spec 2025-11-25)
+- Single `/mcp` endpoint for all operations (POST/GET/DELETE)
+- Header-based session management (`MCP-Session-Id`)
+- Protocol version negotiation (`MCP-Protocol-Version`)
+- Origin header validation for security
+- Resumability support with `Last-Event-ID`
+- Server-Sent Events (SSE) streaming support
 
 **MCP Endpoint:**
 - `POST /mcp` - Send JSON-RPC messages (initialize, tool calls, etc.)
@@ -444,14 +444,14 @@ const apiClient = createStubClient({
 Keep business logic separate from MCP adapter:
 
 ```typescript
-// ✅ Good: Separate function
+// Good: Separate function
 async function createTaskMCP(args: CreateTaskArgs) {
   return await createTask(args)
 }
 
 const handler = payable.mcp(createTaskMCP)
 
-// ❌ Bad: Inline logic
+// Bad: Inline logic
 const handler = payable.mcp(async args => {
   // Logic here makes testing harder
 })
@@ -534,12 +534,12 @@ pnpm test:watch
 
 ### What's Tested
 
-- ✅ MCP tool execution with paywall protection
-- ✅ Free tier limit enforcement
-- ✅ Paywall error formatting
-- ✅ Customer reference extraction
-- ✅ Persistence across restarts (file storage)
-- ✅ Concurrent requests handling
+- MCP tool execution with paywall protection
+- Free tier limit enforcement
+- Paywall error formatting
+- Customer reference extraction
+- Persistence across restarts (file storage)
+- Concurrent requests handling
 
 ### Test Structure
 
@@ -632,7 +632,7 @@ src/__tests__/
 
 ### API Reference
 
-- [Server SDK API Reference](../../docs/api/server/) - Complete API documentation
+- [Server SDK API Reference](../../packages/server/README.md) - Complete API documentation
 - [Server SDK README](../../packages/server/README.md) - Package documentation
 
 ### Additional Resources

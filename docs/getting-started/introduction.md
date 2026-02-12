@@ -1,12 +1,20 @@
 # Introduction
 
+## Table of Contents
+
+- [What is SolvaPay SDK?](#what-is-solvapay-sdk)
+- [Key Features](#key-features)
+- [Use Cases](#use-cases)
+- [Architecture Overview](#architecture-overview)
+- [Next Steps](#next-steps)
+
 ## What is SolvaPay SDK?
 
 SolvaPay SDK is a modern TypeScript SDK for monetizing APIs, AI agents, and MCP (Model Context Protocol) servers with paywall protection and subscription management. It provides a unified API that works across multiple frameworks and runtimes.
 
 ## Key Features
 
-### 🛡️ One-Line Paywall Protection
+### One-Line Paywall Protection
 
 Protect your API endpoints, functions, and MCP tools with a single line of code:
 
@@ -21,7 +29,7 @@ export const POST = payable.next(createTask)
 const handler = payable.mcp(createTask)
 ```
 
-### 💳 Headless React Components
+### Headless React Components
 
 Build beautiful payment flows with headless React components that work with any design system:
 
@@ -41,14 +49,14 @@ function CheckoutPage() {
 }
 ```
 
-### 🚀 Works Out of the Box
+### Works Out of the Box
 
 - **Stub mode** - Test without an API key
 - **Edge runtime support** - Deploy globally with low latency
 - **Automatic runtime detection** - Works in Node.js and Edge environments
 - **Type-safe** - Full TypeScript support with comprehensive types
 
-### 🔒 Secure by Default
+### Secure by Default
 
 - API keys never exposed to the browser
 - Payment flows initiated by backend API routes only

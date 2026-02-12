@@ -264,7 +264,7 @@ export default function HomePage() {
                 {cancelledSubscription.endDate && (
                   <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm font-medium text-amber-900">
-                      ⏰ Access expires on {formatDate(cancelledSubscription.endDate)}
+                      Access expires on {formatDate(cancelledSubscription.endDate)}
                     </p>
                     {(() => {
                       const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate);
@@ -344,7 +344,7 @@ export default function HomePage() {
               {cancelledSubscription.endDate && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-sm font-semibold text-amber-900 mb-1">
-                    ⏰ Subscription Expires: {formatDate(cancelledSubscription.endDate)}
+                    Subscription Expires: {formatDate(cancelledSubscription.endDate)}
                   </p>
                   {(() => {
                     const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate);
@@ -608,11 +608,11 @@ Now that you have a complete implementation, consider:
 
 You've successfully built a complete Next.js application with:
 
-- ✅ Supabase authentication (email/password + Google OAuth)
-- ✅ SolvaPay hosted checkout
-- ✅ Subscription management
-- ✅ Modern UI components
-- ✅ Premium feature gating
-- ✅ Error handling and loading states
+- Supabase authentication (email/password + Google OAuth)
+- SolvaPay hosted checkout
+- Subscription management
+- Modern UI components
+- Premium feature gating
+- Error handling and loading states
 
 The implementation follows best practices and provides a solid foundation for building a subscription-based SaaS application.

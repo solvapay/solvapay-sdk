@@ -6,10 +6,10 @@ Complete step-by-step guide for integrating SolvaPay hosted checkout and Supabas
 
 This guide will help you build a Next.js application with:
 
-- ✅ **Supabase Authentication** - Email/password and Google OAuth sign-in
-- ✅ **SolvaPay Hosted Checkout** - Secure subscription payments hosted on SolvaPay
-- ✅ **Modern UI Components** - Beautiful, accessible components with Tailwind CSS
-- ✅ **Subscription Management** - Hosted customer portal for managing subscriptions
+- **Supabase Authentication** - Email/password and Google OAuth sign-in
+- **SolvaPay Hosted Checkout** - Secure subscription payments hosted on SolvaPay
+- **Modern UI Components** - Beautiful, accessible components with Tailwind CSS
+- **Subscription Management** - Hosted customer portal for managing subscriptions
 
 ## Guide Structure
 

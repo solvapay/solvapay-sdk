@@ -44,7 +44,7 @@ The API documentation is available at:
 ### Step 1: Enable Supabase OAuth Server (Beta)
 
 Supabase's OAuth 2.1 server capabilities are currently in beta. Apply for access here:
-- 🔗 [Supabase OAuth Server Beta](https://github.com/orgs/supabase/discussions/38022)
+- [Supabase OAuth Server Beta](https://github.com/orgs/supabase/discussions/38022)
 
 Once enabled in your Supabase project, you can configure OpenAI to authenticate directly with Supabase.
 

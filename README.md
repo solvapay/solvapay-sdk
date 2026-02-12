@@ -2,19 +2,19 @@
 
 A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and subscription management.
 
-**✨ Key Features:**
+**Key Features:**
 
-- 🛡️ **One-line paywall protection** for Express, Next.js, and MCP servers
-- 💳 **Headless React components** for subscription checkout flows
-- 🚀 **Works out of the box** with stub mode (no API key needed for testing)
-- 🔒 **Secure by default** - API keys never exposed to the browser
-- ⚡ **Edge runtime support** for global low-latency deployments
+- **One-line paywall protection** for Express, Next.js, and MCP servers
+- **Headless React components** for subscription checkout flows
+- **Works out of the box** with stub mode (no API key needed for testing)
+- **Secure by default** - API keys never exposed to the browser
+- **Edge runtime support** for global low-latency deployments
 
 [![npm version](https://img.shields.io/npm/v/@solvapay/server.svg)](https://www.npmjs.com/package/@solvapay/server)
 [![preview](https://img.shields.io/npm/v/@solvapay/server/preview?label=preview)](https://www.npmjs.com/package/@solvapay/server?activeTab=versions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Try an Example (No API Key Required)
 
@@ -50,7 +50,7 @@ npm install @solvapay/next
 npm install @solvapay/auth
 ```
 
-## 📦 Packages
+## Packages
 
 The SDK consists of **6 published packages**:
 
@@ -63,7 +63,7 @@ The SDK consists of **6 published packages**:
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed package design and boundaries.
 
-## 🎯 Usage
+## Usage
 
 ### Server-Side: Paywall Protection
 
@@ -277,11 +277,11 @@ The `@solvapay/auth` package provides utilities for extracting user information:
 
 See [`packages/next/README.md`](./packages/next/README.md) and [`packages/auth/README.md`](./packages/auth/README.md) for detailed documentation.
 
-## 📚 Examples
+## Examples
 
 The [`examples/`](./examples) directory contains working demonstrations:
 
-### 🚀 [express-basic](./examples/express-basic)
+### [express-basic](./examples/express-basic)
 
 Simple Express.js API with paywall protection:
 
@@ -294,7 +294,7 @@ Simple Express.js API with paywall protection:
 cd examples/express-basic && pnpm dev
 ```
 
-### 💳 [checkout-demo](./examples/checkout-demo)
+### [checkout-demo](./examples/checkout-demo)
 
 Full-featured Next.js checkout flow:
 
@@ -309,7 +309,20 @@ Full-featured Next.js checkout flow:
 cd examples/checkout-demo && pnpm dev
 ```
 
-### 🤖 [nextjs-openai-custom-gpt-actions](./examples/nextjs-openai-custom-gpt-actions)
+### [hosted-checkout-demo](./examples/hosted-checkout-demo)
+
+Hosted checkout flow using redirect-based payments:
+
+- Hosted checkout on solvapay.com (similar to Stripe Checkout)
+- Customer portal for subscription management
+- Token-based access control
+- Supabase authentication integration
+
+```bash
+cd examples/hosted-checkout-demo && pnpm dev
+```
+
+### [nextjs-openai-custom-gpt-actions](./examples/nextjs-openai-custom-gpt-actions)
 
 OpenAI Custom GPT Actions integration:
 
@@ -322,7 +335,7 @@ OpenAI Custom GPT Actions integration:
 cd examples/nextjs-openai-custom-gpt-actions && pnpm dev
 ```
 
-### 🔌 [mcp-basic](./examples/mcp-basic)
+### [mcp-basic](./examples/mcp-basic)
 
 Model Context Protocol server with paywall:
 
@@ -336,9 +349,9 @@ cd examples/mcp-basic && pnpm dev
 
 See [`examples/README.md`](./examples/README.md) for detailed setup instructions.
 
-## 🏗️ Architecture
+## Architecture
 
-This is a **monorepo** with 5 published packages built using Turborepo, tsup, and pnpm workspaces.
+This is a **monorepo** with 6 published packages built using Turborepo, tsup, and pnpm workspaces.
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for:
 
@@ -347,7 +360,7 @@ See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for:
 - Build system and testing approach
 - Security considerations
 
-## 🧪 Development
+## Development
 
 ```bash
 # Install dependencies
@@ -374,13 +387,13 @@ pnpm version:bump:major  # 0.x.x → 1.0.0
 
 See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflow and [`CONTRIBUTING.md`](./CONTRIBUTING.md) for development guidelines.
 
-## 📖 Documentation
+## Documentation
 
 - **[Architecture](./docs/guides/architecture.md)** - Package design and structure
 - **[Contributing](./CONTRIBUTING.md)** - Development guidelines
 - **[Publishing](./docs/publishing.md)** - Publishing and release process
 
-## 🔒 Security
+## Security
 
 - API keys are **never** exposed to the browser
 - Payment flows initiated by backend API routes only
@@ -389,16 +402,16 @@ See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflo
 
 **Found a security vulnerability?** Please report it responsibly - see our [Security Policy](./SECURITY.md) for details.
 
-## 📝 License
+## License
 
 MIT License - see [LICENSE.md](./LICENSE.md) for details.
 
-## 🤝 Support
+## Support
 
 - **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
 - **Email**: contact@solvapay.com
 
-## 📋 Additional Resources
+## Additional Resources
 
 - **[Contributing Guide](./CONTRIBUTING.md)** - How to contribute to the project
 - **[Code of Conduct](./CODE_OF_CONDUCT.md)** - Community guidelines

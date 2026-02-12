@@ -36,9 +36,9 @@ import {} from /* utilities will be added here */ '@solvapay/test-utils'
 
 This package is for internal use only:
 
-- ✅ Private package (not published)
-- ✅ Used as workspace dependency
-- ✅ Source files imported directly (no build step)
+- Private package (not published)
+- Used as workspace dependency
+- Source files imported directly (no build step)
 
 ## Adding New Test Utilities
 

@@ -8,7 +8,7 @@ SolvaPay SDK helps you monetize your APIs, AI agents, and MCP servers with minim
 
 ## Key Features
 
-### 🛡️ One-Line Paywall Protection
+### One-Line Paywall Protection
 
 Protect your API endpoints, functions, and MCP tools with a single line of code:
 
@@ -23,7 +23,7 @@ export const POST = payable.next(createTask)
 const handler = payable.mcp(createTask)
 ```
 
-### 💳 Headless React Components
+### Headless React Components
 
 Build beautiful payment flows with headless React components that work with any design system:
 
@@ -43,14 +43,14 @@ function CheckoutPage() {
 }
 ```
 
-### 🚀 Works Out of the Box
+### Works Out of the Box
 
 - **Stub mode** - Test without an API key
 - **Edge runtime support** - Deploy globally with low latency
 - **Automatic runtime detection** - Works in Node.js and Edge environments
 - **Type-safe** - Full TypeScript support with comprehensive types
 
-### 🔒 Secure by Default
+### Secure by Default
 
 - API keys never exposed to the browser
 - Payment flows initiated by backend API routes only
@@ -198,7 +198,7 @@ Return Paywall Error (with checkout URL)
 ## Documentation
 
 - **[Framework Guides](./guides/)** - Express, Next.js, React, and MCP integration guides
-- **[API Reference](./api/)** - Complete API documentation for all packages
+- **[Architecture Guide](./guides/architecture.md)** - Detailed technical architecture and package design
 - **[Examples](./examples/overview.md)** - Working examples and demos
 - **[Advanced Topics](./guides/)** - Custom authentication, error handling, testing, and more
 

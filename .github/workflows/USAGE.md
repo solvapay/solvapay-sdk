@@ -58,7 +58,7 @@ Click the **"Run workflow"** button at the bottom of the dropdown.
 
 - The workflow will appear in the list of runs
 - Click on it to see detailed logs
-- Watch for ✅ success or ❌ errors in each step
+- Watch for success or errors in each step
 
 ## Example Workflows
 
@@ -80,7 +80,7 @@ Click the **"Run workflow"** button at the bottom of the dropdown.
 **Output Example:**
 
 ```
-🔍 DRY RUN MODE - No changes will be made
+DRY RUN MODE - No changes will be made
 
 Would tag the following packages as 'latest':
   - @solvapay/core@1.0.0-preview.9
@@ -91,12 +91,12 @@ Would tag the following packages as 'latest':
   - @solvapay/next@1.0.0-preview.9
 
 Checking which versions exist on npm...
-  ✅ @solvapay/core@1.0.0-preview.9 exists
-  ✅ @solvapay/react@1.0.0-preview.9 exists
-  ⚠️  @solvapay/react-supabase@1.0.0-preview.9 not found (would skip)
-  ✅ @solvapay/server@1.0.0-preview.9 exists
-  ✅ @solvapay/auth@1.0.0-preview.9 exists
-  ✅ @solvapay/next@1.0.0-preview.9 exists
+  @solvapay/core@1.0.0-preview.9 exists
+  @solvapay/react@1.0.0-preview.9 exists
+  @solvapay/react-supabase@1.0.0-preview.9 not found (would skip)
+  @solvapay/server@1.0.0-preview.9 exists
+  @solvapay/auth@1.0.0-preview.9 exists
+  @solvapay/next@1.0.0-preview.9 exists
 ```
 
 ### Example 2: Actually Tag as Latest
@@ -118,19 +118,19 @@ Checking which versions exist on npm...
 **Output Example:**
 
 ```
-🏷️  Tag as Latest
+Tag as Latest
 
 Version: 1.0.0-preview.9
 
 Tagging @solvapay/core@1.0.0-preview.9 as "latest"...
-  ✅ +latest: @solvapay/core@1.0.0-preview.9
+  +latest: @solvapay/core@1.0.0-preview.9
 
 Tagging @solvapay/react@1.0.0-preview.9 as "latest"...
-  ✅ +latest: @solvapay/react@1.0.0-preview.9
+  +latest: @solvapay/react@1.0.0-preview.9
 
 [... continues for all packages ...]
 
-✅ Successfully tagged version 1.0.0-preview.9 as 'latest'
+Successfully tagged version 1.0.0-preview.9 as 'latest'
 ```
 
 ## Common Use Cases
@@ -184,33 +184,33 @@ Or visit npm directly:
 
 ## Troubleshooting
 
-### ❌ "Invalid version format"
+### "Invalid version format"
 
 **Error:**
 
 ```
-❌ Invalid version format: 1.0.0preview9
+Invalid version format: 1.0.0preview9
 Expected format: X.Y.Z or X.Y.Z-preview.N
 ```
 
 **Solution:** Use correct format with dot separator: `1.0.0-preview.9` (not `1.0.0preview9`)
 
-### ⚠️ "Version not found"
+### "Version not found"
 
 **Warning:**
 
 ```
-⚠️ Version 1.0.0-preview.9 not found for @solvapay/react-supabase (skipping)
+Version 1.0.0-preview.9 not found for @solvapay/react-supabase (skipping)
 ```
 
 **Meaning:** This package hasn't been published at that version yet. It will be skipped automatically.
 
-### ❌ "401 Unauthorized"
+### "401 Unauthorized"
 
 **Error:**
 
 ```
-❌ Failed to tag @solvapay/core: 401 Unauthorized
+Failed to tag @solvapay/core: 401 Unauthorized
 ```
 
 **Solution:**
@@ -221,22 +221,22 @@ Expected format: X.Y.Z or X.Y.Z-preview.N
 
 ## Best Practices
 
-1. ✅ **Always use dry run first** - Preview changes before applying
-2. ✅ **Verify on npm** - Check dist-tags after tagging
-3. ✅ **Tag all or none** - Don't tag just some packages (they should all match)
-4. ✅ **Document decisions** - Note in PR/issue why you're promoting a version
-5. ✅ **Communicate** - Let team know when changing the "latest" tag
+1. **Always use dry run first** - Preview changes before applying
+2. **Verify on npm** - Check dist-tags after tagging
+3. **Tag all or none** - Don't tag just some packages (they should all match)
+4. **Document decisions** - Note in PR/issue why you're promoting a version
+5. **Communicate** - Let team know when changing the "latest" tag
 
 ## Safety Features
 
 The workflow includes several safety features:
 
-- ✅ **Version validation** - Checks format before proceeding
-- ✅ **Existence check** - Verifies packages exist on npm
-- ✅ **Automatic skip** - Skips unpublished packages
-- ✅ **Dry run mode** - Preview without changes
-- ✅ **Verification step** - Shows tags after applying
-- ✅ **Audit trail** - All runs logged in GitHub Actions
+- **Version validation** - Checks format before proceeding
+- **Existence check** - Verifies packages exist on npm
+- **Automatic skip** - Skips unpublished packages
+- **Dry run mode** - Preview without changes
+- **Verification step** - Shows tags after applying
+- **Audit trail** - All runs logged in GitHub Actions
 
 ## Need Help?
 

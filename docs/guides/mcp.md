@@ -330,7 +330,6 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               error: 'Payment required',
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
-              plan: error.structuredContent.plan,
               agent: error.structuredContent.agent,
             }),
           },
@@ -588,7 +587,6 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               error: 'Payment required',
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
-              plan: error.structuredContent.plan,
               agent: error.structuredContent.agent,
             }),
           },
@@ -607,9 +605,9 @@ async function main() {
   const transport = new StdioServerTransport()
   await server.connect(transport)
 
-  console.error('🚀 SolvaPay Protected MCP Server started')
-  console.error('📝 Available tools: create_task, get_task, list_tasks')
-  console.error('💰 Paywall protection enabled')
+  console.error('SolvaPay Protected MCP Server started')
+  console.error('Available tools: create_task, get_task, list_tasks')
+  console.error('Paywall protection enabled')
 }
 
 main().catch(error => {
@@ -664,4 +662,4 @@ async function createTask(args: any) {
 - [Express.js Integration Guide](./express.md) - Learn HTTP framework integration
 - [Error Handling Strategies](./error-handling.md) - Advanced error handling patterns
 - [Custom Authentication Adapters](./custom-auth.md) - Build custom auth adapters
-- [API Reference](../api/server/src/README.md) - Full API documentation
+- [API Reference](../../packages/server/README.md) - Full API documentation

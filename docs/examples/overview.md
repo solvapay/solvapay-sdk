@@ -16,11 +16,11 @@ This document provides an overview of all available examples in the SolvaPay SDK
 
 | Example                                                                                                                         | Framework  | Checkout Type      | Auth             | Use Case            | Complexity        |
 | ------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------ | ---------------- | ------------------- | ----------------- |
-| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic)                                       | Express.js | N/A (Paywall only) | Header-based     | API protection      | ⭐ Simple         |
-| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo)                                       | Next.js    | Embedded           | Supabase         | Full payment flow   | ⭐⭐⭐ Advanced   |
-| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo)                         | Next.js    | Hosted             | Supabase         | Hosted checkout     | ⭐⭐ Intermediate |
-| [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic)                                               | MCP Server | N/A (Paywall only) | Header-based     | MCP tool protection | ⭐ Simple         |
-| [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions) | Next.js    | Hosted             | Supabase + OAuth | OpenAI GPT Actions  | ⭐⭐⭐ Advanced   |
+| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic)                                       | Express.js | N/A (Paywall only) | Header-based     | API protection      | Simple         |
+| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo)                                       | Next.js    | Embedded           | Supabase         | Full payment flow   | Advanced       |
+| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo)                         | Next.js    | Hosted             | Supabase         | Hosted checkout     | Intermediate   |
+| [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic)                                               | MCP Server | N/A (Paywall only) | Header-based     | MCP tool protection | Simple         |
+| [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions) | Next.js    | Hosted             | Supabase + OAuth | OpenAI GPT Actions  | Advanced       |
 
 ## Available Examples
 
@@ -411,9 +411,9 @@ Two checkout approaches are demonstrated:
 
 ### API Reference
 
-- [Server SDK API Reference](../api/server/src/)
-- [React SDK API Reference](../api/react/src/)
-- [Next.js SDK API Reference](../api/next/src/)
+- [Server SDK API Reference](../../packages/server/README.md)
+- [React SDK API Reference](../../packages/react/README.md)
+- [Next.js SDK API Reference](../../packages/next/README.md)
 
 ## Troubleshooting
 
@@ -457,4 +457,4 @@ After exploring examples:
 
 ---
 
-**Last Updated**: 2024-12-19
+**Last Updated**: 2026-02-09

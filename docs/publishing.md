@@ -470,12 +470,12 @@ Enable the dry run option to see what would be tagged without actually making ch
 
 **Benefits:**
 
-- ✅ No need to be logged in to npm locally
-- ✅ Consistent environment (same as publishing)
-- ✅ Audit trail in GitHub Actions logs
-- ✅ Can be triggered from anywhere (even mobile!)
-- ✅ Dry run option to preview changes
-- ✅ Automatic validation and safety checks
+- No need to be logged in to npm locally
+- Consistent environment (same as publishing)
+- Audit trail in GitHub Actions logs
+- Can be triggered from anywhere (even mobile!)
+- Dry run option to preview changes
+- Automatic validation and safety checks
 
 **Verify the Tags:**
 

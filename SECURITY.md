@@ -45,4 +45,4 @@ Security updates are published as:
 - Security advisories on GitHub
 - Release notes in our [CHANGELOG.md](./CHANGELOG.md)
 
-Thanks for helping keep SolvaPay SDK secure! 🔒
+Thanks for helping keep SolvaPay SDK secure!

@@ -2,9 +2,18 @@
 
 This guide covers installing and setting up SolvaPay SDK packages in your project.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Package Installation](#package-installation)
+- [Environment Setup](#environment-setup)
+- [Verification Steps](#verification-steps)
+- [Framework-Specific Setup](#framework-specific-setup)
+- [Next Steps](#next-steps)
+
 ## Prerequisites
 
-- **Node.js**: Version 18.0.0 or higher
+- **Node.js**: Version 18.17 or higher
 - **Package Manager**: npm, yarn, or pnpm
 - **TypeScript**: Version 5.0.0 or higher (recommended)
 
@@ -137,7 +146,7 @@ Create a test file to verify the installation:
 import { createSolvaPay } from '@solvapay/server'
 
 const solvaPay = createSolvaPay()
-console.log('✅ SolvaPay SDK installed successfully!')
+console.log('SolvaPay SDK installed successfully!')
 ```
 
 Run it:

@@ -22,12 +22,12 @@ Complete payment integration demo showcasing SolvaPay's hosted checkout flow wit
 
 ## Features
 
-- 🎯 **Hosted Checkout**: Secure checkout hosted on solvapay.com (similar to Stripe Checkout)
-- 🔒 **Content Gating**: Lock premium features behind subscriptions
-- 📊 **Subscription Management**: Real-time subscription status checking
-- 🔐 **Customer Portal**: Hosted subscription management page (similar to Stripe Customer Portal)
-- 🔐 **Authentication**: Email/password and Google OAuth sign-in with Supabase
-- 🧪 **Test Mode**: Complete test environment with localStorage persistence
+- **Hosted Checkout**: Secure checkout hosted on solvapay.com (similar to Stripe Checkout)
+- **Content Gating**: Lock premium features behind subscriptions
+- **Subscription Management**: Real-time subscription status checking
+- **Customer Portal**: Hosted subscription management page (similar to Stripe Customer Portal)
+- **Authentication**: Email/password and Google OAuth sign-in with Supabase
+- **Test Mode**: Complete test environment with localStorage persistence
 
 ## Architecture
 
@@ -121,9 +121,9 @@ The hosted checkout page accepts standard Stripe test cards:
 
 | Card Number         | Result                |
 | ------------------- | --------------------- |
-| 4242 4242 4242 4242 | ✅ Payment succeeds   |
-| 4000 0000 0000 0002 | ❌ Payment declined   |
-| 4000 0000 0000 9995 | ❌ Insufficient funds |
+| 4242 4242 4242 4242 | Payment succeeds      |
+| 4000 0000 0000 0002 | Payment declined      |
+| 4000 0000 0000 9995 | Insufficient funds    |
 
 - Use any future expiry date
 - Use any 3-digit CVC
@@ -335,7 +335,7 @@ import { SubscriptionGate } from '@solvapay/react'
     if (!hasAccess) {
       return (
         <div>
-          <h2>🔒 Premium Content</h2>
+          <h2>Premium Content</h2>
           <button onClick={handleViewPlans}>Upgrade Now</button>
         </div>
       )
@@ -502,14 +502,14 @@ These endpoints should be implemented on the SolvaPay backend and will be called
 Always generate tokens server-side for security:
 
 ```typescript
-// ✅ Good: Server-side token generation
+// Good: Server-side token generation
 export async function POST(request: NextRequest) {
   const userId = requireUserId(request)
   const { token } = await createCheckoutToken(userId)
   return NextResponse.json({ checkoutUrl: `https://solvapay.com/checkout?token=${token}` })
 }
 
-// ❌ Bad: Client-side token generation (security risk)
+// Bad: Client-side token generation (security risk)
 const token = await generateToken() // Never do this!
 ```
 
@@ -673,9 +673,9 @@ const handleManageSubscription = async () => {
 
 ### API Reference
 
-- [React SDK API Reference](../../docs/api/react/) - Complete React component documentation
-- [Server SDK API Reference](../../docs/api/server/) - Backend API documentation
-- [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
+- [React SDK API Reference](../../packages/react/README.md) - Complete React component documentation
+- [Server SDK API Reference](../../packages/server/README.md) - Backend API documentation
+- [Next.js SDK API Reference](../../packages/next/README.md) - Next.js helper documentation
 
 ### Additional Resources
 

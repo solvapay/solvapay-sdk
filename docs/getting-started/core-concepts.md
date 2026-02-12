@@ -2,6 +2,16 @@
 
 Understanding the key concepts in SolvaPay SDK will help you build effective monetization strategies.
 
+## Table of Contents
+
+- [Agents and Plans](#agents-and-plans)
+- [Customer References](#customer-references)
+- [Paywall Protection Flow](#paywall-protection-flow)
+- [Subscription Lifecycle](#subscription-lifecycle)
+- [Authentication Flow](#authentication-flow)
+- [Usage Tracking](#usage-tracking)
+- [Next Steps](#next-steps)
+
 ## Agents and Plans
 
 ### Agents
@@ -275,4 +285,4 @@ Usage limits are enforced automatically:
 
 - [Quick Start](./quick-start.md) - Try the examples
 - [Framework Guides](../guides/express.md) - Framework-specific integration
-- [API Reference](../api/) - Complete API documentation
+- [Architecture Guide](../guides/architecture.md) - Detailed technical architecture

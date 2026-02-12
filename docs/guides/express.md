@@ -206,39 +206,24 @@ app.use(authMiddleware)
 app.post('/api/tasks', payable.http(createTask))
 ```
 
-### Option 3: Custom Auth Adapter
+### Option 3: Custom Customer Reference Extraction
 
-Create a custom auth adapter for more complex scenarios:
+Use the `getCustomerRef` option for more complex scenarios:
 
 ```typescript
-import { AuthAdapter } from '@solvapay/auth'
+import jwt from 'jsonwebtoken'
 
-const customAuthAdapter: AuthAdapter = {
-  getUserId: async (req: express.Request) => {
-    // Your custom logic to extract user ID
-    const token = req.headers.authorization?.replace('Bearer ', '')
-    if (!token) return null
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string }
-    return decoded.userId
-  },
-
-  getUserEmail: async (req: express.Request) => {
-    // Extract email from token or database
-    return null // Optional
-  },
-
-  getUserName: async (req: express.Request) => {
-    // Extract name from token or database
-    return null // Optional
-  },
-}
-
-// Use with payable options
+// Extract customer reference from JWT token
 app.post(
   '/api/tasks',
   payable.http(createTask, {
-    authAdapter: customAuthAdapter,
+    getCustomerRef: (req: express.Request) => {
+      const token = req.headers.authorization?.replace('Bearer ', '')
+      if (!token) return null
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string }
+      return decoded.userId
+    },
   }),
 )
 ```
@@ -281,7 +266,6 @@ async function handlePaywall(
         error: 'Payment required',
         message: error.message,
         checkoutUrl: error.structuredContent.checkoutUrl,
-        plan: error.structuredContent.plan,
         agent: error.structuredContent.agent,
       })
     }
@@ -336,18 +320,17 @@ app.post(
 )
 ```
 
-### Request Metadata
+### Response Transformation
 
-Add custom metadata to requests:
+Transform responses before sending:
 
 ```typescript
 app.post(
   '/api/tasks',
   payable.http(createTask, {
-    metadata: {
-      endpoint: '/api/tasks',
-      method: 'POST',
-      // Custom metadata
+    transformResponse: (result, reply) => {
+      // Custom response formatting
+      reply.status(201).json({ data: result, timestamp: new Date().toISOString() })
     },
   }),
 )
@@ -468,7 +451,6 @@ app.use((error: Error, req: Request, res: Response, next: express.NextFunction) 
       error: 'Payment required',
       message: error.message,
       checkoutUrl: error.structuredContent.checkoutUrl,
-      plan: error.structuredContent.plan,
       agent: error.structuredContent.agent,
     })
   }

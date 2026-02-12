@@ -115,9 +115,9 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-### Cancel Subscription
+### Cancel Renewal
 
-Cancel a user's subscription:
+Cancel renewal of a user's purchase:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'

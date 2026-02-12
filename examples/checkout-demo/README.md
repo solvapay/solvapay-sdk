@@ -21,13 +21,13 @@ Complete payment integration demo showcasing SolvaPay's headless React component
 
 ## Features
 
-- 🎯 **Headless Components**: Fully flexible, unstyled components with render props
-- 🔒 **Content Gating**: Lock premium features behind subscriptions
-- 💳 **Secure Payments**: Stripe-powered payment processing
-- 📊 **Subscription Management**: Real-time subscription status checking
-- 🔐 **Authentication**: Email/password and Google OAuth sign-in with Supabase
-- 🎨 **Style Agnostic**: Works with any CSS framework or design system
-- 🧪 **Test Mode**: Complete test environment with localStorage persistence
+- **Headless Components**: Fully flexible, unstyled components with render props
+- **Content Gating**: Lock premium features behind subscriptions
+- **Secure Payments**: Stripe-powered payment processing
+- **Subscription Management**: Real-time subscription status checking
+- **Authentication**: Email/password and Google OAuth sign-in with Supabase
+- **Style Agnostic**: Works with any CSS framework or design system
+- **Test Mode**: Complete test environment with localStorage persistence
 
 ## New Headless Architecture
 
@@ -113,9 +113,9 @@ Use these test card numbers in the checkout form:
 
 | Card Number         | Result                |
 | ------------------- | --------------------- |
-| 4242 4242 4242 4242 | ✅ Payment succeeds   |
-| 4000 0000 0000 0002 | ❌ Payment declined   |
-| 4000 0000 0000 9995 | ❌ Insufficient funds |
+| 4242 4242 4242 4242 | Payment succeeds      |
+| 4000 0000 0000 0002 | Payment declined      |
+| 4000 0000 0000 9995 | Insufficient funds    |
 
 - Use any future expiry date
 - Use any 3-digit CVC
@@ -237,7 +237,7 @@ import { SubscriptionGate, UpgradeButton } from '@solvapay/react'
     if (!hasAccess) {
       return (
         <div>
-          <h2>🔒 Premium Content</h2>
+          <h2>Premium Content</h2>
           <UpgradeButton planRef="pln_pro">
             {({ onClick, loading }) => (
               <button onClick={onClick}>{loading ? 'Loading...' : 'Upgrade Now'}</button>
@@ -755,9 +755,9 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 
 ### API Reference
 
-- [React SDK API Reference](../../docs/api/react/) - Complete React component documentation
-- [Server SDK API Reference](../../docs/api/server/) - Backend API documentation
-- [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
+- [React SDK API Reference](../../packages/react/README.md) - Complete React component documentation
+- [Server SDK API Reference](../../packages/server/README.md) - Backend API documentation
+- [Next.js SDK API Reference](../../packages/next/README.md) - Next.js helper documentation
 
 ### Additional Resources
 

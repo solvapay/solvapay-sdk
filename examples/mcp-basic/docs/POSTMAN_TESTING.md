@@ -2,7 +2,7 @@
 
 This guide explains how to test the SolvaPay MCP server using Postman with the **Streamable HTTP transport** (MCP spec 2025-11-25).
 
-> **✅ Updated**: This example now uses the official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport which implements the current MCP specification. This means:
+> **Updated**: This example now uses the official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport which implements the current MCP specification. This means:
 > 1. Single `/mcp` endpoint for all operations (POST/GET/DELETE)
 > 2. Session management via `MCP-Session-Id` header (not query parameters)
 > 3. Protocol version via `MCP-Protocol-Version` header

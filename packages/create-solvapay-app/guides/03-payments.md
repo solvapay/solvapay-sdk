@@ -364,9 +364,9 @@ Use these test card numbers on the hosted checkout page:
 
 | Card Number         | Result                |
 | ------------------- | --------------------- |
-| 4242 4242 4242 4242 | ✅ Payment succeeds   |
-| 4000 0000 0000 0002 | ❌ Payment declined   |
-| 4000 0000 0000 9995 | ❌ Insufficient funds |
+| 4242 4242 4242 4242 | Payment succeeds   |
+| 4000 0000 0000 0002 | Payment declined   |
+| 4000 0000 0000 9995 | Insufficient funds |
 
 - Use any future expiry date
 - Use any 3-digit CVC
@@ -467,10 +467,10 @@ function MyComponent() {
 
 The SDK automatically filters subscriptions:
 
-- ✅ **Included**: Active subscriptions
-- ✅ **Included**: Cancelled subscriptions with future `endDate`
-- ❌ **Excluded**: Cancelled subscriptions without `endDate`
-- ❌ **Excluded**: Cancelled subscriptions with past `endDate`
+- **Included**: Active subscriptions
+- **Included**: Cancelled subscriptions with future `endDate`
+- **Excluded**: Cancelled subscriptions without `endDate`
+- **Excluded**: Cancelled subscriptions with past `endDate`
 
 ### Refetching Subscription Status
 

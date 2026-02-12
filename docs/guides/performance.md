@@ -145,11 +145,11 @@ export async function POST(request: NextRequest) {
 Create a single SolvaPay instance and reuse it:
 
 ```typescript
-// ✅ Good: Single instance
+// Good: Single instance
 // lib/solvapay.ts
 export const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
 
-// ❌ Bad: Creating new instances
+// Bad: Creating new instances
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY }) // In each file
 ```
 
@@ -158,7 +158,7 @@ const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY }) // 
 Enable subscription caching in Next.js:
 
 ```typescript
-// ✅ Good: Use cached subscription checks
+// Good: Use cached subscription checks
 import { checkSubscription } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
@@ -172,13 +172,13 @@ export async function GET(request: NextRequest) {
 Batch multiple operations when possible:
 
 ```typescript
-// ✅ Good: Batch operations
+// Good: Batch operations
 const [subscription, customer] = await Promise.all([
   checkSubscription(request),
   getCustomer(request),
 ])
 
-// ❌ Bad: Sequential operations
+// Bad: Sequential operations
 const subscription = await checkSubscription(request)
 const customer = await getCustomer(request)
 ```
@@ -199,7 +199,7 @@ Use caching and deduplication to minimize API calls:
 Use Edge-compatible patterns:
 
 ```typescript
-// ✅ Good: Edge-compatible
+// Good: Edge-compatible
 import { createSolvaPay } from '@solvapay/server'
 
 export const runtime = 'edge'
@@ -277,7 +277,7 @@ const subscriptionCache = new LRUCache<string, any>({
   ttl: 60000, // 60 seconds
 })
 
-async function getCachedSubscription(userId: string) {
+async function getCachedSubscription(userId: string, request: NextRequest) {
   const cached = subscriptionCache.get(userId)
   if (cached) {
     return cached
@@ -325,4 +325,4 @@ async function batchCustomerLookups(userIds: string[]) {
 
 - [Testing with Stub Mode](./testing.md) - Test performance
 - [Next.js Integration Guide](./nextjs.md) - Next.js performance tips
-- [API Reference](../api/server/src/README.md) - Full API documentation
+- [API Reference](../../packages/server/README.md) - Full API documentation

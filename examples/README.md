@@ -7,10 +7,10 @@ This directory contains example applications demonstrating how to use the SolvaP
 The `shared/` folder contains reusable utilities used across multiple examples:
 
 - **`stub-api-client.ts`** - A demo implementation of the SolvaPay API client for local development
-  - ✅ No backend required
-  - ✅ Simulates free tier limits and paid access
-  - ✅ In-memory or file-based persistence
-  - ✅ Drop-in replacement for `createSolvaPayClient()`
+  - No backend required
+  - Simulates free tier limits and paid access
+  - In-memory or file-based persistence
+  - Drop-in replacement for `createSolvaPayClient()`
 
 See [`shared/README.md`](./shared/README.md) for detailed documentation.
 

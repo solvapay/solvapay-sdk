@@ -57,7 +57,7 @@ To make monetizing MCP servers easy, SolvaPay SDK should abstract this "Shim" la
 
 We should offer three levels of support:
 
-#### Level 1: The "Bring Your Own Auth" (✅ Implemented in Example)
+#### Level 1: The "Bring Your Own Auth" (Implemented in Example)
 The developer manually implements the OAuth endpoints. SolvaPay provides the `McpAdapter` to handle the actual tool execution.
 *   **Pros**: Maximum control; well-documented example available.
 *   **Cons**: Higher initial setup; developer must understand OAuth.
@@ -112,7 +112,7 @@ The SolvaPay SDK should define a standard `IdentityProvider` interface that simp
 
 ## 4. Implementation Status: `nextjs-openai-custom-gpt-actions`
 
-**Status: ✅ COMPLETED AND PRODUCTION-READY**
+**Status: COMPLETED AND PRODUCTION-READY**
 
 The custom OAuth bridge has been successfully implemented in the `examples/nextjs-openai-custom-gpt-actions` directory. The implementation follows the "Shim" architecture described above.
 
@@ -120,12 +120,12 @@ The custom OAuth bridge has been successfully implemented in the `examples/nextj
 
 | Component | File | Status |
 | :--- | :--- | :--- |
-| **Middleware** | `src/middleware.ts` | ✅ **Implemented**: Handles both Custom Bearer Tokens (for GPT) and Standard Cookies (for Browser). |
-| **Authorize Endpoint** | `src/app/api/oauth/authorize/route.ts` | ✅ **Implemented**: Validates Supabase session, generates auth codes, stores in DB. |
-| **Token Endpoint** | `src/app/api/oauth/token/route.ts` | ✅ **Implemented**: Exchanges codes for JWT access tokens and refresh tokens. |
-| **Storage Layer** | `src/lib/oauth-storage.ts` | ✅ **Implemented**: Uses Supabase DB tables (`oauth_codes`, `oauth_refresh_tokens`). |
-| **Database Schema** | `supabase/migrations/002_create_oauth_tables.sql` | ✅ **Implemented**: Tables for auth codes and refresh tokens. |
-| **User Info** | `src/app/api/user/me/route.ts` | ✅ **Implemented**: Returns user info from OAuth token. |
+| **Middleware** | `src/middleware.ts` | **Implemented**: Handles both Custom Bearer Tokens (for GPT) and Standard Cookies (for Browser). |
+| **Authorize Endpoint** | `src/app/api/oauth/authorize/route.ts` | **Implemented**: Validates Supabase session, generates auth codes, stores in DB. |
+| **Token Endpoint** | `src/app/api/oauth/token/route.ts` | **Implemented**: Exchanges codes for JWT access tokens and refresh tokens. |
+| **Storage Layer** | `src/lib/oauth-storage.ts` | **Implemented**: Uses Supabase DB tables (`oauth_codes`, `oauth_refresh_tokens`). |
+| **Database Schema** | `supabase/migrations/002_create_oauth_tables.sql` | **Implemented**: Tables for auth codes and refresh tokens. |
+| **User Info** | `src/app/api/user/me/route.ts` | **Implemented**: Returns user info from OAuth token. |
 
 ### 4.2 Key Features
 

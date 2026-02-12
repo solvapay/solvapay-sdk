@@ -2,6 +2,14 @@
 
 Get up and running with SolvaPay SDK in minutes. These examples are copy-paste ready and work out of the box.
 
+## Table of Contents
+
+- [Express.js: Protect an API Endpoint](#expressjs-protect-an-api-endpoint-5-minutes)
+- [Next.js: Add Payment Flow](#nextjs-add-payment-flow-10-minutes)
+- [MCP Server: Protect MCP Tools](#mcp-server-protect-mcp-tools-5-minutes)
+- [React: Add Payment UI Components](#react-add-payment-ui-components-10-minutes)
+- [Next Steps](#next-steps)
+
 ## Express.js: Protect an API Endpoint (5 minutes)
 
 Protect an Express.js API endpoint with paywall protection:
@@ -235,9 +243,9 @@ function App() {
 import { useSubscription } from '@solvapay/react'
 
 function Dashboard() {
-  const { subscriptions, hasPaidSubscription, isLoading } = useSubscription()
+  const { subscriptions, hasPaidSubscription, loading } = useSubscription()
 
-  if (isLoading) return <div>Loading...</div>
+  if (loading) return <div>Loading...</div>
 
   if (!hasPaidSubscription) {
     return (
@@ -283,4 +291,4 @@ function Checkout() {
 
 - [Core Concepts](./core-concepts.md) - Understand agents, plans, and the paywall flow
 - [Framework Guides](../guides/express.md) - Detailed integration guides for your framework
-- [API Reference](../api/) - Complete API documentation
+- [Architecture Guide](../guides/architecture.md) - Detailed technical architecture

@@ -485,4 +485,4 @@ await handleWebhookEvent(testEvent)
 
 - [Error Handling Strategies](./error-handling.md) - Handle webhook errors
 - [Next.js Integration Guide](./nextjs.md) - Next.js webhook setup
-- [API Reference](../api/server/src/README.md) - Full API documentation
+- [API Reference](../../packages/server/README.md) - Full API documentation
