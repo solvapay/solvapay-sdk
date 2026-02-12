@@ -568,7 +568,7 @@ export interface components {
              */
             type?: "recurring" | "usage-based" | "hybrid" | "one-time";
             /**
-             * Billing cycle
+             * Billing cycle (required for recurring/hybrid, optional for post-paid usage-based)
              * @example monthly
              * @enum {string}
              */
@@ -631,16 +631,14 @@ export interface components {
              */
             basePrice?: number;
             /**
-             * Usage limits
+             * Usage limits (shape varies by plan type)
              * @example {
-             *       "maxTransactions": 1000,
-             *       "maxCalls": 500,
-             *       "maxHours": 24
+             *       "maxTransactions": 1000
              *     }
              */
             limits?: Record<string, never>;
             /**
-             * Plan features (can be array of strings or object with boolean flags)
+             * Plan features (generic key/value, shape is provider-defined)
              * @example {
              *       "apiAccess": true,
              *       "prioritySupport": false
@@ -658,10 +656,11 @@ export interface components {
              */
             requiresPayment?: boolean;
             /**
-             * Whether the plan is active
-             * @example true
+             * Plan status
+             * @example active
+             * @enum {string}
              */
-            isActive?: boolean;
+            status?: "active" | "inactive" | "archived";
             /**
              * Maximum number of active users
              * @example 10
@@ -672,7 +671,7 @@ export interface components {
              * @example 30
              */
             accessExpiryDays?: number;
-            /** Additional metadata */
+            /** @description Additional metadata */
             metadata?: Record<string, never>;
             /**
              * Whether this is the default plan
@@ -770,7 +769,7 @@ export interface components {
              * @example 2025-01-01T00:00:00.000Z
              */
             paidAt?: string;
-            /** Usage quota information (for usage-based plans) */
+            /** @description Usage quota information (for usage-based plans) */
             usageQuota?: Record<string, never>;
             /**
              * Whether this is a recurring purchase
@@ -1924,15 +1923,11 @@ export interface operations {
              *         "quota": 1000,
              *         "rolloverUnusedUnits": true,
              *         "limits": {
-             *           "maxTransactions": 1000,
-             *           "maxCalls": 500,
-             *           "maxHours": 24
+             *           "maxTransactions": 1000
              *         },
              *         "features": {
              *           "apiAccess": true,
-             *           "prioritySupport": false,
-             *           "advancedFeatures": false,
-             *           "customIntegrations": false
+             *           "prioritySupport": false
              *         },
              *         "isFreeTier": false,
              *         "requiresPayment": true,
@@ -1972,15 +1967,11 @@ export interface operations {
                      *         "quota": 1000,
                      *         "rolloverUnusedUnits": true,
                      *         "limits": {
-                     *           "maxTransactions": 1000,
-                     *           "maxCalls": 500,
-                     *           "maxHours": 24
+                     *           "maxTransactions": 1000
                      *         },
                      *         "features": {
                      *           "apiAccess": true,
-                     *           "prioritySupport": false,
-                     *           "advancedFeatures": false,
-                     *           "customIntegrations": false
+                     *           "prioritySupport": false
                      *         },
                      *         "isFreeTier": false,
                      *         "requiresPayment": true,
@@ -2057,30 +2048,16 @@ export interface operations {
              *       "setupFee": 0,
              *       "trialDays": 7,
              *       "billingCycle": "monthly",
-             *       "billingModel": "post-paid",
-             *       "pricePerUnit": 0,
-             *       "unit": "month",
-             *       "quota": 1000,
-             *       "rolloverUnusedUnits": false,
-             *       "basePrice": 29.99,
              *       "limits": {
-             *         "maxTransactions": 1000,
-             *         "maxCalls": 500,
-             *         "maxHours": 24,
-             *         "maxStorage": 1000,
-             *         "maxUsers": 10
+             *         "maxTransactions": 1000
              *       },
              *       "features": {
              *         "apiAccess": true,
-             *         "prioritySupport": false,
-             *         "advancedFeatures": false,
-             *         "customIntegrations": false
+             *         "prioritySupport": false
              *       },
              *       "isFreeTier": false,
              *       "requiresPayment": true,
              *       "isActive": true,
-             *       "maxActiveUsers": 10,
-             *       "accessExpiryDays": 30,
              *       "status": "active",
              *       "createdAt": "2024-01-15T10:30:00Z",
              *       "updatedAt": "2024-01-15T10:30:00Z"
@@ -2103,30 +2080,16 @@ export interface operations {
                      *       "setupFee": 0,
                      *       "trialDays": 7,
                      *       "billingCycle": "monthly",
-                     *       "billingModel": "post-paid",
-                     *       "pricePerUnit": 0,
-                     *       "unit": "month",
-                     *       "quota": 1000,
-                     *       "rolloverUnusedUnits": false,
-                     *       "basePrice": 29.99,
                      *       "limits": {
-                     *         "maxTransactions": 1000,
-                     *         "maxCalls": 500,
-                     *         "maxHours": 24,
-                     *         "maxStorage": 1000,
-                     *         "maxUsers": 10
+                     *         "maxTransactions": 1000
                      *       },
                      *       "features": {
                      *         "apiAccess": true,
-                     *         "prioritySupport": false,
-                     *         "advancedFeatures": false,
-                     *         "customIntegrations": false
+                     *         "prioritySupport": false
                      *       },
                      *       "isFreeTier": false,
                      *       "requiresPayment": true,
                      *       "isActive": true,
-                     *       "maxActiveUsers": 10,
-                     *       "accessExpiryDays": 30,
                      *       "status": "active",
                      *       "createdAt": "2024-01-15T10:30:00Z",
                      *       "updatedAt": "2024-01-15T10:30:00Z"

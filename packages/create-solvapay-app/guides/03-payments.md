@@ -362,8 +362,8 @@ export default function HomePage() {
 
 Use these test card numbers on the hosted checkout page:
 
-| Card Number         | Result                |
-| ------------------- | --------------------- |
+| Card Number         | Result             |
+| ------------------- | ------------------ |
 | 4242 4242 4242 4242 | Payment succeeds   |
 | 4000 0000 0000 0002 | Payment declined   |
 | 4000 0000 0000 9995 | Insufficient funds |
