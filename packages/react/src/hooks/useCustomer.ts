@@ -24,7 +24,7 @@ export interface CustomerInfo {
 
 /**
  * Hook to access customer information
- * Returns customer data (email, name, customerRef) separate from subscription data
+ * Returns customer data (email, name, customerRef) separate from purchase data
  *
  * @example
  * ```tsx
@@ -43,12 +43,12 @@ export interface CustomerInfo {
  * ```
  */
 export function useCustomer(): CustomerInfo {
-  const { subscription, customerRef } = useSolvaPay()
+  const { purchase, customerRef } = useSolvaPay()
 
   return {
-    customerRef: subscription.customerRef || customerRef,
-    email: subscription.email,
-    name: subscription.name,
-    loading: subscription.loading,
+    customerRef: purchase.customerRef || customerRef,
+    email: purchase.email,
+    name: purchase.name,
+    loading: purchase.loading,
   }
 }

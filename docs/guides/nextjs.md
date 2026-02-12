@@ -80,14 +80,14 @@ export const POST = payable.next(createTask)
 The `@solvapay/next` package provides helper functions that simplify common operations:
 
 ```typescript
-// app/api/check-subscription/route.ts
+// app/api/check-purchase/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
 
-  // checkSubscription returns NextResponse or data object
+  // checkPurchase returns NextResponse or data object
   if (result instanceof NextResponse) {
     return result
   }
@@ -98,15 +98,15 @@ export async function GET(request: NextRequest) {
 
 ### Available Helper Functions
 
-#### Check Subscription
+#### Check Purchase
 
 ```typescript
-// app/api/check-subscription/route.ts
+// app/api/check-purchase/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -179,15 +179,15 @@ export async function POST(request: NextRequest) {
 
 ## Server Components
 
-Use SolvaPay in Server Components to check subscription status:
+Use SolvaPay in Server Components to check purchase status:
 
 ```typescript
 // app/dashboard/page.tsx
-import { checkSubscription } from '@solvapay/next';
+import { checkPurchase } from '@solvapay/next';
 import { cookies } from 'next/headers';
 
 export default async function DashboardPage() {
-  // Create a request-like object for checkSubscription
+  // Create a request-like object for checkPurchase
   const cookieStore = await cookies();
   const headers = new Headers();
 
@@ -201,18 +201,18 @@ export default async function DashboardPage() {
     headers,
   });
 
-  const subscription = await checkSubscription(request);
+  const purchase = await checkPurchase(request);
 
-  if (subscription instanceof Response) {
+  if (purchase instanceof Response) {
     // Handle error
-    return <div>Error checking subscription</div>;
+    return <div>Error checking purchase</div>;
   }
 
   return (
     <div>
       <h1>Dashboard</h1>
-      {subscription.hasPaidSubscription ? (
-        <p>You have an active subscription!</p>
+      {purchase.hasPaidPurchase ? (
+        <p>You have an active purchase!</p>
       ) : (
         <p>Please subscribe to access premium features.</p>
       )}
@@ -337,7 +337,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           config={{
             // Optional: Custom API routes (defaults work out of the box)
             api: {
-              checkSubscription: '/api/check-subscription',
+              checkPurchase: '/api/check-purchase',
               createPayment: '/api/create-payment-intent',
               processPayment: '/api/process-payment',
             },
@@ -358,12 +358,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 Set up the required API routes using Next.js helpers:
 
 ```typescript
-// app/api/check-subscription/route.ts
+// app/api/check-purchase/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -410,19 +410,19 @@ Use React components and hooks in your pages:
 // app/checkout/page.tsx
 'use client';
 
-import { PaymentForm, useSubscription } from '@solvapay/react';
+import { PaymentForm, usePurchase } from '@solvapay/react';
 import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { hasPaidSubscription, loading } = useSubscription();
+  const { hasPaidPurchase, loading } = usePurchase();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (hasPaidSubscription) {
-    return <div>You already have an active subscription!</div>;
+  if (hasPaidPurchase) {
+    return <div>You already have an active purchase!</div>;
   }
 
   return (
@@ -457,7 +457,7 @@ app/
 └── api/
     ├── tasks/
     │   └── route.ts
-    ├── check-subscription/
+    ├── check-purchase/
     │   └── route.ts
     ├── create-payment-intent/
     │   └── route.ts
@@ -546,11 +546,11 @@ export default function CheckoutPage() {
 // app/dashboard/page.tsx
 'use client';
 
-import { useSubscription } from '@solvapay/react';
+import { usePurchase } from '@solvapay/react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { hasPaidSubscription, loading, activeSubscription } = useSubscription();
+  const { hasPaidPurchase, loading, activePurchase } = usePurchase();
 
   if (loading) {
     return <div>Loading...</div>;
@@ -560,11 +560,11 @@ export default function DashboardPage() {
     <div className="container mx-auto p-8">
       <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
 
-      {hasPaidSubscription ? (
+      {hasPaidPurchase ? (
         <div>
-          <p className="text-green-600">You have an active subscription!</p>
-          {activeSubscription && (
-            <p>Plan: {activeSubscription.planName}</p>
+          <p className="text-green-600">You have an active purchase!</p>
+          {activePurchase && (
+            <p>Plan: {activePurchase.planName}</p>
           )}
         </div>
       ) : (
@@ -582,19 +582,19 @@ export default function DashboardPage() {
 
 ## Cache Management
 
-The `@solvapay/next` package includes subscription caching to reduce API calls:
+The `@solvapay/next` package includes purchase caching to reduce API calls:
 
 ```typescript
-import { clearSubscriptionCache, getSubscriptionCacheStats } from '@solvapay/next'
+import { clearPurchaseCache, getPurchaseCacheStats } from '@solvapay/next'
 
 // Clear cache for a specific user
-await clearSubscriptionCache(userId)
+await clearPurchaseCache(userId)
 
 // Clear all caches
-await clearAllSubscriptionCache()
+await clearAllPurchaseCache()
 
 // Get cache statistics
-const stats = await getSubscriptionCacheStats()
+const stats = await getPurchaseCacheStats()
 console.log(stats)
 ```
 
@@ -608,7 +608,7 @@ console.log(stats)
 
 4. **Type Safety**: Use TypeScript for better type safety.
 
-5. **Cache Management**: Use subscription caching to reduce API calls and improve performance.
+5. **Cache Management**: Use purchase caching to reduce API calls and improve performance.
 
 6. **Middleware**: Set up authentication middleware to extract user information early.
 

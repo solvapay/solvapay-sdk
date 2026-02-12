@@ -6,7 +6,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <title>SolvaPay Checkout Demo</title>
-        <meta name="description" content="Minimal subscription checkout" />
+        <meta name="description" content="Minimal purchase checkout" />
       </head>
       <body className="font-sans">
         <ClientLayout>{children}</ClientLayout>

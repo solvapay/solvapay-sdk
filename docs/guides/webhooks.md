@@ -1,6 +1,6 @@
 # Webhook Handling
 
-This guide shows you how to handle SolvaPay webhooks to keep your application in sync with subscription and payment events.
+This guide shows you how to handle SolvaPay webhooks to keep your application in sync with purchase and payment events.
 
 ## Table of Contents
 
@@ -14,9 +14,9 @@ This guide shows you how to handle SolvaPay webhooks to keep your application in
 
 SolvaPay sends webhooks to notify your application about important events:
 
-- **Subscription Created** - New subscription activated
-- **Subscription Updated** - Subscription plan or status changed
-- **Subscription Cancelled** - Subscription cancelled
+- **Purchase Created** - New purchase activated
+- **Purchase Updated** - Purchase plan or status changed
+- **Purchase Cancelled** - Purchase cancelled
 - **Payment Succeeded** - Payment processed successfully
 - **Payment Failed** - Payment processing failed
 
@@ -166,7 +166,7 @@ interface WebhookEvent {
   type: string
   data: {
     customerRef: string
-    subscriptionId?: string
+    purchaseId?: string
     planRef?: string
     status?: string
     // ... other event data
@@ -175,21 +175,21 @@ interface WebhookEvent {
 }
 ```
 
-### Handle Subscription Events
+### Handle Purchase Events
 
 ```typescript
 async function handleWebhookEvent(event: WebhookEvent) {
   switch (event.type) {
-    case 'subscription.created':
-      await handleSubscriptionCreated(event.data)
+    case 'purchase.created':
+      await handlePurchaseCreated(event.data)
       break
 
-    case 'subscription.updated':
-      await handleSubscriptionUpdated(event.data)
+    case 'purchase.updated':
+      await handlePurchaseUpdated(event.data)
       break
 
-    case 'subscription.cancelled':
-      await handleSubscriptionCancelled(event.data)
+    case 'purchase.cancelled':
+      await handlePurchaseCancelled(event.data)
       break
 
     case 'payment.succeeded':
@@ -206,59 +206,59 @@ async function handleWebhookEvent(event: WebhookEvent) {
 }
 ```
 
-### Subscription Created
+### Purchase Created
 
 ```typescript
-async function handleSubscriptionCreated(data: any) {
-  const { customerRef, subscriptionId, planRef } = data
+async function handlePurchaseCreated(data: any) {
+  const { customerRef, purchaseId, planRef } = data
 
   // Update your database
-  await db.subscriptions.create({
+  await db.purchases.create({
     customerRef,
-    subscriptionId,
+    purchaseId,
     planRef,
     status: 'active',
   })
 
-  // Clear subscription cache
-  await clearSubscriptionCache(customerRef)
+  // Clear purchase cache
+  await clearPurchaseCache(customerRef)
 
   // Send welcome email, etc.
   await sendWelcomeEmail(customerRef)
 }
 ```
 
-### Subscription Updated
+### Purchase Updated
 
 ```typescript
-async function handleSubscriptionUpdated(data: any) {
-  const { customerRef, subscriptionId, planRef, status } = data
+async function handlePurchaseUpdated(data: any) {
+  const { customerRef, purchaseId, planRef, status } = data
 
-  // Update subscription in database
-  await db.subscriptions.update({
-    where: { subscriptionId },
+  // Update purchase in database
+  await db.purchases.update({
+    where: { purchaseId },
     data: { planRef, status },
   })
 
   // Clear cache
-  await clearSubscriptionCache(customerRef)
+  await clearPurchaseCache(customerRef)
 }
 ```
 
-### Subscription Cancelled
+### Purchase Cancelled
 
 ```typescript
-async function handleSubscriptionCancelled(data: any) {
-  const { customerRef, subscriptionId } = data
+async function handlePurchaseCancelled(data: any) {
+  const { customerRef, purchaseId } = data
 
-  // Update subscription status
-  await db.subscriptions.update({
-    where: { subscriptionId },
+  // Update purchase status
+  await db.purchases.update({
+    where: { purchaseId },
     data: { status: 'cancelled', cancelledAt: new Date() },
   })
 
   // Clear cache
-  await clearSubscriptionCache(customerRef)
+  await clearPurchaseCache(customerRef)
 
   // Send cancellation email
   await sendCancellationEmail(customerRef)
@@ -280,7 +280,7 @@ async function handlePaymentSucceeded(data: any) {
   })
 
   // Clear cache
-  await clearSubscriptionCache(customerRef)
+  await clearPurchaseCache(customerRef)
 }
 ```
 
@@ -311,7 +311,7 @@ async function handlePaymentFailed(data: any) {
 // app/api/webhooks/solvapay/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhook } from '@solvapay/server'
-import { clearSubscriptionCache } from '@solvapay/next'
+import { clearPurchaseCache } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
   try {
@@ -349,16 +349,16 @@ async function handleWebhookEvent(event: any) {
   const { type, data } = event
 
   switch (type) {
-    case 'subscription.created':
-    case 'subscription.updated':
-    case 'subscription.cancelled':
-      // Clear subscription cache
+    case 'purchase.created':
+    case 'purchase.updated':
+    case 'purchase.cancelled':
+      // Clear purchase cache
       if (data.customerRef) {
-        await clearSubscriptionCache(data.customerRef)
+        await clearPurchaseCache(data.customerRef)
       }
 
       // Update database
-      await updateSubscriptionInDatabase(data)
+      await updatePurchaseInDatabase(data)
       break
 
     case 'payment.succeeded':
@@ -379,7 +379,7 @@ async function handleWebhookEvent(event: any) {
 // routes/webhooks.ts
 import express from 'express'
 import { verifyWebhook } from '@solvapay/server'
-import { clearSubscriptionCache } from '@solvapay/next'
+import { clearPurchaseCache } from '@solvapay/next'
 
 const router = express.Router()
 
@@ -415,13 +415,13 @@ async function handleWebhookEvent(event: any) {
   const { type, data } = event
 
   switch (type) {
-    case 'subscription.created':
-    case 'subscription.updated':
-    case 'subscription.cancelled':
+    case 'purchase.created':
+    case 'purchase.updated':
+    case 'purchase.cancelled':
       if (data.customerRef) {
-        await clearSubscriptionCache(data.customerRef)
+        await clearPurchaseCache(data.customerRef)
       }
-      await updateSubscriptionInDatabase(data)
+      await updatePurchaseInDatabase(data)
       break
 
     case 'payment.succeeded':
@@ -446,7 +446,7 @@ export default router
 
 5. **Handle Errors Gracefully**: Return appropriate status codes and log errors.
 
-6. **Clear Caches**: Clear subscription caches when subscription events occur.
+6. **Clear Caches**: Clear purchase caches when purchase events occur.
 
 7. **Update Database**: Keep your database in sync with webhook events.
 
@@ -469,10 +469,10 @@ ngrok http 3000
 ```typescript
 // Test webhook locally
 const testEvent = {
-  type: 'subscription.created',
+  type: 'purchase.created',
   data: {
     customerRef: 'user_123',
-    subscriptionId: 'sub_123',
+    purchaseId: 'sub_123',
     planRef: 'pln_premium',
   },
   timestamp: new Date().toISOString(),

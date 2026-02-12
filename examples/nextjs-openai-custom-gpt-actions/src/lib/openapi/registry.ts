@@ -78,7 +78,7 @@ registry.registerPath({
   path: '/api/user/plan',
   operationId: 'getUserPlan',
   summary: 'Get user plan',
-  description: 'Get current user subscription plan and usage information',
+  description: 'Get current user purchase plan and usage information',
   tags: ['User'],
   security: [{ oauth2: [] }],
   'x-openai-isConsequential': false,

@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react'
+import { usePurchase, usePlans, usePurchaseStatus } from '@solvapay/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getAccessToken } from '../lib/supabase'
 import { sortPlansByPrice } from './utils/planHelpers'
 import { PlanSelectionSection } from './components/PlanSelectionSection'
 import { PaymentSummary } from './components/PaymentSummary'
-import { SubscriptionNotices } from './components/SubscriptionNotices'
+import { PurchaseNotices } from './components/PurchaseNotices'
 import { CheckoutActions } from './components/CheckoutActions'
 import { StyledPaymentForm } from './components/StyledPaymentForm'
 import { SuccessMessage } from './components/SuccessMessage'
@@ -25,8 +25,8 @@ export default function CheckoutPage() {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false)
   const [paymentFailed, setPaymentFailed] = useState<boolean>(false)
   const [isCancelling, setIsCancelling] = useState<boolean>(false)
-  const { refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } =
-    useSubscription()
+  const { refetch, hasPaidPurchase, activePaidPurchase, activePurchase } =
+    usePurchase()
   const router = useRouter()
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -59,11 +59,11 @@ export default function CheckoutPage() {
     autoSelectFirstPaid: true,
   })
 
-  // Get advanced subscription status helpers
-  const subscriptionStatus = useSubscriptionStatus()
+  // Get advanced purchase status helpers
+  const purchaseStatus = usePurchaseStatus()
 
-  // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
-  // Refetch is only called after operations that change subscription state (payment, cancellation)
+  // Note: Provider auto-fetches purchases on mount, so no manual refetch needed here
+  // Refetch is only called after operations that change purchase state (payment, cancellation)
 
   // Handle payment success
   const handlePaymentSuccess = async (paymentIntent?: unknown) => {
@@ -72,7 +72,7 @@ export default function CheckoutPage() {
     const isTimeout = result?._processingTimeout === true
     const hasError = !!result?._processingError
 
-    // Refetch subscriptions before showing message
+    // Refetch purchases before showing message
     await refetch()
 
     if (isTimeout || hasError) {
@@ -126,11 +126,11 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!activePaidSubscription) {
+    if (!activePaidPurchase) {
       return
     }
 
-    if (activePaidSubscription.status !== 'active') {
+    if (activePaidPurchase.status !== 'active') {
       await refetch()
       return
     }
@@ -149,7 +149,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          purchaseRef: activePaidSubscription.reference,
+          purchaseRef: activePaidPurchase.reference,
           reason: 'User requested cancellation',
         }),
       })
@@ -189,7 +189,7 @@ export default function CheckoutPage() {
           <SuccessMessage />
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your subscription</h2>
+            <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your plan</h2>
 
             {loading && <div className="text-center py-8 text-slate-500">Loading plans...</div>}
 
@@ -207,7 +207,7 @@ export default function CheckoutPage() {
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanName={activeSubscription?.planName || null}
+                      activePlanName={activePurchase?.planName || null}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
@@ -215,17 +215,17 @@ export default function CheckoutPage() {
                     {/* Payment Summary */}
                     <PaymentSummary selectedPlan={currentPlan} className="mb-8" />
 
-                    {/* Cancelled Subscription Notice */}
-                    <SubscriptionNotices
-                      cancelledSubscription={subscriptionStatus.cancelledSubscription}
-                      shouldShow={subscriptionStatus.shouldShowCancelledNotice}
+                    {/* Cancelled Purchase Notice */}
+                    <PurchaseNotices
+                      cancelledPurchase={purchaseStatus.cancelledPurchase}
+                      shouldShow={purchaseStatus.shouldShowCancelledNotice}
                       className="mb-6"
                     />
 
                     {/* Action Buttons */}
                     <CheckoutActions
-                      hasPaidSubscription={hasPaidSubscription}
-                      shouldShowCancelledNotice={subscriptionStatus.shouldShowCancelledNotice}
+                      hasPaidPurchase={hasPaidPurchase}
+                      shouldShowCancelledNotice={purchaseStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}
                       isPreparingCheckout={false}

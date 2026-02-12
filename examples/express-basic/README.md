@@ -286,7 +286,7 @@ The adapter automatically handles errors:
   "error": "Payment required",
   "agent": "agt_NO8WYSX5",
   "checkoutUrl": "https://checkout.solvapay.com/...",
-  "message": "Plan subscription required. Remaining: 0"
+  "message": "Plan purchase required. Remaining: 0"
 }
 
 // Other errors are returned as 500 with error message
@@ -300,7 +300,7 @@ The HTTP adapter (`payable.http()`) is a middleware function that:
 
 - Parses request body and route parameters
 - Extracts customer reference from headers
-- Checks subscription limits
+- Checks purchase limits
 - Executes your business logic
 - Formats the response
 - Handles errors
@@ -356,7 +356,7 @@ Returned when user exceeds their plan limits:
   "error": "Payment required",
   "agent": "express-tasks-api",
   "checkoutUrl": "https://checkout.solvapay.com/...",
-  "message": "Plan subscription required. Remaining: 0"
+  "message": "Plan purchase required. Remaining: 0"
 }
 ```
 

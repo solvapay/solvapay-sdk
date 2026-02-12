@@ -3,17 +3,17 @@ import React, { createContext, useState, useEffect, useCallback, useMemo, useRef
 import type {
   SolvaPayProviderProps,
   SolvaPayContextValue,
-  SubscriptionStatus,
-  CustomerSubscriptionData,
+  PurchaseStatus,
+  CustomerPurchaseData,
   PaymentIntentResult,
   SolvaPayConfig,
 } from './types'
 import type { ProcessPaymentResult } from '@solvapay/server'
 import {
-  filterSubscriptions,
-  isPaidSubscription,
-  getPrimarySubscription,
-} from './utils/subscriptions'
+  filterPurchases,
+  isPaidPurchase,
+  getPrimaryPurchase,
+} from './utils/purchases'
 import { defaultAuthAdapter, type AuthAdapter } from './adapters/auth'
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null)
@@ -118,12 +118,12 @@ function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
 /**
  * SolvaPay Provider - Headless Context Provider for React.
  *
- * Provides subscription state, payment methods, and customer data to child components
+ * Provides purchase state, payment methods, and customer data to child components
  * via React Context. This is the root component that must wrap your app to use
  * SolvaPay React hooks and components.
  *
  * Features:
- * - Automatic subscription status checking
+ * - Automatic purchase status checking
  * - Customer reference caching in localStorage
  * - Payment intent creation and processing
  * - Authentication adapter support (Supabase, custom, etc.)
@@ -132,7 +132,7 @@ function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
  * @param props - Provider configuration
  * @param props.config - Configuration object for API routes and authentication
  * @param props.config.api - API route configuration (optional, uses defaults if not provided)
- * @param props.config.api.checkSubscription - Endpoint for checking subscription status (default: '/api/check-subscription')
+ * @param props.config.api.checkPurchase - Endpoint for checking purchase status (default: '/api/check-purchase')
  * @param props.config.api.createPayment - Endpoint for creating payment intents (default: '/api/create-payment-intent')
  * @param props.config.api.processPayment - Endpoint for processing payments (default: '/api/process-payment')
  * @param props.config.auth - Authentication configuration (optional)
@@ -158,7 +158,7 @@ function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
  *     <SolvaPayProvider
  *       config={{
  *         api: {
- *           checkSubscription: '/custom/api/subscription',
+ *           checkPurchase: '/custom/api/purchase',
  *           createPayment: '/custom/api/payment'
  *         }
  *       }}
@@ -189,7 +189,7 @@ function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
  * }
  * ```
  *
- * @see {@link useSubscription} for accessing subscription data
+ * @see {@link usePurchase} for accessing purchase data
  * @see {@link useCheckout} for payment checkout flow
  * @see {@link useSolvaPay} for accessing provider methods
  * @since 1.0.0
@@ -197,12 +197,12 @@ function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
 export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   config,
   createPayment: customCreatePayment,
-  checkSubscription: customCheckSubscription,
+  checkPurchase: customCheckPurchase,
   processPayment: customProcessPayment,
   children,
 }) => {
-  const [subscriptionData, setSubscriptionData] = useState<CustomerSubscriptionData>({
-    subscriptions: [],
+  const [purchaseData, setPurchaseData] = useState<CustomerPurchaseData>({
+    purchases: [],
   })
   const [loading, setLoading] = useState(false)
   const [internalCustomerRef, setInternalCustomerRef] = useState<string | undefined>(undefined)
@@ -215,7 +215,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const lastFetchedRef = useRef<string | null>(null)
 
   // Store functions in refs to avoid dependency issues
-  const checkSubscriptionRef = useRef<(() => Promise<CustomerSubscriptionData>) | null>(null)
+  const checkPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(null)
   const createPaymentRef = useRef<
     ((params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>) | null
   >(null)
@@ -228,7 +228,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     | null
   >(null)
   const configRef = useRef(config)
-  const buildDefaultCheckSubscriptionRef = useRef<(() => Promise<CustomerSubscriptionData>) | null>(
+  const buildDefaultCheckPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(
     null,
   )
 
@@ -238,8 +238,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [config])
 
   useEffect(() => {
-    checkSubscriptionRef.current = customCheckSubscription || null
-  }, [customCheckSubscription])
+    checkPurchaseRef.current = customCheckPurchase || null
+  }, [customCheckPurchase])
 
   useEffect(() => {
     createPaymentRef.current = customCreatePayment || null
@@ -249,13 +249,13 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     processPaymentRef.current = customProcessPayment || null
   }, [customProcessPayment])
 
-  // Build default checkSubscription implementation - store in ref to keep it stable
-  const buildDefaultCheckSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
+  // Build default checkPurchase implementation - store in ref to keep it stable
+  const buildDefaultCheckPurchase = useCallback(async (): Promise<CustomerPurchaseData> => {
     const currentConfig = configRef.current
     const adapter = getAuthAdapter(currentConfig)
     const token = await adapter.getToken()
     const detectedUserId = await adapter.getUserId()
-    const route = currentConfig?.api?.checkSubscription || '/api/check-subscription'
+    const route = currentConfig?.api?.checkPurchase || '/api/check-purchase'
     const fetchFn = currentConfig?.fetch || fetch
 
     // Get cached customerRef from localStorage, validated against current userId
@@ -288,8 +288,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     })
 
     if (!res.ok) {
-      const error = new Error(`Failed to check subscription: ${res.statusText}`)
-      currentConfig?.onError?.(error, 'checkSubscription')
+      const error = new Error(`Failed to check purchase: ${res.statusText}`)
+      currentConfig?.onError?.(error, 'checkPurchase')
       throw error
     }
 
@@ -298,8 +298,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   // Store in ref so it doesn't need to be in dependency arrays
   useEffect(() => {
-    buildDefaultCheckSubscriptionRef.current = buildDefaultCheckSubscription
-  }, [buildDefaultCheckSubscription])
+    buildDefaultCheckPurchaseRef.current = buildDefaultCheckPurchase
+  }, [buildDefaultCheckPurchase])
 
   // Build default createPayment implementation
   const buildDefaultCreatePayment = useCallback(
@@ -415,16 +415,16 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   // Get the actual functions to use (priority: custom > config > defaults)
   // Use refs to avoid dependency issues - this keeps the function stable
-  const _checkSubscription = useCallback(async (): Promise<CustomerSubscriptionData> => {
-    if (checkSubscriptionRef.current) {
-      return checkSubscriptionRef.current()
+  const _checkPurchase = useCallback(async (): Promise<CustomerPurchaseData> => {
+    if (checkPurchaseRef.current) {
+      return checkPurchaseRef.current()
     }
-    if (buildDefaultCheckSubscriptionRef.current) {
-      return buildDefaultCheckSubscriptionRef.current()
+    if (buildDefaultCheckPurchaseRef.current) {
+      return buildDefaultCheckPurchaseRef.current()
     }
     // Fallback (shouldn't happen, but TypeScript needs it)
-    return buildDefaultCheckSubscription()
-  }, [buildDefaultCheckSubscription])
+    return buildDefaultCheckPurchase()
+  }, [buildDefaultCheckPurchase])
 
   const createPayment = useCallback(
     async (params: { planRef: string; agentRef?: string }): Promise<PaymentIntentResult> => {
@@ -495,13 +495,13 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     return () => clearInterval(interval)
   }, [userId]) // Include userId in deps to detect changes
 
-  // Fetch subscription function - memoized to prevent unnecessary re-renders
-  // Use refs for checkSubscription to avoid dependency issues
-  const fetchSubscription = useCallback(
+  // Fetch purchase function - memoized to prevent unnecessary re-renders
+  // Use refs for checkPurchase to avoid dependency issues
+  const fetchPurchase = useCallback(
     async (force = false) => {
       // Only fetch if authenticated or if we have a customerRef
       if (!isAuthenticated && !internalCustomerRef) {
-        setSubscriptionData({ subscriptions: [] })
+        setPurchaseData({ purchases: [] })
         setLoading(false)
         inFlightRef.current = null
         lastFetchedRef.current = null
@@ -524,10 +524,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       setLoading(true)
 
       try {
-        // Use ref to get the current checkSubscription function
-        const checkFn = checkSubscriptionRef.current || buildDefaultCheckSubscriptionRef.current
+        // Use ref to get the current checkPurchase function
+        const checkFn = checkPurchaseRef.current || buildDefaultCheckPurchaseRef.current
         if (!checkFn) {
-          throw new Error('checkSubscription function not available')
+          throw new Error('checkPurchase function not available')
         }
         const data = await checkFn()
 
@@ -543,21 +543,21 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
         // Only update if this is still the current cacheKey (might have changed during fetch)
         if (inFlightRef.current === cacheKey) {
-          // Filter subscriptions using shared utility
-          const filteredData: CustomerSubscriptionData = {
+          // Filter purchases using shared utility
+          const filteredData: CustomerPurchaseData = {
             ...data,
-            subscriptions: filterSubscriptions(data.subscriptions || []),
+            purchases: filterPurchases(data.purchases || []),
           }
 
-          setSubscriptionData(filteredData)
+          setPurchaseData(filteredData)
           lastFetchedRef.current = cacheKey
         }
       } catch (error) {
-        console.error('[SolvaPayProvider] Failed to fetch subscription:', error)
-        // On error, set empty subscriptions
+        console.error('[SolvaPayProvider] Failed to fetch purchase:', error)
+        // On error, set empty purchases
         if (inFlightRef.current === cacheKey) {
-          setSubscriptionData({
-            subscriptions: [],
+          setPurchaseData({
+            purchases: [],
           })
           lastFetchedRef.current = cacheKey
         }
@@ -571,29 +571,29 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     [isAuthenticated, internalCustomerRef, userId],
   )
 
-  // Refetch subscription function - forces a fresh fetch by clearing cache
-  // Use ref to get fetchSubscription to avoid dependency issues
-  const fetchSubscriptionRef = useRef(fetchSubscription)
+  // Refetch purchase function - forces a fresh fetch by clearing cache
+  // Use ref to get fetchPurchase to avoid dependency issues
+  const fetchPurchaseRef = useRef(fetchPurchase)
   useEffect(() => {
-    fetchSubscriptionRef.current = fetchSubscription
-  }, [fetchSubscription])
+    fetchPurchaseRef.current = fetchPurchase
+  }, [fetchPurchase])
 
-  const refetchSubscription = useCallback(async () => {
+  const refetchPurchase = useCallback(async () => {
     // Always clear cache state before refetching to ensure fresh data
     // Clear both the cache key tracking and in-flight requests
     lastFetchedRef.current = null
     inFlightRef.current = null
 
-    // Also clear subscription data temporarily to ensure UI reflects loading state
+    // Also clear purchase data temporarily to ensure UI reflects loading state
     // This prevents showing stale data while fetching
-    setSubscriptionData({ subscriptions: [] })
+    setPurchaseData({ purchases: [] })
 
     // Force a fresh fetch by passing force=true
     // This bypasses the cache check and ensures we get the latest data from the server
-    await fetchSubscriptionRef.current(true)
+    await fetchPurchaseRef.current(true)
   }, [])
 
-  // Auto-fetch subscriptions on mount and when auth state changes
+  // Auto-fetch purchases on mount and when auth state changes
   // Only depend on actual values, not the function itself
   useEffect(() => {
     // Clear cache when userId or customerRef changes to prevent stale data
@@ -602,9 +602,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     inFlightRef.current = null
 
     if (isAuthenticated || internalCustomerRef) {
-      fetchSubscription()
+      fetchPurchase()
     } else {
-      setSubscriptionData({ subscriptions: [] })
+      setPurchaseData({ purchases: [] })
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -617,61 +617,61 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       // Store with current userId to prevent cross-user contamination
       setCachedCustomerRef(newCustomerRef, userId)
       // Trigger refetch
-      fetchSubscription(true)
+      fetchPurchase(true)
     },
-    [fetchSubscription, userId],
+    [fetchPurchase, userId],
   )
 
-  // Build subscription status with helper methods - memoized to prevent unnecessary re-renders
-  const subscription: SubscriptionStatus = useMemo(() => {
-    // Get primary active subscription (paid or free) - most recent active subscription
-    const activeSubscription = getPrimarySubscription(subscriptionData.subscriptions)
+  // Build purchase status with helper methods - memoized to prevent unnecessary re-renders
+  const purchase: PurchaseStatus = useMemo(() => {
+    // Get primary active purchase (paid or free) - most recent active purchase
+    const activePurchase = getPrimaryPurchase(purchaseData.purchases)
 
-    // Compute active paid subscriptions
-    // Backend keeps subscriptions as 'active' until expiration, even when cancelled
-    const activePaidSubscriptions = subscriptionData.subscriptions.filter(
-      sub => sub.status === 'active' && isPaidSubscription(sub),
+    // Compute active paid purchases
+    // Backend keeps purchases as 'active' until expiration, even when cancelled
+    const activePaidPurchases = purchaseData.purchases.filter(
+      p => p.status === 'active' && isPaidPurchase(p),
     )
 
-    // Get most recent active paid subscription (sorted by startDate)
-    const activePaidSubscription =
-      activePaidSubscriptions.sort(
+    // Get most recent active paid purchase (sorted by startDate)
+    const activePaidPurchase =
+      activePaidPurchases.sort(
         (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
       )[0] || null
 
     return {
       loading,
-      customerRef: subscriptionData.customerRef || internalCustomerRef,
-      email: subscriptionData.email,
-      name: subscriptionData.name,
-      subscriptions: subscriptionData.subscriptions,
+      customerRef: purchaseData.customerRef || internalCustomerRef,
+      email: purchaseData.email,
+      name: purchaseData.name,
+      purchases: purchaseData.purchases,
       hasPlan: (planName: string) => {
-        return subscriptionData.subscriptions.some(
-          sub => sub.planName.toLowerCase() === planName.toLowerCase() && sub.status === 'active',
+        return purchaseData.purchases.some(
+          p => p.planName.toLowerCase() === planName.toLowerCase() && p.status === 'active',
         )
       },
-      activeSubscription,
-      hasPaidSubscription: activePaidSubscriptions.length > 0,
-      activePaidSubscription,
+      activePurchase,
+      hasPaidPurchase: activePaidPurchases.length > 0,
+      activePaidPurchase,
     }
-  }, [loading, subscriptionData, internalCustomerRef])
+  }, [loading, purchaseData, internalCustomerRef])
 
   // Memoize context value to prevent unnecessary re-renders of consumers
   const contextValue: SolvaPayContextValue = useMemo(
     () => ({
-      subscription,
-      refetchSubscription,
+      purchase,
+      refetchPurchase,
       createPayment,
       processPayment,
-      customerRef: subscriptionData.customerRef || internalCustomerRef,
+      customerRef: purchaseData.customerRef || internalCustomerRef,
       updateCustomerRef,
     }),
     [
-      subscription,
-      refetchSubscription,
+      purchase,
+      refetchPurchase,
       createPayment,
       processPayment,
-      subscriptionData.customerRef,
+      purchaseData.customerRef,
       internalCustomerRef,
       updateCustomerRef,
     ],

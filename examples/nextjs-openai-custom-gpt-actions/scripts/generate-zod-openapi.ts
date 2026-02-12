@@ -98,7 +98,7 @@ async function generateOpenApiSpec() {
       tags: [
         {
           name: 'User',
-          description: 'User account and subscription management',
+          description: 'User account and purchase management',
         },
         {
           name: 'Tasks',

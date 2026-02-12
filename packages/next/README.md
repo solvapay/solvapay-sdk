@@ -14,23 +14,23 @@ npm install @solvapay/next @solvapay/server next
 
 All helpers return either a success result or a `NextResponse` error, making them easy to use in Next.js API routes.
 
-### Check Subscription
+### Check Purchase
 
-Check user subscription status with built-in request deduplication and caching:
+Check user purchase status with built-in request deduplication and caching:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
 
   // If result is a NextResponse, it's an error response - return it
   if (result instanceof NextResponse) {
     return result
   }
 
-  // Otherwise, return the subscription data
+  // Otherwise, return the purchase data
   return NextResponse.json(result)
 }
 ```
@@ -195,19 +195,19 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 import {
-  clearSubscriptionCache,
-  clearAllSubscriptionCache,
-  getSubscriptionCacheStats,
+  clearPurchaseCache,
+  clearAllPurchaseCache,
+  getPurchaseCacheStats,
 } from '@solvapay/next'
 
 // Clear cache for a specific user
-clearSubscriptionCache(userId)
+clearPurchaseCache(userId)
 
 // Clear all cache entries
-clearAllSubscriptionCache()
+clearAllPurchaseCache()
 
 // Get cache statistics
-const stats = getSubscriptionCacheStats()
+const stats = getPurchaseCacheStats()
 console.log(`In-flight: ${stats.inFlight}, Cached: ${stats.cached}`)
 ```
 
@@ -222,7 +222,7 @@ All helper functions follow the same pattern:
 
 **Available Helpers:**
 
-- `checkSubscription(request, options?)` - Check subscription with caching
+- `checkPurchase(request, options?)` - Check purchase with caching
 - `syncCustomer(request, options?)` - Sync customer with backend
 - `createPaymentIntent(request, body, options?)` - Create payment intent
 - `processPayment(request, body, options?)` - Process payment

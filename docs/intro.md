@@ -1,10 +1,10 @@
 # Welcome to SolvaPay SDK
 
-SolvaPay SDK is a modern TypeScript SDK for monetizing APIs, AI agents, and MCP (Model Context Protocol) servers with paywall protection and subscription management. It provides a unified API that works across multiple frameworks and runtimes.
+SolvaPay SDK is a modern TypeScript SDK for monetizing APIs, AI agents, and MCP (Model Context Protocol) servers with paywall protection and purchase management. It provides a unified API that works across multiple frameworks and runtimes.
 
 ## What is SolvaPay SDK?
 
-SolvaPay SDK helps you monetize your APIs, AI agents, and MCP servers with minimal setup. Add paywall protection to your endpoints, manage subscriptions, and process payments—all with a simple, type-safe API.
+SolvaPay SDK helps you monetize your APIs, AI agents, and MCP servers with minimal setup. Add paywall protection to your endpoints, manage purchases, and process payments—all with a simple, type-safe API.
 
 ## Key Features
 
@@ -28,10 +28,10 @@ const handler = payable.mcp(createTask)
 Build beautiful payment flows with headless React components that work with any design system:
 
 ```tsx
-import { PaymentForm, useSubscription } from '@solvapay/react'
+import { PaymentForm, usePurchase } from '@solvapay/react'
 
 function CheckoutPage() {
-  const { hasPaidSubscription } = useSubscription()
+  const { hasPaidPurchase } = usePurchase()
 
   return (
     <PaymentForm
@@ -97,7 +97,7 @@ npm install @solvapay/auth
 
 ### API Monetization
 
-Protect your REST or GraphQL APIs with usage limits and subscription checks:
+Protect your REST or GraphQL APIs with usage limits and purchase checks:
 
 ```typescript
 const solvaPay = createSolvaPay()
@@ -118,7 +118,7 @@ app.post(
 
 ### AI Agents
 
-Monetize AI agent interactions with pay-per-use or subscription models:
+Monetize AI agent interactions with pay-per-use or purchase models:
 
 ```typescript
 // Protect agent endpoints
@@ -164,7 +164,7 @@ SolvaPay SDK is organized as a monorepo with 6 published packages:
 
 ### How It Works
 
-1. **Agent & Plan Setup**: Define your agent (API/service) and plans (subscription tiers) in the SolvaPay dashboard
+1. **Agent & Plan Setup**: Define your agent (API/service) and plans (purchase tiers) in the SolvaPay dashboard
 2. **Protection**: Use `payable()` to wrap your business logic with paywall protection
 3. **Customer Management**: Customers are automatically created and synced with your authentication system
 4. **Payment Processing**: Integrate Stripe for payment processing (handled by SolvaPay backend)
@@ -177,9 +177,9 @@ Client Request
     ↓
 Paywall Check (via payable adapter)
     ↓
-Check Subscription Status
+Check Purchase Status
     ↓
-Has Subscription? → Yes → Execute Business Logic
+Has Purchase? → Yes → Execute Business Logic
     ↓ No
 Check Usage Limits
     ↓

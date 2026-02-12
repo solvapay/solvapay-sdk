@@ -6,7 +6,7 @@ import type { PaymentIntent } from '@stripe/stripe-js'
 import type { ProcessPaymentResult } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
 
-export interface SubscriptionInfo {
+export interface PurchaseInfo {
   reference: string
   planName: string
   agentName: string
@@ -18,11 +18,11 @@ export interface SubscriptionInfo {
   amount?: number
 }
 
-export interface CustomerSubscriptionData {
+export interface CustomerPurchaseData {
   customerRef?: string
   email?: string
   name?: string
-  subscriptions: SubscriptionInfo[]
+  purchases: PurchaseInfo[]
 }
 
 export interface PaymentIntentResult {
@@ -32,31 +32,31 @@ export interface PaymentIntentResult {
   customerRef?: string // Backend customer reference
 }
 
-export interface SubscriptionStatus {
+export interface PurchaseStatus {
   loading: boolean
   customerRef?: string
   email?: string
   name?: string
-  subscriptions: SubscriptionInfo[]
+  purchases: PurchaseInfo[]
   hasPlan: (planName: string) => boolean
   /**
-   * Primary active subscription (paid or free) - most recent subscription with status === 'active'
-   * Backend keeps subscriptions as 'active' until expiration, even when cancelled.
-   * null if no active subscription exists
+   * Primary active purchase (paid or free) - most recent purchase with status === 'active'
+   * Backend keeps purchases as 'active' until expiration, even when cancelled.
+   * null if no active purchase exists
    */
-  activeSubscription: SubscriptionInfo | null
+  activePurchase: PurchaseInfo | null
   /**
-   * Check if user has any active paid subscription (amount > 0)
-   * Checks subscriptions with status === 'active'.
-   * Backend keeps subscriptions as 'active' until expiration, even when cancelled.
+   * Check if user has any active paid purchase (amount > 0)
+   * Checks purchases with status === 'active'.
+   * Backend keeps purchases as 'active' until expiration, even when cancelled.
    */
-  hasPaidSubscription: boolean
+  hasPaidPurchase: boolean
   /**
-   * Most recent active paid subscription (sorted by startDate)
-   * Returns subscription with status === 'active' and amount > 0.
-   * null if no active paid subscription exists
+   * Most recent active paid purchase (sorted by startDate)
+   * Returns purchase with status === 'active' and amount > 0.
+   * null if no active paid purchase exists
    */
-  activePaidSubscription: SubscriptionInfo | null
+  activePaidPurchase: PurchaseInfo | null
 }
 
 /**
@@ -69,7 +69,7 @@ export interface SolvaPayConfig {
    * Defaults to standard Next.js API routes
    */
   api?: {
-    checkSubscription?: string // Default: '/api/check-subscription'
+    checkPurchase?: string // Default: '/api/check-purchase'
     createPayment?: string // Default: '/api/create-payment-intent'
     processPayment?: string // Default: '/api/process-payment'
   }
@@ -134,8 +134,8 @@ export interface SolvaPayConfig {
 }
 
 export interface SolvaPayContextValue {
-  subscription: SubscriptionStatus
-  refetchSubscription: () => Promise<void>
+  purchase: PurchaseStatus
+  refetchPurchase: () => Promise<void>
   createPayment: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
     paymentIntentId: string
@@ -158,7 +158,7 @@ export interface SolvaPayProviderProps {
    * Use only if you need custom logic beyond standard API routes
    */
   createPayment?: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>
-  checkSubscription?: () => Promise<CustomerSubscriptionData>
+  checkPurchase?: () => Promise<CustomerPurchaseData>
   processPayment?: (params: {
     paymentIntentId: string
     agentRef: string
@@ -170,20 +170,20 @@ export interface SolvaPayProviderProps {
 
 export interface PlanBadgeProps {
   children?: (props: {
-    subscriptions: SubscriptionInfo[]
+    purchases: PurchaseInfo[]
     loading: boolean
     displayPlan: string | null
     shouldShow: boolean
   }) => React.ReactNode
   as?: React.ElementType
-  className?: string | ((props: { subscriptions: SubscriptionInfo[] }) => string)
+  className?: string | ((props: { purchases: PurchaseInfo[] }) => string)
 }
 
-export interface SubscriptionGateProps {
+export interface PurchaseGateProps {
   requirePlan?: string
   children: (props: {
     hasAccess: boolean
-    subscriptions: SubscriptionInfo[]
+    purchases: PurchaseInfo[]
     loading: boolean
   }) => React.ReactNode
 }
@@ -197,7 +197,7 @@ export interface PaymentError extends Error {
 }
 
 /**
- * Plan interface for subscription plans
+ * Plan interface for plans
  */
 export interface Plan {
   reference: string
@@ -280,7 +280,7 @@ export interface PlanSelectorProps {
    */
   children: (
     props: UsePlansReturn & {
-      subscriptions: SubscriptionInfo[]
+      purchases: PurchaseInfo[]
       isPaidPlan: (planName: string) => boolean
       isCurrentPlan: (planName: string) => boolean
     },
@@ -288,21 +288,21 @@ export interface PlanSelectorProps {
 }
 
 /**
- * Return type for useSubscriptionStatus hook
+ * Return type for usePurchaseStatus hook
  *
- * Provides advanced subscription status helpers and utilities.
- * Focuses on cancelled subscription logic and date formatting.
- * For basic subscription data and paid status, use useSubscription() instead.
+ * Provides advanced purchase status helpers and utilities.
+ * Focuses on cancelled purchase logic and date formatting.
+ * For basic purchase data and paid status, use usePurchase() instead.
  */
-export interface SubscriptionStatusReturn {
+export interface PurchaseStatusReturn {
   /**
-   * Most recent cancelled paid subscription (sorted by startDate)
-   * null if no cancelled paid subscription exists
+   * Most recent cancelled paid purchase (sorted by startDate)
+   * null if no cancelled paid purchase exists
    */
-  cancelledSubscription: SubscriptionInfo | null
+  cancelledPurchase: PurchaseInfo | null
   /**
-   * Whether to show cancelled subscription notice
-   * true if cancelledSubscription exists
+   * Whether to show cancelled purchase notice
+   * true if cancelledPurchase exists
    */
   shouldShowCancelledNotice: boolean
   /**

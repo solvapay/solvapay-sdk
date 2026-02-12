@@ -11,7 +11,7 @@ import {
   processPaymentCore,
   isErrorResult,
 } from '@solvapay/server'
-import { clearSubscriptionCache } from '../cache'
+import { clearPurchaseCache } from '../cache'
 import { getAuthenticatedUserCore } from '@solvapay/server'
 
 /**
@@ -52,11 +52,11 @@ export async function createPaymentIntent(
     )
   }
 
-  // Clear subscription cache to ensure fresh data after payment intent creation
+  // Clear purchase cache to ensure fresh data after payment intent creation
   try {
     const userResult = await getAuthenticatedUserCore(request)
     if (!isErrorResult(userResult)) {
-      clearSubscriptionCache(userResult.userId)
+      clearPurchaseCache(userResult.userId)
     }
   } catch {
     // Ignore errors in cache clearing
@@ -93,11 +93,11 @@ export async function processPayment(
     )
   }
 
-  // Clear subscription cache to ensure fresh data on next fetch
+  // Clear purchase cache to ensure fresh data on next fetch
   try {
     const userResult = await getAuthenticatedUserCore(request)
     if (!isErrorResult(userResult)) {
-      clearSubscriptionCache(userResult.userId)
+      clearPurchaseCache(userResult.userId)
     }
   } catch {
     // Ignore errors in cache clearing

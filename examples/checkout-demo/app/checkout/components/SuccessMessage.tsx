@@ -17,7 +17,7 @@ export function SuccessMessage() {
         </svg>
       </div>
       <h2 className="text-2xl font-semibold text-slate-900 mb-2">Payment Successful!</h2>
-      <p className="text-slate-600 mb-4">Your subscription has been activated.</p>
+      <p className="text-slate-600 mb-4">Your purchase has been activated.</p>
       <p className="text-sm text-slate-500">Redirecting to home page...</p>
     </div>
   )

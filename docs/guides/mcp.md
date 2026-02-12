@@ -1,6 +1,6 @@
 # MCP Server Integration Guide
 
-This guide shows you how to integrate SolvaPay SDK with Model Context Protocol (MCP) servers to protect MCP tools with paywall protection and subscription management.
+This guide shows you how to integrate SolvaPay SDK with Model Context Protocol (MCP) servers to protect MCP tools with paywall protection and purchase management.
 
 ## Table of Contents
 
@@ -79,7 +79,7 @@ Define your MCP tools:
 const tools: Tool[] = [
   {
     name: 'create_task',
-    description: 'Create a new task (requires subscription)',
+    description: 'Create a new task (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -374,7 +374,7 @@ const payable = solvaPay.payable({
 const tools: Tool[] = [
   {
     name: 'create_task',
-    description: 'Create a new task (requires subscription)',
+    description: 'Create a new task (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -400,7 +400,7 @@ const tools: Tool[] = [
   },
   {
     name: 'get_task',
-    description: 'Get a task by ID (requires subscription)',
+    description: 'Get a task by ID (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -422,7 +422,7 @@ const tools: Tool[] = [
   },
   {
     name: 'list_tasks',
-    description: 'List all tasks (requires subscription)',
+    description: 'List all tasks (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {

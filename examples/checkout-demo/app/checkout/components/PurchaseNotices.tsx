@@ -1,25 +1,25 @@
-import type { SubscriptionInfo } from '@solvapay/react'
+import type { PurchaseInfo } from '@solvapay/react'
 import { formatDate, getDaysUntilExpiration } from '../utils/dateHelpers'
 
-interface SubscriptionNoticesProps {
-  cancelledSubscription: SubscriptionInfo | null
+interface PurchaseNoticesProps {
+  cancelledPurchase: PurchaseInfo | null
   shouldShow: boolean
   className?: string
 }
 
 /**
- * Subscription Notices Component
+ * Purchase Notices Component
  *
  * Displays cancellation notices and expiration warnings
  */
-export function SubscriptionNotices({
-  cancelledSubscription,
+export function PurchaseNotices({
+  cancelledPurchase,
   shouldShow,
   className = '',
-}: SubscriptionNoticesProps) {
-  if (!shouldShow || !cancelledSubscription) return null
+}: PurchaseNoticesProps) {
+  if (!shouldShow || !cancelledPurchase) return null
 
-  const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate)
+  const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate)
 
   return (
     <div className={`p-4 bg-amber-50 border border-amber-200 rounded-lg ${className}`}>
@@ -39,12 +39,12 @@ export function SubscriptionNotices({
         </svg>
         <div className="flex-1">
           <p className="text-sm font-medium text-amber-900 mb-2">
-            Your subscription has been cancelled
+            Your purchase has been cancelled
           </p>
-          {cancelledSubscription.endDate ? (
+          {cancelledPurchase.endDate ? (
             <div className="mt-2 p-2 bg-white rounded border border-amber-300">
               <p className="text-sm font-semibold text-amber-900">
-                ⏰ Subscription Expires: {formatDate(cancelledSubscription.endDate)}
+                ⏰ Purchase Expires: {formatDate(cancelledPurchase.endDate)}
               </p>
               {daysLeft !== null && daysLeft > 0 && (
                 <p className="text-xs text-amber-700 mt-1">
@@ -52,18 +52,18 @@ export function SubscriptionNotices({
                 </p>
               )}
               <p className="text-xs text-amber-700 mt-1">
-                You'll continue to have access to {cancelledSubscription.planName} features until
+                You'll continue to have access to {cancelledPurchase.planName} features until
                 this date
               </p>
             </div>
           ) : (
-            <p className="text-sm text-amber-700 mt-1">Your subscription access has ended</p>
+            <p className="text-sm text-amber-700 mt-1">Your purchase access has ended</p>
           )}
-          {cancelledSubscription.cancelledAt && (
+          {cancelledPurchase.cancelledAt && (
             <p className="text-xs text-amber-600 mt-2">
-              Cancelled on {formatDate(cancelledSubscription.cancelledAt)}
-              {cancelledSubscription.cancellationReason &&
-                ` - ${cancelledSubscription.cancellationReason}`}
+              Cancelled on {formatDate(cancelledPurchase.cancelledAt)}
+              {cancelledPurchase.cancellationReason &&
+                ` - ${cancelledPurchase.cancellationReason}`}
             </p>
           )}
         </div>

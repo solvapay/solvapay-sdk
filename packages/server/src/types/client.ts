@@ -14,9 +14,9 @@ export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { p
 /**
  * Extended CustomerResponse with proper field mapping
  *
- * Note: The backend API may return subscriptions with additional fields beyond PurchaseInfo
+ * Note: The backend API may return purchases with additional fields beyond PurchaseInfo
  * (e.g., amount, endDate, cancelledAt, cancellationReason) as defined in PurchaseResponse.
- * These additional fields are preserved in the subscriptions array.
+ * These additional fields are preserved in the purchases array.
  */
 export type CustomerResponseMapped = {
   customerRef: string
@@ -24,7 +24,7 @@ export type CustomerResponseMapped = {
   name?: string
   externalRef?: string
   plan?: string
-  subscriptions?: Array<
+  purchases?: Array<
     components['schemas']['PurchaseInfo'] &
       Partial<
         Pick<
@@ -42,9 +42,9 @@ export type CustomerResponseMapped = {
 }
 
 /**
- * Purchase information returned from payment processing
+ * One-time purchase information returned from payment processing
  */
-export interface PurchaseInfo {
+export interface OneTimePurchaseInfo {
   reference: string
   productRef?: string
   amount: number
@@ -57,9 +57,9 @@ export interface PurchaseInfo {
  * Result from processing a payment intent
  */
 export interface ProcessPaymentResult {
-  type: 'subscription' | 'purchase'
-  subscription?: components['schemas']['PurchaseInfo']
-  purchase?: PurchaseInfo
+  type: 'recurring' | 'one-time'
+  purchase?: components['schemas']['PurchaseInfo']
+  oneTimePurchase?: OneTimePurchaseInfo
   status: 'completed'
 }
 

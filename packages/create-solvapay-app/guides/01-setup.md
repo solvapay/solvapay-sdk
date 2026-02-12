@@ -1,6 +1,6 @@
 # Prerequisites: Account Setup and Configuration
 
-Before implementing the SolvaPay subscription integration, you need to set up your accounts and configure environment variables.
+Before implementing the SolvaPay purchase integration, you need to set up your accounts and configure environment variables.
 
 ## Step 1: Create SolvaPay Account
 
@@ -76,7 +76,7 @@ Once your accounts are set up and environment variables are configured, copy the
 **Copy this prompt into Cursor (or IDE of your choice) to implement:**
 
 ```
-Add subscription and auth to my app using these instructions
+Add purchase and auth to my app using these instructions
 ```
 
 **Then drag these guide files into the chat as references:**

@@ -6,7 +6,7 @@ This guide covers performance optimization strategies for SolvaPay SDK, includin
 
 - [Caching Strategies](#caching-strategies)
 - [Request Deduplication](#request-deduplication)
-- [Subscription Caching](#subscription-caching)
+- [Purchase Caching](#purchase-caching)
 - [Best Practices](#best-practices)
 - [Performance Monitoring](#performance-monitoring)
 
@@ -26,24 +26,24 @@ const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
 const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
 ```
 
-### Subscription Caching (Next.js)
+### Purchase Caching (Next.js)
 
-Use subscription caching to reduce API calls:
+Use purchase caching to reduce API calls:
 
 ```typescript
-import { checkSubscription, clearSubscriptionCache } from '@solvapay/next'
+import { checkPurchase, clearPurchaseCache } from '@solvapay/next'
 
-// Check subscription (cached automatically)
+// Check purchase (cached automatically)
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
   return NextResponse.json(result)
 }
 
-// Clear cache when subscription changes
+// Clear cache when purchase changes
 export async function POST(request: NextRequest) {
   const userId = getUserIdFromRequest(request)
-  await clearSubscriptionCache(userId)
-  // ... handle subscription update
+  await clearPurchaseCache(userId)
+  // ... handle purchase update
 }
 ```
 
@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
 Monitor cache performance:
 
 ```typescript
-import { getSubscriptionCacheStats } from '@solvapay/next'
+import { getPurchaseCacheStats } from '@solvapay/next'
 
-const stats = await getSubscriptionCacheStats()
+const stats = await getPurchaseCacheStats()
 console.log('Cache hits:', stats.hits)
 console.log('Cache misses:', stats.misses)
 console.log('Cache size:', stats.size)
@@ -83,20 +83,20 @@ await Promise.all(promises)
 2. **Cache TTL**: Results are cached for 60 seconds to prevent duplicate sequential requests
 3. **Automatic Cleanup**: Expired cache entries are automatically removed
 
-## Subscription Caching
+## Purchase Caching
 
-### Next.js Subscription Caching
+### Next.js Purchase Caching
 
-The `@solvapay/next` package includes built-in subscription caching:
+The `@solvapay/next` package includes built-in purchase caching:
 
 ```typescript
-// app/api/check-subscription/route.ts
+// app/api/check-purchase/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
   // Automatically cached per user ID
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
   return NextResponse.json(result)
 }
 ```
@@ -105,24 +105,24 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 import {
-  clearSubscriptionCache,
-  clearAllSubscriptionCache,
-  getSubscriptionCacheStats,
+  clearPurchaseCache,
+  clearAllPurchaseCache,
+  getPurchaseCacheStats,
 } from '@solvapay/next'
 
 // Clear cache for specific user
-await clearSubscriptionCache(userId)
+await clearPurchaseCache(userId)
 
 // Clear all caches
-await clearAllSubscriptionCache()
+await clearAllPurchaseCache()
 
 // Get cache statistics
-const stats = await getSubscriptionCacheStats()
+const stats = await getPurchaseCacheStats()
 ```
 
 ### Cache Invalidation
 
-Invalidate cache when subscription changes:
+Invalidate cache when purchase changes:
 
 ```typescript
 // After successful payment
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
   // Process payment...
 
   // Clear cache to force refresh
-  await clearSubscriptionCache(userId)
+  await clearPurchaseCache(userId)
 
   return NextResponse.json({ success: true })
 }
@@ -153,16 +153,16 @@ export const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY }) // In each file
 ```
 
-### 2. Use Subscription Caching
+### 2. Use Purchase Caching
 
-Enable subscription caching in Next.js:
+Enable purchase caching in Next.js:
 
 ```typescript
-// Good: Use cached subscription checks
-import { checkSubscription } from '@solvapay/next'
+// Good: Use cached purchase checks
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request) // Cached automatically
+  const result = await checkPurchase(request) // Cached automatically
   return NextResponse.json(result)
 }
 ```
@@ -173,13 +173,13 @@ Batch multiple operations when possible:
 
 ```typescript
 // Good: Batch operations
-const [subscription, customer] = await Promise.all([
-  checkSubscription(request),
+const [purchase, customer] = await Promise.all([
+  checkPurchase(request),
   getCustomer(request),
 ])
 
 // Bad: Sequential operations
-const subscription = await checkSubscription(request)
+const purchase = await checkPurchase(request)
 const customer = await getCustomer(request)
 ```
 
@@ -191,7 +191,7 @@ Use caching and deduplication to minimize API calls:
 // SolvaPay automatically:
 // - Deduplicates concurrent requests
 // - Caches customer lookups (60s TTL)
-// - Caches subscription checks (Next.js)
+// - Caches purchase checks (Next.js)
 ```
 
 ### 5. Edge Runtime Compatibility
@@ -235,10 +235,10 @@ async function measurePerformance() {
 ### Monitor Cache Hit Rates
 
 ```typescript
-import { getSubscriptionCacheStats } from '@solvapay/next'
+import { getPurchaseCacheStats } from '@solvapay/next'
 
 async function monitorCache() {
-  const stats = await getSubscriptionCacheStats()
+  const stats = await getPurchaseCacheStats()
   const hitRate = stats.hits / (stats.hits + stats.misses)
 
   console.log(`Cache hit rate: ${(hitRate * 100).toFixed(2)}%`)
@@ -271,23 +271,23 @@ For advanced use cases, implement custom caching:
 import { createSolvaPay } from '@solvapay/server'
 import { LRUCache } from 'lru-cache'
 
-// Custom subscription cache
-const subscriptionCache = new LRUCache<string, any>({
+// Custom purchase cache
+const purchaseCache = new LRUCache<string, any>({
   max: 1000,
   ttl: 60000, // 60 seconds
 })
 
-async function getCachedSubscription(userId: string, request: NextRequest) {
-  const cached = subscriptionCache.get(userId)
+async function getCachedPurchase(userId: string, request: NextRequest) {
+  const cached = purchaseCache.get(userId)
   if (cached) {
     return cached
   }
 
   // Fetch from API
-  const subscription = await checkSubscription(request)
-  subscriptionCache.set(userId, subscription)
+  const purchase = await checkPurchase(request)
+  purchaseCache.set(userId, purchase)
 
-  return subscription
+  return purchase
 }
 ```
 

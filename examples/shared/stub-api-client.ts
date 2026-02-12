@@ -571,7 +571,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       name: customer.name,
       externalRef: customer.externalRef,
       plan,
-      subscriptions: [], // Stub doesn't track subscriptions yet
+      purchases: [], // Stub doesn't track purchases yet
     }
   }
 
@@ -599,7 +599,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           name: customer.name,
           externalRef: params.externalRef,
           plan,
-          subscriptions: [], // Stub doesn't track subscriptions yet
+          purchases: [], // Stub doesn't track purchases yet
         }
       }
     }

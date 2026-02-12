@@ -7,7 +7,7 @@ Understanding the key concepts in SolvaPay SDK will help you build effective mon
 - [Agents and Plans](#agents-and-plans)
 - [Customer References](#customer-references)
 - [Paywall Protection Flow](#paywall-protection-flow)
-- [Subscription Lifecycle](#subscription-lifecycle)
+- [Purchase Lifecycle](#purchase-lifecycle)
 - [Authentication Flow](#authentication-flow)
 - [Usage Tracking](#usage-tracking)
 - [Next Steps](#next-steps)
@@ -33,11 +33,11 @@ const payable = solvaPay.payable({
 
 ### Plans
 
-A **Plan** represents a subscription tier or pricing model. Plans define:
+A **Plan** represents a purchase tier or pricing model. Plans define:
 
 - **Plan Reference** (`pln_...`) - Unique identifier for the plan
 - **Name** - Plan name (e.g., "Premium", "Pro")
-- **Price** - Subscription price
+- **Price** - Purchase price
 - **Usage Limits** - What's included (e.g., 1000 API calls/month)
 - **Features** - What features are available
 
@@ -64,7 +64,7 @@ const payable = solvaPay.payable({
 A **Customer Reference** (`customerRef`) is a unique identifier for a user in your system. It's used to:
 
 - Track usage per customer
-- Check subscription status
+- Check purchase status
 - Enforce usage limits
 - Create payment intents
 
@@ -72,7 +72,7 @@ A **Customer Reference** (`customerRef`) is a unique identifier for a user in yo
 
 1. **Customer Creation**: When a user first interacts with your protected endpoints, SolvaPay automatically creates a customer record
 2. **External Reference**: You can link SolvaPay customers to your user IDs using `externalRef`
-3. **Customer Lookup**: SolvaPay uses the customer reference to check subscriptions and track usage
+3. **Customer Lookup**: SolvaPay uses the customer reference to check purchases and track usage
 
 ```typescript
 // Ensure customer exists (creates if doesn't exist)
@@ -105,7 +105,7 @@ For Next.js, the customer reference is automatically extracted from authenticati
 
 ```typescript
 // Next.js automatically extracts from auth middleware
-const result = await checkSubscription(request)
+const result = await checkPurchase(request)
 // result.customerRef is automatically set
 ```
 
@@ -116,7 +116,7 @@ const result = await checkSubscription(request)
 When you wrap your business logic with `payable()`, SolvaPay automatically:
 
 1. **Extracts Customer Reference** - From headers, auth tokens, or request context
-2. **Checks Subscription Status** - Verifies if customer has required plan
+2. **Checks Purchase Status** - Verifies if customer has required plan
 3. **Checks Usage Limits** - Verifies if customer is within usage limits
 4. **Executes Business Logic** - If checks pass, runs your function
 5. **Tracks Usage** - Records the usage for billing/analytics
@@ -125,9 +125,9 @@ When you wrap your business logic with `payable()`, SolvaPay automatically:
 ### Paywall Flow Diagram
 
 ```
-Request → Extract Customer Ref → Check Subscription
+Request → Extract Customer Ref → Check Purchase
                                     ↓
-                              Has Subscription?
+                              Has Purchase?
                                     ↓
                               Yes → Check Usage Limits
                                     ↓
@@ -149,7 +149,7 @@ When a paywall is triggered, SolvaPay returns a structured error:
 ```typescript
 {
   error: 'PaywallError',
-  message: 'Subscription required',
+  message: 'Purchase required',
   checkoutUrl: 'https://checkout.solvapay.com/...',
   // Additional metadata for custom UI
 }
@@ -173,23 +173,23 @@ try {
 }
 ```
 
-## Subscription Lifecycle
+## Purchase Lifecycle
 
-### Subscription States
+### Purchase States
 
-Subscriptions can be in different states:
+Purchases can be in different states:
 
-- **Active** - Subscription is active and can be used
-- **Cancelled** - Subscription is cancelled but still active until end date
-- **Expired** - Subscription has expired
-- **Past Due** - Payment failed, subscription is past due
+- **Active** - Purchase is active and can be used
+- **Cancelled** - Purchase is cancelled but still active until end date
+- **Expired** - Purchase has expired
+- **Past Due** - Payment failed, purchase is past due
 
-### Subscription Management
+### Purchase Management
 
 ```typescript
-// Check subscription status
+// Check purchase status
 const customer = await solvaPay.getCustomer({ customerRef: 'user_123' })
-const subscriptions = customer.subscriptions
+const purchases = customer.purchases
 
 // Cancel renewal
 await solvaPay.cancelRenewal({
@@ -203,7 +203,7 @@ await solvaPay.cancelRenewal({
 All agents support a **free tier** with limited usage:
 
 - **Free Tier Limits** - Set in SolvaPay dashboard (e.g., 100 calls/month)
-- **No Subscription Required** - Free tier works without payment
+- **No Purchase Required** - Free tier works without payment
 - **Automatic Upgrade Prompt** - When limits are exceeded, users see checkout URL
 
 ## Authentication Flow
@@ -215,7 +215,7 @@ SolvaPay SDK integrates with your existing authentication system:
 1. **Extract User ID** - From auth tokens, headers, or session
 2. **Map to Customer Reference** - User ID becomes customer reference
 3. **Sync Customer Data** - Email, name, etc. synced to SolvaPay
-4. **Check Subscription** - Verify subscription status
+4. **Check Purchase** - Verify purchase status
 
 ### Authentication Adapters
 

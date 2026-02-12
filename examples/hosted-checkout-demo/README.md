@@ -1,6 +1,6 @@
 # SolvaPay Hosted Checkout Demo
 
-Complete payment integration demo showcasing SolvaPay's hosted checkout flow with subscription management and content gating.
+Complete payment integration demo showcasing SolvaPay's hosted checkout flow with purchase management and content gating.
 
 ## Table of Contents
 
@@ -23,15 +23,15 @@ Complete payment integration demo showcasing SolvaPay's hosted checkout flow wit
 ## Features
 
 - **Hosted Checkout**: Secure checkout hosted on solvapay.com (similar to Stripe Checkout)
-- **Content Gating**: Lock premium features behind subscriptions
-- **Subscription Management**: Real-time subscription status checking
-- **Customer Portal**: Hosted subscription management page (similar to Stripe Customer Portal)
+- **Content Gating**: Lock premium features behind purchases
+- **Purchase Management**: Real-time purchase status checking
+- **Customer Portal**: Hosted purchase management page (similar to Stripe Customer Portal)
 - **Authentication**: Email/password and Google OAuth sign-in with Supabase
 - **Test Mode**: Complete test environment with localStorage persistence
 
 ## Architecture
 
-This demo uses **hosted checkout** - users are redirected to `solvapay.com` for checkout and subscription management, similar to Stripe Checkout and Stripe Customer Portal.
+This demo uses **hosted checkout** - users are redirected to `solvapay.com` for checkout and purchase management, similar to Stripe Checkout and Stripe Customer Portal.
 
 ### Flow Overview
 
@@ -42,11 +42,11 @@ This demo uses **hosted checkout** - users are redirected to `solvapay.com` for 
    - User completes checkout on hosted page
    - User is redirected back to app after successful checkout
 
-2. **Subscription Management Flow**:
-   - User clicks "Manage Subscription"
+2. **Purchase Management Flow**:
+   - User clicks "Manage Purchase"
    - Frontend calls `/api/create-manage-customer-token` to generate a secure token
    - User is redirected to `solvapay.com/customer?token=<token>`
-   - User manages subscription on hosted page
+   - User manages purchase on hosted page
    - User is redirected back to app when done
 
 ## Prerequisites
@@ -108,12 +108,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Demo Flow
 
-1. **Home Page**: View locked premium content and subscription status
+1. **Home Page**: View locked premium content and purchase status
 2. **Click Upgrade**: Redirects to hosted checkout page
 3. **Complete Payment**: Use test card (4242 4242 4242 4242) on hosted page
 4. **Return to App**: Automatically redirected back after successful checkout
 5. **View Unlocked Content**: Premium features are instantly available
-6. **Manage Subscription**: Click "Manage Subscription" to access hosted customer portal
+6. **Manage Purchase**: Click "Manage Purchase" to access hosted customer portal
 
 ## Testing Payments
 
@@ -138,8 +138,8 @@ The hosted checkout page accepts standard Stripe test cards:
 import { SolvaPayProvider } from '@solvapay/react'
 ;<SolvaPayProvider
   customerRef={customerId}
-  checkSubscription={async customerRef => {
-    const res = await fetch(`/api/check-subscription?customerRef=${customerRef}`)
+  checkPurchase={async customerRef => {
+    const res = await fetch(`/api/check-purchase?customerRef=${customerRef}`)
     return res.json()
   }}
 >
@@ -304,7 +304,7 @@ const handleViewPlans = async () => {
   }
 }
 
-const handleManageSubscription = async () => {
+const handleManagePurchase = async () => {
   try {
     const accessToken = await getAccessToken()
     const response = await fetch('/api/create-manage-customer-token', {
@@ -323,12 +323,12 @@ const handleManageSubscription = async () => {
 }
 ```
 
-### 6. Locked Content with SubscriptionGate
+### 6. Locked Content with PurchaseGate
 
 ```tsx
 // app/page.tsx
-import { SubscriptionGate } from '@solvapay/react'
-;<SubscriptionGate requirePlan="Pro Plan">
+import { PurchaseGate } from '@solvapay/react'
+;<PurchaseGate requirePlan="Pro Plan">
   {({ hasAccess, loading }) => {
     if (loading) return <Skeleton />
 
@@ -343,7 +343,7 @@ import { SubscriptionGate } from '@solvapay/react'
 
     return <PremiumContent />
   }}
-</SubscriptionGate>
+</PurchaseGate>
 ```
 
 ### 7. Navigation with Plan Badge
@@ -378,8 +378,8 @@ hosted-checkout-demo/
 │   │   │   └── route.ts          # Creates checkout token, returns hosted URL
 │   │   ├── create-manage-customer-token/
 │   │   │   └── route.ts          # Creates management token, returns hosted URL
-│   │   ├── check-subscription/
-│   │   │   └── route.ts          # Subscription status check
+│   │   ├── check-purchase/
+│   │   │   └── route.ts          # Purchase status check
 │   │   └── sync-customer/
 │   │       └── route.ts          # Ensure customer exists
 │   ├── components/
@@ -424,13 +424,13 @@ Tokens are generated server-side and passed as query parameters to hosted pages:
 - Management tokens: Tokens for accessing customer portal
 - Tokens are time-limited and secure (handled by backend)
 
-### Subscription State Management
+### Purchase State Management
 
 The provider automatically:
 
-- Fetches subscription on mount
+- Fetches purchase on mount
 - Provides refetch method for updates
-- Exposes helper methods (`hasActiveSubscription`, `hasPlan`)
+- Exposes helper methods (`hasActivePurchase`, `hasPlan`)
 - Manages loading states
 
 ### Authentication
@@ -521,17 +521,17 @@ Configure return URLs properly:
 const checkoutUrl = `https://solvapay.com/checkout?token=${token}&returnUrl=${encodeURIComponent('https://yourdomain.com/checkout/complete')}`
 ```
 
-### 3. Subscription Refetching
+### 3. Purchase Refetching
 
-Always refetch subscription after returning from hosted checkout:
+Always refetch purchase after returning from hosted checkout:
 
 ```tsx
 // app/checkout/complete/page.tsx
 useEffect(() => {
-  const refetchSubscription = async () => {
-    await refetch() // Update subscription status
+  const refetchPurchase = async () => {
+    await refetch() // Update purchase status
   }
-  refetchSubscription()
+  refetchPurchase()
 }, [])
 ```
 
@@ -556,7 +556,7 @@ const handleViewPlans = async () => {
 Provide easy access to customer portal:
 
 ```tsx
-const handleManageSubscription = async () => {
+const handleManagePurchase = async () => {
   const { customerUrl } = await createCustomerSessionToken()
   window.location.href = customerUrl
 }
@@ -602,9 +602,9 @@ const handleManageSubscription = async () => {
 4. Check that backend API is properly configured
 5. Ensure backend has access to SolvaPay API
 
-### Subscription not updating after checkout
+### Purchase not updating after checkout
 
-**Problem**: Payment succeeds but subscription status doesn't update after returning from hosted checkout.
+**Problem**: Payment succeeds but purchase status doesn't update after returning from hosted checkout.
 
 **Solution**:
 
@@ -614,7 +614,7 @@ const handleManageSubscription = async () => {
      refetch()
    }, [])
    ```
-2. Verify API returns proper subscription format
+2. Verify API returns proper purchase format
 3. Check browser console for errors
 4. Verify customer reference matches between frontend and backend
 5. Ensure return URL is configured correctly on backend

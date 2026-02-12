@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
 import { cancelRenewalCore, isErrorResult } from '@solvapay/server'
-import { clearSubscriptionCache } from '../cache'
+import { clearPurchaseCache } from '../cache'
 import { getAuthenticatedUserCore } from '@solvapay/server'
 
 /**
@@ -37,11 +37,11 @@ export async function cancelRenewal(
     )
   }
 
-  // Clear subscription cache to ensure fresh data on next check
+  // Clear purchase cache to ensure fresh data on next check
   try {
     const userResult = await getAuthenticatedUserCore(request)
     if (!isErrorResult(userResult)) {
-      clearSubscriptionCache(userResult.userId)
+      clearPurchaseCache(userResult.userId)
     }
   } catch {
     // Ignore errors in cache clearing

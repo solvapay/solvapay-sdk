@@ -83,7 +83,7 @@ Replace `<PROJECT_REF>` with your Supabase project reference (e.g., `aadmielekvm
 Try asking your GPT to:
 - "List my tasks"
 - "Create a new task called 'Test task'"
-- "Show me my subscription plan"
+- "Show me my purchase plan"
 
 The GPT will prompt you to authenticate with Supabase on first use.
 

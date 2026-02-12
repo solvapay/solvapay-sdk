@@ -173,14 +173,14 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       // Map response fields to expected format
-      // Note: subscriptions may include additional fields like endDate, cancelledAt
-      // even though they're not in the SubscriptionInfo type definition
+      // Note: purchases may include additional fields like endDate, cancelledAt
+      // even though they're not in the PurchaseInfo type definition
       return {
         customerRef: customer.reference || customer.customerRef,
         email: customer.email,
         name: customer.name,
         externalRef: customer.externalRef,
-        subscriptions: customer.subscriptions || [],
+        purchases: customer.purchases || [],
       }
     },
 

@@ -11,7 +11,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/hooks/useSubscription.ts'],
+      include: ['src/hooks/usePurchase.ts'],
       exclude: ['node_modules', 'dist', '**/*.test.{ts,tsx}', '**/*.config.*'],
     },
   },

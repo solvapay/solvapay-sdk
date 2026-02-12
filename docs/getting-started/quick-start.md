@@ -63,15 +63,15 @@ curl -X POST http://localhost:3000/tasks \
 
 ### 1. Set up API Routes
 
-Create API routes for subscription checking and payment:
+Create API routes for purchase checking and payment:
 
 ```typescript
-// app/api/check-subscription/route.ts
+// app/api/check-purchase/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -106,7 +106,7 @@ export default function RootLayout({ children }) {
         <SolvaPayProvider
           config={{
             api: {
-              checkSubscription: '/api/check-subscription',
+              checkPurchase: '/api/check-purchase',
               createPayment: '/api/create-payment-intent',
             },
           }}
@@ -225,7 +225,7 @@ function App() {
     <SolvaPayProvider
       config={{
         api: {
-          checkSubscription: '/api/check-subscription',
+          checkPurchase: '/api/check-purchase',
           createPayment: '/api/create-payment-intent',
         },
       }}
@@ -236,18 +236,18 @@ function App() {
 }
 ```
 
-### 2. Use Subscription Hook
+### 2. Use Purchase Hook
 
 ```tsx
 // components/Dashboard.tsx
-import { useSubscription } from '@solvapay/react'
+import { usePurchase } from '@solvapay/react'
 
 function Dashboard() {
-  const { subscriptions, hasPaidSubscription, loading } = useSubscription()
+  const { purchases, hasPaidPurchase, loading } = usePurchase()
 
   if (loading) return <div>Loading...</div>
 
-  if (!hasPaidSubscription) {
+  if (!hasPaidPurchase) {
     return (
       <div>
         <h2>Upgrade to Premium</h2>
@@ -259,7 +259,7 @@ function Dashboard() {
   return (
     <div>
       <h2>Welcome, Premium User!</h2>
-      <p>Active subscriptions: {subscriptions.length}</p>
+      <p>Active purchases: {purchases.length}</p>
     </div>
   )
 }

@@ -80,7 +80,7 @@ A full-featured Next.js checkout application demonstrating:
 
 - Complete checkout flow with plan selection
 - Customer authentication and session management
-- Subscription status checking
+- Purchase status checking
 - Payment intent creation and processing
 - Modern UI with Tailwind CSS
 

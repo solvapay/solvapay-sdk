@@ -12,7 +12,7 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 /**
  * Hook to manage plan fetching and selection
  *
- * Provides a reusable way to fetch, filter, sort and select subscription plans.
+ * Provides a reusable way to fetch, filter, sort and select plans.
  * Handles loading and error states automatically.
  * Uses a global cache to prevent duplicate fetches when multiple components use the same agentRef.
  *
