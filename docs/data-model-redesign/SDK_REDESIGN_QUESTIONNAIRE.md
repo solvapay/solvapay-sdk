@@ -21,9 +21,9 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 - `SolvaPayPaywall.protect()` passes `agentRef: agent` to `checkLimits()`
 - `SolvaPayClient.listAgents()`, `.createAgent()`, `.deleteAgent(agentRef)`
 - `SolvaPayClient.listPlans(agentRef)`, `.createPlan({ agentRef })`
-- `SolvaPayClient.createPaymentIntent({ agentRef })`, `.processPayment({ agentRef })`
-- `SolvaPay.createPaymentIntent({ agentRef })`, `.processPayment({ agentRef })`, `.checkLimits({ agentRef })`, `.trackUsage({ agentRef })`, `.createCheckoutSession({ agentRef })`
-- `createPaymentIntentCore(request, { agentRef })`, `processPaymentCore(request, { agentRef })`, `createCheckoutSessionCore(request, { agentRef })`
+- `SolvaPayClient.createPaymentIntent({ agentRef })` (renamed to `createPayment`), `.processPayment({ agentRef })` (renamed to `confirmPayment`)
+- `SolvaPay.createPaymentIntent({ agentRef })` (renamed to `createPayment`), `.processPayment({ agentRef })` (renamed to `confirmPayment`), `.checkLimits({ agentRef })`, `.trackUsage({ agentRef })`, `.createCheckoutSession({ agentRef })`
+- `createPaymentIntentCore(request, { agentRef })` (renamed to `createPaymentCore`), `processPaymentCore(request, { agentRef })` (renamed to `confirmPaymentCore`), `createCheckoutSessionCore(request, { agentRef })`
 - `listPlansCore()` reads `agentRef` from query params, returns `{ plans, agentRef }`
 - Factory `payable()` resolves agent from `options.agentRef || options.agent || env || package.json`
 - HTTP/Next.js error responses include `agent` field
@@ -34,11 +34,11 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 - `PaymentFormProps.agentRef`
 - `PlanSelectorProps.agentRef`
 - `UsePlansOptions.agentRef`
-- `SolvaPayContextValue.createPayment({ agentRef })`, `.processPayment({ agentRef })`
-- `SolvaPayProviderProps.processPayment({ agentRef })`
+- `SolvaPayContextValue.createPayment({ agentRef })`, `.processPayment({ agentRef })` (renamed to `confirmPayment`)
+- `SolvaPayProviderProps.processPayment({ agentRef })` (renamed to `confirmPayment`)
 
 **`@solvapay/next` (packages/next/):**
-- `createPaymentIntent(request, { agentRef })`, `processPayment(request, { agentRef })`, `createCheckoutSession(request, { agentRef })`
+- `createPaymentIntent(request, { agentRef })` (renamed to `createPayment`), `processPayment(request, { agentRef })` (renamed to `confirmPayment`), `createCheckoutSession(request, { agentRef })`
 - `listPlans` return includes `agentRef`
 - `PurchaseCheckResult.purchases[].agentName`
 
@@ -92,20 +92,37 @@ Pre-launch. No external users. No `agent` compatibility layer. No shimming. Remo
 
 > *Rationale: Confirmed pre-launch status. Backend D7 applies to SDK as well. Technical debt elimination.*
 
-### D5. `createPaymentIntent` and `processPayment` keep their method names
+### D5. Rename `createPaymentIntent` -> `createPayment` and `processPayment` -> `confirmPayment`
 
-These method names describe the Stripe client-side flow (creating and confirming a Stripe PaymentIntent), which hasn't changed. The backend now creates a Payment entity internally, but from the SDK integrator's perspective, they're still working with Stripe PaymentIntents for client-side confirmation.
+The backend replaces the `PaymentIntents` collection with `Payments` and renames all SDK routes accordingly (see DATA_SERVICE_DESIGN.md section 2.1):
+- `sdk/payment-intents` -> `sdk/payments`
+- `sdk/payment-intents/:id/process` -> `sdk/payments/:id/confirm`
+
+The SDK method names align with the new backend routes. The `PaymentIntent` entity no longer exists — the backend creates a `Payment` that internally creates a Stripe PaymentIntent. The SDK should not reference a deprecated backend concept.
 
 **What changes:**
-- Method names stay: `createPaymentIntent`, `processPayment`
-- Params change: `agentRef` -> `productRef`
-- Return type of `processPayment` references Purchase (not PaymentIntent entity)
+- `createPaymentIntent()` -> `createPayment()`
+- `processPayment()` -> `confirmPayment()`
+- `createPaymentIntentCore()` -> `createPaymentCore()`
+- `processPaymentCore()` -> `confirmPaymentCore()`
+- Params change: `agentRef` -> `productRef`, `paymentIntentId` -> `paymentId`
+- Next.js helpers: `createPaymentIntent()` -> `createPayment()`, `processPayment()` -> `confirmPayment()`
+- React context: `createPayment` stays (already correct name), `processPayment` -> `confirmPayment`
+- React hook: `useCheckout` internal calls update
 
 **What stays the same:**
-- Return shape from `createPaymentIntent`: `{ id, clientSecret, publishableKey, accountId }`
-- The payment flow: create intent -> confirm on client -> process on server -> purchase created
+- Return shape from `createPayment`: `{ id, clientSecret, publishableKey, accountId }` — the client still uses `clientSecret` with Stripe.js
+- The payment flow: create payment -> confirm on client with Stripe.js -> confirm on server -> purchase activated
 
-> *Rationale: "Payment intent" is a Stripe concept the integrator is familiar with. Renaming to `createPayment` would be confusing since the SDK method creates a Stripe PaymentIntent, not a SolvaPay Payment. The internal entity mapping is the backend's concern.*
+**Backend route mapping:**
+
+| SDK method | Backend route |
+|---|---|
+| `createPayment()` | `POST /v1/sdk/payments` |
+| `confirmPayment()` | `POST /v1/sdk/payments/:id/confirm` |
+| `listPayments()` | `GET /v1/sdk/payments` |
+
+> *Rationale: Clean cut, no legacy. The backend `PaymentIntents` collection is deprecated and absorbed into `Payments`. The SDK should not reference a concept (`PaymentIntent`) that no longer exists on the backend. `createPayment` and `confirmPayment` are clear, match the backend route names, and make debugging/docs simpler. The Stripe PaymentIntent is an internal implementation detail.*
 
 ### D6. Stay in `1.0.0-preview.X` range. No major version bump needed.
 
@@ -184,8 +201,8 @@ type PurchaseStatus = 'pending' | 'active' | 'trialing' | 'past_due' | 'cancelle
 | `listPlans(agentRef)` | `listPlans(productRef)` |
 | `createPlan({ agentRef, ... })` | `createPlan({ productRef, ... })` |
 | `deletePlan(agentRef, planRef)` | `deletePlan(productRef, planRef)` |
-| `createPaymentIntent({ agentRef, ... })` | `createPaymentIntent({ productRef, ... })` |
-| `processPayment({ agentRef, ... })` | `processPayment({ productRef, ... })` |
+| `createPaymentIntent({ agentRef, ... })` | `createPayment({ productRef, ... })` |
+| `processPayment({ agentRef, ... })` | `confirmPayment({ productRef, ... })` |
 | `checkLimits({ agentRef \| mcpServerRef })` | `checkLimits({ productRef })` |
 | `trackUsage({ agentRef, ... })` | `trackUsage({ productRef, ... })` |
 
@@ -205,8 +222,8 @@ All convenience methods on the `SolvaPay` interface update `agentRef` -> `produc
 interface SolvaPay {
   payable(options?: PayableOptions): PayableFunction
   ensureCustomer(customerRef, externalRef?, options?): Promise<string>
-  createPaymentIntent(params: { productRef: string, planRef: string, customerRef: string, idempotencyKey?: string }): Promise<...>
-  processPayment(params: { paymentIntentId: string, productRef: string, customerRef: string, planRef?: string }): Promise<...>
+  createPayment(params: { productRef: string, planRef: string, customerRef: string, idempotencyKey?: string }): Promise<...>
+  confirmPayment(params: { paymentId: string, productRef: string, customerRef: string, planRef?: string }): Promise<...>
   checkLimits(params: { customerRef: string, productRef: string }): Promise<...>
   trackUsage(params: { customerRef: string, productRef: string, planRef: string, ... }): Promise<void>
   createCustomer(params): Promise<...>
@@ -234,8 +251,8 @@ New: `options.productRef || options.product || process.env.SOLVAPAY_PRODUCT || '
 
 | Current function | Param change |
 |---|---|
-| `createPaymentIntentCore(req, { planRef, agentRef })` | `{ planRef, productRef }` |
-| `processPaymentCore(req, { paymentIntentId, agentRef })` | `{ paymentIntentId, productRef }` |
+| `createPaymentIntentCore(req, { planRef, agentRef })` -> `createPaymentCore` | `{ planRef, productRef }` |
+| `processPaymentCore(req, { paymentIntentId, agentRef })` -> `confirmPaymentCore` | `{ paymentId, productRef }` |
 | `createCheckoutSessionCore(req, { agentRef, planRef? })` | `{ productRef, planRef? }` |
 | `listPlansCore(req)` — reads `agentRef` from query | reads `productRef` from query, returns `{ plans, productRef }` |
 
@@ -255,8 +272,8 @@ All React types and components:
 | `PlanSelectorProps.agentRef` | `PlanSelectorProps.productRef` |
 | `UsePlansOptions.agentRef` | `UsePlansOptions.productRef` |
 | `SolvaPayContextValue.createPayment({ agentRef? })` | `SolvaPayContextValue.createPayment({ productRef? })` |
-| `SolvaPayContextValue.processPayment({ agentRef })` | `SolvaPayContextValue.processPayment({ productRef })` |
-| `SolvaPayProviderProps.processPayment({ agentRef })` | `SolvaPayProviderProps.processPayment({ productRef })` |
+| `SolvaPayContextValue.processPayment({ agentRef })` | `SolvaPayContextValue.confirmPayment({ productRef })` |
+| `SolvaPayProviderProps.processPayment({ agentRef })` | `SolvaPayProviderProps.confirmPayment({ productRef })` |
 
 > *Rationale: React types must match server types. Clean rename throughout.*
 
@@ -286,8 +303,8 @@ No new hooks required in v1. `usePayments()` is phase 2 — integrators can use 
 
 | Current | New |
 |---|---|
-| `createPaymentIntent(req, { planRef, agentRef })` | `createPaymentIntent(req, { planRef, productRef })` |
-| `processPayment(req, { paymentIntentId, agentRef })` | `processPayment(req, { paymentIntentId, productRef })` |
+| `createPaymentIntent(req, { planRef, agentRef })` | `createPayment(req, { planRef, productRef })` |
+| `processPayment(req, { paymentIntentId, agentRef })` | `confirmPayment(req, { paymentId, productRef })` |
 | `createCheckoutSession(req, { agentRef, planRef? })` | `createCheckoutSession(req, { productRef, planRef? })` |
 | `listPlans` returns `{ plans, agentRef }` | returns `{ plans, productRef }` |
 | `PurchaseCheckResult.purchases[].agentName` | `PurchaseCheckResult.purchases[].productName` |
@@ -346,10 +363,10 @@ The only change is the `PurchaseInfo` type they operate on (D10), which is a typ
 
 > *Rationale: Utility functions are entity-agnostic. They filter by status and dates, not by entity name.*
 
-### D25. `ProcessPaymentResult` updated for new model
+### D25. `ProcessPaymentResult` renamed to `ConfirmPaymentResult`
 
 ```typescript
-interface ProcessPaymentResult {
+interface ConfirmPaymentResult {
   type: 'recurring' | 'one-time'
   purchase?: PurchaseInfo      // updated PurchaseInfo (D10)
   oneTimePurchase?: OneTimePurchaseInfo
@@ -359,7 +376,7 @@ interface ProcessPaymentResult {
 
 `OneTimePurchaseInfo.productRef` replaces any agent reference (currently has `productRef` already — no change needed there).
 
-> *Rationale: ProcessPaymentResult already uses `productRef` in OneTimePurchaseInfo. The main update is that PurchaseInfo carries the new fields from D10.*
+> *Rationale: Matches the renamed `confirmPayment()` method. PurchaseInfo carries the new fields from D10.*
 
 ---
 

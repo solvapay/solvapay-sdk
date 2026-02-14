@@ -7,7 +7,7 @@ This spec defines the SDK refactoring required to support the Product-centric ba
 - `Product` replaces Agent and MCP Server as the commercial entity referenced by the SDK.
 - `Purchase` is a long-lived access relationship (one per customer per product).
 - `Payment` is a new read-only entity for billing history (initial, renewal, usage charge, refund).
-- `PaymentIntent` (the SolvaPay entity) is deprecated on the backend; the SDK keeps the method name for the Stripe client-side flow.
+- `PaymentIntent` (the SolvaPay entity) is deprecated on the backend, absorbed into `Payment`. The SDK renames `createPaymentIntent` -> `createPayment` and `processPayment` -> `confirmPayment` to match.
 
 Based on decisions D1-D25 and Q1-Q17 from the [SDK Redesign Questionnaire](./SDK_REDESIGN_QUESTIONNAIRE.md).
 
@@ -36,7 +36,7 @@ Out of scope:
 - No legacy: zero deprecated aliases, no backward-compatible shims, no `agent` references anywhere.
 - Explicit over implicit: drop package.json auto-detection for product resolution. Require explicit `productRef` or `SOLVAPAY_PRODUCT` env var.
 - Flat types for integrators: `PurchaseInfo` exposes flat fields, not nested backend structures. The SDK is an ergonomic layer, not a 1:1 backend mirror.
-- Stripe terminology preserved: `createPaymentIntent`/`processPayment` method names stay because they describe the Stripe flow, not the backend entity.
+- No legacy terminology: `createPaymentIntent`/`processPayment` renamed to `createPayment`/`confirmPayment` to match backend routes. The `PaymentIntent` entity no longer exists.
 
 ## 4. API Route Changes
 
@@ -51,8 +51,11 @@ The backend API routes change. The SDK client (`client.ts`) must update all URL 
 | `GET /v1/sdk/agents/{agentRef}/plans` | `GET /v1/sdk/products/{productRef}/plans` | — |
 | `POST /v1/sdk/agents/{agentRef}/plans` | `POST /v1/sdk/products/{productRef}/plans` | `agentRef` removed from body |
 | `DELETE /v1/sdk/agents/{agentRef}/plans/{planRef}` | `DELETE /v1/sdk/products/{productRef}/plans/{planRef}` | — |
-| `POST /v1/sdk/payment-intents` | `POST /v1/sdk/payment-intents` (unchanged) | `agentRef` -> `productRef` in body |
-| `POST /v1/sdk/payment-intents/{id}/process` | `POST /v1/sdk/payment-intents/{id}/process` (unchanged) | `agentRef` -> `productRef` in body |
+| `POST /v1/sdk/payment-intents` | `POST /v1/sdk/payments` | Renamed. `agentRef` -> `productRef` in body |
+| `GET /v1/sdk/payment-intents` | `GET /v1/sdk/payments` | Renamed. List payments. |
+| `GET /v1/sdk/payment-intents/{id}` | `GET /v1/sdk/payments/{id}` | Renamed. |
+| `POST /v1/sdk/payment-intents/{id}/process` | `POST /v1/sdk/payments/{id}/confirm` | Renamed path + action. `agentRef` -> `productRef` in body |
+| — (new) | `GET /v1/sdk/payments/purchase/{purchaseRef}` | New. Billing history for a purchase. |
 | `POST /v1/sdk/limits` | `POST /v1/sdk/limits` (unchanged) | `agentRef`/`mcpServerRef` -> `productRef` |
 | `POST /v1/sdk/usages` | `POST /v1/sdk/usages` (unchanged) | `agentRef` -> `productRef` |
 | `POST /v1/sdk/checkout-sessions` | `POST /v1/sdk/checkout-sessions` (unchanged) | `agentRef` -> `productRef` |
@@ -83,8 +86,8 @@ interface SolvaPayClient {
   listPlans?(agentRef: string): Promise<Array<{ ... }>>
   createPlan?(params: components['schemas']['CreatePlanRequest'] & { agentRef: string }): Promise<{ ... }>
   deletePlan?(agentRef: string, planRef: string): Promise<void>
-  createPaymentIntent?(params: { agentRef: string; planRef: string; customerRef: string; idempotencyKey?: string }): Promise<{ ... }>
-  processPayment?(params: { paymentIntentId: string; agentRef: string; customerRef: string; planRef?: string }): Promise<ProcessPaymentResult>
+  createPaymentIntent?(params: { agentRef: string; planRef: string; customerRef: string; idempotencyKey?: string }): Promise<{ ... }>   // OLD
+  processPayment?(params: { paymentIntentId: string; agentRef: string; customerRef: string; planRef?: string }): Promise<ProcessPaymentResult>   // OLD
   // ...
 }
 
@@ -98,8 +101,8 @@ interface SolvaPayClient {
   listPlans?(productRef: string): Promise<Array<{ ... }>>
   createPlan?(params: components['schemas']['CreatePlanRequest'] & { productRef: string }): Promise<{ ... }>
   deletePlan?(productRef: string, planRef: string): Promise<void>
-  createPaymentIntent?(params: { productRef: string; planRef: string; customerRef: string; idempotencyKey?: string }): Promise<{ ... }>
-  processPayment?(params: { paymentIntentId: string; productRef: string; customerRef: string; planRef?: string }): Promise<ProcessPaymentResult>
+  createPayment?(params: { productRef: string; planRef: string; customerRef: string; idempotencyKey?: string }): Promise<{ ... }>
+  confirmPayment?(params: { paymentId: string; productRef: string; customerRef: string; planRef?: string }): Promise<ConfirmPaymentResult>
   listPayments?(params: { purchaseRef?: string; productRef?: string; customerRef?: string }): Promise<Array<PaymentInfo>>
   // ...
 }
@@ -184,8 +187,8 @@ interface PaywallStructuredContent {
 | `listPlans(agentRef)` -> `listPlans(productRef)` | `/v1/sdk/agents/{ref}/plans` -> `/v1/sdk/products/{ref}/plans` | — |
 | `createPlan({ agentRef })` -> `createPlan({ productRef })` | `/v1/sdk/agents/{ref}/plans` -> `/v1/sdk/products/{ref}/plans` | `params.agentRef` -> `params.productRef` in URL |
 | `deletePlan(agentRef, planRef)` -> `deletePlan(productRef, planRef)` | `/v1/sdk/agents/{ref}/plans/{planRef}` -> `/v1/sdk/products/{ref}/plans/{planRef}` | — |
-| `createPaymentIntent` | URL unchanged | body: `agentRef` -> `productRef` |
-| `processPayment` | URL unchanged | body: `agentRef` -> `productRef` |
+| `createPaymentIntent` -> `createPayment` | `/v1/sdk/payment-intents` -> `/v1/sdk/payments` | body: `agentRef` -> `productRef` |
+| `processPayment` -> `confirmPayment` | `/v1/sdk/payment-intents/{id}/process` -> `/v1/sdk/payments/{id}/confirm` | body: `agentRef` -> `productRef`, `paymentIntentId` -> `paymentId` |
 | `checkLimits` | URL unchanged | body field change cascades from generated types |
 | `trackUsage` | URL unchanged | body field change cascades from generated types |
 
@@ -229,8 +232,8 @@ JSDoc example: `client.listAgents()` -> `client.listProducts()`
 | `'default-agent'` -> `'default-product'` | `payable()` fallback |
 | `const metadata = { agent, plan }` -> `const metadata = { product, plan }` | `payable()` function |
 | JSDoc examples: all `agent: 'agt_xxx'` -> `product: 'prod_xxx'` | all JSDoc blocks |
-| `createPaymentIntent` params in implementation | convenience method |
-| `processPayment` params in implementation | convenience method |
+| `createPaymentIntent` -> `createPayment` in implementation | convenience method (renamed) |
+| `processPayment` -> `confirmPayment` in implementation | convenience method (renamed) |
 | `checkLimits` params in implementation | convenience method |
 | `trackUsage` params in implementation | convenience method |
 | `createCheckoutSession` params in implementation | convenience method |
@@ -238,9 +241,9 @@ JSDoc example: `client.listAgents()` -> `client.listProducts()`
 
 #### 5.1.5 Helpers (Core route helpers)
 
-**`src/helpers/payment.ts`**:
-- `createPaymentIntentCore`: `body.agentRef` -> `body.productRef`, validation message, JSDoc
-- `processPaymentCore`: `body.agentRef` -> `body.productRef`, validation message, JSDoc
+**`src/helpers/payment.ts`** (rename file to `src/helpers/payment.ts` — stays same name, content changes):
+- `createPaymentIntentCore` -> `createPaymentCore`: `body.agentRef` -> `body.productRef`, URL `/v1/sdk/payment-intents` -> `/v1/sdk/payments`, validation message, JSDoc
+- `processPaymentCore` -> `confirmPaymentCore`: `body.agentRef` -> `body.productRef`, `body.paymentIntentId` -> `body.paymentId`, URL `/process` -> `/confirm`, validation message, JSDoc
 
 **`src/helpers/checkout.ts`**:
 - `createCheckoutSessionCore`: `body.agentRef` -> `body.productRef`, validation message
@@ -352,10 +355,10 @@ interface PurchaseInfo {
 
 Update `SolvaPayContextValue`:
 - `createPayment: (params: { planRef: string; agentRef?: string })` -> `createPayment: (params: { planRef: string; productRef?: string })`
-- `processPayment?: (params: { paymentIntentId: string; agentRef: string; planRef?: string })` -> `processPayment?: (params: { paymentIntentId: string; productRef: string; planRef?: string })`
+- `processPayment?: (params: { paymentIntentId: string; agentRef: string; planRef?: string })` -> `confirmPayment?: (params: { paymentId: string; productRef: string; planRef?: string })`
 
 Update `SolvaPayProviderProps`:
-- Same `processPayment` param rename
+- Same `processPayment` -> `confirmPayment` rename
 
 Update `PaymentFormProps`:
 - `agentRef?: string` -> `productRef?: string`
@@ -395,7 +398,7 @@ type PurchaseStatusValue = 'pending' | 'active' | 'trialing' | 'past_due' | 'can
 
 **`src/PaymentForm.tsx`**: `agentRef` prop -> `productRef` prop. Internal `useCheckout` call updates.
 
-**`src/SolvaPayProvider.tsx`**: `createPayment`/`processPayment` param types cascade from `SolvaPayContextValue`. Internal API call body: `agentRef` -> `productRef`.
+**`src/SolvaPayProvider.tsx`**: `createPayment`/`confirmPayment` param types cascade from `SolvaPayContextValue`. Internal API call body: `agentRef` -> `productRef`.
 
 **`src/components/PurchaseGate.tsx`**: Add `requireProduct` prop logic alongside existing `requirePlan`.
 
@@ -442,8 +445,8 @@ type PurchaseStatusValue = 'pending' | 'active' | 'trialing' | 'past_due' | 'can
 12 source files. 5 require changes.
 
 **`src/helpers/payment.ts`**:
-- `createPaymentIntent(request, body: { planRef, agentRef })` -> `body: { planRef, productRef }`
-- `processPayment(request, body: { paymentIntentId, agentRef })` -> `body: { paymentIntentId, productRef }`
+- `createPaymentIntent` -> `createPayment(request, body: { planRef, productRef })`
+- `processPayment` -> `confirmPayment(request, body: { paymentId, productRef })`
 - Validation messages and JSDoc
 
 **`src/helpers/checkout.ts`**:
@@ -493,7 +496,8 @@ No changes required (D19, D20).
 - `app/page.tsx`: read new env var
 - `app/checkout/page.tsx`: update context
 - `app/checkout/components/PaymentFormSection.tsx`, `StyledPaymentForm.tsx`: `agentRef` prop -> `productRef`
-- `app/api/create-payment-intent/route.ts`, `app/api/process-payment/route.ts`: body `agentRef` -> `productRef`
+- `app/api/create-payment-intent/route.ts` -> rename to `app/api/create-payment/route.ts`: body `agentRef` -> `productRef`, call `createPayment` instead of `createPaymentIntent`
+- `app/api/process-payment/route.ts` -> rename to `app/api/confirm-payment/route.ts`: body `agentRef` -> `productRef`, call `confirmPayment` instead of `processPayment`
 
 **`examples/hosted-checkout-demo/`**:
 - `.env` and `env.example`: `NEXT_PUBLIC_AGENT_REF` -> `NEXT_PUBLIC_PRODUCT_REF`
