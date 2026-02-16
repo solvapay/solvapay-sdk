@@ -242,7 +242,7 @@ export {
   getAuthenticatedUser,
   syncCustomer,
   createPaymentIntent,
-  processPayment,
+  processPaymentIntent,
   createCheckoutSession,
   createCustomerSession,
   cancelRenewal,

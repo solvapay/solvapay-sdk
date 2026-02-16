@@ -6,18 +6,18 @@ import { createTask, getTask, listTasks, deleteTask, clearAllTasks } from '@solv
  * SolvaPay Server SDK - Backend Integration Tests (With Fetched Defaults)
  *
  * These tests verify the SDK works correctly with a real SolvaPay backend.
- * This version fetches the default agent and plan from the account.
+ * This version fetches the default product and plan from the account.
  *
- * ## Test Approach - Fetched Default Agent/Plan Scenario
+ * ## Test Approach - Fetched Default Product/Plan Scenario
  *
  * 1. **Setup (beforeAll)**:
  *    - Creates API client with provider credentials
- *    - Fetches default agent (first agent in account)
- *    - Fetches default plan (first plan for the agent)
+ *    - Fetches default product (first product in account)
+ *    - Fetches default plan (first plan for the product)
  *    - Initializes SDK paywall instance
  *
  * 2. **Test Execution**:
- *    - Tests with explicit agent/plan references
+ *    - Tests with explicit product/plan references
  *    - Each test uses unique customer refs for isolation
  *    - Verifies SDK behavior against real backend
  *
@@ -61,11 +61,11 @@ const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
 // Skip all tests if not configured for backend integration
 const describeIntegration = USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
 
-describeIntegration('Backend Integration - Real API with Auto-Discovered Agent & Plan', () => {
+describeIntegration('Backend Integration - Real API with Auto-Discovered Product & Plan', () => {
   let apiClient: any
   let solvaPay: any
   let testCustomerRef: string
-  let defaultAgent: { reference: string; name: string }
+  let defaultProduct: { reference: string; name: string }
   let defaultPlan: { reference: string; name: string; isFreeTier?: boolean; freeUnits?: number }
 
   beforeAll(async () => {
@@ -78,7 +78,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
 
     console.log('\n╔═══════════════════════════════════════════════════════════╗')
     console.log('║     SolvaPay SDK - Backend Integration Tests             ║')
-    console.log('║           (With Fetched Default Agent/Plan)              ║')
+    console.log('║           (With Fetched Default Product/Plan)             ║')
     console.log('╚═══════════════════════════════════════════════════════════╝')
     console.log()
     console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com')
@@ -95,27 +95,26 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       console.log('✅ API Client created')
       console.log()
 
-      // Step 2: Fetch default agent and plan
-      console.log('Step 2: Fetching default agent and plan from account...')
+      // Step 2: Fetch default product and plan
+      console.log('Step 2: Fetching default product and plan from account...')
 
-      // Fetch agents (assuming there's a listAgents method)
-      console.log('🔍 Fetching default agent...')
-      const agents = await apiClient.listAgents()
-      if (!agents || agents.length === 0) {
-        throw new Error('No agents found in account. Please create at least one agent.')
+      console.log('🔍 Fetching default product...')
+      const products = await apiClient.listProducts()
+      if (!products || products.length === 0) {
+        throw new Error('No products found in account. Please create at least one product.')
       }
-      defaultAgent = agents[0]
-      console.log('✅ Default agent fetched:', {
-        reference: defaultAgent.reference,
-        name: defaultAgent.name,
+      defaultProduct = products[0]
+      console.log('✅ Default product fetched:', {
+        reference: defaultProduct.reference,
+        name: defaultProduct.name,
       })
 
-      // Fetch plans for the default agent
+      // Fetch plans for the default product
       console.log('🔍 Fetching default plan...')
-      const plans = await apiClient.listPlans(defaultAgent.reference)
+      const plans = await apiClient.listPlans(defaultProduct.reference)
       if (!plans || plans.length === 0) {
         throw new Error(
-          `No plans found for agent ${defaultAgent.reference}. Please create at least one plan.`,
+          `No plans found for product ${defaultProduct.reference}. Please create at least one plan.`,
         )
       }
       defaultPlan = plans[0]
@@ -144,13 +143,13 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       console.error('║  ❌ SETUP FAILED                                          ║')
       console.error('╚═══════════════════════════════════════════════════════════╝')
       console.error()
-      console.error('Failed to fetch default agent/plan:', error)
+      console.error('Failed to fetch default product/plan:', error)
       console.error()
       console.error('💡 Troubleshooting:')
       console.error('   1. Ensure backend is running')
       console.error('   2. Verify SOLVAPAY_SECRET_KEY is valid')
-      console.error('   3. Ensure at least one agent and plan exist in the account')
-      console.error('   4. Check that listAgents/listPlans endpoints exist on backend')
+      console.error('   3. Ensure at least one product and plan exist in the account')
+      console.error('   4. Check that listProducts/listPlans endpoints exist on backend')
       console.error('   5. See packages/server/README.md "Integration Tests"')
       console.error()
       throw error
@@ -186,7 +185,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
 
       const result = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       expect(result).toBeDefined()
@@ -204,7 +203,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       await expect(
         apiClient.trackUsage({
           customerRef: customerRef,
-          agentRef: defaultAgent.reference,
+          productRef: defaultProduct.reference,
           planRef: defaultPlan.reference,
           outcome: 'success',
           requestId: `req_${Date.now()}`,
@@ -221,7 +220,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // First, check initial limits to get the remaining count
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       expect(initialCheck).toBeDefined()
@@ -242,7 +241,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
           await apiClient.trackUsage({
             requestId: `req_denied_${Date.now()}_${i}`,
             customerRef: customerRef,
-            agentRef: defaultAgent.reference,
+            productRef: defaultProduct.reference,
             planRef: defaultPlan.reference,
             outcome: 'paywall', // Track that it was blocked
             actionDuration: 50,
@@ -254,7 +253,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
         // Verify limits are still exceeded after tracking denied usage
         const postDeniedCheck = await apiClient.checkLimits({
           customerRef: customerRef,
-          agentRef: defaultAgent.reference,
+          productRef: defaultProduct.reference,
         })
         expect(postDeniedCheck.withinLimits).toBe(false)
         expect(postDeniedCheck.remaining).toBeLessThanOrEqual(0)
@@ -274,7 +273,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
           apiClient.trackUsage({
             requestId: `req_${Date.now()}_${i}`,
             customerRef: customerRef,
-            agentRef: defaultAgent.reference,
+            productRef: defaultProduct.reference,
             planRef: defaultPlan.reference,
             outcome: 'success',
             actionDuration: 100,
@@ -289,7 +288,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // Now check if we've exceeded limits
       const finalCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       expect(finalCheck).toBeDefined()
@@ -314,7 +313,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
   describe('Paywall Protection - Protected Functions', () => {
     it('should enforce usage limits when protecting functions with payable.function()', async () => {
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
@@ -340,7 +339,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
 
     it('should enforce usage limits in HTTP handlers created with payable.http()', async () => {
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const httpHandler = payable.http(createTask)
@@ -368,7 +367,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
 
     it('should automatically track usage when requests pass through paywall', async () => {
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
@@ -404,7 +403,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
   describe('Framework Adapters - Next.js & MCP', () => {
     it('should enforce limits in Next.js App Router handlers (payable.next)', async () => {
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const nextHandler = payable.next(createTask)
@@ -437,7 +436,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
 
     it('should enforce limits in MCP tool handlers (payable.mcp)', async () => {
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const mcpHandler = payable.mcp(listTasks)
@@ -478,7 +477,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // Get initial limits
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -492,7 +491,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
         await apiClient.trackUsage({
           requestId: `req_success_${Date.now()}_${i}`,
           customerRef: customerRef,
-          agentRef: defaultAgent.reference,
+          productRef: defaultProduct.reference,
           planRef: defaultPlan.reference,
           outcome: 'success',
           actionDuration: 100,
@@ -503,7 +502,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // Verify we've exhausted the free units
       const afterFreeUnitsCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       expect(afterFreeUnitsCheck.remaining).toBeLessThanOrEqual(0)
@@ -513,7 +512,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       await apiClient.trackUsage({
         requestId: `req_exceed_${Date.now()}`,
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
         outcome: 'paywall',
         actionDuration: 50,
@@ -523,7 +522,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // Verify limits are still exceeded
       const finalCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       expect(finalCheck.withinLimits).toBe(false)
@@ -541,7 +540,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // Get initial limits
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -552,7 +551,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
 
       // Create protected handler
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
@@ -594,7 +593,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // Get initial limits
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -609,7 +608,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
         await apiClient.trackUsage({
           requestId: `req_partial_${Date.now()}_${i}`,
           customerRef: customerRef,
-          agentRef: defaultAgent.reference,
+          productRef: defaultProduct.reference,
           planRef: defaultPlan.reference,
           outcome: 'success',
           actionDuration: 100,
@@ -620,7 +619,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
       // Check remaining units
       const midCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       // Should still be within limits
@@ -643,7 +642,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
     it('should handle invalid customer references gracefully', async () => {
       // Try with empty customer ref
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
@@ -663,7 +662,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Agent &
 
     it('should correctly handle multiple concurrent requests without race conditions', async () => {
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)

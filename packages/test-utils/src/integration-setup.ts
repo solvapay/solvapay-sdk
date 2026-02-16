@@ -11,7 +11,7 @@ export interface TestProviderSetup {
   environment: 'sandbox' | 'live'
 }
 
-export interface TestAgentSetup {
+export interface TestProductSetup {
   reference: string
   name: string
   providerId: string
@@ -20,7 +20,7 @@ export interface TestAgentSetup {
 export interface TestPlanSetup {
   reference: string
   name: string
-  agentRef: string
+  productRef: string
   isFreeTier: boolean
   freeUnits: number
 }
@@ -49,24 +49,24 @@ export async function createTestProvider(
 }
 
 /**
- * Create a test agent via SDK API
+ * Create a test product via SDK API
  */
-export async function createTestAgent(
+export async function createTestProduct(
   apiBaseUrl: string,
   secretKey: string,
   name?: string,
-): Promise<TestAgentSetup> {
-  const agentName = name || `SDK Test Agent ${Date.now()}`
+): Promise<TestProductSetup> {
+  const productName = name || `SDK Test Product ${Date.now()}`
 
-  const response = await fetch(`${apiBaseUrl}/v1/sdk/agents`, {
+  const response = await fetch(`${apiBaseUrl}/v1/sdk/products`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${secretKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: agentName,
-      description: 'Temporary agent for SDK integration tests',
+      name: productName,
+      description: 'Temporary product for SDK integration tests',
       categories: ['test'],
       capabilities: { test: true },
     }),
@@ -74,7 +74,7 @@ export async function createTestAgent(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Failed to create test agent: ${response.status} - ${error}`)
+    throw new Error(`Failed to create test product: ${response.status} - ${error}`)
   }
 
   const data = await response.json()
@@ -91,13 +91,13 @@ export async function createTestAgent(
 export async function createTestPlan(
   apiBaseUrl: string,
   secretKey: string,
-  agentRef: string,
+  productRef: string,
   name?: string,
   freeUnits: number = 5,
 ): Promise<TestPlanSetup> {
   const planName = name || `SDK Test Plan ${Date.now()}`
 
-  const response = await fetch(`${apiBaseUrl}/v1/sdk/agents/${agentRef}/plans`, {
+  const response = await fetch(`${apiBaseUrl}/v1/sdk/products/${productRef}/plans`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${secretKey}`,
@@ -134,21 +134,21 @@ export async function createTestPlan(
   return {
     reference: data.data?.reference || data.reference,
     name: data.data?.name || data.name,
-    agentRef,
+    productRef,
     isFreeTier: true,
     freeUnits,
   }
 }
 
 /**
- * Delete a test agent
+ * Delete a test product
  */
-export async function deleteTestAgent(
+export async function deleteTestProduct(
   apiBaseUrl: string,
   secretKey: string,
-  agentRef: string,
+  productRef: string,
 ): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/v1/sdk/agents/${agentRef}`, {
+  const response = await fetch(`${apiBaseUrl}/v1/sdk/products/${productRef}`, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${secretKey}`,
@@ -157,21 +157,21 @@ export async function deleteTestAgent(
 
   if (!response.ok && response.status !== 404) {
     const error = await response.text()
-    console.warn(`Failed to delete test agent: ${response.status} - ${error}`)
+    console.warn(`Failed to delete test product: ${response.status} - ${error}`)
   }
 }
 
 /**
  * Delete a test plan
- * Note: Plans are nested under agents in the API
+ * Note: Plans are nested under products in the API
  */
 export async function deleteTestPlan(
   apiBaseUrl: string,
   secretKey: string,
-  agentRef: string,
+  productRef: string,
   planRef: string,
 ): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/v1/sdk/agents/${agentRef}/plans/${planRef}`, {
+  const response = await fetch(`${apiBaseUrl}/v1/sdk/products/${productRef}/plans/${planRef}`, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${secretKey}`,

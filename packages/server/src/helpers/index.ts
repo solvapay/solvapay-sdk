@@ -20,13 +20,13 @@ export { getAuthenticatedUserCore } from './auth'
 export { syncCustomerCore } from './customer'
 
 // Export payment helpers
-export { createPaymentIntentCore, processPaymentCore } from './payment'
+export { createPaymentIntentCore, processPaymentIntentCore } from './payment'
 
 // Export checkout helpers
 export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout'
 
-// Export renewal helpers
-export { cancelRenewalCore } from './renewal'
+// Export purchase cancellation helpers
+export { cancelPurchaseCore } from './renewal'
 
 // Export plans helpers
 export { listPlansCore } from './plans'

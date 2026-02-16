@@ -43,6 +43,7 @@ export type {
   UsePlansOptions,
   UsePlansReturn,
   PurchaseStatusReturn,
+  PurchaseStatusValue,
 } from './types'
 export type { CustomerInfo } from './hooks/useCustomer'
 

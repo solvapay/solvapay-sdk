@@ -13,6 +13,7 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 ### Current agent/agentRef Touchpoints
 
 **`@solvapay/server` (packages/server/):**
+
 - `PayableOptions.agent`, `PayableOptions.agentRef` — payable config
 - `PaywallMetadata.agent` — internal paywall metadata
 - `PaywallStructuredContent.agent` — error response field
@@ -29,6 +30,7 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 - HTTP/Next.js error responses include `agent` field
 
 **`@solvapay/react` (packages/react/):**
+
 - `PurchaseInfo.agentName`
 - `useCheckout(planRef, agentRef?)`
 - `PaymentFormProps.agentRef`
@@ -38,11 +40,13 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 - `SolvaPayProviderProps.processPaymentIntent({ agentRef })`
 
 **`@solvapay/next` (packages/next/):**
+
 - `createPaymentIntent(request, { agentRef })`, `processPaymentIntent(request, { agentRef })`, `createCheckoutSession(request, { agentRef })`
 - `listPlans` return includes `agentRef`
 - `PurchaseCheckResult.purchases[].agentName`
 
 **Generated types (packages/server/src/types/generated.ts):**
+
 - `CheckLimitRequest.agentRef` OR `CheckLimitRequest.mcpServerRef` branching
 - `/v1/sdk/agents` paths, `AgentSdkController_*` operation names
 - `CreateAgentRequest`, `UpdateAgentRequest` schemas
@@ -58,6 +62,7 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 Clean rename across all packages. No deprecated aliases. `product` is the short form for config, `productRef` is the explicit reference identifier.
 
 **What changes:**
+
 - `PayableOptions.agent` -> `PayableOptions.product`
 - `PayableOptions.agentRef` -> `PayableOptions.productRef`
 - `SolvaPay.payable({ agent: 'agt_xxx' })` -> `SolvaPay.payable({ product: 'prod_xxx' })`
@@ -68,35 +73,37 @@ Clean rename across all packages. No deprecated aliases. `product` is the short 
 - All Next.js helpers: `body.agentRef` -> `body.productRef`
 - Environment variable: `SOLVAPAY_AGENT` -> `SOLVAPAY_PRODUCT`
 
-> *Rationale: Product is the backend's commercial entity (D1). The SDK should use the same term. No users to migrate. Clean cut eliminates confusion between agent (future operational concept) and product (what you sell).*
+> _Rationale: Product is the backend's commercial entity (D1). The SDK should use the same term. No users to migrate. Clean cut eliminates confusion between agent (future operational concept) and product (what you sell)._
 
 ### D2. Reference prefix is `prod_`
 
 Products use `prod_` prefix (e.g. `prod_8XK2M4`), matching the backend schema design. Purchases use `pur_`.
 
-> *Rationale: Consistent with backend. No reason to diverge.*
+> _Rationale: Consistent with backend. No reason to diverge._
 
 ### D3. Eliminate `agentRef`/`mcpServerRef` branching in CheckLimitRequest
 
 The current generated `CheckLimitRequest` has `agentRef?: string` OR `mcpServerRef?: string`. The new version will have a single `productRef: string` (required).
 
 **What changes:**
+
 - `checkLimits({ customerRef, agentRef })` -> `checkLimits({ customerRef, productRef })`
 - No more optional fields or branching logic
 
-> *Rationale: Backend unifies behind productId (backend D1). The SDK's limit check becomes simpler — one required field instead of two optional mutually exclusive fields.*
+> _Rationale: Backend unifies behind productId (backend D1). The SDK's limit check becomes simpler — one required field instead of two optional mutually exclusive fields._
 
 ### D4. No backward compatibility. No deprecated aliases. Clean cut.
 
 Pre-launch. No external users. No `agent` compatibility layer. No shimming. Remove all Agent CRUD from the SDK.
 
-> *Rationale: Confirmed pre-launch status. Backend D7 applies to SDK as well. Technical debt elimination.*
+> _Rationale: Confirmed pre-launch status. Backend D7 applies to SDK as well. Technical debt elimination._
 
 ### D5. `createPaymentIntent` and `processPaymentIntent` keep their existing names
 
 PaymentIntent stays as the SDK's payment flow concept. No method renames. Only the request parameters change to use `productRef` instead of `agentRef`/`mcpServerRef`.
 
 **What changes:**
+
 - `createPaymentIntent({ agentRef, ... })` -> `createPaymentIntent({ productRef, ... })`
 - `processPaymentIntent({ agentRef, ... })` -> `processPaymentIntent({ productRef, ... })`
 - `createPaymentIntentCore(req, { agentRef })` -> `createPaymentIntentCore(req, { productRef })`
@@ -105,36 +112,38 @@ PaymentIntent stays as the SDK's payment flow concept. No method renames. Only t
 - React context/hooks: same param renames (`agentRef` -> `productRef`)
 
 **What stays the same:**
+
 - All method names: `createPaymentIntent`, `processPaymentIntent`, `createPaymentIntentCore`, `processPaymentIntentCore`
 - Return shape from `createPaymentIntent`: `{ id, clientSecret, publishableKey, accountId }` — the client still uses `clientSecret` with Stripe.js
 - The payment flow: create payment intent -> confirm on client with Stripe.js -> process on server -> purchase activated
 
 **Backend route mapping:**
 
-| SDK method | Backend route |
-|---|---|
-| `createPaymentIntent()` | `POST /v1/sdk/payment-intents` |
+| SDK method               | Backend route                              |
+| ------------------------ | ------------------------------------------ |
+| `createPaymentIntent()`  | `POST /v1/sdk/payment-intents`             |
 | `processPaymentIntent()` | `POST /v1/sdk/payment-intents/:id/process` |
 
-> *Rationale: PaymentIntent accurately describes what the SDK creates (a Stripe PaymentIntent wrapper). No need to rename — the concept is correct. Only the entity reference parameters change from agent to product. There is no separate Payment entity in the SDK; each Purchase serves as the billing record for its period.*
+> _Rationale: PaymentIntent accurately describes what the SDK creates (a Stripe PaymentIntent wrapper). No need to rename — the concept is correct. Only the entity reference parameters change from agent to product. There is no separate Payment entity in the SDK; each Purchase serves as the billing record for its period._
 
 ### D6. Stay in `1.0.0-preview.X` range. No major version bump needed.
 
 Bump to `1.0.0-preview.19` (or next available). Pre-1.0-stable means breaking changes are expected. No semver major needed.
 
-> *Rationale: Preview range signals instability. Breaking changes are normal. No users to communicate migration to.*
+> _Rationale: Preview range signals instability. Breaking changes are normal. No users to communicate migration to._
 
 ### D7. No Payment entity exposed in the SDK
 
 There is no `Payment` entity in the SDK. No `listPayments` method. No `PaymentInfo` type. Billing history is accessed via `listPurchases` filtered by product — each Purchase IS a billing record for its period.
 
 **What this means:**
+
 - No `SolvaPayClient.listPayments()` — use `listPurchases({ productRef?, customerRef? })` instead
 - No `SolvaPay.listPayments()` convenience method
 - No `usePayments()` hook — use `usePurchase()` which already returns `purchases: PurchaseInfo[]`
 - `PurchaseInfo` includes billing fields: `amount`, `currency`, `transactionId`, `paymentIntentId`
 
-> *Rationale: A per-period Purchase already captures all billing information (amount, currency, status, dates). Exposing a separate Payment entity would duplicate data and add complexity. Integrators query purchases to show billing history — each purchase row IS an invoice/receipt for its period.*
+> _Rationale: A per-period Purchase already captures all billing information (amount, currency, status, dates). Exposing a separate Payment entity would duplicate data and add complexity. Integrators query purchases to show billing history — each purchase row IS an invoice/receipt for its period._
 
 ### D8. SDK has zero awareness of MCP Pay
 
@@ -142,26 +151,29 @@ The SDK is for providers who integrate code. MCP Pay is a no-code product where 
 
 The `payable.mcp()` adapter stays — it's for providers running their own MCP servers with SDK integration. The adapter name describes the framework (MCP protocol), not the product type.
 
-> *Rationale: MCP Pay users never touch the SDK. Mixing the concepts would confuse both audiences. The backend uses `isMcpPay` as an internal flag (backend D4) — it should not leak into the SDK.*
+> _Rationale: MCP Pay users never touch the SDK. Mixing the concepts would confuse both audiences. The backend uses `isMcpPay` as an internal flag (backend D4) — it should not leak into the SDK._
 
 ### D9. `PaywallMetadata` and `PaywallStructuredContent` use `product`
 
 Internal paywall types rename `agent` to `product`:
+
 - `PaywallMetadata.agent` -> `PaywallMetadata.product`
 - `PaywallStructuredContent.agent` -> `PaywallStructuredContent.product`
 - `PaywallError` structured content exposes `product` not `agent`
 - HTTP/Next.js error responses return `product` field instead of `agent`
 
-> *Rationale: The paywall protects access to a product. The term should match. Error responses seen by integrators should use consistent terminology.*
+> _Rationale: The paywall protects access to a product. The term should match. Error responses seen by integrators should use consistent terminology._
 
 ### D10. `PurchaseInfo` updated for long-lived purchase model
 
 The React `PurchaseInfo` type and Next.js `PurchaseCheckResult` update to reflect the new model:
 
 **Fields renamed:**
+
 - `agentName` -> `productName`
 
 **Fields added:**
+
 - `productReference: string`
 - `planType: string` — `'recurring' | 'usage-based' | 'one-time' | 'hybrid'`
 - `isRecurring: boolean`
@@ -169,45 +181,57 @@ The React `PurchaseInfo` type and Next.js `PurchaseCheckResult` update to reflec
 - `billingCycle?: string`
 
 **Fields added (usage-based plans):**
+
 - `usage?: { used: number, quota: number | null, unit: string, remaining: number | null }`
 
 **Fields kept:**
+
 - `reference`, `planName`, `status`, `startDate`, `endDate`, `cancelledAt`, `cancellationReason`, `amount`
 
-> *Rationale: Long-lived purchases carry more state (billing, usage). Integrators need this for UI (show remaining usage, next billing date, plan type badges). Matches backend Purchase schema (backend D9, D17, D18).*
+> _Rationale: Long-lived purchases carry more state (billing, usage). Integrators need this for UI (show remaining usage, next billing date, plan type badges). Matches backend Purchase schema (backend D9, D17, D18)._
 
 ### D11. Purchase statuses are a union type
 
 SDK exposes all 8 statuses from backend D11 as a TypeScript union, not a free-form string:
 
 ```typescript
-type PurchaseStatus = 'pending' | 'active' | 'trialing' | 'past_due' | 'cancelled' | 'expired' | 'suspended' | 'refunded'
+type PurchaseStatus =
+  | 'pending'
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'cancelled'
+  | 'expired'
+  | 'suspended'
+  | 'refunded'
 ```
 
-> *Rationale: Type safety for integrators. Matches backend D11 exactly. No additional statuses needed in the SDK.*
+> _Rationale: Type safety for integrators. Matches backend D11 exactly. No additional statuses needed in the SDK._
 
 ### D12. Rename `SolvaPayClient` agent methods to product methods
 
-| Current method | New method |
-|---|---|
-| `listAgents()` | `listProducts()` |
-| `createAgent(params)` | `createProduct(params)` |
-| `deleteAgent(agentRef)` | `deleteProduct(productRef)` |
-| `listPlans(agentRef)` | `listPlans(productRef)` |
-| `createPlan({ agentRef, ... })` | `createPlan({ productRef, ... })` |
-| `deletePlan(agentRef, planRef)` | `deletePlan(productRef, planRef)` |
-| `createPaymentIntent({ agentRef, ... })` | `createPaymentIntent({ productRef, ... })` |
-| `processPaymentIntent({ agentRef, ... })` | `processPaymentIntent({ productRef, ... })` |
-| `checkLimits({ agentRef \| mcpServerRef })` | `checkLimits({ productRef })` |
-| `trackUsage({ agentRef, ... })` | `trackUsage({ productRef, ... })` |
+| Current method                              | New method                                  |
+| ------------------------------------------- | ------------------------------------------- |
+| `listAgents()`                              | `listProducts()`                            |
+| `createAgent(params)`                       | `createProduct(params)`                     |
+| `deleteAgent(agentRef)`                     | `deleteProduct(productRef)`                 |
+| `listPlans(agentRef)`                       | `listPlans(productRef)`                     |
+| `createPlan({ agentRef, ... })`             | `createPlan({ productRef, ... })`           |
+| `deletePlan(agentRef, planRef)`             | `deletePlan(productRef, planRef)`           |
+| `createPaymentIntent({ agentRef, ... })`    | `createPaymentIntent({ productRef, ... })`  |
+| `processPaymentIntent({ agentRef, ... })`   | `processPaymentIntent({ productRef, ... })` |
+| `checkLimits({ agentRef \| mcpServerRef })` | `checkLimits({ productRef })`               |
+| `trackUsage({ agentRef, ... })`             | `trackUsage({ productRef, ... })`           |
 
 **New methods added:**
+
 - `listPurchases({ productRef?, customerRef? })` — billing history (each Purchase is a billing record)
 
 **Methods removed:**
+
 - None removed (agent methods are renamed, not dropped)
 
-> *Rationale: 1:1 rename. Agent -> Product. No methods lost. One method gained (listPurchases). PaymentIntent methods keep their names — only params change. checkLimits simplified from two optional fields to one required field.*
+> _Rationale: 1:1 rename. Agent -> Product. No methods lost. One method gained (listPurchases). PaymentIntent methods keep their names — only params change. checkLimits simplified from two optional fields to one required field._
 
 ### D13. `SolvaPay` factory interface method updates
 
@@ -230,7 +254,7 @@ interface SolvaPay {
 }
 ```
 
-> *Rationale: Mirrors SolvaPayClient renames. PaymentIntent methods keep their names — only params change. listPurchases added for billing history (no separate Payment entity).*
+> _Rationale: Mirrors SolvaPayClient renames. PaymentIntent methods keep their names — only params change. listPurchases added for billing history (no separate Payment entity)._
 
 ### D14. Factory `payable()` auto-resolution changes
 
@@ -240,37 +264,37 @@ New: `options.productRef || options.product || process.env.SOLVAPAY_PRODUCT || '
 
 **Drop package.json name auto-detection.** This was a convenience that assumed one product per app. With Product as the explicit entity, require explicit configuration or env var.
 
-> *Rationale: Auto-detecting product from package.json name is confusing ("why is my product called my-express-app?"). Products have explicit references like `prod_8XK2M4`. Require explicit configuration.*
+> _Rationale: Auto-detecting product from package.json name is confusing ("why is my product called my-express-app?"). Products have explicit references like `prod_8XK2M4`. Require explicit configuration._
 
 ### D15. Core route helpers rename `agentRef` -> `productRef`
 
-| Current function | Param change |
-|---|---|
-| `createPaymentIntentCore(req, { planRef, agentRef })` | `{ planRef, productRef }` |
-| `processPaymentIntentCore(req, { paymentIntentId, agentRef })` | `{ paymentIntentId, productRef }` |
-| `createCheckoutSessionCore(req, { agentRef, planRef? })` | `{ productRef, planRef? }` |
-| `listPlansCore(req)` — reads `agentRef` from query | reads `productRef` from query, returns `{ plans, productRef }` |
+| Current function                                               | Param change                                                   |
+| -------------------------------------------------------------- | -------------------------------------------------------------- |
+| `createPaymentIntentCore(req, { planRef, agentRef })`          | `{ planRef, productRef }`                                      |
+| `processPaymentIntentCore(req, { paymentIntentId, agentRef })` | `{ paymentIntentId, productRef }`                              |
+| `createCheckoutSessionCore(req, { agentRef, planRef? })`       | `{ productRef, planRef? }`                                     |
+| `listPlansCore(req)` — reads `agentRef` from query             | reads `productRef` from query, returns `{ plans, productRef }` |
 
 Validation messages update: `"agentRef is required"` -> `"productRef is required"`.
 
-> *Rationale: Straightforward param rename. No logic changes.*
+> _Rationale: Straightforward param rename. No logic changes._
 
 ### D16. React `PurchaseInfo.agentName` -> `PurchaseInfo.productName`
 
 All React types and components:
 
-| Current | New |
-|---|---|
-| `PurchaseInfo.agentName` | `PurchaseInfo.productName` |
-| `useCheckout(planRef, agentRef?)` | `useCheckout(planRef, productRef?)` |
-| `PaymentFormProps.agentRef` | `PaymentFormProps.productRef` |
-| `PlanSelectorProps.agentRef` | `PlanSelectorProps.productRef` |
-| `UsePlansOptions.agentRef` | `UsePlansOptions.productRef` |
-| `SolvaPayContextValue.createPaymentIntent({ agentRef? })` | `SolvaPayContextValue.createPaymentIntent({ productRef? })` |
-| `SolvaPayContextValue.processPaymentIntent({ agentRef })` | `SolvaPayContextValue.processPaymentIntent({ productRef })` |
+| Current                                                    | New                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| `PurchaseInfo.agentName`                                   | `PurchaseInfo.productName`                                   |
+| `useCheckout(planRef, agentRef?)`                          | `useCheckout(planRef, productRef?)`                          |
+| `PaymentFormProps.agentRef`                                | `PaymentFormProps.productRef`                                |
+| `PlanSelectorProps.agentRef`                               | `PlanSelectorProps.productRef`                               |
+| `UsePlansOptions.agentRef`                                 | `UsePlansOptions.productRef`                                 |
+| `SolvaPayContextValue.createPaymentIntent({ agentRef? })`  | `SolvaPayContextValue.createPaymentIntent({ productRef? })`  |
+| `SolvaPayContextValue.processPaymentIntent({ agentRef })`  | `SolvaPayContextValue.processPaymentIntent({ productRef })`  |
 | `SolvaPayProviderProps.processPaymentIntent({ agentRef })` | `SolvaPayProviderProps.processPaymentIntent({ productRef })` |
 
-> *Rationale: React types must match server types. Clean rename throughout.*
+> _Rationale: React types must match server types. Clean rename throughout._
 
 ### D17. `usePurchase` hook updates for long-lived purchases
 
@@ -282,7 +306,7 @@ interface PurchaseStatus {
   customerRef?: string
   email?: string
   name?: string
-  purchases: PurchaseInfo[]           // updated type
+  purchases: PurchaseInfo[] // updated type
   hasPlan: (planName: string) => boolean
   activePurchase: PurchaseInfo | null
   hasPaidPurchase: boolean
@@ -292,39 +316,39 @@ interface PurchaseStatus {
 
 No new hooks required in v1. There is no separate Payment entity — `usePurchase()` already returns `purchases: PurchaseInfo[]` which serves as billing history. Integrators can also use `solvaPay.listPurchases()` directly.
 
-> *Rationale: The hook shape is still correct for the new model. Long-lived purchases just have richer data. Each Purchase is a billing record for its period — no separate Payment entity needed.*
+> _Rationale: The hook shape is still correct for the new model. Long-lived purchases just have richer data. Each Purchase is a billing record for its period — no separate Payment entity needed._
 
 ### D18. Next.js helpers rename `agentRef` -> `productRef`
 
-| Current | New |
-|---|---|
-| `createPaymentIntent(req, { planRef, agentRef })` | `createPaymentIntent(req, { planRef, productRef })` |
+| Current                                                    | New                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| `createPaymentIntent(req, { planRef, agentRef })`          | `createPaymentIntent(req, { planRef, productRef })`          |
 | `processPaymentIntent(req, { paymentIntentId, agentRef })` | `processPaymentIntent(req, { paymentIntentId, productRef })` |
-| `createCheckoutSession(req, { agentRef, planRef? })` | `createCheckoutSession(req, { productRef, planRef? })` |
-| `listPlans` returns `{ plans, agentRef }` | returns `{ plans, productRef }` |
-| `PurchaseCheckResult.purchases[].agentName` | `PurchaseCheckResult.purchases[].productName` |
+| `createCheckoutSession(req, { agentRef, planRef? })`       | `createCheckoutSession(req, { productRef, planRef? })`       |
+| `listPlans` returns `{ plans, agentRef }`                  | returns `{ plans, productRef }`                              |
+| `PurchaseCheckResult.purchases[].agentName`                | `PurchaseCheckResult.purchases[].productName`                |
 
 Cache key strategy unchanged — still `userId`-based. Cache invalidation points stay the same (after createPaymentIntent, processPaymentIntent, cancelRenewal).
 
-> *Rationale: Param renames propagate from Core helpers. Cache layer is user-scoped, unaffected by entity rename.*
+> _Rationale: Param renames propagate from Core helpers. Cache layer is user-scoped, unaffected by entity rename._
 
 ### D19. `@solvapay/auth` requires no changes
 
 Auth adapters (`AuthAdapter`, `SupabaseAuthAdapter`, `MockAuthAdapter`, `SolvapayAuthAdapter`) deal with user identity extraction, not product/agent references. No changes needed.
 
-> *Rationale: Auth is entity-agnostic. It extracts user IDs from tokens/sessions, independent of what the user purchases.*
+> _Rationale: Auth is entity-agnostic. It extracts user IDs from tokens/sessions, independent of what the user purchases._
 
 ### D20. `@solvapay/react-supabase` requires no changes
 
 The `createSupabaseAuthAdapter` wraps Supabase auth. It returns an `AuthAdapter` for token/userId extraction. No product/agent references exist in this package.
 
-> *Rationale: Same as D19. Auth adapter, not entity-aware.*
+> _Rationale: Same as D19. Auth adapter, not entity-aware._
 
 ### D21. `@solvapay/core` requires minimal changes
 
 Only change: remove `version` export if unused, or update it. No agent references exist in `@solvapay/core` today.
 
-> *Rationale: Core package contains config, error class, and env validation. None reference agents.*
+> _Rationale: Core package contains config, error class, and env validation. None reference agents._
 
 ### D22. Generated types regenerate automatically
 
@@ -332,23 +356,23 @@ After the backend deploys new OpenAPI spec (with `/v1/sdk/products` routes repla
 
 **Sequencing:** Backend API must deploy first. Then SDK regenerates types. Then hand-written SDK code updates to reference new generated types.
 
-> *Rationale: generated.ts is auto-produced from OpenAPI. The change cascades from backend. No manual editing of generated.ts needed.*
+> _Rationale: generated.ts is auto-produced from OpenAPI. The change cascades from backend. No manual editing of generated.ts needed._
 
 ### D23. Update all 5 example apps simultaneously
 
 All examples are small and reference agent terminology. Update in one pass:
 
-| Example | Changes |
-|---|---|
-| `express-basic` | `payable({ agent })` -> `payable({ product })`, env vars |
-| `mcp-basic` | `payable({ agent })` -> `payable({ product })`, env vars |
-| `checkout-demo` | agentRef in payment flow -> productRef |
-| `hosted-checkout-demo` | agentRef in checkout flow -> productRef |
-| `nextjs-openai-custom-gpt-actions` | agentRef in API routes -> productRef |
+| Example                            | Changes                                                  |
+| ---------------------------------- | -------------------------------------------------------- |
+| `express-basic`                    | `payable({ agent })` -> `payable({ product })`, env vars |
+| `mcp-basic`                        | `payable({ agent })` -> `payable({ product })`, env vars |
+| `checkout-demo`                    | agentRef in payment flow -> productRef                   |
+| `hosted-checkout-demo`             | agentRef in checkout flow -> productRef                  |
+| `nextjs-openai-custom-gpt-actions` | agentRef in API routes -> productRef                     |
 
 Also update `examples/shared/` if it contains shared config referencing agents.
 
-> *Rationale: Examples are documentation. They must reflect the current API. Small enough to update in one pass.*
+> _Rationale: Examples are documentation. They must reflect the current API. Small enough to update in one pass._
 
 ### D24. Purchase utility functions require no logic changes
 
@@ -356,7 +380,7 @@ Also update `examples/shared/` if it contains shared config referencing agents.
 
 The only change is the `PurchaseInfo` type they operate on (D10), which is a type-level change, not a logic change.
 
-> *Rationale: Utility functions are entity-agnostic. They filter by status and dates, not by entity name.*
+> _Rationale: Utility functions are entity-agnostic. They filter by status and dates, not by entity name._
 
 ### D25. `ProcessPaymentResult` keeps its existing name
 
@@ -365,7 +389,7 @@ No rename needed since PaymentIntent methods are unchanged (D5). The type stays 
 ```typescript
 interface ProcessPaymentResult {
   type: 'recurring' | 'one-time'
-  purchase?: PurchaseInfo      // updated PurchaseInfo (D10)
+  purchase?: PurchaseInfo // updated PurchaseInfo (D10)
   oneTimePurchase?: OneTimePurchaseInfo
   status: 'completed'
 }
@@ -373,7 +397,7 @@ interface ProcessPaymentResult {
 
 `OneTimePurchaseInfo.productRef` replaces any agent reference (currently has `productRef` already — no change needed there).
 
-> *Rationale: Matches the unchanged `processPaymentIntent()` method. No method rename means no result type rename. PurchaseInfo carries the new fields from D10.*
+> _Rationale: Matches the unchanged `processPaymentIntent()` method. No method rename means no result type rename. PurchaseInfo carries the new fields from D10._
 
 ---
 
@@ -386,26 +410,28 @@ interface ProcessPaymentResult {
 Current: falls back to `process.env.SOLVAPAY_AGENT`, then `package.json name`, then `'default-agent'`.
 
 Options:
+
 - a) `process.env.SOLVAPAY_PRODUCT` -> `'default-product'` (drop package.json detection)
 - b) `process.env.SOLVAPAY_PRODUCT` -> throw error (require explicit config)
 - c) `process.env.SOLVAPAY_PRODUCT` -> `package.json name` -> `'default-product'`
 
-> *Recommendation: **(a)**. Env var fallback for single-product apps, explicit `productRef` for multi-product. Drop package.json detection — it was a cute hack but produces confusing product names. Don't throw — stub mode should still work for local dev without any config.*
+> _Recommendation: **(a)**. Env var fallback for single-product apps, explicit `productRef` for multi-product. Drop package.json detection — it was a cute hack but produces confusing product names. Don't throw — stub mode should still work for local dev without any config._
 
 **Q2. Should the SDK validate product reference format (`prod_*`) or accept any string?**
 
 Options:
+
 - a) Accept any string (flexible, works during development)
 - b) Validate `prod_` prefix, warn on mismatch
 - c) Validate `prod_` prefix, throw on mismatch
 
-> *Recommendation: **(a)**. Accept any string. During development and testing, integrators may use arbitrary strings. The backend validates the reference — the SDK shouldn't duplicate validation. This also allows backward-compatible reference formats if the backend ever changes prefixes.*
+> _Recommendation: **(a)**. Accept any string. During development and testing, integrators may use arbitrary strings. The backend validates the reference — the SDK shouldn't duplicate validation. This also allows backward-compatible reference formats if the backend ever changes prefixes._
 
 **Q3. What should the `SOLVAPAY_PRODUCT` env var behavior be in the `payable.mcp()` adapter specifically?**
 
 MCP servers often monetize a single product. Should the env var apply to all adapters equally, or should MCP have different defaults?
 
-> *Recommendation: Same behavior across all adapters. `SOLVAPAY_PRODUCT` applies universally. No adapter-specific env var logic. The adapter is a framework choice, not a product identity choice.*
+> _Recommendation: Same behavior across all adapters. `SOLVAPAY_PRODUCT` applies universally. No adapter-specific env var logic. The adapter is a framework choice, not a product identity choice._
 
 ---
 
@@ -414,33 +440,36 @@ MCP servers often monetize a single product. Should the env var apply to all ada
 **Q4. Should the SDK expose a `Product` type for CRUD operations, or only use `productRef` as an opaque string?**
 
 Options:
+
 - a) Expose `Product` type with full fields (`reference`, `name`, `description`, `status`, `planIds`, etc.)
 - b) Only expose `productRef` as a string identifier — Product CRUD handled in dashboard only
 - c) Expose a slim `ProductInfo` type (`reference`, `name`, `description`, `status`) for read-only listing
 
-> *Recommendation: **(c)**. SDK integrators need to list their products (for admin dashboards, product selectors). Full CRUD is a dashboard concern. Expose `listProducts()` returning `ProductInfo[]` and `createProduct()`/`deleteProduct()` as optional management methods (same pattern as current agent methods). Keep the return type slim — no planIds, no balance, no isMcpPay.*
+> _Recommendation: **(c)**. SDK integrators need to list their products (for admin dashboards, product selectors). Full CRUD is a dashboard concern. Expose `listProducts()` returning `ProductInfo[]` and `createProduct()`/`deleteProduct()` as optional management methods (same pattern as current agent methods). Keep the return type slim — no planIds, no balance, no isMcpPay._
 
 **Q5. Should `PurchaseInfo` include the `planSnapshot` from the backend, or keep the current flat fields?**
 
 Backend stores `planSnapshot: { name, price, currency, planType, features, limits }` on each Purchase.
 
 Options:
+
 - a) Expose as nested `planSnapshot` matching backend
 - b) Keep flat: `planName`, `amount`, `currency`, `planType` as top-level fields
 - c) Both: flat convenience fields + optional `planSnapshot` for full access
 
-> *Recommendation: **(b)**. Keep flat fields for simplicity. SDK integrators don't need the raw snapshot — they need `planName`, `amount`, `planType` at the top level for UI rendering. If someone needs features/limits, they can query the Plan directly. Flat fields are easier to destructure in React components.*
+> _Recommendation: **(b)**. Keep flat fields for simplicity. SDK integrators don't need the raw snapshot — they need `planName`, `amount`, `planType` at the top level for UI rendering. If someone needs features/limits, they can query the Plan directly. Flat fields are easier to destructure in React components._
 
 **Q6. How should usage data be exposed on `PurchaseInfo`?**
 
 Backend Purchase has `usage: { used, quota, unit, periodStart, periodEnd, resetDate, overageUnits, overageCost, carriedOverUnits }`.
 
 Options:
+
 - a) Expose full usage subdocument
 - b) Expose slim usage: `{ used, quota, unit, remaining }` (computed `remaining = quota - used`)
 - c) Don't expose usage on PurchaseInfo — use a separate `useUsage()` hook
 
-> *Recommendation: **(b)**. Slim usage with computed `remaining`. Integrators need "50 of 100 used, 50 remaining" for progress bars. Period dates, overage costs, and carryover are backend billing concerns, not SDK display concerns. If integrators need the full breakdown, they can query the backend API directly.*
+> _Recommendation: **(b)**. Slim usage with computed `remaining`. Integrators need "50 of 100 used, 50 remaining" for progress bars. Period dates, overage costs, and carryover are backend billing concerns, not SDK display concerns. If integrators need the full breakdown, they can query the backend API directly._
 
 **Q7. ~~Should the SDK add a `PaymentInfo` type for the `listPayments` response?~~**
 
@@ -453,30 +482,33 @@ Options:
 **Q8. Should the backend API and SDK update be deployed simultaneously, or does the SDK need a compatibility window?**
 
 Options:
+
 - a) Simultaneous deploy — backend + SDK + examples all update together
 - b) Backend deploys first with dual endpoints (old + new), SDK updates after
 - c) SDK ships first with feature flag, backend deploys after
 
-> *Recommendation: **(a)**. Simultaneous. No external users. Backend can deploy new endpoints and deprecate old ones in the same release. SDK regenerates types from new spec and updates in lockstep. Ship as one coordinated release.*
+> _Recommendation: **(a)**. Simultaneous. No external users. Backend can deploy new endpoints and deprecate old ones in the same release. SDK regenerates types from new spec and updates in lockstep. Ship as one coordinated release._
 
 **Q9. Should generated types (`generated.ts`) be committed to the repo, or generated at build time?**
 
 Currently committed. After the backend API changes, the generated file will have a large diff.
 
 Options:
+
 - a) Keep committing generated types (current pattern)
 - b) Generate at build time only, gitignore the file
 
-> *Recommendation: **(a)**. Keep committing. Committed types make diffs reviewable, work without backend access, and don't require build-time code generation. The large diff from this redesign is a one-time event.*
+> _Recommendation: **(a)**. Keep committing. Committed types make diffs reviewable, work without backend access, and don't require build-time code generation. The large diff from this redesign is a one-time event._
 
 **Q10. What is the implementation order across packages?**
 
 Options:
+
 - a) Bottom-up: core -> server -> react -> next -> examples
 - b) Server-first: server (types + client + paywall) -> next -> react -> core -> examples
 - c) Types-first: regenerate generated.ts -> update server types -> update server impl -> update next -> update react -> examples
 
-> *Recommendation: **(c)**. Types-first. The generated types from the backend OpenAPI spec drive everything downstream. Once `generated.ts` is updated, the hand-written types update to match, then implementations, then consumers. This is the natural dependency order.*
+> _Recommendation: **(c)**. Types-first. The generated types from the backend OpenAPI spec drive everything downstream. Once `generated.ts` is updated, the hand-written types update to match, then implementations, then consumers. This is the natural dependency order._
 
 ---
 
@@ -487,33 +519,36 @@ Options:
 Current: `useCheckout(planRef: string, agentRef?: string)`
 
 Options:
+
 - a) `useCheckout(planRef: string, productRef?: string)` — same positional args
 - b) `useCheckout({ planRef: string, productRef?: string })` — options object
 - c) `useCheckout(planRef: string, options?: { productRef?: string })` — hybrid
 
-> *Recommendation: **(b)**. Options object. The current positional signature is fragile as we add more options. An options object is more extensible and self-documenting: `useCheckout({ planRef: 'pln_xxx', productRef: 'prod_xxx' })`.*
+> _Recommendation: **(b)**. Options object. The current positional signature is fragile as we add more options. An options object is more extensible and self-documenting: `useCheckout({ planRef: 'pln_xxx', productRef: 'prod_xxx' })`._
 
 **Q12. Should `PurchaseGate` accept `productRef` in addition to (or instead of) `requirePlan`?**
 
 Current: `<PurchaseGate requirePlan="Premium">`. Gates access by plan name.
 
 Options:
+
 - a) Keep `requirePlan` only — plan name is sufficient for gating
 - b) Add `requireProduct` as an alternative — gate by product ownership regardless of plan
 - c) Add both `requireProduct` and `requirePlan` — gate by product OR plan
 
-> *Recommendation: **(c)**. Both. `requireProduct` gates "does the customer own this product at all?" (any active purchase). `requirePlan` gates "does the customer have this specific plan?". Both are valid use cases. `requireProduct` is the more common one in the new model.*
+> _Recommendation: **(c)**. Both. `requireProduct` gates "does the customer own this product at all?" (any active purchase). `requirePlan` gates "does the customer have this specific plan?". Both are valid use cases. `requireProduct` is the more common one in the new model._
 
 **Q13. Should `PaymentForm` require `productRef` or auto-detect from context?**
 
 Current: `<PaymentForm planRef="pln_xxx" agentRef="agt_xxx" />`
 
 Options:
+
 - a) Require `productRef` prop explicitly
 - b) Auto-detect from nearest `SolvaPayProvider` context, allow override via prop
 - c) Require `productRef` but allow env var fallback
 
-> *Recommendation: **(a)**. Require explicitly. PaymentForm is used in checkout flows where the product is known. Auto-detection adds indirection. Explicit is better than implicit for payment flows — you want to be sure which product you're charging for.*
+> _Recommendation: **(a)**. Require explicitly. PaymentForm is used in checkout flows where the product is known. Auto-detection adds indirection. Explicit is better than implicit for payment flows — you want to be sure which product you're charging for._
 
 ---
 
@@ -522,25 +557,34 @@ Options:
 **Q14. What should the paywall HTTP error response shape be?**
 
 Current:
+
 ```json
-{ "success": false, "error": "Payment required", "agent": "agt_xxx", "checkoutUrl": "...", "message": "..." }
+{
+  "success": false,
+  "error": "Payment required",
+  "agent": "agt_xxx",
+  "checkoutUrl": "...",
+  "message": "..."
+}
 ```
 
 Options:
+
 - a) Same shape, rename `agent` to `product`
 - b) Restructure: `{ "error": "payment_required", "product": "...", "checkoutUrl": "...", "details": "..." }`
 - c) Use RFC 7807 Problem Details: `{ "type": "payment_required", "title": "...", "detail": "...", "product": "...", "checkoutUrl": "..." }`
 
-> *Recommendation: **(a)**. Same shape, rename field. The current shape works. Don't over-engineer error responses during this rename pass. If error response format improvement is needed, do it as a separate effort.*
+> _Recommendation: **(a)**. Same shape, rename field. The current shape works. Don't over-engineer error responses during this rename pass. If error response format improvement is needed, do it as a separate effort._
 
 **Q15. Should `PaywallError.structuredContent` be renamed or restructured?**
 
 Current `PaywallStructuredContent`:
+
 ```typescript
 { kind: 'payment_required', agent: string, checkoutUrl: string, message: string }
 ```
 
-> *Recommendation: Rename `agent` -> `product`. Keep structure. `kind: 'payment_required'` is correct. `product` identifies which product triggered the paywall. `checkoutUrl` provides the redirect. No structural change needed.*
+> _Recommendation: Rename `agent` -> `product`. Keep structure. `kind: 'payment_required'` is correct. `product` identifies which product triggered the paywall. `checkoutUrl` provides the redirect. No structural change needed._
 
 ---
 
@@ -551,20 +595,22 @@ Current `PaywallStructuredContent`:
 The `docs/` folder has getting-started guides, API references (generated by typedoc), and example overviews.
 
 Options:
+
 - a) Update guides and regenerate API docs in the same pass
 - b) Regenerate API docs only (automatic from types), defer guide updates
 - c) Defer all docs updates to a follow-up
 
-> *Recommendation: **(b)**. API docs regenerate automatically. Guides reference `agent` terminology and need updating but are lower priority than working code. Update guides as a fast follow-up.*
+> _Recommendation: **(b)**. API docs regenerate automatically. Guides reference `agent` terminology and need updating but are lower priority than working code. Update guides as a fast follow-up._
 
 **Q17. Should example apps demonstrate billing history via purchases, or just rename agent -> product?**
 
 Options:
+
 - a) Just rename agent -> product (minimum viable)
 - b) Add purchase-based billing history display to checkout-demo and hosted-checkout-demo
 - c) Create a new example specifically for purchase/billing management
 
-> *Recommendation: **(a)** for this pass. Rename only. Purchase-based billing history examples can be added when the `listPurchases` API is stable and tested. Keep the scope of this refactor focused.*
+> _Recommendation: **(a)** for this pass. Rename only. Purchase-based billing history examples can be added when the `listPurchases` API is stable and tested. Keep the scope of this refactor focused._
 
 ---
 

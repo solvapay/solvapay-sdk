@@ -15,8 +15,6 @@ import type {
   SolvaPayClient,
 } from './types'
 import { withRetry, createRequestDeduplicator } from './utils'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 
 // Re-export types for convenience
 export type {
@@ -117,25 +115,8 @@ export class SolvaPayPaywall {
     }
   }
 
-  private resolveAgent(metadata: PaywallMetadata): string {
-    return (
-      metadata.agent || process.env.SOLVAPAY_AGENT || this.getPackageJsonName() || 'default-agent'
-    )
-  }
-
-  private getPackageJsonName(): string | undefined {
-    try {
-      // Check if we're in an edge runtime (process.cwd may not be available)
-      if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
-        return undefined
-      }
-      const packageJsonPath = join(process.cwd(), 'package.json')
-      const pkgContent = readFileSync(packageJsonPath, 'utf-8')
-      const pkg = JSON.parse(pkgContent)
-      return pkg.name
-    } catch {
-      return undefined
-    }
+  private resolveProduct(metadata: PaywallMetadata): string {
+    return metadata.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
   }
 
   private generateRequestId(): string {
@@ -152,7 +133,7 @@ export class SolvaPayPaywall {
     metadata: PaywallMetadata = {},
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
-    const agent = this.resolveAgent(metadata)
+    const product = this.resolveProduct(metadata)
     const toolName = handler.name || 'anonymous'
 
     return async (args: TArgs): Promise<TResult> => {
@@ -182,14 +163,14 @@ export class SolvaPayPaywall {
 
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
-          agentRef: agent,
+          productRef: product,
         })
 
         if (!limitsCheck.withinLimits) {
           const latencyMs = Date.now() - startTime
           await this.trackUsage(
             backendCustomerRef,
-            agent,
+            product,
             planRef,
             toolName,
             'paywall',
@@ -199,7 +180,7 @@ export class SolvaPayPaywall {
 
           throw new PaywallError('Payment required', {
             kind: 'payment_required',
-            agent,
+            product,
             checkoutUrl: limitsCheck.checkoutUrl || '',
             message: `Plan purchase required. Remaining: ${limitsCheck.remaining}`,
           })
@@ -212,7 +193,7 @@ export class SolvaPayPaywall {
         const latencyMs = Date.now() - startTime
         await this.trackUsage(
           backendCustomerRef,
-          agent,
+          product,
           planRef,
           toolName,
           'success',
@@ -234,7 +215,7 @@ export class SolvaPayPaywall {
         const planRef = metadata.plan || toolName
         await this.trackUsage(
           backendCustomerRef,
-          agent,
+          product,
           planRef,
           toolName,
           outcome,
@@ -409,7 +390,7 @@ export class SolvaPayPaywall {
 
   async trackUsage(
     customerRef: string,
-    agentRef: string,
+    productRef: string,
     planRef: string,
     toolName: string,
     outcome: 'success' | 'paywall' | 'fail',
@@ -421,7 +402,7 @@ export class SolvaPayPaywall {
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          agentRef,
+          productRef,
           planRef,
           outcome,
           action: toolName,
@@ -639,7 +620,7 @@ function handleHttpError(error: any, reply: any) {
     const errorResponse = {
       success: false,
       error: 'Payment required',
-      agent: error.structuredContent.agent,
+      product: error.structuredContent.product,
       checkoutUrl: error.structuredContent.checkoutUrl,
       message: error.structuredContent.message,
     }
@@ -753,7 +734,7 @@ function handleNextError(error: any): Response {
       JSON.stringify({
         success: false,
         error: 'Payment required',
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
         checkoutUrl: error.structuredContent.checkoutUrl,
         message: error.structuredContent.message,
       }),

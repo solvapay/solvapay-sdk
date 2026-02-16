@@ -52,7 +52,7 @@ export type ServerClientOptions = {
  * });
  *
  * // Use client for custom operations
- * const agents = await client.listAgents();
+ * const products = await client.listProducts();
  * ```
  *
  * @see {@link createSolvaPay} for the recommended high-level API
@@ -184,11 +184,11 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
     },
 
-    // Management methods (primarily for integration tests)
+    // Product management methods (primarily for integration tests)
 
-    // GET: /v1/sdk/agents
-    async listAgents() {
-      const url = `${base}/v1/sdk/agents`
+    // GET: /v1/sdk/products
+    async listProducts() {
+      const url = `${base}/v1/sdk/products`
 
       const res = await fetch(url, {
         method: 'GET',
@@ -198,23 +198,23 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`List agents failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`List products failed (${res.status}): ${error}`)
       }
 
       const result = await res.json()
       // Handle both direct array and wrapped object formats
-      const agents = Array.isArray(result) ? result : result.agents || []
+      const products = Array.isArray(result) ? result : result.products || []
 
       // Unwrap data field if present
-      return agents.map((agent: any) => ({
-        ...agent,
-        ...(agent.data || {}),
+      return products.map((product: any) => ({
+        ...product,
+        ...(product.data || {}),
       }))
     },
 
-    // POST: /v1/sdk/agents
-    async createAgent(params) {
-      const url = `${base}/v1/sdk/agents`
+    // POST: /v1/sdk/products
+    async createProduct(params) {
+      const url = `${base}/v1/sdk/products`
 
       const res = await fetch(url, {
         method: 'POST',
@@ -225,16 +225,16 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create agent failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`Create product failed (${res.status}): ${error}`)
       }
 
       const result = await res.json()
       return result
     },
 
-    // DELETE: /v1/sdk/agents/{agentRef}
-    async deleteAgent(agentRef) {
-      const url = `${base}/v1/sdk/agents/${agentRef}`
+    // DELETE: /v1/sdk/products/{productRef}
+    async deleteProduct(productRef) {
+      const url = `${base}/v1/sdk/products/${productRef}`
 
       const res = await fetch(url, {
         method: 'DELETE',
@@ -244,13 +244,13 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok && res.status !== 404) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Delete agent failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`Delete product failed (${res.status}): ${error}`)
       }
     },
 
-    // GET: /v1/sdk/agents/{agentRef}/plans
-    async listPlans(agentRef) {
-      const url = `${base}/v1/sdk/agents/${agentRef}/plans`
+    // GET: /v1/sdk/products/{productRef}/plans
+    async listPlans(productRef) {
+      const url = `${base}/v1/sdk/products/${productRef}/plans`
 
       const res = await fetch(url, {
         method: 'GET',
@@ -287,9 +287,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
     },
 
-    // POST: /v1/sdk/agents/{agentRef}/plans
+    // POST: /v1/sdk/products/{productRef}/plans
     async createPlan(params) {
-      const url = `${base}/v1/sdk/agents/${params.agentRef}/plans`
+      const url = `${base}/v1/sdk/products/${params.productRef}/plans`
 
       const res = await fetch(url, {
         method: 'POST',
@@ -307,9 +307,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // DELETE: /v1/sdk/agents/{agentRef}/plans/{planRef}
-    async deletePlan(agentRef, planRef) {
-      const url = `${base}/v1/sdk/agents/${agentRef}/plans/${planRef}`
+    // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
+    async deletePlan(productRef, planRef) {
+      const url = `${base}/v1/sdk/products/${productRef}/plans/${planRef}`
 
       const res = await fetch(url, {
         method: 'DELETE',
@@ -338,7 +338,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({
-          agentRef: params.agentRef,
+          productRef: params.productRef,
           planRef: params.planRef,
           customerReference: params.customerRef,
         }),
@@ -355,7 +355,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     },
 
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
-    async processPayment(params) {
+    async processPaymentIntent(params) {
       const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/process`
 
       const res = await fetch(url, {
@@ -365,7 +365,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          agentRef: params.agentRef,
+          productRef: params.productRef,
           customerRef: params.customerRef,
           planRef: params.planRef,
         }),
@@ -381,9 +381,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // POST: /v1/sdk/purchases/{purchaseRef}/cancel-renewal
-    async cancelRenewal(params) {
-      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/cancel-renewal`
+    // POST: /v1/sdk/purchases/{purchaseRef}/cancel
+    async cancelPurchase(params) {
+      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/cancel`
 
       // Prepare request options
       const requestOptions: RequestInit = {
@@ -408,11 +408,11 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
         if (res.status === 400) {
           throw new SolvaPayError(
-            `Renewal cannot be cancelled or purchase does not belong to provider: ${error}`,
+            `Purchase cannot be cancelled or does not belong to provider: ${error}`,
           )
         }
 
-        throw new SolvaPayError(`Cancel renewal failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`Cancel purchase failed (${res.status}): ${error}`)
       }
 
       // Get response text first to debug any parsing issues
@@ -424,14 +424,14 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       } catch (parseError) {
         log(`❌ Failed to parse response as JSON: ${parseError}`)
         throw new SolvaPayError(
-          `Invalid JSON response from cancel renewal endpoint: ${responseText.substring(0, 200)}`,
+          `Invalid JSON response from cancel purchase endpoint: ${responseText.substring(0, 200)}`,
         )
       }
 
       // Validate response structure
       if (!responseData || typeof responseData !== 'object') {
         log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
-        throw new SolvaPayError(`Invalid response structure from cancel renewal endpoint`)
+        throw new SolvaPayError(`Invalid response structure from cancel purchase endpoint`)
       }
 
       // Backend returns nested structure: { purchase: {...}, message: "..." }
@@ -449,7 +449,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       // Check if response has expected fields
       if (!result || typeof result !== 'object') {
         log(`❌ Invalid purchase data in response. Full response:`, responseData)
-        throw new SolvaPayError(`Invalid purchase data in cancel renewal response`)
+        throw new SolvaPayError(`Invalid purchase data in cancel purchase response`)
       }
 
       return result

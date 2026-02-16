@@ -16,8 +16,8 @@ export interface PaywallArgs {
  * Metadata for configuring paywall protection
  */
 export interface PaywallMetadata {
-  agent?: string
-  plan?: string // Optional plan identifier, defaults to handler/action name
+  product?: string
+  plan?: string
 }
 
 /**
@@ -25,7 +25,7 @@ export interface PaywallMetadata {
  */
 export interface PaywallStructuredContent {
   kind: 'payment_required'
-  agent: string
+  product: string
   checkoutUrl: string
   message: string
 }

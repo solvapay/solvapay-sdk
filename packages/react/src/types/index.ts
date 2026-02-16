@@ -8,14 +8,27 @@ import type { AuthAdapter } from '../adapters/auth'
 
 export interface PurchaseInfo {
   reference: string
+  productName: string
+  productReference: string
   planName: string
-  agentName: string
   status: string
   startDate: string
   endDate?: string
   cancelledAt?: string
   cancellationReason?: string
   amount?: number
+  currency?: string
+  planType?: string
+  isRecurring?: boolean
+  nextBillingDate?: string
+  billingCycle?: string
+  transactionId?: string
+  usage?: {
+    used: number
+    quota: number | null
+    unit: string
+    remaining: number | null
+  }
 }
 
 export interface CustomerPurchaseData {
@@ -136,10 +149,10 @@ export interface SolvaPayConfig {
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
-  createPayment: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>
+  createPayment: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
   customerRef?: string
@@ -157,11 +170,11 @@ export interface SolvaPayProviderProps {
    * Custom API functions (override config defaults)
    * Use only if you need custom logic beyond standard API routes
    */
-  createPayment?: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>
+  createPayment?: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
   checkPurchase?: () => Promise<CustomerPurchaseData>
   processPayment?: (params: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
 
@@ -181,6 +194,7 @@ export interface PlanBadgeProps {
 
 export interface PurchaseGateProps {
   requirePlan?: string
+  requireProduct?: string
   children: (props: {
     hasAccess: boolean
     purchases: PurchaseInfo[]
@@ -218,11 +232,11 @@ export interface UsePlansOptions {
   /**
    * Fetcher function to retrieve plans
    */
-  fetcher: (agentRef: string) => Promise<Plan[]>
+  fetcher: (productRef: string) => Promise<Plan[]>
   /**
-   * Agent reference to fetch plans for
+   * Product reference to fetch plans for
    */
-  agentRef?: string
+  productRef?: string
   /**
    * Optional filter function to filter plans
    */
@@ -256,13 +270,13 @@ export interface UsePlansReturn {
  */
 export interface PlanSelectorProps {
   /**
-   * Agent reference to fetch plans for
+   * Product reference to fetch plans for
    */
-  agentRef?: string
+  productRef?: string
   /**
    * Fetcher function to retrieve plans
    */
-  fetcher: (agentRef: string) => Promise<Plan[]>
+  fetcher: (productRef: string) => Promise<Plan[]>
   /**
    * Optional filter function
    */
@@ -327,9 +341,9 @@ export interface PaymentFormProps {
    */
   planRef: string
   /**
-   * Agent reference. Required for processing payment after confirmation.
+   * Product reference. Required for processing payment after confirmation.
    */
-  agentRef?: string
+  productRef?: string
   /**
    * Callback when payment succeeds
    */
@@ -355,3 +369,13 @@ export interface PaymentFormProps {
    */
   buttonClassName?: string
 }
+
+export type PurchaseStatusValue =
+  | 'pending'
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'cancelled'
+  | 'expired'
+  | 'suspended'
+  | 'refunded'

@@ -13,12 +13,12 @@ interface RouteContext {
 export const GET = async (request: Request, context: RouteContext) => {
   const solvaPay = getSolvaPay()
   
-  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  const product = process.env.NEXT_PUBLIC_PRODUCT_REF
   
   // Extract user ID from middleware-set header
   const rawUserId = request.headers.get('x-user-id')
   
-  const basicPayable = solvaPay.payable(agent ? { agent } : {})
+  const basicPayable = solvaPay.payable(product ? { product } : {})
 
   return basicPayable.next(getTask, {
     extractArgs: async (req: Request, ctx: RouteContext) => {
@@ -38,12 +38,12 @@ export const GET = async (request: Request, context: RouteContext) => {
 export const PUT = async (request: Request, context: RouteContext) => {
   const solvaPay = getSolvaPay()
   
-  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  const product = process.env.NEXT_PUBLIC_PRODUCT_REF
   
   // Extract raw user ID from middleware-set header
   const rawUserId = request.headers.get('x-user-id')
   
-  const payable = solvaPay.payable(agent ? { agent } : {})
+  const payable = solvaPay.payable(product ? { product } : {})
 
   return payable.next(updateTask, {
     extractArgs: async (req: Request, ctx: RouteContext) => {
@@ -74,13 +74,13 @@ export const PUT = async (request: Request, context: RouteContext) => {
 export const DELETE = async (request: Request, context: RouteContext) => {
   const solvaPay = getSolvaPay()
   
-  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  const product = process.env.NEXT_PUBLIC_PRODUCT_REF
   
   // Extract raw user ID from middleware-set header
   const rawUserId = request.headers.get('x-user-id')
   
-  // For delete, we ideally want a premium agent, but we'll use the configured one if set
-  const premiumPayable = solvaPay.payable(agent ? { agent } : {})
+  // For delete, we ideally want a premium product, but we'll use the configured one if set
+  const premiumPayable = solvaPay.payable(product ? { product } : {})
 
   return premiumPayable.next(deleteTask, {
     extractArgs: async (req: Request, ctx: RouteContext) => {

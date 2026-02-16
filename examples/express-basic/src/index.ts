@@ -20,7 +20,7 @@ const solvaPay = createSolvaPay({
 })
 
 // Create payable handler with explicit HTTP adapter
-const payable = solvaPay.payable({ agent: 'agt_NO8WYSX5', plan: 'pln_MUKDWQZZ' })
+const payable = solvaPay.payable({ product: 'prod_NO8WYSX5', plan: 'pln_MUKDWQZZ' })
 
 app.use(express.json())
 

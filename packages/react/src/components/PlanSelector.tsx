@@ -19,9 +19,9 @@ import type { PlanSelectorProps } from '../types'
  * @example
  * ```tsx
  * <PlanSelector
- *   agentRef="agent_123"
- *   fetcher={async (agentRef) => {
- *     const res = await fetch(`/api/list-plans?agentRef=${agentRef}`);
+ *   productRef="prod_123"
+ *   fetcher={async (productRef) => {
+ *     const res = await fetch(`/api/list-plans?productRef=${productRef}`);
  *     const data = await res.json();
  *     return data.plans;
  *   }}
@@ -50,7 +50,7 @@ import type { PlanSelectorProps } from '../types'
  * ```
  */
 export const PlanSelector: React.FC<PlanSelectorProps> = ({
-  agentRef,
+  productRef,
   fetcher,
   filter,
   sortBy,
@@ -60,7 +60,7 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
   const { purchases } = usePurchase()
 
   const plansHook = usePlans({
-    agentRef,
+    productRef,
     fetcher,
     filter,
     sortBy,

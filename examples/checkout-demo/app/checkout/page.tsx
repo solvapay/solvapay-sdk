@@ -30,11 +30,11 @@ export default function CheckoutPage() {
   const router = useRouter()
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF
+  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
 
   // Stable fetcher function to prevent re-renders
-  const plansFetcher = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`)
+  const plansFetcher = useCallback(async (productRef: string) => {
+    const response = await fetch(`/api/list-plans?productRef=${productRef}`)
     if (!response.ok) {
       const errorData = await response.json()
       throw new Error(errorData.error || 'Failed to fetch plans')
@@ -54,7 +54,7 @@ export default function CheckoutPage() {
     selectedPlan: currentPlan,
     setSelectedPlanIndex,
   } = usePlans({
-    agentRef: agentRef || '',
+    productRef: productRef || '',
     fetcher: plansFetcher,
     autoSelectFirstPaid: true,
   })
@@ -238,7 +238,7 @@ export default function CheckoutPage() {
                 {showPaymentForm && (
                   <StyledPaymentForm
                     currentPlan={currentPlan}
-                    agentRef={agentRef}
+                    productRef={productRef}
                     onSuccess={handlePaymentSuccess}
                     onError={handlePaymentError}
                     onBack={handleBackToSelection}

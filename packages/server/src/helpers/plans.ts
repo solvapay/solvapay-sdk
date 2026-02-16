@@ -13,29 +13,25 @@ import { getSolvaPayConfig } from '@solvapay/core'
 
 /**
  * List plans - core implementation
- *
- * @param request - Standard Web API Request
- * @returns Plans response or error result
  */
 export async function listPlansCore(request: Request): Promise<
   | {
       plans: any[]
-      agentRef: string
+      productRef: string
     }
   | ErrorResult
 > {
   try {
     const url = new URL(request.url)
-    const agentRef = url.searchParams.get('agentRef')
+    const productRef = url.searchParams.get('productRef')
 
-    if (!agentRef) {
+    if (!productRef) {
       return {
-        error: 'Missing required parameter: agentRef',
+        error: 'Missing required parameter: productRef',
         status: 400,
       }
     }
 
-    // Get configuration from environment
     const config = getSolvaPayConfig()
     const solvapaySecretKey = config.apiKey
     const solvapayApiBaseUrl = config.apiBaseUrl
@@ -47,7 +43,6 @@ export async function listPlansCore(request: Request): Promise<
       }
     }
 
-    // Create SolvaPay API client
     const apiClient = createSolvaPayClient({
       apiKey: solvapaySecretKey,
       apiBaseUrl: solvapayApiBaseUrl,
@@ -60,12 +55,11 @@ export async function listPlansCore(request: Request): Promise<
       }
     }
 
-    const plans = await apiClient.listPlans(agentRef)
+    const plans = await apiClient.listPlans(productRef)
 
-    // Return plans array
     return {
       plans: plans || [],
-      agentRef,
+      productRef,
     }
   } catch (error) {
     return handleRouteError(error, 'List plans', 'Failed to fetch plans')

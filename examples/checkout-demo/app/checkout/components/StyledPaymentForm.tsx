@@ -5,7 +5,7 @@ import '../payment-form.css'
 
 interface StyledPaymentFormProps {
   currentPlan: Plan
-  agentRef?: string
+  productRef?: string
   onSuccess: (paymentIntent?: unknown) => void
   onError: (error: Error) => void
   onBack: () => void
@@ -19,7 +19,7 @@ interface StyledPaymentFormProps {
  */
 export function StyledPaymentForm({
   currentPlan,
-  agentRef,
+  productRef,
   onSuccess,
   onError,
   onBack,
@@ -63,7 +63,7 @@ export function StyledPaymentForm({
         <PaymentForm
           key={currentPlan.reference}
           planRef={currentPlan.reference}
-          agentRef={agentRef}
+          productRef={productRef}
           onSuccess={onSuccess}
           onError={onError}
           submitButtonText="Complete Purchase"

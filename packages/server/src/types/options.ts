@@ -48,17 +48,17 @@ export interface RetryOptions {
  */
 export interface PayableOptions {
   /**
-   * Agent identifier (auto-detected from package.json if not provided)
+   * Product identifier
    */
-  agent?: string
+  product?: string
 
   /**
-   * Agent reference (alias for agent, preferred for consistency with backend API)
+   * Product reference (alias for product, preferred for consistency with backend API)
    */
-  agentRef?: string
+  productRef?: string
 
   /**
-   * Plan identifier (defaults to agent name if not provided)
+   * Plan identifier (defaults to product name if not provided)
    */
   plan?: string
 

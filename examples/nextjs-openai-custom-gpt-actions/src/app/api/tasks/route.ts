@@ -8,13 +8,13 @@ function getSolvaPay() {
 export const GET = async (request: Request) => {
   const solvaPay = getSolvaPay()
   
-  // Use configured agent ref if available
-  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  // Use configured product ref if available
+  const product = process.env.NEXT_PUBLIC_PRODUCT_REF
   
   // Extract user ID from middleware-set header
   const rawUserId = request.headers.get('x-user-id')
   
-  const payable = solvaPay.payable(agent ? { agent } : {})
+  const payable = solvaPay.payable(product ? { product } : {})
 
   return payable.next(listTasks, {
     extractArgs: async (req: Request) => {
@@ -33,12 +33,12 @@ export const GET = async (request: Request) => {
 export const POST = async (request: Request) => {
   const solvaPay = getSolvaPay()
   
-  const agent = process.env.NEXT_PUBLIC_AGENT_REF
+  const product = process.env.NEXT_PUBLIC_PRODUCT_REF
   
   // Extract raw user ID from middleware-set header
   const rawUserId = request.headers.get('x-user-id')
   
-  const payable = solvaPay.payable(agent ? { agent } : {})
+  const payable = solvaPay.payable(product ? { product } : {})
 
   return payable.next(createTask, {
     extractArgs: async (req: Request) => {
