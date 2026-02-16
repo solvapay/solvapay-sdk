@@ -6,7 +6,7 @@ Questionnaire to inform the redesign of the SolvaPay SDK for the Product-centric
 
 The SDK is a monorepo with 6 published packages (`@solvapay/core`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/react`, `@solvapay/next`, `@solvapay/react-supabase`) and 5 example apps. Current version: `1.0.0-preview.18`. No external users.
 
-The backend is replacing the Agent/MCP Server dual-entity model with a unified Product entity (backend decisions D1-D18). The SDK currently references `agent`/`agentRef` in ~40 touchpoints across all packages and uses `PaymentIntent` as a concept that the backend is replacing with `Payment`.
+The backend is replacing the Agent/MCP Server dual-entity model with a unified Product entity (backend decisions D1-D18). The SDK currently references `agent`/`agentRef` in ~40 touchpoints across all packages. `PaymentIntent` stays as the SDK payment flow concept — there is no separate Payment entity. Each Purchase serves as the billing record for its period.
 
 **Pre-launch status:** No backward compatibility required. No deprecated aliases. Clean cut on all code. This is the opportunity to eliminate all technical debt.
 
@@ -21,9 +21,9 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 - `SolvaPayPaywall.protect()` passes `agentRef: agent` to `checkLimits()`
 - `SolvaPayClient.listAgents()`, `.createAgent()`, `.deleteAgent(agentRef)`
 - `SolvaPayClient.listPlans(agentRef)`, `.createPlan({ agentRef })`
-- `SolvaPayClient.createPaymentIntent({ agentRef })` (renamed to `createPayment`), `.processPayment({ agentRef })` (renamed to `confirmPayment`)
-- `SolvaPay.createPaymentIntent({ agentRef })` (renamed to `createPayment`), `.processPayment({ agentRef })` (renamed to `confirmPayment`), `.checkLimits({ agentRef })`, `.trackUsage({ agentRef })`, `.createCheckoutSession({ agentRef })`
-- `createPaymentIntentCore(request, { agentRef })` (renamed to `createPaymentCore`), `processPaymentCore(request, { agentRef })` (renamed to `confirmPaymentCore`), `createCheckoutSessionCore(request, { agentRef })`
+- `SolvaPayClient.createPaymentIntent({ agentRef })`, `.processPaymentIntent({ agentRef })`
+- `SolvaPay.createPaymentIntent({ agentRef })`, `.processPaymentIntent({ agentRef })`, `.checkLimits({ agentRef })`, `.trackUsage({ agentRef })`, `.createCheckoutSession({ agentRef })`
+- `createPaymentIntentCore(request, { agentRef })`, `processPaymentIntentCore(request, { agentRef })`, `createCheckoutSessionCore(request, { agentRef })`
 - `listPlansCore()` reads `agentRef` from query params, returns `{ plans, agentRef }`
 - Factory `payable()` resolves agent from `options.agentRef || options.agent || env || package.json`
 - HTTP/Next.js error responses include `agent` field
@@ -34,11 +34,11 @@ The backend is replacing the Agent/MCP Server dual-entity model with a unified P
 - `PaymentFormProps.agentRef`
 - `PlanSelectorProps.agentRef`
 - `UsePlansOptions.agentRef`
-- `SolvaPayContextValue.createPayment({ agentRef })`, `.processPayment({ agentRef })` (renamed to `confirmPayment`)
-- `SolvaPayProviderProps.processPayment({ agentRef })` (renamed to `confirmPayment`)
+- `SolvaPayContextValue.createPaymentIntent({ agentRef })`, `.processPaymentIntent({ agentRef })`
+- `SolvaPayProviderProps.processPaymentIntent({ agentRef })`
 
 **`@solvapay/next` (packages/next/):**
-- `createPaymentIntent(request, { agentRef })` (renamed to `createPayment`), `processPayment(request, { agentRef })` (renamed to `confirmPayment`), `createCheckoutSession(request, { agentRef })`
+- `createPaymentIntent(request, { agentRef })`, `processPaymentIntent(request, { agentRef })`, `createCheckoutSession(request, { agentRef })`
 - `listPlans` return includes `agentRef`
 - `PurchaseCheckResult.purchases[].agentName`
 
@@ -72,7 +72,7 @@ Clean rename across all packages. No deprecated aliases. `product` is the short 
 
 ### D2. Reference prefix is `prod_`
 
-Products use `prod_` prefix (e.g. `prod_8XK2M4`), matching the backend schema design. Purchases use `pur_`, Payments use `pay_`.
+Products use `prod_` prefix (e.g. `prod_8XK2M4`), matching the backend schema design. Purchases use `pur_`.
 
 > *Rationale: Consistent with backend. No reason to diverge.*
 
@@ -92,37 +92,31 @@ Pre-launch. No external users. No `agent` compatibility layer. No shimming. Remo
 
 > *Rationale: Confirmed pre-launch status. Backend D7 applies to SDK as well. Technical debt elimination.*
 
-### D5. Rename `createPaymentIntent` -> `createPayment` and `processPayment` -> `confirmPayment`
+### D5. `createPaymentIntent` and `processPaymentIntent` keep their existing names
 
-The backend replaces the `PaymentIntents` collection with `Payments` and renames all SDK routes accordingly (see DATA_SERVICE_DESIGN.md section 2.1):
-- `sdk/payment-intents` -> `sdk/payments`
-- `sdk/payment-intents/:id/process` -> `sdk/payments/:id/confirm`
-
-The SDK method names align with the new backend routes. The `PaymentIntent` entity no longer exists — the backend creates a `Payment` that internally creates a Stripe PaymentIntent. The SDK should not reference a deprecated backend concept.
+PaymentIntent stays as the SDK's payment flow concept. No method renames. Only the request parameters change to use `productRef` instead of `agentRef`/`mcpServerRef`.
 
 **What changes:**
-- `createPaymentIntent()` -> `createPayment()`
-- `processPayment()` -> `confirmPayment()`
-- `createPaymentIntentCore()` -> `createPaymentCore()`
-- `processPaymentCore()` -> `confirmPaymentCore()`
-- Params change: `agentRef` -> `productRef`, `paymentIntentId` -> `paymentId`
-- Next.js helpers: `createPaymentIntent()` -> `createPayment()`, `processPayment()` -> `confirmPayment()`
-- React context: `createPayment` stays (already correct name), `processPayment` -> `confirmPayment`
-- React hook: `useCheckout` internal calls update
+- `createPaymentIntent({ agentRef, ... })` -> `createPaymentIntent({ productRef, ... })`
+- `processPaymentIntent({ agentRef, ... })` -> `processPaymentIntent({ productRef, ... })`
+- `createPaymentIntentCore(req, { agentRef })` -> `createPaymentIntentCore(req, { productRef })`
+- `processPaymentIntentCore(req, { agentRef })` -> `processPaymentIntentCore(req, { productRef })`
+- Next.js helpers: same param renames (`agentRef` -> `productRef`)
+- React context/hooks: same param renames (`agentRef` -> `productRef`)
 
 **What stays the same:**
-- Return shape from `createPayment`: `{ id, clientSecret, publishableKey, accountId }` — the client still uses `clientSecret` with Stripe.js
-- The payment flow: create payment -> confirm on client with Stripe.js -> confirm on server -> purchase activated
+- All method names: `createPaymentIntent`, `processPaymentIntent`, `createPaymentIntentCore`, `processPaymentIntentCore`
+- Return shape from `createPaymentIntent`: `{ id, clientSecret, publishableKey, accountId }` — the client still uses `clientSecret` with Stripe.js
+- The payment flow: create payment intent -> confirm on client with Stripe.js -> process on server -> purchase activated
 
 **Backend route mapping:**
 
 | SDK method | Backend route |
 |---|---|
-| `createPayment()` | `POST /v1/sdk/payments` |
-| `confirmPayment()` | `POST /v1/sdk/payments/:id/confirm` |
-| `listPayments()` | `GET /v1/sdk/payments` |
+| `createPaymentIntent()` | `POST /v1/sdk/payment-intents` |
+| `processPaymentIntent()` | `POST /v1/sdk/payment-intents/:id/process` |
 
-> *Rationale: Clean cut, no legacy. The backend `PaymentIntents` collection is deprecated and absorbed into `Payments`. The SDK should not reference a concept (`PaymentIntent`) that no longer exists on the backend. `createPayment` and `confirmPayment` are clear, match the backend route names, and make debugging/docs simpler. The Stripe PaymentIntent is an internal implementation detail.*
+> *Rationale: PaymentIntent accurately describes what the SDK creates (a Stripe PaymentIntent wrapper). No need to rename — the concept is correct. Only the entity reference parameters change from agent to product. There is no separate Payment entity in the SDK; each Purchase serves as the billing record for its period.*
 
 ### D6. Stay in `1.0.0-preview.X` range. No major version bump needed.
 
@@ -130,16 +124,17 @@ Bump to `1.0.0-preview.19` (or next available). Pre-1.0-stable means breaking ch
 
 > *Rationale: Preview range signals instability. Breaking changes are normal. No users to communicate migration to.*
 
-### D7. Expose Payment as read-only in the SDK
+### D7. No Payment entity exposed in the SDK
 
-Add `listPayments` to `SolvaPayClient` for billing history. Do not expose Payment CRUD — payments are created by the backend (via billing flow, webhooks), not by SDK integrators.
+There is no `Payment` entity in the SDK. No `listPayments` method. No `PaymentInfo` type. Billing history is accessed via `listPurchases` filtered by product — each Purchase IS a billing record for its period.
 
-**What changes:**
-- Add `SolvaPayClient.listPayments({ purchaseRef?, productRef?, customerRef? })` — read-only
-- Add `SolvaPay.listPayments(params)` convenience method
-- React: add `usePayments()` hook (phase 2, not blocking)
+**What this means:**
+- No `SolvaPayClient.listPayments()` — use `listPurchases({ productRef?, customerRef? })` instead
+- No `SolvaPay.listPayments()` convenience method
+- No `usePayments()` hook — use `usePurchase()` which already returns `purchases: PurchaseInfo[]`
+- `PurchaseInfo` includes billing fields: `amount`, `currency`, `transactionId`, `paymentIntentId`
 
-> *Rationale: Integrators need billing history for customer-facing UI (invoices, receipts, retry status). Payment creation is a backend concern (Stripe webhooks, renewal cron). SDK is read-only for payments.*
+> *Rationale: A per-period Purchase already captures all billing information (amount, currency, status, dates). Exposing a separate Payment entity would duplicate data and add complexity. Integrators query purchases to show billing history — each purchase row IS an invoice/receipt for its period.*
 
 ### D8. SDK has zero awareness of MCP Pay
 
@@ -201,18 +196,18 @@ type PurchaseStatus = 'pending' | 'active' | 'trialing' | 'past_due' | 'cancelle
 | `listPlans(agentRef)` | `listPlans(productRef)` |
 | `createPlan({ agentRef, ... })` | `createPlan({ productRef, ... })` |
 | `deletePlan(agentRef, planRef)` | `deletePlan(productRef, planRef)` |
-| `createPaymentIntent({ agentRef, ... })` | `createPayment({ productRef, ... })` |
-| `processPayment({ agentRef, ... })` | `confirmPayment({ productRef, ... })` |
+| `createPaymentIntent({ agentRef, ... })` | `createPaymentIntent({ productRef, ... })` |
+| `processPaymentIntent({ agentRef, ... })` | `processPaymentIntent({ productRef, ... })` |
 | `checkLimits({ agentRef \| mcpServerRef })` | `checkLimits({ productRef })` |
 | `trackUsage({ agentRef, ... })` | `trackUsage({ productRef, ... })` |
 
 **New methods added:**
-- `listPayments({ purchaseRef?, productRef?, customerRef? })` — read-only
+- `listPurchases({ productRef?, customerRef? })` — billing history (each Purchase is a billing record)
 
 **Methods removed:**
 - None removed (agent methods are renamed, not dropped)
 
-> *Rationale: 1:1 rename. Agent -> Product. No methods lost. One method gained (listPayments). checkLimits simplified from two optional fields to one required field.*
+> *Rationale: 1:1 rename. Agent -> Product. No methods lost. One method gained (listPurchases). PaymentIntent methods keep their names — only params change. checkLimits simplified from two optional fields to one required field.*
 
 ### D13. `SolvaPay` factory interface method updates
 
@@ -222,20 +217,20 @@ All convenience methods on the `SolvaPay` interface update `agentRef` -> `produc
 interface SolvaPay {
   payable(options?: PayableOptions): PayableFunction
   ensureCustomer(customerRef, externalRef?, options?): Promise<string>
-  createPayment(params: { productRef: string, planRef: string, customerRef: string, idempotencyKey?: string }): Promise<...>
-  confirmPayment(params: { paymentId: string, productRef: string, customerRef: string, planRef?: string }): Promise<...>
+  createPaymentIntent(params: { productRef: string, planRef: string, customerRef: string, idempotencyKey?: string }): Promise<...>
+  processPaymentIntent(params: { paymentIntentId: string, productRef: string, customerRef: string, planRef?: string }): Promise<...>
   checkLimits(params: { customerRef: string, productRef: string }): Promise<...>
   trackUsage(params: { customerRef: string, productRef: string, planRef: string, ... }): Promise<void>
   createCustomer(params): Promise<...>
   getCustomer(params): Promise<...>
   createCheckoutSession(params: { productRef: string, customerRef: string, planRef?: string, returnUrl?: string }): Promise<...>
   createCustomerSession(params): Promise<...>
-  listPayments(params: { purchaseRef?: string, productRef?: string, customerRef?: string }): Promise<...>  // NEW
+  listPurchases(params: { productRef?: string, customerRef?: string }): Promise<...>  // NEW — billing history
   apiClient: SolvaPayClient
 }
 ```
 
-> *Rationale: Mirrors SolvaPayClient renames. listPayments added as convenience method.*
+> *Rationale: Mirrors SolvaPayClient renames. PaymentIntent methods keep their names — only params change. listPurchases added for billing history (no separate Payment entity).*
 
 ### D14. Factory `payable()` auto-resolution changes
 
@@ -251,8 +246,8 @@ New: `options.productRef || options.product || process.env.SOLVAPAY_PRODUCT || '
 
 | Current function | Param change |
 |---|---|
-| `createPaymentIntentCore(req, { planRef, agentRef })` -> `createPaymentCore` | `{ planRef, productRef }` |
-| `processPaymentCore(req, { paymentIntentId, agentRef })` -> `confirmPaymentCore` | `{ paymentId, productRef }` |
+| `createPaymentIntentCore(req, { planRef, agentRef })` | `{ planRef, productRef }` |
+| `processPaymentIntentCore(req, { paymentIntentId, agentRef })` | `{ paymentIntentId, productRef }` |
 | `createCheckoutSessionCore(req, { agentRef, planRef? })` | `{ productRef, planRef? }` |
 | `listPlansCore(req)` — reads `agentRef` from query | reads `productRef` from query, returns `{ plans, productRef }` |
 
@@ -271,9 +266,9 @@ All React types and components:
 | `PaymentFormProps.agentRef` | `PaymentFormProps.productRef` |
 | `PlanSelectorProps.agentRef` | `PlanSelectorProps.productRef` |
 | `UsePlansOptions.agentRef` | `UsePlansOptions.productRef` |
-| `SolvaPayContextValue.createPayment({ agentRef? })` | `SolvaPayContextValue.createPayment({ productRef? })` |
-| `SolvaPayContextValue.processPayment({ agentRef })` | `SolvaPayContextValue.confirmPayment({ productRef })` |
-| `SolvaPayProviderProps.processPayment({ agentRef })` | `SolvaPayProviderProps.confirmPayment({ productRef })` |
+| `SolvaPayContextValue.createPaymentIntent({ agentRef? })` | `SolvaPayContextValue.createPaymentIntent({ productRef? })` |
+| `SolvaPayContextValue.processPaymentIntent({ agentRef })` | `SolvaPayContextValue.processPaymentIntent({ productRef })` |
+| `SolvaPayProviderProps.processPaymentIntent({ agentRef })` | `SolvaPayProviderProps.processPaymentIntent({ productRef })` |
 
 > *Rationale: React types must match server types. Clean rename throughout.*
 
@@ -295,21 +290,21 @@ interface PurchaseStatus {
 }
 ```
 
-No new hooks required in v1. `usePayments()` is phase 2 — integrators can use `solvaPay.listPayments()` directly for now.
+No new hooks required in v1. There is no separate Payment entity — `usePurchase()` already returns `purchases: PurchaseInfo[]` which serves as billing history. Integrators can also use `solvaPay.listPurchases()` directly.
 
-> *Rationale: The hook shape is still correct for the new model. Long-lived purchases just have richer data. A payment history hook can be added when there's demand.*
+> *Rationale: The hook shape is still correct for the new model. Long-lived purchases just have richer data. Each Purchase is a billing record for its period — no separate Payment entity needed.*
 
 ### D18. Next.js helpers rename `agentRef` -> `productRef`
 
 | Current | New |
 |---|---|
-| `createPaymentIntent(req, { planRef, agentRef })` | `createPayment(req, { planRef, productRef })` |
-| `processPayment(req, { paymentIntentId, agentRef })` | `confirmPayment(req, { paymentId, productRef })` |
+| `createPaymentIntent(req, { planRef, agentRef })` | `createPaymentIntent(req, { planRef, productRef })` |
+| `processPaymentIntent(req, { paymentIntentId, agentRef })` | `processPaymentIntent(req, { paymentIntentId, productRef })` |
 | `createCheckoutSession(req, { agentRef, planRef? })` | `createCheckoutSession(req, { productRef, planRef? })` |
 | `listPlans` returns `{ plans, agentRef }` | returns `{ plans, productRef }` |
 | `PurchaseCheckResult.purchases[].agentName` | `PurchaseCheckResult.purchases[].productName` |
 
-Cache key strategy unchanged — still `userId`-based. Cache invalidation points stay the same (after createPaymentIntent, processPayment, cancelRenewal).
+Cache key strategy unchanged — still `userId`-based. Cache invalidation points stay the same (after createPaymentIntent, processPaymentIntent, cancelRenewal).
 
 > *Rationale: Param renames propagate from Core helpers. Cache layer is user-scoped, unaffected by entity rename.*
 
@@ -363,10 +358,12 @@ The only change is the `PurchaseInfo` type they operate on (D10), which is a typ
 
 > *Rationale: Utility functions are entity-agnostic. They filter by status and dates, not by entity name.*
 
-### D25. `ProcessPaymentResult` renamed to `ConfirmPaymentResult`
+### D25. `ProcessPaymentResult` keeps its existing name
+
+No rename needed since PaymentIntent methods are unchanged (D5). The type stays `ProcessPaymentResult`:
 
 ```typescript
-interface ConfirmPaymentResult {
+interface ProcessPaymentResult {
   type: 'recurring' | 'one-time'
   purchase?: PurchaseInfo      // updated PurchaseInfo (D10)
   oneTimePurchase?: OneTimePurchaseInfo
@@ -376,7 +373,7 @@ interface ConfirmPaymentResult {
 
 `OneTimePurchaseInfo.productRef` replaces any agent reference (currently has `productRef` already — no change needed there).
 
-> *Rationale: Matches the renamed `confirmPayment()` method. PurchaseInfo carries the new fields from D10.*
+> *Rationale: Matches the unchanged `processPaymentIntent()` method. No method rename means no result type rename. PurchaseInfo carries the new fields from D10.*
 
 ---
 
@@ -445,14 +442,9 @@ Options:
 
 > *Recommendation: **(b)**. Slim usage with computed `remaining`. Integrators need "50 of 100 used, 50 remaining" for progress bars. Period dates, overage costs, and carryover are backend billing concerns, not SDK display concerns. If integrators need the full breakdown, they can query the backend API directly.*
 
-**Q7. Should the SDK add a `PaymentInfo` type for the `listPayments` response?**
+**Q7. ~~Should the SDK add a `PaymentInfo` type for the `listPayments` response?~~**
 
-Options:
-- a) Full `PaymentInfo` type matching backend Payment entity
-- b) Slim type: `{ reference, type, amount, currency, status, paidAt, periodStart?, periodEnd? }`
-- c) Return raw backend response (`Record<string, unknown>`)
-
-> *Recommendation: **(b)**. Slim type. Integrators need reference, type (initial/renewal/refund), amount, status, and date for billing history UI. Stripe-specific fields (stripePaymentIntentId, clientSecret), retry logic, and ledger references are backend concerns.*
+**N/A.** No `PaymentInfo` type. No `listPayments` method. There is no separate Payment entity in the SDK (D7). Purchase serves as the billing record. `PurchaseInfo` includes billing fields (`amount`, `currency`, `transactionId`, `paymentIntentId`) so integrators can render invoices/receipts directly from purchase data.
 
 ---
 
@@ -565,20 +557,20 @@ Options:
 
 > *Recommendation: **(b)**. API docs regenerate automatically. Guides reference `agent` terminology and need updating but are lower priority than working code. Update guides as a fast follow-up.*
 
-**Q17. Should example apps demonstrate the new Payment entity, or just rename agent -> product?**
+**Q17. Should example apps demonstrate billing history via purchases, or just rename agent -> product?**
 
 Options:
 - a) Just rename agent -> product (minimum viable)
-- b) Add payment history display to checkout-demo and hosted-checkout-demo
-- c) Create a new example specifically for payment/billing management
+- b) Add purchase-based billing history display to checkout-demo and hosted-checkout-demo
+- c) Create a new example specifically for purchase/billing management
 
-> *Recommendation: **(a)** for this pass. Rename only. Payment history examples can be added when the `listPayments` API is stable and tested. Keep the scope of this refactor focused.*
+> *Recommendation: **(a)** for this pass. Rename only. Purchase-based billing history examples can be added when the `listPurchases` API is stable and tested. Keep the scope of this refactor focused.*
 
 ---
 
 ## Status
 
-**25 decisions made (D1-D25). 17 questions answered with recommendations (Q1-Q17).**
+**25 decisions made (D1-D25). 16 questions answered with recommendations, 1 N/A (Q1-Q17). Updated to Option E: no Payment entity, PaymentIntent methods keep their names, per-period Purchase serves as billing record.**
 
 ## Next Steps
 

@@ -5,9 +5,8 @@
 This spec defines the SDK refactoring required to support the Product-centric backend model:
 
 - `Product` replaces Agent and MCP Server as the commercial entity referenced by the SDK.
-- `Purchase` is a long-lived access relationship (one per customer per product).
-- `Payment` is a new read-only entity for billing history (initial, renewal, usage charge, refund).
-- `PaymentIntent` (the SolvaPay entity) is deprecated on the backend, absorbed into `Payment`. The SDK renames `createPaymentIntent` -> `createPayment` and `processPayment` -> `confirmPayment` to match.
+- `Purchase` is per-period — each billing period creates a new Purchase. Purchase IS the billing record (amount, transactionId, period dates). No separate Payment entity in the SDK.
+- `PaymentIntent` stays (not renamed, not deprecated). Updated with `productRef` replacing `agentRef`/`mcpServerRef`. Methods `createPaymentIntent` and `processPaymentIntent` keep their names.
 
 Based on decisions D1-D25 and Q1-Q17 from the [SDK Redesign Questionnaire](./SDK_REDESIGN_QUESTIONNAIRE.md).
 
@@ -28,7 +27,6 @@ Out of scope:
 - `@solvapay/react-supabase` — no agent references, no changes needed (D20)
 - Backend schema/service implementation
 - Guide/tutorial documentation (fast follow-up)
-- New `usePayments()` React hook (phase 2)
 
 ## 3. Design Principles
 
@@ -36,7 +34,7 @@ Out of scope:
 - No legacy: zero deprecated aliases, no backward-compatible shims, no `agent` references anywhere.
 - Explicit over implicit: drop package.json auto-detection for product resolution. Require explicit `productRef` or `SOLVAPAY_PRODUCT` env var.
 - Flat types for integrators: `PurchaseInfo` exposes flat fields, not nested backend structures. The SDK is an ergonomic layer, not a 1:1 backend mirror.
-- No legacy terminology: `createPaymentIntent`/`processPayment` renamed to `createPayment`/`confirmPayment` to match backend routes. The `PaymentIntent` entity no longer exists.
+- PaymentIntent stays: `createPaymentIntent` and `processPaymentIntent` keep their names. Only request/response fields change (`agentRef` -> `productRef`).
 
 ## 4. API Route Changes
 
@@ -51,15 +49,13 @@ The backend API routes change. The SDK client (`client.ts`) must update all URL 
 | `GET /v1/sdk/agents/{agentRef}/plans` | `GET /v1/sdk/products/{productRef}/plans` | — |
 | `POST /v1/sdk/agents/{agentRef}/plans` | `POST /v1/sdk/products/{productRef}/plans` | `agentRef` removed from body |
 | `DELETE /v1/sdk/agents/{agentRef}/plans/{planRef}` | `DELETE /v1/sdk/products/{productRef}/plans/{planRef}` | — |
-| `POST /v1/sdk/payment-intents` | `POST /v1/sdk/payments` | Renamed. `agentRef` -> `productRef` in body |
-| `GET /v1/sdk/payment-intents` | `GET /v1/sdk/payments` | Renamed. List payments. |
-| `GET /v1/sdk/payment-intents/{id}` | `GET /v1/sdk/payments/{id}` | Renamed. |
-| `POST /v1/sdk/payment-intents/{id}/process` | `POST /v1/sdk/payments/{id}/confirm` | Renamed path + action. `agentRef` -> `productRef` in body |
-| — (new) | `GET /v1/sdk/payments/purchase/{purchaseRef}` | New. Billing history for a purchase. |
+| `POST /v1/sdk/payment-intents` | `POST /v1/sdk/payment-intents` (unchanged) | `agentRef` -> `productRef` in body |
+| `GET /v1/sdk/payment-intents` | `GET /v1/sdk/payment-intents` (unchanged) | — |
+| `GET /v1/sdk/payment-intents/{id}` | `GET /v1/sdk/payment-intents/{id}` (unchanged) | — |
+| `POST /v1/sdk/payment-intents/{id}/process` | `POST /v1/sdk/payment-intents/{id}/process` (unchanged) | `agentRef` -> `productRef` in body |
 | `POST /v1/sdk/limits` | `POST /v1/sdk/limits` (unchanged) | `agentRef`/`mcpServerRef` -> `productRef` |
 | `POST /v1/sdk/usages` | `POST /v1/sdk/usages` (unchanged) | `agentRef` -> `productRef` |
 | `POST /v1/sdk/checkout-sessions` | `POST /v1/sdk/checkout-sessions` (unchanged) | `agentRef` -> `productRef` |
-| — (new) | `GET /v1/sdk/payments` | New endpoint for billing history |
 
 ## 5. Package-by-Package Changes
 
@@ -101,25 +97,9 @@ interface SolvaPayClient {
   listPlans?(productRef: string): Promise<Array<{ ... }>>
   createPlan?(params: components['schemas']['CreatePlanRequest'] & { productRef: string }): Promise<{ ... }>
   deletePlan?(productRef: string, planRef: string): Promise<void>
-  createPayment?(params: { productRef: string; planRef: string; customerRef: string; idempotencyKey?: string }): Promise<{ ... }>
-  confirmPayment?(params: { paymentId: string; productRef: string; customerRef: string; planRef?: string }): Promise<ConfirmPaymentResult>
-  listPayments?(params: { purchaseRef?: string; productRef?: string; customerRef?: string }): Promise<Array<PaymentInfo>>
+  createPaymentIntent?(params: { productRef: string; planRef: string; customerRef: string; idempotencyKey?: string }): Promise<{ ... }>
+  processPaymentIntent?(params: { paymentIntentId: string; productRef: string; customerRef: string; planRef?: string }): Promise<ProcessPaymentResult>
   // ...
-}
-```
-
-Add new `PaymentInfo` type:
-
-```typescript
-interface PaymentInfo {
-  reference: string
-  type: 'initial' | 'renewal' | 'one_time' | 'usage_charge' | 'refund'
-  amount: number
-  currency: string
-  status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'cancelled' | 'refunded'
-  paidAt?: string
-  periodStart?: string
-  periodEnd?: string
 }
 ```
 
@@ -187,12 +167,10 @@ interface PaywallStructuredContent {
 | `listPlans(agentRef)` -> `listPlans(productRef)` | `/v1/sdk/agents/{ref}/plans` -> `/v1/sdk/products/{ref}/plans` | — |
 | `createPlan({ agentRef })` -> `createPlan({ productRef })` | `/v1/sdk/agents/{ref}/plans` -> `/v1/sdk/products/{ref}/plans` | `params.agentRef` -> `params.productRef` in URL |
 | `deletePlan(agentRef, planRef)` -> `deletePlan(productRef, planRef)` | `/v1/sdk/agents/{ref}/plans/{planRef}` -> `/v1/sdk/products/{ref}/plans/{planRef}` | — |
-| `createPaymentIntent` -> `createPayment` | `/v1/sdk/payment-intents` -> `/v1/sdk/payments` | body: `agentRef` -> `productRef` |
-| `processPayment` -> `confirmPayment` | `/v1/sdk/payment-intents/{id}/process` -> `/v1/sdk/payments/{id}/confirm` | body: `agentRef` -> `productRef`, `paymentIntentId` -> `paymentId` |
+| `createPaymentIntent` (name unchanged) | URL unchanged | body: `agentRef` -> `productRef` |
+| `processPaymentIntent` (name unchanged) | URL unchanged | body: `agentRef` -> `productRef` |
 | `checkLimits` | URL unchanged | body field change cascades from generated types |
 | `trackUsage` | URL unchanged | body field change cascades from generated types |
-
-New method: `listPayments` — `GET /v1/sdk/payments?purchaseRef=X&productRef=X&customerRef=X`
 
 Error messages: `"List agents failed"` -> `"List products failed"`, etc.
 JSDoc example: `client.listAgents()` -> `client.listProducts()`
@@ -225,25 +203,23 @@ JSDoc example: `client.listAgents()` -> `client.listProducts()`
 | Change | Location |
 |---|---|
 | `SolvaPay` interface: all `agentRef` params -> `productRef` | interface definition |
-| Add `listPayments` method to `SolvaPay` interface | interface definition |
 | `payable()` implementation: `options.agentRef \|\| options.agent` -> `options.productRef \|\| options.product` | `payable()` function |
 | `process.env.SOLVAPAY_AGENT` -> `process.env.SOLVAPAY_PRODUCT` | `payable()` function |
 | Remove `getPackageJsonName()` call and function | `payable()` + helper function |
 | `'default-agent'` -> `'default-product'` | `payable()` fallback |
 | `const metadata = { agent, plan }` -> `const metadata = { product, plan }` | `payable()` function |
 | JSDoc examples: all `agent: 'agt_xxx'` -> `product: 'prod_xxx'` | all JSDoc blocks |
-| `createPaymentIntent` -> `createPayment` in implementation | convenience method (renamed) |
-| `processPayment` -> `confirmPayment` in implementation | convenience method (renamed) |
+| `createPaymentIntent` params: `agentRef` -> `productRef` | convenience method (field rename only) |
+| `processPaymentIntent` params: `agentRef` -> `productRef` | convenience method (field rename only) |
 | `checkLimits` params in implementation | convenience method |
 | `trackUsage` params in implementation | convenience method |
 | `createCheckoutSession` params in implementation | convenience method |
-| Add `listPayments` implementation | convenience method |
 
 #### 5.1.5 Helpers (Core route helpers)
 
 **`src/helpers/payment.ts`** (rename file to `src/helpers/payment.ts` — stays same name, content changes):
-- `createPaymentIntentCore` -> `createPaymentCore`: `body.agentRef` -> `body.productRef`, URL `/v1/sdk/payment-intents` -> `/v1/sdk/payments`, validation message, JSDoc
-- `processPaymentCore` -> `confirmPaymentCore`: `body.agentRef` -> `body.productRef`, `body.paymentIntentId` -> `body.paymentId`, URL `/process` -> `/confirm`, validation message, JSDoc
+- `createPaymentIntentCore`: `body.agentRef` -> `body.productRef`, validation message, JSDoc (function name and URL unchanged)
+- `processPaymentIntentCore`: `body.agentRef` -> `body.productRef`, validation message, JSDoc (function name and URL unchanged)
 
 **`src/helpers/checkout.ts`**:
 - `createCheckoutSessionCore`: `body.agentRef` -> `body.productRef`, validation message
@@ -279,13 +255,13 @@ JSDoc example: `client.listAgents()` -> `client.listProducts()`
 | File | Change type |
 |---|---|
 | `src/types/generated.ts` | Regenerate (auto) |
-| `src/types/client.ts` | Rename methods + params, add `PaymentInfo`, add `listPayments` |
+| `src/types/client.ts` | Rename params (`agentRef` -> `productRef`), method names unchanged |
 | `src/types/options.ts` | Rename `agent`/`agentRef` fields |
 | `src/types/paywall.ts` | Rename `agent` field |
-| `src/client.ts` | Rename methods, URLs, body fields, error messages |
+| `src/client.ts` | Rename agent methods/URLs to product, update body fields, error messages (PaymentIntent methods unchanged) |
 | `src/paywall.ts` | Rename `resolveAgent`, metadata, error content, trackUsage |
-| `src/factory.ts` | Rename interface params, payable resolution, add listPayments |
-| `src/helpers/payment.ts` | Rename params, validation messages |
+| `src/factory.ts` | Rename interface params, payable resolution (no new methods) |
+| `src/helpers/payment.ts` | Rename params (`agentRef` -> `productRef`), validation messages (function names unchanged) |
 | `src/helpers/checkout.ts` | Rename params, validation messages |
 | `src/helpers/plans.ts` | Rename query param, return shape |
 | `src/types/index.ts` | Verify re-exports (no structural change) |
@@ -354,11 +330,11 @@ interface PurchaseInfo {
 ```
 
 Update `SolvaPayContextValue`:
-- `createPayment: (params: { planRef: string; agentRef?: string })` -> `createPayment: (params: { planRef: string; productRef?: string })`
-- `processPayment?: (params: { paymentIntentId: string; agentRef: string; planRef?: string })` -> `confirmPayment?: (params: { paymentId: string; productRef: string; planRef?: string })`
+- `createPaymentIntent: (params: { planRef: string; productRef?: string })` — field rename only: `agentRef` -> `productRef`
+- `processPaymentIntent?: (params: { paymentIntentId: string; productRef: string; planRef?: string })` — field rename only: `agentRef` -> `productRef`
 
 Update `SolvaPayProviderProps`:
-- Same `processPayment` -> `confirmPayment` rename
+- Same `agentRef` -> `productRef` field renames
 
 Update `PaymentFormProps`:
 - `agentRef?: string` -> `productRef?: string`
@@ -398,7 +374,7 @@ type PurchaseStatusValue = 'pending' | 'active' | 'trialing' | 'past_due' | 'can
 
 **`src/PaymentForm.tsx`**: `agentRef` prop -> `productRef` prop. Internal `useCheckout` call updates.
 
-**`src/SolvaPayProvider.tsx`**: `createPayment`/`confirmPayment` param types cascade from `SolvaPayContextValue`. Internal API call body: `agentRef` -> `productRef`.
+**`src/SolvaPayProvider.tsx`**: `createPaymentIntent`/`processPaymentIntent` param types cascade from `SolvaPayContextValue`. Internal API call body: `agentRef` -> `productRef`.
 
 **`src/components/PurchaseGate.tsx`**: Add `requireProduct` prop logic alongside existing `requirePlan`.
 
@@ -445,8 +421,8 @@ type PurchaseStatusValue = 'pending' | 'active' | 'trialing' | 'past_due' | 'can
 12 source files. 5 require changes.
 
 **`src/helpers/payment.ts`**:
-- `createPaymentIntent` -> `createPayment(request, body: { planRef, productRef })`
-- `processPayment` -> `confirmPayment(request, body: { paymentId, productRef })`
+- `createPaymentIntent(request, body: { planRef, productRef })` — field rename only: `agentRef` -> `productRef` (function name unchanged)
+- `processPaymentIntent(request, body: { paymentIntentId, productRef })` — field rename only: `agentRef` -> `productRef` (function name unchanged)
 - Validation messages and JSDoc
 
 **`src/helpers/checkout.ts`**:
@@ -496,8 +472,8 @@ No changes required (D19, D20).
 - `app/page.tsx`: read new env var
 - `app/checkout/page.tsx`: update context
 - `app/checkout/components/PaymentFormSection.tsx`, `StyledPaymentForm.tsx`: `agentRef` prop -> `productRef`
-- `app/api/create-payment-intent/route.ts` -> rename to `app/api/create-payment/route.ts`: body `agentRef` -> `productRef`, call `createPayment` instead of `createPaymentIntent`
-- `app/api/process-payment/route.ts` -> rename to `app/api/confirm-payment/route.ts`: body `agentRef` -> `productRef`, call `confirmPayment` instead of `processPayment`
+- `app/api/create-payment-intent/route.ts`: body `agentRef` -> `productRef` (route name unchanged)
+- `app/api/process-payment/route.ts`: body `agentRef` -> `productRef` (route name unchanged)
 
 **`examples/hosted-checkout-demo/`**:
 - `.env` and `env.example`: `NEXT_PUBLIC_AGENT_REF` -> `NEXT_PUBLIC_PRODUCT_REF`
@@ -515,31 +491,21 @@ No changes required (D19, D20).
 
 ## 6. New Types Summary
 
-Types introduced by this refactoring:
+Types introduced or updated by this refactoring (no `PaymentInfo` — billing data lives on `PurchaseInfo`):
 
 ```typescript
-// New type in @solvapay/server (src/types/client.ts)
-interface PaymentInfo {
-  reference: string
-  type: 'initial' | 'renewal' | 'one_time' | 'usage_charge' | 'refund'
-  amount: number
-  currency: string
-  status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'cancelled' | 'refunded'
-  paidAt?: string
-  periodStart?: string
-  periodEnd?: string
-}
-
 // New type alias in @solvapay/react (src/types/index.ts)
 type PurchaseStatusValue = 'pending' | 'active' | 'trialing' | 'past_due' | 'cancelled' | 'expired' | 'suspended' | 'refunded'
 
-// New fields on PurchaseInfo in @solvapay/react
+// Updated PurchaseInfo in @solvapay/react — per-period: each Purchase is a billing record
 interface PurchaseInfo {
   // ... existing fields (reference, planName, status, startDate, etc.)
   productName: string           // renamed from agentName
   productReference: string      // new
   planType: string              // new
   isRecurring: boolean          // new
+  amount?: number               // billing amount for this period
+  transactionId?: string        // payment processor transaction ID
   nextBillingDate?: string      // new
   billingCycle?: string         // new
   currency?: string             // new
@@ -566,24 +532,24 @@ interface PurchaseGateProps {
 **Prerequisite:** Backend deploys new OpenAPI spec with `/v1/sdk/products` routes.
 
 1. Regenerate `packages/server/src/types/generated.ts` via `pnpm generate:types`
-2. Update `packages/server/src/types/client.ts` — rename methods, add `PaymentInfo`, add `listPayments`
+2. Update `packages/server/src/types/client.ts` — rename params (`agentRef` -> `productRef`), no new types
 3. Update `packages/server/src/types/options.ts` — rename fields
 4. Update `packages/server/src/types/paywall.ts` — rename fields
 5. Build server types to verify compilation: `cd packages/server && pnpm build`
 
 ### Phase 2: Server Implementation
 
-6. Update `packages/server/src/client.ts` — URLs, body fields, method names, error messages
+6. Update `packages/server/src/client.ts` — agent->product URLs, body fields, error messages (PaymentIntent methods/URLs unchanged)
 7. Update `packages/server/src/paywall.ts` — resolveProduct, metadata, error content
 8. Update `packages/server/src/factory.ts` — interface, payable(), convenience methods, remove getPackageJsonName
-9. Update `packages/server/src/helpers/payment.ts` — params
+9. Update `packages/server/src/helpers/payment.ts` — field renames only (`agentRef` -> `productRef`)
 10. Update `packages/server/src/helpers/checkout.ts` — params
 11. Update `packages/server/src/helpers/plans.ts` — query param, return shape
 12. Full server build + existing tests: `cd packages/server && pnpm build && pnpm test`
 
 ### Phase 3: Next.js Package
 
-13. Update `packages/next/src/helpers/payment.ts` — params
+13. Update `packages/next/src/helpers/payment.ts` — field renames only (`agentRef` -> `productRef`)
 14. Update `packages/next/src/helpers/checkout.ts` — params
 15. Update `packages/next/src/helpers/plans.ts` — query param, return shape
 16. Update `packages/next/src/cache.ts` — PurchaseCheckResult type
@@ -626,9 +592,10 @@ interface PurchaseGateProps {
 - All existing tests pass with updated fixtures.
 - `createSolvaPay().payable({ product: 'prod_xxx' })` works across all adapters (http, next, mcp, function).
 - `SolvaPayClient.listProducts()`, `.createProduct()`, `.deleteProduct()` call correct backend routes.
-- `SolvaPayClient.listPayments()` calls new backend endpoint.
+- PaymentIntent routes unchanged (`sdk/payment-intents/*`) — only request/response fields updated (`agentRef` -> `productRef`).
+- No `PaymentInfo` type anywhere in the SDK. Billing data lives on `PurchaseInfo`.
 - `checkLimits({ customerRef, productRef })` sends single `productRef` (no agentRef/mcpServerRef branching).
-- `PurchaseInfo` exposes `productName`, `productReference`, `planType`, `isRecurring`, `usage` fields.
+- `PurchaseInfo` exposes `productName`, `productReference`, `planType`, `isRecurring`, `amount`, `transactionId`, `usage` fields.
 - `PurchaseGate` supports both `requireProduct` and `requirePlan` props.
 - `useCheckout` accepts options object: `useCheckout({ planRef, productRef })`.
 - All 5 example apps build and reference `NEXT_PUBLIC_PRODUCT_REF` / `SOLVAPAY_PRODUCT`.
