@@ -120,8 +120,8 @@ export interface paths {
         put: operations["ProductSdkController_updateProduct"];
         post?: never;
         /**
-         * Delete a product (soft-delete)
-         * @description Soft-deletes a product by setting its status to inactive. Associated plans and purchases are preserved.
+         * Delete a product
+         * @description Deletes a product permanently in sandbox or when no purchases exist. In live mode with purchases, the product is deactivated instead.
          */
         delete: operations["ProductSdkController_deleteProduct"];
         options?: never;
@@ -529,8 +529,8 @@ export interface components {
              * @example AI-powered writing tool
              */
             description?: string;
-            /** @description URL to the product avatar image */
-            avatarUrl?: string;
+            /** @description URL to the product image */
+            imageUrl?: string;
             /**
              * Free-form product type defined by the provider
              * @example Coding Assistant
@@ -564,8 +564,8 @@ export interface components {
             name: string;
             /** @description Product description */
             description?: string;
-            /** @description URL to the product avatar image */
-            avatarUrl?: string;
+            /** @description URL to the product image */
+            imageUrl?: string;
             /** @description Free-form product type */
             productType?: string;
             /**
@@ -604,8 +604,8 @@ export interface components {
             name?: string;
             /** @description Product description */
             description?: string;
-            /** @description URL to the product avatar image */
-            avatarUrl?: string;
+            /** @description URL to the product image */
+            imageUrl?: string;
             /** @description Free-form product type defined by the provider */
             productType?: string;
             /**
@@ -1759,7 +1759,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Product soft-deleted successfully */
+            /** @description Product deleted or deactivated successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
