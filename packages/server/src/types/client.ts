@@ -85,6 +85,7 @@ export interface SolvaPayClient {
   getCustomer(params: {
     customerRef?: string
     externalRef?: string
+    email?: string
   }): Promise<CustomerResponseMapped>
 
   // Management methods

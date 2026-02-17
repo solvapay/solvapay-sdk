@@ -369,14 +369,73 @@ export class SolvaPayPaywall {
                this.log(`⚠️ Failed to lookup existing customer by externalRef after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
              }
            }
+
+          // If conflict is due to email uniqueness but externalRef lookup failed,
+          // retry creation with a generated email while preserving externalRef.
+          // This allows resolving stale customers created before externalRef was set.
+          const conflictMessage = error instanceof Error ? error.message : String(error)
+          const isEmailConflict =
+            conflictMessage.includes('email') || conflictMessage.includes('identifier email')
+
+          if (externalRef && isEmailConflict && options?.email) {
+            try {
+              const byEmail = await this.apiClient.getCustomer({ email: options.email })
+              if (byEmail && byEmail.customerRef) {
+                this.customerRefMapping.set(customerRef, byEmail.customerRef)
+                this.log(
+                  `⚠️ Resolved customer ${customerRef} by email after conflict; using existing customer ${byEmail.customerRef}`,
+                )
+                return byEmail.customerRef
+              }
+            } catch (emailLookupError: any) {
+              this.log(
+                `⚠️ Email lookup failed after customer conflict for ${customerRef}:`,
+                emailLookupError instanceof Error ? emailLookupError.message : emailLookupError,
+              )
+            }
+
+            try {
+              const retryParams: any = {
+                email: `${customerRef}-${Date.now()}@auto-created.local`,
+                externalRef,
+              }
+
+              if (options?.name) {
+                retryParams.name = options.name
+              }
+
+              const retryResult = await this.apiClient.createCustomer(retryParams)
+              const retryRef =
+                (retryResult as any).customerRef || (retryResult as any).reference || customerRef
+
+              this.customerRefMapping.set(customerRef, retryRef)
+              this.log(
+                `⚠️ Retried customer creation for ${customerRef} with generated email after email conflict`,
+              )
+              return retryRef
+            } catch (retryError: any) {
+              this.log(
+                `⚠️ Retry create customer with generated email failed for ${customerRef}:`,
+                retryError instanceof Error ? retryError.message : retryError,
+              )
+            }
+          }
+
+          // We have a known conflict but could not resolve the existing customer reference.
+          // Returning the original app user ID here causes downstream 404s in payment APIs.
+          const unresolvedMessage =
+            error instanceof Error ? error.message : 'Customer already exists but could not be resolved'
+          throw new Error(
+            `Failed to resolve existing customer for ${customerRef} after conflict: ${unresolvedMessage}. ` +
+              'Ensure the existing customer is linked to this externalRef.',
+          )
         }
 
         this.log(
           `❌ Failed to auto-create customer ${customerRef}:`,
           error instanceof Error ? error.message : error,
         )
-        // Continue anyway - use the original ref
-        return customerRef
+        throw error
       }
     })
 

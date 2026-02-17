@@ -135,18 +135,22 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
+    // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}|email={email}
     async getCustomer(params) {
       let url
       let isByExternalRef = false
+      let isByEmail = false
 
       if (params.externalRef) {
         url = `${base}/v1/sdk/customers?externalRef=${encodeURIComponent(params.externalRef)}`
         isByExternalRef = true
+      } else if (params.email) {
+        url = `${base}/v1/sdk/customers?email=${encodeURIComponent(params.email)}`
+        isByEmail = true
       } else if (params.customerRef) {
         url = `${base}/v1/sdk/customers/${params.customerRef}`
       } else {
-        throw new SolvaPayError('Either customerRef or externalRef must be provided')
+        throw new SolvaPayError('One of customerRef, externalRef, or email must be provided')
       }
 
       const res = await fetch(url, {
@@ -162,14 +166,33 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       const result = await res.json()
 
-      // If getting by externalRef, the result might be an array or wrapped object
+      // If getting by externalRef, support all backend response shapes:
+      // - direct customer object
+      // - array of customers
+      // - wrapped object with `customers` or `customer`
       let customer = result
-      if (isByExternalRef) {
-        const customers = Array.isArray(result) ? result : result.customers || []
-        if (customers.length === 0) {
+      if (isByExternalRef || isByEmail) {
+        const directCustomer =
+          result &&
+          typeof result === 'object' &&
+          (result.reference || result.customerRef || result.externalRef)
+            ? result
+            : undefined
+
+        const wrappedCustomer =
+          result && typeof result === 'object' && result.customer ? result.customer : undefined
+
+        const customers = Array.isArray(result)
+          ? result
+          : result && typeof result === 'object' && Array.isArray(result.customers)
+            ? result.customers
+            : []
+
+        customer = directCustomer || wrappedCustomer || customers[0]
+
+        if (!customer) {
           throw new SolvaPayError(`No customer found with externalRef: ${params.externalRef}`)
         }
-        customer = customers[0]
       }
 
       // Map response fields to expected format
