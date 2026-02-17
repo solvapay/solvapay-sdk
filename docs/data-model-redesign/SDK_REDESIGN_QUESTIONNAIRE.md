@@ -65,7 +65,7 @@ Clean rename across all packages. No deprecated aliases. `product` is the short 
 
 - `PayableOptions.agent` -> `PayableOptions.product`
 - `PayableOptions.agentRef` -> `PayableOptions.productRef`
-- `SolvaPay.payable({ agent: 'agt_xxx' })` -> `SolvaPay.payable({ product: 'prod_xxx' })`
+- `SolvaPay.payable({ agent: 'agt_xxx' })` -> `SolvaPay.payable({ product: 'prd_xxx' })`
 - All `SolvaPayClient` methods: `agentRef` param -> `productRef`
 - All `SolvaPay` interface methods: `agentRef` param -> `productRef`
 - All Core helpers: `agentRef` param -> `productRef`
@@ -75,9 +75,9 @@ Clean rename across all packages. No deprecated aliases. `product` is the short 
 
 > _Rationale: Product is the backend's commercial entity (D1). The SDK should use the same term. No users to migrate. Clean cut eliminates confusion between agent (future operational concept) and product (what you sell)._
 
-### D2. Reference prefix is `prod_`
+### D2. Reference prefix is `prd_`
 
-Products use `prod_` prefix (e.g. `prod_8XK2M4`), matching the backend schema design. Purchases use `pur_`.
+Products use `prd_` prefix (e.g. `prd_8XK2M4`), matching the backend schema design. Purchases use `pur_`.
 
 > _Rationale: Consistent with backend. No reason to diverge._
 
@@ -264,7 +264,7 @@ New: `options.productRef || options.product || process.env.SOLVAPAY_PRODUCT || '
 
 **Drop package.json name auto-detection.** This was a convenience that assumed one product per app. With Product as the explicit entity, require explicit configuration or env var.
 
-> _Rationale: Auto-detecting product from package.json name is confusing ("why is my product called my-express-app?"). Products have explicit references like `prod_8XK2M4`. Require explicit configuration._
+> _Rationale: Auto-detecting product from package.json name is confusing ("why is my product called my-express-app?"). Products have explicit references like `prd_8XK2M4`. Require explicit configuration._
 
 ### D15. Core route helpers rename `agentRef` -> `productRef`
 
@@ -417,13 +417,13 @@ Options:
 
 > _Recommendation: **(a)**. Env var fallback for single-product apps, explicit `productRef` for multi-product. Drop package.json detection — it was a cute hack but produces confusing product names. Don't throw — stub mode should still work for local dev without any config._
 
-**Q2. Should the SDK validate product reference format (`prod_*`) or accept any string?**
+**Q2. Should the SDK validate product reference format (`prd_*`) or accept any string?**
 
 Options:
 
 - a) Accept any string (flexible, works during development)
-- b) Validate `prod_` prefix, warn on mismatch
-- c) Validate `prod_` prefix, throw on mismatch
+- b) Validate `prd_` prefix, warn on mismatch
+- c) Validate `prd_` prefix, throw on mismatch
 
 > _Recommendation: **(a)**. Accept any string. During development and testing, integrators may use arbitrary strings. The backend validates the reference — the SDK shouldn't duplicate validation. This also allows backward-compatible reference formats if the backend ever changes prefixes._
 
@@ -524,7 +524,7 @@ Options:
 - b) `useCheckout({ planRef: string, productRef?: string })` — options object
 - c) `useCheckout(planRef: string, options?: { productRef?: string })` — hybrid
 
-> _Recommendation: **(b)**. Options object. The current positional signature is fragile as we add more options. An options object is more extensible and self-documenting: `useCheckout({ planRef: 'pln_xxx', productRef: 'prod_xxx' })`._
+> _Recommendation: **(b)**. Options object. The current positional signature is fragile as we add more options. An options object is more extensible and self-documenting: `useCheckout({ planRef: 'pln_xxx', productRef: 'prd_xxx' })`._
 
 **Q12. Should `PurchaseGate` accept `productRef` in addition to (or instead of) `requirePlan`?**
 

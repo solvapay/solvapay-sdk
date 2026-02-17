@@ -554,7 +554,7 @@ export interface components {
             id: string;
             /**
              * Product reference
-             * @example prod_1A2B3C4D
+             * @example prd_1A2B3C4D
              */
             reference: string;
             /**
@@ -761,7 +761,7 @@ export interface components {
             planRef?: string;
             /**
              * Product reference (required)
-             * @example prod_1a2b3c4d5e6f
+             * @example prd_1a2b3c4d5e6f
              */
             productRef: string;
         };
@@ -811,7 +811,7 @@ export interface components {
             customerRef: string;
             /**
              * Product reference identifier
-             * @example prod_1A2B3C4D
+             * @example prd_1A2B3C4D
              */
             productRef: string;
         };
@@ -896,7 +896,7 @@ export interface components {
             planName: string;
             /**
              * Product reference
-             * @example prod_abc123
+             * @example prd_abc123
              */
             productReference?: string;
             /**
@@ -1940,7 +1940,7 @@ export interface operations {
                     planRef: string;
                     /**
                      * Product reference that owns the plan
-                     * @example prod_1A2B3C4D
+                     * @example prd_1A2B3C4D
                      */
                     productRef: string;
                     /**
@@ -2016,7 +2016,7 @@ export interface operations {
                 "application/json": {
                     /**
                      * Product reference that owns the plan
-                     * @example prod_123
+                     * @example prd_123
                      */
                     productRef: string;
                     /**
@@ -2082,7 +2082,7 @@ export interface operations {
                     customerRef: string;
                     /**
                      * Product reference
-                     * @example prod_1A2B3C4D
+                     * @example prd_1A2B3C4D
                      */
                     productRef: string;
                     /**
@@ -2315,7 +2315,7 @@ export interface operations {
                     customerRef: string;
                     /**
                      * Product reference
-                     * @example prod_1A2B3C4D
+                     * @example prd_1A2B3C4D
                      */
                     productRef: string;
                     /**

@@ -43,7 +43,7 @@ import type { PaymentFormProps } from './types'
  *   return (
  *     <PaymentForm
  *       planRef="pln_premium"
- *       productRef="prod_myapi"
+ *       productRef="prd_myapi"
  *       onSuccess={() => {
  *         console.log('Payment successful!');
  *         router.push('/dashboard');

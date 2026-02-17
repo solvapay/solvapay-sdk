@@ -208,7 +208,7 @@ JSDoc example: `client.listAgents()` -> `client.listProducts()`
 | Remove `getPackageJsonName()` call and function                                                                | `payable()` + helper function          |
 | `'default-agent'` -> `'default-product'`                                                                       | `payable()` fallback                   |
 | `const metadata = { agent, plan }` -> `const metadata = { product, plan }`                                     | `payable()` function                   |
-| JSDoc examples: all `agent: 'agt_xxx'` -> `product: 'prod_xxx'`                                                | all JSDoc blocks                       |
+| JSDoc examples: all `agent: 'agt_xxx'` -> `product: 'prd_xxx'`                                                | all JSDoc blocks                       |
 | `createPaymentIntent` params: `agentRef` -> `productRef`                                                       | convenience method (field rename only) |
 | `processPaymentIntent` params: `agentRef` -> `productRef`                                                      | convenience method (field rename only) |
 | `checkLimits` params in implementation                                                                         | convenience method                     |
@@ -637,7 +637,7 @@ interface PurchaseGateProps {
 - Zero references to `agent`, `agentRef`, `agentName`, `SOLVAPAY_AGENT`, `agt_` across all source files (excluding `generated.ts` pre-regeneration and git history).
 - All packages compile without errors.
 - All existing tests pass with updated fixtures.
-- `createSolvaPay().payable({ product: 'prod_xxx' })` works across all adapters (http, next, mcp, function).
+- `createSolvaPay().payable({ product: 'prd_xxx' })` works across all adapters (http, next, mcp, function).
 - `SolvaPayClient.listProducts()`, `.createProduct()`, `.deleteProduct()` call correct backend routes.
 - PaymentIntent routes unchanged (`sdk/payment-intents/*`) — only request/response fields updated (`agentRef` -> `productRef`).
 - No `PaymentInfo` type anywhere in the SDK. Billing data lives on `PurchaseInfo`.

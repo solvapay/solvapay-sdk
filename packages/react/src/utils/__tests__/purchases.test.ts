@@ -11,7 +11,7 @@ const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => 
   reference: 'pur_123',
   planName: 'Test Plan',
   productName: 'Test Product',
-  productReference: 'prod_123',
+  productReference: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
   amount: 1000,

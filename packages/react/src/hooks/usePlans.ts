@@ -19,7 +19,7 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
  * @example
  * ```tsx
  * const plans = usePlans({
- *   productRef: 'prod_123',
+ *   productRef: 'prd_123',
  *   fetcher: async (productRef) => {
  *     const res = await fetch(`/api/list-plans?productRef=${productRef}`);
  *     const data = await res.json();

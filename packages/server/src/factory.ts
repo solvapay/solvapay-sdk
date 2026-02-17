@@ -68,7 +68,7 @@ export interface CreateSolvaPayConfig {
  *
  * @example
  * ```typescript
- * const payable = solvaPay.payable({ product: 'prod_myapi', plan: 'pln_premium' });
+ * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
  *
  * // Express.js
  * app.post('/tasks', payable.http(createTask));
@@ -179,7 +179,7 @@ export interface PayableFunction {
  * const solvaPay = createSolvaPay();
  *
  * // Create payable handlers
-   * const payable = solvaPay.payable({ product: 'prod_myapi', plan: 'pln_premium' });
+   * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
    *
    * // Manage customers
    * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
@@ -188,7 +188,7 @@ export interface PayableFunction {
    *
    * // Create payment intents
    * const intent = await solvaPay.createPaymentIntent({
-   *   productRef: 'prod_myapi',
+   *   productRef: 'prd_myapi',
    *   planRef: 'pln_premium',
    *   customerRef: 'user_123'
    * });
@@ -204,7 +204,7 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * const payable = solvaPay.payable({
-   *   product: 'prod_myapi',
+   *   product: 'prd_myapi',
    *   plan: 'pln_premium'
    * });
    *
@@ -265,7 +265,7 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * const intent = await solvaPay.createPaymentIntent({
-   *   productRef: 'prod_myapi',
+   *   productRef: 'prd_myapi',
    *   planRef: 'pln_premium',
    *   customerRef: 'user_123',
    *   idempotencyKey: 'unique-key-123'
@@ -304,7 +304,7 @@ export interface SolvaPay {
    * // After client confirms payment with Stripe.js
    * const result = await solvaPay.processPaymentIntent({
    *   paymentIntentId: 'pi_1234567890',
-   *   productRef: 'prod_myapi',
+   *   productRef: 'prd_myapi',
    *   customerRef: 'user_123',
    *   planRef: 'pln_premium'
    * });
@@ -336,7 +336,7 @@ export interface SolvaPay {
    * ```typescript
    * const limits = await solvaPay.checkLimits({
    *   customerRef: 'user_123',
-   *   productRef: 'prod_myapi'
+   *   productRef: 'prd_myapi'
    * });
    *
    * if (!limits.withinLimits) {
@@ -372,7 +372,7 @@ export interface SolvaPay {
    * ```typescript
    * await solvaPay.trackUsage({
    *   customerRef: 'user_123',
-   *   productRef: 'prod_myapi',
+   *   productRef: 'prd_myapi',
    *   planRef: 'pln_premium',
    *   outcome: 'success',
    *   action: 'api_call',
@@ -459,7 +459,7 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * const session = await solvaPay.createCheckoutSession({
-   *   productRef: 'prod_myapi',
+   *   productRef: 'prd_myapi',
    *   customerRef: 'user_123',
    *   planRef: 'pln_premium',
    *   returnUrl: 'https://myapp.com/success'
@@ -549,7 +549,7 @@ export interface SolvaPay {
  *
  * // Create payable handlers for your product
  * const payable = solvaPay.payable({
- *   product: 'prod_myapi',
+ *   product: 'prd_myapi',
  *   plan: 'pln_premium'
  * });
  *

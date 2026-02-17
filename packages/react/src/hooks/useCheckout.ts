@@ -45,7 +45,7 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * function CustomCheckout() {
  *   const { loading, error, stripePromise, clientSecret, startCheckout } = useCheckout({
  *     planRef: 'pln_premium',
- *     productRef: 'prod_myapi',
+ *     productRef: 'prd_myapi',
  *   });
  *
  *   useEffect(() => {

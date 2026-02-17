@@ -19,7 +19,7 @@ import type { PlanSelectorProps } from '../types'
  * @example
  * ```tsx
  * <PlanSelector
- *   productRef="prod_123"
+ *   productRef="prd_123"
  *   fetcher={async (productRef) => {
  *     const res = await fetch(`/api/list-plans?productRef=${productRef}`);
  *     const data = await res.json();
