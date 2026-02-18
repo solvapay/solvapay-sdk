@@ -80,7 +80,7 @@ export class HttpAdapter implements Adapter<HttpContext, any> {
       const errorResponse = {
         success: false,
         error: 'Payment required',
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
         checkoutUrl: error.structuredContent.checkoutUrl,
         message: error.structuredContent.message,
       }

@@ -16,8 +16,6 @@ import { createSolvaPayClient } from './client'
 import { SolvaPayPaywall } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 
 /**
  * Configuration for creating a SolvaPay instance.
@@ -70,7 +68,7 @@ export interface CreateSolvaPayConfig {
  *
  * @example
  * ```typescript
- * const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
+ * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
  *
  * // Express.js
  * app.post('/tasks', payable.http(createTask));
@@ -181,32 +179,32 @@ export interface PayableFunction {
  * const solvaPay = createSolvaPay();
  *
  * // Create payable handlers
- * const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' });
- *
- * // Manage customers
- * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
- *   email: 'user@example.com'
- * });
- *
- * // Create payment intents
- * const intent = await solvaPay.createPaymentIntent({
- *   agentRef: 'agt_myapi',
- *   planRef: 'pln_premium',
- *   customerRef: 'user_123'
- * });
+   * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
+   *
+   * // Manage customers
+   * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
+   *   email: 'user@example.com'
+   * });
+   *
+   * // Create payment intents
+   * const intent = await solvaPay.createPaymentIntent({
+   *   productRef: 'prd_myapi',
+   *   planRef: 'pln_premium',
+   *   customerRef: 'user_123'
+   * });
  * ```
  */
 export interface SolvaPay {
   /**
    * Create a payable handler with explicit adapters for different frameworks.
    *
-   * @param options - Payable options including agent and plan references
+   * @param options - Payable options including product and plan references
    * @returns PayableFunction with framework-specific adapters
    *
    * @example
    * ```typescript
    * const payable = solvaPay.payable({
-   *   agent: 'agt_myapi',
+   *   product: 'prd_myapi',
    *   plan: 'pln_premium'
    * });
    *
@@ -254,11 +252,11 @@ export interface SolvaPay {
    * Create a Stripe payment intent for a customer to purchase a plan.
    *
    * This creates a payment intent that can be confirmed on the client side
-   * using Stripe.js. After confirmation, call `processPayment()` to complete
+   * using Stripe.js. After confirmation, call `processPaymentIntent()` to complete
    * the purchase.
    *
    * @param params - Payment intent parameters
-   * @param params.agentRef - Agent reference
+   * @param params.productRef - Product reference
    * @param params.planRef - Plan reference to purchase
    * @param params.customerRef - Customer reference
    * @param params.idempotencyKey - Optional idempotency key for retry safety
@@ -267,7 +265,7 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * const intent = await solvaPay.createPaymentIntent({
-   *   agentRef: 'agt_myapi',
+   *   productRef: 'prd_myapi',
    *   planRef: 'pln_premium',
    *   customerRef: 'user_123',
    *   idempotencyKey: 'unique-key-123'
@@ -277,7 +275,7 @@ export interface SolvaPay {
    * ```
    */
   createPaymentIntent(params: {
-    agentRef: string
+    productRef: string
     planRef: string
     customerRef: string
     idempotencyKey?: string
@@ -296,7 +294,7 @@ export interface SolvaPay {
    *
    * @param params - Payment processing parameters
    * @param params.paymentIntentId - Stripe payment intent ID from client confirmation
-   * @param params.agentRef - Agent reference
+   * @param params.productRef - Product reference
    * @param params.customerRef - Customer reference
    * @param params.planRef - Optional plan reference (if not in payment intent)
    * @returns Payment processing result with purchase details
@@ -304,9 +302,9 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * // After client confirms payment with Stripe.js
-   * const result = await solvaPay.processPayment({
+   * const result = await solvaPay.processPaymentIntent({
    *   paymentIntentId: 'pi_1234567890',
-   *   agentRef: 'agt_myapi',
+   *   productRef: 'prd_myapi',
    *   customerRef: 'user_123',
    *   planRef: 'pln_premium'
    * });
@@ -316,29 +314,29 @@ export interface SolvaPay {
    * }
    * ```
    */
-  processPayment(params: {
+  processPaymentIntent(params: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     customerRef: string
     planRef?: string
   }): Promise<import('./types/client').ProcessPaymentResult>
 
   /**
-   * Check if customer is within usage limits for an agent.
+   * Check if customer is within usage limits for a product.
    *
    * This method checks purchase status and usage limits without
    * executing business logic. Use `payable()` for automatic protection.
    *
    * @param params - Limit check parameters
    * @param params.customerRef - Customer reference
-   * @param params.agentRef - Agent reference
+   * @param params.productRef - Product reference
    * @returns Limit check result with remaining usage and checkout URL if needed
    *
    * @example
    * ```typescript
    * const limits = await solvaPay.checkLimits({
    *   customerRef: 'user_123',
-   *   agentRef: 'agt_myapi'
+   *   productRef: 'prd_myapi'
    * });
    *
    * if (!limits.withinLimits) {
@@ -347,7 +345,7 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: { customerRef: string; agentRef: string }): Promise<{
+  checkLimits(params: { customerRef: string; productRef: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -362,7 +360,7 @@ export interface SolvaPay {
    *
    * @param params - Usage tracking parameters
    * @param params.customerRef - Customer reference
-   * @param params.agentRef - Agent reference
+   * @param params.productRef - Product reference
    * @param params.planRef - Plan reference
    * @param params.outcome - Action outcome ('success', 'paywall', or 'fail')
    * @param params.action - Optional action name for analytics
@@ -374,7 +372,7 @@ export interface SolvaPay {
    * ```typescript
    * await solvaPay.trackUsage({
    *   customerRef: 'user_123',
-   *   agentRef: 'agt_myapi',
+   *   productRef: 'prd_myapi',
    *   planRef: 'pln_premium',
    *   outcome: 'success',
    *   action: 'api_call',
@@ -386,7 +384,7 @@ export interface SolvaPay {
    */
   trackUsage(params: {
     customerRef: string
-    agentRef: string
+    productRef: string
     planRef: string
     outcome: 'success' | 'paywall' | 'fail'
     action?: string
@@ -452,7 +450,7 @@ export interface SolvaPay {
    * to a hosted payment page. After payment, customer is redirected back.
    *
    * @param params - Checkout session parameters
-   * @param params.agentRef - Agent reference
+   * @param params.productRef - Product reference
    * @param params.customerRef - Customer reference
    * @param params.planRef - Optional plan reference (if not specified, shows plan selector)
    * @param params.returnUrl - URL to redirect to after successful payment
@@ -461,7 +459,7 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * const session = await solvaPay.createCheckoutSession({
-   *   agentRef: 'agt_myapi',
+   *   productRef: 'prd_myapi',
    *   customerRef: 'user_123',
    *   planRef: 'pln_premium',
    *   returnUrl: 'https://myapp.com/success'
@@ -472,7 +470,7 @@ export interface SolvaPay {
    * ```
    */
   createCheckoutSession(params: {
-    agentRef: string
+    productRef: string
     customerRef: string
     planRef?: string
     returnUrl?: string
@@ -510,12 +508,12 @@ export interface SolvaPay {
    * Direct access to the API client for advanced operations.
    *
    * Use this for operations not exposed by the SolvaPay interface,
-   * such as agent/plan management or custom API calls.
+   * such as product/plan management or custom API calls.
    *
    * @example
    * ```typescript
    * // Access API client directly for custom operations
-   * const agents = await solvaPay.apiClient.listAgents();
+   * const products = await solvaPay.apiClient.listProducts();
    * ```
    */
   apiClient: SolvaPayClient
@@ -549,9 +547,9 @@ export interface SolvaPay {
  *   apiClient: mockClient
  * });
  *
- * // Create payable handlers for your agent
+ * // Create payable handlers for your product
  * const payable = solvaPay.payable({
- *   agent: 'agt_myapi',
+ *   product: 'prd_myapi',
  *   plan: 'pln_premium'
  * });
  *
@@ -611,11 +609,11 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.createPaymentIntent(params)
     },
 
-    processPayment(params) {
-      if (!apiClient.processPayment) {
-        throw new SolvaPayError('processPayment is not available on this API client')
+    processPaymentIntent(params) {
+      if (!apiClient.processPaymentIntent) {
+        throw new SolvaPayError('processPaymentIntent is not available on this API client')
       }
-      return apiClient.processPayment(params)
+      return apiClient.processPaymentIntent(params)
     },
 
     checkLimits(params) {
@@ -638,7 +636,11 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
     },
 
     createCheckoutSession(params) {
-      return apiClient.createCheckoutSession(params)
+      return apiClient.createCheckoutSession({
+        customerReference: params.customerRef,
+        productRef: params.productRef,
+        planRef: params.planRef,
+      })
     },
 
     createCustomerSession(params) {
@@ -647,17 +649,16 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
-      // Resolve agent name (support both agentRef and agent for backward compatibility)
-      const agent =
-        options.agentRef ||
-        options.agent ||
-        process.env.SOLVAPAY_AGENT ||
-        getPackageJsonName() ||
-        'default-agent'
-      // Resolve plan (support both planRef and plan for backward compatibility)
-      const plan = options.planRef || options.plan || agent
+      // Resolve product name (support both productRef and product)
+      const product =
+        options.productRef ||
+        options.product ||
+        process.env.SOLVAPAY_PRODUCT ||
+        'default-product'
+      // Resolve plan (support both planRef and plan)
+      const plan = options.planRef || options.plan || product
 
-      const metadata = { agent, plan }
+      const metadata = { product, plan }
 
       return {
         // HTTP adapter for Express/Fastify
@@ -702,24 +703,5 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         },
       }
     },
-  }
-}
-
-/**
- * Helper to get package name from package.json
- * Edge-safe: returns undefined in edge runtimes where process.cwd() is not available
- */
-function getPackageJsonName(): string | undefined {
-  try {
-    // Check if we're in an edge runtime (process.cwd may not be available)
-    if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
-      return undefined
-    }
-    const packageJsonPath = join(process.cwd(), 'package.json')
-    const pkgContent = readFileSync(packageJsonPath, 'utf-8')
-    const pkg = JSON.parse(pkgContent)
-    return pkg.name
-  } catch {
-    return undefined
   }
 }

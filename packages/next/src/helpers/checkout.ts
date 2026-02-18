@@ -1,7 +1,5 @@
 /**
  * Next.js Checkout Helpers
- *
- * Next.js-specific wrappers for checkout helpers.
  */
 
 import { NextResponse } from 'next/server'
@@ -12,18 +10,10 @@ import {
   isErrorResult,
 } from '@solvapay/server'
 
-/**
- * Create checkout session - Next.js wrapper
- *
- * @param request - Next.js request object
- * @param body - Checkout session parameters
- * @param options - Configuration options
- * @returns Checkout session response or NextResponse error
- */
 export async function createCheckoutSession(
   request: globalThis.Request,
   body: {
-    agentRef: string
+    productRef: string
     planRef?: string
     returnUrl?: string
   },
@@ -52,13 +42,6 @@ export async function createCheckoutSession(
   return result
 }
 
-/**
- * Create customer session - Next.js wrapper
- *
- * @param request - Next.js request object
- * @param options - Configuration options
- * @returns Customer session response or NextResponse error
- */
 export async function createCustomerSession(
   request: globalThis.Request,
   options: {

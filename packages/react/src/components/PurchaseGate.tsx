@@ -20,12 +20,14 @@ import type { PurchaseGateProps } from '../types'
  * </PurchaseGate>
  * ```
  */
-export const PurchaseGate: React.FC<PurchaseGateProps> = ({ requirePlan, children }) => {
+export const PurchaseGate: React.FC<PurchaseGateProps> = ({ requirePlan, requireProduct, children }) => {
   const { purchases, loading, hasPlan } = usePurchase()
 
   const hasAccess = requirePlan
     ? hasPlan(requirePlan)
-    : purchases.some(p => p.status === 'active')
+    : requireProduct
+      ? purchases.some(p => p.status === 'active' && (p.productName === requireProduct || p.productReference === requireProduct))
+      : purchases.some(p => p.status === 'active')
 
   return (
     <>

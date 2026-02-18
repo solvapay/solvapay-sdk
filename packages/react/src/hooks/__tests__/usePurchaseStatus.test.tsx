@@ -8,7 +8,8 @@ import type { PurchaseInfo } from '../../types'
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
   planName: 'Test Plan',
-  agentName: 'Test Agent',
+  productName: 'Test Product',
+  productReference: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
   amount: 1000,

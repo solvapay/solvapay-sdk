@@ -15,8 +15,6 @@ import type {
   SolvaPayClient,
 } from './types'
 import { withRetry, createRequestDeduplicator } from './utils'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 
 // Re-export types for convenience
 export type {
@@ -117,25 +115,8 @@ export class SolvaPayPaywall {
     }
   }
 
-  private resolveAgent(metadata: PaywallMetadata): string {
-    return (
-      metadata.agent || process.env.SOLVAPAY_AGENT || this.getPackageJsonName() || 'default-agent'
-    )
-  }
-
-  private getPackageJsonName(): string | undefined {
-    try {
-      // Check if we're in an edge runtime (process.cwd may not be available)
-      if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
-        return undefined
-      }
-      const packageJsonPath = join(process.cwd(), 'package.json')
-      const pkgContent = readFileSync(packageJsonPath, 'utf-8')
-      const pkg = JSON.parse(pkgContent)
-      return pkg.name
-    } catch {
-      return undefined
-    }
+  private resolveProduct(metadata: PaywallMetadata): string {
+    return metadata.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
   }
 
   private generateRequestId(): string {
@@ -152,7 +133,7 @@ export class SolvaPayPaywall {
     metadata: PaywallMetadata = {},
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
-    const agent = this.resolveAgent(metadata)
+    const product = this.resolveProduct(metadata)
     const toolName = handler.name || 'anonymous'
 
     return async (args: TArgs): Promise<TResult> => {
@@ -182,14 +163,14 @@ export class SolvaPayPaywall {
 
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
-          agentRef: agent,
+          productRef: product,
         })
 
         if (!limitsCheck.withinLimits) {
           const latencyMs = Date.now() - startTime
           await this.trackUsage(
             backendCustomerRef,
-            agent,
+            product,
             planRef,
             toolName,
             'paywall',
@@ -199,7 +180,7 @@ export class SolvaPayPaywall {
 
           throw new PaywallError('Payment required', {
             kind: 'payment_required',
-            agent,
+            product,
             checkoutUrl: limitsCheck.checkoutUrl || '',
             message: `Plan purchase required. Remaining: ${limitsCheck.remaining}`,
           })
@@ -212,7 +193,7 @@ export class SolvaPayPaywall {
         const latencyMs = Date.now() - startTime
         await this.trackUsage(
           backendCustomerRef,
-          agent,
+          product,
           planRef,
           toolName,
           'success',
@@ -234,7 +215,7 @@ export class SolvaPayPaywall {
         const planRef = metadata.plan || toolName
         await this.trackUsage(
           backendCustomerRef,
-          agent,
+          product,
           planRef,
           toolName,
           outcome,
@@ -388,14 +369,73 @@ export class SolvaPayPaywall {
                this.log(`⚠️ Failed to lookup existing customer by externalRef after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
              }
            }
+
+          // If conflict is due to email uniqueness but externalRef lookup failed,
+          // retry creation with a generated email while preserving externalRef.
+          // This allows resolving stale customers created before externalRef was set.
+          const conflictMessage = error instanceof Error ? error.message : String(error)
+          const isEmailConflict =
+            conflictMessage.includes('email') || conflictMessage.includes('identifier email')
+
+          if (externalRef && isEmailConflict && options?.email) {
+            try {
+              const byEmail = await this.apiClient.getCustomer({ email: options.email })
+              if (byEmail && byEmail.customerRef) {
+                this.customerRefMapping.set(customerRef, byEmail.customerRef)
+                this.log(
+                  `⚠️ Resolved customer ${customerRef} by email after conflict; using existing customer ${byEmail.customerRef}`,
+                )
+                return byEmail.customerRef
+              }
+            } catch (emailLookupError: any) {
+              this.log(
+                `⚠️ Email lookup failed after customer conflict for ${customerRef}:`,
+                emailLookupError instanceof Error ? emailLookupError.message : emailLookupError,
+              )
+            }
+
+            try {
+              const retryParams: any = {
+                email: `${customerRef}-${Date.now()}@auto-created.local`,
+                externalRef,
+              }
+
+              if (options?.name) {
+                retryParams.name = options.name
+              }
+
+              const retryResult = await this.apiClient.createCustomer(retryParams)
+              const retryRef =
+                (retryResult as any).customerRef || (retryResult as any).reference || customerRef
+
+              this.customerRefMapping.set(customerRef, retryRef)
+              this.log(
+                `⚠️ Retried customer creation for ${customerRef} with generated email after email conflict`,
+              )
+              return retryRef
+            } catch (retryError: any) {
+              this.log(
+                `⚠️ Retry create customer with generated email failed for ${customerRef}:`,
+                retryError instanceof Error ? retryError.message : retryError,
+              )
+            }
+          }
+
+          // We have a known conflict but could not resolve the existing customer reference.
+          // Returning the original app user ID here causes downstream 404s in payment APIs.
+          const unresolvedMessage =
+            error instanceof Error ? error.message : 'Customer already exists but could not be resolved'
+          throw new Error(
+            `Failed to resolve existing customer for ${customerRef} after conflict: ${unresolvedMessage}. ` +
+              'Ensure the existing customer is linked to this externalRef.',
+          )
         }
 
         this.log(
           `❌ Failed to auto-create customer ${customerRef}:`,
           error instanceof Error ? error.message : error,
         )
-        // Continue anyway - use the original ref
-        return customerRef
+        throw error
       }
     })
 
@@ -409,7 +449,7 @@ export class SolvaPayPaywall {
 
   async trackUsage(
     customerRef: string,
-    agentRef: string,
+    productRef: string,
     planRef: string,
     toolName: string,
     outcome: 'success' | 'paywall' | 'fail',
@@ -421,7 +461,7 @@ export class SolvaPayPaywall {
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          agentRef,
+          productRef,
           planRef,
           outcome,
           action: toolName,
@@ -639,7 +679,7 @@ function handleHttpError(error: any, reply: any) {
     const errorResponse = {
       success: false,
       error: 'Payment required',
-      agent: error.structuredContent.agent,
+      product: error.structuredContent.product,
       checkoutUrl: error.structuredContent.checkoutUrl,
       message: error.structuredContent.message,
     }
@@ -753,7 +793,7 @@ function handleNextError(error: any): Response {
       JSON.stringify({
         success: false,
         error: 'Payment required',
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
         checkoutUrl: error.structuredContent.checkoutUrl,
         message: error.structuredContent.message,
       }),

@@ -280,7 +280,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
-  async checkLimits(params: { customerRef: string; agentRef: string }): Promise<{
+  async checkLimits(params: { customerRef: string; productRef: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -290,7 +290,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     await new Promise(resolve => setTimeout(resolve, this.delays.checkLimits))
 
     this.log(`📡 Stub Request: POST /v1/sdk/limits`)
-    this.log(`   Customer: ${params.customerRef}, Agent: ${params.agentRef}`)
+    this.log(`   Customer: ${params.customerRef}, Product: ${params.productRef}`)
 
     // Use file lock for thread-safe file operations
     return await this.withFileLock(async () => {
@@ -320,7 +320,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
       // No paid access, check free tier
       const freeTierData = await this.loadFreeTierData()
-      const key = `${params.customerRef}_${params.agentRef}`
+      const key = `${params.customerRef}_${params.productRef}`
       const now = new Date()
       const usage = freeTierData[key]
 
@@ -363,7 +363,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       if (!withinLimits) {
         return {
           ...result,
-          checkoutUrl: `https://checkout.solvapay.com/demo?customer=${params.customerRef}&agent=${params.agentRef}`,
+          checkoutUrl: `https://checkout.solvapay.com/demo?customer=${params.customerRef}&product=${params.productRef}`,
         }
       }
 
@@ -376,7 +376,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async trackUsage(params: {
     customerRef: string
-    agentRef: string
+    productRef: string
     planRef: string
     outcome: 'success' | 'paywall' | 'fail'
     action?: string
@@ -397,20 +397,25 @@ export class StubSolvaPayClient implements SolvaPayClient {
    * Create a checkout session (for testing)
    */
   async createCheckoutSession(params: {
-    customerRef: string
-    agentRef: string
+    customerReference: string
+    productRef: string
     planRef?: string
-  }): Promise<{ sessionId: string; checkoutUrl: string }> {
-    // Simulate API delay
+  }): Promise<{
+    id: string
+    sessionId: string
+    amount: number
+    currency: string
+    status: string
+    checkoutUrl: string
+  }> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
 
-    // Generate a mock session ID
+    const id = `cs_${Math.random().toString(36).slice(2, 15)}`
     const sessionId = `sess_${Math.random().toString(36).slice(2, 15)}`
 
-    // Build checkout URL with session ID
     const queryParams = new URLSearchParams({
-      customer: params.customerRef,
-      agent: params.agentRef,
+      customer: params.customerReference,
+      product: params.productRef,
       sessionId: sessionId,
     })
 
@@ -420,11 +425,15 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     const checkoutUrl = `https://checkout.solvapay.com/demo?${queryParams.toString()}`
 
-    this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`)
+    this.log(`💳 Created checkout session for ${params.customerReference}: ${checkoutUrl}`)
 
     return {
-      sessionId: sessionId,
-      checkoutUrl: checkoutUrl,
+      id,
+      sessionId,
+      amount: 0,
+      currency: 'USD',
+      status: 'active',
+      checkoutUrl,
     }
   }
 
@@ -666,7 +675,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Get checkout URL for a customer
    */
-  getCheckoutUrl(customerRef: string, agent: string): string {
+  getCheckoutUrl(customerRef: string, product: string): string {
     return `${this.baseUrl}/checkout?plan=pro&customer_ref=${encodeURIComponent(customerRef)}&return_url=${encodeURIComponent(this.baseUrl)}`
   }
 

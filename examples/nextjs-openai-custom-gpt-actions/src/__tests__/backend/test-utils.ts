@@ -116,7 +116,7 @@ export const setupTestEnvironment = () => {
     // Set up test environment variables
     process.env.NODE_ENV = 'test'
     process.env.SOLVAPAY_SECRET_KEY = 'test-api-key'
-    process.env.SOLVAPAY_AGENT = 'test-agent'
+    process.env.SOLVAPAY_PRODUCT = 'test-product'
     process.env.OAUTH_ISSUER = 'http://localhost:3000'
     process.env.OAUTH_CLIENT_ID = 'test-client-id'
     process.env.OAUTH_CLIENT_SECRET = 'test-client-secret'

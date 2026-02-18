@@ -11,7 +11,7 @@
     "dev:docs": "pnpm generate:docs && next dev",
     "init:db": "tsx scripts/init-db.ts",
     "setup": "pnpm install && pnpm setup:env && pnpm build:deps",
-    "setup:env": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env.local')){fs.writeFileSync('.env.local','SOLVAPAY_API_KEY=demo-key-for-development\\nSOLVAPAY_AGENT=custom-gpt-actions\\n'); console.log('✅ Created .env.local file');}\"",
+    "setup:env": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env.local')){fs.writeFileSync('.env.local','SOLVAPAY_API_KEY=demo-key-for-development\\nSOLVAPAY_PRODUCT=custom-gpt-actions\\n'); console.log('✅ Created .env.local file');}\"",
     "build:deps": "cd ../.. && pnpm build:packages",
     "test": "vitest run",
     "test:watch": "vitest",

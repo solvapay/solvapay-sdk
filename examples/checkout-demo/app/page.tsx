@@ -5,11 +5,11 @@ import { usePurchase, usePlans, usePurchaseStatus } from '@solvapay/react'
 import Link from 'next/link'
 
 export default function HomePage() {
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF
+  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
 
   // Memoize the fetcher function to prevent unnecessary re-fetches
-  const fetchPlans = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`)
+  const fetchPlans = useCallback(async (productRef: string) => {
+    const response = await fetch(`/api/list-plans?productRef=${productRef}`)
     if (!response.ok) throw new Error('Failed to fetch plans')
     const data = await response.json()
     return data.plans || []
@@ -17,7 +17,7 @@ export default function HomePage() {
 
   // Fetch plans using SDK hook
   const { loading: plansLoading } = usePlans({
-    agentRef: agentRef || undefined,
+    productRef: productRef || undefined,
     fetcher: fetchPlans,
   })
 

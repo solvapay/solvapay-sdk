@@ -17,7 +17,7 @@ describe('StubSolvaPayClient', () => {
       // First call should be within free tier
       const result1 = await apiClient.checkLimits({
         customerRef,
-        agentRef: planRef,
+        productRef: planRef,
       })
       expect(result1.withinLimits).toBe(true)
       expect(result1.plan).toBe('free')
@@ -26,7 +26,7 @@ describe('StubSolvaPayClient', () => {
       // Second call should still be within free tier
       const result2 = await apiClient.checkLimits({
         customerRef,
-        agentRef: planRef,
+        productRef: planRef,
       })
       expect(result2.withinLimits).toBe(true)
       expect(result2.plan).toBe('free')
@@ -41,7 +41,7 @@ describe('StubSolvaPayClient', () => {
       // the daily reset logic would be more complex
       const result = await apiClient.checkLimits({
         customerRef,
-        agentRef: planRef,
+        productRef: planRef,
       })
       expect(result.withinLimits).toBe(true)
       expect(result.plan).toBe('free')
@@ -52,7 +52,7 @@ describe('StubSolvaPayClient', () => {
     it('should return paid plan for customers with credits', async () => {
       const result = await apiClient.checkLimits({
         customerRef: 'demo_customer',
-        agentRef: 'test_product',
+        productRef: 'test_product',
       })
       expect(result.withinLimits).toBe(true)
       expect(result.plan).toBe('paid')
@@ -62,7 +62,7 @@ describe('StubSolvaPayClient', () => {
     it('should return free plan for customers without credits', async () => {
       const result = await apiClient.checkLimits({
         customerRef: 'test_customer',
-        agentRef: 'test_product',
+        productRef: 'test_product',
       })
       expect(result.withinLimits).toBe(true) // Within free tier
       expect(result.plan).toBe('free')
@@ -73,7 +73,7 @@ describe('StubSolvaPayClient', () => {
 
       const result = await apiClient.checkLimits({
         customerRef: 'test_customer',
-        agentRef: 'test_product',
+        productRef: 'test_product',
       })
       expect(result.withinLimits).toBe(true)
       expect(result.plan).toBe('paid')
@@ -105,8 +105,8 @@ describe('StubSolvaPayClient', () => {
   describe('Checkout Session Creation', () => {
     it('should create checkout session with correct parameters', async () => {
       const result = await apiClient.createCheckoutSession({
-        customerRef: 'test_customer',
-        agentRef: 'test_plan',
+        customerReference: 'test_customer',
+        productRef: 'test_plan',
         planRef: 'test_plan_ref',
       })
 
@@ -114,7 +114,7 @@ describe('StubSolvaPayClient', () => {
       expect(result).toHaveProperty('checkoutUrl')
       expect(result.checkoutUrl).toContain('checkout.solvapay.com')
       expect(result.checkoutUrl).toContain('customer=test_customer')
-      expect(result.checkoutUrl).toContain('agent=test_plan')
+      expect(result.checkoutUrl).toContain('product=test_plan')
       expect(typeof result.sessionId).toBe('string')
     })
   })
@@ -123,7 +123,7 @@ describe('StubSolvaPayClient', () => {
     it('should track usage events', async () => {
       const usageParams = {
         customerRef: 'test_customer',
-        agentRef: 'test_agent',
+        productRef: 'test_product',
         planRef: 'test_plan',
         outcome: 'success' as const,
         action: 'test_tool',

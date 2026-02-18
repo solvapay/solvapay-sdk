@@ -1,6 +1,6 @@
 // Set environment variables before importing modules that depend on them
 process.env.SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY || 'test-api-key'
-process.env.SOLVAPAY_AGENT = process.env.SOLVAPAY_AGENT || 'test-agent'
+process.env.SOLVAPAY_PRODUCT = process.env.SOLVAPAY_PRODUCT || 'test-product'
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'

@@ -62,7 +62,7 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
               {
                 success: false,
                 error: 'Payment required',
-                agent: error.structuredContent.agent,
+                product: error.structuredContent.product,
                 checkoutUrl: error.structuredContent.checkoutUrl,
                 message: error.structuredContent.message,
               },

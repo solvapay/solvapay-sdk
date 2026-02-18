@@ -8,7 +8,8 @@ import type { PurchaseStatus, PurchaseInfo, SolvaPayContextValue } from '../../t
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
   planName: 'Test Plan',
-  agentName: 'Test Agent',
+  productName: 'Test Product',
+  productReference: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
   amount: 1000,
@@ -582,7 +583,7 @@ describe('usePurchase', () => {
       const purchase = createPurchase({
         reference: 'pur_full',
         planName: 'Full Plan',
-        agentName: 'Full Agent',
+        productName: 'Full Product',
         status: 'active',
         startDate: '2024-01-01T00:00:00Z',
         endDate: '2024-12-31T23:59:59Z',
@@ -603,7 +604,7 @@ describe('usePurchase', () => {
       const returnedPurchase = result.current.purchases[0]
       expect(returnedPurchase.reference).toBe('pur_full')
       expect(returnedPurchase.planName).toBe('Full Plan')
-      expect(returnedPurchase.agentName).toBe('Full Agent')
+      expect(returnedPurchase.productName).toBe('Full Product')
       expect(returnedPurchase.status).toBe('active')
       expect(returnedPurchase.startDate).toBe('2024-01-01T00:00:00Z')
       expect(returnedPurchase.endDate).toBe('2024-12-31T23:59:59Z')

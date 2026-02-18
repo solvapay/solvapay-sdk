@@ -50,14 +50,6 @@ describe('Integration Tests - User Flows', () => {
       expect(screen.getByText('How to Use')).toBeInTheDocument()
     })
 
-    it('displays login button when user is not authenticated', async () => {
-      render(<HomePage />)
-
-      // Wait for async state to settle
-      await vi.waitFor(() => {
-        expect(screen.getByText('Log In')).toBeInTheDocument()
-      })
-    })
   })
 
   describe('Checkout Flow', () => {

@@ -12,19 +12,25 @@ export default function Home() {
   const [loadingUser, setLoadingUser] = useState(true)
 
   useEffect(() => {
+    const fallbackOrigin = window.location.origin
+    setApiUrl(`${fallbackOrigin}/api/docs/json`)
+
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 5000)
+
     // Fetch configuration
-    fetch('/api/config/url')
+    fetch('/api/config/url', { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
-        const origin = data.url || window.location.origin
+        const origin = (data.url || fallbackOrigin).replace(/\/$/, '')
         setApiUrl(`${origin}/api/docs/json`)
         if (data.solvaPayConsoleUrl) {
           setSolvaPayConsoleUrl(data.solvaPayConsoleUrl)
         }
       })
-      .catch(() => {
-        const origin = window.location.origin
-        setApiUrl(`${origin}/api/docs/json`)
+      .catch(() => {})
+      .finally(() => {
+        window.clearTimeout(timeoutId)
       })
 
     // Check if user is logged in

@@ -21,5 +21,5 @@ export const solvaPay = createSolvaPay({
 /**
  * Create payable handler with explicit MCP adapter
  */
-export const payable = solvaPay.payable({ agent: 'basic-crud' })
+export const payable = solvaPay.payable({ product: 'basic-crud' })
 

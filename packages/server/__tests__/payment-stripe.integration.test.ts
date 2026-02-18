@@ -28,7 +28,7 @@ import {
  *
  * 2. **Test Provider with API Key**:
  *    - Valid SolvaPay provider account
- *    - At least one agent and usage-based plan configured
+ *    - At least one product and usage-based plan configured
  *
  * 3. **Stripe Test Account**:
  *    - Stripe test mode secret key
@@ -79,7 +79,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   let solvaPay: any
   let stripeClient: any // Stripe Node.js client
   let testCustomerRef: string
-  let defaultAgent: { reference: string; name: string }
+  let defaultProduct: { reference: string; name: string }
   let defaultPlan: { reference: string; name: string; isFreeTier?: boolean; freeUnits?: number }
   let usageBasedPlan: {
     reference: string
@@ -118,37 +118,37 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       console.log('✅ API Client created')
       console.log()
 
-      // Step 2: Fetch default agent and plan from backend
-      console.log('Step 2: Fetching default agent and plan...')
+      // Step 2: Fetch default product and plan from backend
+      console.log('Step 2: Fetching default product and plan...')
 
-      const agents = await apiClient.listAgents()
-      if (!agents || agents.length === 0) {
-        throw new Error('No agents found. Please create at least one agent in your account.')
+      const products = await apiClient.listProducts()
+      if (!products || products.length === 0) {
+        throw new Error('No products found. Please create at least one product in your account.')
       }
 
-      // Find an agent that has plans (try each agent until we find one with plans)
+      // Find a product that has plans (try each product until we find one with plans)
       let plans: any[] = []
-      for (const agent of agents) {
-        const agentPlans = await apiClient.listPlans(agent.reference)
-        if (agentPlans && agentPlans.length > 0) {
-          defaultAgent = agent
-          plans = agentPlans
+      for (const product of products) {
+        const productPlans = await apiClient.listPlans(product.reference)
+        if (productPlans && productPlans.length > 0) {
+          defaultProduct = product
+          plans = productPlans
           break
         }
       }
 
-      if (!defaultAgent) {
-        throw new Error('No agents with plans found. Please create at least one plan for an agent.')
+      if (!defaultProduct) {
+        throw new Error('No products with plans found. Please create at least one plan for a product.')
       }
 
-      console.log('✅ Default agent fetched:', {
-        reference: defaultAgent.reference,
-        name: defaultAgent.name,
+      console.log('✅ Default product fetched:', {
+        reference: defaultProduct.reference,
+        name: defaultProduct.name,
       })
 
       if (plans.length === 0) {
         throw new Error(
-          `No plans found for agent ${defaultAgent.reference}. Please create at least one plan.`,
+          `No plans found for product ${defaultProduct.reference}. Please create at least one plan.`,
         )
       }
       defaultPlan = plans[0]
@@ -202,7 +202,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         const planToTest = usageBasedPlan || defaultPlan
         await createTestPaymentIntent(
           apiClient,
-          defaultAgent.reference,
+          defaultProduct.reference,
           planToTest.reference,
           testCustomer,
         )
@@ -259,7 +259,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       console.error('   1. Ensure backend is running with Stripe integration')
       console.error('   2. Verify SOLVAPAY_SECRET_KEY is valid')
       console.error('   3. Verify STRIPE_TEST_SECRET_KEY is valid')
-      console.error('   4. Ensure at least one agent and plan exist')
+      console.error('   4. Ensure at least one product and plan exist')
       console.error('   5. Ensure provider has Stripe Connect account configured')
       console.error('   6. Check that Stripe webhooks are configured')
       console.error('   7. See packages/server/README.md "Payment Integration Tests"')
@@ -307,7 +307,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       const paymentIntent = await createTestPaymentIntent(
         apiClient,
-        defaultAgent.reference,
+        defaultProduct.reference,
         planToUse.reference,
         customerRef,
       )
@@ -338,7 +338,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       const paymentIntent = await createTestPaymentIntent(
         apiClient,
-        defaultAgent.reference,
+        defaultProduct.reference,
         planToUse.reference,
         customerRef,
       )
@@ -373,7 +373,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Step 2: Create payment intent
       const paymentIntent = await createTestPaymentIntent(
         apiClient,
-        defaultAgent.reference,
+        defaultProduct.reference,
         planToUse.reference,
         customerRef,
       )
@@ -432,7 +432,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       const limitsCheck = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       expect(limitsCheck.remaining).toBeGreaterThanOrEqual(freeUnitsExpected)
@@ -461,7 +461,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
       const initialLimits = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       const creditsBeforeUsage = initialLimits.remaining
@@ -470,7 +470,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Track usage to deduct 1 credit
       await apiClient.trackUsage({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: planToUse.reference,
         outcome: 'success',
         action: 'testAction',
@@ -482,7 +482,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Verify credit deduction
       const limitsAfterUsage = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       const creditsAfterUsage = limitsAfterUsage.remaining
@@ -533,7 +533,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
       const initialLimits = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
       const initialRemaining = initialLimits.remaining
       console.log(`\n📊 E2E Flow: Initial remaining units: ${initialRemaining}`)
@@ -541,7 +541,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Create and confirm payment intent
       const paymentIntent = await createTestPaymentIntent(
         apiClient,
-        defaultAgent.reference,
+        defaultProduct.reference,
         planToUse.reference,
         customerRef,
       )
@@ -561,7 +561,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       const updatedLimits = await waitForWebhookProcessing(
         apiClient,
         customerRef,
-        defaultAgent.reference,
+        defaultProduct.reference,
         planToUse.reference,
         expectedMinUnits,
         15000,
@@ -574,7 +574,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       // Verify protected function access
       const payable = solvaPay.payable({
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
         planRef: planToUse.reference,
       })
       const protectedHandler = await payable.function(createTask)
@@ -591,7 +591,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Verify usage deduction
       const limitsAfterUsage = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: defaultAgent.reference,
+        productRef: defaultProduct.reference,
       })
 
       expect(limitsAfterUsage.remaining).toBe(updatedLimits.remaining - 1)
@@ -619,7 +619,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Create payment intent
       const paymentIntent = await createTestPaymentIntent(
         apiClient,
-        defaultAgent.reference,
+        defaultProduct.reference,
         planToUse.reference,
         customerRef,
       )
@@ -652,7 +652,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Create payment intent
       const paymentIntent = await createTestPaymentIntent(
         apiClient,
-        defaultAgent.reference,
+        defaultProduct.reference,
         planToUse.reference,
         customerRef,
       )

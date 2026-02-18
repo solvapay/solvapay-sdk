@@ -649,7 +649,7 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
       expect(parsedContent.checkoutUrl).toBeDefined()
       expect(parsedContent.checkoutUrl).toContain('checkout')
       expect(parsedContent.checkoutUrl).toMatch(/^https?:\/\//)
-      expect(parsedContent.agent).toBeDefined()
+      expect(parsedContent.product).toBeDefined()
       expect(parsedContent.message).toBeDefined()
     }, TEST_TIMEOUT)
   })

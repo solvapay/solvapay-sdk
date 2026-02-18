@@ -12,12 +12,12 @@ export { getAuthenticatedUser } from './auth'
 export { syncCustomer } from './customer'
 
 // Export payment helpers
-export { createPaymentIntent, processPayment } from './payment'
+export { createPaymentIntent, processPaymentIntent } from './payment'
 
 // Export checkout helpers
 export { createCheckoutSession, createCustomerSession } from './checkout'
 
-// Export renewal helpers
+// Export purchase cancellation helpers
 export { cancelRenewal } from './renewal'
 
 // Export plans helpers

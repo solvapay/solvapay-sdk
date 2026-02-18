@@ -24,7 +24,7 @@ import type { PaymentFormProps } from './types'
  *
  * @param props - Payment form configuration
  * @param props.planRef - Plan reference to purchase (required)
- * @param props.agentRef - Agent reference for usage tracking (required)
+ * @param props.productRef - Product reference for usage tracking
  * @param props.onSuccess - Callback when payment succeeds
  * @param props.onError - Callback when payment fails
  * @param props.returnUrl - Optional return URL after payment (for redirects)
@@ -43,7 +43,7 @@ import type { PaymentFormProps } from './types'
  *   return (
  *     <PaymentForm
  *       planRef="pln_premium"
- *       agentRef="agt_myapi"
+ *       productRef="prd_myapi"
  *       onSuccess={() => {
  *         console.log('Payment successful!');
  *         router.push('/dashboard');
@@ -62,7 +62,7 @@ import type { PaymentFormProps } from './types'
  */
 export const PaymentForm: React.FC<PaymentFormProps> = ({
   planRef,
-  agentRef,
+  productRef,
   onSuccess,
   onError,
   returnUrl,
@@ -79,7 +79,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     clientSecret,
     startCheckout,
     stripePromise,
-  } = useCheckout(validPlanRef, agentRef)
+  } = useCheckout({ planRef: validPlanRef, productRef })
   const { refetch } = usePurchase()
   const { processPayment } = useSolvaPay()
   const hasInitializedRef = useRef(false)
@@ -113,11 +113,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       const paymentIntentAny = paymentIntent as Record<string, unknown>
 
       // Process payment if we have the necessary data (customerRef is handled internally)
-      if (processPayment && agentRef) {
+      if (processPayment && productRef) {
         try {
           const result = await processPayment({
             paymentIntentId: paymentIntentAny.id as string,
-            agentRef: agentRef,
+            productRef: productRef,
             planRef: planRef,
           })
           processingResult = result
@@ -182,7 +182,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         } as unknown as any)
       }
     },
-    [processPayment, agentRef, planRef, refetch, onSuccess],
+    [processPayment, productRef, planRef, refetch, onSuccess],
   )
 
   // Handle payment error

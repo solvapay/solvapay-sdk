@@ -217,12 +217,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   // Store functions in refs to avoid dependency issues
   const checkPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(null)
   const createPaymentRef = useRef<
-    ((params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>) | null
+    ((params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>) | null
   >(null)
   const processPaymentRef = useRef<
     | ((params: {
         paymentIntentId: string
-        agentRef: string
+        productRef: string
         planRef?: string
       }) => Promise<ProcessPaymentResult>)
     | null
@@ -303,7 +303,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   // Build default createPayment implementation
   const buildDefaultCreatePayment = useCallback(
-    async (params: { planRef: string; agentRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: { planRef: string; productRef?: string }): Promise<PaymentIntentResult> => {
       const currentConfig = configRef.current
       const adapter = getAuthAdapter(currentConfig)
       const token = await adapter.getToken()
@@ -335,10 +335,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         Object.assign(headers, customHeaders)
       }
 
-      // Build request body with planRef and agentRef if provided
-      const body: { planRef: string; agentRef?: string } = { planRef: params.planRef }
-      if (params.agentRef) {
-        body.agentRef = params.agentRef
+      // Build request body with planRef and productRef if provided
+      const body: { planRef: string; productRef?: string } = { planRef: params.planRef }
+      if (params.productRef) {
+        body.productRef = params.productRef
       }
 
       const res = await fetchFn(route, {
@@ -362,7 +362,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const buildDefaultProcessPayment = useCallback(
     async (params: {
       paymentIntentId: string
-      agentRef: string
+      productRef: string
       planRef?: string
     }): Promise<ProcessPaymentResult> => {
       const currentConfig = configRef.current
@@ -427,7 +427,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [buildDefaultCheckPurchase])
 
   const createPayment = useCallback(
-    async (params: { planRef: string; agentRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: { planRef: string; productRef?: string }): Promise<PaymentIntentResult> => {
       if (createPaymentRef.current) {
         return createPaymentRef.current(params)
       }
@@ -439,7 +439,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const processPayment = useCallback(
     async (params: {
       paymentIntentId: string
-      agentRef: string
+      productRef: string
       planRef?: string
     }): Promise<ProcessPaymentResult> => {
       if (processPaymentRef.current) {

@@ -22,7 +22,7 @@ import { syncCustomerCore } from './customer'
 export async function createCheckoutSessionCore(
   request: Request,
   body: {
-    agentRef: string
+    productRef: string
     planRef?: string
     returnUrl?: string
   },
@@ -40,15 +40,13 @@ export async function createCheckoutSessionCore(
   | ErrorResult
 > {
   try {
-    // Validate required parameters
-    if (!body.agentRef) {
+    if (!body.productRef) {
       return {
-        error: 'Missing required parameter: agentRef is required',
+        error: 'Missing required parameter: productRef is required',
         status: 400,
       }
     }
 
-    // Sync customer first
     const customerResult = await syncCustomerCore(request, {
       solvaPay: options.solvaPay,
       includeEmail: options.includeEmail,
@@ -61,8 +59,6 @@ export async function createCheckoutSessionCore(
 
     const customerRef = customerResult
 
-    // Extract returnUrl from request if not provided
-    // Priority: body.returnUrl > options.returnUrl > auto-extract from request origin
     let returnUrl = body.returnUrl || options.returnUrl
     if (!returnUrl) {
       try {
@@ -73,18 +69,15 @@ export async function createCheckoutSessionCore(
       }
     }
 
-    // Use provided SolvaPay instance or create new one
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    // Call backend API to create checkout session
     const session = await solvaPay.createCheckoutSession({
-      agentRef: body.agentRef,
+      productRef: body.productRef,
       customerRef,
       planRef: body.planRef || undefined,
       returnUrl: returnUrl,
     })
 
-    // Return the session details
     return {
       sessionId: session.sessionId,
       checkoutUrl: session.checkoutUrl,
@@ -116,7 +109,6 @@ export async function createCustomerSessionCore(
   | ErrorResult
 > {
   try {
-    // Sync customer first
     const customerResult = await syncCustomerCore(request, {
       solvaPay: options.solvaPay,
       includeEmail: options.includeEmail,
@@ -129,10 +121,8 @@ export async function createCustomerSessionCore(
 
     const customerRef = customerResult
 
-    // Use provided SolvaPay instance or create new one
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    // Call backend API to create customer session
     const session = await solvaPay.createCustomerSession({
       customerRef,
     })

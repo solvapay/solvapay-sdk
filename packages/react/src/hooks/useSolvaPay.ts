@@ -28,7 +28,7 @@ import type { SolvaPayContextValue } from '../types'
  *   const handlePayment = async () => {
  *     const intent = await createPayment({
  *       planRef: 'pln_premium',
- *       agentRef: 'agt_myapi'
+ *       productRef: 'prd_myapi'
  *     });
  *     // Process payment...
  *   };

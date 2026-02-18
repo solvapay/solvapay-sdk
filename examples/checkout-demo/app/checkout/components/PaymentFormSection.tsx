@@ -4,7 +4,7 @@ import { formatPrice } from '../utils/planHelpers'
 
 interface PaymentFormSectionProps {
   currentPlan: Plan
-  agentRef?: string
+  productRef?: string
   onSuccess: (paymentIntent?: unknown) => void
   onError: (error: Error) => void
   onBack: () => void
@@ -18,7 +18,7 @@ interface PaymentFormSectionProps {
  */
 export function PaymentFormSection({
   currentPlan,
-  agentRef,
+  productRef,
   onSuccess,
   onError,
   onBack,
@@ -43,7 +43,7 @@ export function PaymentFormSection({
       <PaymentForm
         key={currentPlan.reference}
         planRef={currentPlan.reference}
-        agentRef={agentRef}
+        productRef={productRef}
         onSuccess={onSuccess}
         onError={onError}
         submitButtonText="Complete Purchase"

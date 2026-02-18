@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { cancelRenewalCore, isErrorResult } from '@solvapay/server'
+import { cancelPurchaseCore, isErrorResult } from '@solvapay/server'
 import { clearPurchaseCache } from '../cache'
 import { getAuthenticatedUserCore } from '@solvapay/server'
 
 /**
- * Next.js Renewal Helpers
- *
- * Next.js-specific wrappers for renewal helpers.
+ * Next.js Purchase Cancellation Helpers
  */
 
 /**
- * Cancel renewal - Next.js wrapper
+ * Cancel purchase - Next.js wrapper
  *
  * @param request - Next.js request object
  * @param body - Cancellation parameters
@@ -28,7 +26,7 @@ export async function cancelRenewal(
     solvaPay?: SolvaPay
   } = {},
 ): Promise<Record<string, unknown> | NextResponse> {
-  const result = await cancelRenewalCore(request, body, options)
+  const result = await cancelPurchaseCore(request, body, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(
@@ -37,7 +35,6 @@ export async function cancelRenewal(
     )
   }
 
-  // Clear purchase cache to ensure fresh data on next check
   try {
     const userResult = await getAuthenticatedUserCore(request)
     if (!isErrorResult(userResult)) {

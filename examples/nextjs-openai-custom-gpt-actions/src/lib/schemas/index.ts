@@ -16,7 +16,7 @@ export const PaywallErrorResponseSchema = z
   .object({
     error: z.string().describe('Error message'),
     success: z.boolean().describe('Request success status'),
-    agent: z.string().describe('The agent that triggered the paywall'),
+    product: z.string().describe('The product that triggered the paywall'),
     checkoutUrl: z.string().describe('URL to upgrade the plan'),
     message: z.string().describe('Human-readable paywall message'),
   })
