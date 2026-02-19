@@ -529,7 +529,7 @@ export interface components {
              * @example AI-powered writing tool
              */
             description?: string;
-            /** @description URL to the product image */
+            /** URL to the product image */
             imageUrl?: string;
             /**
              * Free-form product type defined by the provider
@@ -541,9 +541,9 @@ export interface components {
              * @default false
              */
             isMcpPay: boolean;
-            /** @description Product-specific configuration */
+            /** Product-specific configuration */
             config?: Record<string, never>;
-            /** @description Arbitrary key-value metadata */
+            /** Arbitrary key-value metadata */
             metadata?: Record<string, never>;
         };
         SdkProductResponse: {
@@ -562,11 +562,11 @@ export interface components {
              * @example AI Writing Assistant
              */
             name: string;
-            /** @description Product description */
+            /** Product description */
             description?: string;
-            /** @description URL to the product image */
+            /** URL to the product image */
             imageUrl?: string;
-            /** @description Free-form product type */
+            /** Free-form product type */
             productType?: string;
             /**
              * Product status
@@ -588,34 +588,34 @@ export interface components {
              * @example false
              */
             isMcpPay: boolean;
-            /** @description Product-specific configuration */
+            /** Product-specific configuration */
             config?: Record<string, never>;
-            /** @description Arbitrary key-value metadata */
+            /** Arbitrary key-value metadata */
             metadata?: Record<string, never>;
-            /** @description Creation timestamp */
+            /** Creation timestamp */
             createdAt: string;
-            /** @description Last update timestamp */
+            /** Last update timestamp */
             updatedAt: string;
-            /** @description Plans associated with this product */
+            /** Plans associated with this product */
             plans?: string[];
         };
         UpdateProductRequest: {
-            /** @description Product name */
+            /** Product name */
             name?: string;
-            /** @description Product description */
+            /** Product description */
             description?: string;
-            /** @description URL to the product image */
+            /** URL to the product image */
             imageUrl?: string;
-            /** @description Free-form product type defined by the provider */
+            /** Free-form product type defined by the provider */
             productType?: string;
             /**
              * Product status
              * @enum {string}
              */
             status?: "active" | "inactive" | "suspended";
-            /** @description Product-specific configuration */
+            /** Product-specific configuration */
             config?: Record<string, never>;
-            /** @description Arbitrary key-value metadata */
+            /** Arbitrary key-value metadata */
             metadata?: Record<string, never>;
         };
         CreatePlanRequest: {
@@ -739,7 +739,7 @@ export interface components {
              * @example 30
              */
             accessExpiryDays?: number;
-            /** @description Additional metadata */
+            /** Additional metadata */
             metadata?: Record<string, never>;
             /**
              * Whether this is the default plan
@@ -800,7 +800,7 @@ export interface components {
         CancelRenewalRequest: Record<string, never>;
         UpdateConnectedAccount: Record<string, never>;
         CancelPurchaseRequest: {
-            /** @description Reason for cancellation */
+            /** Reason for cancellation */
             reason?: string;
         };
         CheckLimitRequest: {
@@ -956,7 +956,7 @@ export interface components {
              * @example auth_user_12345
              */
             externalRef?: string;
-            /** @description Active purchases */
+            /** Active purchases */
             purchases?: components["schemas"]["PurchaseInfo"][];
         };
         CreateCustomerSessionResponse: {
@@ -993,7 +993,7 @@ export interface components {
              * @example 2025-01-01T12:00:00.000Z
              */
             expiresAt: string;
-            /** @description Customer object from session data */
+            /** Customer object from session data */
             customer: components["schemas"]["CustomerResponse"];
             /**
              * Session creation date
@@ -1077,19 +1077,19 @@ export interface components {
             token_endpoint_auth_method: string;
         };
         GoogleLoginDto: {
-            /** @description The authorization code returned by Google */
+            /** The authorization code returned by Google */
             code: string;
-            /** @description The redirect URI used in the initial authorization request */
+            /** The redirect URI used in the initial authorization request */
             redirect_uri: string;
-            /** @description The state parameter returned by Google (contains client_id) */
+            /** The state parameter returned by Google (contains client_id) */
             state: string;
         };
         GithubLoginDto: {
-            /** @description The authorization code returned by GitHub */
+            /** The authorization code returned by GitHub */
             code: string;
-            /** @description The redirect URI used in the initial authorization request */
+            /** The redirect URI used in the initial authorization request */
             redirect_uri: string;
-            /** @description The state parameter returned by GitHub (contains client_id) */
+            /** The state parameter returned by GitHub (contains client_id) */
             state: string;
         };
         ExecuteAnalyticsQuery: Record<string, never>;
@@ -1125,9 +1125,9 @@ export interface components {
             secondary?: string;
         };
         ThemeOverridesDto: {
-            /** @description Light mode color overrides */
+            /** Light mode color overrides */
             light?: components["schemas"]["ThemeModeColorsDto"];
-            /** @description Dark mode color overrides */
+            /** Dark mode color overrides */
             dark?: components["schemas"]["ThemeModeColorsDto"];
         };
         UpdateBrandThemeDto: {
@@ -1153,7 +1153,7 @@ export interface components {
              * @example 16px
              */
             fontSize: string;
-            /** @description Per-mode color overrides for light and dark themes */
+            /** Per-mode color overrides for light and dark themes */
             themes?: components["schemas"]["ThemeOverridesDto"];
         };
         CreateWebhookEndpointDto: Record<string, never>;
@@ -1185,15 +1185,15 @@ export interface operations {
     AgentSdkController_listAgents: {
         parameters: {
             query?: {
-                /** @description Maximum number of agents to return (1-100) */
+                /** Maximum number of agents to return (1-100) */
                 limit?: number;
-                /** @description Number of agents to skip for pagination */
+                /** Number of agents to skip for pagination */
                 offset?: number;
-                /** @description Search term to filter agents by name, description, reference, or categories (case-insensitive) */
+                /** Search term to filter agents by name, description, reference, or categories (case-insensitive) */
                 search?: string;
-                /** @description Comma-separated list of categories to filter by (e.g., "ai,chat,automation") */
+                /** Comma-separated list of categories to filter by (e.g., "ai,chat,automation") */
                 categories?: string;
-                /** @description Filter by agent status */
+                /** Filter by agent status */
                 status?: "published" | "unpublished" | "all";
             };
             header?: never;
@@ -1247,7 +1247,7 @@ export interface operations {
                     "application/json": components["schemas"]["Agent"][];
                 };
             };
-            /** @description Invalid request parameters or validation errors */
+            /** Invalid request parameters or validation errors */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1269,7 +1269,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid, missing, or expired secret key */
+            /** Invalid, missing, or expired secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1294,7 +1294,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Agent creation data */
+        /** Agent creation data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateAgentRequest"];
@@ -1386,7 +1386,7 @@ export interface operations {
                     "application/json": components["schemas"]["Agent"];
                 };
             };
-            /** @description Invalid request data */
+            /** Invalid request data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1395,7 +1395,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1422,7 +1422,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Avatar uploaded successfully */
+            /** Avatar uploaded successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1433,14 +1433,14 @@ export interface operations {
                     };
                 };
             };
-            /** @description Invalid file or request data */
+            /** Invalid file or request data */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1454,12 +1454,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
             };
             cookie?: never;
         };
-        /** @description Agent update data - only provided fields will be updated */
+        /** Agent update data - only provided fields will be updated */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateAgentRequest"];
@@ -1553,7 +1553,7 @@ export interface operations {
                     "application/json": components["schemas"]["Agent"];
                 };
             };
-            /** @description Invalid request data */
+            /** Invalid request data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1562,7 +1562,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1571,7 +1571,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Agent not found */
+            /** Agent not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1587,14 +1587,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Agent reference identifier */
+                /** Agent reference identifier */
                 agentRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Agent deleted successfully */
+            /** Agent deleted successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1603,7 +1603,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description Invalid or missing secret key */
+            /** Invalid or missing secret key */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1612,7 +1612,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Agent not found */
+            /** Agent not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1626,15 +1626,15 @@ export interface operations {
     ProductSdkController_listProducts: {
         parameters: {
             query?: {
-                /** @description Max results (1-100) */
+                /** Max results (1-100) */
                 limit?: number;
-                /** @description Pagination offset */
+                /** Pagination offset */
                 offset?: number;
-                /** @description Search by name or description */
+                /** Search by name or description */
                 search?: string;
-                /** @description Filter by status */
+                /** Filter by status */
                 status?: "active" | "inactive" | "suspended";
-                /** @description Filter MCP Pay products */
+                /** Filter MCP Pay products */
                 isMcpPay?: boolean;
             };
             header?: never;
@@ -1643,7 +1643,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Products retrieved successfully */
+            /** Products retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1665,7 +1665,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Product created successfully */
+            /** Product created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1674,7 +1674,7 @@ export interface operations {
                     "application/json": components["schemas"]["SdkProductResponse"];
                 };
             };
-            /** @description Missing required fields or validation error */
+            /** Missing required fields or validation error */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1688,14 +1688,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Product retrieved successfully */
+            /** Product retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1704,7 +1704,7 @@ export interface operations {
                     "application/json": components["schemas"]["SdkProductResponse"];
                 };
             };
-            /** @description Product not found */
+            /** Product not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1718,7 +1718,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
             };
             cookie?: never;
@@ -1729,7 +1729,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Product updated successfully */
+            /** Product updated successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1738,7 +1738,7 @@ export interface operations {
                     "application/json": components["schemas"]["SdkProductResponse"];
                 };
             };
-            /** @description Product not found */
+            /** Product not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1752,21 +1752,21 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Product deleted or deactivated successfully */
+            /** Product deleted or deactivated successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Product not found */
+            /** Product not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1785,7 +1785,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
             };
             cookie?: never;
@@ -1805,7 +1805,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
             };
             cookie?: never;
@@ -1829,9 +1829,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
-                /** @description Plan reference or ID */
+                /** Plan reference or ID */
                 planRef: string;
             };
             cookie?: never;
@@ -1851,9 +1851,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
-                /** @description Plan reference or ID */
+                /** Plan reference or ID */
                 planRef: string;
             };
             cookie?: never;
@@ -1877,9 +1877,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
-                /** @description Plan reference or ID */
+                /** Plan reference or ID */
                 planRef: string;
             };
             cookie?: never;
@@ -1897,9 +1897,9 @@ export interface operations {
     PaymentIntentSdkController_getPaymentIntents: {
         parameters: {
             query?: {
-                /** @description Maximum number of results */
+                /** Maximum number of results */
                 limit?: number;
-                /** @description Pagination offset */
+                /** Pagination offset */
                 offset?: number;
             };
             header?: never;
@@ -1908,7 +1908,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Payment intents retrieved successfully */
+            /** Payment intents retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1923,13 +1923,13 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Unique idempotency key to prevent duplicate payments (required) */
+                /** Unique idempotency key to prevent duplicate payments (required) */
                 "idempotency-key": string;
             };
             path?: never;
             cookie?: never;
         };
-        /** @description Payment intent creation data */
+        /** Payment intent creation data */
         requestBody: {
             content: {
                 "application/json": {
@@ -1957,7 +1957,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Payment intent created successfully */
+            /** Payment intent created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1966,7 +1966,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Missing required fields or invalid data */
+            /** Missing required fields or invalid data */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1982,14 +1982,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Payment intent ID */
+                /** Payment intent ID */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Payment intent retrieved successfully */
+            /** Payment intent retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2005,12 +2005,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Stripe payment intent ID (format: pi_xxx) */
+                /** Stripe payment intent ID (format: pi_xxx) */
                 id: string;
             };
             cookie?: never;
         };
-        /** @description Payment processing data */
+        /** Payment processing data */
         requestBody: {
             content: {
                 "application/json": {
@@ -2033,7 +2033,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Payment intent status */
+            /** Payment intent status */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2054,7 +2054,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Payment not succeeded or invalid request */
+            /** Payment not succeeded or invalid request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2090,27 +2090,27 @@ export interface operations {
                      * @example pln_2b3c4d5e
                      */
                     planRef?: string;
-                    /** @description URL to redirect after checkout */
+                    /** URL to redirect after checkout */
                     returnUrl?: string;
                 };
             };
         };
         responses: {
-            /** @description Checkout session created */
+            /** Checkout session created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @description Checkout session ID */
+                        /** Checkout session ID */
                         sessionId?: string;
-                        /** @description URL to redirect the customer to */
+                        /** URL to redirect the customer to */
                         checkoutUrl?: string;
                     };
                 };
             };
-            /** @description Missing customerRef or productRef */
+            /** Missing customerRef or productRef */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2122,11 +2122,11 @@ export interface operations {
     PurchaseSdkController_listPurchases: {
         parameters: {
             query?: {
-                /** @description Filter by purchase status */
+                /** Filter by purchase status */
                 status?: "pending" | "active" | "trialing" | "past_due" | "cancelled" | "expired" | "suspended" | "refunded";
-                /** @description Filter by product ID */
+                /** Filter by product ID */
                 productId?: string;
-                /** @description Filter by customer ID */
+                /** Filter by customer ID */
                 customerId?: string;
             };
             header?: never;
@@ -2135,7 +2135,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Purchases retrieved successfully */
+            /** Purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2149,21 +2149,21 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Customer reference or ID */
+                /** Customer reference or ID */
                 customerRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Customer purchases retrieved successfully */
+            /** Customer purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2177,21 +2177,21 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Product reference or ID */
+                /** Product reference or ID */
                 productRef: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Product purchases retrieved successfully */
+            /** Product purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Product not found */
+            /** Product not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2205,21 +2205,21 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Purchase ID or reference */
+                /** Purchase ID or reference */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Purchase retrieved successfully */
+            /** Purchase retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Purchase not found */
+            /** Purchase not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2233,7 +2233,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Purchase reference or ID */
+                /** Purchase reference or ID */
                 purchaseRef: string;
             };
             cookie?: never;
@@ -2244,14 +2244,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Purchase cancelled successfully */
+            /** Purchase cancelled successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Purchase not found */
+            /** Purchase not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2273,7 +2273,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Limit check result */
+            /** Limit check result */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2282,14 +2282,14 @@ export interface operations {
                     "application/json": components["schemas"]["LimitResponse"];
                 };
             };
-            /** @description Missing customerRef or productRef */
+            /** Missing customerRef or productRef */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Customer or product not found */
+            /** Customer or product not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2329,19 +2329,19 @@ export interface operations {
                      * @enum {string}
                      */
                     action?: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
-                    /** @description Tool or feature name */
+                    /** Tool or feature name */
                     toolName?: string;
-                    /** @description Custom action key for custom action types */
+                    /** Custom action key for custom action types */
                     customActionKey?: string;
-                    /** @description Human-readable description of the event */
+                    /** Human-readable description of the event */
                     description?: string;
-                    /** @description Arbitrary metadata */
+                    /** Arbitrary metadata */
                     metadata?: Record<string, never>;
                 };
             };
         };
         responses: {
-            /** @description Usage recorded successfully */
+            /** Usage recorded successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2360,14 +2360,14 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing customerRef or productRef */
+            /** Missing customerRef or productRef */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Customer or product not found */
+            /** Customer or product not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2396,14 +2396,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Bulk usage events processed */
+            /** Bulk usage events processed */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Events array is required and must not be empty */
+            /** Events array is required and must not be empty */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2415,9 +2415,9 @@ export interface operations {
     CustomerSdkController_getCustomerByQuery: {
         parameters: {
             query?: {
-                /** @description Customer reference identifier (use this OR externalRef, not both) */
+                /** Customer reference identifier (use this OR externalRef, not both) */
                 reference?: string;
-                /** @description External reference ID from your auth system (use this OR reference, not both) */
+                /** External reference ID from your auth system (use this OR reference, not both) */
                 externalRef?: string;
             };
             header?: never;
@@ -2426,7 +2426,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Customer retrieved successfully */
+            /** Customer retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2435,7 +2435,7 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerResponse"];
                 };
             };
-            /** @description Invalid request - must provide exactly one of reference or externalRef */
+            /** Invalid request - must provide exactly one of reference or externalRef */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2444,7 +2444,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2462,14 +2462,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Customer creation data */
+        /** Customer creation data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateCustomerRequest"];
             };
         };
         responses: {
-            /** @description Customer created successfully */
+            /** Customer created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -2478,7 +2478,7 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerResponse"];
                 };
             };
-            /** @description Invalid email or missing required fields */
+            /** Invalid email or missing required fields */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2494,14 +2494,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Customer reference identifier */
+                /** Customer reference identifier */
                 reference: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Customer retrieved successfully */
+            /** Customer retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2510,7 +2510,7 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerResponse"];
                 };
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2528,14 +2528,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Customer session creation request data */
+        /** Customer session creation request data */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateCustomerSessionRequest"];
             };
         };
         responses: {
-            /** @description Customer session created successfully */
+            /** Customer session created successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -2544,7 +2544,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreateCustomerSessionResponse"];
                 };
             };
-            /** @description Invalid request data or customer not found */
+            /** Invalid request data or customer not found */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2553,7 +2553,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Customer not found */
+            /** Customer not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2569,14 +2569,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Customer session ID/token */
+                /** Customer session ID/token */
                 sessionId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Customer session retrieved successfully */
+            /** Customer session retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2585,7 +2585,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetCustomerSessionResponse"];
                 };
             };
-            /** @description Customer session not found */
+            /** Customer session not found */
             404: {
                 headers: {
                     [name: string]: unknown;

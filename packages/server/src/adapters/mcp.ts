@@ -12,7 +12,7 @@ import { PaywallError } from '../paywall'
 /**
  * MCP context (plain args object)
  */
-type McpContext = any
+type McpContext = Record<string, unknown>
 
 /**
  * MCP Adapter implementation
@@ -20,7 +20,7 @@ type McpContext = any
 export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
   constructor(private options: McpAdapterOptions = {}) {}
 
-  extractArgs(args: McpContext): any {
+  extractArgs(args: McpContext): Record<string, unknown> {
     // MCP args are already plain objects, pass through
     return args
   }
@@ -32,11 +32,12 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
     }
 
     // Extract from args.auth.customer_ref
-    const customerRef = args?.auth?.customer_ref || 'anonymous'
+    const auth = args?.auth as { customer_ref?: string } | undefined
+    const customerRef = auth?.customer_ref || 'anonymous'
     return AdapterUtils.ensureCustomerRef(customerRef)
   }
 
-  formatResponse(result: any, _context: McpContext): PaywallToolResult {
+  formatResponse(result: unknown, _context: McpContext): PaywallToolResult {
     const transformed = this.options.transformResponse
       ? this.options.transformResponse(result)
       : result

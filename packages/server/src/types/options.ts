@@ -70,6 +70,7 @@ export interface PayableOptions {
   /**
    * Optional function to extract customer reference from context
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getCustomerRef?: (context: any) => string | Promise<string>
 }
 
@@ -80,16 +81,19 @@ export interface HttpAdapterOptions {
   /**
    * Extract arguments from HTTP request
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extractArgs?: (req: any) => any
 
   /**
    * Extract customer reference from HTTP request
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getCustomerRef?: (req: any) => string | Promise<string>
 
   /**
    * Transform the response before sending
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transformResponse?: (result: any, reply: any) => any
 }
 
@@ -100,6 +104,7 @@ export interface NextAdapterOptions {
   /**
    * Extract arguments from Web Request
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extractArgs?: (request: Request, context?: any) => any | Promise<any>
 
   /**
@@ -110,6 +115,7 @@ export interface NextAdapterOptions {
   /**
    * Transform the response before returning
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transformResponse?: (result: any) => any
 }
 
@@ -120,10 +126,12 @@ export interface McpAdapterOptions {
   /**
    * Extract customer reference from MCP args
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getCustomerRef?: (args: any) => string | Promise<string>
 
   /**
    * Transform the response before wrapping in MCP format
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transformResponse?: (result: any) => any
 }

@@ -126,8 +126,8 @@ export interface SolvaPayClient {
       interval?: string
       isFreeTier?: boolean
       freeUnits?: number
-      metadata?: Record<string, any>
-      [key: string]: any
+      metadata?: Record<string, unknown>
+      [key: string]: unknown
     }>
   >
 

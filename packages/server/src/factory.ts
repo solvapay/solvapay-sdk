@@ -7,6 +7,7 @@
 import type {
   SolvaPayClient,
   PayableOptions,
+  PaywallArgs,
   HttpAdapterOptions,
   NextAdapterOptions,
   McpAdapterOptions,
@@ -99,10 +100,13 @@ export interface PayableFunction {
    * }));
    * ```
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   http<T = any>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     businessLogic: (args: any) => Promise<T>,
     options?: HttpAdapterOptions,
-  ): (req: any, reply: any) => Promise<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): (req: any, reply: any) => Promise<unknown>
 
   /**
    * Next.js adapter for App Router API routes.
@@ -120,9 +124,12 @@ export interface PayableFunction {
    * });
    * ```
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   next<T = any>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     businessLogic: (args: any) => Promise<T>,
     options?: NextAdapterOptions,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): (request: Request, context?: any) => Promise<Response>
 
   /**
@@ -139,10 +146,12 @@ export interface PayableFunction {
    * });
    * ```
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mcp<T = any>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     businessLogic: (args: any) => Promise<T>,
     options?: McpAdapterOptions,
-  ): (args: any) => Promise<any>
+  ): (args: Record<string, unknown>) => Promise<unknown>
 
   /**
    * Pure function adapter for direct function protection.
@@ -165,7 +174,12 @@ export interface PayableFunction {
    * });
    * ```
    */
-  function<T = any>(businessLogic: (args: any) => Promise<T>): Promise<(args: any) => Promise<T>>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function<T = any>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    businessLogic: (args: any) => Promise<T>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<(args: any) => Promise<T>>
 }
 
 /**
@@ -661,44 +675,54 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       const metadata = { product, plan }
 
       return {
-        // HTTP adapter for Express/Fastify
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         http<T = any>(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: HttpAdapterOptions,
         ) {
           const adapter = new HttpAdapter(adapterOptions)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (req: any, reply: any) => {
             const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
             return handler([req, reply])
           }
         },
 
-        // Next.js adapter for App Router
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         next<T = any>(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: NextAdapterOptions,
         ) {
           const adapter = new NextAdapter(adapterOptions)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (request: Request, context?: any) => {
             const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
             return handler([request, context])
           }
         },
 
-        // MCP adapter for Model Context Protocol
-        mcp<T = any>(businessLogic: (args: any) => Promise<T>, adapterOptions?: McpAdapterOptions) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mcp<T = any>(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          businessLogic: (args: any) => Promise<T>,
+          adapterOptions?: McpAdapterOptions,
+        ) {
           const adapter = new McpAdapter(adapterOptions)
-          return async (args: any) => {
+          return async (args: Record<string, unknown>) => {
             const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
             return handler(args)
           }
         },
 
-        // Pure function adapter for direct protection
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async function<T = any>(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           businessLogic: (args: any) => Promise<T>,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ): Promise<(args: any) => Promise<T>> {
-          const getCustomerRef = (args: any) => args.auth?.customer_ref || 'anonymous'
+          const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },
       }

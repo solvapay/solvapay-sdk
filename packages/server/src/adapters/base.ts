@@ -6,16 +6,17 @@
  */
 
 import type { SolvaPayPaywall } from '../paywall'
-import type { PaywallMetadata } from '../types'
+import type { PaywallArgs, PaywallMetadata } from '../types'
 
 /**
  * Base adapter interface that all framework adapters implement
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface Adapter<TContext = any, TResult = any> {
   /**
    * Extract plain arguments from the framework-specific context
    */
-  extractArgs(context: TContext): Promise<any> | any
+  extractArgs(context: TContext): Promise<Record<string, unknown>> | Record<string, unknown>
 
   /**
    * Extract customer reference from the context
@@ -25,7 +26,7 @@ export interface Adapter<TContext = any, TResult = any> {
   /**
    * Format the business logic result for the framework
    */
-  formatResponse(result: any, context: TContext): TResult
+  formatResponse(result: unknown, context: TContext): TResult
 
   /**
    * Format errors for the framework
@@ -86,6 +87,7 @@ export async function createAdapterHandler<TContext, TResult>(
   adapter: Adapter<TContext, TResult>,
   paywall: SolvaPayPaywall,
   metadata: PaywallMetadata,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   businessLogic: (args: any) => Promise<any>,
 ): Promise<(context: TContext) => Promise<TResult>> {
   return async (context: TContext): Promise<TResult> => {
@@ -97,8 +99,7 @@ export async function createAdapterHandler<TContext, TResult>(
       // Add auth info to args
       args.auth = { customer_ref: customerRef }
 
-      // Create protected handler
-      const getCustomerRef = (args: any) => args.auth.customer_ref
+      const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
       const protectedHandler = await paywall.protect(businessLogic, metadata, getCustomerRef)
 
       // Execute protected handler

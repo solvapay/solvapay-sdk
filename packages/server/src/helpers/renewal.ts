@@ -28,7 +28,7 @@ export async function cancelPurchaseCore(
   options: {
     solvaPay?: SolvaPay
   } = {},
-): Promise<any | ErrorResult> {
+): Promise<Record<string, unknown> | ErrorResult> {
   try {
     if (!body.purchaseRef) {
       return {
@@ -58,9 +58,9 @@ export async function cancelPurchaseCore(
       }
     }
 
-    const responseAny = cancelledPurchase as any
-    if (responseAny.purchase && typeof responseAny.purchase === 'object') {
-      cancelledPurchase = responseAny.purchase
+    const responseObj = cancelledPurchase as unknown as Record<string, unknown>
+    if (responseObj.purchase && typeof responseObj.purchase === 'object') {
+      cancelledPurchase = responseObj.purchase as typeof cancelledPurchase
     }
 
     if (!cancelledPurchase.reference) {
