@@ -18,20 +18,20 @@ This example demonstrates how to integrate SolvaPay paywall functionality with a
 
 ## Features
 
-### 🔒 **Agent-Based Access Control**
+### Agent-Based Access Control
 
 - Uses `agent` to identify the service/tool suite
 - Supports both free tier and paid plan access
 - Backend-configurable plans (no hardcoded pricing in SDK)
 
-### 📊 **Persistent Free Tier Tracking**
+### Persistent Free Tier Tracking
 
 - **Production-ready demo**: Free tier usage persists across server restarts
 - **File-based storage**: Simulates database persistence using JSON files
 - **Daily reset logic**: Automatically resets counters each day
 - **Concurrent safe**: Handles multiple API calls properly
 
-### 📈 **Usage Analytics**
+### Usage Analytics
 
 - Tracks feature usage with `trackUsage()` (not tied to plans)
 - Clean separation: Plans control access, features track usage
@@ -61,10 +61,10 @@ POST / api / create - checkout
 
 ## Key Benefits
 
-✅ **Server restart resilience** - Free tier counts persist  
-✅ **Multi-instance compatible** - Shared storage approach  
-✅ **Development realistic** - Mirrors production behavior  
-✅ **Alpha launch ready** - Transparent about requirements
+- **Server restart resilience** - Free tier counts persist
+- **Multi-instance compatible** - Shared storage approach
+- **Development realistic** - Mirrors production behavior
+- **Alpha launch ready** - Transparent about requirements
 
 ## Quick Start
 
@@ -84,11 +84,95 @@ POST / api / create - checkout
 
 ### Run the MCP Server
 
+#### Stdio Mode (Default)
+
+The server runs in stdio mode by default, which is used by MCP clients:
+
 ```bash
-pnpm start
+pnpm dev
 ```
 
 The server will start and listen for MCP client connections via stdio.
+
+#### Streamable HTTP Mode (External Access)
+
+To expose the MCP server externally via Streamable HTTP transport (MCP spec 2025-11-25), set the `MCP_TRANSPORT` environment variable:
+
+```bash
+MCP_TRANSPORT=http MCP_PORT=3003 pnpm dev
+```
+
+Or create a `.env` file:
+
+```bash
+MCP_TRANSPORT=http
+MCP_PORT=3003
+MCP_HOST=localhost  # or 0.0.0.0 to bind to all interfaces
+```
+
+**Features:**
+- Uses official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport
+- Implements MCP Streamable HTTP transport (spec 2025-11-25)
+- Single `/mcp` endpoint for all operations (POST/GET/DELETE)
+- Header-based session management (`MCP-Session-Id`)
+- Protocol version negotiation (`MCP-Protocol-Version`)
+- Origin header validation for security
+- Resumability support with `Last-Event-ID`
+- Server-Sent Events (SSE) streaming support
+
+**MCP Endpoint:**
+- `POST /mcp` - Send JSON-RPC messages (initialize, tool calls, etc.)
+- `GET /mcp` - Open SSE stream for server-to-client messages
+- `DELETE /mcp` - Terminate session
+
+**Example usage with MCP client:**
+
+For Streamable HTTP, the client flow is:
+
+1. **Initialize Session** (POST to `/mcp`):
+   ```bash
+   curl -X POST "http://localhost:3003/mcp" \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json, text/event-stream" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 1,
+       "method": "initialize",
+       "params": {
+         "protocolVersion": "2025-11-25",
+         "capabilities": {},
+         "clientInfo": { "name": "test-client", "version": "1.0.0" }
+       }
+     }'
+   ```
+   Server responds with `MCP-Session-Id` header and JSON-RPC response.
+
+2. **Send Subsequent Requests** (include session ID):
+   ```bash
+   curl -X POST "http://localhost:3003/mcp" \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json, text/event-stream" \
+     -H "MCP-Session-Id: <SESSION_ID_FROM_INIT>" \
+     -H "MCP-Protocol-Version: 2025-11-25" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 2,
+       "method": "tools/list",
+       "params": {}
+     }'
+   ```
+
+3. **Open SSE Stream** (GET to `/mcp`):
+   ```bash
+   curl -N "http://localhost:3003/mcp" \
+     -H "Accept: text/event-stream" \
+     -H "MCP-Session-Id: <SESSION_ID>" \
+     -H "MCP-Protocol-Version: 2025-11-25"
+   ```
+
+**Additional Endpoints:**
+- `GET /health` - Health check
 
 ### Run Tests
 
@@ -360,14 +444,14 @@ const apiClient = createStubClient({
 Keep business logic separate from MCP adapter:
 
 ```typescript
-// ✅ Good: Separate function
+// Good: Separate function
 async function createTaskMCP(args: CreateTaskArgs) {
   return await createTask(args)
 }
 
 const handler = payable.mcp(createTaskMCP)
 
-// ❌ Bad: Inline logic
+// Bad: Inline logic
 const handler = payable.mcp(async args => {
   // Logic here makes testing harder
 })
@@ -418,7 +502,23 @@ const apiClient = createStubClient({
 
 This example includes comprehensive tests for MCP integration.
 
-### Running Tests
+### Automated Client Test
+
+We provide a script to simulate a client connecting to the server:
+
+```bash
+# 1. Start the server (terminal 1)
+MCP_TRANSPORT=http MCP_PORT=3003 pnpm dev
+
+# 2. Run the test client (terminal 2)
+MCP_PORT=3003 pnpm test:client
+```
+
+### Manual Testing with Postman/Curl
+
+See [Testing with Postman](docs/POSTMAN_TESTING.md) for detailed instructions on how to test the SSE-based transport.
+
+### Running Automated Tests
 
 ```bash
 # Run all tests
@@ -434,12 +534,12 @@ pnpm test:watch
 
 ### What's Tested
 
-- ✅ MCP tool execution with paywall protection
-- ✅ Free tier limit enforcement
-- ✅ Paywall error formatting
-- ✅ Customer reference extraction
-- ✅ Persistence across restarts (file storage)
-- ✅ Concurrent requests handling
+- MCP tool execution with paywall protection
+- Free tier limit enforcement
+- Paywall error formatting
+- Customer reference extraction
+- Persistence across restarts (file storage)
+- Concurrent requests handling
 
 ### Test Structure
 
@@ -532,7 +632,7 @@ src/__tests__/
 
 ### API Reference
 
-- [Server SDK API Reference](../../docs/api/server/) - Complete API documentation
+- [Server SDK API Reference](../../packages/server/README.md) - Complete API documentation
 - [Server SDK README](../../packages/server/README.md) - Package documentation
 
 ### Additional Resources

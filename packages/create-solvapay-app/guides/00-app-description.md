@@ -4,7 +4,7 @@ This document describes your application and will be used to customize the gener
 
 ## How to Use This Template
 
-1. **Option 1: Use Default** - Leave this file as-is for a generic subscription SaaS example
+1. **Option 1: Use Default** - Leave this file as-is for a generic purchase SaaS example
 2. **Option 2: Customize** - Edit this file to describe your specific app before implementing the guides
 3. **Option 3: AI Enhancement** - Paste this file into Cursor AI chat along with your own instructions to generate a customized version
 
@@ -12,11 +12,11 @@ When you implement the guides (especially `05-complete-example.md`), the AI will
 
 ## App Overview
 
-**App Name:** Subscription SaaS Application
+**App Name:** Purchase SaaS Application
 
-**App Type:** Generic subscription-based SaaS application
+**App Type:** Generic purchase-based SaaS application
 
-**Purpose:** A subscription-based software-as-a-service application that offers both free and premium features.
+**Purpose:** A purchase-based software-as-a-service application that offers both free and premium features.
 
 ## Target Audience
 
@@ -51,12 +51,12 @@ When you implement the guides (especially `05-complete-example.md`), the AI will
 
 The HomePage should:
 
-- Display a welcoming header with subscription status
+- Display a welcoming header with purchase status
 - Show feature cards that differentiate free vs premium features
-- Include clear call-to-action buttons for upgrading or managing subscriptions
+- Include clear call-to-action buttons for upgrading or managing purchases
 - Use professional, modern design with good spacing and readability
-- Display subscription management options for active subscribers
-- Show appropriate messaging for cancelled subscriptions
+- Display purchase management options for active subscribers
+- Show appropriate messaging for cancelled purchases
 
 ## Customization Instructions
 

@@ -448,4 +448,4 @@ it('should handle API errors', async () => {
 
 - [Error Handling Strategies](./error-handling.md) - Handle errors in tests
 - [Performance Optimization](./performance.md) - Test performance
-- [API Reference](../api/server/src/README.md) - Full API documentation
+- [API Reference](../../packages/server/README.md) - Full API documentation

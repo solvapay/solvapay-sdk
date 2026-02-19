@@ -1,32 +1,22 @@
 /**
  * Next.js Payment Helpers
- *
- * Next.js-specific wrappers for payment helpers.
  */
 
 import { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
 import {
   createPaymentIntentCore,
-  processPaymentCore,
+  processPaymentIntentCore,
   isErrorResult,
 } from '@solvapay/server'
-import { clearSubscriptionCache } from '../cache'
+import { clearPurchaseCache } from '../cache'
 import { getAuthenticatedUserCore } from '@solvapay/server'
 
-/**
- * Create payment intent - Next.js wrapper
- *
- * @param request - Next.js request object
- * @param body - Payment intent parameters
- * @param options - Configuration options
- * @returns Payment intent response or NextResponse error
- */
 export async function createPaymentIntent(
   request: globalThis.Request,
   body: {
     planRef: string
-    agentRef: string
+    productRef: string
   },
   options: {
     solvaPay?: SolvaPay
@@ -52,11 +42,10 @@ export async function createPaymentIntent(
     )
   }
 
-  // Clear subscription cache to ensure fresh data after payment intent creation
   try {
     const userResult = await getAuthenticatedUserCore(request)
     if (!isErrorResult(userResult)) {
-      clearSubscriptionCache(userResult.userId)
+      clearPurchaseCache(userResult.userId)
     }
   } catch {
     // Ignore errors in cache clearing
@@ -65,26 +54,18 @@ export async function createPaymentIntent(
   return result
 }
 
-/**
- * Process payment - Next.js wrapper
- *
- * @param request - Next.js request object
- * @param body - Payment processing parameters
- * @param options - Configuration options
- * @returns Process payment result or NextResponse error
- */
-export async function processPayment(
+export async function processPaymentIntent(
   request: globalThis.Request,
   body: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     planRef?: string
   },
   options: {
     solvaPay?: SolvaPay
   } = {},
 ): Promise<import('@solvapay/server').ProcessPaymentResult | NextResponse> {
-  const result = await processPaymentCore(request, body, options)
+  const result = await processPaymentIntentCore(request, body, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(
@@ -93,11 +74,10 @@ export async function processPayment(
     )
   }
 
-  // Clear subscription cache to ensure fresh data on next fetch
   try {
     const userResult = await getAuthenticatedUserCore(request)
     if (!isErrorResult(userResult)) {
-      clearSubscriptionCache(userResult.userId)
+      clearPurchaseCache(userResult.userId)
     }
   } catch {
     // Ignore errors in cache clearing

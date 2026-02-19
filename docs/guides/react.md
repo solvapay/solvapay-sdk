@@ -1,6 +1,6 @@
 # React Integration Guide
 
-This guide shows you how to integrate SolvaPay React components and hooks into your React application to build payment flows and subscription management UIs.
+This guide shows you how to integrate SolvaPay React components and hooks into your React application to build payment flows and purchase management UIs.
 
 ## Table of Contents
 
@@ -10,7 +10,7 @@ This guide shows you how to integrate SolvaPay React components and hooks into y
 - [Components](#components)
 - [Hooks](#hooks)
 - [Payment Flow](#payment-flow)
-- [Subscription Management](#subscription-management)
+- [Purchase Management](#purchase-management)
 - [Complete Example](#complete-example)
 
 ## Installation
@@ -57,7 +57,7 @@ function App() {
 
 By default, `SolvaPayProvider` uses these API endpoints:
 
-- `/api/check-subscription` - Check subscription status
+- `/api/check-purchase` - Check purchase status
 - `/api/create-payment-intent` - Create payment intents
 - `/api/process-payment` - Process payments
 
@@ -77,7 +77,7 @@ function App() {
     <SolvaPayProvider
       config={{
         api: {
-          checkSubscription: '/api/custom/subscription',
+          checkPurchase: '/api/custom/purchase',
           createPayment: '/api/custom/payment',
           processPayment: '/api/custom/process',
         },
@@ -123,6 +123,11 @@ Create a custom auth adapter for other authentication systems:
 import { SolvaPayProvider, AuthAdapter } from '@solvapay/react'
 
 const customAuthAdapter: AuthAdapter = {
+  getToken: async () => {
+    // Return auth token from your auth system
+    return localStorage.getItem('auth-token')
+  },
+
   getUserId: async () => {
     // Extract user ID from your auth system
     const token = localStorage.getItem('auth-token')
@@ -130,16 +135,6 @@ const customAuthAdapter: AuthAdapter = {
 
     const decoded = JSON.parse(atob(token.split('.')[1]))
     return decoded.userId
-  },
-
-  getUserEmail: async () => {
-    // Extract email if available
-    return null
-  },
-
-  getUserName: async () => {
-    // Extract name if available
-    return null
   },
 }
 
@@ -185,7 +180,7 @@ function CheckoutPage() {
 #### PaymentForm Props
 
 - `planRef` (required) - Plan reference to subscribe to
-- `agentRef` (required) - Agent reference for usage tracking
+- `agentRef` (optional) - Agent reference for usage tracking
 - `onSuccess` - Callback when payment succeeds
 - `onError` - Callback when payment fails
 - `returnUrl` - Optional return URL after payment
@@ -195,7 +190,7 @@ function CheckoutPage() {
 
 ### PlanSelector
 
-Select a plan from available plans:
+Select a plan from available plans using the render-prop API:
 
 ```tsx
 import { PlanSelector } from '@solvapay/react'
@@ -203,38 +198,57 @@ import { PlanSelector } from '@solvapay/react'
 function PlanSelectionPage() {
   return (
     <PlanSelector
-      agentRef="agt_myapi"
-      onSelect={plan => {
-        console.log('Selected plan:', plan)
-        // Navigate to checkout with selected plan
+      fetcher={async (agentRef) => {
+        const res = await fetch(`/api/plans?agentRef=${agentRef}`)
+        return res.json()
       }}
-    />
+      agentRef="agt_myapi"
+    >
+      {({ plans, loading, error, selectedPlan, selectPlan }) => {
+        if (loading) return <div>Loading plans...</div>
+        if (error) return <div>Error: {error.message}</div>
+        return (
+          <div>
+            {plans.map(plan => (
+              <button
+                key={plan.id}
+                onClick={() => selectPlan(plan)}
+                style={{ fontWeight: selectedPlan?.id === plan.id ? 'bold' : 'normal' }}
+              >
+                {plan.name} - ${plan.price}
+              </button>
+            ))}
+          </div>
+        )
+      }}
+    </PlanSelector>
   )
 }
 ```
 
-### SubscriptionGate
+### PurchaseGate
 
-Conditionally render content based on subscription status:
+Conditionally render content based on purchase status using the render-prop pattern:
 
 ```tsx
-import { SubscriptionGate } from '@solvapay/react'
+import { PurchaseGate } from '@solvapay/react'
 
 function PremiumContent() {
   return (
-    <SubscriptionGate
-      planRef="pln_premium"
-      fallback={<div>Please subscribe to access this content.</div>}
-    >
-      <div>Premium content here!</div>
-    </SubscriptionGate>
+    <PurchaseGate requirePlan="pln_premium">
+      {({ hasAccess, loading }) => {
+        if (loading) return <div>Loading...</div>
+        if (!hasAccess) return <div>Please subscribe to access this content.</div>
+        return <div>Premium content here!</div>
+      }}
+    </PurchaseGate>
   )
 }
 ```
 
 ### PlanBadge
 
-Display plan information:
+Display plan information using the render-prop pattern:
 
 ```tsx
 import { PlanBadge } from '@solvapay/react'
@@ -243,7 +257,11 @@ function UserProfile() {
   return (
     <div>
       <h1>Your Profile</h1>
-      <PlanBadge planRef="pln_premium" />
+      <PlanBadge>
+        {({ displayPlan, shouldShow }) =>
+          shouldShow ? <span className="badge">{displayPlan}</span> : null
+        }
+      </PlanBadge>
     </div>
   )
 }
@@ -251,31 +269,31 @@ function UserProfile() {
 
 ## Hooks
 
-### useSubscription
+### usePurchase
 
-Check subscription status and access subscription data:
+Check purchase status and access purchase data:
 
 ```tsx
-import { useSubscription } from '@solvapay/react'
+import { usePurchase } from '@solvapay/react'
 
 function Dashboard() {
-  const { hasPaidSubscription, isLoading, subscription, refetch } = useSubscription()
+  const { hasPaidPurchase, loading, activePurchase, refetch } = usePurchase()
 
-  if (isLoading) {
-    return <div>Loading subscription status...</div>
+  if (loading) {
+    return <div>Loading purchase status...</div>
   }
 
   return (
     <div>
-      {hasPaidSubscription ? (
+      {hasPaidPurchase ? (
         <div>
-          <h2>Active Subscription</h2>
-          <p>Plan: {subscription?.plan?.name}</p>
-          <p>Status: {subscription?.status}</p>
+          <h2>Active Purchase</h2>
+          <p>Plan: {activePurchase?.planName}</p>
+          <p>Status: {activePurchase?.status}</p>
         </div>
       ) : (
         <div>
-          <p>No active subscription</p>
+          <p>No active purchase</p>
           <button onClick={() => refetch()}>Refresh</button>
         </div>
       )}
@@ -284,13 +302,15 @@ function Dashboard() {
 }
 ```
 
-#### useSubscription Return Values
+#### usePurchase Return Values
 
-- `hasPaidSubscription` - Boolean indicating if user has paid subscription
-- `isLoading` - Boolean indicating if subscription check is in progress
-- `subscription` - Subscription data object (null if no subscription)
-- `refetch` - Function to manually refetch subscription status
-- `error` - Error object if subscription check failed
+- `loading` - Boolean indicating if purchase check is in progress
+- `purchases` - Array of purchase objects
+- `activePurchase` - The active purchase (or null)
+- `hasPaidPurchase` - Boolean indicating if user has paid purchase
+- `activePaidPurchase` - The active paid purchase (or null)
+- `hasPlan(planName)` - Function to check if user has a specific plan
+- `refetch` - Function to manually refetch purchase status
 
 ### useCheckout
 
@@ -300,30 +320,23 @@ Programmatic checkout flow:
 import { useCheckout } from '@solvapay/react'
 
 function CustomCheckout() {
-  const { createPayment, processPayment, isLoading, error } = useCheckout(
+  const { startCheckout, loading, error, stripePromise, clientSecret, reset } = useCheckout(
     'pln_premium',
     'agt_myapi',
   )
 
   const handleCheckout = async () => {
     try {
-      // Create payment intent
-      const intent = await createPayment()
-
-      // Process payment (after Stripe confirmation)
-      const result = await processPayment(intent.paymentIntentId)
-
-      if (result.success) {
-        console.log('Payment successful!')
-      }
+      await startCheckout()
+      console.log('Checkout started!')
     } catch (error) {
       console.error('Checkout failed:', error)
     }
   }
 
   return (
-    <button onClick={handleCheckout} disabled={isLoading}>
-      {isLoading ? 'Processing...' : 'Checkout'}
+    <button onClick={handleCheckout} disabled={loading}>
+      {loading ? 'Processing...' : 'Checkout'}
     </button>
   )
 }
@@ -337,17 +350,18 @@ Access customer information:
 import { useCustomer } from '@solvapay/react'
 
 function CustomerInfo() {
-  const { customer, isLoading, refetch } = useCustomer()
+  const { customerRef, email, name, loading } = useCustomer()
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading customer info...</div>
   }
 
   return (
     <div>
       <h2>Customer Information</h2>
-      <p>Customer ID: {customer?.id}</p>
-      <p>Email: {customer?.email}</p>
+      <p>Customer ID: {customerRef}</p>
+      <p>Email: {email}</p>
+      <p>Name: {name}</p>
     </div>
   )
 }
@@ -361,11 +375,15 @@ Fetch available plans:
 import { usePlans } from '@solvapay/react'
 
 function PlansPage() {
-  const { plans, isLoading, error } = usePlans({
+  const { plans, loading, error } = usePlans({
+    fetcher: async (agentRef) => {
+      const res = await fetch(`/api/plans?agentRef=${agentRef}`)
+      return res.json()
+    },
     agentRef: 'agt_myapi',
   })
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading plans...</div>
   }
 
@@ -396,7 +414,7 @@ Access all SolvaPay functionality:
 import { useSolvaPay } from '@solvapay/react'
 
 function CustomComponent() {
-  const { subscription, createPayment, processPayment, customerRef, refetchSubscription } =
+  const { activePurchase, startCheckout, customerRef, refetchPurchase } =
     useSolvaPay()
 
   // Use any SolvaPay functionality
@@ -440,42 +458,20 @@ function CheckoutPage() {
 Build a custom payment flow with hooks:
 
 ```tsx
-import { useCheckout, useSubscription } from '@solvapay/react'
+import { useCheckout, usePurchase } from '@solvapay/react'
 import { loadStripe } from '@stripe/stripe-js'
 
 function CustomCheckoutPage() {
-  const { createPayment, processPayment, isLoading } = useCheckout('pln_premium', 'agt_myapi')
-  const { refetch } = useSubscription()
-  const [stripe, setStripe] = useState(null)
-
-  useEffect(() => {
-    // Initialize Stripe
-    loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!).then(setStripe)
-  }, [])
+  const { startCheckout, loading, stripePromise, clientSecret, reset } = useCheckout('pln_premium', 'agt_myapi')
+  const { refetch } = usePurchase()
 
   const handleCheckout = async () => {
     try {
-      // Create payment intent
-      const intent = await createPayment()
+      await startCheckout()
 
-      // Confirm payment with Stripe
-      const { error: stripeError } = await stripe.confirmCardPayment(intent.clientSecret, {
-        payment_method: {
-          card: cardElement,
-        },
-      })
-
-      if (stripeError) {
-        throw stripeError
-      }
-
-      // Process payment
-      const result = await processPayment(intent.paymentIntentId)
-
-      if (result.success) {
-        await refetch() // Refresh subscription status
-        router.push('/dashboard')
-      }
+      // After successful checkout, refresh purchase status
+      await refetch()
+      router.push('/dashboard')
     } catch (error) {
       console.error('Checkout failed:', error)
     }
@@ -484,7 +480,7 @@ function CustomCheckoutPage() {
   return (
     <div>
       {/* Your custom UI */}
-      <button onClick={handleCheckout} disabled={isLoading}>
+      <button onClick={handleCheckout} disabled={loading}>
         Pay Now
       </button>
     </div>
@@ -492,21 +488,21 @@ function CustomCheckoutPage() {
 }
 ```
 
-## Subscription Management
+## Purchase Management
 
-### Check Subscription Status
+### Check Purchase Status
 
 ```tsx
-import { useSubscription } from '@solvapay/react'
+import { usePurchase } from '@solvapay/react'
 
 function ProtectedContent() {
-  const { hasPaidSubscription, isLoading } = useSubscription()
+  const { hasPaidPurchase, loading } = usePurchase()
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading...</div>
   }
 
-  if (!hasPaidSubscription) {
+  if (!hasPaidPurchase) {
     return <div>Please subscribe to access this content.</div>
   }
 
@@ -514,45 +510,45 @@ function ProtectedContent() {
 }
 ```
 
-### Display Subscription Details
+### Display Purchase Details
 
 ```tsx
-import { useSubscription } from '@solvapay/react'
+import { usePurchase } from '@solvapay/react'
 
-function SubscriptionDetails() {
-  const { subscription, isLoading } = useSubscription()
+function PurchaseDetails() {
+  const { activePurchase, loading } = usePurchase()
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading...</div>
   }
 
-  if (!subscription) {
-    return <div>No active subscription</div>
+  if (!activePurchase) {
+    return <div>No active purchase</div>
   }
 
   return (
     <div>
-      <h2>Your Subscription</h2>
-      <p>Plan: {subscription.plan?.name}</p>
-      <p>Status: {subscription.status}</p>
-      <p>Current Period End: {subscription.currentPeriodEnd}</p>
+      <h2>Your Purchase</h2>
+      <p>Plan: {activePurchase.planName}</p>
+      <p>Status: {activePurchase.status}</p>
+      <p>Current Period End: {activePurchase.currentPeriodEnd}</p>
     </div>
   )
 }
 ```
 
-### Refresh Subscription Status
+### Refresh Purchase Status
 
 ```tsx
-import { useSubscription } from '@solvapay/react'
+import { usePurchase } from '@solvapay/react'
 
-function SubscriptionStatus() {
-  const { subscription, refetch, isLoading } = useSubscription()
+function PurchaseStatus() {
+  const { activePurchase, refetch, loading } = usePurchase()
 
   return (
     <div>
-      <p>Status: {subscription?.status || 'None'}</p>
-      <button onClick={() => refetch()} disabled={isLoading}>
+      <p>Status: {activePurchase?.status || 'None'}</p>
+      <button onClick={() => refetch()} disabled={loading}>
         Refresh
       </button>
     </div>
@@ -590,13 +586,13 @@ function App() {
 }
 
 // Dashboard.tsx
-import { useSubscription } from '@solvapay/react'
+import { usePurchase } from '@solvapay/react'
 import { Link } from 'react-router-dom'
 
 export function Dashboard() {
-  const { hasPaidSubscription, isLoading, subscription } = useSubscription()
+  const { hasPaidPurchase, loading, activePurchase } = usePurchase()
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading...</div>
   }
 
@@ -604,11 +600,11 @@ export function Dashboard() {
     <div>
       <h1>Dashboard</h1>
 
-      {hasPaidSubscription ? (
+      {hasPaidPurchase ? (
         <div>
           <h2>Welcome, Premium User!</h2>
-          <p>Plan: {subscription?.plan?.name}</p>
-          <p>Status: {subscription?.status}</p>
+          <p>Plan: {activePurchase?.planName}</p>
+          <p>Status: {activePurchase?.status}</p>
         </div>
       ) : (
         <div>
@@ -683,9 +679,9 @@ SolvaPay components are headless and don't include default styles. Style them to
 
 2. **Error Handling**: Always handle errors from hooks and components.
 
-3. **Loading States**: Show loading states while subscription checks are in progress.
+3. **Loading States**: Show loading states while purchase checks are in progress.
 
-4. **Refetch After Payment**: Call `refetch()` after successful payment to update subscription status.
+4. **Refetch After Payment**: Call `refetch()` after successful payment to update purchase status.
 
 5. **Type Safety**: Use TypeScript for better type safety and autocomplete.
 
@@ -696,4 +692,4 @@ SolvaPay components are headless and don't include default styles. Style them to
 - [Next.js Integration Guide](./nextjs.md) - Learn Next.js-specific integration
 - [Custom Authentication Adapters](./custom-auth.md) - Build custom auth adapters
 - [Error Handling Strategies](./error-handling.md) - Advanced error handling
-- [API Reference](../api/react/src/README.md) - Full API documentation
+- [API Reference](../../packages/react/README.md) - Full API documentation

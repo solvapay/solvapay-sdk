@@ -38,7 +38,7 @@ export interface MCPToolResult {
   isError?: boolean
   structuredContent?: {
     kind: 'payment_required'
-    agent: string
+    product: string
     checkoutUrl: string
     message: string
   }

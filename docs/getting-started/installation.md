@@ -2,9 +2,18 @@
 
 This guide covers installing and setting up SolvaPay SDK packages in your project.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Package Installation](#package-installation)
+- [Environment Setup](#environment-setup)
+- [Verification Steps](#verification-steps)
+- [Framework-Specific Setup](#framework-specific-setup)
+- [Next Steps](#next-steps)
+
 ## Prerequisites
 
-- **Node.js**: Version 18.0.0 or higher
+- **Node.js**: Version 18.17 or higher
 - **Package Manager**: npm, yarn, or pnpm
 - **TypeScript**: Version 5.0.0 or higher (recommended)
 
@@ -26,7 +35,7 @@ pnpm add @solvapay/server
 
 ### React Components
 
-For client-side payment flows and subscription management:
+For client-side payment flows and purchase management:
 
 ```bash
 npm install @solvapay/react
@@ -113,7 +122,7 @@ SolvaPay SDK works in **stub mode** when no API key is provided. This is perfect
 
 In stub mode:
 
-- All subscription checks return "free tier" (no subscription)
+- All purchase checks return "free tier" (no purchase)
 - Payment flows are simulated
 - No actual API calls are made
 
@@ -137,7 +146,7 @@ Create a test file to verify the installation:
 import { createSolvaPay } from '@solvapay/server'
 
 const solvaPay = createSolvaPay()
-console.log('✅ SolvaPay SDK installed successfully!')
+console.log('SolvaPay SDK installed successfully!')
 ```
 
 Run it:

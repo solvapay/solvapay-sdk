@@ -1,6 +1,6 @@
 # SolvaPay Checkout Demo - Headless Components
 
-Complete payment integration demo showcasing SolvaPay's headless React components with locked content and subscription gates.
+Complete payment integration demo showcasing SolvaPay's headless React components with locked content and purchase gates.
 
 ## Table of Contents
 
@@ -21,13 +21,13 @@ Complete payment integration demo showcasing SolvaPay's headless React component
 
 ## Features
 
-- 🎯 **Headless Components**: Fully flexible, unstyled components with render props
-- 🔒 **Content Gating**: Lock premium features behind subscriptions
-- 💳 **Secure Payments**: Stripe-powered payment processing
-- 📊 **Subscription Management**: Real-time subscription status checking
-- 🔐 **Authentication**: Email/password and Google OAuth sign-in with Supabase
-- 🎨 **Style Agnostic**: Works with any CSS framework or design system
-- 🧪 **Test Mode**: Complete test environment with localStorage persistence
+- **Headless Components**: Fully flexible, unstyled components with render props
+- **Content Gating**: Lock premium features behind purchases
+- **Secure Payments**: Stripe-powered payment processing
+- **Purchase Management**: Real-time purchase status checking
+- **Authentication**: Email/password and Google OAuth sign-in with Supabase
+- **Style Agnostic**: Works with any CSS framework or design system
+- **Test Mode**: Complete test environment with localStorage persistence
 
 ## New Headless Architecture
 
@@ -35,11 +35,11 @@ This demo showcases the modern headless component approach:
 
 ### Core Components
 
-1. **`<SolvaPayProvider>`** - Context provider with subscription state
-2. **`<SubscriptionGate>`** - Conditional rendering based on subscription
+1. **`<SolvaPayProvider>`** - Context provider with purchase state
+2. **`<PurchaseGate>`** - Conditional rendering based on purchase
 3. **`<UpgradeButton>`** - Complete upgrade flow with inline payment
-4. **`<PlanBadge>`** - Display current subscription status
-5. **`useSubscription`** - Hook for subscription state access
+4. **`<PlanBadge>`** - Display current purchase status
+5. **`usePurchase`** - Hook for purchase state access
 6. **`useCheckout`** - Hook for checkout flow management
 
 ## Prerequisites
@@ -105,7 +105,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 2. **Click Upgrade**: Trigger inline payment form
 3. **Complete Payment**: Use test card (4242 4242 4242 4242)
 4. **View Unlocked Content**: Premium features are instantly available
-5. **Persistence**: Subscription persists in localStorage across refreshes
+5. **Persistence**: Purchase persists in localStorage across refreshes
 
 ## Testing Payments
 
@@ -113,9 +113,9 @@ Use these test card numbers in the checkout form:
 
 | Card Number         | Result                |
 | ------------------- | --------------------- |
-| 4242 4242 4242 4242 | ✅ Payment succeeds   |
-| 4000 0000 0000 0002 | ❌ Payment declined   |
-| 4000 0000 0000 9995 | ❌ Insufficient funds |
+| 4242 4242 4242 4242 | Payment succeeds      |
+| 4000 0000 0000 0002 | Payment declined      |
+| 4000 0000 0000 9995 | Insufficient funds    |
 
 - Use any future expiry date
 - Use any 3-digit CVC
@@ -137,8 +137,8 @@ import { SolvaPayProvider } from '@solvapay/react'
     })
     return res.json()
   }}
-  checkSubscription={async customerRef => {
-    const res = await fetch(`/api/check-subscription?customerRef=${customerRef}`)
+  checkPurchase={async customerRef => {
+    const res = await fetch(`/api/check-purchase?customerRef=${customerRef}`)
     return res.json()
   }}
 >
@@ -225,19 +225,19 @@ const handleCreatePayment = async ({ planRef }) => {
 }
 ```
 
-### 3. Locked Content with SubscriptionGate
+### 3. Locked Content with PurchaseGate
 
 ```tsx
 // app/page.tsx
-import { SubscriptionGate, UpgradeButton } from '@solvapay/react'
-;<SubscriptionGate requirePlan="Pro Plan">
+import { PurchaseGate, UpgradeButton } from '@solvapay/react'
+;<PurchaseGate requirePlan="Pro Plan">
   {({ hasAccess, loading }) => {
     if (loading) return <Skeleton />
 
     if (!hasAccess) {
       return (
         <div>
-          <h2>🔒 Premium Content</h2>
+          <h2>Premium Content</h2>
           <UpgradeButton planRef="pln_pro">
             {({ onClick, loading }) => (
               <button onClick={onClick}>{loading ? 'Loading...' : 'Upgrade Now'}</button>
@@ -249,7 +249,7 @@ import { SubscriptionGate, UpgradeButton } from '@solvapay/react'
 
     return <PremiumContent />
   }}
-</SubscriptionGate>
+</PurchaseGate>
 ```
 
 ### 4. Navigation with Plan Badge
@@ -259,8 +259,8 @@ import { SubscriptionGate, UpgradeButton } from '@solvapay/react'
 import { PlanBadge, UpgradeButton } from '@solvapay/react';
 
 <PlanBadge>
-  {({ subscriptions, loading }) => {
-    const activeSubs = subscriptions.filter(sub => sub.status === 'active');
+  {({ purchases, loading }) => {
+    const activeSubs = purchases.filter(sub => sub.status === 'active');
     return (
       <div>
         {activeSubs.length > 0
@@ -283,10 +283,10 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
 
 ### 5. Backend API Routes
 
-**Check Subscription:**
+**Check Purchase:**
 
 ```typescript
-// app/api/check-subscription/route.ts
+// app/api/check-purchase/route.ts
 import { createSolvaPay } from '@solvapay/server'
 // Middleware handles authentication and sets x-user-id header
 
@@ -308,7 +308,7 @@ export async function GET(request: NextRequest) {
     customerRef: customer.customerRef,
     email: customer.email,
     name: customer.name,
-    subscriptions: customer.subscriptions || [],
+    purchases: customer.purchases || [],
   })
 }
 ```
@@ -357,8 +357,8 @@ checkout-demo/
 │   ├── api/
 │   │   ├── create-payment-intent/
 │   │   │   └── route.ts          # Payment intent creation
-│   │   └── check-subscription/
-│   │       └── route.ts          # Subscription status check
+│   │   └── check-purchase/
+│   │       └── route.ts          # Purchase status check
 │   ├── components/
 │   │   └── Navigation.tsx        # Nav with PlanBadge and UpgradeButton
 │   ├── lib/
@@ -397,13 +397,13 @@ This allows you to:
 - Control all behavior and state
 - Maintain full TypeScript type safety
 
-### Subscription State Management
+### Purchase State Management
 
 The provider automatically:
 
-- Fetches subscription on mount
+- Fetches purchase on mount
 - Provides refetch method for updates
-- Exposes helper methods (`hasActiveSubscription`, `hasPlan`)
+- Exposes helper methods (`hasActivePurchase`, `hasPlan`)
 - Manages loading states
 
 ### Authentication
@@ -511,9 +511,9 @@ All components accept any styling approach:
 
 // CSS Modules
 <PlanBadge>
-  {({ subscriptions }) => (
+  {({ purchases }) => (
     <div className={styles.badge}>
-      {subscriptions.map(sub => sub.planName).join(', ')}
+      {purchases.map(sub => sub.planName).join(', ')}
     </div>
   )}
 </PlanBadge>
@@ -547,7 +547,7 @@ Always wrap your app with `SolvaPayProvider` at the root level:
 <SolvaPayProvider
   customerRef={customerId}
   createPayment={handleCreatePayment}
-  checkSubscription={handleCheckSubscription}
+  checkPurchase={handleCheckPurchase}
 >
   {children}
 </SolvaPayProvider>
@@ -577,15 +577,15 @@ const handleCreatePayment = async ({ planRef, customerRef }) => {
 }
 ```
 
-### 3. Subscription Refetching
+### 3. Purchase Refetching
 
-Always refetch subscription after successful payment:
+Always refetch purchase after successful payment:
 
 ```tsx
-const { refetch } = useSubscription()
+const { refetch } = usePurchase()
 
 const handlePaymentSuccess = async () => {
-  await refetch() // Update subscription status
+  await refetch() // Update purchase status
   // Navigate or show success message
 }
 ```
@@ -595,7 +595,7 @@ const handlePaymentSuccess = async () => {
 Use loading states from hooks:
 
 ```tsx
-const { loading, subscriptions } = useSubscription()
+const { loading, purchases } = usePurchase()
 
 if (loading) {
   return <Spinner />
@@ -607,9 +607,9 @@ if (loading) {
 Use TypeScript types from the SDK:
 
 ```tsx
-import type { SubscriptionStatus } from '@solvapay/react'
+import type { PurchaseStatus } from '@solvapay/react'
 
-const status: SubscriptionStatus = subscription.status
+const status: PurchaseStatus = purchase.status
 ```
 
 ### 6. Environment Variables
@@ -649,18 +649,18 @@ SUPABASE_JWT_SECRET=your_secret_here
 5. Check server logs for detailed error messages
 6. Ensure API route is properly handling authentication
 
-### Subscription not updating after payment
+### Purchase not updating after payment
 
-**Problem**: Payment succeeds but subscription status doesn't update.
+**Problem**: Payment succeeds but purchase status doesn't update.
 
 **Solution**:
 
 1. Check that `refetch()` is called after successful payment:
    ```tsx
-   const { refetch } = useSubscription()
+   const { refetch } = usePurchase()
    await refetch()
    ```
-2. Verify API returns proper subscription format
+2. Verify API returns proper purchase format
 3. Check browser console for errors
 4. Verify customer reference matches between frontend and backend
 5. Check that webhook is configured (if using webhooks)
@@ -755,9 +755,9 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 
 ### API Reference
 
-- [React SDK API Reference](../../docs/api/react/) - Complete React component documentation
-- [Server SDK API Reference](../../docs/api/server/) - Backend API documentation
-- [Next.js SDK API Reference](../../docs/api/next/) - Next.js helper documentation
+- [React SDK API Reference](../../packages/react/README.md) - Complete React component documentation
+- [Server SDK API Reference](../../packages/server/README.md) - Backend API documentation
+- [Next.js SDK API Reference](../../packages/next/README.md) - Next.js helper documentation
 
 ### Additional Resources
 

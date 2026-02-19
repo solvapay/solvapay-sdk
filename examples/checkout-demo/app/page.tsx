@@ -1,15 +1,15 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react'
+import { usePurchase, usePlans, usePurchaseStatus } from '@solvapay/react'
 import Link from 'next/link'
 
 export default function HomePage() {
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF
+  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
 
   // Memoize the fetcher function to prevent unnecessary re-fetches
-  const fetchPlans = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`)
+  const fetchPlans = useCallback(async (productRef: string) => {
+    const response = await fetch(`/api/list-plans?productRef=${productRef}`)
     if (!response.ok) throw new Error('Failed to fetch plans')
     const data = await response.json()
     return data.plans || []
@@ -17,27 +17,27 @@ export default function HomePage() {
 
   // Fetch plans using SDK hook
   const { loading: plansLoading } = usePlans({
-    agentRef: agentRef || undefined,
+    productRef: productRef || undefined,
     fetcher: fetchPlans,
   })
 
-  // Get subscription helpers from SDK
+  // Get purchase helpers from SDK
   // Note: Plans are handled on the checkout page, so we pass empty array
-  // Subscription status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
-  // Use hasPaidSubscription and activeSubscription consistently throughout the component
-  // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
+  // Purchase status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
+  // Use hasPaidPurchase and activePurchase consistently throughout the component
+  // Note: Provider auto-fetches purchases on mount, so no manual refetch needed here
   const {
-    loading: subscriptionsLoading,
-    hasPaidSubscription,
-    activeSubscription,
-  } = useSubscription()
+    loading: purchasesLoading,
+    hasPaidPurchase,
+    activePurchase,
+  } = usePurchase()
 
-  // Get advanced subscription status helpers
-  const { cancelledSubscription, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
-    useSubscriptionStatus()
+  // Get advanced purchase status helpers
+  const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
+    usePurchaseStatus()
 
   // Combine loading states - only show content when both are loaded
-  const isLoading = subscriptionsLoading || plansLoading
+  const isLoading = purchasesLoading || plansLoading
 
   const FeatureCard = ({
     title,
@@ -97,30 +97,30 @@ export default function HomePage() {
             <div className="flex justify-center items-center gap-2">
               <Skeleton className="h-5 w-48" />
             </div>
-          ) : activeSubscription ? (
+          ) : activePurchase ? (
             <p className="text-slate-600">
               You're on the{' '}
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activeSubscription.planName}
+                {activePurchase.planName}
               </span>{' '}
               plan
             </p>
-          ) : shouldShowCancelledNotice && cancelledSubscription ? (
+          ) : shouldShowCancelledNotice && cancelledPurchase ? (
             <div className="space-y-2">
               <p className="text-slate-600">
                 Your{' '}
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                  {cancelledSubscription.planName}
+                  {cancelledPurchase.planName}
                 </span>{' '}
-                subscription has been cancelled
+                purchase has been cancelled
               </p>
-              {cancelledSubscription.endDate ? (
+              {cancelledPurchase.endDate ? (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-sm font-medium text-amber-900">
-                    ⏰ Access expires on {formatDate(cancelledSubscription.endDate)}
+                    ⏰ Access expires on {formatDate(cancelledPurchase.endDate)}
                   </p>
                   {(() => {
-                    const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate)
+                    const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate)
                     return daysLeft !== null && daysLeft > 0 ? (
                       <p className="text-xs text-amber-700 mt-1">
                         {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
@@ -128,23 +128,23 @@ export default function HomePage() {
                     ) : null
                   })()}
                   <p className="text-xs text-amber-700 mt-1">
-                    You'll continue to have access to {cancelledSubscription.planName} features
+                    You'll continue to have access to {cancelledPurchase.planName} features
                     until this date
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500 mt-1">Your subscription access has ended</p>
+                <p className="text-sm text-slate-500 mt-1">Your purchase access has ended</p>
               )}
-              {cancelledSubscription.cancelledAt && (
+              {cancelledPurchase.cancelledAt && (
                 <p className="text-xs text-slate-400 mt-2">
-                  Cancelled on {formatDate(cancelledSubscription.cancelledAt)}
-                  {cancelledSubscription.cancellationReason &&
-                    ` - ${cancelledSubscription.cancellationReason}`}
+                  Cancelled on {formatDate(cancelledPurchase.cancelledAt)}
+                  {cancelledPurchase.cancellationReason &&
+                    ` - ${cancelledPurchase.cancellationReason}`}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-slate-600">You don't have an active subscription</p>
+            <p className="text-slate-600">You don't have an active purchase</p>
           )}
         </div>
 
@@ -161,12 +161,12 @@ export default function HomePage() {
           <FeatureCard
             title="Advanced Analytics"
             description="Real-time data analysis with custom dashboards."
-            locked={!isLoading && !hasPaidSubscription}
+            locked={!isLoading && !hasPaidPurchase}
           />
           <FeatureCard
             title="Priority Support"
             description="Get help from our team within 24 hours."
-            locked={!isLoading && !hasPaidSubscription}
+            locked={!isLoading && !hasPaidPurchase}
           />
         </div>
 
@@ -177,25 +177,25 @@ export default function HomePage() {
               <Skeleton className="h-5 w-64 mx-auto" />
               <Skeleton className="h-10 w-48 mx-auto" />
             </div>
-          ) : hasPaidSubscription ? (
+          ) : hasPaidPurchase ? (
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-4">Manage your subscription and billing</p>
+              <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
               <Link href="/checkout">
                 <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Manage Subscription
+                  Manage Purchase
                 </button>
               </Link>
             </div>
-          ) : shouldShowCancelledNotice && cancelledSubscription ? (
+          ) : shouldShowCancelledNotice && cancelledPurchase ? (
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Your subscription is cancelled</p>
-              {cancelledSubscription.endDate ? (
+              <p className="text-slate-900 mb-2 font-medium">Your purchase is cancelled</p>
+              {cancelledPurchase.endDate ? (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-sm font-semibold text-amber-900 mb-1">
-                    ⏰ Subscription Expires: {formatDate(cancelledSubscription.endDate)}
+                    ⏰ Purchase Expires: {formatDate(cancelledPurchase.endDate)}
                   </p>
                   {(() => {
-                    const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate)
+                    const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate)
                     return daysLeft !== null && daysLeft > 0 ? (
                       <p className="text-xs text-amber-700 mb-1">
                         {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
@@ -203,16 +203,16 @@ export default function HomePage() {
                     ) : null
                   })()}
                   <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledSubscription.planName} features
+                    You'll continue to have access to {cancelledPurchase.planName} features
                     until this date
                   </p>
                 </div>
               ) : (
-                <p className="text-slate-600 text-sm mb-6">Your subscription access has ended</p>
+                <p className="text-slate-600 text-sm mb-6">Your purchase access has ended</p>
               )}
               <Link href="/checkout">
                 <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Resubscribe
+                  Purchase Again
                 </button>
               </Link>
             </div>

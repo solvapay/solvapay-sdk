@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { Plan, UsePlansOptions, UsePlansReturn } from '../types'
 
 // Global cache for plans to prevent duplicate fetches across components
-// Key: agentRef, Value: { plans: Plan[], timestamp: number, promise: Promise<Plan[]> | null }
+// Key: productRef, Value: { plans: Plan[], timestamp: number, promise: Promise<Plan[]> | null }
 const plansCache = new Map<
   string,
   { plans: Plan[]; timestamp: number; promise: Promise<Plan[]> | null }
@@ -12,16 +12,16 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 /**
  * Hook to manage plan fetching and selection
  *
- * Provides a reusable way to fetch, filter, sort and select subscription plans.
+ * Provides a reusable way to fetch, filter, sort and select plans.
  * Handles loading and error states automatically.
- * Uses a global cache to prevent duplicate fetches when multiple components use the same agentRef.
+ * Uses a global cache to prevent duplicate fetches when multiple components use the same productRef.
  *
  * @example
  * ```tsx
  * const plans = usePlans({
- *   agentRef: 'agent_123',
- *   fetcher: async (agentRef) => {
- *     const res = await fetch(`/api/list-plans?agentRef=${agentRef}`);
+ *   productRef: 'prd_123',
+ *   fetcher: async (productRef) => {
+ *     const res = await fetch(`/api/list-plans?productRef=${productRef}`);
  *     const data = await res.json();
  *     return data.plans;
  *   },
@@ -35,7 +35,7 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
  * ```
  */
 export function usePlans(options: UsePlansOptions): UsePlansReturn {
-  const { fetcher, agentRef, filter, sortBy, autoSelectFirstPaid = false } = options
+  const { fetcher, productRef, filter, sortBy, autoSelectFirstPaid = false } = options
 
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,14 +67,14 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
   // Fetch plans with caching
   const fetchPlans = useCallback(
     async (force = false) => {
-      if (!agentRef) {
-        setError(new Error('Agent reference not configured'))
+      if (!productRef) {
+        setError(new Error('Product reference not configured'))
         setLoading(false)
         return
       }
 
       // Check cache first
-      const cached = plansCache.get(agentRef)
+      const cached = plansCache.get(productRef)
       const now = Date.now()
 
       if (!force && cached && now - cached.timestamp < CACHE_DURATION) {
@@ -139,8 +139,8 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         setError(null)
 
         // Create promise and store it in cache
-        const fetchPromise = fetcherRef.current(agentRef)
-        plansCache.set(agentRef, {
+        const fetchPromise = fetcherRef.current(productRef)
+        plansCache.set(productRef, {
           plans: [],
           timestamp: now,
           promise: fetchPromise,
@@ -150,7 +150,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         const fetchedPlans = await fetchPromise
 
         // Update cache with fetched data
-        plansCache.set(agentRef, {
+        plansCache.set(productRef, {
           plans: fetchedPlans,
           timestamp: now,
           promise: null,
@@ -175,16 +175,16 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         }
       } catch (err) {
         // Remove failed promise from cache
-        plansCache.delete(agentRef)
+        plansCache.delete(productRef)
         setError(err instanceof Error ? err : new Error('Failed to load plans'))
       } finally {
         setLoading(false)
       }
     },
-    [agentRef],
-  ) // Only depend on agentRef, use refs for everything else
+    [productRef],
+  ) // Only depend on productRef, use refs for everything else
 
-  // Fetch plans on mount and when agentRef changes
+  // Fetch plans on mount and when productRef changes
   useEffect(() => {
     fetchPlans()
   }, [fetchPlans])

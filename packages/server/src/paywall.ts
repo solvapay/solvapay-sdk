@@ -15,8 +15,6 @@ import type {
   SolvaPayClient,
 } from './types'
 import { withRetry, createRequestDeduplicator } from './utils'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 
 // Re-export types for convenience
 export type {
@@ -28,10 +26,10 @@ export type {
 }
 
 /**
- * Error thrown when a paywall is triggered (subscription required or usage limit exceeded).
+ * Error thrown when a paywall is triggered (purchase required or usage limit exceeded).
  *
  * This error is automatically thrown by the paywall protection system when:
- * - Customer doesn't have required subscription
+ * - Customer doesn't have required purchase
  * - Customer has exceeded usage limits
  * - Customer needs to upgrade their plan
  *
@@ -117,25 +115,8 @@ export class SolvaPayPaywall {
     }
   }
 
-  private resolveAgent(metadata: PaywallMetadata): string {
-    return (
-      metadata.agent || process.env.SOLVAPAY_AGENT || this.getPackageJsonName() || 'default-agent'
-    )
-  }
-
-  private getPackageJsonName(): string | undefined {
-    try {
-      // Check if we're in an edge runtime (process.cwd may not be available)
-      if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
-        return undefined
-      }
-      const packageJsonPath = join(process.cwd(), 'package.json')
-      const pkgContent = readFileSync(packageJsonPath, 'utf-8')
-      const pkg = JSON.parse(pkgContent)
-      return pkg.name
-    } catch {
-      return undefined
-    }
+  private resolveProduct(metadata: PaywallMetadata): string {
+    return metadata.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
   }
 
   private generateRequestId(): string {
@@ -152,7 +133,7 @@ export class SolvaPayPaywall {
     metadata: PaywallMetadata = {},
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
-    const agent = this.resolveAgent(metadata)
+    const product = this.resolveProduct(metadata)
     const toolName = handler.name || 'anonymous'
 
     return async (args: TArgs): Promise<TResult> => {
@@ -163,7 +144,18 @@ export class SolvaPayPaywall {
         : args.auth?.customer_ref || 'anonymous'
 
       // Auto-create customer if needed and get the backend reference
-      const backendCustomerRef = await this.ensureCustomer(inputCustomerRef)
+      // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
+      let backendCustomerRef: string
+
+      // If the input ref is already a SolvaPay customer ID (starts with 'cus_'), 
+      // use it directly without attempting lookup/creation by externalRef.
+      if (inputCustomerRef.startsWith('cus_')) {
+        backendCustomerRef = inputCustomerRef
+      } else {
+        // Auto-create customer if needed and get the backend reference
+        // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
+        backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
+      }
 
       try {
         // Check limits with backend using the backend customer reference
@@ -171,14 +163,14 @@ export class SolvaPayPaywall {
 
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
-          agentRef: agent,
+          productRef: product,
         })
 
         if (!limitsCheck.withinLimits) {
           const latencyMs = Date.now() - startTime
           await this.trackUsage(
             backendCustomerRef,
-            agent,
+            product,
             planRef,
             toolName,
             'paywall',
@@ -188,9 +180,9 @@ export class SolvaPayPaywall {
 
           throw new PaywallError('Payment required', {
             kind: 'payment_required',
-            agent,
+            product,
             checkoutUrl: limitsCheck.checkoutUrl || '',
-            message: `Plan subscription required. Remaining: ${limitsCheck.remaining}`,
+            message: `Plan purchase required. Remaining: ${limitsCheck.remaining}`,
           })
         }
 
@@ -201,7 +193,7 @@ export class SolvaPayPaywall {
         const latencyMs = Date.now() - startTime
         await this.trackUsage(
           backendCustomerRef,
-          agent,
+          product,
           planRef,
           toolName,
           'success',
@@ -223,7 +215,7 @@ export class SolvaPayPaywall {
         const planRef = metadata.plan || toolName
         await this.trackUsage(
           backendCustomerRef,
-          agent,
+          product,
           planRef,
           toolName,
           outcome,
@@ -262,6 +254,13 @@ export class SolvaPayPaywall {
       return customerRef
     }
 
+    // If customerRef is already a SolvaPay ID (starts with 'cus_'),
+    // return it directly. We cannot "ensure" (create) a customer with a specific ID,
+    // and using it as an externalRef causes issues.
+    if (customerRef.startsWith('cus_')) {
+      return customerRef
+    }
+
     // Use shared deduplicator to prevent duplicate lookups across all instances
     // This is especially important when multiple routes call ensureCustomer concurrently
     const cacheKey = externalRef || customerRef
@@ -275,9 +274,9 @@ export class SolvaPayPaywall {
     // Use shared deduplicator (handles both concurrent requests and cache)
     const backendRef = await sharedCustomerLookupDeduplicator.deduplicate(cacheKey, async () => {
       // If externalRef is provided, try to lookup existing customer first
-      if (externalRef && this.apiClient.getCustomerByExternalRef) {
+      if (externalRef) {
         try {
-          const existingCustomer = await this.apiClient.getCustomerByExternalRef({ externalRef })
+          const existingCustomer = await this.apiClient.getCustomer({ externalRef })
 
           if (existingCustomer && existingCustomer.customerRef) {
             const ref = existingCustomer.customerRef
@@ -316,7 +315,7 @@ export class SolvaPayPaywall {
 
       // Skip if createCustomer is not available
       if (!this.apiClient.createCustomer) {
-        // eslint-disable-next-line no-console
+         
         console.warn(
           `⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`,
         )
@@ -328,8 +327,9 @@ export class SolvaPayPaywall {
       try {
         // Prepare customer creation params
         // Use provided email/name, or fallback to auto-generated values
+        // Use a timestamp-based email to avoid conflicts with old orphaned records
         const createParams: any = {
-          email: options?.email || `${customerRef}@auto-created.local`,
+          email: options?.email || `${customerRef}-${Date.now()}@auto-created.local`,
         }
 
         // Only include name if explicitly provided (don't fallback to customerRef)
@@ -352,13 +352,90 @@ export class SolvaPayPaywall {
         this.customerRefMapping.set(customerRef, ref)
 
         return ref
-      } catch (error) {
+      } catch (error: any) {
+        // Handle existing customer conflict (409)
+        // If customer already exists, we should try to fetch it to get the correct backend ID
+        if (error.message && (error.message.includes('409') || error.message.includes('already exists'))) {
+           // Try to lookup by externalRef first if available
+           if (externalRef) {
+             try {
+               const searchResult = await this.apiClient.getCustomer({ externalRef })
+               if (searchResult && searchResult.customerRef) {
+                 this.customerRefMapping.set(customerRef, searchResult.customerRef)
+                 return searchResult.customerRef
+               }
+             } catch (lookupError: any) {
+               // Fallback to original behavior if lookup fails
+               this.log(`⚠️ Failed to lookup existing customer by externalRef after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
+             }
+           }
+
+          // If conflict is due to email uniqueness but externalRef lookup failed,
+          // retry creation with a generated email while preserving externalRef.
+          // This allows resolving stale customers created before externalRef was set.
+          const conflictMessage = error instanceof Error ? error.message : String(error)
+          const isEmailConflict =
+            conflictMessage.includes('email') || conflictMessage.includes('identifier email')
+
+          if (externalRef && isEmailConflict && options?.email) {
+            try {
+              const byEmail = await this.apiClient.getCustomer({ email: options.email })
+              if (byEmail && byEmail.customerRef) {
+                this.customerRefMapping.set(customerRef, byEmail.customerRef)
+                this.log(
+                  `⚠️ Resolved customer ${customerRef} by email after conflict; using existing customer ${byEmail.customerRef}`,
+                )
+                return byEmail.customerRef
+              }
+            } catch (emailLookupError: any) {
+              this.log(
+                `⚠️ Email lookup failed after customer conflict for ${customerRef}:`,
+                emailLookupError instanceof Error ? emailLookupError.message : emailLookupError,
+              )
+            }
+
+            try {
+              const retryParams: any = {
+                email: `${customerRef}-${Date.now()}@auto-created.local`,
+                externalRef,
+              }
+
+              if (options?.name) {
+                retryParams.name = options.name
+              }
+
+              const retryResult = await this.apiClient.createCustomer(retryParams)
+              const retryRef =
+                (retryResult as any).customerRef || (retryResult as any).reference || customerRef
+
+              this.customerRefMapping.set(customerRef, retryRef)
+              this.log(
+                `⚠️ Retried customer creation for ${customerRef} with generated email after email conflict`,
+              )
+              return retryRef
+            } catch (retryError: any) {
+              this.log(
+                `⚠️ Retry create customer with generated email failed for ${customerRef}:`,
+                retryError instanceof Error ? retryError.message : retryError,
+              )
+            }
+          }
+
+          // We have a known conflict but could not resolve the existing customer reference.
+          // Returning the original app user ID here causes downstream 404s in payment APIs.
+          const unresolvedMessage =
+            error instanceof Error ? error.message : 'Customer already exists but could not be resolved'
+          throw new Error(
+            `Failed to resolve existing customer for ${customerRef} after conflict: ${unresolvedMessage}. ` +
+              'Ensure the existing customer is linked to this externalRef.',
+          )
+        }
+
         this.log(
           `❌ Failed to auto-create customer ${customerRef}:`,
           error instanceof Error ? error.message : error,
         )
-        // Continue anyway - use the original ref
-        return customerRef
+        throw error
       }
     })
 
@@ -372,7 +449,7 @@ export class SolvaPayPaywall {
 
   async trackUsage(
     customerRef: string,
-    agentRef: string,
+    productRef: string,
     planRef: string,
     toolName: string,
     outcome: 'success' | 'paywall' | 'fail',
@@ -384,7 +461,7 @@ export class SolvaPayPaywall {
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          agentRef,
+          productRef,
           planRef,
           outcome,
           action: toolName,
@@ -397,12 +474,12 @@ export class SolvaPayPaywall {
         initialDelay: 500,
         shouldRetry: error => error.message.includes('Customer not found'), // TODO: review if this is needed and what to check for
         onRetry: (error, attempt) => {
-          // eslint-disable-next-line no-console
+           
           console.warn(`⚠️  Customer not found (attempt ${attempt + 1}/3), retrying in 500ms...`)
         },
       },
     ).catch(error => {
-      // eslint-disable-next-line no-console
+       
       console.error('Usage tracking failed:', error)
       // Don't throw - tracking is not critical
     })
@@ -602,7 +679,7 @@ function handleHttpError(error: any, reply: any) {
     const errorResponse = {
       success: false,
       error: 'Payment required',
-      agent: error.structuredContent.agent,
+      product: error.structuredContent.product,
       checkoutUrl: error.structuredContent.checkoutUrl,
       message: error.structuredContent.message,
     }
@@ -703,8 +780,9 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
 
 export function ensureCustomerRef(customerRef: string): string {
   // Ensure customer ref is properly formatted
-  if (!customerRef.startsWith('customer_') && !customerRef.startsWith('demo_')) {
-    return `customer_${customerRef.replace(/[^a-zA-Z0-9]/g, '_')}`
+  // Return customer ref as-is (preserve UUIDs with hyphens, etc.)
+  if (!customerRef || customerRef === 'anonymous') {
+    return 'anonymous'
   }
   return customerRef
 }
@@ -715,7 +793,7 @@ function handleNextError(error: any): Response {
       JSON.stringify({
         success: false,
         error: 'Payment required',
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
         checkoutUrl: error.structuredContent.checkoutUrl,
         message: error.structuredContent.message,
       }),

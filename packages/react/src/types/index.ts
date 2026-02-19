@@ -6,23 +6,36 @@ import type { PaymentIntent } from '@stripe/stripe-js'
 import type { ProcessPaymentResult } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
 
-export interface SubscriptionInfo {
+export interface PurchaseInfo {
   reference: string
+  productName: string
+  productReference: string
   planName: string
-  agentName: string
   status: string
   startDate: string
   endDate?: string
   cancelledAt?: string
   cancellationReason?: string
   amount?: number
+  currency?: string
+  planType?: string
+  isRecurring?: boolean
+  nextBillingDate?: string
+  billingCycle?: string
+  transactionId?: string
+  usage?: {
+    used: number
+    quota: number | null
+    unit: string
+    remaining: number | null
+  }
 }
 
-export interface CustomerSubscriptionData {
+export interface CustomerPurchaseData {
   customerRef?: string
   email?: string
   name?: string
-  subscriptions: SubscriptionInfo[]
+  purchases: PurchaseInfo[]
 }
 
 export interface PaymentIntentResult {
@@ -32,31 +45,31 @@ export interface PaymentIntentResult {
   customerRef?: string // Backend customer reference
 }
 
-export interface SubscriptionStatus {
+export interface PurchaseStatus {
   loading: boolean
   customerRef?: string
   email?: string
   name?: string
-  subscriptions: SubscriptionInfo[]
+  purchases: PurchaseInfo[]
   hasPlan: (planName: string) => boolean
   /**
-   * Primary active subscription (paid or free) - most recent subscription with status === 'active'
-   * Backend keeps subscriptions as 'active' until expiration, even when cancelled.
-   * null if no active subscription exists
+   * Primary active purchase (paid or free) - most recent purchase with status === 'active'
+   * Backend keeps purchases as 'active' until expiration, even when cancelled.
+   * null if no active purchase exists
    */
-  activeSubscription: SubscriptionInfo | null
+  activePurchase: PurchaseInfo | null
   /**
-   * Check if user has any active paid subscription (amount > 0)
-   * Checks subscriptions with status === 'active'.
-   * Backend keeps subscriptions as 'active' until expiration, even when cancelled.
+   * Check if user has any active paid purchase (amount > 0)
+   * Checks purchases with status === 'active'.
+   * Backend keeps purchases as 'active' until expiration, even when cancelled.
    */
-  hasPaidSubscription: boolean
+  hasPaidPurchase: boolean
   /**
-   * Most recent active paid subscription (sorted by startDate)
-   * Returns subscription with status === 'active' and amount > 0.
-   * null if no active paid subscription exists
+   * Most recent active paid purchase (sorted by startDate)
+   * Returns purchase with status === 'active' and amount > 0.
+   * null if no active paid purchase exists
    */
-  activePaidSubscription: SubscriptionInfo | null
+  activePaidPurchase: PurchaseInfo | null
 }
 
 /**
@@ -69,7 +82,7 @@ export interface SolvaPayConfig {
    * Defaults to standard Next.js API routes
    */
   api?: {
-    checkSubscription?: string // Default: '/api/check-subscription'
+    checkPurchase?: string // Default: '/api/check-purchase'
     createPayment?: string // Default: '/api/create-payment-intent'
     processPayment?: string // Default: '/api/process-payment'
   }
@@ -134,12 +147,12 @@ export interface SolvaPayConfig {
 }
 
 export interface SolvaPayContextValue {
-  subscription: SubscriptionStatus
-  refetchSubscription: () => Promise<void>
-  createPayment: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>
+  purchase: PurchaseStatus
+  refetchPurchase: () => Promise<void>
+  createPayment: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
   customerRef?: string
@@ -157,11 +170,11 @@ export interface SolvaPayProviderProps {
    * Custom API functions (override config defaults)
    * Use only if you need custom logic beyond standard API routes
    */
-  createPayment?: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>
-  checkSubscription?: () => Promise<CustomerSubscriptionData>
+  createPayment?: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
+  checkPurchase?: () => Promise<CustomerPurchaseData>
   processPayment?: (params: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
 
@@ -170,20 +183,21 @@ export interface SolvaPayProviderProps {
 
 export interface PlanBadgeProps {
   children?: (props: {
-    subscriptions: SubscriptionInfo[]
+    purchases: PurchaseInfo[]
     loading: boolean
     displayPlan: string | null
     shouldShow: boolean
   }) => React.ReactNode
   as?: React.ElementType
-  className?: string | ((props: { subscriptions: SubscriptionInfo[] }) => string)
+  className?: string | ((props: { purchases: PurchaseInfo[] }) => string)
 }
 
-export interface SubscriptionGateProps {
+export interface PurchaseGateProps {
   requirePlan?: string
+  requireProduct?: string
   children: (props: {
     hasAccess: boolean
-    subscriptions: SubscriptionInfo[]
+    purchases: PurchaseInfo[]
     loading: boolean
   }) => React.ReactNode
 }
@@ -197,7 +211,7 @@ export interface PaymentError extends Error {
 }
 
 /**
- * Plan interface for subscription plans
+ * Plan interface for plans
  */
 export interface Plan {
   reference: string
@@ -208,7 +222,7 @@ export interface Plan {
   interval?: string
   features?: string[]
   isFreeTier?: boolean
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -218,11 +232,11 @@ export interface UsePlansOptions {
   /**
    * Fetcher function to retrieve plans
    */
-  fetcher: (agentRef: string) => Promise<Plan[]>
+  fetcher: (productRef: string) => Promise<Plan[]>
   /**
-   * Agent reference to fetch plans for
+   * Product reference to fetch plans for
    */
-  agentRef?: string
+  productRef?: string
   /**
    * Optional filter function to filter plans
    */
@@ -256,13 +270,13 @@ export interface UsePlansReturn {
  */
 export interface PlanSelectorProps {
   /**
-   * Agent reference to fetch plans for
+   * Product reference to fetch plans for
    */
-  agentRef?: string
+  productRef?: string
   /**
    * Fetcher function to retrieve plans
    */
-  fetcher: (agentRef: string) => Promise<Plan[]>
+  fetcher: (productRef: string) => Promise<Plan[]>
   /**
    * Optional filter function
    */
@@ -280,7 +294,7 @@ export interface PlanSelectorProps {
    */
   children: (
     props: UsePlansReturn & {
-      subscriptions: SubscriptionInfo[]
+      purchases: PurchaseInfo[]
       isPaidPlan: (planName: string) => boolean
       isCurrentPlan: (planName: string) => boolean
     },
@@ -288,21 +302,21 @@ export interface PlanSelectorProps {
 }
 
 /**
- * Return type for useSubscriptionStatus hook
+ * Return type for usePurchaseStatus hook
  *
- * Provides advanced subscription status helpers and utilities.
- * Focuses on cancelled subscription logic and date formatting.
- * For basic subscription data and paid status, use useSubscription() instead.
+ * Provides advanced purchase status helpers and utilities.
+ * Focuses on cancelled purchase logic and date formatting.
+ * For basic purchase data and paid status, use usePurchase() instead.
  */
-export interface SubscriptionStatusReturn {
+export interface PurchaseStatusReturn {
   /**
-   * Most recent cancelled paid subscription (sorted by startDate)
-   * null if no cancelled paid subscription exists
+   * Most recent cancelled paid purchase (sorted by startDate)
+   * null if no cancelled paid purchase exists
    */
-  cancelledSubscription: SubscriptionInfo | null
+  cancelledPurchase: PurchaseInfo | null
   /**
-   * Whether to show cancelled subscription notice
-   * true if cancelledSubscription exists
+   * Whether to show cancelled purchase notice
+   * true if cancelledPurchase exists
    */
   shouldShowCancelledNotice: boolean
   /**
@@ -327,9 +341,9 @@ export interface PaymentFormProps {
    */
   planRef: string
   /**
-   * Agent reference. Required for processing payment after confirmation.
+   * Product reference. Required for processing payment after confirmation.
    */
-  agentRef?: string
+  productRef?: string
   /**
    * Callback when payment succeeds
    */
@@ -355,3 +369,13 @@ export interface PaymentFormProps {
    */
   buttonClassName?: string
 }
+
+export type PurchaseStatusValue =
+  | 'pending'
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'cancelled'
+  | 'expired'
+  | 'suspended'
+  | 'refunded'

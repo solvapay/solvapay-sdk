@@ -16,7 +16,7 @@ SolvaPay SDK uses several error types:
 
 ### PaywallError
 
-Thrown when a paywall is triggered (subscription required or usage limit exceeded):
+Thrown when a paywall is triggered (purchase required or usage limit exceeded):
 
 ```typescript
 import { PaywallError } from '@solvapay/server'
@@ -49,7 +49,7 @@ Regular JavaScript errors from your business logic or network issues.
 
 `PaywallError` is thrown when:
 
-- Customer doesn't have required subscription
+- Customer doesn't have required purchase
 - Customer has exceeded usage limits
 - Customer needs to upgrade their plan
 
@@ -139,8 +139,6 @@ function paywallErrorHandler(
         message: error.message,
         checkoutUrl: error.structuredContent.checkoutUrl,
         agent: error.structuredContent.agent,
-        plan: error.structuredContent.plan,
-        remaining: error.structuredContent.remaining,
       },
     })
   }
@@ -210,11 +208,11 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 import { isErrorResult, handleRouteError } from '@solvapay/server'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
 
   // Check if result is an error
   if (isErrorResult(result)) {
@@ -300,15 +298,14 @@ function CheckoutPage() {
 import { useCheckout } from '@solvapay/react'
 
 function CustomCheckout() {
-  const { createPayment, processPayment, error, isLoading } = useCheckout(
+  const { startCheckout, error, loading } = useCheckout(
     'pln_premium',
     'agt_myapi',
   )
 
   const handleCheckout = async () => {
     try {
-      const intent = await createPayment()
-      const result = await processPayment(intent.paymentIntentId)
+      const result = await startCheckout()
 
       if (!result.success) {
         throw new Error(result.error || 'Payment failed')
@@ -322,7 +319,7 @@ function CustomCheckout() {
   return (
     <div>
       {error && <div>Error: {error.message}</div>}
-      <button onClick={handleCheckout} disabled={isLoading}>
+      <button onClick={handleCheckout} disabled={loading}>
         Checkout
       </button>
     </div>
@@ -371,7 +368,6 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
               agent: error.structuredContent.agent,
-              plan: error.structuredContent.plan,
             }),
           },
         ],
@@ -418,7 +414,7 @@ try {
 ```typescript
 if (error instanceof PaywallError) {
   return res.status(402).json({
-    error: 'Subscription required',
+    error: 'Purchase required',
     message: 'Please subscribe to access this feature.',
     checkoutUrl: error.structuredContent.checkoutUrl,
   })
@@ -527,7 +523,6 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
         message: error.message,
         checkoutUrl: error.structuredContent.checkoutUrl,
         agent: error.structuredContent.agent,
-        plan: error.structuredContent.plan,
       },
     })
   }
@@ -608,4 +603,4 @@ export async function POST(request: NextRequest) {
 - [Express.js Integration Guide](./express.md) - Learn Express integration
 - [Next.js Integration Guide](./nextjs.md) - Learn Next.js integration
 - [Custom Authentication Adapters](./custom-auth.md) - Handle auth errors
-- [API Reference](../api/server/src/README.md) - Full API documentation
+- [API Reference](../../packages/server/README.md) - Full API documentation

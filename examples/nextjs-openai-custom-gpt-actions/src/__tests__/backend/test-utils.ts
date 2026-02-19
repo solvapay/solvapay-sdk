@@ -7,7 +7,7 @@ import { join } from 'path'
 export const createMockRequest = (url: string, options: RequestInit = {}) => {
   return new NextRequest(
     url,
-    options.method ? (options as any) : ({ method: 'GET', ...options } as any),
+    options.method ? options : { method: 'GET', ...options },
   )
 }
 
@@ -22,7 +22,7 @@ export const createMockRequestWithAuth = (
     method: options.method || 'GET',
     headers,
     ...options,
-  } as any)
+  })
 }
 
 export const createMockRequestWithCustomer = (
@@ -36,7 +36,7 @@ export const createMockRequestWithCustomer = (
     method: options.method || 'GET',
     headers,
     ...options,
-  } as any)
+  })
 }
 
 export const expectSuccessfulResponse = (response: Response, expectedStatus = 200) => {
@@ -73,7 +73,7 @@ export const expectJsonResponse = (response: Response, expectedStatus = 200) => 
 }
 
 // Mock JWT token creation (for OAuth token testing)
-export const createMockJWT = async (payload: any = {}) => {
+export const createMockJWT = async (payload: Record<string, unknown> = {}) => {
   const { SignJWT } = await import('jose')
 
   // Ensure the secret is set
@@ -97,7 +97,7 @@ export const createMockJWT = async (payload: any = {}) => {
 }
 
 // Test data factories
-export const createTestThing = (overrides: any = {}) => ({
+export const createTestThing = (overrides: Record<string, unknown> = {}) => ({
   name: 'Test Thing',
   description: 'A test thing for testing',
   ...overrides,
@@ -116,7 +116,7 @@ export const setupTestEnvironment = () => {
     // Set up test environment variables
     process.env.NODE_ENV = 'test'
     process.env.SOLVAPAY_SECRET_KEY = 'test-api-key'
-    process.env.SOLVAPAY_AGENT = 'test-agent'
+    process.env.SOLVAPAY_PRODUCT = 'test-product'
     process.env.OAUTH_ISSUER = 'http://localhost:3000'
     process.env.OAUTH_CLIENT_ID = 'test-client-id'
     process.env.OAUTH_CLIENT_SECRET = 'test-client-secret'

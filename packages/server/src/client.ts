@@ -52,7 +52,7 @@ export type ServerClientOptions = {
  * });
  *
  * // Use client for custom operations
- * const agents = await client.listAgents();
+ * const products = await client.listProducts();
  * ```
  *
  * @see {@link createSolvaPay} for the recommended high-level API
@@ -135,9 +135,23 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // GET: /v1/sdk/customers/{reference}
+    // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}|email={email}
     async getCustomer(params) {
-      const url = `${base}/v1/sdk/customers/${params.customerRef}`
+      let url
+      let isByExternalRef = false
+      let isByEmail = false
+
+      if (params.externalRef) {
+        url = `${base}/v1/sdk/customers?externalRef=${encodeURIComponent(params.externalRef)}`
+        isByExternalRef = true
+      } else if (params.email) {
+        url = `${base}/v1/sdk/customers?email=${encodeURIComponent(params.email)}`
+        isByEmail = true
+      } else if (params.customerRef) {
+        url = `${base}/v1/sdk/customers/${params.customerRef}`
+      } else {
+        throw new SolvaPayError('One of customerRef, externalRef, or email must be provided')
+      }
 
       const res = await fetch(url, {
         method: 'GET',
@@ -152,55 +166,52 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       const result = await res.json()
 
-      // Map response fields to expected format
-      // Note: subscriptions may include additional fields like endDate, cancelledAt
-      // even though they're not in the SubscriptionInfo type definition
-      return {
-        customerRef: result.reference || result.customerRef,
-        email: result.email,
-        name: result.name,
-        externalRef: result.externalRef,
-        subscriptions: result.subscriptions || [],
+      // If getting by externalRef, support all backend response shapes:
+      // - direct customer object
+      // - array of customers
+      // - wrapped object with `customers` or `customer`
+      let customer = result
+      if (isByExternalRef || isByEmail) {
+        const directCustomer =
+          result &&
+          typeof result === 'object' &&
+          (result.reference || result.customerRef || result.externalRef)
+            ? result
+            : undefined
+
+        const wrappedCustomer =
+          result && typeof result === 'object' && result.customer ? result.customer : undefined
+
+        const customers = Array.isArray(result)
+          ? result
+          : result && typeof result === 'object' && Array.isArray(result.customers)
+            ? result.customers
+            : []
+
+        customer = directCustomer || wrappedCustomer || customers[0]
+
+        if (!customer) {
+          throw new SolvaPayError(`No customer found with externalRef: ${params.externalRef}`)
+        }
       }
-    },
-
-    // GET: /v1/sdk/customers?externalRef={externalRef}
-    async getCustomerByExternalRef(params) {
-      const url = `${base}/v1/sdk/customers?externalRef=${encodeURIComponent(params.externalRef)}`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get customer by externalRef failed (${res.status}): ${error}`)
-      }
-
-      const result = await res.json()
-
-      // Handle array response (if backend returns array)
-      const customer = Array.isArray(result) ? result[0] : result
 
       // Map response fields to expected format
-      // Note: subscriptions may include additional fields like endDate, cancelledAt
-      // even though they're not in the SubscriptionInfo type definition
+      // Note: purchases may include additional fields like endDate, cancelledAt
+      // even though they're not in the PurchaseInfo type definition
       return {
         customerRef: customer.reference || customer.customerRef,
         email: customer.email,
         name: customer.name,
         externalRef: customer.externalRef,
-        subscriptions: customer.subscriptions || [],
+        purchases: customer.purchases || [],
       }
     },
 
-    // Management methods (primarily for integration tests)
+    // Product management methods (primarily for integration tests)
 
-    // GET: /v1/sdk/agents
-    async listAgents() {
-      const url = `${base}/v1/sdk/agents`
+    // GET: /v1/sdk/products
+    async listProducts() {
+      const url = `${base}/v1/sdk/products`
 
       const res = await fetch(url, {
         method: 'GET',
@@ -210,23 +221,23 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`List agents failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`List products failed (${res.status}): ${error}`)
       }
 
       const result = await res.json()
       // Handle both direct array and wrapped object formats
-      const agents = Array.isArray(result) ? result : result.agents || []
+      const products = Array.isArray(result) ? result : result.products || []
 
       // Unwrap data field if present
-      return agents.map((agent: any) => ({
-        ...agent,
-        ...(agent.data || {}),
+      return products.map((product: any) => ({
+        ...product,
+        ...(product.data || {}),
       }))
     },
 
-    // POST: /v1/sdk/agents
-    async createAgent(params) {
-      const url = `${base}/v1/sdk/agents`
+    // POST: /v1/sdk/products
+    async createProduct(params) {
+      const url = `${base}/v1/sdk/products`
 
       const res = await fetch(url, {
         method: 'POST',
@@ -237,16 +248,16 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create agent failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`Create product failed (${res.status}): ${error}`)
       }
 
       const result = await res.json()
       return result
     },
 
-    // DELETE: /v1/sdk/agents/{agentRef}
-    async deleteAgent(agentRef) {
-      const url = `${base}/v1/sdk/agents/${agentRef}`
+    // DELETE: /v1/sdk/products/{productRef}
+    async deleteProduct(productRef) {
+      const url = `${base}/v1/sdk/products/${productRef}`
 
       const res = await fetch(url, {
         method: 'DELETE',
@@ -256,13 +267,13 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok && res.status !== 404) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Delete agent failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`Delete product failed (${res.status}): ${error}`)
       }
     },
 
-    // GET: /v1/sdk/agents/{agentRef}/plans
-    async listPlans(agentRef) {
-      const url = `${base}/v1/sdk/agents/${agentRef}/plans`
+    // GET: /v1/sdk/products/{productRef}/plans
+    async listPlans(productRef) {
+      const url = `${base}/v1/sdk/products/${productRef}/plans`
 
       const res = await fetch(url, {
         method: 'GET',
@@ -299,9 +310,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
     },
 
-    // POST: /v1/sdk/agents/{agentRef}/plans
+    // POST: /v1/sdk/products/{productRef}/plans
     async createPlan(params) {
-      const url = `${base}/v1/sdk/agents/${params.agentRef}/plans`
+      const url = `${base}/v1/sdk/products/${params.productRef}/plans`
 
       const res = await fetch(url, {
         method: 'POST',
@@ -319,9 +330,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // DELETE: /v1/sdk/agents/{agentRef}/plans/{planRef}
-    async deletePlan(agentRef, planRef) {
-      const url = `${base}/v1/sdk/agents/${agentRef}/plans/${planRef}`
+    // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
+    async deletePlan(productRef, planRef) {
+      const url = `${base}/v1/sdk/products/${productRef}/plans/${planRef}`
 
       const res = await fetch(url, {
         method: 'DELETE',
@@ -350,7 +361,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({
-          agentRef: params.agentRef,
+          productRef: params.productRef,
           planRef: params.planRef,
           customerReference: params.customerRef,
         }),
@@ -367,7 +378,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     },
 
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
-    async processPayment(params) {
+    async processPaymentIntent(params) {
       const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/process`
 
       const res = await fetch(url, {
@@ -377,7 +388,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          agentRef: params.agentRef,
+          productRef: params.productRef,
           customerRef: params.customerRef,
           planRef: params.planRef,
         }),
@@ -393,9 +404,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
-    // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
-    async cancelSubscription(params) {
-      const url = `${base}/v1/sdk/subscriptions/${params.subscriptionRef}/cancel`
+    // POST: /v1/sdk/purchases/{purchaseRef}/cancel
+    async cancelPurchase(params) {
+      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/cancel`
 
       // Prepare request options
       const requestOptions: RequestInit = {
@@ -415,16 +426,16 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         log(`❌ API Error: ${res.status} - ${error}`)
 
         if (res.status === 404) {
-          throw new SolvaPayError(`Subscription not found: ${error}`)
+          throw new SolvaPayError(`Purchase not found: ${error}`)
         }
 
         if (res.status === 400) {
           throw new SolvaPayError(
-            `Subscription cannot be cancelled or does not belong to provider: ${error}`,
+            `Purchase cannot be cancelled or does not belong to provider: ${error}`,
           )
         }
 
-        throw new SolvaPayError(`Cancel subscription failed (${res.status}): ${error}`)
+        throw new SolvaPayError(`Cancel purchase failed (${res.status}): ${error}`)
       }
 
       // Get response text first to debug any parsing issues
@@ -436,32 +447,32 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       } catch (parseError) {
         log(`❌ Failed to parse response as JSON: ${parseError}`)
         throw new SolvaPayError(
-          `Invalid JSON response from cancel subscription endpoint: ${responseText.substring(0, 200)}`,
+          `Invalid JSON response from cancel purchase endpoint: ${responseText.substring(0, 200)}`,
         )
       }
 
       // Validate response structure
       if (!responseData || typeof responseData !== 'object') {
         log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
-        throw new SolvaPayError(`Invalid response structure from cancel subscription endpoint`)
+        throw new SolvaPayError(`Invalid response structure from cancel purchase endpoint`)
       }
 
-      // Backend returns nested structure: { subscription: {...}, message: "..." }
-      // Extract the subscription object from the response
+      // Backend returns nested structure: { purchase: {...}, message: "..." }
+      // Extract the purchase object from the response
       let result
-      if (responseData.subscription && typeof responseData.subscription === 'object') {
-        result = responseData.subscription
+      if (responseData.purchase && typeof responseData.purchase === 'object') {
+        result = responseData.purchase
       } else if (responseData.reference) {
         result = responseData
       } else {
         // Try to extract anyway or use the whole response
-        result = responseData.subscription || responseData
+        result = responseData.purchase || responseData
       }
 
       // Check if response has expected fields
       if (!result || typeof result !== 'object') {
-        log(`❌ Invalid subscription data in response. Full response:`, responseData)
-        throw new SolvaPayError(`Invalid subscription data in cancel subscription response`)
+        log(`❌ Invalid purchase data in response. Full response:`, responseData)
+        throw new SolvaPayError(`Invalid purchase data in cancel purchase response`)
       }
 
       return result

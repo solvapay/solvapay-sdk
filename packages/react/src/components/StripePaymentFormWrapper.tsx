@@ -5,7 +5,7 @@ import { useCustomer } from '../hooks/useCustomer'
 import { Spinner } from './Spinner'
 
 interface StripePaymentFormWrapperProps {
-  onSuccess?: (paymentIntent: any) => void | Promise<void>
+  onSuccess?: (paymentIntent: unknown) => void | Promise<void>
   onError?: (error: Error) => void
   returnUrl?: string
   submitButtonText?: string

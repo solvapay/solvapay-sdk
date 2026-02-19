@@ -1,25 +1,25 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
-import { useSubscription } from '../hooks/useSubscription'
+import { usePurchase } from '../hooks/usePurchase'
 import type { PlanBadgeProps } from '../types'
 
 /**
  * Headless Plan Badge Component
  *
- * Displays subscription status with complete styling control.
+ * Displays purchase status with complete styling control.
  * Supports render props, custom components, or className patterns.
  *
- * Prevents flickering by hiding the badge during initial load and when no subscription exists.
- * Shows the badge once loading completes AND an active subscription exists (paid or free).
+ * Prevents flickering by hiding the badge during initial load and when no purchase exists.
+ * Shows the badge once loading completes AND an active purchase exists (paid or free).
  * Badge only updates when the plan name actually changes (prevents unnecessary re-renders).
  *
- * Displays the primary active subscription (paid or free) to show current plan status.
+ * Displays the primary active purchase (paid or free) to show current plan status.
  *
  * @example
  * ```tsx
  * // Render prop pattern
  * <PlanBadge>
- *   {({ subscriptions, loading, displayPlan, shouldShow }) => (
+ *   {({ purchases, loading, displayPlan, shouldShow }) => (
  *     shouldShow ? (
  *       <div>{displayPlan}</div>
  *     ) : null
@@ -35,22 +35,22 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
   as: Component = 'div',
   className,
 }) => {
-  const { subscriptions, loading, hasPaidSubscription, activeSubscription } = useSubscription()
+  const { purchases, loading, hasPaidPurchase, activePurchase } = usePurchase()
   const [displayPlan, setDisplayPlan] = useState<string | null>(null)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
   // Refs for tracking previous values and preventing race conditions
   const lastPlanRef = useRef<string | null>(null)
   const lastLoadingRef = useRef<boolean>(true) // Start as true (initial loading state)
-  const previousSubscriptionsRef = useRef<typeof subscriptions>(subscriptions)
+  const previousPurchasesRef = useRef<typeof purchases>(purchases)
 
-  // Use activeSubscription from hook (primary subscription - paid or free)
-  const currentPlanName = activeSubscription?.planName || null
+  // Use activePurchase from hook (primary purchase - paid or free)
+  const currentPlanName = activePurchase?.planName || null
 
   const effectivePlanName = currentPlanName
 
-  // Track when loading completes (not when subscriptions exist)
-  // This handles the case where loading finishes but subscriptions array is empty
+  // Track when loading completes (not when purchases exist)
+  // This handles the case where loading finishes but purchases array is empty
   // Also handles the case where loading starts as false (already loaded)
   useEffect(() => {
     // Simple: if loading is false, we've loaded (either completed or started as false)
@@ -63,29 +63,29 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
     lastLoadingRef.current = loading
   }, [loading, hasLoadedOnce])
 
-  // Detect customerRef changes (when subscriptions array reference changes)
+  // Detect customerRef changes (when purchases array reference changes)
   // Reset state when customer changes to prevent stale data
-  // Note: Subscriptions array reference changes when customerRef changes OR when refetching
+  // Note: Purchases array reference changes when customerRef changes OR when refetching
   // We reset state conservatively - if loading, state will be restored when loading completes
   useEffect(() => {
-    const previousSubs = previousSubscriptionsRef.current
+    const previousPurchases = previousPurchasesRef.current
 
-    // Check if subscriptions array reference changed
-    // This happens when customerRef changes OR when subscriptions are refetched
-    if (previousSubs !== subscriptions) {
+    // Check if purchases array reference changed
+    // This happens when customerRef changes OR when purchases are refetched
+    if (previousPurchases !== purchases) {
       // Only reset hasLoadedOnce if we're currently loading (new fetch in progress)
       // If not loading, keep hasLoadedOnce true to prevent flickering on refetches
       if (loading) {
         setHasLoadedOnce(false)
       }
 
-      // Always reset displayPlan and lastPlanRef when subscriptions change
+      // Always reset displayPlan and lastPlanRef when purchases change
       // This ensures we show the latest plan name
       setDisplayPlan(null)
       lastPlanRef.current = null
-      previousSubscriptionsRef.current = subscriptions
+      previousPurchasesRef.current = purchases
     }
-  }, [subscriptions, loading])
+  }, [purchases, loading])
 
   // Update display plan when plan name changes
   // Only update when effectivePlanName actually changes (prevents unnecessary re-renders)
@@ -112,7 +112,7 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
   }, [effectivePlanName, displayPlan])
 
   // Determine if badge should be shown
-  // Show if: loading has completed AND we have an active subscription (paid or free)
+  // Show if: loading has completed AND we have an active purchase (paid or free)
   // This ensures badge only appears after initial load completes (prevents flickering)
   const shouldShow = effectivePlanName !== null && hasLoadedOnce
 
@@ -122,7 +122,7 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
 
   // If using render prop pattern
   if (children) {
-    return <>{children({ subscriptions, loading, displayPlan: planToDisplay, shouldShow })}</>
+    return <>{children({ purchases, loading, displayPlan: planToDisplay, shouldShow })}</>
   }
 
   // Hide badge if we shouldn't show it
@@ -132,14 +132,14 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({
 
   // Determine className
   const computedClassName =
-    typeof className === 'function' ? className({ subscriptions }) : className
+    typeof className === 'function' ? className({ purchases }) : className
 
   return (
     <Component
       className={computedClassName}
       data-loading={loading}
-      data-has-subscription={!!activeSubscription}
-      data-has-paid-subscription={hasPaidSubscription}
+      data-has-purchase={!!activePurchase}
+      data-has-paid-purchase={hasPaidPurchase}
       role="status"
       aria-live="polite"
       aria-busy={loading}

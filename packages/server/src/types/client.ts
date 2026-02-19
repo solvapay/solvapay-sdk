@@ -14,9 +14,8 @@ export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { p
 /**
  * Extended CustomerResponse with proper field mapping
  *
- * Note: The backend API may return subscriptions with additional fields beyond SubscriptionInfo
- * (e.g., amount, endDate, cancelledAt, cancellationReason) as defined in SubscriptionResponse.
- * These additional fields are preserved in the subscriptions array.
+ * Note: The backend API returns purchases as PurchaseInfo objects.
+ * Additional fields (paidAt, nextBillingDate) may be present in the response.
  */
 export type CustomerResponseMapped = {
   customerRef: string
@@ -24,27 +23,18 @@ export type CustomerResponseMapped = {
   name?: string
   externalRef?: string
   plan?: string
-  subscriptions?: Array<
-    components['schemas']['SubscriptionInfo'] &
-      Partial<
-        Pick<
-          components['schemas']['SubscriptionResponse'],
-          | 'amount'
-          | 'currency'
-          | 'endDate'
-          | 'cancelledAt'
-          | 'cancellationReason'
-          | 'paidAt'
-          | 'nextBillingDate'
-        >
-      >
+  purchases?: Array<
+    components['schemas']['PurchaseInfo'] & {
+      paidAt?: string
+      nextBillingDate?: string
+    }
   >
 }
 
 /**
- * Purchase information returned from payment processing
+ * One-time purchase information returned from payment processing
  */
-export interface PurchaseInfo {
+export interface OneTimePurchaseInfo {
   reference: string
   productRef?: string
   amount: number
@@ -57,9 +47,9 @@ export interface PurchaseInfo {
  * Result from processing a payment intent
  */
 export interface ProcessPaymentResult {
-  type: 'subscription' | 'purchase'
-  subscription?: components['schemas']['SubscriptionInfo']
-  purchase?: PurchaseInfo
+  type: 'recurring' | 'one-time'
+  purchase?: components['schemas']['PurchaseInfo']
+  oneTimePurchase?: OneTimePurchaseInfo
   status: 'completed'
 }
 
@@ -75,41 +65,58 @@ export interface SolvaPayClient {
   checkLimits(params: components['schemas']['CheckLimitRequest']): Promise<LimitResponseWithPlan>
 
   // POST: /v1/sdk/usages
-  trackUsage(params: components['schemas']['UsageEvent'] & { planRef: string }): Promise<void>
+  trackUsage(params: {
+    customerRef: string
+    productRef: string
+    planRef: string
+    outcome: string
+    action?: string
+    requestId?: string
+    actionDuration?: number
+    timestamp?: string
+  }): Promise<void>
 
   // POST: /v1/sdk/customers
   createCustomer?(
     params: components['schemas']['CreateCustomerRequest'],
   ): Promise<{ customerRef: string }>
 
-  // GET: /v1/sdk/customers/{reference}
-  getCustomer?(params: { customerRef: string }): Promise<CustomerResponseMapped>
+  // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
+  getCustomer(params: {
+    customerRef?: string
+    externalRef?: string
+    email?: string
+  }): Promise<CustomerResponseMapped>
 
-  // GET: /v1/sdk/customers?externalRef={externalRef}
-  getCustomerByExternalRef?(params: { externalRef: string }): Promise<CustomerResponseMapped>
+  // Management methods
 
-  // Management methods (primarily for integration tests)
-
-  // GET: /v1/sdk/agents
-  listAgents?(): Promise<
+  // GET: /v1/sdk/products
+  listProducts?(): Promise<
     Array<{
       reference: string
       name: string
       description?: string
+      status?: string
     }>
   >
 
-  // POST: /v1/sdk/agents
-  createAgent?(params: components['schemas']['CreateAgentRequest']): Promise<{
+  // POST: /v1/sdk/products
+  createProduct?(params: components['schemas']['CreateProductRequest']): Promise<{
     reference: string
     name: string
   }>
 
-  // DELETE: /v1/sdk/agents/{agentRef}
-  deleteAgent?(agentRef: string): Promise<void>
+  // PUT: /v1/sdk/products/{productRef}
+  updateProduct?(
+    productRef: string,
+    params: components['schemas']['UpdateProductRequest'],
+  ): Promise<components['schemas']['SdkProductResponse']>
 
-  // GET: /v1/sdk/agents/{agentRef}/plans
-  listPlans?(agentRef: string): Promise<
+  // DELETE: /v1/sdk/products/{productRef}
+  deleteProduct?(productRef: string): Promise<void>
+
+  // GET: /v1/sdk/products/{productRef}/plans
+  listPlans?(productRef: string): Promise<
     Array<{
       reference: string
       name: string
@@ -120,22 +127,24 @@ export interface SolvaPayClient {
       isFreeTier?: boolean
       freeUnits?: number
       metadata?: Record<string, any>
-      [key: string]: any // Allow additional fields from API
+      [key: string]: any
     }>
   >
 
-  // POST: /v1/sdk/agents/{agentRef}/plans
-  createPlan?(params: components['schemas']['CreatePlanRequest'] & { agentRef: string }): Promise<{
+  // POST: /v1/sdk/products/{productRef}/plans
+  createPlan?(
+    params: components['schemas']['CreatePlanRequest'] & { productRef: string },
+  ): Promise<{
     reference: string
     name: string
   }>
 
-  // DELETE: /v1/sdk/agents/{agentRef}/plans/{planRef}
-  deletePlan?(agentRef: string, planRef: string): Promise<void>
+  // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
+  deletePlan?(productRef: string, planRef: string): Promise<void>
 
   // POST: /v1/sdk/payment-intents
   createPaymentIntent?(params: {
-    agentRef: string
+    productRef: string
     planRef: string
     customerRef: string
     idempotencyKey?: string
@@ -146,16 +155,16 @@ export interface SolvaPayClient {
     accountId?: string
   }>
 
-  // POST: /v1/sdk/subscriptions/{subscriptionRef}/cancel
-  cancelSubscription?(params: {
-    subscriptionRef: string
+  // POST: /v1/sdk/purchases/{purchaseRef}/cancel
+  cancelPurchase?(params: {
+    purchaseRef: string
     reason?: string
-  }): Promise<components['schemas']['SubscriptionResponse']>
+  }): Promise<components['schemas']['PurchaseInfo']>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
-  processPayment?(params: {
+  processPaymentIntent?(params: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     customerRef: string
     planRef?: string
   }): Promise<ProcessPaymentResult>
@@ -163,7 +172,7 @@ export interface SolvaPayClient {
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
     params: components['schemas']['CreateCheckoutSessionRequest'],
-  ): Promise<components['schemas']['CreateCheckoutSessionResponse']>
+  ): Promise<components['schemas']['CheckoutSessionResponse']>
 
   // POST: /v1/sdk/customers/customer-sessions
   createCustomerSession(

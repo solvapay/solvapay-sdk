@@ -18,7 +18,7 @@ pnpm add @solvapay/react
 ### Zero-Config Usage (Recommended)
 
 ```tsx
-import { SolvaPayProvider, PaymentForm, useSubscription } from '@solvapay/react'
+import { SolvaPayProvider, PaymentForm, usePurchase } from '@solvapay/react'
 
 export default function App() {
   return (
@@ -31,7 +31,7 @@ export default function App() {
 
 By default, `SolvaPayProvider` uses:
 
-- `/api/check-subscription` for subscription checks
+- `/api/check-purchase` for purchase checks
 - `/api/create-payment-intent` for payment creation
 - `/api/process-payment` for payment processing
 
@@ -45,7 +45,7 @@ export default function App() {
     <SolvaPayProvider
       config={{
         api: {
-          checkSubscription: '/api/custom/subscription',
+          checkPurchase: '/api/custom/purchase',
           createPayment: '/api/custom/payment',
           processPayment: '/api/custom/process',
         },
@@ -93,9 +93,9 @@ export default function App() {
         if (!res.ok) throw new Error('Failed to create payment')
         return res.json()
       }}
-      checkSubscription={async customerRef => {
-        const res = await fetch(`/api/custom/subscription?customerRef=${customerRef}`)
-        if (!res.ok) throw new Error('Failed to check subscription')
+      checkPurchase={async customerRef => {
+        const res = await fetch(`/api/custom/purchase?customerRef=${customerRef}`)
+        if (!res.ok) throw new Error('Failed to check purchase')
         return res.json()
       }}
     >
@@ -109,12 +109,12 @@ export default function App() {
 
 ### SolvaPayProvider
 
-Headless context provider that manages subscription state, payment methods, and customer references.
+Headless context provider that manages purchase state, payment methods, and customer references.
 
 **Features:**
 
 - Zero-config with sensible defaults
-- Auto-fetches subscriptions on mount
+- Auto-fetches purchases on mount
 - Built-in localStorage caching with user validation
 - Supports auth adapters for extracting user IDs and tokens
 - Customizable API routes via config
@@ -125,7 +125,7 @@ Headless context provider that manages subscription state, payment methods, and 
   - `config.api?` - Custom API route paths
   - `config.auth?` - Auth adapter configuration
 - `createPayment?: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>` - Custom payment creation function (optional, overrides config)
-- `checkSubscription?: (customerRef: string) => Promise<CustomerSubscriptionData>` - Custom subscription check function (optional, overrides config)
+- `checkPurchase?: (customerRef: string) => Promise<CustomerPurchaseData>` - Custom purchase check function (optional, overrides config)
 - `processPayment?: (params: { paymentIntentId: string; agentRef: string; planRef?: string }) => Promise<ProcessPaymentResult>` - Custom payment processing function (optional)
 - `children: React.ReactNode` - Child components
 
@@ -134,7 +134,7 @@ Headless context provider that manages subscription state, payment methods, and 
 ```tsx
 interface SolvaPayConfig {
   api?: {
-    checkSubscription?: string // Default: '/api/check-subscription'
+    checkPurchase?: string // Default: '/api/check-purchase'
     createPayment?: string // Default: '/api/create-payment-intent'
     processPayment?: string // Default: '/api/process-payment'
   }
@@ -208,7 +208,7 @@ function CheckoutPage() {
 
 ### PlanBadge
 
-Displays current subscription plan with render props or className pattern.
+Displays current purchase plan with render props or className pattern.
 
 **Props:**
 
@@ -222,9 +222,9 @@ Displays current subscription plan with render props or className pattern.
 <PlanBadge className="badge badge-primary" />
 ```
 
-### SubscriptionGate
+### PurchaseGate
 
-Controls access to content based on subscription status.
+Controls access to content based on purchase status.
 
 **Props:**
 
@@ -234,29 +234,29 @@ Controls access to content based on subscription status.
 **Example:**
 
 ```tsx
-<SubscriptionGate requirePlan="Pro Plan">
-  {({ hasAccess, loading, subscriptions }) => {
+<PurchaseGate requirePlan="Pro Plan">
+  {({ hasAccess, loading, purchases }) => {
     if (loading) return <Loading />
     if (!hasAccess) return <Paywall />
     return <PremiumContent />
   }}
-</SubscriptionGate>
+</PurchaseGate>
 ```
 
 ## Hooks
 
-### useSubscription
+### usePurchase
 
-Access subscription status, active subscriptions, and helper functions.
+Access purchase status, active purchases, and helper functions.
 
 ```tsx
 const {
-  subscriptions, // Array of all subscriptions
+  purchases, // Array of all purchases
   loading, // Loading state
-  hasPaidSubscription, // Boolean: has any paid subscription
-  activeSubscription, // Most recent active subscription
-  refetch, // Function to refetch subscriptions
-} = useSubscription()
+  hasPaidPurchase, // Boolean: has any paid purchase
+  activePurchase, // Most recent active purchase
+  refetch, // Function to refetch purchases
+} = usePurchase()
 ```
 
 ### usePlans
@@ -275,17 +275,17 @@ const {
 })
 ```
 
-### useSubscriptionStatus
+### usePurchaseStatus
 
-Advanced subscription status helpers.
+Advanced purchase status helpers.
 
 ```tsx
 const {
-  cancelledSubscription, // Most recent cancelled subscription
+  cancelledPurchase, // Most recent cancelled purchase
   shouldShowCancelledNotice, // Boolean: should show cancellation notice
   formatDate, // Helper to format dates
   getDaysUntilExpiration, // Helper to get days until expiration
-} = useSubscriptionStatus()
+} = usePurchaseStatus()
 ```
 
 ### useCheckout
@@ -302,7 +302,7 @@ Access SolvaPay context directly.
 
 ```tsx
 const {
-  subscriptionData, // Full subscription data
+  purchaseData, // Full purchase data
   loading, // Loading state
   createPayment, // Payment creation function
   processPayment, // Payment processing function
@@ -316,7 +316,7 @@ const {
 All components and hooks are fully typed. Import types as needed:
 
 ```tsx
-import type { PaymentFormProps, SubscriptionStatus, PaymentIntentResult } from '@solvapay/react'
+import type { PaymentFormProps, PurchaseStatus, PaymentIntentResult } from '@solvapay/react'
 ```
 
 ## More Information

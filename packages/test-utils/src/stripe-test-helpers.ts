@@ -32,20 +32,20 @@ export const STRIPE_TEST_CARDS = {
  * Create a payment intent via backend SDK
  *
  * @param apiClient - SolvaPay API client instance
- * @param agentRef - Reference to the agent
+ * @param productRef - Reference to the product
  * @param planRef - Reference to the plan to purchase
  * @param customerRef - Reference to the customer making the payment
  * @returns Payment intent with clientSecret, publishableKey, and stripeAccountId
  *
  * @example
  * ```typescript
- * const paymentIntent = await createTestPaymentIntent(apiClient, 'agt_abc123', 'pln_abc123', 'cust_xyz789');
+ * const paymentIntent = await createTestPaymentIntent(apiClient, 'prd_abc123', 'pln_abc123', 'cust_xyz789');
  * console.log(paymentIntent.clientSecret); // pi_xxx_secret_yyy
  * ```
  */
 export async function createTestPaymentIntent(
   apiClient: SolvaPayClient,
-  agentRef: string,
+  productRef: string,
   planRef: string,
   customerRef: string,
 ): Promise<{
@@ -61,7 +61,7 @@ export async function createTestPaymentIntent(
 
   const idempotencyKey = `test-payment-${planRef}-${Date.now()}`
   const result = await apiClient.createPaymentIntent({
-    agentRef,
+    productRef,
     planRef,
     customerRef,
     idempotencyKey,
@@ -139,7 +139,7 @@ export async function confirmPaymentWithTestCard(
  *
  * @param apiClient - SolvaPay API client instance
  * @param customerRef - Customer reference to check
- * @param agentRef - Agent reference to check limits for
+ * @param productRef - Product reference to check limits for
  * @param planRef - Plan reference (unused, kept for backward compatibility)
  * @param expectedUnits - Minimum expected remaining units after payment
  * @param timeout - Maximum time to wait in milliseconds (default: 10000)
@@ -152,7 +152,7 @@ export async function confirmPaymentWithTestCard(
  * const limits = await waitForWebhookProcessing(
  *   apiClient,
  *   'customer_123',
- *   'agent_123',
+ *   'product_123',
  *   'plan_123', // Not used, but kept for backward compatibility
  *   100,
  *   15000 // 15 second timeout
@@ -164,7 +164,7 @@ export async function confirmPaymentWithTestCard(
 export async function waitForWebhookProcessing(
   apiClient: SolvaPayClient,
   customerRef: string,
-  agentRef: string,
+  productRef: string,
   planRef: string,
   expectedUnits: number,
   timeout: number = 10000,
@@ -185,7 +185,7 @@ export async function waitForWebhookProcessing(
     try {
       const limits = await apiClient.checkLimits({
         customerRef: customerRef,
-        agentRef: agentRef,
+        productRef: productRef,
       })
 
       testLog.debug(`  Attempt ${attempts}: remaining=${limits.remaining}, target=${expectedUnits}`)

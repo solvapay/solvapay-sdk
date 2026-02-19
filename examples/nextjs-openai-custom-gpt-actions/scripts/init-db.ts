@@ -3,7 +3,7 @@
 /**
  * Initialize Supabase Database
  *
- * This script sets up the OAuth refresh tokens table in Supabase.
+ * This script sets up the Tasks table in Supabase.
  * Run this script once to initialize your database schema.
  *
  * Usage:
@@ -158,70 +158,12 @@ async function initDatabase() {
       process.exit(1)
     }
 
-    // Extract hostname using regex (find the LAST @ before the hostname pattern)
-    // This handles cases where password might contain @ (should be %40 but sometimes isn't)
-    // Pattern: @db.xxxxx.supabase.co
-    const hostMatch = dbUrl.match(/@(db\.[^:/]+\.supabase\.co)/)
-    if (hostMatch) {
-      const hostname = hostMatch[1]
-      console.log(`   Host: ${hostname}`)
-    } else {
-      // Fallback: try to find any supabase.co hostname
-      const fallbackMatch = dbUrl.match(/@([^:/]*\.supabase\.co)/)
-      if (fallbackMatch) {
-        const hostname = fallbackMatch[1]
-        console.log(`   Host: ${hostname}`)
-
-        if (!hostname.startsWith('db.')) {
-          console.error('❌ Error: Invalid Supabase hostname format.')
-          console.error(`   Got: ${hostname}`)
-          console.error('   Expected format: db.[PROJECT_REF].supabase.co')
-          console.error(
-            "   Make sure you're using the database connection string, not the API URL.",
-          )
-          process.exit(1)
-        }
-      } else {
-        console.warn('⚠️  Warning: Could not extract hostname from connection string.')
-        console.warn(
-          '   The connection will be attempted anyway, but verify your SUPABASE_DB_URL format.',
-        )
-      }
-    }
-
-    // Extract database name (after the last /, before any ? or end of string)
-    const dbMatch = dbUrl.match(/\/([^/?]+)(?:\?|$)/)
-    if (dbMatch && dbMatch[1]) {
-      console.log(`   Database: ${dbMatch[1]}`)
-    }
-
-    // Warn about potential password encoding issues
-    // Check if password contains unencoded special characters
-    const passwordMatch = dbUrl.match(/:\/\/[^:]+:([^@]+)@/)
-    if (passwordMatch) {
-      const passwordPart = passwordMatch[1]
-      // Check for common unencoded special characters
-      if (passwordPart.includes('@') && !passwordPart.includes('%40')) {
-        console.warn(
-          "⚠️  Warning: Password contains @ character. Make sure it's URL-encoded as %40.",
-        )
-        console.warn(
-          '   If connection fails, try URL-encoding special characters in your password:',
-        )
-        console.warn('   @ → %40, # → %23, % → %25, & → %26, + → %2B')
-      }
-      if (passwordPart.includes('&') && !passwordPart.includes('%26')) {
-        console.warn('⚠️  Warning: Password contains & character. Consider URL-encoding it as %26.')
-      }
-    }
-
     client = new Client({
       connectionString: dbUrl,
       ssl: { rejectUnauthorized: false }, // Supabase requires SSL
     })
   } else {
     // Extract project reference from Supabase URL to build database host
-    // Example: https://abcdefghijklmnop.supabase.co -> db.abcdefghijklmnop.supabase.co
     let host = dbHost
     if (!host && supabaseUrl) {
       const urlMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)
@@ -257,152 +199,58 @@ async function initDatabase() {
     await client.connect()
     console.log('✅ Connected to database\n')
 
-    // Read the SQL migration file
-    const migrationPath = join(
-      process.cwd(),
-      'supabase',
-      'migrations',
-      '001_oauth_refresh_tokens.sql',
-    )
-    let sql: string
+    // Read the SQL migration files
+    const migrationsDir = join(process.cwd(), 'supabase', 'migrations')
+    const migrationFiles = [
+      '001_create_tasks_table.sql',
+      '002_create_oauth_tables.sql',
+      '003_add_email_to_oauth_codes.sql',
+      '004_update_tasks_user_id.sql'
+    ]
 
-    try {
-      sql = readFileSync(migrationPath, 'utf-8')
-      console.log(`📄 Read migration file: ${migrationPath}\n`)
-    } catch (error) {
-      throw new Error(`Failed to read migration file: ${migrationPath}\n${error}`)
-    }
+    for (const file of migrationFiles) {
+      const migrationPath = join(migrationsDir, file)
+      let sql: string
 
-    // Execute the SQL (pg handles multiple statements automatically)
-    console.log('📝 Executing SQL migration...\n')
-
-    try {
-      await client.query(sql)
-      console.log('✅ Migration executed successfully!\n')
-
-      // Verify the table was created
-      const tableCheck = await client.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'oauth_refresh_tokens'
-        );
-      `)
-
-      if (tableCheck.rows[0].exists) {
-        console.log('✅ Verified: oauth_refresh_tokens table exists')
-      } else {
-        console.warn('⚠️  Warning: Table existence check failed, but migration completed')
+      try {
+        sql = readFileSync(migrationPath, 'utf-8')
+        console.log(`📄 Read migration file: ${file}\n`)
+      } catch (error) {
+        throw new Error(`Failed to read migration file: ${migrationPath}\n${error}`)
       }
 
-      // Check indexes
-      const indexCheck = await client.query(`
-        SELECT indexname 
-        FROM pg_indexes 
-        WHERE tablename = 'oauth_refresh_tokens';
-      `)
+      // Execute the SQL
+      console.log(`📝 Executing SQL migration: ${file}...\n`)
 
-      console.log(`✅ Created ${indexCheck.rows.length} indexes`)
-
-      // Check RLS policies
-      const policyCheck = await client.query(`
-        SELECT policyname 
-        FROM pg_policies 
-        WHERE tablename = 'oauth_refresh_tokens';
-      `)
-
-      console.log(`✅ Created ${policyCheck.rows.length} RLS policies`)
-
-      // Check functions
-      const functionCheck = await client.query(`
-        SELECT routine_name 
-        FROM information_schema.routines 
-        WHERE routine_schema = 'public' 
-        AND routine_name = 'cleanup_expired_refresh_tokens';
-      `)
-
-      if (functionCheck.rows.length > 0) {
-        console.log('✅ Created cleanup_expired_refresh_tokens function')
-      }
-
-      console.log('\n✨ Database initialization complete!')
-    } catch (error: any) {
-      // Check if error is because table already exists
-      if (error.message.includes('already exists') || error.code === '42P07') {
-        console.log('⚠️  Warning: Table or objects already exist')
-        console.log("   This is normal if you've run this script before.")
-        console.log('   Migration will continue...\n')
-      } else {
-        throw error
+      try {
+        await client.query(sql)
+        console.log(`✅ Migration ${file} executed successfully!\n`)
+      } catch (error: any) {
+        // Check if error is because table already exists
+        if (error.message.includes('already exists') || error.code === '42P07') {
+          console.log(`⚠️  Warning: Objects in ${file} already exist`)
+          console.log("   This is normal if you've run this script before.")
+          console.log('   Migration will continue...\n')
+        } else {
+          throw error
+        }
       }
     }
+
+    // Verify the tables were created
+    const tableCheck = await client.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name IN ('tasks', 'oauth_codes', 'oauth_refresh_tokens');
+      `)
+      
+    const foundTables = tableCheck.rows.map((row: any) => row.table_name)
+    console.log(`✅ Verified tables exist: ${foundTables.join(', ')}`)
+
+    console.log('\n✨ Database initialization complete!')
   } catch (error: any) {
     console.error('❌ Error initializing database:', error.message)
-
-    if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
-      console.error('\n💡 DNS/Hostname Error - Possible issues:')
-      console.error('   1. Verify the hostname is correct:')
-      console.error('      - Go to Supabase Dashboard → Settings → Database')
-      console.error('      - Check the "Connection string" section')
-      console.error('      - Make sure you\'re using the "URI" format (not Transaction mode)')
-      console.error('      - The hostname should be: db.[PROJECT_REF].supabase.co')
-      console.error('')
-      console.error('   2. Connection String Types:')
-      console.error('      - Use "URI" (Direct connection) for scripts')
-      console.error('      - NOT "Transaction" or "Session" mode (those use pooler.supabase.co)')
-      console.error('')
-      console.error('   3. Verify your project reference:')
-      console.error('      - Check your NEXT_PUBLIC_SUPABASE_URL')
-      console.error('      - Extract the project reference from it')
-      console.error('      - Database host should be: db.[PROJECT_REF].supabase.co')
-      console.error('')
-      console.error('   4. Test DNS resolution:')
-      console.error('      Run: nslookup db.aadmielekvmoikgxhxmr.supabase.co')
-      console.error('      (Replace with your actual hostname)\n')
-    } else if (error.code === 'ECONNREFUSED' || error.code === 'EHOSTUNREACH') {
-      console.error('\n💡 Connection Error - Possible issues:')
-      console.error('   1. Check your SUPABASE_DB_URL format')
-      console.error(
-        '      Expected: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres',
-      )
-      console.error(
-        "   2. Make sure you've replaced [PASSWORD] and [PROJECT_REF] with actual values",
-      )
-      console.error('   3. Verify the connection string from Supabase Dashboard')
-      console.error('      Go to: Settings → Database → Connection string → URI')
-      console.error(
-        '   4. Ensure your IP is allowed (check Supabase Dashboard → Settings → Database → Connection pooling)\n',
-      )
-    } else if (error.code === '28P01') {
-      console.error('\n💡 Authentication Error:')
-      console.error('   Your database password is incorrect.')
-      console.error("   Make sure you're using the database password, not the API key.\n")
-    } else if (error.message.includes('password')) {
-      console.error('\n💡 Password Error:')
-      console.error('   Make sure special characters in your password are URL-encoded.')
-      console.error('   Or use individual connection parameters instead.\n')
-    }
-
-    // Show connection details for debugging (without password)
-    if (dbUrl) {
-      // Mask password in connection string
-      const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@')
-      console.error('\n🔍 Debug info:')
-      console.error('   Connection string (masked):', maskedUrl)
-
-      // Extract and show hostname
-      const hostMatch = dbUrl.match(/@(db\.[^:/]+\.supabase\.co)/)
-      if (hostMatch) {
-        console.error(`   Hostname being resolved: ${hostMatch[1]}`)
-        console.error('   If DNS resolution fails, verify:')
-        console.error('   1. The hostname matches your project reference')
-        console.error(
-          '   2. You\'re using the "URI" connection string (not Transaction/Session mode)',
-        )
-        console.error('   3. Your Supabase project is active and not paused')
-      }
-    }
-
     process.exit(1)
   } finally {
     await client.end()

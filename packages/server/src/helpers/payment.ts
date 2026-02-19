@@ -12,7 +12,7 @@ import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
 
 /**
- * Create a Stripe payment intent for a customer to subscribe to a plan.
+ * Create a Stripe payment intent for a customer to purchase a plan.
  *
  * This is a framework-agnostic helper that:
  * 1. Extracts authenticated user from the request
@@ -20,12 +20,12 @@ import { syncCustomerCore } from './customer'
  * 3. Creates a payment intent for the specified plan
  *
  * The payment intent can then be confirmed on the client side using Stripe.js.
- * After confirmation, use `processPaymentCore()` to complete the subscription.
+ * After confirmation, use `processPaymentIntentCore()` to complete the purchase.
  *
  * @param request - Standard Web API Request object
  * @param body - Payment intent parameters
- * @param body.planRef - Plan reference to subscribe to (required)
- * @param body.agentRef - Agent reference (required)
+ * @param body.planRef - Plan reference to purchase (required)
+ * @param body.productRef - Product reference (required)
  * @param options - Configuration options
  * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
  * @param options.includeEmail - Whether to include email in customer data (default: true)
@@ -47,7 +47,7 @@ import { syncCustomerCore } from './customer'
  * }
  * ```
  *
- * @see {@link processPaymentCore} for processing confirmed payments
+ * @see {@link processPaymentIntentCore} for processing confirmed payments
  * @see {@link ErrorResult} for error handling
  * @since 1.0.0
  */
@@ -55,7 +55,7 @@ export async function createPaymentIntentCore(
   request: Request,
   body: {
     planRef: string
-    agentRef: string
+    productRef: string
   },
   options: {
     solvaPay?: SolvaPay
@@ -73,15 +73,13 @@ export async function createPaymentIntentCore(
   | ErrorResult
 > {
   try {
-    // Validate required parameters
-    if (!body.planRef || !body.agentRef) {
+    if (!body.planRef || !body.productRef) {
       return {
-        error: 'Missing required parameters: planRef and agentRef are required',
+        error: 'Missing required parameters: planRef and productRef are required',
         status: 400,
       }
     }
 
-    // Sync customer first
     const customerResult = await syncCustomerCore(request, {
       solvaPay: options.solvaPay,
       includeEmail: options.includeEmail,
@@ -94,23 +92,20 @@ export async function createPaymentIntentCore(
 
     const customerRef = customerResult
 
-    // Use provided SolvaPay instance or create new one
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    // Create payment intent using the SDK
     const paymentIntent = await solvaPay.createPaymentIntent({
-      agentRef: body.agentRef,
+      productRef: body.productRef,
       planRef: body.planRef,
       customerRef,
     })
 
-    // Return the payment intent details
     return {
       id: paymentIntent.id,
       clientSecret: paymentIntent.clientSecret,
       publishableKey: paymentIntent.publishableKey,
       accountId: paymentIntent.accountId,
-      customerRef, // Return the backend customer reference
+      customerRef,
     }
   } catch (error) {
     return handleRouteError(error, 'Create payment intent', 'Payment intent creation failed')
@@ -121,7 +116,7 @@ export async function createPaymentIntentCore(
  * Process a payment intent after client-side Stripe confirmation.
  *
  * This helper processes a payment intent that has been confirmed on the client
- * side using Stripe.js. It creates the subscription or purchase immediately,
+ * side using Stripe.js. It creates the purchase immediately,
  * eliminating webhook delay.
  *
  * Call this after the client has confirmed the payment intent with Stripe.js.
@@ -129,25 +124,21 @@ export async function createPaymentIntentCore(
  * @param request - Standard Web API Request object
  * @param body - Payment processing parameters
  * @param body.paymentIntentId - Stripe payment intent ID from client confirmation (required)
- * @param body.agentRef - Agent reference (required)
+ * @param body.productRef - Product reference (required)
  * @param body.planRef - Optional plan reference (if not in payment intent)
  * @param options - Configuration options
  * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
- * @returns Process payment result with subscription details, or error result
+ * @returns Process payment result with purchase details, or error result
  *
  * @example
  * ```typescript
  * // In an API route handler
  * export async function POST(request: Request) {
  *   const body = await request.json();
- *   const result = await processPaymentCore(request, body);
+ *   const result = await processPaymentIntentCore(request, body);
  *
  *   if (isErrorResult(result)) {
  *     return Response.json(result, { status: result.status });
- *   }
- *
- *   if (result.success) {
- *     console.log('Subscription created:', result.subscriptionRef);
  *   }
  *
  *   return Response.json(result);
@@ -158,11 +149,11 @@ export async function createPaymentIntentCore(
  * @see {@link ErrorResult} for error handling
  * @since 1.0.0
  */
-export async function processPaymentCore(
+export async function processPaymentIntentCore(
   request: Request,
   body: {
     paymentIntentId: string
-    agentRef: string
+    productRef: string
     planRef?: string
   },
   options: {
@@ -170,15 +161,13 @@ export async function processPaymentCore(
   } = {},
 ): Promise<import('../types/client').ProcessPaymentResult | ErrorResult> {
   try {
-    // Validate required parameters
-    if (!body.paymentIntentId || !body.agentRef) {
+    if (!body.paymentIntentId || !body.productRef) {
       return {
-        error: 'paymentIntentId and agentRef are required',
+        error: 'paymentIntentId and productRef are required',
         status: 400,
       }
     }
 
-    // Sync customer first
     const customerResult = await syncCustomerCore(request, {
       solvaPay: options.solvaPay,
     })
@@ -189,19 +178,17 @@ export async function processPaymentCore(
 
     const customerRef = customerResult
 
-    // Use provided SolvaPay instance or create new one
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    // Call SDK method to process the already-confirmed payment
-    const result = await solvaPay.processPayment({
+    const result = await solvaPay.processPaymentIntent({
       paymentIntentId: body.paymentIntentId,
-      agentRef: body.agentRef,
+      productRef: body.productRef,
       customerRef,
       planRef: body.planRef,
     })
 
     return result
   } catch (error) {
-    return handleRouteError(error, 'Process payment', 'Payment processing failed')
+    return handleRouteError(error, 'Process payment intent', 'Payment processing failed')
   }
 }

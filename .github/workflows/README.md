@@ -4,25 +4,25 @@ This directory contains automated workflows for the SolvaPay SDK.
 
 ## Workflows
 
-### 🚀 `publish.yml` - Stable Release
+### `publish.yml` - Stable Release
 
 **Trigger:** Push to `main` branch (or manual via Actions UI)
 
 Automatically publishes a new stable version to npm with the `latest` tag.
 
-### 🧪 `publish-preview.yml` - Preview Release
+### `publish-preview.yml` - Preview Release
 
 **Trigger:** Push to `dev` branch
 
 Automatically publishes a new preview version to npm with the `preview` tag.
 
-### 🏷️ `tag-as-latest.yml` - Tag Version as Latest
+### `tag-as-latest.yml` - Tag Version as Latest
 
 **Trigger:** Manual via GitHub Actions UI only
 
 Promotes any existing version (especially preview versions) to the `latest` tag on npm.
 
-**⚠️ This is the ONLY supported way to tag versions as latest.**
+**This is the ONLY supported way to tag versions as latest.**
 
 **How to use:**
 
@@ -48,11 +48,11 @@ Set up in: **Repository Settings → Secrets and variables → Actions**
 
 ## Best Practices
 
-1. ✅ **Always use dry run first**: When using `tag-as-latest.yml`, enable dry run to verify what will be tagged
-2. ✅ **Use GitHub Actions only**: Don't run tagging scripts locally - use the workflow for consistency and audit trail
-3. ✅ **Check workflow logs**: Always review the workflow execution logs for any issues
-4. ✅ **Verify on npm**: After tagging, check `npm dist-tag ls @solvapay/core` to verify tags
-5. ✅ **Keep tokens secure**: Never commit or expose `NPM_TOKEN` in logs or code
+1. **Always use dry run first**: When using `tag-as-latest.yml`, enable dry run to verify what will be tagged
+2. **Use GitHub Actions only**: Don't run tagging scripts locally - use the workflow for consistency and audit trail
+3. **Check workflow logs**: Always review the workflow execution logs for any issues
+4. **Verify on npm**: After tagging, check `npm dist-tag ls @solvapay/core` to verify tags
+5. **Keep tokens secure**: Never commit or expose `NPM_TOKEN` in logs or code
 
 ## Quick Reference
 

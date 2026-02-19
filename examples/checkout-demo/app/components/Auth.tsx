@@ -24,8 +24,9 @@ export function Auth() {
       if (googleError) throw googleError
       // OAuth redirect will happen automatically
       // The callback route will handle the rest
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Google sign-in failed'
+      setError(message)
       setIsLoading(false)
     }
   }
@@ -80,8 +81,9 @@ export function Auth() {
         if (signInError) throw signInError
         // Success - auth state change will trigger re-render in layout
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Authentication failed'
+      setError(message)
     } finally {
       setIsLoading(false)
     }

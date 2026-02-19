@@ -1,14 +1,14 @@
 # Step 3: Payments Setup
 
-This guide covers setting up SolvaPay hosted checkout for subscription payments.
+This guide covers setting up SolvaPay hosted checkout for purchase payments.
 
 ## Overview
 
 We'll implement:
 
 1. API route to create checkout sessions
-2. API route to check subscription status
-3. API route to create customer sessions (for subscription management)
+2. API route to check purchase status
+3. API route to create customer sessions (for purchase management)
 4. API route to sync customers
 5. Frontend integration for checkout flow
 
@@ -37,28 +37,28 @@ export async function POST(request: NextRequest) {
 - Creates checkout session
 - Returns checkout URL for redirect
 
-## Step 2: Create Check Subscription API Route
+## Step 2: Create Check Purchase API Route
 
-Create `src/app/api/check-subscription/route.ts`:
+Create `src/app/api/check-purchase/route.ts`:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { checkSubscription } from '@solvapay/next'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  const result = await checkSubscription(request)
+  const result = await checkPurchase(request)
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
 **What this does:**
 
-- Uses the `checkSubscription` helper from `@solvapay/next`
+- Uses the `checkPurchase` helper from `@solvapay/next`
 - Automatically extracts user ID from request (set by middleware)
 - Gets user email and name from Supabase token
 - Ensures customer exists in SolvaPay
-- Checks subscription status with SolvaPay API
-- Returns subscription data
+- Checks purchase status with SolvaPay API
+- Returns purchase data
 
 ## Step 3: Create Customer Session API Route
 
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 - Gets user email and name from Supabase token
 - Ensures customer exists in SolvaPay
 - Creates a customer portal session
-- Allows users to manage subscriptions, payment methods, and billing history
+- Allows users to manage purchases, payment methods, and billing history
 - Returns URL to redirect user to hosted customer portal
 
 ## Step 4: Create Sync Customer API Route
@@ -117,16 +117,16 @@ export async function POST(request: NextRequest) {
 
 ## Step 5: Update Root Layout
 
-The layout is already set up correctly from Step 2. The `SolvaPayProvider` with the Supabase adapter automatically handles subscription checking - no additional configuration needed!
+The layout is already set up correctly from Step 2. The `SolvaPayProvider` with the Supabase adapter automatically handles purchase checking - no additional configuration needed!
 
 **Important:** The Supabase adapter automatically:
 
 - Gets the access token from Supabase session using `supabase.auth.getSession()`
-- Calls `/api/check-subscription` with the Authorization header
-- Updates subscription state in the provider
-- You can use `useSubscription()` hook anywhere in your app to access subscription data
+- Calls `/api/check-purchase` with the Authorization header
+- Updates purchase state in the provider
+- You can use `usePurchase()` hook anywhere in your app to access purchase data
 
-**You don't need to pass a `checkSubscription` prop** - it's handled automatically by the adapter. The adapter uses the token from Supabase to authenticate with your API routes.
+**You don't need to pass a `checkPurchase` prop** - it's handled automatically by the adapter. The adapter uses the token from Supabase to authenticate with your API routes.
 
 ## Step 6: Create Home Page with Checkout Flow
 
@@ -136,7 +136,7 @@ Update `src/app/page.tsx`:
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSubscription, useSubscriptionStatus } from '@solvapay/react';
+import { usePurchase, usePurchaseStatus } from '@solvapay/react';
 import { getAccessToken } from './lib/supabase';
 
 export default function HomePage() {
@@ -144,10 +144,10 @@ export default function HomePage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get subscription helpers from SDK
-  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
+  // Get purchase helpers from SDK
+  const { purchases, loading: purchasesLoading, refetch, hasPaidPurchase, activePurchase } = usePurchase();
 
-  // Refetch subscriptions on mount to ensure we have latest data after navigation
+  // Refetch purchases on mount to ensure we have latest data after navigation
   // This is especially important when creating a new account or after account changes
   // Empty dependency array ensures this only runs once on mount, preventing stale data
   useEffect(() => {
@@ -158,13 +158,13 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run on mount to ensure fresh data on page load
 
-  // Get advanced subscription status helpers
+  // Get advanced purchase status helpers
   const {
-    cancelledSubscription,
+    cancelledPurchase,
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionStatus();
+  } = usePurchaseStatus();
 
   // Handle redirect to hosted checkout page
   const handleViewPlans = useCallback(async (planRef?: string) => {
@@ -223,7 +223,7 @@ export default function HomePage() {
   }, [agentRef]);
 
   // Handle redirect to hosted customer management page
-  const handleManageSubscription = useCallback(async () => {
+  const handleManagePurchase = useCallback(async () => {
     setIsRedirecting(true);
     setError(null);
 
@@ -264,7 +264,7 @@ export default function HomePage() {
     }
   }, []);
 
-  const isLoading = subscriptionsLoading;
+  const isLoading = purchasesLoading;
 
   return (
     <div className="min-h-screen bg-white">
@@ -275,15 +275,15 @@ export default function HomePage() {
             Welcome to Your Dashboard
           </h1>
           {isLoading ? (
-            <p className="text-slate-600">Loading subscription...</p>
-          ) : activeSubscription ? (
+            <p className="text-slate-600">Loading purchase...</p>
+          ) : activePurchase ? (
             <p className="text-slate-600">
               You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activeSubscription.planName}
+                {activePurchase.planName}
               </span> plan
             </p>
           ) : (
-            <p className="text-slate-600">You don't have an active subscription</p>
+            <p className="text-slate-600">You don't have an active purchase</p>
           )}
         </div>
 
@@ -293,20 +293,20 @@ export default function HomePage() {
             <div className="text-center py-4">
               <p className="text-slate-600">Loading...</p>
             </div>
-          ) : hasPaidSubscription ? (
+          ) : hasPaidPurchase ? (
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-4">Manage your subscription and billing</p>
+              <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               )}
               <button
-                onClick={handleManageSubscription}
+                onClick={handleManagePurchase}
                 disabled={isRedirecting}
                 className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isRedirecting ? 'Redirecting...' : 'Manage Subscription'}
+                {isRedirecting ? 'Redirecting...' : 'Manage Purchase'}
               </button>
             </div>
           ) : (
@@ -336,9 +336,9 @@ export default function HomePage() {
 
 **What this does:**
 
-- Displays subscription status
-- Shows "Upgrade" button if no subscription
-- Shows "Manage Subscription" button if subscribed
+- Displays purchase status
+- Shows "Upgrade" button if no purchase
+- Shows "Manage Purchase" button if subscribed
 - Handles redirects to hosted checkout and customer portal
 
 ## How Hosted Checkout Works
@@ -353,20 +353,20 @@ export default function HomePage() {
    - User completes payment on `solvapay.com`
    - After payment, user is redirected back to your app
 
-3. **Subscription status updates**
-   - Provider automatically checks subscription
-   - UI updates to show active subscription
-   - "Manage Subscription" button appears
+3. **Purchase status updates**
+   - Provider automatically checks purchase
+   - UI updates to show active purchase
+   - "Manage Purchase" button appears
 
 ## Testing Payments
 
 Use these test card numbers on the hosted checkout page:
 
-| Card Number         | Result                |
-| ------------------- | --------------------- |
-| 4242 4242 4242 4242 | ✅ Payment succeeds   |
-| 4000 0000 0000 0002 | ❌ Payment declined   |
-| 4000 0000 0000 9995 | ❌ Insufficient funds |
+| Card Number         | Result             |
+| ------------------- | ------------------ |
+| 4242 4242 4242 4242 | Payment succeeds   |
+| 4000 0000 0000 0002 | Payment declined   |
+| 4000 0000 0000 9995 | Insufficient funds |
 
 - Use any future expiry date
 - Use any 3-digit CVC
@@ -388,20 +388,20 @@ Test your payment setup:
    - You should be redirected to hosted checkout
    - Complete test payment (use card: 4242 4242 4242 4242)
    - You should be redirected back to app
-   - Subscription status should update
+   - Purchase status should update
 
-3. **Test subscription management:**
-   - With an active subscription, click "Manage Subscription"
+3. **Test purchase management:**
+   - With an active purchase, click "Manage Purchase"
    - You should be redirected to customer portal
-   - Can manage subscription, payment methods, billing history
+   - Can manage purchase, payment methods, billing history
 
 ## Troubleshooting
 
-### Subscription not updating after checkout
+### Purchase not updating after checkout
 
 - Ensure `refetch()` is called after returning from checkout
-- Check that `/api/check-subscription` returns correct format
-- Verify customerRef matches between checkout and subscription check
+- Check that `/api/check-purchase` returns correct format
+- Verify customerRef matches between checkout and purchase check
 
 ### "Unauthorized" errors
 
@@ -409,75 +409,75 @@ Test your payment setup:
 - Check that Authorization header is being sent
 - Ensure user is authenticated before calling checkout
 
-## Understanding Subscription Status Tracking
+## Understanding Purchase Status Tracking
 
 ### How It Works
 
-The subscription tracking system follows this flow:
+The purchase tracking system follows this flow:
 
 1. **Authentication** → User ID extracted from Supabase JWT token via middleware
-2. **API Route** → Backend checks subscription status via SolvaPay API using `checkSubscription` helper
-3. **React Hook** → Components access subscription data with automatic caching via `useSubscription()`
-4. **UI Display** → Features shown/hidden based on subscription status
+2. **API Route** → Backend checks purchase status via SolvaPay API using `checkPurchase` helper
+3. **React Hook** → Components access purchase data with automatic caching via `usePurchase()`
+4. **UI Display** → Features shown/hidden based on purchase status
 
 ### Key Concepts
 
 - **User ID Mapping**: The Supabase user ID is stored as `externalRef` on the SolvaPay backend
 - **Customer Reference**: The `customerRef` returned from API calls is the SolvaPay backend customer reference (different from the Supabase user ID)
-- **Automatic Subscription Checking**: The Supabase adapter automatically calls `/api/check-subscription` with the token - no manual setup needed
+- **Automatic Purchase Checking**: The Supabase adapter automatically calls `/api/check-purchase` with the token - no manual setup needed
 - **Request Deduplication**: The SDK automatically prevents duplicate concurrent requests for the same user
 - **Caching**: Results are cached for 2 seconds to prevent rapid sequential requests
 
-### Subscription States
+### Purchase States
 
 - **Active**: `status === 'active'` and not cancelled
 - **Cancelled**: `status === 'cancelled'` OR `cancelledAt` is set
-- **Expired**: Cancelled subscription with `endDate` in the past
-- **Active Cancelled**: Cancelled subscription with `endDate` in the future
+- **Expired**: Cancelled purchase with `endDate` in the past
+- **Active Cancelled**: Cancelled purchase with `endDate` in the future
 
-### Using Subscription Hooks
+### Using Purchase Hooks
 
 ```typescript
-import { useSubscription, useSubscriptionStatus } from '@solvapay/react'
+import { usePurchase, usePurchaseStatus } from '@solvapay/react'
 
 function MyComponent() {
-  // Basic subscription data
+  // Basic purchase data
   const {
-    subscriptions, // Array of subscription objects
+    purchases, // Array of purchase objects
     loading, // Loading state
-    hasActiveSubscription, // Boolean: has any active subscription
+    hasActivePurchase, // Boolean: has any active purchase
     refetch, // Function to force refresh
-  } = useSubscription()
+  } = usePurchase()
 
-  // Helper utilities for subscription logic
+  // Helper utilities for purchase logic
   const {
-    hasPaidSubscription, // Boolean: has active paid plan
-    activePaidSubscription, // Most recent paid subscription
-    cancelledSubscription, // Most recent cancelled subscription
+    hasPaidPurchase, // Boolean: has active paid plan
+    activePaidPurchase, // Most recent paid purchase
+    cancelledPurchase, // Most recent cancelled purchase
     shouldShowCancelledNotice, // Should show cancellation notice
     formatDate, // Format dates for display
     getDaysUntilExpiration, // Calculate days until expiration
-  } = useSubscriptionStatus([]) // Pass array of plan definitions
+  } = usePurchaseStatus([]) // Pass array of plan definitions
 
   // Use these values to control UI
 }
 ```
 
-### Subscription Filtering
+### Purchase Filtering
 
-The SDK automatically filters subscriptions:
+The SDK automatically filters purchases:
 
-- ✅ **Included**: Active subscriptions
-- ✅ **Included**: Cancelled subscriptions with future `endDate`
-- ❌ **Excluded**: Cancelled subscriptions without `endDate`
-- ❌ **Excluded**: Cancelled subscriptions with past `endDate`
+- **Included**: Active purchases
+- **Included**: Cancelled purchases with future `endDate`
+- **Excluded**: Cancelled purchases without `endDate`
+- **Excluded**: Cancelled purchases with past `endDate`
 
-### Refetching Subscription Status
+### Refetching Purchase Status
 
-Force a refresh when subscription status might have changed:
+Force a refresh when purchase status might have changed:
 
 ```typescript
-const { refetch } = useSubscription()
+const { refetch } = usePurchase()
 
 // After successful payment
 const handlePaymentSuccess = async () => {
@@ -495,8 +495,8 @@ useEffect(() => {
 **Feature Gating:**
 
 ```typescript
-const { hasPaidSubscription } = useSubscriptionStatus([]);
-if (!hasPaidSubscription) {
+const { hasPaidPurchase } = usePurchaseStatus([]);
+if (!hasPaidPurchase) {
   return <UpgradePrompt />;
 }
 return <PremiumContent />;
@@ -505,18 +505,18 @@ return <PremiumContent />;
 **Status Display:**
 
 ```typescript
-const { activePaidSubscription, cancelledSubscription, shouldShowCancelledNotice } = useSubscriptionStatus([]);
+const { activePaidPurchase, cancelledPurchase, shouldShowCancelledNotice } = usePurchaseStatus([]);
 
-if (activePaidSubscription) {
-  return <SuccessBanner>Active: {activePaidSubscription.planName}</SuccessBanner>;
+if (activePaidPurchase) {
+  return <SuccessBanner>Active: {activePaidPurchase.planName}</SuccessBanner>;
 }
 
-if (shouldShowCancelledNotice && cancelledSubscription) {
-  return <WarningBanner>Expires: {formatDate(cancelledSubscription.endDate)}</WarningBanner>;
+if (shouldShowCancelledNotice && cancelledPurchase) {
+  return <WarningBanner>Expires: {formatDate(cancelledPurchase.endDate)}</WarningBanner>;
 }
 ```
 
-For more details on subscription status tracking, see the complete example in [Step 5: Complete Example](./05-complete-example.md).
+For more details on purchase status tracking, see the complete example in [Step 5: Complete Example](./05-complete-example.md).
 
 ## Next Steps
 

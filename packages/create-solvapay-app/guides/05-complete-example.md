@@ -6,9 +6,9 @@ This guide provides a complete working example that ties everything together.
 
 This example includes:
 
-- Complete home page with subscription status
+- Complete home page with purchase status
 - Feature cards with premium gating
-- Subscription management UI
+- Purchase management UI
 - Sign-out functionality
 - Error handling
 - Loading states
@@ -20,7 +20,7 @@ This example includes:
 - **HomePage content** - Welcome messages, feature names, descriptions
 - **Feature cards** - Free vs premium features based on your app description
 - **Branding** - Colors, tone, and messaging style
-- **Call-to-action text** - Upgrade buttons and subscription management messaging
+- **Call-to-action text** - Upgrade buttons and purchase management messaging
 
 **How to use:**
 
@@ -53,7 +53,7 @@ If you haven't customized `00-app-description.md`, this generic example will wor
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSubscription, useSubscriptionStatus } from '@solvapay/react';
+import { usePurchase, usePurchaseStatus } from '@solvapay/react';
 import { getAccessToken, signOut } from './lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Button } from './components/ui/Button';
@@ -67,10 +67,10 @@ export default function HomePage() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get subscription helpers from SDK
-  const { subscriptions, loading: subscriptionsLoading, refetch, hasPaidSubscription, activeSubscription } = useSubscription();
+  // Get purchase helpers from SDK
+  const { purchases, loading: purchasesLoading, refetch, hasPaidPurchase, activePurchase } = usePurchase();
 
-  // Refetch subscriptions on mount to ensure we have latest data after navigation
+  // Refetch purchases on mount to ensure we have latest data after navigation
   // This is especially important when creating a new account or after account changes
   // Empty dependency array ensures this only runs once on mount, preventing stale data
   useEffect(() => {
@@ -81,15 +81,15 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run on mount to ensure fresh data on page load
 
-  // Get advanced subscription status helpers
+  // Get advanced purchase status helpers
   const {
-    cancelledSubscription,
+    cancelledPurchase,
     shouldShowCancelledNotice,
     formatDate,
     getDaysUntilExpiration,
-  } = useSubscriptionStatus();
+  } = usePurchaseStatus();
 
-  const isLoading = subscriptionsLoading;
+  const isLoading = purchasesLoading;
 
   // Handle redirect to hosted checkout page
   const handleViewPlans = useCallback(async (planRef?: string) => {
@@ -148,7 +148,7 @@ export default function HomePage() {
   }, [agentRef]);
 
   // Handle redirect to hosted customer management page
-  const handleManageSubscription = useCallback(async () => {
+  const handleManagePurchase = useCallback(async () => {
     setIsRedirecting(true);
     setError(null);
 
@@ -252,22 +252,22 @@ export default function HomePage() {
             <h1 className="text-3xl font-semibold text-slate-900 mb-2">Welcome</h1>
             {isLoading ? (
               <Skeleton className="h-5 w-48" />
-            ) : activeSubscription ? (
+            ) : activePurchase ? (
               <p className="text-slate-600">
-                You're on the <Badge variant="premium">{activeSubscription.planName}</Badge> plan
+                You're on the <Badge variant="premium">{activePurchase.planName}</Badge> plan
               </p>
-            ) : shouldShowCancelledNotice && cancelledSubscription ? (
+            ) : shouldShowCancelledNotice && cancelledPurchase ? (
               <div className="space-y-2">
                 <p className="text-slate-600">
-                  Your <Badge variant="premium">{cancelledSubscription.planName}</Badge> subscription has been cancelled
+                  Your <Badge variant="premium">{cancelledPurchase.planName}</Badge> purchase has been cancelled
                 </p>
-                {cancelledSubscription.endDate && (
+                {cancelledPurchase.endDate && (
                   <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm font-medium text-amber-900">
-                      ⏰ Access expires on {formatDate(cancelledSubscription.endDate)}
+                      Access expires on {formatDate(cancelledPurchase.endDate)}
                     </p>
                     {(() => {
-                      const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate);
+                      const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate);
                       return daysLeft !== null && daysLeft > 0 ? (
                         <p className="text-xs text-amber-700 mt-1">
                           {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
@@ -278,7 +278,7 @@ export default function HomePage() {
                 )}
               </div>
             ) : (
-              <p className="text-slate-600">You don't have an active subscription</p>
+              <p className="text-slate-600">You don't have an active purchase</p>
             )}
           </div>
           <Button
@@ -295,7 +295,7 @@ export default function HomePage() {
         {/*
           CUSTOMIZE: Replace these feature cards with features from 00-app-description.md
           - Free tier features should NOT have locked={true}
-          - Premium tier features should have locked={!isLoading && !hasPaidSubscription}
+          - Premium tier features should have locked={!isLoading && !hasPaidPurchase}
           - Update titles and descriptions to match your app's actual features
         */}
         <div className="grid md:grid-cols-2 gap-4 mb-8">
@@ -310,12 +310,12 @@ export default function HomePage() {
           <FeatureCard
             title="Advanced Analytics"
             description="Real-time data analysis with custom dashboards."
-            locked={!isLoading && !hasPaidSubscription}
+            locked={!isLoading && !hasPaidPurchase}
           />
           <FeatureCard
             title="Priority Support"
             description="Get help from our team within 24 hours."
-            locked={!isLoading && !hasPaidSubscription}
+            locked={!isLoading && !hasPaidPurchase}
           />
         </div>
 
@@ -326,28 +326,28 @@ export default function HomePage() {
               <Skeleton className="h-5 w-64 mx-auto" />
               <Skeleton className="h-10 w-48 mx-auto" />
             </div>
-          ) : hasPaidSubscription ? (
+          ) : hasPaidPurchase ? (
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-4">Manage your subscription and billing</p>
+              <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               )}
-              <Button onClick={handleManageSubscription} disabled={isRedirecting} className="w-full sm:w-auto">
-                {isRedirecting ? 'Redirecting...' : 'Manage Subscription'}
+              <Button onClick={handleManagePurchase} disabled={isRedirecting} className="w-full sm:w-auto">
+                {isRedirecting ? 'Redirecting...' : 'Manage Purchase'}
               </Button>
             </div>
-          ) : shouldShowCancelledNotice && cancelledSubscription ? (
+          ) : shouldShowCancelledNotice && cancelledPurchase ? (
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Your subscription is cancelled</p>
-              {cancelledSubscription.endDate && (
+              <p className="text-slate-900 mb-2 font-medium">Your purchase is cancelled</p>
+              {cancelledPurchase.endDate && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-sm font-semibold text-amber-900 mb-1">
-                    ⏰ Subscription Expires: {formatDate(cancelledSubscription.endDate)}
+                    Purchase Expires: {formatDate(cancelledPurchase.endDate)}
                   </p>
                   {(() => {
-                    const daysLeft = getDaysUntilExpiration(cancelledSubscription.endDate);
+                    const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate);
                     return daysLeft !== null && daysLeft > 0 ? (
                       <p className="text-xs text-amber-700 mb-1">
                         {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
@@ -355,7 +355,7 @@ export default function HomePage() {
                     ) : null;
                   })()}
                   <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledSubscription.planName} features until this date
+                    You'll continue to have access to {cancelledPurchase.planName} features until this date
                   </p>
                 </div>
               )}
@@ -398,7 +398,7 @@ my-app/
 ├── src/
 │   └── app/
 │       ├── api/
-│       │   ├── check-subscription/
+│       │   ├── check-purchase/
 │       │   │   └── route.ts
 │       │   ├── create-checkout-session/
 │       │   │   └── route.ts
@@ -455,8 +455,8 @@ Test your complete implementation:
 - [ ] Checkout session is created successfully
 - [ ] Test payment completes successfully
 - [ ] User is redirected back after payment
-- [ ] Subscription status updates after payment
-- [ ] "Manage Subscription" button appears when subscribed
+- [ ] Purchase status updates after payment
+- [ ] "Manage Purchase" button appears when subscribed
 - [ ] Customer portal redirects correctly
 
 ### UI/UX
@@ -465,8 +465,8 @@ Test your complete implementation:
 - [ ] Error messages display correctly
 - [ ] Premium features are locked for free users
 - [ ] Premium features unlock for paid users
-- [ ] Subscription status displays correctly
-- [ ] Cancelled subscription notice displays (if applicable)
+- [ ] Purchase status displays correctly
+- [ ] Cancelled purchase notice displays (if applicable)
 - [ ] All buttons have proper hover/focus states
 
 ## Testing Guide
@@ -485,28 +485,28 @@ Test your complete implementation:
    - Fill in name, email, and password
    - Submit form
 
-3. **Upgrade subscription:**
+3. **Upgrade purchase:**
    - Click "Upgrade" button
    - You should be redirected to hosted checkout
    - Use test card: `4242 4242 4242 4242`
    - Complete payment
    - You should be redirected back to app
 
-4. **Verify subscription:**
-   - Subscription status should show active plan
-   - "Manage Subscription" button should appear
+4. **Verify purchase:**
+   - Purchase status should show active plan
+   - "Manage Purchase" button should appear
    - Premium features should be unlocked
 
-5. **Manage subscription:**
-   - Click "Manage Subscription"
+5. **Manage purchase:**
+   - Click "Manage Purchase"
    - You should be redirected to customer portal
-   - Can view subscription, payment methods, billing history
+   - Can view purchase, payment methods, billing history
 
-### Test Cancelled Subscription
+### Test Cancelled Purchase
 
-1. **Cancel subscription in customer portal:**
+1. **Cancel purchase in customer portal:**
    - Go to customer portal
-   - Cancel subscription
+   - Cancel purchase
    - Return to app
 
 2. **Verify cancelled state:**
@@ -517,23 +517,23 @@ Test your complete implementation:
 
 ## Common Issues and Solutions
 
-### Issue: Subscription not updating after checkout
+### Issue: Purchase not updating after checkout
 
 **Solution:**
 
 - Ensure `refetch()` is called after returning from checkout
-- Check that `/api/check-subscription` returns correct format
-- Verify customerRef matches between checkout and subscription check
+- Check that `/api/check-purchase` returns correct format
+- Verify customerRef matches between checkout and purchase check
 - Check browser console for errors
 
 ### Issue: Premium features not unlocking
 
 **Solution:**
 
-- Verify `hasPaidSubscription` is correctly checking subscription amount
-- Check that subscription amount > 0 for paid plans
-- Ensure subscription check is completing successfully
-- Check browser console for subscription errors
+- Verify `hasPaidPurchase` is correctly checking purchase amount
+- Check that purchase amount > 0 for paid plans
+- Ensure purchase check is completing successfully
+- Check browser console for purchase errors
 
 ### Issue: Sign out not working
 
@@ -556,7 +556,7 @@ If you customized `00-app-description.md`, here's how the HomePage should be ada
 2. **Feature Cards:**
    - Replace generic features with your app's actual free tier features
    - Replace premium features with your app's actual premium tier features
-   - Ensure premium features have `locked={!isLoading && !hasPaidSubscription}`
+   - Ensure premium features have `locked={!isLoading && !hasPaidPurchase}`
    - Ensure free features don't have the `locked` prop
 
 3. **Branding:**
@@ -583,7 +583,7 @@ Now that you have a complete implementation, consider:
    - Add password reset flow
    - Add email verification UI
    - Add user profile page
-   - Add subscription usage tracking
+   - Add purchase usage tracking
 
 3. **Production Deployment:**
    - Configure production environment variables
@@ -608,11 +608,11 @@ Now that you have a complete implementation, consider:
 
 You've successfully built a complete Next.js application with:
 
-- ✅ Supabase authentication (email/password + Google OAuth)
-- ✅ SolvaPay hosted checkout
-- ✅ Subscription management
-- ✅ Modern UI components
-- ✅ Premium feature gating
-- ✅ Error handling and loading states
+- Supabase authentication (email/password + Google OAuth)
+- SolvaPay hosted checkout
+- Purchase management
+- Modern UI components
+- Premium feature gating
+- Error handling and loading states
 
-The implementation follows best practices and provides a solid foundation for building a subscription-based SaaS application.
+The implementation follows best practices and provides a solid foundation for building a purchase-based SaaS application.

@@ -12,16 +12,16 @@ import { SolvaPayError } from '@solvapay/core'
 import {
   getSharedDeduplicator,
   type RequestDeduplicationOptions,
-  type SubscriptionCheckResult,
+  type PurchaseCheckResult,
 } from './cache'
 
 // Re-export types for backward compatibility
-export type { RequestDeduplicationOptions, SubscriptionCheckResult } from './cache'
+export type { RequestDeduplicationOptions, PurchaseCheckResult } from './cache'
 
 /**
- * Options for checking subscriptions
+ * Options for checking purchases
  */
-export interface CheckSubscriptionOptions {
+export interface CheckPurchaseOptions {
   /**
    * Request deduplication options
    *
@@ -52,9 +52,9 @@ export interface CheckSubscriptionOptions {
 }
 
 /**
- * Check user subscription status with automatic deduplication and caching.
+ * Check user purchase status with automatic deduplication and caching.
  *
- * This Next.js helper function provides optimized subscription checking with:
+ * This Next.js helper function provides optimized purchase checking with:
  * - Automatic request deduplication (concurrent requests share the same promise)
  * - Short-term caching (2 seconds) to prevent duplicate sequential requests
  * - Fast path optimization using cached customer references from client
@@ -65,7 +65,7 @@ export interface CheckSubscriptionOptions {
  * 2. Gets user email and name from Supabase JWT token (if available)
  * 3. Validates cached customer reference (if provided via header)
  * 4. Ensures customer exists in SolvaPay backend
- * 5. Returns customer subscription information
+ * 5. Returns customer purchase information
  *
  * @param request - Next.js request object (NextRequest extends Request)
  * @param options - Configuration options
@@ -73,15 +73,15 @@ export interface CheckSubscriptionOptions {
  * @param options.solvaPay - Optional SolvaPay instance (creates new one if not provided)
  * @param options.includeEmail - Whether to include email in response (default: true)
  * @param options.includeName - Whether to include name in response (default: true)
- * @returns Subscription check result with customer data and subscriptions, or NextResponse error
+ * @returns Purchase check result with customer data and purchases, or NextResponse error
  *
  * @example
  * ```typescript
  * import { NextRequest, NextResponse } from 'next/server';
- * import { checkSubscription } from '@solvapay/next';
+ * import { checkPurchase } from '@solvapay/next';
  *
  * export async function GET(request: NextRequest) {
- *   const result = await checkSubscription(request);
+ *   const result = await checkPurchase(request);
  *
  *   if (result instanceof NextResponse) {
  *     return result; // Error response
@@ -91,14 +91,14 @@ export interface CheckSubscriptionOptions {
  * }
  * ```
  *
- * @see {@link clearSubscriptionCache} for cache management
- * @see {@link getSubscriptionCacheStats} for cache monitoring
+ * @see {@link clearPurchaseCache} for cache management
+ * @see {@link getPurchaseCacheStats} for cache monitoring
  * @since 1.0.0
  */
-export async function checkSubscription(
+export async function checkPurchase(
   request: Request,
-  options: CheckSubscriptionOptions = {},
-): Promise<SubscriptionCheckResult | NextResponse> {
+  options: CheckPurchaseOptions = {},
+): Promise<PurchaseCheckResult | NextResponse> {
   try {
     // Dynamic import to avoid requiring auth package if not needed
     const { requireUserId, getUserEmailFromRequest, getUserNameFromRequest } = await import(
@@ -127,7 +127,7 @@ export async function checkSubscription(
 
     // If cached customerRef is provided, validate it first (fast path)
     // IMPORTANT: We must validate that the cached customerRef belongs to the current userId
-    // to prevent showing subscription data from a different user
+    // to prevent showing purchase data from a different user
     // customerRef is the SolvaPay customer ID (e.g., cus_VQ6VQ8HV)
     // userId is the Supabase user ID (e.g., e5dd246c-a472-4f27-8779-2bd45f3d73a2)
     // We validate by checking customer.externalRef === userId
@@ -142,10 +142,10 @@ export async function checkSubscription(
           // Only use fast path if externalRef exists and matches the current userId
           // If externalRef is undefined, we can't validate ownership, so fall through to normal lookup
           if (customer.externalRef && customer.externalRef === userId) {
-            // Filter to only include active subscriptions
-            // Backend keeps subscriptions as 'active' until expiration, even when cancelled
-            const filteredSubscriptions = (customer.subscriptions || []).filter(
-              sub => sub.status === 'active',
+            // Filter to only include active purchases
+            // Backend keeps purchases as 'active' until expiration, even when cancelled
+            const filteredPurchases = (customer.purchases || []).filter(
+              p => p.status === 'active',
             )
 
             // Cache hit - return immediately (fast path)
@@ -153,8 +153,8 @@ export async function checkSubscription(
               customerRef: customer.customerRef,
               email: customer.email,
               name: customer.name,
-              subscriptions: filteredSubscriptions,
-            } as SubscriptionCheckResult
+              purchases: filteredPurchases,
+            } as PurchaseCheckResult
           }
           // If externalRef doesn't match userId, fall through to normal lookup
           // This ensures we always use the correct customerRef for the current userId
@@ -168,7 +168,7 @@ export async function checkSubscription(
     // Use shared deduplicator
     const deduplicator = getSharedDeduplicator(options.deduplication)
 
-    // Deduplicate subscription check
+    // Deduplicate purchase check
     const response = await deduplicator.deduplicate(userId, async () => {
       try {
         // Use userId as cache key and externalRef (Supabase user IDs are stable UUIDs)
@@ -183,38 +183,38 @@ export async function checkSubscription(
           name: name || undefined,
         })
 
-        // Get customer details including subscriptions using the backend customer reference
+        // Get customer details including purchases using the backend customer reference
         const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef })
 
-        // Filter subscriptions to only include active ones
-        // Backend keeps subscriptions as 'active' until expiration, even when cancelled.
+        // Filter purchases to only include active ones
+        // Backend keeps purchases as 'active' until expiration, even when cancelled.
         // Cancellation is tracked via cancelledAt field.
-        const filteredSubscriptions = (customer.subscriptions || []).filter(
-          sub => sub.status === 'active',
+        const filteredPurchases = (customer.purchases || []).filter(
+          p => p.status === 'active',
         )
 
-        // Return customer data with filtered subscriptions
+        // Return customer data with filtered purchases
         const result = {
           customerRef: customer.customerRef || userId,
           email: customer.email,
           name: customer.name,
-          subscriptions: filteredSubscriptions,
-        } as SubscriptionCheckResult
+          purchases: filteredPurchases,
+        } as PurchaseCheckResult
 
         return result
       } catch (error) {
-        console.error('[checkSubscription] Error fetching customer:', error)
-        // Customer doesn't exist yet - return empty subscriptions (free tier)
+        console.error('[checkPurchase] Error fetching customer:', error)
+        // Customer doesn't exist yet - return empty purchases (free tier)
         return {
           customerRef: userId,
-          subscriptions: [],
-        } as SubscriptionCheckResult
+          purchases: [],
+        } as PurchaseCheckResult
       }
     })
 
     return response
   } catch (error) {
-    console.error('Check subscription failed:', error)
+    console.error('Check purchase failed:', error)
 
     // Handle SolvaPay configuration errors
     if (error instanceof SolvaPayError) {
@@ -224,7 +224,7 @@ export async function checkSubscription(
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
     return NextResponse.json(
-      { error: 'Failed to check subscription', details: errorMessage },
+      { error: 'Failed to check purchase', details: errorMessage },
       { status: 500 },
     )
   }
@@ -232,9 +232,9 @@ export async function checkSubscription(
 
 // Re-export cache functions for backward compatibility
 export {
-  clearSubscriptionCache,
-  clearAllSubscriptionCache,
-  getSubscriptionCacheStats,
+  clearPurchaseCache,
+  clearAllPurchaseCache,
+  getPurchaseCacheStats,
 } from './cache'
 
 // Export route helpers
@@ -242,10 +242,10 @@ export {
   getAuthenticatedUser,
   syncCustomer,
   createPaymentIntent,
-  processPayment,
+  processPaymentIntent,
   createCheckoutSession,
   createCustomerSession,
-  cancelSubscription,
+  cancelRenewal,
   listPlans,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,

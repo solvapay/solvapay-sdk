@@ -26,8 +26,9 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * manages the checkout state including loading, errors, Stripe instance,
  * and client secret. Use this for programmatic checkout flows.
  *
- * @param planRef - Plan reference to subscribe to (required)
- * @param agentRef - Optional agent reference for usage tracking
+ * @param options - Checkout options
+ * @param options.planRef - Plan reference to purchase (required)
+ * @param options.productRef - Optional product reference for usage tracking
  * @returns Checkout state and methods
  * @returns loading - Whether checkout is in progress
  * @returns error - Error state if checkout fails
@@ -42,10 +43,10 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * import { PaymentElement } from '@stripe/react-stripe-js';
  *
  * function CustomCheckout() {
- *   const { loading, error, stripePromise, clientSecret, startCheckout } = useCheckout(
- *     'pln_premium',
- *     'agt_myapi'
- *   );
+ *   const { loading, error, stripePromise, clientSecret, startCheckout } = useCheckout({
+ *     planRef: 'pln_premium',
+ *     productRef: 'prd_myapi',
+ *   });
  *
  *   useEffect(() => {
  *     startCheckout();
@@ -67,7 +68,8 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * @see {@link SolvaPayProvider} for required context provider
  * @since 1.0.0
  */
-export function useCheckout(planRef: string, agentRef?: string): UseCheckoutReturn {
+export function useCheckout(options: { planRef: string; productRef?: string }): UseCheckoutReturn {
+  const { planRef, productRef } = options
   const { createPayment, customerRef, updateCustomerRef } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(
@@ -97,7 +99,7 @@ export function useCheckout(planRef: string, agentRef?: string): UseCheckoutRetu
 
     try {
       // Create payment intent (customerRef is handled internally by provider)
-      const result = await createPayment({ planRef, agentRef })
+      const result = await createPayment({ planRef, productRef })
 
       // Validate payment intent result
       if (!result || typeof result !== 'object') {
@@ -134,8 +136,8 @@ export function useCheckout(planRef: string, agentRef?: string): UseCheckoutRetu
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
 
-      // Note: We don't refetch here because payment intent creation doesn't change subscription status
-      // Subscription only changes after successful payment completion, which is handled in PaymentForm
+      // Note: We don't refetch here because payment intent creation doesn't change purchase status
+      // Purchase only changes after successful payment completion, which is handled in PaymentForm
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start checkout')
       setError(error)
@@ -143,7 +145,7 @@ export function useCheckout(planRef: string, agentRef?: string): UseCheckoutRetu
       setLoading(false)
       isStartingRef.current = false // Clear guard flag
     }
-  }, [planRef, agentRef, createPayment, updateCustomerRef, loading])
+  }, [planRef, productRef, createPayment, updateCustomerRef, loading])
 
   const reset = useCallback(() => {
     isStartingRef.current = false

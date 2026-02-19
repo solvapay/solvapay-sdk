@@ -3,21 +3,12 @@ import { listPlansCore, isErrorResult } from '@solvapay/server'
 
 /**
  * Next.js Plans Helper
- *
- * Next.js-specific wrapper for plans helper.
- * This is a public route - no authentication required.
  */
 
-/**
- * List plans - Next.js wrapper
- *
- * @param request - Next.js request object
- * @returns Plans response or NextResponse error
- */
 export async function listPlans(request: globalThis.Request): Promise<
   | {
       plans: Array<Record<string, unknown>>
-      agentRef: string
+      productRef: string
     }
   | NextResponse
 > {

@@ -26,29 +26,29 @@ async function createTestPlan() {
   const client = createSolvaPayClient({ apiKey, apiBaseUrl })
 
   try {
-    // Step 1: Get first agent
-    console.log('Step 1: Fetching agents...')
-    const agents = await client.listAgents!()
+    // Step 1: Get first product
+    console.log('Step 1: Fetching products...')
+    const products = await client.listProducts!()
 
-    if (!agents || agents.length === 0) {
-      console.error('❌ No agents found. Create an agent first.')
-      console.log('\nTo create an agent:')
-      console.log('  curl -X POST http://localhost:3001/v1/sdk/agents \\')
+    if (!products || products.length === 0) {
+      console.error('❌ No products found. Create a product first.')
+      console.log('\nTo create a product:')
+      console.log('  curl -X POST http://localhost:3001/v1/sdk/products \\')
       console.log('    -H "Authorization: Bearer $SOLVAPAY_SECRET_KEY" \\')
       console.log('    -H "Content-Type: application/json" \\')
-      console.log('    -d \'{"name": "Test Agent", "description": "Agent for testing"}\'')
+      console.log('    -d \'{"name": "Test Product", "description": "Product for testing"}\'')
       process.exit(1)
     }
 
-    const agent = agents[0]
-    console.log(`✅ Using agent: ${agent.name} (${agent.reference})`)
+    const product = products[0]
+    console.log(`✅ Using product: ${product.name} (${product.reference})`)
     console.log()
 
     // Step 2: Create plan with free units
     console.log('Step 2: Creating plan with 5 free units...')
     const plan = await client.createPlan!({
       name: `SDK Test Plan ${Date.now()}`,
-      agentRef: agent.reference,
+      productRef: product.reference,
       isFreeTier: true,
       freeUnits: 5,
       description: 'Test plan with 5 free requests for SDK integration tests',
@@ -60,7 +60,7 @@ async function createTestPlan() {
     console.log('📋 Plan Details:')
     console.log(`   Name: ${plan.name}`)
     console.log(`   Reference: ${plan.reference}`)
-    console.log(`   Agent: ${agent.reference}`)
+    console.log(`   Product: ${product.reference}`)
     console.log(`   Free Units: 5`)
     console.log()
     console.log('🎉 You can now run integration tests with:')

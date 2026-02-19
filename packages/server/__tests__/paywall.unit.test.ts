@@ -15,8 +15,8 @@ class MockApiClient implements SolvaPayClient {
     this.userPlans.set(customerRef, plan)
   }
 
-  async checkLimits(params: { customerRef: string; agentRef: string }) {
-    const key = `${params.customerRef}-${params.agentRef}`
+  async checkLimits(params: { customerRef: string; productRef: string }) {
+    const key = `${params.customerRef}-${params.productRef}`
     const now = new Date()
     const userPlan = this.userPlans.get(params.customerRef) || 'free'
 
@@ -65,7 +65,7 @@ class MockApiClient implements SolvaPayClient {
 
   async trackUsage(params: {
     customerRef: string
-    agentRef: string
+    productRef: string
     outcome: 'success' | 'paywall' | 'fail'
     action?: string
     requestId: string
@@ -109,7 +109,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
   describe('Core Paywall Protection Logic', () => {
     it('should allow requests when customer is within usage limits', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true, data: 'test' })
-      const payable = solvaPay.payable({ agent: 'test' })
+      const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
       const result = await protectedHandler({ auth: { customer_ref: 'test_user' } })
@@ -123,7 +123,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     it('should throw PaywallError when customer exceeds usage limits', async () => {
       mockApiClient.shouldBlock = true
       const handler = vi.fn()
-      const payable = solvaPay.payable({ agent: 'test' })
+      const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
       await expect(protectedHandler({ auth: { customer_ref: 'blocked_user' } })).rejects.toThrow(
@@ -138,7 +138,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     it('should bypass limits for customers on pro/premium plans', async () => {
       mockApiClient.setUserPlan('pro_user', 'pro')
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ agent: 'test' })
+      const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
       // Should succeed even with very low limits
@@ -151,7 +151,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
     it('should track usage with "fail" outcome when handler throws error', async () => {
       const handler = vi.fn().mockRejectedValue(new Error('Handler failed'))
-      const payable = solvaPay.payable({ agent: 'test' })
+      const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
       await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).rejects.toThrow(
@@ -166,7 +166,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
   describe('HTTP Adapter - Express/Fastify Style', () => {
     it('should wrap handlers for Express/Fastify and extract params from req/query/body', async () => {
       const handler = vi.fn().mockResolvedValue({ message: 'success' })
-      const payable = solvaPay.payable({ agent: 'http-test' })
+      const payable = solvaPay.payable({ product: 'http-test' })
       const httpHandler = payable.http(handler)
 
       const mockReq = {
@@ -187,7 +187,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           name: 'test',
           id: '123',
           limit: '10',
-          auth: { customer_ref: 'customer_http_user' },
+          auth: { customer_ref: 'http_user' },
         }),
       )
     })
@@ -195,7 +195,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     it('should return 402 Payment Required when paywall blocks HTTP request', async () => {
       mockApiClient.shouldBlock = true
       const handler = vi.fn()
-      const payable = solvaPay.payable({ agent: 'blocked' })
+      const payable = solvaPay.payable({ product: 'blocked' })
       const httpHandler = payable.http(handler)
 
       const mockReq = { headers: { 'x-customer-ref': 'blocked_user' } }
@@ -207,7 +207,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(result).toMatchObject({
         success: false,
         error: 'Payment required',
-        agent: 'blocked',
+        product: 'blocked',
         checkoutUrl: 'https://example.com/checkout',
       })
     })
@@ -216,7 +216,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
   describe('Next.js Adapter - App Router Support', () => {
     it('should wrap Next.js route handlers and parse Request objects', async () => {
       const handler = vi.fn().mockResolvedValue({ message: 'next success' })
-      const payable = solvaPay.payable({ agent: 'next-test' })
+      const payable = solvaPay.payable({ product: 'next-test' })
       const nextHandler = payable.next(handler)
 
       const mockRequest = new Request('http://localhost:3000/api/test?limit=5', {
@@ -241,14 +241,14 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           name: 'test',
           limit: '5',
-          auth: { customer_ref: 'customer_next_user' },
+          auth: { customer_ref: 'next_user' },
         }),
       )
     })
 
     it('should extract dynamic route params from Next.js context', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ agent: 'next-params' })
+      const payable = solvaPay.payable({ product: 'next-params' })
       const nextHandler = payable.next(handler)
 
       const mockRequest = new Request('http://localhost:3000/api/items/123')
@@ -268,7 +268,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     it('should return 402 Response when paywall blocks Next.js request', async () => {
       mockApiClient.shouldBlock = true
       const handler = vi.fn()
-      const payable = solvaPay.payable({ agent: 'next-blocked' })
+      const payable = solvaPay.payable({ product: 'next-blocked' })
       const nextHandler = payable.next(handler)
 
       const mockRequest = new Request('http://localhost:3000/api/test', {
@@ -284,7 +284,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(data).toMatchObject({
         success: false,
         error: 'Payment required',
-        agent: 'next-blocked',
+        product: 'next-blocked',
         checkoutUrl: 'https://example.com/checkout',
       })
     })
@@ -293,7 +293,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
   describe('MCP Adapter - AI Tool Protocol', () => {
     it('should wrap MCP tools and format responses in MCP protocol', async () => {
       const handler = vi.fn().mockResolvedValue({ tools: ['test'] })
-      const payable = solvaPay.payable({ agent: 'mcp-test' })
+      const payable = solvaPay.payable({ product: 'mcp-test' })
       const mcpHandler = payable.mcp(handler)
 
       const result = await mcpHandler({
@@ -310,7 +310,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
           input: 'test',
-          auth: { customer_ref: 'customer_mcp_user' },
+          auth: { customer_ref: 'mcp_user' },
         }),
       )
     })
@@ -329,7 +329,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       }))
 
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ agent: 'jwt-test' })
+      const payable = solvaPay.payable({ product: 'jwt-test' })
       const nextHandler = payable.next(handler)
 
       const mockRequest = new Request('http://localhost:3000/api/test', {
@@ -348,14 +348,14 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(response.status).toBe(200)
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          auth: { customer_ref: 'customer_jwt_user_123' },
+          auth: { customer_ref: 'jwt_user_123' },
         }),
       )
     })
 
     it('should fallback to x-customer-ref header when JWT is invalid', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ agent: 'fallback-test' })
+      const payable = solvaPay.payable({ product: 'fallback-test' })
       const nextHandler = payable.next(handler)
 
       const mockRequest = new Request('http://localhost:3000/api/test', {
@@ -370,14 +370,14 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(response.status).toBe(200)
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          auth: { customer_ref: 'customer_jwt_user_123' },
+          auth: { customer_ref: 'jwt_user_123' },
         }),
       )
     })
 
     it('should default to "demo_user" when no authentication is provided', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ agent: 'default-test' })
+      const payable = solvaPay.payable({ product: 'default-test' })
       const nextHandler = payable.next(handler)
 
       const mockRequest = new Request('http://localhost:3000/api/test')
@@ -393,19 +393,19 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     })
   })
 
-  describe('Agent Reference Resolution', () => {
-    it('should use explicitly provided agentRef from payable() config', async () => {
+  describe('Product Reference Resolution', () => {
+    it('should use explicitly provided productRef from payable() config', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ agent: 'custom-agent' })
+      const payable = solvaPay.payable({ product: 'custom-product' })
       const protectedHandler = await payable.function(handler)
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
 
-      expect(mockApiClient.trackUsageCalls[0].agentRef).toBe('custom-agent')
+      expect(mockApiClient.trackUsageCalls[0].productRef).toBe('custom-product')
     })
 
-    it('should fallback to SOLVAPAY_AGENT environment variable', async () => {
-      process.env.SOLVAPAY_AGENT = 'env-agent'
+    it('should fallback to SOLVAPAY_PRODUCT environment variable', async () => {
+      process.env.SOLVAPAY_PRODUCT = 'env-product'
 
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({})
@@ -413,29 +413,19 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
 
-      expect(mockApiClient.trackUsageCalls[0].agentRef).toBe('env-agent')
+      expect(mockApiClient.trackUsageCalls[0].productRef).toBe('env-product')
 
-      delete process.env.SOLVAPAY_AGENT
+      delete process.env.SOLVAPAY_PRODUCT
     })
 
-    it('should fallback to package.json name as last resort', async () => {
-      // Mock require for package.json
-      const originalRequire = require
-      ;(global as any).require = vi.fn().mockImplementation((path: string) => {
-        if (path.includes('package.json')) {
-          return { name: 'test-package' }
-        }
-        return originalRequire(path)
-      })
-
+    it('should fallback to default-product when no product configured', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({})
       const protectedHandler = await payable.function(handler)
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
 
-      expect(mockApiClient.trackUsageCalls[0].agentRef).toBe('@solvapay/server')
-      ;(global as any).require = originalRequire
+      expect(mockApiClient.trackUsageCalls[0].productRef).toBe('default-product')
     })
   })
 
@@ -443,7 +433,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     it('should create structured PaywallError with checkoutUrl and metadata', () => {
       const error = new PaywallError('Payment required', {
         kind: 'payment_required',
-        agent: 'test-agent',
+        product: 'test-product',
         checkoutUrl: 'https://example.com/checkout',
         message: 'Upgrade required',
       })
@@ -452,7 +442,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(error.message).toBe('Payment required')
       expect(error.structuredContent).toEqual({
         kind: 'payment_required',
-        agent: 'test-agent',
+        product: 'test-product',
         checkoutUrl: 'https://example.com/checkout',
         message: 'Upgrade required',
       })
@@ -469,7 +459,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       })
 
       const handler = vi.fn()
-      const payable = faultySolvaPay.payable({ agent: 'test' })
+      const payable = faultySolvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
       await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).rejects.toThrow(
@@ -483,7 +473,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       mockApiClient.trackUsage = vi.fn().mockRejectedValue(new Error('Tracking failed'))
 
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ agent: 'test' })
+      const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
       // Should still succeed even if tracking fails

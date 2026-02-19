@@ -1,6 +1,6 @@
 # MCP Server Integration Guide
 
-This guide shows you how to integrate SolvaPay SDK with Model Context Protocol (MCP) servers to protect MCP tools with paywall protection and subscription management.
+This guide shows you how to integrate SolvaPay SDK with Model Context Protocol (MCP) servers to protect MCP tools with paywall protection and purchase management.
 
 ## Table of Contents
 
@@ -79,7 +79,7 @@ Define your MCP tools:
 const tools: Tool[] = [
   {
     name: 'create_task',
-    description: 'Create a new task (requires subscription)',
+    description: 'Create a new task (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -330,7 +330,6 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               error: 'Payment required',
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
-              plan: error.structuredContent.plan,
               agent: error.structuredContent.agent,
             }),
           },
@@ -375,7 +374,7 @@ const payable = solvaPay.payable({
 const tools: Tool[] = [
   {
     name: 'create_task',
-    description: 'Create a new task (requires subscription)',
+    description: 'Create a new task (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -401,7 +400,7 @@ const tools: Tool[] = [
   },
   {
     name: 'get_task',
-    description: 'Get a task by ID (requires subscription)',
+    description: 'Get a task by ID (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -423,7 +422,7 @@ const tools: Tool[] = [
   },
   {
     name: 'list_tasks',
-    description: 'List all tasks (requires subscription)',
+    description: 'List all tasks (requires purchase)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -588,7 +587,6 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               error: 'Payment required',
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
-              plan: error.structuredContent.plan,
               agent: error.structuredContent.agent,
             }),
           },
@@ -607,9 +605,9 @@ async function main() {
   const transport = new StdioServerTransport()
   await server.connect(transport)
 
-  console.error('🚀 SolvaPay Protected MCP Server started')
-  console.error('📝 Available tools: create_task, get_task, list_tasks')
-  console.error('💰 Paywall protection enabled')
+  console.error('SolvaPay Protected MCP Server started')
+  console.error('Available tools: create_task, get_task, list_tasks')
+  console.error('Paywall protection enabled')
 }
 
 main().catch(error => {
@@ -664,4 +662,4 @@ async function createTask(args: any) {
 - [Express.js Integration Guide](./express.md) - Learn HTTP framework integration
 - [Error Handling Strategies](./error-handling.md) - Advanced error handling patterns
 - [Custom Authentication Adapters](./custom-auth.md) - Build custom auth adapters
-- [API Reference](../api/server/src/README.md) - Full API documentation
+- [API Reference](../../packages/server/README.md) - Full API documentation

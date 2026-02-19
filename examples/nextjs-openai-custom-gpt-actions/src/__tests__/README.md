@@ -2,7 +2,7 @@
 
 This directory contains simplified tests for the Next.js OpenAI Custom GPT Actions example.
 
-## 📁 Structure
+## Structure
 
 ```
 src/__tests__/
@@ -11,7 +11,7 @@ src/__tests__/
 │   ├── home.test.tsx             # Home page tests
 │   ├── integration.test.tsx      # User flow integration tests
 │   └── simple-render.test.tsx    # Simple component render tests
-└── backend/              # Backend/API tests (11 files)
+└── backend/              # Backend/API tests (10 files)
     ├── api.test.ts               # API endpoint tests
     ├── basic.test.ts             # Basic API functionality tests
     ├── checkout.test.ts          # Checkout flow tests
@@ -21,11 +21,10 @@ src/__tests__/
     ├── tasks.test.ts             # Task CRUD operations tests
     ├── user-plans.test.ts        # User plan management tests (blue sky only)
     ├── integration.test.ts       # Backend integration tests (blue sky only)
-    ├── signout.test.ts           # Sign out endpoint tests (blue sky only)
     └── test-utils.ts             # Shared test utilities
 ```
 
-## 🚀 Running Tests
+## Running Tests
 
 ### All Tests
 
@@ -51,7 +50,7 @@ npm run test:ui-components
 npm run test:watch
 ```
 
-## ✅ Test Coverage
+## Test Coverage
 
 ### Backend Tests
 
@@ -67,7 +66,7 @@ npm run test:watch
 - **User Interactions**: Button clicks and form submissions (successful flows)
 - **Integration Flows**: OAuth, checkout, and API testing flows
 
-## 🔧 Test Configuration
+## Test Configuration
 
 - **Framework**: Vitest with React Testing Library
 - **Environment**: jsdom for UI tests, node for backend tests
@@ -75,7 +74,7 @@ npm run test:watch
 - **Focus**: Blue sky scenarios (happy paths) only
 - **Service**: Uses `@solvapay/demo-services` for task management
 
-## 💡 Notes
+## Notes
 
 - Tests focus on blue sky scenarios (successful operations only)
 - Error handling and edge cases are not tested in this example

@@ -1,7 +1,7 @@
 /**
- * Subscription Cache Utilities
+ * Purchase Cache Utilities
  *
- * Cache management functions for subscription data.
+ * Cache management functions for purchase data.
  * Separated from index.ts to avoid circular dependencies.
  */
 
@@ -29,16 +29,16 @@ export interface RequestDeduplicationOptions {
 }
 
 /**
- * Subscription check result
+ * Purchase check result
  */
-export interface SubscriptionCheckResult {
+export interface PurchaseCheckResult {
   customerRef: string
   email?: string
   name?: string
-  subscriptions: Array<{
+  purchases: Array<{
     reference: string
     planName?: string
-    agentName?: string
+    productReference?: string
     status?: string
     startDate?: string
     [key: string]: unknown
@@ -207,9 +207,9 @@ function createRequestDeduplicator<T = unknown>(
 }
 
 /**
- * Shared subscription check deduplicator
+ * Shared purchase check deduplicator
  *
- * Prevents duplicate subscription checks by:
+ * Prevents duplicate purchase checks by:
  * - Deduplicating concurrent requests (multiple requests share the same promise)
  * - Caching results for 2 seconds (prevents duplicate sequential requests)
  * - Automatic cleanup of expired cache entries
@@ -218,51 +218,51 @@ function createRequestDeduplicator<T = unknown>(
  * Note: This is a simple in-memory cache suitable for single-instance deployments.
  * For multi-instance deployments, consider using Redis or a shared cache.
  */
-let sharedSubscriptionDeduplicator: ReturnType<
-  typeof createRequestDeduplicator<SubscriptionCheckResult>
+let sharedPurchaseDeduplicator: ReturnType<
+  typeof createRequestDeduplicator<PurchaseCheckResult>
 > | null = null
 
 export function getSharedDeduplicator(options?: RequestDeduplicationOptions) {
-  if (!sharedSubscriptionDeduplicator) {
-    sharedSubscriptionDeduplicator = createRequestDeduplicator<SubscriptionCheckResult>({
+  if (!sharedPurchaseDeduplicator) {
+    sharedPurchaseDeduplicator = createRequestDeduplicator<PurchaseCheckResult>({
       cacheTTL: 2000, // Cache results for 2 seconds
       maxCacheSize: 1000, // Maximum cache entries
       cacheErrors: true, // Cache error results too
       ...options,
     })
   }
-  return sharedSubscriptionDeduplicator
+  return sharedPurchaseDeduplicator
 }
 
 /**
- * Clear subscription cache for a specific user.
+ * Clear purchase cache for a specific user.
  *
- * Useful when you know subscription status has changed (e.g., after a successful
- * checkout, subscription update, or cancellation). This forces the next
- * `checkSubscription()` call to fetch fresh data from the backend.
+ * Useful when you know purchase status has changed (e.g., after a successful
+ * checkout, purchase update, or cancellation). This forces the next
+ * `checkPurchase()` call to fetch fresh data from the backend.
  *
  * @param userId - User ID to clear cache for
  *
  * @example
  * ```typescript
- * import { clearSubscriptionCache } from '@solvapay/next';
+ * import { clearPurchaseCache } from '@solvapay/next';
  *
  * // After successful payment
  * await processPayment(request, body);
- * clearSubscriptionCache(userId); // Force refresh on next check
+ * clearPurchaseCache(userId); // Force refresh on next check
  * ```
  *
- * @see {@link checkSubscription} for subscription checking
- * @see {@link clearAllSubscriptionCache} to clear all cache entries
+ * @see {@link checkPurchase} for purchase checking
+ * @see {@link clearAllPurchaseCache} to clear all cache entries
  * @since 1.0.0
  */
-export function clearSubscriptionCache(userId: string): void {
+export function clearPurchaseCache(userId: string): void {
   const deduplicator = getSharedDeduplicator()
   deduplicator.clearCache(userId)
 }
 
 /**
- * Clear all subscription cache entries.
+ * Clear all purchase cache entries.
  *
  * Useful for testing, debugging, or when you need to force fresh lookups
  * for all users. This clears both the in-flight request cache and the
@@ -270,27 +270,27 @@ export function clearSubscriptionCache(userId: string): void {
  *
  * @example
  * ```typescript
- * import { clearAllSubscriptionCache } from '@solvapay/next';
+ * import { clearAllPurchaseCache } from '@solvapay/next';
  *
  * // In a test setup
  * beforeEach(() => {
- *   clearAllSubscriptionCache();
+ *   clearAllPurchaseCache();
  * });
  * ```
  *
- * @see {@link clearSubscriptionCache} to clear cache for a specific user
- * @see {@link getSubscriptionCacheStats} for cache monitoring
+ * @see {@link clearPurchaseCache} to clear cache for a specific user
+ * @see {@link getPurchaseCacheStats} for cache monitoring
  * @since 1.0.0
  */
-export function clearAllSubscriptionCache(): void {
+export function clearAllPurchaseCache(): void {
   const deduplicator = getSharedDeduplicator()
   deduplicator.clearAllCache()
 }
 
 /**
- * Get subscription cache statistics for monitoring and debugging.
+ * Get purchase cache statistics for monitoring and debugging.
  *
- * Returns the current state of the subscription cache, including:
+ * Returns the current state of the purchase cache, including:
  * - Number of in-flight requests (being deduplicated)
  * - Number of cached results
  *
@@ -300,11 +300,11 @@ export function clearAllSubscriptionCache(): void {
  *
  * @example
  * ```typescript
- * import { getSubscriptionCacheStats } from '@solvapay/next';
+ * import { getPurchaseCacheStats } from '@solvapay/next';
  *
  * // In a monitoring endpoint
  * export async function GET() {
- *   const stats = getSubscriptionCacheStats();
+ *   const stats = getPurchaseCacheStats();
  *   return Response.json({
  *     cache: {
  *       inFlight: stats.inFlight,
@@ -314,10 +314,10 @@ export function clearAllSubscriptionCache(): void {
  * }
  * ```
  *
- * @see {@link checkSubscription} for subscription checking
+ * @see {@link checkPurchase} for purchase checking
  * @since 1.0.0
  */
-export function getSubscriptionCacheStats(): { inFlight: number; cached: number } {
+export function getPurchaseCacheStats(): { inFlight: number; cached: number } {
   const deduplicator = getSharedDeduplicator()
   return deduplicator.getStats()
 }

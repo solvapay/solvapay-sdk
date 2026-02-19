@@ -20,12 +20,12 @@ A simple Express.js CRUD API demonstrating SolvaPay paywall protection.
 
 ## Features
 
-- ✅ **Express.js** REST API with full CRUD operations
-- ✅ **SolvaPay Paywall** protection on all endpoints
-- ✅ **Demo Mode**: Uses stub client - no backend required
-- ✅ **Auto Port Detection**: Finds next available port automatically
-- ✅ **Plan-Based Limits**: Different limits for different operations
-- ✅ **Clean Architecture**: Separated business logic and route handlers
+- **Express.js** REST API with full CRUD operations
+- **SolvaPay Paywall** protection on all endpoints
+- **Demo Mode**: Uses stub client - no backend required
+- **Auto Port Detection**: Finds next available port automatically
+- **Plan-Based Limits**: Different limits for different operations
+- **Clean Architecture**: Separated business logic and route handlers
 
 ## Quick Start
 
@@ -286,7 +286,7 @@ The adapter automatically handles errors:
   "error": "Payment required",
   "agent": "agt_NO8WYSX5",
   "checkoutUrl": "https://checkout.solvapay.com/...",
-  "message": "Plan subscription required. Remaining: 0"
+  "message": "Plan purchase required. Remaining: 0"
 }
 
 // Other errors are returned as 500 with error message
@@ -300,7 +300,7 @@ The HTTP adapter (`payable.http()`) is a middleware function that:
 
 - Parses request body and route parameters
 - Extracts customer reference from headers
-- Checks subscription limits
+- Checks purchase limits
 - Executes your business logic
 - Formats the response
 - Handles errors
@@ -356,7 +356,7 @@ Returned when user exceeds their plan limits:
   "error": "Payment required",
   "agent": "express-tasks-api",
   "checkoutUrl": "https://checkout.solvapay.com/...",
-  "message": "Plan subscription required. Remaining: 0"
+  "message": "Plan purchase required. Remaining: 0"
 }
 ```
 
@@ -400,10 +400,10 @@ const apiClient = createStubClient({
 Keep your business logic separate from route handlers:
 
 ```typescript
-// ✅ Good: Business logic in separate function
+// Good: Business logic in separate function
 app.post('/tasks', payable.http(createTask))
 
-// ❌ Bad: Business logic in route handler
+// Bad: Business logic in route handler
 app.post(
   '/tasks',
   payable.http(async args => {
@@ -478,7 +478,7 @@ const solvaPay = createSolvaPay({ apiClient })
 **Solution**: The server automatically finds the next available port:
 
 ```
-⚠️  Port 3001 is in use, trying 3002...
+Port 3001 is in use, trying 3002...
 ```
 
 You can also set a custom port:
@@ -576,14 +576,14 @@ pnpm test:coverage
 
 The test suite (`api.test.ts`) verifies:
 
-- ✅ Unprotected routes (health check, API info)
-- ✅ Paywall protection on protected endpoints
-- ✅ Free tier enforcement (5 operations per user)
-- ✅ Blocking after limit exceeded
-- ✅ Per-user usage isolation
-- ✅ Consistent limit tracking across operations
-- ✅ Error handling (missing customer_ref, etc.)
-- ✅ Concurrent requests from different users
+- Unprotected routes (health check, API info)
+- Paywall protection on protected endpoints
+- Free tier enforcement (5 operations per user)
+- Blocking after limit exceeded
+- Per-user usage isolation
+- Consistent limit tracking across operations
+- Error handling (missing customer_ref, etc.)
+- Concurrent requests from different users
 
 **No setup required** - tests use the stub client by default for fast, reliable testing.
 
@@ -618,7 +618,7 @@ For comprehensive backend integration tests of the SolvaPay SDK itself, see the 
 
 ### API Reference
 
-- [Server SDK API Reference](../../docs/api/server/) - Complete API documentation
+- [Server SDK API Reference](../../packages/server/README.md) - Complete API documentation
 - [Server SDK README](../../packages/server/README.md) - Package documentation
 
 ### Additional Resources

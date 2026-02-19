@@ -1,0 +1,535 @@
+{
+	"info": {
+		"_postman_id": "solvapay-mcp-server",
+		"name": "SolvaPay MCP Server",
+		"description": "Collection for testing the SolvaPay MCP Server via Streamable HTTP transport (MCP spec 2025-11-25)\n\n**IMPORTANT:**\n1. First run \"1. Initialize Session\" - this will create a session and return a session ID in the response headers\n2. Copy the `MCP-Session-Id` from the response headers and paste it into the collection variable `session_id`\n3. (Optional) Run \"2. Open SSE Stream\" and keep it open to receive server notifications\n4. Then you can run the other requests (they will use the session ID from step 1)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Initialize Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Extract session ID from response headers",
+							"const sessionId = pm.response.headers.get('MCP-Session-Id');",
+							"",
+							"if (sessionId) {",
+							"    pm.collectionVariables.set('session_id', sessionId);",
+							"    console.log('✅ Session ID extracted from headers:', sessionId);",
+							"    console.log('Session ID has been saved to collection variable');",
+							"} else {",
+							"    console.log('⚠️ No MCP-Session-Id header found in response');",
+							"    console.log('Please check the response headers manually');",
+							"}",
+							"",
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Response contains JSON-RPC result', function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('jsonrpc', '2.0');",
+							"    pm.expect(jsonData).to.have.property('result');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-11-25\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman-client\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "**STEP 1: Initialize the session**\n\nThis creates a new MCP session and returns a session ID in the response headers.\n\n1. Send this request\n2. **Check the response headers** - look for `MCP-Session-Id`\n3. Copy the session ID value\n4. Go to collection settings (three dots → Edit) and paste it into the `session_id` variable\n\n**OR** check the Postman Console (View → Show Postman Console) - the test script may have extracted it automatically.\n\nThe response body will contain the JSON-RPC initialize result."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Open SSE Stream (Optional)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"console.log('✅ SSE stream opened. Keep this request tab open to receive server notifications.');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "text/event-stream"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "**STEP 2 (Optional): Open SSE stream for server notifications**\n\n⚠️ **Make sure you've completed Step 1 and set the `session_id` variable!**\n\n1. Send this request\n2. **Keep the response tab open** - you'll see server notifications here\n3. This allows you to receive server-initiated messages\n\nThis is optional but recommended for receiving real-time notifications."
+			},
+			"response": []
+		},
+		{
+			"name": "3. List Tools",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Response contains JSON-RPC result', function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('jsonrpc', '2.0');",
+							"    pm.expect(jsonData).to.have.property('result');",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.result && jsonData.result.tools) {",
+							"    console.log('✅ Found', jsonData.result.tools.length, 'tools');",
+							"    jsonData.result.tools.forEach(tool => {",
+							"        console.log('  -', tool.name + ':', tool.description);",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "List all available tools. Requires session ID from Step 1. Response will be in the HTTP response body."
+			},
+			"response": []
+		},
+		{
+			"name": "4. Create Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.error) {",
+							"    console.log('⚠️ Error response:', jsonData.error.message);",
+							"    if (jsonData.error.data && jsonData.error.data.checkoutUrl) {",
+							"        console.log('💳 Paywall triggered! Checkout URL:', jsonData.error.data.checkoutUrl);",
+							"    }",
+							"} else if (jsonData.result) {",
+							"    console.log('✅ Task created successfully');",
+							"    console.log('Result:', JSON.stringify(jsonData.result, null, 2));",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"create_task\",\n    \"arguments\": {\n      \"title\": \"Test Task from Postman\",\n      \"description\": \"This is a test task created via Postman\",\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Create a new task. Requires:\n- Session ID from Step 1\n- `auth.customer_ref` in the arguments\n\nResponse will be in the HTTP response body. If paywall is triggered, you'll see an error response with a checkout URL."
+			},
+			"response": []
+		},
+		{
+			"name": "5. List Tasks",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.error) {",
+							"    console.log('⚠️ Error response:', jsonData.error.message);",
+							"} else if (jsonData.result) {",
+							"    console.log('✅ Tasks retrieved successfully');",
+							"    console.log('Result:', JSON.stringify(jsonData.result, null, 2));",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"list_tasks\",\n    \"arguments\": {\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "List all tasks for a customer. Requires:\n- Session ID from Step 1\n- `auth.customer_ref` in the arguments"
+			},
+			"response": []
+		},
+		{
+			"name": "6. Get Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.error) {",
+							"    console.log('⚠️ Error response:', jsonData.error.message);",
+							"} else if (jsonData.result) {",
+							"    console.log('✅ Task retrieved successfully');",
+							"    console.log('Result:', JSON.stringify(jsonData.result, null, 2));",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"get_task\",\n    \"arguments\": {\n      \"id\": \"{{task_id}}\",\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Get a specific task by ID. Requires:\n- Session ID from Step 1\n- Task ID (set `task_id` variable or replace `{{task_id}}`)\n- `auth.customer_ref` in the arguments"
+			},
+			"response": []
+		},
+		{
+			"name": "7. Delete Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.error) {",
+							"    console.log('⚠️ Error response:', jsonData.error.message);",
+							"} else if (jsonData.result) {",
+							"    console.log('✅ Task deleted successfully');",
+							"    console.log('Result:', JSON.stringify(jsonData.result, null, 2));",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream"
+					},
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"delete_task\",\n    \"arguments\": {\n      \"id\": \"{{task_id}}\",\n      \"auth\": {\n        \"customer_ref\": \"{{customer_ref}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Delete a specific task by ID. Requires:\n- Session ID from Step 1\n- Task ID (set `task_id` variable or replace `{{task_id}}`)\n- `auth.customer_ref` in the arguments"
+			},
+			"response": []
+		},
+		{
+			"name": "8. Terminate Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200 or 204', function () {",
+							"    pm.expect([200, 204]).to.include(pm.response.code);",
+							"});",
+							"",
+							"console.log('✅ Session terminated');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "MCP-Session-Id",
+						"value": "{{session_id}}"
+					},
+					{
+						"key": "MCP-Protocol-Version",
+						"value": "2025-11-25"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/mcp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"mcp"
+					]
+				},
+				"description": "Terminate the current session. Requires session ID from Step 1."
+			},
+			"response": []
+		},
+		{
+			"name": "Health Check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Response indicates server is healthy', function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('status', 'ok');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check if the server is running and healthy. No authentication required."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3003",
+			"type": "string",
+			"description": "Base URL of the MCP server"
+		},
+		{
+			"key": "session_id",
+			"value": "",
+			"type": "string",
+			"description": "Session ID from the initialize response (MCP-Session-Id header). Set automatically by request 1."
+		},
+		{
+			"key": "customer_ref",
+			"value": "user_123",
+			"type": "string",
+			"description": "Customer reference for authentication"
+		},
+		{
+			"key": "task_id",
+			"value": "",
+			"type": "string",
+			"description": "Task ID for get/delete operations. Set this after creating a task."
+		}
+	]
+}

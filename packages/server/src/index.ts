@@ -45,8 +45,8 @@ export type { ServerClientOptions } from './client'
  *     });
  *
  *     // Handle webhook event
- *     if (payload.type === 'subscription.created') {
- *       // Process subscription creation
+ *     if (payload.type === 'purchase.created') {
+ *       // Process purchase creation
  *     }
  *
  *     res.json({ received: true });
@@ -92,7 +92,7 @@ export type {
 } from './types'
 
 // Export payment processing types
-export type { PurchaseInfo, ProcessPaymentResult, CustomerResponseMapped } from './types/client'
+export type { OneTimePurchaseInfo, ProcessPaymentResult, CustomerResponseMapped } from './types/client'
 
 // Export utilities for general use
 export { withRetry } from './utils'
@@ -102,10 +102,10 @@ export {
   getAuthenticatedUserCore,
   syncCustomerCore,
   createPaymentIntentCore,
-  processPaymentCore,
+  processPaymentIntentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
-  cancelSubscriptionCore,
+  cancelPurchaseCore,
   listPlansCore,
   isErrorResult,
   handleRouteError,

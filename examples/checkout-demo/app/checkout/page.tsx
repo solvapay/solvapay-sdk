@@ -1,34 +1,40 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useSubscription, usePlans, useSubscriptionStatus } from '@solvapay/react'
+import { usePurchase, usePlans, usePurchaseStatus } from '@solvapay/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getAccessToken } from '../lib/supabase'
 import { sortPlansByPrice } from './utils/planHelpers'
 import { PlanSelectionSection } from './components/PlanSelectionSection'
 import { PaymentSummary } from './components/PaymentSummary'
-import { SubscriptionNotices } from './components/SubscriptionNotices'
+import { PurchaseNotices } from './components/PurchaseNotices'
 import { CheckoutActions } from './components/CheckoutActions'
 import { StyledPaymentForm } from './components/StyledPaymentForm'
 import { SuccessMessage } from './components/SuccessMessage'
 import { PaymentFailureMessage } from './components/PaymentFailureMessage'
+
+interface PaymentIntentResult {
+  _processingTimeout?: boolean
+  _processingError?: string
+  [key: string]: unknown
+}
 
 export default function CheckoutPage() {
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false)
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false)
   const [paymentFailed, setPaymentFailed] = useState<boolean>(false)
   const [isCancelling, setIsCancelling] = useState<boolean>(false)
-  const { refetch, hasPaidSubscription, activePaidSubscription, activeSubscription } =
-    useSubscription()
+  const { refetch, hasPaidPurchase, activePaidPurchase, activePurchase } =
+    usePurchase()
   const router = useRouter()
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF
+  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
 
   // Stable fetcher function to prevent re-renders
-  const plansFetcher = useCallback(async (agentRef: string) => {
-    const response = await fetch(`/api/list-plans?agentRef=${agentRef}`)
+  const plansFetcher = useCallback(async (productRef: string) => {
+    const response = await fetch(`/api/list-plans?productRef=${productRef}`)
     if (!response.ok) {
       const errorData = await response.json()
       throw new Error(errorData.error || 'Failed to fetch plans')
@@ -48,24 +54,25 @@ export default function CheckoutPage() {
     selectedPlan: currentPlan,
     setSelectedPlanIndex,
   } = usePlans({
-    agentRef: agentRef || '',
+    productRef: productRef || '',
     fetcher: plansFetcher,
     autoSelectFirstPaid: true,
   })
 
-  // Get advanced subscription status helpers
-  const subscriptionStatus = useSubscriptionStatus()
+  // Get advanced purchase status helpers
+  const purchaseStatus = usePurchaseStatus()
 
-  // Note: Provider auto-fetches subscriptions on mount, so no manual refetch needed here
-  // Refetch is only called after operations that change subscription state (payment, cancellation)
+  // Note: Provider auto-fetches purchases on mount, so no manual refetch needed here
+  // Refetch is only called after operations that change purchase state (payment, cancellation)
 
   // Handle payment success
-  const handlePaymentSuccess = async (paymentIntent?: any) => {
+  const handlePaymentSuccess = async (paymentIntent?: unknown) => {
+    const result = paymentIntent as PaymentIntentResult | undefined
     // Check if payment processing timed out or had an error
-    const isTimeout = paymentIntent?._processingTimeout === true
-    const hasError = !!paymentIntent?._processingError
+    const isTimeout = result?._processingTimeout === true
+    const hasError = !!result?._processingError
 
-    // Refetch subscriptions before showing message
+    // Refetch purchases before showing message
     await refetch()
 
     if (isTimeout || hasError) {
@@ -74,7 +81,7 @@ export default function CheckoutPage() {
           '[CheckoutPage] Payment processing timed out - webhooks may not be configured',
         )
       } else if (hasError) {
-        console.error('[CheckoutPage] Payment processing failed:', paymentIntent?._processingError)
+        console.error('[CheckoutPage] Payment processing failed:', result?._processingError)
       }
 
       // Show failure message to user (no technical details)
@@ -119,11 +126,11 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!activePaidSubscription) {
+    if (!activePaidPurchase) {
       return
     }
 
-    if (activePaidSubscription.status !== 'active') {
+    if (activePaidPurchase.status !== 'active') {
       await refetch()
       return
     }
@@ -138,19 +145,19 @@ export default function CheckoutPage() {
         ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       }
 
-      const res = await fetch('/api/cancel-subscription', {
+      const res = await fetch('/api/cancel-renewal', {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          subscriptionRef: activePaidSubscription.reference,
+          purchaseRef: activePaidPurchase.reference,
           reason: 'User requested cancellation',
         }),
       })
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        const errorMessage = errorData.error || 'Failed to cancel subscription'
-        console.error('Cancel subscription error:', errorMessage, errorData)
+        const errorMessage = errorData.error || 'Failed to cancel renewal'
+        console.error('Cancel renewal error:', errorMessage, errorData)
         throw new Error(errorMessage)
       }
 
@@ -159,7 +166,7 @@ export default function CheckoutPage() {
       await refetch()
       window.location.href = '/'
     } catch (err) {
-      console.error('Cancel subscription failed:', err)
+      console.error('Cancel renewal failed:', err)
       setIsCancelling(false)
     }
   }
@@ -182,7 +189,7 @@ export default function CheckoutPage() {
           <SuccessMessage />
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your subscription</h2>
+            <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your plan</h2>
 
             {loading && <div className="text-center py-8 text-slate-500">Loading plans...</div>}
 
@@ -200,7 +207,7 @@ export default function CheckoutPage() {
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanName={activeSubscription?.planName || null}
+                      activePlanName={activePurchase?.planName || null}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
@@ -208,17 +215,17 @@ export default function CheckoutPage() {
                     {/* Payment Summary */}
                     <PaymentSummary selectedPlan={currentPlan} className="mb-8" />
 
-                    {/* Cancelled Subscription Notice */}
-                    <SubscriptionNotices
-                      cancelledSubscription={subscriptionStatus.cancelledSubscription}
-                      shouldShow={subscriptionStatus.shouldShowCancelledNotice}
+                    {/* Cancelled Purchase Notice */}
+                    <PurchaseNotices
+                      cancelledPurchase={purchaseStatus.cancelledPurchase}
+                      shouldShow={purchaseStatus.shouldShowCancelledNotice}
                       className="mb-6"
                     />
 
                     {/* Action Buttons */}
                     <CheckoutActions
-                      hasPaidSubscription={hasPaidSubscription}
-                      shouldShowCancelledNotice={subscriptionStatus.shouldShowCancelledNotice}
+                      hasPaidPurchase={hasPaidPurchase}
+                      shouldShowCancelledNotice={purchaseStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}
                       isPreparingCheckout={false}
@@ -231,7 +238,7 @@ export default function CheckoutPage() {
                 {showPaymentForm && (
                   <StyledPaymentForm
                     currentPlan={currentPlan}
-                    agentRef={agentRef}
+                    productRef={productRef}
                     onSuccess={handlePaymentSuccess}
                     onError={handlePaymentError}
                     onBack={handleBackToSelection}
