@@ -141,7 +141,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
                 ...paymentIntentAny,
                 _processingTimeout: processingTimeout,
                 _processingResult: processingResult,
-              } as unknown as any)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any)
             }
 
             // Then throw error to signal timeout to StripePaymentFormWrapper
@@ -159,7 +160,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
               await onSuccess({
                 ...paymentIntentAny,
                 _processingError: error,
-              } as unknown as any)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any)
             } catch {
               // Ignore callback errors
             }
@@ -179,7 +181,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           ...paymentIntentAny,
           _processingTimeout: processingTimeout,
           _processingResult: processingResult,
-        } as unknown as any)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
       }
     },
     [processPayment, productRef, planRef, refetch, onSuccess],

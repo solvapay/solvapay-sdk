@@ -12,6 +12,7 @@ import { PaywallError } from '../paywall'
 /**
  * Next.js context (Web Request + optional route context)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type NextContext = [request: Request, context?: any]
 
 /**
@@ -20,7 +21,7 @@ type NextContext = [request: Request, context?: any]
 export class NextAdapter implements Adapter<NextContext, Response> {
   constructor(private options: NextAdapterOptions = {}) {}
 
-  async extractArgs([request, context]: NextContext): Promise<any> {
+  async extractArgs([request, context]: NextContext): Promise<Record<string, unknown>> {
     if (this.options.extractArgs) {
       return await this.options.extractArgs(request, context)
     }
@@ -92,7 +93,7 @@ export class NextAdapter implements Adapter<NextContext, Response> {
     return 'demo_user'
   }
 
-  formatResponse(result: any, _context: NextContext): Response {
+  formatResponse(result: unknown, _context: NextContext): Response {
     const transformed = this.options.transformResponse
       ? this.options.transformResponse(result)
       : result

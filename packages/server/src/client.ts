@@ -70,7 +70,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
   // Enable debug logging via environment variable (same pattern as paywall)
   const debug = process.env.SOLVAPAY_DEBUG === 'true'
-  const log = (...args: any[]) => {
+  const log = (...args: unknown[]) => {
     if (debug) {
       // eslint-disable-next-line no-console
       console.log(...args)
@@ -229,9 +229,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const products = Array.isArray(result) ? result : result.products || []
 
       // Unwrap data field if present
-      return products.map((product: any) => ({
+      return products.map((product: Record<string, unknown>) => ({
         ...product,
-        ...(product.data || {}),
+        ...((product.data as Record<string, unknown>) || {}),
       }))
     },
 
@@ -293,17 +293,15 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       // Unwrap data field if present, preserving all plan properties
       // Spread plan.data first, then plan, so plan properties take precedence
-      return plans.map((plan: any) => {
-        // Preserve price from either plan or plan.data
-        const price = plan.price ?? plan.data?.price
+      return plans.map((plan: Record<string, unknown>) => {
+        const data = (plan.data as Record<string, unknown>) || {}
+        const price = plan.price ?? data.price
 
-        const unwrapped = {
-          ...(plan.data || {}),
+        const unwrapped: Record<string, unknown> = {
+          ...data,
           ...plan,
-          // Explicitly preserve price field to ensure it's not lost
           ...(price !== undefined && { price }),
         }
-        // Remove the data field if it was present, as we've already unwrapped it
         delete unwrapped.data
 
         return unwrapped

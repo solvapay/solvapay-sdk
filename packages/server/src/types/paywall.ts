@@ -8,7 +8,7 @@
  * Arguments passed to protected handlers
  */
 export interface PaywallArgs {
-  [key: string]: any
+  [key: string]: unknown
   auth?: { customer_ref?: string }
 }
 

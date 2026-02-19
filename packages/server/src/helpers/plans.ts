@@ -16,7 +16,7 @@ import { getSolvaPayConfig } from '@solvapay/core'
  */
 export async function listPlansCore(request: Request): Promise<
   | {
-      plans: any[]
+      plans: Record<string, unknown>[]
       productRef: string
     }
   | ErrorResult

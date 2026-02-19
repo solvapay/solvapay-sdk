@@ -13,15 +13,16 @@ import { PaywallError } from '../paywall'
 /**
  * HTTP context (Express or Fastify)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type HttpContext = [req: any, reply: any]
 
 /**
  * HTTP Adapter implementation
  */
-export class HttpAdapter implements Adapter<HttpContext, any> {
+export class HttpAdapter implements Adapter<HttpContext, unknown> {
   constructor(private options: HttpAdapterOptions = {}) {}
 
-  extractArgs([req, _reply]: HttpContext): any {
+  extractArgs([req, _reply]: HttpContext): Record<string, unknown> {
     if (this.options.extractArgs) {
       return this.options.extractArgs(req)
     }
@@ -60,7 +61,7 @@ export class HttpAdapter implements Adapter<HttpContext, any> {
     return 'anonymous'
   }
 
-  formatResponse(result: any, [_req, reply]: HttpContext): any {
+  formatResponse(result: unknown, [_req, reply]: HttpContext): unknown {
     if (this.options.transformResponse) {
       return this.options.transformResponse(result, reply)
     }
@@ -75,7 +76,7 @@ export class HttpAdapter implements Adapter<HttpContext, any> {
     return result
   }
 
-  formatError(error: Error, [_req, reply]: HttpContext): any {
+  formatError(error: Error, [_req, reply]: HttpContext): unknown {
     if (error instanceof PaywallError) {
       const errorResponse = {
         success: false,

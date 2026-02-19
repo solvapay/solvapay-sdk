@@ -108,7 +108,7 @@ export class SolvaPayPaywall {
     this.debug = options.debug ?? process.env.SOLVAPAY_DEBUG === 'true'
   }
 
-  private log(...args: any[]): void {
+  private log(...args: unknown[]): void {
     if (this.debug) {
       // eslint-disable-next-line no-console
       console.log(...args)
@@ -128,6 +128,7 @@ export class SolvaPayPaywall {
   /**
    * Core protection method - works for both MCP and HTTP
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async protect<TArgs extends PaywallArgs, TResult = any>(
     handler: (args: TArgs) => Promise<TResult>,
     metadata: PaywallMetadata = {},
@@ -328,17 +329,14 @@ export class SolvaPayPaywall {
         // Prepare customer creation params
         // Use provided email/name, or fallback to auto-generated values
         // Use a timestamp-based email to avoid conflicts with old orphaned records
-        const createParams: any = {
+        const createParams: { email: string; name?: string; externalRef?: string } = {
           email: options?.email || `${customerRef}-${Date.now()}@auto-created.local`,
         }
 
-        // Only include name if explicitly provided (don't fallback to customerRef)
-        // This prevents externalRef from being used as the name when both are the same value
         if (options?.name) {
           createParams.name = options.name
         }
 
-        // Include externalRef if provided
         if (externalRef) {
           createParams.externalRef = externalRef
         }
@@ -346,16 +344,16 @@ export class SolvaPayPaywall {
         const result = await this.apiClient.createCustomer(createParams)
 
         // Extract the backend reference from the response
-        const ref = (result as any).customerRef || (result as any).reference || customerRef
+        const resultObj = result as unknown as Record<string, string>
+        const ref = resultObj.customerRef || resultObj.reference || customerRef
 
         // Store the mapping (per-instance cache)
         this.customerRefMapping.set(customerRef, ref)
 
         return ref
-      } catch (error: any) {
-        // Handle existing customer conflict (409)
-        // If customer already exists, we should try to fetch it to get the correct backend ID
-        if (error.message && (error.message.includes('409') || error.message.includes('already exists'))) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        if (errorMessage.includes('409') || errorMessage.includes('already exists')) {
            // Try to lookup by externalRef first if available
            if (externalRef) {
              try {
@@ -364,8 +362,7 @@ export class SolvaPayPaywall {
                  this.customerRefMapping.set(customerRef, searchResult.customerRef)
                  return searchResult.customerRef
                }
-             } catch (lookupError: any) {
-               // Fallback to original behavior if lookup fails
+             } catch (lookupError: unknown) {
                this.log(`⚠️ Failed to lookup existing customer by externalRef after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
              }
            }
@@ -373,9 +370,8 @@ export class SolvaPayPaywall {
           // If conflict is due to email uniqueness but externalRef lookup failed,
           // retry creation with a generated email while preserving externalRef.
           // This allows resolving stale customers created before externalRef was set.
-          const conflictMessage = error instanceof Error ? error.message : String(error)
           const isEmailConflict =
-            conflictMessage.includes('email') || conflictMessage.includes('identifier email')
+            errorMessage.includes('email') || errorMessage.includes('identifier email')
 
           if (externalRef && isEmailConflict && options?.email) {
             try {
@@ -387,7 +383,7 @@ export class SolvaPayPaywall {
                 )
                 return byEmail.customerRef
               }
-            } catch (emailLookupError: any) {
+            } catch (emailLookupError: unknown) {
               this.log(
                 `⚠️ Email lookup failed after customer conflict for ${customerRef}:`,
                 emailLookupError instanceof Error ? emailLookupError.message : emailLookupError,
@@ -395,7 +391,7 @@ export class SolvaPayPaywall {
             }
 
             try {
-              const retryParams: any = {
+              const retryParams: { email: string; name?: string; externalRef?: string } = {
                 email: `${customerRef}-${Date.now()}@auto-created.local`,
                 externalRef,
               }
@@ -405,15 +401,15 @@ export class SolvaPayPaywall {
               }
 
               const retryResult = await this.apiClient.createCustomer(retryParams)
-              const retryRef =
-                (retryResult as any).customerRef || (retryResult as any).reference || customerRef
+              const retryObj = retryResult as unknown as Record<string, string>
+              const retryRef = retryObj.customerRef || retryObj.reference || customerRef
 
               this.customerRefMapping.set(customerRef, retryRef)
               this.log(
                 `⚠️ Retried customer creation for ${customerRef} with generated email after email conflict`,
               )
               return retryRef
-            } catch (retryError: any) {
+            } catch (retryError: unknown) {
               this.log(
                 `⚠️ Retry create customer with generated email failed for ${customerRef}:`,
                 retryError instanceof Error ? retryError.message : retryError,
@@ -423,8 +419,7 @@ export class SolvaPayPaywall {
 
           // We have a known conflict but could not resolve the existing customer reference.
           // Returning the original app user ID here causes downstream 404s in payment APIs.
-          const unresolvedMessage =
-            error instanceof Error ? error.message : 'Customer already exists but could not be resolved'
+          const unresolvedMessage = errorMessage || 'Customer already exists but could not be resolved'
           throw new Error(
             `Failed to resolve existing customer for ${customerRef} after conflict: ${unresolvedMessage}. ` +
               'Ensure the existing customer is linked to this externalRef.',
@@ -493,6 +488,7 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
   const paywall = new SolvaPayPaywall(config.apiClient)
 
   // Functional approach - works for both MCP and HTTP
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function protect<TArgs extends PaywallArgs, TResult = any>(metadata: PaywallMetadata = {}) {
     return function (handler: (args: TArgs) => Promise<TResult>) {
       return paywall.protect(handler, metadata)
@@ -501,7 +497,7 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
 
   // Class-based decorator
   function Paywall(metadata: PaywallMetadata = {}) {
-    return function (target: any, propertyKey: string, descriptor?: PropertyDescriptor) {
+    return function (target: Record<string, unknown>, propertyKey: string, descriptor?: PropertyDescriptor) {
       // Handle both descriptor and direct property assignment
       const method = descriptor?.value || target[propertyKey]
 
@@ -524,38 +520,42 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     }
   }
 
-  // HTTP framework integration
   function createHttpHandler(
-    methodOrMetadata: ((...args: any[]) => any) | PaywallMetadata,
+    methodOrMetadata: ((...args: unknown[]) => unknown) | PaywallMetadata,
     handlerOrOptions?:
-      | ((args: any) => Promise<any>)
+      | ((args: PaywallArgs) => Promise<unknown>)
       | {
-          extractArgs?: (req: any) => any
-          transformResponse?: (result: any, reply: any) => any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          extractArgs?: (req: any) => Record<string, unknown>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          transformResponse?: (result: unknown, reply: any) => unknown
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           getCustomerRef?: (req: any) => string
         },
   ) {
-    // Handle decorated method
     if (typeof methodOrMetadata === 'function') {
       const method = methodOrMetadata
-      const metadata = (method as any)._paywallMetadata as PaywallMetadata
-      const options = handlerOrOptions as any
+      const metadata = (method as unknown as Record<string, unknown>)._paywallMetadata as PaywallMetadata
+      const options = handlerOrOptions as Record<string, unknown>
 
       if (!metadata) {
         throw new Error('Method must be decorated with @Paywall')
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return async (req: any, reply: any) => {
         try {
-          const extractArgs = options?.extractArgs || defaultExtractArgs
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const extractArgs = (options?.extractArgs as (req: any) => PaywallArgs) || defaultExtractArgs
           const getCustomerRef =
-            options?.getCustomerRef || ((req: any) => req.auth?.customer_ref || 'anonymous')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (options?.getCustomerRef as (req: any) => string) || ((req: Record<string, unknown>) => (req.auth as Record<string, string>)?.customer_ref || 'anonymous')
 
           const args = extractArgs(req)
-          const protectedMethod = await paywall.protect(method as any, metadata, getCustomerRef)
+          const protectedMethod = await paywall.protect(method as unknown as (args: PaywallArgs) => Promise<unknown>, metadata, getCustomerRef)
           const result = await protectedMethod(args)
 
-          const transformResponse = options?.transformResponse || ((result: any) => result)
+          const transformResponse = (options?.transformResponse as (result: unknown, reply: unknown) => unknown) || ((result: unknown) => result)
           return transformResponse(result, reply)
         } catch (error) {
           return handleHttpError(error, reply)
@@ -563,14 +563,14 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
       }
     }
 
-    // Handle inline metadata + handler
     const metadata = methodOrMetadata
-    const handler = handlerOrOptions as (args: any) => Promise<any>
+    const handler = handlerOrOptions as (args: PaywallArgs) => Promise<unknown>
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return async (req: any, reply: any) => {
       try {
         const args = defaultExtractArgs(req)
-        const getCustomerRef = (args: any) => args.auth?.customer_ref || 'anonymous'
+        const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
 
         const protectedHandler = await paywall.protect(handler, metadata, getCustomerRef)
         const result = await protectedHandler(args)
@@ -590,56 +590,53 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     }
   }
 
-  // MCP integration
   function createMCPHandler(
-    methodOrMetadata: ((...args: any[]) => any) | PaywallMetadata,
-    handler?: (args: any) => Promise<any>,
+    methodOrMetadata: ((...args: unknown[]) => unknown) | PaywallMetadata,
+    handler?: (args: PaywallArgs) => Promise<unknown>,
   ) {
-    // Handle decorated method
     if (typeof methodOrMetadata === 'function') {
       const method = methodOrMetadata
-      const metadata = (method as any)._paywallMetadata as PaywallMetadata
+      const metadata = (method as unknown as Record<string, unknown>)._paywallMetadata as PaywallMetadata
 
       if (!metadata) {
         throw new Error('Method must be decorated with @Paywall')
       }
 
-      const getCustomerRef = (args: any) => args.auth?.customer_ref || 'anonymous'
-      return paywall.protect(method as any, metadata, getCustomerRef)
+      const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+      return paywall.protect(method as unknown as (args: PaywallArgs) => Promise<unknown>, metadata, getCustomerRef)
     }
 
-    // Handle inline metadata + handler
     const metadata = methodOrMetadata
-    const getCustomerRef = (args: any) => args.auth?.customer_ref || 'anonymous'
+    const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
     return paywall.protect(handler!, metadata, getCustomerRef)
   }
 
-  // Next.js API route integration
   function createNextHandler(
     metadata: PaywallMetadata,
-    handler: (args: any) => Promise<any>,
+    handler: (args: PaywallArgs) => Promise<unknown>,
     options?: {
-      extractArgs?: (request: Request, context?: any) => Promise<any> | any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extractArgs?: (request: Request, context?: any) => Promise<Record<string, unknown>> | Record<string, unknown>
       getCustomerRef?: (request: Request) => Promise<string> | string
-      transformResponse?: (result: any) => any
+      transformResponse?: (result: unknown) => unknown
     },
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return async (request: Request, context?: any) => {
       try {
         const extractArgs = options?.extractArgs || defaultExtractNextArgs
         const getCustomerRef = options?.getCustomerRef || defaultGetCustomerRef
-        const transformResponse = options?.transformResponse || ((result: any) => result)
+        const transformResponse = options?.transformResponse || ((result: unknown) => result)
 
         const args = await extractArgs(request, context)
         const customerRef = await getCustomerRef(request)
 
-        // Add auth info to args
         args.auth = { customer_ref: customerRef }
 
         const protectedHandler = await paywall.protect(
           handler,
           metadata,
-          (args: any) => args.auth.customer_ref,
+          (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous',
         )
         const result = await protectedHandler(args)
 
@@ -664,8 +661,8 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
   }
 }
 
-// Helper functions
-function defaultExtractArgs(req: any): any {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function defaultExtractArgs(req: any): PaywallArgs {
   return {
     ...((req.body as object) || {}),
     ...((req.params as object) || {}),
@@ -674,7 +671,8 @@ function defaultExtractArgs(req: any): any {
   }
 }
 
-function handleHttpError(error: any, reply: any) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function handleHttpError(error: unknown, reply: any) {
   if (error instanceof PaywallError) {
     const errorResponse = {
       success: false,
@@ -716,7 +714,7 @@ function handleHttpError(error: any, reply: any) {
 }
 
 // Next.js helper functions
-async function defaultExtractNextArgs(request: Request, context?: any): Promise<any> {
+async function defaultExtractNextArgs(request: Request, context?: Record<string, unknown>): Promise<Record<string, unknown>> {
   const url = new URL(request.url)
   const query = Object.fromEntries(url.searchParams.entries())
 
@@ -733,19 +731,18 @@ async function defaultExtractNextArgs(request: Request, context?: any): Promise<
     // If parsing fails, continue with empty body
   }
 
-  // Handle route parameters if provided
-  let routeParams = {}
+  let routeParams: Record<string, unknown> = {}
   if (context?.params) {
-    if (typeof context.params === 'object' && 'then' in context.params) {
-      // Handle Promise<params> case (Next.js 13+ app router)
-      routeParams = await context.params
+    const params = context.params
+    if (typeof params === 'object' && params !== null && 'then' in params) {
+      routeParams = (await (params as Promise<Record<string, unknown>>)) || {}
     } else {
-      routeParams = context.params
+      routeParams = (params as Record<string, unknown>) || {}
     }
   }
 
   return {
-    ...body,
+    ...(body as Record<string, unknown>),
     ...query,
     ...routeParams,
   }
@@ -787,7 +784,7 @@ export function ensureCustomerRef(customerRef: string): string {
   return customerRef
 }
 
-function handleNextError(error: any): Response {
+function handleNextError(error: unknown): Response {
   if (error instanceof PaywallError) {
     return new Response(
       JSON.stringify({
