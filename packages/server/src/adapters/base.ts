@@ -6,7 +6,7 @@
  */
 
 import type { SolvaPayPaywall } from '../paywall'
-import type { PaywallMetadata } from '../types'
+import type { PaywallArgs, PaywallMetadata } from '../types'
 
 /**
  * Base adapter interface that all framework adapters implement

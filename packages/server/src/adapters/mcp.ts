@@ -32,7 +32,8 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
     }
 
     // Extract from args.auth.customer_ref
-    const customerRef = args?.auth?.customer_ref || 'anonymous'
+    const auth = args?.auth as { customer_ref?: string } | undefined
+    const customerRef = auth?.customer_ref || 'anonymous'
     return AdapterUtils.ensureCustomerRef(customerRef)
   }
 
