@@ -29,7 +29,7 @@ A dropdown will appear with the following inputs:
 │ │ 1.0.0-preview.9                                  │       │
 │ └──────────────────────────────────────────────────┘       │
 │                                                              │
-│ ☐ Dry run (show what would be tagged without actually       │
+│ [ ] Dry run (show what would be tagged without actually     │
 │   tagging)                                                   │
 │                                                              │
 │                            [ Run workflow ]                  │
@@ -46,8 +46,8 @@ A dropdown will appear with the following inputs:
 
 **Dry run** (Optional)
 
-- ☑ Check this box to preview what would be tagged **without making changes**
-- ☐ Leave unchecked to actually tag the version as latest
+- [x] Check this box to preview what would be tagged **without making changes**
+- [ ] Leave unchecked to actually tag the version as latest
 - Recommended: Run with dry run first!
 
 ### 5. Execute the Workflow
@@ -69,7 +69,7 @@ Click the **"Run workflow"** button at the bottom of the dropdown.
 **Inputs:**
 
 - Version: `1.0.0-preview.9`
-- Dry run: ☑ **Enabled**
+- Dry run: [x] **Enabled**
 
 **What happens:**
 
@@ -106,7 +106,7 @@ Checking which versions exist on npm...
 **Inputs:**
 
 - Version: `1.0.0-preview.9`
-- Dry run: ☐ **Disabled**
+- Dry run: [ ] **Disabled**
 
 **What happens:**
 

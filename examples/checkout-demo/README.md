@@ -264,7 +264,7 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
     return (
       <div>
         {activeSubs.length > 0
-          ? activeSubs.map(sub => <span>✓ {sub.planName}</span>)
+          ? activeSubs.map(sub => <span>[Active] {sub.planName}</span>)
           : <span>Free Plan</span>
         }
       </div>

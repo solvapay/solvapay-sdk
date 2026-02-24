@@ -590,11 +590,11 @@ The test suite (`api.test.ts`) verifies:
 ### Example Test Output
 
 ```
-✓ Express Basic API - Paywall Tests (8 tests)
-  ✓ Unprotected Routes
-  ✓ Paywall Free Tier
-  ✓ Paywall Error Handling
-  ✓ Paywall Isolation
+[PASS] Express Basic API - Paywall Tests (8 tests)
+  [PASS] Unprotected Routes
+  [PASS] Paywall Free Tier
+  [PASS] Paywall Error Handling
+  [PASS] Paywall Isolation
 ```
 
 ### SDK Integration Tests
