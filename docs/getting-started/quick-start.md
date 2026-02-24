@@ -1,6 +1,8 @@
 # Quick Start
 
 Get up and running with SolvaPay SDK in minutes. These examples are copy-paste ready and work out of the box.
+Create your product in the SolvaPay UI first, then use its `productRef` in the snippets below.
+Products are available for SDK integration by default and active in SolvaPay MCP distribution.
 
 ## Table of Contents
 
@@ -26,9 +28,9 @@ const solvaPay = createSolvaPay({
   // apiKey: process.env.SOLVAPAY_SECRET_KEY // Optional for production
 })
 
-// Create payable handler for your agent
+// Create payable handler for your product
 const payable = solvaPay.payable({
-  agent: 'agt_YOUR_AGENT', // Your agent reference from SolvaPay dashboard
+  product: 'prd_YOUR_PRODUCT', // Your product reference from SolvaPay dashboard
   plan: 'pln_YOUR_PLAN', // Your plan reference
 })
 
@@ -82,13 +84,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json()
+  const { planRef, productRef } = await request.json()
 
-  if (!planRef || !agentRef) {
+  if (!planRef || !productRef) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await createPaymentIntent(request, { planRef, agentRef })
+  const result = await createPaymentIntent(request, { planRef, productRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -136,7 +138,7 @@ export default function CheckoutPage() {
       <h1>Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_YOUR_PLAN"
-        agentRef="agt_YOUR_AGENT"
+        productRef="prd_YOUR_PRODUCT"
         onSuccess={() => {
           console.log('Payment successful!')
           router.push('/dashboard')
@@ -167,7 +169,7 @@ const solvaPay = createSolvaPay({
 
 // Create payable handler
 const payable = solvaPay.payable({
-  agent: 'agt_YOUR_AGENT',
+  product: 'prd_YOUR_PRODUCT',
 })
 
 // Your tool implementation
@@ -277,7 +279,7 @@ function Checkout() {
       <h1>Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_YOUR_PLAN"
-        agentRef="agt_YOUR_AGENT"
+        productRef="prd_YOUR_PRODUCT"
         onSuccess={() => {
           window.location.href = '/dashboard'
         }}
@@ -289,6 +291,6 @@ function Checkout() {
 
 ## Next Steps
 
-- [Core Concepts](./core-concepts.md) - Understand agents, plans, and the paywall flow
+- [Core Concepts](./core-concepts.md) - Understand products, plans, and the paywall flow
 - [Framework Guides](../guides/express.md) - Detailed integration guides for your framework
 - [Architecture Guide](../guides/architecture.md) - Detailed technical architecture

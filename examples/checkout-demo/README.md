@@ -49,7 +49,7 @@ Before running this demo, you need:
 1. **SolvaPay Account**
    - Sign up at https://solvapay.com
    - Get your secret API key from the dashboard
-   - Create at least one agent and plan
+   - Create at least one product and plan
 
 2. **Supabase Account** (for authentication)
    - Sign up at https://supabase.com
@@ -83,7 +83,7 @@ cp env.example .env.local
 
 # Edit .env.local with your SolvaPay and Supabase credentials
 # Required: SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
-# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_AGENT_REF
+# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_PRODUCT_REF
 ```
 
 ## Running the Demo
@@ -133,7 +133,7 @@ import { SolvaPayProvider } from '@solvapay/react'
   createPayment={async ({ planRef, customerRef }) => {
     const res = await fetch('/api/create-payment-intent', {
       method: 'POST',
-      body: JSON.stringify({ planRef, customerRef, agentRef }),
+      body: JSON.stringify({ planRef, customerRef, productRef }),
     })
     return res.json()
   }}
@@ -219,7 +219,7 @@ const handleCreatePayment = async ({ planRef }) => {
       'Content-Type': 'application/json',
       ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
     },
-    body: JSON.stringify({ planRef, agentRef }),
+    body: JSON.stringify({ planRef, productRef }),
   })
   return res.json()
 }
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { planRef, agentRef } = await request.json()
+  const { planRef, productRef } = await request.json()
 
   const solvapay = createSolvaPay({
     apiKey: process.env.SOLVAPAY_SECRET_KEY!,
@@ -336,7 +336,7 @@ export async function POST(request: NextRequest) {
   await solvapay.ensureCustomer(userId)
 
   const paymentIntent = await solvapay.createPaymentIntent({
-    agentRef,
+    productRef,
     planRef,
     customerRef: userId,
   })
@@ -464,7 +464,7 @@ This demo uses Supabase for authentication with Next.js middleware as the defaul
 | ------------------------------- | --------------------------------------------- | -------- |
 | `SOLVAPAY_SECRET_KEY`           | Your SolvaPay secret key                      | Yes      |
 | `SOLVAPAY_API_BASE_URL`         | Backend URL (defaults to prod)                | No       |
-| `NEXT_PUBLIC_AGENT_REF`         | Agent reference                               | No       |
+| `NEXT_PUBLIC_PRODUCT_REF`       | Product reference                             | No       |
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                          | Yes      |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key                      | Yes      |
 | `SUPABASE_JWT_SECRET`           | Supabase JWT secret (for server verification) | Yes      |
@@ -562,7 +562,7 @@ const handleCreatePayment = async ({ planRef, customerRef }) => {
   try {
     const res = await fetch('/api/create-payment-intent', {
       method: 'POST',
-      body: JSON.stringify({ planRef, customerRef, agentRef }),
+      body: JSON.stringify({ planRef, customerRef, productRef }),
     })
 
     if (!res.ok) {
@@ -645,7 +645,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 1. Check your SolvaPay API key is valid in the dashboard
 2. Verify the backend URL is correct (`SOLVAPAY_API_BASE_URL`)
 3. Check network tab for API errors and status codes
-4. Verify agent and plan references match your dashboard
+4. Verify product and plan references match your dashboard
 5. Check server logs for detailed error messages
 6. Ensure API route is properly handling authentication
 

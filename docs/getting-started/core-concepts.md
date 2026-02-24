@@ -4,7 +4,7 @@ Understanding the key concepts in SolvaPay SDK will help you build effective mon
 
 ## Table of Contents
 
-- [Agents and Plans](#agents-and-plans)
+- [Products and Plans](#products-and-plans)
 - [Customer References](#customer-references)
 - [Paywall Protection Flow](#paywall-protection-flow)
 - [Purchase Lifecycle](#purchase-lifecycle)
@@ -12,22 +12,23 @@ Understanding the key concepts in SolvaPay SDK will help you build effective mon
 - [Usage Tracking](#usage-tracking)
 - [Next Steps](#next-steps)
 
-## Agents and Plans
+## Products and Plans
 
-### Agents
+### Products
 
-An **Agent** represents your API, service, or application that you want to monetize. Each agent has:
+A **Product** represents your API, service, or application that you want to monetize. Each product has:
 
-- **Agent Reference** (`agt_...`) - Unique identifier for your agent
+- **Product Reference** (`prd_...`) - Unique identifier for your product
 - **Name** - Human-readable name
-- **Description** - What the agent does
+- **Description** - What the product does
 
-Agents are created in the SolvaPay dashboard and represent the service you're protecting.
+Products are created in the SolvaPay dashboard and represent the service you're protecting. New
+products are available for SDK integration by default and are active in SolvaPay MCP distribution.
 
 ```typescript
-// All endpoints for this agent share the same paywall rules
+// All endpoints for this product share the same paywall rules
 const payable = solvaPay.payable({
-  agent: 'agt_myapi', // Your agent reference
+  product: 'prd_myapi', // Your product reference
 })
 ```
 
@@ -41,21 +42,21 @@ A **Plan** represents a purchase tier or pricing model. Plans define:
 - **Usage Limits** - What's included (e.g., 1000 API calls/month)
 - **Features** - What features are available
 
-Plans are created in the SolvaPay dashboard and can be associated with agents.
+Plans are created in the SolvaPay dashboard and can be associated with products.
 
 ```typescript
 // Protect endpoints with a specific plan requirement
 const payable = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium', // Users need this plan to access
 })
 ```
 
-### Agent-Plan Relationship
+### Product-Plan Relationship
 
-- **One agent can have multiple plans** - Different tiers (Free, Pro, Enterprise)
-- **Plans can be shared across agents** - Reuse plans for multiple services
-- **Paywall checks** - Verify user has the required plan for the agent
+- **One product can have multiple plans** - Different tiers (Free, Pro, Enterprise)
+- **Plans can be shared across products** - Reuse plans for multiple services
+- **Paywall checks** - Verify user has the required plan for the product
 
 ## Customer References
 
@@ -200,7 +201,7 @@ await solvaPay.cancelRenewal({
 
 ### Free Tier
 
-All agents support a **free tier** with limited usage:
+All products support a **free tier** with limited usage:
 
 - **Free Tier Limits** - Set in SolvaPay dashboard (e.g., 100 calls/month)
 - **No Purchase Required** - Free tier works without payment
@@ -254,7 +255,7 @@ SolvaPay automatically tracks usage when you use `payable()`:
 
 - **Per Request** - Each protected request is tracked
 - **Per Customer** - Usage is tracked per customer reference
-- **Per Agent** - Usage is tracked per agent
+- **Per Product** - Usage is tracked per product
 - **Per Plan** - Usage limits are enforced per plan
 
 ### Manual Usage Tracking
@@ -265,7 +266,7 @@ You can also track usage manually:
 // Track custom usage
 await solvaPay.trackUsage({
   customerRef: 'user_123',
-  agentRef: 'agt_myapi',
+  productRef: 'prd_myapi',
   amount: 1, // Usage amount
   metadata: {
     /* custom data */

@@ -124,7 +124,7 @@ describe('Task Creation', () => {
 
     solvaPay = createSolvaPay({ apiClient: stubClient })
     payable = solvaPay.payable({
-      agent: 'agt_test',
+      product: 'prd_test',
       plan: 'pln_test',
     })
   })
@@ -178,7 +178,7 @@ describe('API Integration', () => {
 
     const stubClient = createStubClient({ freeTierLimit: 3 })
     const solvaPay = createSolvaPay({ apiClient: stubClient })
-    const payable = solvaPay.payable({ agent: 'agt_test', plan: 'pln_test' })
+    const payable = solvaPay.payable({ product: 'prd_test', plan: 'pln_test' })
 
     app.post(
       '/api/tasks',
@@ -230,7 +230,7 @@ describe('API Integration', () => {
 it('should track free tier usage per customer', async () => {
   const stubClient = createStubClient({ freeTierLimit: 3 })
   const solvaPay = createSolvaPay({ apiClient: stubClient })
-  const payable = solvaPay.payable({ agent: 'agt_test', plan: 'pln_test' })
+  const payable = solvaPay.payable({ product: 'prd_test', plan: 'pln_test' })
 
   const handler = payable.http(async () => ({ success: true }))
   const req = { body: {}, headers: {} }
@@ -271,7 +271,7 @@ it('should create customers automatically', async () => {
 it('should throw PaywallError with structured content', async () => {
   const stubClient = createStubClient({ freeTierLimit: 1 })
   const solvaPay = createSolvaPay({ apiClient: stubClient })
-  const payable = solvaPay.payable({ agent: 'agt_test', plan: 'pln_test' })
+  const payable = solvaPay.payable({ product: 'prd_test', plan: 'pln_test' })
 
   const handler = payable.http(async () => ({ success: true }))
   const req = { body: {}, headers: { 'x-customer-ref': 'user_1' } }
@@ -287,7 +287,7 @@ it('should throw PaywallError with structured content', async () => {
   } catch (error) {
     expect(error).toBeInstanceOf(PaywallError)
     expect(error.structuredContent.checkoutUrl).toBeDefined()
-    expect(error.structuredContent.agent).toBe('agt_test')
+    expect(error.structuredContent.product).toBe('prd_test')
   }
 })
 ```
@@ -327,7 +327,7 @@ describe('Paywall Protection', () => {
 
     solvaPay = createSolvaPay({ apiClient: stubClient })
     payable = solvaPay.payable({
-      agent: 'agt_test',
+      product: 'prd_test',
       plan: 'pln_test',
     })
   })
@@ -364,7 +364,7 @@ describe('Paywall Protection', () => {
     it('should include checkout URL in PaywallError', async () => {
       const stubClient = createStubClient({ freeTierLimit: 1 })
       const solvaPay = createSolvaPay({ apiClient: stubClient })
-      const payable = solvaPay.payable({ agent: 'agt_test', plan: 'pln_test' })
+      const payable = solvaPay.payable({ product: 'prd_test', plan: 'pln_test' })
 
       const handler = payable.http(async () => ({ success: true }))
       const req = { body: {}, headers: { 'x-customer-ref': 'user_3' } }
@@ -378,7 +378,7 @@ describe('Paywall Protection', () => {
       } catch (error) {
         if (error instanceof PaywallError) {
           expect(error.structuredContent.checkoutUrl).toBeDefined()
-          expect(error.structuredContent.agent).toBe('agt_test')
+          expect(error.structuredContent.product).toBe('prd_test')
         }
       }
     })

@@ -62,7 +62,7 @@ import { Badge } from './components/ui/Badge';
 
 export default function HomePage() {
   const router = useRouter();
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
+  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF;
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,8 +93,8 @@ export default function HomePage() {
 
   // Handle redirect to hosted checkout page
   const handleViewPlans = useCallback(async (planRef?: string) => {
-    if (!agentRef) {
-      setError('Agent reference is not configured');
+    if (!productRef) {
+      setError('Product reference is not configured');
       return;
     }
 
@@ -112,8 +112,8 @@ export default function HomePage() {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      const requestBody: { agentRef: string; planRef?: string } = {
-        agentRef,
+      const requestBody: { productRef: string; planRef?: string } = {
+        productRef,
       };
 
       if (planRef) {
@@ -145,7 +145,7 @@ export default function HomePage() {
       setError(err instanceof Error ? err.message : 'Failed to redirect to checkout');
       setIsRedirecting(false);
     }
-  }, [agentRef]);
+  }, [productRef]);
 
   // Handle redirect to hosted customer management page
   const handleManagePurchase = useCallback(async () => {

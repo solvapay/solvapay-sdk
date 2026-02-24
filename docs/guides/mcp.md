@@ -1,6 +1,8 @@
 # MCP Server Integration Guide
 
 This guide shows you how to integrate SolvaPay SDK with Model Context Protocol (MCP) servers to protect MCP tools with paywall protection and purchase management.
+If you want SolvaPay to host MCP auth and billing for you, Hosted MCP configuration is optional and
+configured on the product in the SolvaPay UI.
 
 ## Table of Contents
 
@@ -39,9 +41,9 @@ const solvaPay = createSolvaPay({
   apiKey: process.env.SOLVAPAY_SECRET_KEY,
 })
 
-// Create payable handler for your agent
+// Create payable handler for your product
 const payable = solvaPay.payable({
-  agent: 'agt_YOUR_AGENT_ID',
+  product: 'prd_YOUR_PRODUCT_ID',
   plan: 'pln_YOUR_PLAN_ID', // Optional: can be set per tool
 })
 ```
@@ -149,7 +151,7 @@ If all tools use the same plan, create one `payable` handler:
 
 ```typescript
 const payable = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium',
 })
 
@@ -184,12 +186,12 @@ Create multiple `payable` handlers for different plans:
 
 ```typescript
 const freeTier = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_free',
 })
 
 const premiumTier = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium',
 })
 
@@ -330,7 +332,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               error: 'Payment required',
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
-              agent: error.structuredContent.agent,
+              product: error.structuredContent.product,
             }),
           },
         ],
@@ -366,7 +368,7 @@ const solvaPay = createSolvaPay({
 
 // Create payable handler
 const payable = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium',
 })
 
@@ -587,7 +589,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               error: 'Payment required',
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
-              agent: error.structuredContent.agent,
+              product: error.structuredContent.product,
             }),
           },
         ],

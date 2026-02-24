@@ -203,14 +203,14 @@ const solvaPay = createSolvaPay({ apiClient })
 Create a payable handler that will protect your endpoints:
 
 ```typescript
-// Create payable handler with agent and plan configuration
+// Create payable handler with product and plan configuration
 const payable = solvaPay.payable({
-  agent: 'agt_NO8WYSX5', // Your agent reference
+  product: 'prd_NO8WYSX5', // Your product reference
   plan: 'pln_MUKDWQZZ', // Your plan reference
 })
 ```
 
-**Note**: The agent and plan references should match what you've configured in your SolvaPay dashboard.
+**Note**: The product and plan references should match what you've configured in your SolvaPay dashboard.
 
 ### Step 3: Protect Endpoints
 
@@ -284,7 +284,7 @@ The adapter automatically handles errors:
 {
   "success": false,
   "error": "Payment required",
-  "agent": "agt_NO8WYSX5",
+  "product": "prd_NO8WYSX5",
   "checkoutUrl": "https://checkout.solvapay.com/...",
   "message": "Plan purchase required. Remaining: 0"
 }
@@ -325,11 +325,11 @@ Each endpoint can use the same plan or different plans:
 
 ```typescript
 // Same plan for all endpoints
-const payable = solvaPay.payable({ agent: 'my-agent', plan: 'my-plan' })
+const payable = solvaPay.payable({ product: 'my-product', plan: 'my-plan' })
 
 // Different plans per endpoint
-const createPayable = solvaPay.payable({ agent: 'my-agent', plan: 'create-plan' })
-const readPayable = solvaPay.payable({ agent: 'my-agent', plan: 'read-plan' })
+const createPayable = solvaPay.payable({ product: 'my-product', plan: 'create-plan' })
+const readPayable = solvaPay.payable({ product: 'my-product', plan: 'read-plan' })
 
 app.post('/tasks', createPayable.http(createTask))
 app.get('/tasks', readPayable.http(listTasks))
@@ -354,7 +354,7 @@ Returned when user exceeds their plan limits:
 {
   "success": false,
   "error": "Payment required",
-  "agent": "express-tasks-api",
+  "product": "express-tasks-api",
   "checkoutUrl": "https://checkout.solvapay.com/...",
   "message": "Plan purchase required. Remaining: 0"
 }
@@ -517,7 +517,7 @@ Then restart the example server.
 
 **Solution**:
 
-1. Check that agent and plan references are correct
+1. Check that product and plan references are correct
 2. Verify stub client configuration
 3. In production, ensure API key is valid
 4. Check network tab for API errors

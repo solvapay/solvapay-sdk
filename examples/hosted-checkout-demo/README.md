@@ -56,7 +56,7 @@ Before running this demo, you need:
 1. **SolvaPay Account**
    - Sign up at https://solvapay.com
    - Get your secret API key from the dashboard
-   - Create at least one agent and plan
+   - Create at least one product and plan
 
 2. **Supabase Account** (for authentication)
    - Sign up at https://supabase.com
@@ -90,7 +90,7 @@ cp env.example .env.local
 
 # Edit .env.local with your SolvaPay and Supabase credentials
 # Required: SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
-# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_AGENT_REF
+# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_PRODUCT_REF
 ```
 
 ## Running the Demo
@@ -194,7 +194,7 @@ const handleViewPlans = async () => {
       'Content-Type': 'application/json',
       ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
     },
-    body: JSON.stringify({ agentRef }),
+    body: JSON.stringify({ productRef }),
   })
   const { checkoutUrl } = await res.json()
   window.location.href = checkoutUrl // Redirect to hosted checkout
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
   // Get userId from middleware
   const userId = requireUserId(request)
 
-  const { agentRef, planRef } = await request.json()
+  const { productRef, planRef } = await request.json()
 
   const solvaPay = createSolvaPay()
 
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       Authorization: `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`,
     },
     body: JSON.stringify({
-      agentRef,
+      productRef,
       customerRef,
       planRef, // Optional
     }),
@@ -294,7 +294,7 @@ const handleViewPlans = async () => {
         'Content-Type': 'application/json',
         ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       },
-      body: JSON.stringify({ agentRef }),
+      body: JSON.stringify({ productRef }),
     })
 
     const { checkoutUrl } = await response.json()
@@ -472,7 +472,7 @@ This demo uses Supabase for authentication:
 | ------------------------------- | --------------------------------------------- | -------- |
 | `SOLVAPAY_SECRET_KEY`           | Your SolvaPay secret key                      | Yes      |
 | `SOLVAPAY_API_BASE_URL`         | Backend URL (defaults to prod)                | No       |
-| `NEXT_PUBLIC_AGENT_REF`         | Agent reference                               | No       |
+| `NEXT_PUBLIC_PRODUCT_REF`       | Product reference                             | No       |
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                          | Yes      |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key                      | Yes      |
 | `SUPABASE_JWT_SECRET`           | Supabase JWT secret (for server verification) | Yes      |
@@ -484,7 +484,7 @@ This demo expects the following backend endpoints to be implemented:
 ### Create Checkout Token
 
 - **Endpoint**: `POST /api/create-checkout-token`
-- **Request**: `{ agentRef: string, customerRef: string, planRef?: string }`
+- **Request**: `{ productRef: string, customerRef: string, planRef?: string }`
 - **Response**: `{ token: string }`
 
 ### Create Manage Customer Token

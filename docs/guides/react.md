@@ -164,7 +164,7 @@ function CheckoutPage() {
   return (
     <PaymentForm
       planRef="pln_premium"
-      agentRef="agt_myapi"
+      productRef="prd_myapi"
       onSuccess={() => {
         console.log('Payment successful!')
         // Redirect or show success message
@@ -180,7 +180,7 @@ function CheckoutPage() {
 #### PaymentForm Props
 
 - `planRef` (required) - Plan reference to subscribe to
-- `agentRef` (optional) - Agent reference for usage tracking
+- `productRef` (optional) - Product reference for usage tracking
 - `onSuccess` - Callback when payment succeeds
 - `onError` - Callback when payment fails
 - `returnUrl` - Optional return URL after payment
@@ -198,11 +198,11 @@ import { PlanSelector } from '@solvapay/react'
 function PlanSelectionPage() {
   return (
     <PlanSelector
-      fetcher={async (agentRef) => {
-        const res = await fetch(`/api/plans?agentRef=${agentRef}`)
+      fetcher={async (productRef) => {
+        const res = await fetch(`/api/plans?productRef=${productRef}`)
         return res.json()
       }}
-      agentRef="agt_myapi"
+      productRef="prd_myapi"
     >
       {({ plans, loading, error, selectedPlan, selectPlan }) => {
         if (loading) return <div>Loading plans...</div>
@@ -322,7 +322,7 @@ import { useCheckout } from '@solvapay/react'
 function CustomCheckout() {
   const { startCheckout, loading, error, stripePromise, clientSecret, reset } = useCheckout(
     'pln_premium',
-    'agt_myapi',
+    'prd_myapi',
   )
 
   const handleCheckout = async () => {
@@ -376,11 +376,11 @@ import { usePlans } from '@solvapay/react'
 
 function PlansPage() {
   const { plans, loading, error } = usePlans({
-    fetcher: async (agentRef) => {
-      const res = await fetch(`/api/plans?agentRef=${agentRef}`)
+    fetcher: async (productRef) => {
+      const res = await fetch(`/api/plans?productRef=${productRef}`)
       return res.json()
     },
-    agentRef: 'agt_myapi',
+    productRef: 'prd_myapi',
   })
 
   if (loading) {
@@ -440,7 +440,7 @@ function CheckoutPage() {
       <h1>Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_premium"
-        agentRef="agt_myapi"
+        productRef="prd_myapi"
         onSuccess={() => {
           router.push('/dashboard')
         }}
@@ -462,7 +462,7 @@ import { useCheckout, usePurchase } from '@solvapay/react'
 import { loadStripe } from '@stripe/stripe-js'
 
 function CustomCheckoutPage() {
-  const { startCheckout, loading, stripePromise, clientSecret, reset } = useCheckout('pln_premium', 'agt_myapi')
+  const { startCheckout, loading, stripePromise, clientSecret, reset } = useCheckout('pln_premium', 'prd_myapi')
   const { refetch } = usePurchase()
 
   const handleCheckout = async () => {
@@ -628,7 +628,7 @@ export function Checkout() {
       <h1>Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_premium"
-        agentRef="agt_myapi"
+        productRef="prd_myapi"
         onSuccess={() => {
           navigate('/dashboard')
         }}
@@ -648,7 +648,7 @@ SolvaPay components are headless and don't include default styles. Style them to
 ```tsx
 <PaymentForm
   planRef="pln_premium"
-  agentRef="agt_myapi"
+  productRef="prd_myapi"
   className="my-custom-form"
   buttonClassName="my-custom-button"
 />

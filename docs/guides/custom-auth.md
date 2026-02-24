@@ -129,7 +129,7 @@ const authAdapter: AuthAdapter = {
 }
 
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
-const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
+const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' })
 
 // Use with Express
 app.post(

@@ -42,7 +42,7 @@ function CheckoutPage() {
   return (
     <PaymentForm
       planRef="pln_premium"
-      agentRef="agt_myapi"
+      productRef="prd_myapi"
       onSuccess={() => router.push('/dashboard')}
     />
   )
@@ -72,7 +72,7 @@ Protect your REST or GraphQL APIs with usage limits and purchase checks:
 ```typescript
 const solvaPay = createSolvaPay()
 const payable = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium',
 })
 
@@ -88,12 +88,12 @@ app.post(
 
 ### AI Agents
 
-Monetize AI agent interactions with pay-per-use or purchase models:
+Monetize AI app interactions with pay-per-use or purchase models:
 
 ```typescript
-// Protect agent endpoints
+// Protect app endpoints
 app.post(
-  '/agent/chat',
+  '/app/chat',
   payable.http(async req => {
     const response = await aiAgent.chat(req.body.message)
     return { response }
@@ -110,7 +110,7 @@ import { createSolvaPay } from '@solvapay/server'
 
 const solvaPay = createSolvaPay()
 const payable = solvaPay.payable({
-  agent: 'agt_mcptools',
+  product: 'prd_mcptools',
   plan: 'pln_pro',
 })
 
@@ -134,7 +134,7 @@ SolvaPay SDK is organized as a monorepo with 6 published packages:
 
 ### How It Works
 
-1. **Agent & Plan Setup**: Define your agent (API/service) and plans (purchase tiers) in the SolvaPay dashboard
+1. **Product & Plan Setup**: Create your product in the SolvaPay UI, then attach plans
 2. **Protection**: Use `payable()` to wrap your business logic with paywall protection
 3. **Customer Management**: Customers are automatically created and synced with your authentication system
 4. **Payment Processing**: Integrate Stripe for payment processing (handled by SolvaPay backend)

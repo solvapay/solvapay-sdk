@@ -23,7 +23,7 @@ const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
 
 // Customer lookups are automatically cached for 60 seconds
 // Multiple concurrent requests share the same promise
-const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
+const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' })
 ```
 
 ### Purchase Caching (Next.js)
@@ -224,7 +224,7 @@ async function measurePerformance() {
 
   await solvaPay.checkLimits({
     customerRef: 'user_123',
-    agentRef: 'agt_myapi',
+    productRef: 'prd_myapi',
   })
 
   const latency = Date.now() - start

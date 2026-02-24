@@ -11,7 +11,7 @@ Before implementing the SolvaPay purchase integration, you need to set up your a
    - Go to Settings → API Keys
    - Create a new secret key
    - Copy the secret key (starts with `sp_sandbox_` or `sp_live_`)
-5. Copy your **Agent Reference** (starts with `agt_`) from the dashboard
+5. Copy your **Product Reference** (starts with `prd_`) from the dashboard
 
 ## Step 2: Create Supabase Account
 
@@ -33,7 +33,7 @@ Open `.env.local` in your project root and update it with your actual credential
 # SolvaPay Configuration
 SOLVAPAY_SECRET_KEY=sp_sandbox_your_secret_key_here
 SOLVAPAY_API_BASE_URL=https://api.solvapay.com
-NEXT_PUBLIC_AGENT_REF=agt_your_agent_ref
+NEXT_PUBLIC_PRODUCT_REF=prd_your_product_ref
 
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co

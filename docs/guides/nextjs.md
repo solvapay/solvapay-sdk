@@ -31,7 +31,7 @@ Create a `.env.local` file:
 
 ```env
 SOLVAPAY_SECRET_KEY=sk_...
-NEXT_PUBLIC_SOLVAPAY_AGENT=agt_YOUR_AGENT_ID
+NEXT_PUBLIC_SOLVAPAY_PRODUCT=prd_YOUR_PRODUCT_ID
 ```
 
 ### 2. Initialize SolvaPay Client
@@ -59,7 +59,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { solvaPay } from '@/lib/solvapay'
 
 const payable = solvaPay.payable({
-  agent: process.env.NEXT_PUBLIC_SOLVAPAY_AGENT!,
+  product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!,
   plan: 'pln_premium',
 })
 
@@ -119,13 +119,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json()
+  const { planRef, productRef } = await request.json()
 
-  if (!planRef || !agentRef) {
+  if (!planRef || !productRef) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await createPaymentIntent(request, { planRef, agentRef })
+  const result = await createPaymentIntent(request, { planRef, productRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -138,13 +138,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { processPayment } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { paymentIntentId, agentRef, planRef } = await request.json()
+  const { paymentIntentId, productRef, planRef } = await request.json()
 
-  if (!paymentIntentId || !agentRef) {
+  if (!paymentIntentId || !productRef) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await processPayment(request, { paymentIntentId, agentRef, planRef })
+  const result = await processPayment(request, { paymentIntentId, productRef, planRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -157,9 +157,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createCheckoutSession } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json()
+  const { planRef, productRef } = await request.json()
 
-  const result = await createCheckoutSession(request, { planRef, agentRef })
+  const result = await createCheckoutSession(request, { planRef, productRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -238,7 +238,7 @@ export default function CheckoutPage() {
   return (
     <PaymentForm
       planRef="pln_premium"
-      agentRef={process.env.NEXT_PUBLIC_SOLVAPAY_AGENT!}
+      productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!}
       onSuccess={() => {
         router.push('/dashboard');
       }}
@@ -374,13 +374,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json()
+  const { planRef, productRef } = await request.json()
 
-  if (!planRef || !agentRef) {
+  if (!planRef || !productRef) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await createPaymentIntent(request, { planRef, agentRef })
+  const result = await createPaymentIntent(request, { planRef, productRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -391,13 +391,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { processPayment } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { paymentIntentId, agentRef, planRef } = await request.json()
+  const { paymentIntentId, productRef, planRef } = await request.json()
 
-  if (!paymentIntentId || !agentRef) {
+  if (!paymentIntentId || !productRef) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await processPayment(request, { paymentIntentId, agentRef, planRef })
+  const result = await processPayment(request, { paymentIntentId, productRef, planRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -430,7 +430,7 @@ export default function CheckoutPage() {
       <h1>Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_premium"
-        agentRef={process.env.NEXT_PUBLIC_SOLVAPAY_AGENT!}
+      productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!}
         onSuccess={() => {
           router.push('/dashboard');
         }}
@@ -501,7 +501,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { solvaPay } from '@/lib/solvapay'
 
 const payable = solvaPay.payable({
-  agent: process.env.NEXT_PUBLIC_SOLVAPAY_AGENT!,
+  product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!,
   plan: 'pln_premium',
 })
 
@@ -532,7 +532,7 @@ export default function CheckoutPage() {
       <h1 className="text-3xl font-bold mb-8">Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_premium"
-        agentRef={process.env.NEXT_PUBLIC_SOLVAPAY_AGENT!}
+        productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!}
         onSuccess={() => router.push('/dashboard')}
       />
     </div>

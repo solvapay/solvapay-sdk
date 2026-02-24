@@ -42,9 +42,9 @@ const solvaPay = createSolvaPay({
   apiKey: process.env.SOLVAPAY_SECRET_KEY, // Optional: defaults to env var
 })
 
-// Create payable handler for your agent
+// Create payable handler for your product
 const payable = solvaPay.payable({
-  agent: 'agt_YOUR_AGENT_ID',
+  product: 'prd_YOUR_PRODUCT_ID',
   plan: 'pln_YOUR_PLAN_ID', // Optional: can be set per endpoint
 })
 ```
@@ -87,7 +87,7 @@ If all your endpoints use the same plan, create one `payable` handler:
 
 ```typescript
 const payable = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium',
 })
 
@@ -102,12 +102,12 @@ Create multiple `payable` handlers for different plans:
 
 ```typescript
 const freeTier = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_free',
 })
 
 const premiumTier = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium',
 })
 
@@ -266,7 +266,7 @@ async function handlePaywall(
         error: 'Payment required',
         message: error.message,
         checkoutUrl: error.structuredContent.checkoutUrl,
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
       })
     }
 
@@ -376,7 +376,7 @@ const solvaPay = createSolvaPay({
 
 // Create payable handlers
 const payable = solvaPay.payable({
-  agent: 'agt_myapi',
+  product: 'prd_myapi',
   plan: 'pln_premium',
 })
 
@@ -451,7 +451,7 @@ app.use((error: Error, req: Request, res: Response, next: express.NextFunction) 
       error: 'Payment required',
       message: error.message,
       checkoutUrl: error.structuredContent.checkoutUrl,
-      agent: error.structuredContent.agent,
+      product: error.structuredContent.product,
     })
   }
 

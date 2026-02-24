@@ -64,8 +64,8 @@ const solvaPay = createSolvaPay({
   apiKey: process.env.SOLVAPAY_SECRET_KEY!
 });
 
-// Create a payable with your agent configuration
-const payable = solvaPay.payable({ agent: 'my-agent' });
+// Create a payable with your product configuration
+const payable = solvaPay.payable({ product: 'my-product' });
 
 // Use the appropriate adapter for your context:
 
@@ -109,7 +109,7 @@ const auth = new SupabaseAuthAdapter({
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
 
 // Use with Next.js adapter
-export const POST = solvaPay.payable({ agent: 'my-api' }).next(
+export const POST = solvaPay.payable({ product: 'my-api' }).next(
   async args => {
     return { result: 'success' }
   },
@@ -222,7 +222,7 @@ Unit tests (`__tests__/paywall.test.ts`) use a mock API client and test:
 - Handler creation (HTTP, Next.js, MCP)
 - Error handling
 - Authentication flows
-- Agent resolution
+- Product resolution
 
 **No backend required** - runs fast and deterministically.
 

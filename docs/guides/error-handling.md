@@ -58,7 +58,7 @@ It includes structured content with checkout URLs and metadata:
 ```typescript
 interface PaywallStructuredContent {
   kind: 'payment_required'
-  agent: string
+  product: string
   checkoutUrl: string
   message: string
   plan?: string
@@ -110,7 +110,7 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
     return res.status(402).json({
       error: 'Payment required',
       checkoutUrl: error.structuredContent.checkoutUrl,
-      agent: error.structuredContent.agent,
+      product: error.structuredContent.product,
       message: error.structuredContent.message,
     })
   }
@@ -138,7 +138,7 @@ function paywallErrorHandler(
         type: 'paywall',
         message: error.message,
         checkoutUrl: error.structuredContent.checkoutUrl,
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
       },
     })
   }
@@ -236,7 +236,7 @@ export function handleApiError(error: unknown, request: NextRequest) {
       {
         error: 'Payment required',
         checkoutUrl: error.structuredContent.checkoutUrl,
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
         message: error.structuredContent.message,
       },
       { status: 402 },
@@ -278,7 +278,7 @@ function CheckoutPage() {
       {error && <div className="error-message">{error}</div>}
       <PaymentForm
         planRef="pln_premium"
-        agentRef="agt_myapi"
+        productRef="prd_myapi"
         onSuccess={() => {
           setError(null)
           // Handle success
@@ -300,7 +300,7 @@ import { useCheckout } from '@solvapay/react'
 function CustomCheckout() {
   const { startCheckout, error, loading } = useCheckout(
     'pln_premium',
-    'agt_myapi',
+    'prd_myapi',
   )
 
   const handleCheckout = async () => {
@@ -367,7 +367,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
               error: 'Payment required',
               message: error.message,
               checkoutUrl: error.structuredContent.checkoutUrl,
-              agent: error.structuredContent.agent,
+              product: error.structuredContent.product,
             }),
           },
         ],
@@ -508,7 +508,7 @@ const app = express()
 app.use(express.json())
 
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
-const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
+const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' })
 
 // Protected route
 app.post('/api/tasks', payable.http(createTask))
@@ -522,7 +522,7 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
         type: 'paywall',
         message: error.message,
         checkoutUrl: error.structuredContent.checkoutUrl,
-        agent: error.structuredContent.agent,
+        product: error.structuredContent.product,
       },
     })
   }
@@ -556,7 +556,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSolvaPay, PaywallError } from '@solvapay/server'
 
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
-const payable = solvaPay.payable({ agent: 'agt_myapi', plan: 'pln_premium' })
+const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' })
 
 async function createTask(req: NextRequest) {
   const body = await req.json()
@@ -576,7 +576,7 @@ export async function POST(request: NextRequest) {
             type: 'paywall',
             message: error.message,
             checkoutUrl: error.structuredContent.checkoutUrl,
-            agent: error.structuredContent.agent,
+            product: error.structuredContent.product,
           },
         },
         { status: 402 },

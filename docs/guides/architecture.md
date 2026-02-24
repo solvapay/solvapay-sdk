@@ -151,7 +151,7 @@ import { createSolvaPayClient, verifyWebhook, createSolvaPay } from '@solvapay/s
 
 // Unified API for paywall protection:
 const solvaPay = createSolvaPay({ apiKey: 'sk_...' })
-const payable = solvaPay.payable({ agent: 'my-api' })
+const payable = solvaPay.payable({ product: 'my-api' })
 
 // Use with different adapters:
 app.post('/endpoint', payable.http(handler)) // Express/Fastify

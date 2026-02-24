@@ -176,7 +176,7 @@ import { createSolvaPay } from '@solvapay/server'
 const solvaPay = createSolvaPay() // No API key needed
 
 const payable = solvaPay.payable({
-  agent: 'agt_test',
+  product: 'prd_test',
   plan: 'pln_test',
 })
 

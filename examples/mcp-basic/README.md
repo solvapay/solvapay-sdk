@@ -18,11 +18,12 @@ This example demonstrates how to integrate SolvaPay paywall functionality with a
 
 ## Features
 
-### Agent-Based Access Control
+### Product-Based Access Control
 
-- Uses `agent` to identify the service/tool suite
+- Uses `product` to identify the service/tool suite
 - Supports both free tier and paid plan access
 - Backend-configurable plans (no hardcoded pricing in SDK)
+- Hosted MCP configuration is optional and configured on the product in SolvaPay UI
 
 ### Persistent Free Tier Tracking
 
@@ -45,7 +46,7 @@ This example demonstrates how to integrate SolvaPay paywall functionality with a
 // Data stored in .demo-data/ directory
 .demo-data/
 ├── customers.json      // Customer data and credits
-└── free-tier-usage.json // Daily usage tracking per customer/agent/endpoint
+└── free-tier-usage.json // Daily usage tracking per customer/product/endpoint
 ```
 
 ### **Production Implementation (Required)**
@@ -243,13 +244,13 @@ const apiClient = createSolvaPayClient({
 Create a payable handler for MCP tools:
 
 ```typescript
-// Create payable handler with agent configuration
+// Create payable handler with product configuration
 const payable = solvaPay.payable({
-  agent: 'basic-crud', // Agent identifier
+  product: 'basic-crud', // Product identifier
 })
 ```
 
-**Note**: MCP servers typically use a single agent for all tools, but you can use different agents per tool if needed.
+**Note**: MCP servers typically use a single product for all tools, but you can use different products per tool if needed.
 
 ### Step 3: Define MCP Tools
 
@@ -349,7 +350,7 @@ The MCP adapter automatically handles errors:
     "message": "Payment required",
     "data": {
       "checkoutUrl": "https://checkout.solvapay.com/...",
-      "agent": "basic-crud",
+      "product": "basic-crud",
       "remaining": 0
     }
   }
@@ -365,22 +366,22 @@ The MCP adapter automatically handles errors:
 
 ## Configuration
 
-### Agent-Based Configuration
+### Product-Based Configuration
 
 ```typescript
 const paywallMetadata = {
-  agent: 'basic-crud', // Agent identifier
+  product: 'basic-crud', // Product identifier
 }
 ```
 
 ### Endpoint-Specific Metering
 
 ```typescript
-// Different endpoints can use different agents
+// Different endpoints can use different products
 const tools = [
-  { agent: 'list-api' }, // List operations
-  { agent: 'ai-analyzer' }, // AI analysis
-  { agent: 'premium-api' }, // Premium features
+  { product: 'list-api' }, // List operations
+  { product: 'ai-analyzer' }, // AI analysis
+  { product: 'premium-api' }, // Premium features
 ]
 ```
 
