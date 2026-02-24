@@ -140,26 +140,63 @@ export class SolvaPayPaywall {
     return async (args: TArgs): Promise<TResult> => {
       const startTime = Date.now()
       const requestId = this.generateRequestId()
+      const voucherToken = args.auth?.voucher_token
+
+      // Voucher-token auth path: resolve via encrypted token instead of customer ref
+      if (voucherToken && this.apiClient.resolveVoucher) {
+        try {
+          const resolved = await this.apiClient.resolveVoucher({
+            token: voucherToken,
+            productRef: product,
+          })
+
+          if (!resolved.allowed) {
+            throw new PaywallError(resolved.reason || 'Payment required', {
+              kind: 'payment_required',
+              product,
+              checkoutUrl: '',
+              message: resolved.reason || 'Voucher token rejected',
+            })
+          }
+
+          const result = await handler(args)
+
+          const latencyMs = Date.now() - startTime
+          const planRef = metadata.plan || toolName
+          await this.trackUsage(
+            resolved.accountRef,
+            product,
+            planRef,
+            toolName,
+            'success',
+            requestId,
+            latencyMs,
+          )
+
+          return result
+        } catch (error) {
+          if (error instanceof PaywallError) throw error
+          if (error instanceof Error) {
+            this.log(`❌ Voucher resolution error: ${error.message}`)
+          }
+          throw error
+        }
+      }
+
+      // Standard customer-ref auth path
       const inputCustomerRef = getCustomerRef
         ? getCustomerRef(args)
         : args.auth?.customer_ref || 'anonymous'
 
-      // Auto-create customer if needed and get the backend reference
-      // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
       let backendCustomerRef: string
 
-      // If the input ref is already a SolvaPay customer ID (starts with 'cus_'), 
-      // use it directly without attempting lookup/creation by externalRef.
       if (inputCustomerRef.startsWith('cus_')) {
         backendCustomerRef = inputCustomerRef
       } else {
-        // Auto-create customer if needed and get the backend reference
-        // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
         backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
       }
 
       try {
-        // Check limits with backend using the backend customer reference
         const planRef = metadata.plan || toolName
 
         const limitsCheck = await this.apiClient.checkLimits({
@@ -187,10 +224,8 @@ export class SolvaPayPaywall {
           })
         }
 
-        // Execute the protected handler
         const result = await handler(args)
 
-        // Track successful usage
         const latencyMs = Date.now() - startTime
         await this.trackUsage(
           backendCustomerRef,
@@ -204,7 +239,6 @@ export class SolvaPayPaywall {
 
         return result
       } catch (error) {
-        // Log error details for debugging, but format it clearly without full stack traces
         if (error instanceof Error) {
           const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error'
           this.log(`❌ Error in paywall [${errorType}]: ${error.message}`)
@@ -631,7 +665,8 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
         const args = await extractArgs(request, context)
         const customerRef = await getCustomerRef(request)
 
-        args.auth = { customer_ref: customerRef }
+        const voucherToken = request.headers.get('x-solvapay-voucher') || undefined
+        args.auth = { customer_ref: customerRef, voucher_token: voucherToken }
 
         const protectedHandler = await paywall.protect(
           handler,
@@ -663,11 +698,15 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function defaultExtractArgs(req: any): PaywallArgs {
+  const voucherToken = req.headers?.['x-solvapay-voucher']
   return {
     ...((req.body as object) || {}),
     ...((req.params as object) || {}),
     ...((req.query as object) || {}),
-    auth: { customer_ref: req.headers?.['x-customer-ref'] || req.auth?.customer_ref },
+    auth: {
+      customer_ref: req.headers?.['x-customer-ref'] || req.auth?.customer_ref,
+      voucher_token: voucherToken || undefined,
+    },
   }
 }
 

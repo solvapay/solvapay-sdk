@@ -54,10 +54,16 @@ export class NextAdapter implements Adapter<NextContext, Response> {
       }
     }
 
+    const headers: Record<string, string> = {}
+    request.headers.forEach((value, key) => {
+      headers[key] = value
+    })
+
     return {
       ...body,
       ...query,
       ...routeParams,
+      _headers: headers,
     }
   }
 

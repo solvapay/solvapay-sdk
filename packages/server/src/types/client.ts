@@ -169,6 +169,22 @@ export interface SolvaPayClient {
     planRef?: string
   }): Promise<ProcessPaymentResult>
 
+  // POST: /v1/sdk/vouchers/resolve
+  resolveVoucher?(params: {
+    token: string
+    productRef?: string
+    amount?: number
+  }): Promise<{
+    allowed: boolean
+    accountRef: string
+    voucherId: string
+    currency: string
+    balance: number
+    status?: string
+    reason?: string
+    spendLimit?: { amount: number; period: string; perRequest?: number }
+  }>
+
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
     params: components['schemas']['CreateCheckoutSessionRequest'],
@@ -178,4 +194,96 @@ export interface SolvaPayClient {
   createCustomerSession(
     params: components['schemas']['CreateCustomerSessionRequest'],
   ): Promise<components['schemas']['CreateCustomerSessionResponse']>
+
+  // --- Token system (x402 upto flow) ---
+
+  // POST: /v1/sdk/tokens/verify
+  verifyPayment?(params: {
+    accountRef: string
+    productRef: string
+    providerId: string
+    maxAmount: number
+    externalRunId?: string
+    ttlSeconds?: number
+    idempotencyKey?: string
+  }): Promise<{
+    lockId: string
+    lockReference: string
+    lockedAmount: number
+    lockedAmountUsd: number
+    availableBalance: number
+  }>
+
+  // POST: /v1/sdk/tokens/settle
+  settlePayment?(params: {
+    lockId: string
+    amount: number
+    description?: string
+    metadata?: Record<string, any>
+  }): Promise<{
+    settledAmount: number
+    settledAmountUsd: number
+    releasedAmount: number
+    newBalance: number
+  }>
+
+  // POST: /v1/sdk/tokens/release
+  releasePayment?(params: {
+    lockId: string
+    reason?: string
+  }): Promise<{
+    releasedAmount: number
+    newBalance: number
+  }>
+
+  // --- Voucher payment flow (two-phase) ---
+
+  // POST: /v1/sdk/vouchers/verify
+  verifyVoucherPayment?(params: {
+    token: string
+    maxAmount: number
+    productRef: string
+    providerId: string
+    ttlSeconds?: number
+  }): Promise<{
+    lockId: string
+    accountRef: string
+    voucherId: string
+    reservedAmount: number
+    remaining: number
+    currency: string
+    identity?: { fingerprint: string; publicKey: string }
+  }>
+
+  // POST: /v1/sdk/vouchers/settle
+  settleVoucherPayment?(params: {
+    lockId: string
+    amount: number
+    description?: string
+  }): Promise<{
+    settledAmount: number
+    remaining: number
+    providerCredited: number
+  }>
+
+  // POST: /v1/sdk/vouchers/release
+  releaseVoucherPayment?(params: {
+    lockId: string
+    reason?: string
+  }): Promise<{
+    releasedAmount: number
+    remaining: number
+  }>
+
+  // GET: /v1/sdk/tokens/wallet?accountRef=...
+  getTokenWallet?(accountRef: string): Promise<{
+    balance: number
+    balanceUsd: number
+    lockedAmount: number
+    availableBalance: number
+    availableBalanceUsd: number
+    lifetimeTopUp: number
+    lifetimeSpent: number
+    walletStatus: string
+  }>
 }

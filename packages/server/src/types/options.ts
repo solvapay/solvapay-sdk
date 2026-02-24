@@ -72,6 +72,29 @@ export interface PayableOptions {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getCustomerRef?: (context: any) => string | Promise<string>
+
+  /**
+   * Payment scheme:
+   * - 'limits' (default) — existing checkLimits/subscription flow
+   * - 'upto' — x402 token lock from wallet balance
+   * - 'voucher' — two-phase voucher token payment
+   */
+  scheme?: 'limits' | 'upto' | 'voucher'
+
+  /**
+   * Maximum tokens to lock per invocation (required when scheme is 'upto')
+   */
+  maxPrice?: number
+
+  /**
+   * Provider ID (required when scheme is 'upto')
+   */
+  providerId?: string
+
+  /**
+   * Lock TTL in seconds (default: 1800, used when scheme is 'upto')
+   */
+  ttlSeconds?: number
 }
 
 /**

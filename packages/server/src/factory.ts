@@ -518,6 +518,72 @@ export interface SolvaPay {
     customerUrl: string
   }>
 
+  // --- Token system (x402 upto flow) ---
+
+  /**
+   * Verify payment by locking tokens (x402 upto flow).
+   *
+   * Atomically reserves tokens from the consumer's wallet.
+   * Returns a lockId to settle or release later.
+   */
+  verifyPayment(params: {
+    accountRef: string
+    productRef: string
+    providerId: string
+    maxAmount: number
+    externalRunId?: string
+    ttlSeconds?: number
+    idempotencyKey?: string
+  }): Promise<{
+    lockId: string
+    lockReference: string
+    lockedAmount: number
+    lockedAmountUsd: number
+    availableBalance: number
+  }>
+
+  /**
+   * Settle a previously locked token reservation.
+   * Charges the actual amount and releases the remainder.
+   */
+  settlePayment(params: {
+    lockId: string
+    amount: number
+    description?: string
+    metadata?: Record<string, any>
+  }): Promise<{
+    settledAmount: number
+    settledAmountUsd: number
+    releasedAmount: number
+    newBalance: number
+  }>
+
+  /**
+   * Release a token lock without charging.
+   * Returns all locked tokens to available balance.
+   */
+  releasePayment(params: {
+    lockId: string
+    reason?: string
+  }): Promise<{
+    releasedAmount: number
+    newBalance: number
+  }>
+
+  /**
+   * Get the token wallet state for an account.
+   */
+  getTokenWallet(accountRef: string): Promise<{
+    balance: number
+    balanceUsd: number
+    lockedAmount: number
+    availableBalance: number
+    availableBalanceUsd: number
+    lifetimeTopUp: number
+    lifetimeSpent: number
+    walletStatus: string
+  }>
+
   /**
    * Direct access to the API client for advanced operations.
    *
@@ -661,6 +727,34 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.createCustomerSession(params)
     },
 
+    verifyPayment(params) {
+      if (!apiClient.verifyPayment) {
+        throw new SolvaPayError('verifyPayment is not available on this API client')
+      }
+      return apiClient.verifyPayment(params)
+    },
+
+    settlePayment(params) {
+      if (!apiClient.settlePayment) {
+        throw new SolvaPayError('settlePayment is not available on this API client')
+      }
+      return apiClient.settlePayment(params)
+    },
+
+    releasePayment(params) {
+      if (!apiClient.releasePayment) {
+        throw new SolvaPayError('releasePayment is not available on this API client')
+      }
+      return apiClient.releasePayment(params)
+    },
+
+    getTokenWallet(accountRef) {
+      if (!apiClient.getTokenWallet) {
+        throw new SolvaPayError('getTokenWallet is not available on this API client')
+      }
+      return apiClient.getTokenWallet(accountRef)
+    },
+
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
       // Resolve product name (support both productRef and product)
@@ -673,6 +767,169 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       const plan = options.planRef || options.plan || product
 
       const metadata = { product, plan }
+      const isUpto = options.scheme === 'upto'
+      const isVoucher = options.scheme === 'voucher'
+
+      // Wrap business logic with upto verify/settle/release
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function wrapWithUpto<T>(businessLogic: (args: any) => Promise<T>) {
+        if (!isUpto) return businessLogic
+
+        if (!apiClient.verifyPayment || !apiClient.settlePayment || !apiClient.releasePayment) {
+          throw new SolvaPayError('Token methods not available on API client for upto scheme')
+        }
+        if (!options.maxPrice) {
+          throw new SolvaPayError('maxPrice is required when scheme is "upto"')
+        }
+        if (!options.providerId) {
+          throw new SolvaPayError('providerId is required when scheme is "upto"')
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return async (args: any): Promise<T> => {
+          const accountRef =
+            args?.auth?.account_ref || args?.auth?.customer_ref || args?._accountRef
+          if (!accountRef) {
+            throw new SolvaPayError('account_ref is required in auth for upto scheme')
+          }
+
+          const verifyResult = await apiClient.verifyPayment!({
+            accountRef,
+            productRef: product,
+            providerId: options.providerId!,
+            maxAmount: options.maxPrice!,
+            ttlSeconds: options.ttlSeconds,
+          })
+
+          let settled = false
+          const settle = async (amount: number, settleDescription?: string) => {
+            if (settled) throw new SolvaPayError('Payment already settled')
+            settled = true
+            return apiClient.settlePayment!({
+              lockId: verifyResult.lockId,
+              amount,
+              description: settleDescription,
+            })
+          }
+
+          try {
+            const result = await businessLogic({ ...args, _lockId: verifyResult.lockId, settle })
+
+            if (!settled) {
+              await apiClient.releasePayment!({
+                lockId: verifyResult.lockId,
+                reason: 'handler_completed_without_settlement',
+              })
+            }
+
+            return result
+          } catch (err) {
+            if (!settled) {
+              try {
+                await apiClient.releasePayment!({
+                  lockId: verifyResult.lockId,
+                  reason: 'handler_error',
+                })
+              } catch {
+                // Best-effort release; TTL will catch it
+              }
+            }
+            throw err
+          }
+        }
+      }
+
+      // Wrap business logic with voucher verify/settle/release
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function wrapWithVoucher<T>(businessLogic: (args: any) => Promise<T>) {
+        if (!isVoucher) return businessLogic
+
+        if (
+          !apiClient.verifyVoucherPayment ||
+          !apiClient.settleVoucherPayment ||
+          !apiClient.releaseVoucherPayment
+        ) {
+          throw new SolvaPayError(
+            'Voucher payment methods not available on API client for voucher scheme',
+          )
+        }
+        if (!options.maxPrice) {
+          throw new SolvaPayError('maxPrice is required when scheme is "voucher"')
+        }
+        if (!options.providerId) {
+          throw new SolvaPayError('providerId is required when scheme is "voucher"')
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return async (args: any): Promise<T> => {
+          const voucherToken =
+            args?.auth?.voucher_token ||
+            args?._headers?.['x-solvapay-voucher']
+          if (!voucherToken) {
+            throw new SolvaPayError(
+              'voucher_token is required in auth for voucher scheme',
+            )
+          }
+
+          const verifyResult = await apiClient.verifyVoucherPayment!({
+            token: voucherToken,
+            maxAmount: options.maxPrice!,
+            productRef: product,
+            providerId: options.providerId!,
+            ttlSeconds: options.ttlSeconds,
+          })
+
+          let settled = false
+          const settle = async (amount: number, settleDescription?: string) => {
+            if (settled) throw new SolvaPayError('Payment already settled')
+            settled = true
+            return apiClient.settleVoucherPayment!({
+              lockId: verifyResult.lockId,
+              amount,
+              description: settleDescription,
+            })
+          }
+
+          try {
+            const result = await businessLogic({
+              ...args,
+              _lockId: verifyResult.lockId,
+              _voucherId: verifyResult.voucherId,
+              _accountRef: verifyResult.accountRef,
+              _identity: verifyResult.identity,
+              _remaining: verifyResult.remaining,
+              settle,
+            })
+
+            if (!settled) {
+              await apiClient.releaseVoucherPayment!({
+                lockId: verifyResult.lockId,
+                reason: 'handler_completed_without_settlement',
+              })
+            }
+
+            return result
+          } catch (err) {
+            if (!settled) {
+              try {
+                await apiClient.releaseVoucherPayment!({
+                  lockId: verifyResult.lockId,
+                  reason: 'handler_error',
+                })
+              } catch {
+                // Best-effort release; TTL will catch it
+              }
+            }
+            throw err
+          }
+        }
+      }
+
+      // Apply the appropriate scheme wrapper
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function wrapScheme<T>(businessLogic: (args: any) => Promise<T>) {
+        return wrapWithVoucher(wrapWithUpto(businessLogic))
+      }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -682,9 +939,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           adapterOptions?: HttpAdapterOptions,
         ) {
           const adapter = new HttpAdapter(adapterOptions)
+          const wrapped = wrapScheme(businessLogic)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (req: any, reply: any) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await createAdapterHandler(adapter, paywall, metadata, wrapped)
             return handler([req, reply])
           }
         },
@@ -696,9 +954,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           adapterOptions?: NextAdapterOptions,
         ) {
           const adapter = new NextAdapter(adapterOptions)
+          const wrapped = wrapScheme(businessLogic)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (request: Request, context?: any) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await createAdapterHandler(adapter, paywall, metadata, wrapped)
             return handler([request, context])
           }
         },
@@ -710,8 +969,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           adapterOptions?: McpAdapterOptions,
         ) {
           const adapter = new McpAdapter(adapterOptions)
+          const wrapped = wrapScheme(businessLogic)
           return async (args: Record<string, unknown>) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await createAdapterHandler(adapter, paywall, metadata, wrapped)
             return handler(args)
           }
         },
@@ -722,6 +982,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ): Promise<(args: any) => Promise<T>> {
+          if (isUpto || isVoucher) {
+            return wrapScheme(businessLogic)
+          }
           const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },

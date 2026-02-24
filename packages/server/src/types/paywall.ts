@@ -9,7 +9,7 @@
  */
 export interface PaywallArgs {
   [key: string]: unknown
-  auth?: { customer_ref?: string }
+  auth?: { customer_ref?: string; voucher_token?: string }
 }
 
 /**

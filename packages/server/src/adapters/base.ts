@@ -96,8 +96,8 @@ export async function createAdapterHandler<TContext, TResult>(
       const args = await adapter.extractArgs(context)
       const customerRef = await adapter.getCustomerRef(context)
 
-      // Add auth info to args
-      args.auth = { customer_ref: customerRef }
+      // Merge auth info into args, preserving existing auth fields (e.g. voucher_token, account_ref)
+      args.auth = { ...(args.auth || {}), customer_ref: customerRef }
 
       const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
       const protectedHandler = await paywall.protect(businessLogic, metadata, getCustomerRef)

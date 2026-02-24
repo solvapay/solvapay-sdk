@@ -32,6 +32,7 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
       ...((req.body as object) || {}),
       ...((req.params as object) || {}),
       ...((req.query as object) || {}),
+      _headers: req.headers || {},
     }
   }
 

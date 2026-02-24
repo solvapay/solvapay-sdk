@@ -476,6 +476,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
+    // POST: /v1/sdk/vouchers/resolve
+    async resolveVoucher(params) {
+      const url = `${base}/v1/sdk/vouchers/resolve`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Resolve voucher failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
     // POST: /v1/sdk/checkout-sessions
     async createCheckoutSession(params) {
       const url = `${base}/v1/sdk/checkout-sessions`
@@ -514,6 +533,138 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       const result = await res.json()
       return result
+    },
+
+    // POST: /v1/sdk/vouchers/verify
+    async verifyVoucherPayment(params) {
+      const url = `${base}/v1/sdk/vouchers/verify`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Verify voucher payment failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/vouchers/settle
+    async settleVoucherPayment(params) {
+      const url = `${base}/v1/sdk/vouchers/settle`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Settle voucher payment failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/vouchers/release
+    async releaseVoucherPayment(params) {
+      const url = `${base}/v1/sdk/vouchers/release`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Release voucher payment failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/tokens/verify
+    async verifyPayment(params) {
+      const url = `${base}/v1/sdk/tokens/verify`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Verify payment failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/tokens/settle
+    async settlePayment(params) {
+      const url = `${base}/v1/sdk/tokens/settle`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Settle payment failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/tokens/release
+    async releasePayment(params) {
+      const url = `${base}/v1/sdk/tokens/release`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Release payment failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // GET: /v1/sdk/tokens/wallet?accountRef=...
+    async getTokenWallet(accountRef) {
+      const url = `${base}/v1/sdk/tokens/wallet?accountRef=${encodeURIComponent(accountRef)}`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get token wallet failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
     },
   }
 }

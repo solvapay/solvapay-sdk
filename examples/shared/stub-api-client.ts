@@ -672,6 +672,158 @@ export class StubSolvaPayClient implements SolvaPayClient {
     this.log(`📋 Set plan for ${customerRef} to ${plan}`)
   }
 
+  // --- Token system stubs (x402 upto flow) ---
+
+  private inMemoryLocks: Record<string, { accountRef: string; amount: number; status: string }> = {}
+  private lockCounter = 0
+
+  async verifyPayment(params: {
+    accountRef: string
+    productRef: string
+    providerId: string
+    maxAmount: number
+    externalRunId?: string
+    ttlSeconds?: number
+    idempotencyKey?: string
+  }) {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub: verifyPayment for ${params.accountRef}, max=${params.maxAmount}`)
+
+    const lockId = `lock_${++this.lockCounter}`
+    this.inMemoryLocks[lockId] = {
+      accountRef: params.accountRef,
+      amount: params.maxAmount,
+      status: 'reserved',
+    }
+
+    return {
+      lockId,
+      lockReference: `tlk_stub_${this.lockCounter}`,
+      lockedAmount: params.maxAmount,
+      lockedAmountUsd: params.maxAmount * 0.0001,
+      availableBalance: 100000 - params.maxAmount,
+    }
+  }
+
+  async settlePayment(params: {
+    lockId: string
+    amount: number
+    description?: string
+    metadata?: Record<string, any>
+  }) {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    const lock = this.inMemoryLocks[params.lockId]
+    if (!lock) throw new Error('Lock not found')
+    this.log(`📡 Stub: settlePayment lockId=${params.lockId}, amount=${params.amount}`)
+
+    const released = lock.amount - params.amount
+    lock.status = 'settled'
+
+    return {
+      settledAmount: params.amount,
+      settledAmountUsd: params.amount * 0.0001,
+      releasedAmount: released,
+      newBalance: 100000 - params.amount,
+    }
+  }
+
+  async releasePayment(params: { lockId: string; reason?: string }) {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    const lock = this.inMemoryLocks[params.lockId]
+    if (!lock) throw new Error('Lock not found')
+    this.log(`📡 Stub: releasePayment lockId=${params.lockId}`)
+
+    const amount = lock.amount
+    lock.status = 'released'
+
+    return { releasedAmount: amount, newBalance: 100000 }
+  }
+
+  // --- Voucher payment stubs ---
+
+  private voucherLockCounter = 0
+  private inMemoryVoucherLocks: Record<
+    string,
+    { voucherId: string; accountRef: string; amount: number; status: string }
+  > = {}
+
+  async verifyVoucherPayment(params: {
+    token: string
+    maxAmount: number
+    productRef: string
+    providerId: string
+    ttlSeconds?: number
+  }) {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(
+      `📡 Stub: verifyVoucherPayment token=${params.token.slice(0, 10)}..., max=${params.maxAmount}`,
+    )
+
+    const lockId = `vlk_${++this.voucherLockCounter}`
+    this.inMemoryVoucherLocks[lockId] = {
+      voucherId: `voucher_stub_${this.voucherLockCounter}`,
+      accountRef: 'acc_stub',
+      amount: params.maxAmount,
+      status: 'reserved',
+    }
+
+    return {
+      lockId,
+      accountRef: 'acc_stub',
+      voucherId: this.inMemoryVoucherLocks[lockId].voucherId,
+      reservedAmount: params.maxAmount,
+      remaining: 10000 - params.maxAmount,
+      currency: 'USD',
+      identity: { fingerprint: 'stub_fp', publicKey: 'stub_pk' },
+    }
+  }
+
+  async settleVoucherPayment(params: {
+    lockId: string
+    amount: number
+    description?: string
+  }) {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    const lock = this.inMemoryVoucherLocks[params.lockId]
+    if (!lock) throw new Error('Voucher lock not found')
+    this.log(`📡 Stub: settleVoucherPayment lockId=${params.lockId}, amount=${params.amount}`)
+
+    lock.status = 'settled'
+    const platformFee = Math.round(params.amount * 0.1)
+
+    return {
+      settledAmount: params.amount,
+      remaining: 10000 - params.amount,
+      providerCredited: params.amount - platformFee,
+    }
+  }
+
+  async releaseVoucherPayment(params: { lockId: string; reason?: string }) {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    const lock = this.inMemoryVoucherLocks[params.lockId]
+    if (!lock) throw new Error('Voucher lock not found')
+    this.log(`📡 Stub: releaseVoucherPayment lockId=${params.lockId}`)
+
+    const amount = lock.amount
+    lock.status = 'released'
+
+    return { releasedAmount: amount, remaining: 10000 }
+  }
+
+  async getTokenWallet(accountRef: string) {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    return {
+      balance: 100000,
+      balanceUsd: 10,
+      lockedAmount: 0,
+      availableBalance: 100000,
+      availableBalanceUsd: 10,
+      lifetimeTopUp: 100000,
+      lifetimeSpent: 0,
+      walletStatus: 'active',
+    }
+  }
+
   /**
    * Get checkout URL for a customer
    */
