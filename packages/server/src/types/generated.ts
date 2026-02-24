@@ -814,6 +814,13 @@ export interface components {
              * @example prd_1A2B3C4D
              */
             productRef: string;
+            /**
+             * Plan reference to pre-select when creating a checkout session.
+             * If provided and the customer needs to purchase, the checkout page
+             * skips plan selection and shows the payment form directly.
+             * @example pln_2B3C4D5E
+             */
+            planRef?: string;
         };
         LimitResponse: {
             /**

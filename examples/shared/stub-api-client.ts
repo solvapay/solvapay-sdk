@@ -280,7 +280,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
-  async checkLimits(params: { customerRef: string; productRef: string }): Promise<{
+  async checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string

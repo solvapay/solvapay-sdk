@@ -344,13 +344,15 @@ export interface SolvaPay {
    * @param params - Limit check parameters
    * @param params.customerRef - Customer reference
    * @param params.productRef - Product reference
+   * @param params.planRef - Optional plan reference to pre-select on checkout
    * @returns Limit check result with remaining usage and checkout URL if needed
    *
    * @example
    * ```typescript
    * const limits = await solvaPay.checkLimits({
    *   customerRef: 'user_123',
-   *   productRef: 'prd_myapi'
+   *   productRef: 'prd_myapi',
+   *   planRef: 'pln_premium'
    * });
    *
    * if (!limits.withinLimits) {
@@ -359,7 +361,7 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: { customerRef: string; productRef: string }): Promise<{
+  checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string

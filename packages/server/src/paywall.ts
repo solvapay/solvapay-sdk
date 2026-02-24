@@ -202,6 +202,7 @@ export class SolvaPayPaywall {
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
           productRef: product,
+          planRef,
         })
 
         if (!limitsCheck.withinLimits) {
