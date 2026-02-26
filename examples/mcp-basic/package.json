@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.14.9",
+    "@types/node": "^24.10.2",
     "@vitest/coverage-v8": "^2.0.5",
     "eventsource": "^4.1.0",
     "nodemon": "^3.1.0",
