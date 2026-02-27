@@ -1,11 +1,19 @@
-# TypeScript SDK
+---
+title: "Introduction"
+description: "Learn how to use SolvaPay TypeScript SDK."
+---
 
-SolvaPay SDK is a modern TypeScript SDK for monetizing APIs, AI agents, and MCP (Model Context Protocol) servers with paywall protection and purchase management. It provides a unified API that works across multiple frameworks and runtimes.
+## Table of Contents
+
+- [What is SolvaPay SDK?](#what-is-solvapay-sdk)
+- [Key Features](#key-features)
+- [Use Cases](#use-cases)
+- [Architecture Overview](#architecture-overview)
+- [Next Steps](#next-steps)
 
 ## What is SolvaPay SDK?
 
-SolvaPay SDK helps you monetize your APIs, AI apps, and MCP servers with minimal setup. Add paywall protection to your endpoints, manage purchases, and process payments—all with a simple, type-safe API.
-Products are created in the SolvaPay UI and are available for SDK integration by default.
+SolvaPay SDK is a modern TypeScript SDK for monetizing APIs, AI agents, and MCP (Model Context Protocol) servers with paywall protection and purchase management. It provides a unified API that works across multiple frameworks and runtimes.
 
 ## Key Features
 
@@ -58,42 +66,6 @@ function CheckoutPage() {
 - Webhook signature verification included
 - Automatic runtime detection prevents environment mismatches
 
-## Quick Start
-
-### Try an Example (No API Key Required)
-
-```bash
-# Clone and setup
-git clone https://github.com/solvapay/solvapay-sdk
-cd solvapay-sdk
-pnpm install && pnpm build
-
-# Run Express example with stub mode
-cd examples/express-basic
-pnpm dev
-```
-
-The Express example runs in **stub mode** by default - perfect for testing without an API key!
-
-### Install in Your Project
-
-```bash
-# For server-side paywall protection
-npm install @solvapay/server
-
-# For client-side payment flows
-npm install @solvapay/react
-
-# For Supabase authentication (optional)
-npm install @solvapay/react-supabase @supabase/supabase-js
-
-# For Next.js integration
-npm install @solvapay/next
-
-# For authentication adapters
-npm install @solvapay/auth
-```
-
 ## Use Cases
 
 ### API Monetization
@@ -117,7 +89,7 @@ app.post(
 )
 ```
 
-### AI Apps
+### AI Agents
 
 Monetize AI app interactions with pay-per-use or purchase models:
 
@@ -165,7 +137,7 @@ SolvaPay SDK is organized as a monorepo with 6 published packages:
 
 ### How It Works
 
-1. **Product & Plan Setup**: Create your product in the SolvaPay UI and attach plans. Products are available for SDK integration by default.
+1. **Product & Plan Setup**: Create your product in the SolvaPay UI, then attach plans
 2. **Protection**: Use `payable()` to wrap your business logic with paywall protection
 3. **Customer Management**: Customers are automatically created and synced with your authentication system
 4. **Payment Processing**: Integrate Stripe for payment processing (handled by SolvaPay backend)
@@ -191,23 +163,7 @@ Return Paywall Error (with checkout URL)
 
 ## Next Steps
 
-- **[Installation Guide](./getting-started/installation.md)** - Set up SolvaPay SDK in your project
-- **[Quick Start](./getting-started/quick-start.md)** - Get up and running in 5 minutes
-- **[Core Concepts](./getting-started/core-concepts.md)** - Understand products, plans, and the paywall flow
-- **[Architecture Guide](./guides/architecture.md)** - Detailed technical architecture and package design
-
-## Documentation
-
-- **[Framework Guides](./guides/)** - Express, Next.js, React, and MCP integration guides
-- **[Architecture Guide](./guides/architecture.md)** - Detailed technical architecture and package design
-- **[Examples](./examples/overview.md)** - Working examples and demos
-- **[Advanced Topics](./guides/)** - Custom authentication, error handling, testing, and more
-
-## Support
-
-- **GitHub Issues**: [https://github.com/solvapay/solvapay-sdk/issues](https://github.com/solvapay/solvapay-sdk/issues)
-- **Email**: contact@solvapay.com
-
----
-
-**Ready to get started?** Check out the [Installation Guide](./getting-started/installation.md) or jump straight to the [Quick Start](./getting-started/quick-start.md)!
+- [Installation Guide](./installation.mdx) - Set up SolvaPay SDK in your project
+- [Quick Start](./quick-start.mdx) - Get up and running in 5 minutes
+- [Core Concepts](./core-concepts.mdx) - Understand agents, plans, and the paywall flow
+- [Architecture Guide](../guides/architecture.mdx) - Detailed technical architecture and package design

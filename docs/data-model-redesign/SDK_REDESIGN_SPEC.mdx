@@ -1,4 +1,7 @@
-# SDK Product Model Redesign Spec
+---
+title: "SDK Product Model Redesign Spec"
+description: "Learn how to use SolvaPay TypeScript SDK."
+---
 
 ## 1. Purpose
 
@@ -8,7 +11,7 @@ This spec defines the SDK refactoring required to support the Product-centric ba
 - `Purchase` is per-period — each billing period creates a new Purchase. Purchase IS the billing record (amount, transactionId, period dates). No separate Payment entity in the SDK.
 - `PaymentIntent` stays (not renamed, not deprecated). Updated with `productRef` replacing `agentRef`/`mcpServerRef`. Methods `createPaymentIntent` and `processPaymentIntent` keep their names.
 
-Based on decisions D1-D25 and Q1-Q17 from the [SDK Redesign Questionnaire](./SDK_REDESIGN_QUESTIONNAIRE.md).
+Based on decisions D1-D25 and Q1-Q17 from the [SDK Redesign Questionnaire](./SDK_REDESIGN_QUESTIONNAIRE.mdx).
 
 ## 2. Scope
 
