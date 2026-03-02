@@ -124,6 +124,32 @@ export const POST = solvaPay.payable({ product: 'my-api' }).next(
 
 This automatically extracts the user ID from authentication tokens and uses it as the customer reference for paywall checks.
 
+For MCP bearer-token flows, the SDK also exports helper utilities:
+
+```ts
+import {
+  getCustomerRefFromBearerAuthHeader,
+  McpBearerAuthError,
+} from '@solvapay/server'
+
+const handler = solvaPay.payable({ product: 'my-api' }).mcp(
+  async args => ({ ok: true }),
+  {
+    getCustomerRef: args => {
+      try {
+        return getCustomerRefFromBearerAuthHeader(args._authHeader as string | undefined)
+      } catch (error) {
+        if (error instanceof McpBearerAuthError) return 'anonymous'
+        throw error
+      }
+    },
+  },
+)
+```
+
+`payable({ getCustomerRef })` is now supported as a default extractor across adapters. Adapter-level
+`getCustomerRef` still takes precedence when both are provided.
+
 ### When to Use Each Adapter
 
 Choose the adapter based on your context:
@@ -216,7 +242,7 @@ pnpm test:watch
 
 ### Unit Tests
 
-Unit tests (`__tests__/paywall.test.ts`) use a mock API client and test:
+Unit tests (`__tests__/paywall.unit.test.ts`, `__tests__/mcp-auth.unit.test.ts`) use a mock API client and test:
 
 - Paywall protection logic
 - Handler creation (HTTP, Next.js, MCP)

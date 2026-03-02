@@ -314,6 +314,36 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         }),
       )
     })
+
+    it('should use payable-level getCustomerRef when adapter-level is not provided', async () => {
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({
+        product: 'mcp-custom-ref',
+        getCustomerRef: (args: any) => args.identity?.customer || 'fallback',
+      })
+      const mcpHandler = payable.mcp(handler)
+
+      await mcpHandler({
+        identity: { customer: 'custom_customer' },
+      })
+
+      expect(mockApiClient.trackUsageCalls[0].customerRef).toContain('custom_customer')
+    })
+
+    it('should prioritize adapter-level getCustomerRef over payable-level getCustomerRef', async () => {
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({
+        product: 'mcp-custom-ref-priority',
+        getCustomerRef: () => 'payable_level',
+      })
+      const mcpHandler = payable.mcp(handler, {
+        getCustomerRef: () => 'adapter_level',
+      })
+
+      await mcpHandler({})
+
+      expect(mockApiClient.trackUsageCalls[0].customerRef).toContain('adapter_level')
+    })
   })
 
   describe('Customer Authentication - JWT & Headers', () => {

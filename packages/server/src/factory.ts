@@ -682,7 +682,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: HttpAdapterOptions,
         ) {
-          const adapter = new HttpAdapter(adapterOptions)
+          const adapter = new HttpAdapter({
+            ...adapterOptions,
+            getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
+          })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (req: any, reply: any) => {
             const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
@@ -696,7 +699,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: NextAdapterOptions,
         ) {
-          const adapter = new NextAdapter(adapterOptions)
+          const adapter = new NextAdapter({
+            ...adapterOptions,
+            getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
+          })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (request: Request, context?: any) => {
             const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
@@ -710,7 +716,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: McpAdapterOptions,
         ) {
-          const adapter = new McpAdapter(adapterOptions)
+          const adapter = new McpAdapter({
+            ...adapterOptions,
+            getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
+          })
           return async (args: Record<string, unknown>) => {
             const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
             return handler(args)
@@ -723,7 +732,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ): Promise<(args: any) => Promise<T>> {
-          const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+          const getCustomerRef = (args: PaywallArgs): string => {
+            const configuredRef = options.getCustomerRef?.(args as unknown as Record<string, unknown>)
+            if (typeof configuredRef === 'string') {
+              return configuredRef
+            }
+            return args.auth?.customer_ref || 'anonymous'
+          }
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },
       }

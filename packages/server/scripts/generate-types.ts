@@ -5,6 +5,7 @@ const OPENAPI_URL = 'http://localhost:3001/v1/openapi.json'
 const OUTPUT_FILE = './src/types/generated.ts'
 const TEMP_SPEC_FILE = './temp-filtered-openapi.json'
 const PATH_PREFIX = '/v1/sdk/'
+const EXCLUDED_PATH_PREFIXES = ['/v1/sdk/agents']
 
 interface OpenAPISpec {
   paths?: Record<string, any>
@@ -26,7 +27,14 @@ async function main(): Promise<void> {
 
     // Filter paths to only include SDK routes
     const filteredPaths: Record<string, any> = {}
+    const excludedPaths: string[] = []
     for (const [path, methods] of Object.entries(spec.paths || {})) {
+      const isExcluded = EXCLUDED_PATH_PREFIXES.some(prefix => path.startsWith(prefix))
+      if (isExcluded) {
+        excludedPaths.push(path)
+        continue
+      }
+
       if (path.startsWith(PATH_PREFIX)) {
         filteredPaths[path] = methods
       }
@@ -35,6 +43,13 @@ async function main(): Promise<void> {
     console.log(
       `Filtered to ${Object.keys(filteredPaths).length} SDK paths (matching ${PATH_PREFIX}*)`,
     )
+    if (excludedPaths.length > 0) {
+      console.warn(
+        `Skipping ${excludedPaths.length} SDK paths due to known invalid refs: ${excludedPaths.join(
+          ', ',
+        )}`,
+      )
+    }
 
     if (Object.keys(filteredPaths).length === 0) {
       console.error(`ERROR: No paths found matching prefix "${PATH_PREFIX}"`)

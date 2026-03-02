@@ -96,6 +96,13 @@ export type { OneTimePurchaseInfo, ProcessPaymentResult, CustomerResponseMapped 
 
 // Export utilities for general use
 export { withRetry } from './utils'
+export {
+  McpBearerAuthError,
+  extractBearerToken,
+  decodeJwtPayload,
+  getCustomerRefFromJwtPayload,
+  getCustomerRefFromBearerAuthHeader,
+} from './mcp-auth'
 
 // Export route helpers (generic, framework-agnostic)
 export {

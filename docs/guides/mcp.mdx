@@ -272,6 +272,45 @@ const handler = payable.mcp(createTask, {
 })
 ```
 
+### OAuth Bearer Token Helper
+
+For MCP servers that authenticate with bearer tokens, you can use the server SDK helper utilities:
+
+```typescript
+import {
+  getCustomerRefFromBearerAuthHeader,
+  McpBearerAuthError,
+} from '@solvapay/server'
+
+const handler = payable.mcp(createTask, {
+  getCustomerRef: args => {
+    const header = args._authHeader as string | undefined
+    try {
+      return getCustomerRefFromBearerAuthHeader(header)
+    } catch (error) {
+      if (error instanceof McpBearerAuthError) return 'anonymous'
+      throw error
+    }
+  },
+})
+```
+
+These helpers only decode claims (`customerRef`, `customer_ref`, `sub`) and do not verify signatures.
+Use them after token validation (for example with `/v1/oauth/userinfo`).
+
+### Non-hosted OAuth Bridge Pattern
+
+If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP proxy):
+
+1. Serve local discovery endpoints:
+   - `/.well-known/oauth-protected-resource`
+   - `/.well-known/oauth-authorization-server`
+2. Point discovery metadata to SolvaPay OAuth endpoints (`/v1/oauth/*`)
+3. Ensure `registration_endpoint` includes `mcp_server_id`
+4. Protect `/mcp` with bearer auth and return RFC9728 `WWW-Authenticate` challenge when missing
+
+Reference implementation: `examples/mcp-oauth-bridge`.
+
 ## Error Handling
 
 ### Basic Error Handling

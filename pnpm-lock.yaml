@@ -310,6 +310,43 @@ importers:
         specifier: ^2.0.5
         version: 2.1.9(@types/node@20.19.24)(jsdom@23.2.0)
 
+  examples/mcp-oauth-bridge:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.24.2
+        version: 1.24.2(zod@3.25.76)
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@solvapay/demo-services':
+        specifier: workspace:*
+        version: link:../../packages/demo-services
+      '@solvapay/server':
+        specifier: workspace:*
+        version: link:../../packages/server
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      express:
+        specifier: ^4.18.2
+        version: 4.21.2
+    devDependencies:
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.14.9
+        version: 20.19.24
+      nodemon:
+        specifier: ^3.1.0
+        version: 3.1.10
+      tsx:
+        specifier: ^4.19.0
+        version: 4.20.6
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+
   examples/nextjs-openai-custom-gpt-actions:
     dependencies:
       '@asteasolutions/zod-to-openapi':

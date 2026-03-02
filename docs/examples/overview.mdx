@@ -21,6 +21,7 @@ description: "This document provides an overview of all available examples in th
 | [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo)                                       | Next.js    | Embedded           | Supabase         | Full payment flow   | Advanced       |
 | [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo)                         | Next.js    | Hosted             | Supabase         | Hosted checkout     | Intermediate   |
 | [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic)                                               | MCP Server | N/A (Paywall only) | Header-based     | MCP tool protection | Simple         |
+| [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-oauth-bridge)                                 | MCP Server | N/A (Paywall only) | OAuth + Bearer   | Non-hosted MCP OAuth bridge | Advanced |
 | [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions) | Next.js    | Hosted             | Supabase + OAuth | OpenAI GPT Actions  | Advanced       |
 
 ## Available Examples
@@ -118,7 +119,29 @@ description: "This document provides an overview of all available examples in th
 
 ---
 
-### 5. Next.js OpenAI Custom GPT Actions (`nextjs-openai-custom-gpt-actions`)
+### 5. MCP OAuth Bridge (`mcp-oauth-bridge`)
+
+**Purpose**: Demonstrates a non-hosted MCP server that serves local discovery metadata and delegates OAuth/DCR to SolvaPay backend.
+
+**Key Features**:
+
+- Local `/.well-known/oauth-protected-resource`
+- Local `/.well-known/oauth-authorization-server`
+- Bearer-protected `/mcp` with RFC9728 challenge
+- Dynamic client registration with required `mcp_server_id`
+- `payable.mcp()` with OAuth-derived customer identity
+
+**Best For**:
+
+- Non-hosted MCP deployments
+- MCP OAuth discovery bridging patterns
+- Teams that want backend-owned OAuth with local MCP runtime
+
+**Documentation**: [mcp-oauth-bridge README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-oauth-bridge/README.md)
+
+---
+
+### 6. Next.js OpenAI Custom GPT Actions (`nextjs-openai-custom-gpt-actions`)
 
 **Purpose**: Complete integration for OpenAI Custom GPT Actions with OAuth and paywall.
 
@@ -180,6 +203,7 @@ Select an example based on your needs:
 - **New to SolvaPay?** → Start with `express-basic`
 - **Need payment flow?** → Use `checkout-demo` or `hosted-checkout-demo`
 - **Building MCP server?** → Use `mcp-basic`
+- **Building non-hosted MCP + OAuth bridge?** → Use `mcp-oauth-bridge`
 - **OpenAI integration?** → Use `nextjs-openai-custom-gpt-actions`
 
 ### 3. Setup Environment
@@ -295,6 +319,30 @@ pnpm start
 - Usage tracking
 
 **No authentication required** - uses header-based customer identification.
+
+---
+
+### MCP OAuth Bridge
+
+**Location**: `examples/mcp-oauth-bridge/`
+
+**Run**:
+
+```bash
+cd examples/mcp-oauth-bridge
+pnpm install
+cp .env.example .env
+pnpm dev
+```
+
+**Features Demonstrated**:
+
+- Local discovery metadata for non-hosted MCP origin
+- OAuth + dynamic client registration via SolvaPay backend
+- Bearer-token protected MCP endpoint
+- `payable.mcp()` with custom customer extraction
+
+**Requires**: SolvaPay backend OAuth endpoints and MCP server reference (`MCP_SERVER_ID`)
 
 ---
 

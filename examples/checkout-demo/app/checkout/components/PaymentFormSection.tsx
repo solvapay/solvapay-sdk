@@ -24,6 +24,8 @@ export function PaymentFormSection({
   onBack,
 }: PaymentFormSectionProps) {
   const price = formatPrice(currentPlan.price)
+  const planLabel =
+    typeof currentPlan.metadata?.name === 'string' ? currentPlan.metadata.name : currentPlan.reference
 
   return (
     <div className="space-y-6">
@@ -31,7 +33,7 @@ export function PaymentFormSection({
       <div className="pb-6 border-b border-slate-200">
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm text-slate-600">Selected Plan:</span>
-          <span className="text-sm font-medium text-slate-900">{currentPlan.name}</span>
+          <span className="text-sm font-medium text-slate-900">{planLabel}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-600">Total:</span>
