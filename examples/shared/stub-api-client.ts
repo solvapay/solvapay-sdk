@@ -280,7 +280,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
-  async checkLimits(params: { customerRef: string; productRef: string }): Promise<{
+  async checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -670,6 +670,96 @@ export class StubSolvaPayClient implements SolvaPayClient {
     customerData[customerRef].plan = plan
     await this.saveCustomerData(customerData)
     this.log(`📋 Set plan for ${customerRef} to ${plan}`)
+  }
+
+  /**
+   * List plans for a product (product-scoped)
+   */
+  async listPlans(productRef: string): Promise<
+    Array<{
+      reference: string
+      price?: number
+      currency?: string
+      interval?: string
+      isFreeTier?: boolean
+      freeUnits?: number
+      metadata?: Record<string, unknown>
+      [key: string]: unknown
+    }>
+  > {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: GET /v1/sdk/products/${productRef}/plans`)
+
+    return [
+      {
+        reference: 'plan_free',
+        price: 0,
+        currency: 'USD',
+        isFreeTier: true,
+        freeUnits: this.freeTierLimit,
+      },
+      {
+        reference: 'plan_pro',
+        price: 29,
+        currency: 'USD',
+        interval: 'month',
+        isFreeTier: false,
+      },
+    ]
+  }
+
+  /**
+   * Create a plan under a product (product-scoped)
+   */
+  async createPlan(params: {
+    productRef: string
+    type?: string
+    price?: number
+    [key: string]: unknown
+  }): Promise<{ reference: string }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: POST /v1/sdk/products/${params.productRef}/plans`)
+
+    const reference = `plan_${Math.random().toString(36).slice(2, 10)}`
+    return { reference }
+  }
+
+  /**
+   * Update a plan under a product (product-scoped)
+   */
+  async updatePlan(
+    productRef: string,
+    planRef: string,
+    params: Record<string, unknown>,
+  ): Promise<{ reference: string; [key: string]: unknown }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: PUT /v1/sdk/products/${productRef}/plans/${planRef}`)
+    return {
+      reference: planRef,
+    }
+  }
+
+  /**
+   * Delete a plan from a product (product-scoped)
+   */
+  async deletePlan(productRef: string, planRef: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: DELETE /v1/sdk/products/${productRef}/plans/${planRef}`)
+  }
+
+  /**
+   * Clone a product
+   */
+  async cloneProduct(
+    productRef: string,
+    overrides?: { name?: string },
+  ): Promise<{ reference: string; name: string }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: POST /v1/sdk/products/${productRef}/clone`)
+
+    const reference = `prd_${Math.random().toString(36).slice(2, 10)}`
+    const name = overrides?.name || `Clone of ${productRef}`
+    return { reference, name }
   }
 
   /**

@@ -189,16 +189,16 @@ function CheckoutPage() {
 - `className` - Custom CSS class for form container
 - `buttonClassName` - Custom CSS class for submit button
 
-### PlanSelector
+### PricingSelector
 
-Select a plan from available plans using the render-prop API:
+Select a pricing option from available options using the render-prop API:
 
 ```tsx
-import { PlanSelector } from '@solvapay/react'
+import { PricingSelector } from '@solvapay/react'
 
-function PlanSelectionPage() {
+function PricingPage() {
   return (
-    <PlanSelector
+    <PricingSelector
       fetcher={async (productRef) => {
         const res = await fetch(`/api/plans?productRef=${productRef}`)
         return res.json()
@@ -206,7 +206,7 @@ function PlanSelectionPage() {
       productRef="prd_myapi"
     >
       {({ plans, loading, error, selectedPlan, selectPlan }) => {
-        if (loading) return <div>Loading plans...</div>
+        if (loading) return <div>Loading pricing...</div>
         if (error) return <div>Error: {error.message}</div>
         return (
           <div>
@@ -216,13 +216,13 @@ function PlanSelectionPage() {
                 onClick={() => selectPlan(plan)}
                 style={{ fontWeight: selectedPlan?.id === plan.id ? 'bold' : 'normal' }}
               >
-                {plan.name} - ${plan.price}
+                ${plan.price}/{plan.interval}
               </button>
             ))}
           </div>
         )
       }}
-    </PlanSelector>
+    </PricingSelector>
   )
 }
 ```
@@ -236,7 +236,7 @@ import { PurchaseGate } from '@solvapay/react'
 
 function PremiumContent() {
   return (
-    <PurchaseGate requirePlan="pln_premium">
+    <PurchaseGate requireProduct="pln_premium">
       {({ hasAccess, loading }) => {
         if (loading) return <div>Loading...</div>
         if (!hasAccess) return <div>Please subscribe to access this content.</div>
@@ -247,22 +247,22 @@ function PremiumContent() {
 }
 ```
 
-### PlanBadge
+### ProductBadge
 
-Display plan information using the render-prop pattern:
+Display product subscription information using the render-prop pattern:
 
 ```tsx
-import { PlanBadge } from '@solvapay/react'
+import { ProductBadge } from '@solvapay/react'
 
 function UserProfile() {
   return (
     <div>
       <h1>Your Profile</h1>
-      <PlanBadge>
+      <ProductBadge>
         {({ displayPlan, shouldShow }) =>
           shouldShow ? <span className="badge">{displayPlan}</span> : null
         }
-      </PlanBadge>
+      </ProductBadge>
     </div>
   )
 }
@@ -289,7 +289,7 @@ function Dashboard() {
       {hasPaidPurchase ? (
         <div>
           <h2>Active Purchase</h2>
-          <p>Plan: {activePurchase?.planName}</p>
+          <p>Product: {activePurchase?.productName}</p>
           <p>Status: {activePurchase?.status}</p>
         </div>
       ) : (
@@ -310,7 +310,7 @@ function Dashboard() {
 - `activePurchase` - The active purchase (or null)
 - `hasPaidPurchase` - Boolean indicating if user has paid purchase
 - `activePaidPurchase` - The active paid purchase (or null)
-- `hasPlan(planName)` - Function to check if user has a specific plan
+- `hasProduct(productName)` - Function to check if user has a specific product
 - `refetch` - Function to manually refetch purchase status
 
 ### useCheckout
@@ -397,9 +397,7 @@ function PlansPage() {
       <h1>Available Plans</h1>
       {plans?.map(plan => (
         <div key={plan.id}>
-          <h3>{plan.name}</h3>
-          <p>{plan.description}</p>
-          <p>Price: ${plan.price}</p>
+          <h3>${plan.price}/{plan.interval}</h3>
         </div>
       ))}
     </div>
@@ -530,7 +528,7 @@ function PurchaseDetails() {
   return (
     <div>
       <h2>Your Purchase</h2>
-      <p>Plan: {activePurchase.planName}</p>
+      <p>Product: {activePurchase.productName}</p>
       <p>Status: {activePurchase.status}</p>
       <p>Current Period End: {activePurchase.currentPeriodEnd}</p>
     </div>
@@ -604,7 +602,7 @@ export function Dashboard() {
       {hasPaidPurchase ? (
         <div>
           <h2>Welcome, Premium User!</h2>
-          <p>Plan: {activePurchase?.planName}</p>
+          <p>Product: {activePurchase?.productName}</p>
           <p>Status: {activePurchase?.status}</p>
         </div>
       ) : (

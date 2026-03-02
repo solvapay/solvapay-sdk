@@ -21,9 +21,9 @@ import {
   TaskParamsSchema,
 
   // User schemas
-  UserPlanSchema,
+  UserSubscriptionSchema,
   UserInfoSchema,
-  UserPlanInfoSchema,
+  UserSubscriptionInfoSchema,
 
   // Common schemas
   ErrorResponseSchema,
@@ -37,8 +37,8 @@ registry.register('CreateTaskRequest', CreateTaskRequestSchema)
 registry.register('TaskList', TaskListSchema)
 registry.register('TaskResponse', TaskResponseSchema)
 registry.register('DeleteTaskResponse', DeleteTaskResponseSchema)
-registry.register('UserPlanInfo', UserPlanInfoSchema)
-registry.register('UserPlan', UserPlanSchema)
+registry.register('UserSubscriptionInfo', UserSubscriptionInfoSchema)
+registry.register('UserSubscription', UserSubscriptionSchema)
 registry.register('UserInfo', UserInfoSchema)
 registry.register('ErrorResponse', ErrorResponseSchema)
 
@@ -75,19 +75,19 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
-  path: '/api/user/plan',
-  operationId: 'getUserPlan',
-  summary: 'Get user plan',
-  description: 'Get current user purchase plan and usage information',
+  path: '/api/user/subscription',
+  operationId: 'getUserSubscription',
+  summary: 'Get user subscription',
+  description: 'Get current user subscription and usage information',
   tags: ['User'],
   security: [{ oauth2: [] }],
   'x-openai-isConsequential': false,
   responses: {
     200: {
-      description: 'User plan information',
+      description: 'User subscription information',
       content: {
         'application/json': {
-          schema: UserPlanSchema,
+          schema: UserSubscriptionSchema,
         },
       },
     },
@@ -133,7 +133,7 @@ registry.registerPath({
       },
     },
     402: {
-      description: 'Payment required - upgrade to pro plan',
+      description: 'Payment required - upgrade required',
       content: {
         'application/json': {
           schema: ErrorResponseSchema,
@@ -203,7 +203,7 @@ registry.registerPath({
       },
     },
     402: {
-      description: 'Payment required - upgrade to pro plan',
+      description: 'Payment required - upgrade required',
       content: {
         'application/json': {
           schema: ErrorResponseSchema,
@@ -314,7 +314,7 @@ registry.registerPath({
       },
     },
     402: {
-      description: 'Payment required - upgrade to pro plan',
+      description: 'Payment required - upgrade required',
       content: {
         'application/json': {
           schema: ErrorResponseSchema,
@@ -370,7 +370,7 @@ registry.registerPath({
       },
     },
     402: {
-      description: 'Payment required - upgrade to pro plan',
+      description: 'Payment required - upgrade required',
       content: {
         'application/json': {
           schema: ErrorResponseSchema,

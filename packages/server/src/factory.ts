@@ -350,7 +350,8 @@ export interface SolvaPay {
    * ```typescript
    * const limits = await solvaPay.checkLimits({
    *   customerRef: 'user_123',
-   *   productRef: 'prd_myapi'
+   *   productRef: 'prd_myapi',
+   *   planRef: 'pln_premium'
    * });
    *
    * if (!limits.withinLimits) {
@@ -359,7 +360,7 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: { customerRef: string; productRef: string }): Promise<{
+  checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string

@@ -47,18 +47,15 @@ async function createTestPlan() {
     // Step 2: Create plan with free units
     console.log('Step 2: Creating plan with 5 free units...')
     const plan = await client.createPlan!({
-      name: `SDK Test Plan ${Date.now()}`,
       productRef: product.reference,
       isFreeTier: true,
       freeUnits: 5,
-      description: 'Test plan with 5 free requests for SDK integration tests',
     })
 
     console.log()
     console.log('✅ Plan created successfully!')
     console.log()
     console.log('📋 Plan Details:')
-    console.log(`   Name: ${plan.name}`)
     console.log(`   Reference: ${plan.reference}`)
     console.log(`   Product: ${product.reference}`)
     console.log(`   Free Units: 5`)

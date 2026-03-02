@@ -25,7 +25,7 @@ export function PlanSelectionSection({
     <div className={`grid grid-cols-2 gap-4 ${className}`}>
       {plans.map((plan, index) => {
         const isFree = isFreePlan(plan)
-        const isCurrentPlan = plan.name === activePlanName
+        const isCurrentPlan = plan.reference === activePlanName
         const isSelected = !isFree && selectedPlanIndex === index
         const planPrice = formatPrice(plan.price)
 
@@ -67,7 +67,7 @@ export function PlanSelectionSection({
             {/* Current Plan Badge */}
             {isCurrentPlan && (
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-medium px-3 py-1 rounded-full">
-                Current Plan
+                Current
               </div>
             )}
 
@@ -78,9 +78,9 @@ export function PlanSelectionSection({
               </div>
             )}
 
-            {/* Plan Price and Name */}
+            {/* Plan Price and Reference */}
             <div className="text-2xl font-bold text-slate-900 mb-1">${planPrice}</div>
-            <div className="text-sm text-slate-600">{plan.name}</div>
+            <div className="text-sm text-slate-600">{plan.interval ? `/${plan.interval}` : 'one-time'}</div>
           </div>
         )
       })}

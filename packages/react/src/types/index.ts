@@ -10,7 +10,6 @@ export interface PurchaseInfo {
   reference: string
   productName: string
   productReference: string
-  planName: string
   status: string
   startDate: string
   endDate?: string
@@ -25,7 +24,7 @@ export interface PurchaseInfo {
   transactionId?: string
   usage?: {
     used: number
-    quota: number | null
+    freeUnits: number | null
     unit: string
     remaining: number | null
   }
@@ -51,7 +50,9 @@ export interface PurchaseStatus {
   email?: string
   name?: string
   purchases: PurchaseInfo[]
-  hasPlan: (planName: string) => boolean
+  hasProduct: (productName: string) => boolean
+  /** @deprecated Use hasProduct instead */
+  hasPlan: (productName: string) => boolean
   /**
    * Primary active purchase (paid or free) - most recent purchase with status === 'active'
    * Backend keeps purchases as 'active' until expiration, even when cancelled.
@@ -181,7 +182,7 @@ export interface SolvaPayProviderProps {
   children: React.ReactNode
 }
 
-export interface PlanBadgeProps {
+export interface ProductBadgeProps {
   children?: (props: {
     purchases: PurchaseInfo[]
     loading: boolean
@@ -192,7 +193,11 @@ export interface PlanBadgeProps {
   className?: string | ((props: { purchases: PurchaseInfo[] }) => string)
 }
 
+/** @deprecated Use ProductBadgeProps instead */
+export type PlanBadgeProps = ProductBadgeProps
+
 export interface PurchaseGateProps {
+  /** @deprecated Use requireProduct instead */
   requirePlan?: string
   requireProduct?: string
   children: (props: {
@@ -215,8 +220,6 @@ export interface PaymentError extends Error {
  */
 export interface Plan {
   reference: string
-  name: string
-  description?: string
   price?: number
   currency?: string
   interval?: string
@@ -266,9 +269,9 @@ export interface UsePlansReturn {
 }
 
 /**
- * Props for headless PlanSelector component
+ * Props for headless PricingSelector component
  */
-export interface PlanSelectorProps {
+export interface PricingSelectorProps {
   /**
    * Product reference to fetch plans for
    */
@@ -295,11 +298,14 @@ export interface PlanSelectorProps {
   children: (
     props: UsePlansReturn & {
       purchases: PurchaseInfo[]
-      isPaidPlan: (planName: string) => boolean
-      isCurrentPlan: (planName: string) => boolean
+      isPaidPlan: (planRef: string) => boolean
+      isCurrentPlan: (planRef: string) => boolean
     },
   ) => React.ReactNode
 }
+
+/** @deprecated Use PricingSelectorProps instead */
+export type PlanSelectorProps = PricingSelectorProps
 
 /**
  * Return type for usePurchaseStatus hook

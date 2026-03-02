@@ -7,7 +7,6 @@ import type { PurchaseStatus, PurchaseInfo, SolvaPayContextValue } from '../../t
 // Helper function to create a test purchase
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
-  planName: 'Test Plan',
   productName: 'Test Product',
   productReference: 'prd_123',
   status: 'active',
@@ -22,6 +21,7 @@ const createMockPurchaseStatus = (
 ): PurchaseStatus => ({
   loading: false,
   purchases: [],
+  hasProduct: vi.fn(() => false),
   hasPlan: vi.fn(() => false),
   activePurchase: null,
   hasPaidPurchase: false,
@@ -65,7 +65,7 @@ describe('usePurchase', () => {
 
       expect(result.current.loading).toBe(false)
       expect(result.current.purchases).toHaveLength(1)
-      expect(result.current.purchases[0].planName).toBe('Test Plan')
+      expect(result.current.purchases[0].productName).toBe('Test Product')
     })
 
     it('should return refetch function', () => {
@@ -141,7 +141,7 @@ describe('usePurchase', () => {
     })
 
     it('should return single purchase when one purchase exists', () => {
-      const purchase = createPurchase({ planName: 'Pro Plan' })
+      const purchase = createPurchase({ productName: 'Pro Product' })
       const mockPurchase = createMockPurchaseStatus({
         purchases: [purchase],
       })
@@ -152,14 +152,14 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.purchases).toHaveLength(1)
-      expect(result.current.purchases[0].planName).toBe('Pro Plan')
+      expect(result.current.purchases[0].productName).toBe('Pro Product')
     })
 
     it('should return multiple purchases when multiple exist', () => {
       const purchases = [
-        createPurchase({ planName: 'Plan 1', reference: 'pur_1' }),
-        createPurchase({ planName: 'Plan 2', reference: 'pur_2' }),
-        createPurchase({ planName: 'Plan 3', reference: 'pur_3' }),
+        createPurchase({ productName: 'Product 1', reference: 'pur_1' }),
+        createPurchase({ productName: 'Product 2', reference: 'pur_2' }),
+        createPurchase({ productName: 'Product 3', reference: 'pur_3' }),
       ]
       const mockPurchase = createMockPurchaseStatus({ purchases })
       const mockContextValue = createMockContextValue(mockPurchase)
@@ -169,9 +169,9 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.purchases).toHaveLength(3)
-      expect(result.current.purchases[0].planName).toBe('Plan 1')
-      expect(result.current.purchases[1].planName).toBe('Plan 2')
-      expect(result.current.purchases[2].planName).toBe('Plan 3')
+      expect(result.current.purchases[0].productName).toBe('Product 1')
+      expect(result.current.purchases[1].productName).toBe('Product 2')
+      expect(result.current.purchases[2].productName).toBe('Product 3')
     })
   })
 
@@ -190,7 +190,7 @@ describe('usePurchase', () => {
     })
 
     it('should return active purchase when one exists', () => {
-      const activePurchase = createPurchase({ planName: 'Active Plan' })
+      const activePurchase = createPurchase({ productName: 'Active Product' })
       const mockPurchase = createMockPurchaseStatus({
         activePurchase: activePurchase,
       })
@@ -201,12 +201,12 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.activePurchase).not.toBeNull()
-      expect(result.current.activePurchase?.planName).toBe('Active Plan')
+      expect(result.current.activePurchase?.productName).toBe('Active Product')
     })
 
     it('should return free plan as activePurchase when free plan is active', () => {
       const freePurchase = createPurchase({
-        planName: 'Free Plan',
+        productName: 'Free Product',
         amount: 0,
       })
       const mockPurchase = createMockPurchaseStatus({
@@ -219,13 +219,13 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.activePurchase).not.toBeNull()
-      expect(result.current.activePurchase?.planName).toBe('Free Plan')
+      expect(result.current.activePurchase?.productName).toBe('Free Product')
       expect(result.current.activePurchase?.amount).toBe(0)
     })
 
     it('should return paid plan as activePurchase when paid plan is active', () => {
       const paidPurchase = createPurchase({
-        planName: 'Paid Plan',
+        productName: 'Paid Product',
         amount: 2000,
       })
       const mockPurchase = createMockPurchaseStatus({
@@ -238,7 +238,7 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.activePurchase).not.toBeNull()
-      expect(result.current.activePurchase?.planName).toBe('Paid Plan')
+      expect(result.current.activePurchase?.productName).toBe('Paid Product')
       expect(result.current.activePurchase?.amount).toBe(2000)
     })
   })
@@ -303,7 +303,7 @@ describe('usePurchase', () => {
 
     it('should return paid purchase when one exists', () => {
       const paidPurchase = createPurchase({
-        planName: 'Premium Plan',
+        productName: 'Premium Product',
         amount: 5000,
       })
       const mockPurchase = createMockPurchaseStatus({
@@ -316,7 +316,7 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.activePaidPurchase).not.toBeNull()
-      expect(result.current.activePaidPurchase?.planName).toBe('Premium Plan')
+      expect(result.current.activePaidPurchase?.productName).toBe('Premium Product')
       expect(result.current.activePaidPurchase?.amount).toBe(5000)
     })
 
@@ -336,11 +336,12 @@ describe('usePurchase', () => {
     })
   })
 
-  describe('hasPlan function', () => {
-    it('should return hasPlan function from context', () => {
-      const mockHasPlan = vi.fn(() => true)
+  describe('hasProduct function', () => {
+    it('should return hasProduct function from context', () => {
+      const mockHasProduct = vi.fn(() => true)
       const mockPurchase = createMockPurchaseStatus({
-        hasPlan: mockHasPlan,
+        hasProduct: mockHasProduct,
+        hasPlan: mockHasProduct,
       })
       const mockContextValue = createMockContextValue(mockPurchase)
 
@@ -348,16 +349,17 @@ describe('usePurchase', () => {
 
       const { result } = renderHook(() => usePurchase())
 
-      expect(result.current.hasPlan).toBeDefined()
-      expect(typeof result.current.hasPlan).toBe('function')
-      expect(result.current.hasPlan('Test Plan')).toBe(true)
-      expect(mockHasPlan).toHaveBeenCalledWith('Test Plan')
+      expect(result.current.hasProduct).toBeDefined()
+      expect(typeof result.current.hasProduct).toBe('function')
+      expect(result.current.hasProduct('Test Product')).toBe(true)
+      expect(mockHasProduct).toHaveBeenCalledWith('Test Product')
     })
 
-    it('should return false when hasPlan returns false', () => {
-      const mockHasPlan = vi.fn(() => false)
+    it('should return false when hasProduct returns false', () => {
+      const mockHasProduct = vi.fn(() => false)
       const mockPurchase = createMockPurchaseStatus({
-        hasPlan: mockHasPlan,
+        hasProduct: mockHasProduct,
+        hasPlan: mockHasProduct,
       })
       const mockContextValue = createMockContextValue(mockPurchase)
 
@@ -365,8 +367,8 @@ describe('usePurchase', () => {
 
       const { result } = renderHook(() => usePurchase())
 
-      expect(result.current.hasPlan('Non-existent Plan')).toBe(false)
-      expect(mockHasPlan).toHaveBeenCalledWith('Non-existent Plan')
+      expect(result.current.hasProduct('Non-existent Product')).toBe(false)
+      expect(mockHasProduct).toHaveBeenCalledWith('Non-existent Product')
     })
   })
 
@@ -472,13 +474,13 @@ describe('usePurchase', () => {
   describe('Complex scenarios', () => {
     it('should handle multiple paid purchases correctly', () => {
       const paidPurchase1 = createPurchase({
-        planName: 'Premium',
+        productName: 'Premium',
         amount: 5000,
         reference: 'pur_premium',
         startDate: '2024-01-01T00:00:00Z',
       })
       const paidPurchase2 = createPurchase({
-        planName: 'Pro',
+        productName: 'Pro',
         amount: 3000,
         reference: 'pur_pro',
         startDate: '2024-02-01T00:00:00Z',
@@ -496,19 +498,19 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.hasPaidPurchase).toBe(true)
-      expect(result.current.activePaidPurchase?.planName).toBe('Pro')
-      expect(result.current.activePurchase?.planName).toBe('Pro')
+      expect(result.current.activePaidPurchase?.productName).toBe('Pro')
+      expect(result.current.activePurchase?.productName).toBe('Pro')
       expect(result.current.purchases).toHaveLength(2)
     })
 
     it('should handle mixed paid and free purchases', () => {
       const freePurchase = createPurchase({
-        planName: 'Free',
+        productName: 'Free',
         amount: 0,
         reference: 'pur_free',
       })
       const paidPurchase = createPurchase({
-        planName: 'Paid',
+        productName: 'Paid',
         amount: 1000,
         reference: 'pur_paid',
       })
@@ -525,13 +527,13 @@ describe('usePurchase', () => {
       const { result } = renderHook(() => usePurchase())
 
       expect(result.current.hasPaidPurchase).toBe(true)
-      expect(result.current.activePaidPurchase?.planName).toBe('Paid')
-      expect(result.current.activePurchase?.planName).toBe('Paid')
+      expect(result.current.activePaidPurchase?.productName).toBe('Paid')
+      expect(result.current.activePurchase?.productName).toBe('Paid')
     })
 
     it('should handle cancelled purchase with endDate - should still grant access until expiration', () => {
       const cancelledPurchase = createPurchase({
-        planName: 'Cancelled Plan',
+        productName: 'Cancelled Product',
         status: 'active', // Backend keeps status as 'active' until expiration
         amount: 2000,
         endDate: '2025-12-31T23:59:59Z',
@@ -549,10 +551,10 @@ describe('usePurchase', () => {
 
       const { result } = renderHook(() => usePurchase())
 
-      expect(result.current.activePurchase?.planName).toBe('Cancelled Plan')
+      expect(result.current.activePurchase?.productName).toBe('Cancelled Product')
       expect(result.current.activePurchase?.status).toBe('active')
       expect(result.current.hasPaidPurchase).toBe(true) // Should still grant access
-      expect(result.current.activePaidPurchase?.planName).toBe('Cancelled Plan')
+      expect(result.current.activePaidPurchase?.productName).toBe('Cancelled Product')
     })
 
     it('should handle empty state with no purchases', () => {
@@ -582,7 +584,6 @@ describe('usePurchase', () => {
     it('should return all purchase properties correctly', () => {
       const purchase = createPurchase({
         reference: 'pur_full',
-        planName: 'Full Plan',
         productName: 'Full Product',
         status: 'active',
         startDate: '2024-01-01T00:00:00Z',
@@ -603,7 +604,6 @@ describe('usePurchase', () => {
 
       const returnedPurchase = result.current.purchases[0]
       expect(returnedPurchase.reference).toBe('pur_full')
-      expect(returnedPurchase.planName).toBe('Full Plan')
       expect(returnedPurchase.productName).toBe('Full Product')
       expect(returnedPurchase.status).toBe('active')
       expect(returnedPurchase.startDate).toBe('2024-01-01T00:00:00Z')

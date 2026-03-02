@@ -264,7 +264,7 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
     return (
       <div>
         {activeSubs.length > 0
-          ? activeSubs.map(sub => <span>[Active] {sub.planName}</span>)
+          ? activeSubs.map(sub => <span>[Active] {sub.productName}</span>)
           : <span>Free Plan</span>
         }
       </div>
@@ -513,7 +513,7 @@ All components accept any styling approach:
 <PlanBadge>
   {({ purchases }) => (
     <div className={styles.badge}>
-      {purchases.map(sub => sub.planName).join(', ')}
+      {purchases.map(sub => sub.productName).join(', ')}
     </div>
   )}
 </PlanBadge>

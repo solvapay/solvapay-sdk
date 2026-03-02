@@ -183,7 +183,7 @@ The React `PurchaseInfo` type and Next.js `PurchaseCheckResult` update to reflec
 
 **Fields added (usage-based plans):**
 
-- `usage?: { used: number, quota: number | null, unit: string, remaining: number | null }`
+- `usage?: { used: number, freeUnits: number | null, unit: string, remaining: number | null }`
 
 **Fields kept:**
 
@@ -462,12 +462,12 @@ Options:
 
 **Q6. How should usage data be exposed on `PurchaseInfo`?**
 
-Backend Purchase has `usage: { used, quota, unit, periodStart, periodEnd, resetDate, overageUnits, overageCost, carriedOverUnits }`.
+Backend Purchase has `usage: { used, freeUnits, unit, periodStart, periodEnd, resetDate, overageUnits, overageCost, carriedOverUnits }`.
 
 Options:
 
 - a) Expose full usage subdocument
-- b) Expose slim usage: `{ used, quota, unit, remaining }` (computed `remaining = quota - used`)
+- b) Expose slim usage: `{ used, freeUnits, unit, remaining }` (computed `remaining = freeUnits - used`)
 - c) Don't expose usage on PurchaseInfo — use a separate `useUsage()` hook
 
 > _Recommendation: **(b)**. Slim usage with computed `remaining`. Integrators need "50 of 100 used, 50 remaining" for progress bars. Period dates, overage costs, and carryover are backend billing concerns, not SDK display concerns. If integrators need the full breakdown, they can query the backend API directly._

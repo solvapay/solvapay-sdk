@@ -11,7 +11,7 @@ import type { PurchaseGateProps } from '../types'
  *
  * @example
  * ```tsx
- * <PurchaseGate requirePlan="Pro Plan">
+ * <PurchaseGate requireProduct="Pro Plan">
  *   {({ hasAccess, loading }) => {
  *     if (loading) return <Skeleton />;
  *     if (!hasAccess) return <Paywall />;
@@ -21,13 +21,12 @@ import type { PurchaseGateProps } from '../types'
  * ```
  */
 export const PurchaseGate: React.FC<PurchaseGateProps> = ({ requirePlan, requireProduct, children }) => {
-  const { purchases, loading, hasPlan } = usePurchase()
+  const { purchases, loading, hasProduct } = usePurchase()
 
-  const hasAccess = requirePlan
-    ? hasPlan(requirePlan)
-    : requireProduct
-      ? purchases.some(p => p.status === 'active' && (p.productName === requireProduct || p.productReference === requireProduct))
-      : purchases.some(p => p.status === 'active')
+  const productToCheck = requireProduct || requirePlan
+  const hasAccess = productToCheck
+    ? hasProduct(productToCheck)
+    : purchases.some(p => p.status === 'active')
 
   return (
     <>

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { PlanBadge, usePurchase } from '@solvapay/react'
+import { ProductBadge, usePurchase } from '@solvapay/react'
 import { Button } from './ui/Button'
 import { signOut, getAccessToken } from '../lib/supabase'
 import { useState, useCallback } from 'react'
@@ -105,9 +105,8 @@ export function Navigation() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <PlanBadge>
+            <ProductBadge>
               {({ displayPlan, shouldShow }) => {
-                // Badge handles hiding internally, only render if shouldShow is true
                 if (!shouldShow) {
                   return null
                 }
@@ -118,7 +117,7 @@ export function Navigation() {
                   </div>
                 )
               }}
-            </PlanBadge>
+            </ProductBadge>
 
             {/* Upgrade button - hidden until loaded */}
             {showUpgradeButton && (

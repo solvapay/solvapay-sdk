@@ -165,6 +165,7 @@ export class SolvaPayPaywall {
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
           productRef: product,
+          planRef,
         })
 
         if (!limitsCheck.withinLimits) {
@@ -183,7 +184,7 @@ export class SolvaPayPaywall {
             kind: 'payment_required',
             product,
             checkoutUrl: limitsCheck.checkoutUrl || '',
-            message: `Plan purchase required. Remaining: ${limitsCheck.remaining}`,
+            message: `Purchase required. Remaining: ${limitsCheck.remaining}`,
           })
         }
 

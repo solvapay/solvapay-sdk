@@ -2,23 +2,23 @@
 import React, { useCallback, useMemo } from 'react'
 import { usePlans } from '../hooks/usePlans'
 import { usePurchase } from '../hooks/usePurchase'
-import type { PlanSelectorProps } from '../types'
+import type { PricingSelectorProps } from '../types'
 
 /**
- * Headless Plan Selector Component
+ * Headless Pricing Selector Component
  *
- * Provides plan selection logic with complete styling control via render props.
+ * Provides pricing selection logic with complete styling control via render props.
  * Integrates plan fetching, purchase status, and selection state management.
  *
  * Features:
- * - Fetches and manages plans
- * - Tracks selected plan
- * - Provides helpers for checking if plan is current/paid
+ * - Fetches and manages pricing options
+ * - Tracks selected option
+ * - Provides helpers for checking if option is current/paid
  * - Integrates with purchase context
  *
  * @example
  * ```tsx
- * <PlanSelector
+ * <PricingSelector
  *   productRef="prd_123"
  *   fetcher={async (productRef) => {
  *     const res = await fetch(`/api/list-plans?productRef=${productRef}`);
@@ -31,25 +31,25 @@ import type { PlanSelectorProps } from '../types'
  *   {({ plans, selectedPlan, setSelectedPlanIndex, loading, isPaidPlan, isCurrentPlan }) => (
  *     <div>
  *       {loading ? (
- *         <div>Loading plans...</div>
+ *         <div>Loading...</div>
  *       ) : (
  *         plans.map((plan, index) => (
  *           <button
  *             key={plan.reference}
  *             onClick={() => setSelectedPlanIndex(index)}
- *             disabled={!isPaidPlan(plan.name)}
+ *             disabled={!isPaidPlan(plan.reference)}
  *           >
- *             {plan.name} - ${plan.price}
- *             {isCurrentPlan(plan.name) && ' (Current)'}
+ *             ${plan.price}/{plan.interval}
+ *             {isCurrentPlan(plan.reference) && ' (Current)'}
  *           </button>
  *         ))
  *       )}
  *     </div>
  *   )}
- * </PlanSelector>
+ * </PricingSelector>
  * ```
  */
-export const PlanSelector: React.FC<PlanSelectorProps> = ({
+export const PricingSelector: React.FC<PricingSelectorProps> = ({
   productRef,
   fetcher,
   filter,
@@ -69,16 +69,14 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
 
   const { plans } = plansHook
 
-  // Helper to check if a plan is paid
   const isPaidPlan = useCallback(
-    (planName: string): boolean => {
-      const plan = plans.find(p => p.name === planName)
+    (planRef: string): boolean => {
+      const plan = plans.find(p => p.reference === planRef)
       return plan ? (plan.price ?? 0) > 0 && !plan.isFreeTier : true
     },
     [plans],
   )
 
-  // Get active purchase plan name
   const activePurchase = useMemo(() => {
     const activePurchases = purchases.filter(p => p.status === 'active')
     return (
@@ -88,10 +86,9 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
     )
   }, [purchases])
 
-  // Helper to check if a plan is the current purchase
   const isCurrentPlan = useCallback(
-    (planName: string): boolean => {
-      return activePurchase?.planName === planName
+    (planRef: string): boolean => {
+      return activePurchase?.productName === planRef
     },
     [activePurchase],
   )
@@ -107,3 +104,6 @@ export const PlanSelector: React.FC<PlanSelectorProps> = ({
     </>
   )
 }
+
+/** @deprecated Use PricingSelector instead */
+export const PlanSelector = PricingSelector

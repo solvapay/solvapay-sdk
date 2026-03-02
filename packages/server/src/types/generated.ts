@@ -597,7 +597,25 @@ export interface components {
             /** Last update timestamp */
             updatedAt: string;
             /** Plans associated with this product */
-            plans?: string[];
+            plans?: {
+                id: string;
+                reference: string;
+                price: number;
+                currency: string;
+                currencySymbol?: string;
+                billingCycle?: string;
+                billingModel?: string;
+                pricePerUnit?: number;
+                unit?: string;
+                limits?: Record<string, number | undefined>;
+                features?: Record<string, unknown>;
+                isFreeTier: boolean;
+                requiresPayment: boolean;
+                isActive: boolean;
+                status: string;
+                createdAt: string;
+                updatedAt: string;
+            }[];
         };
         UpdateProductRequest: {
             /** Product name */
@@ -619,16 +637,6 @@ export interface components {
             metadata?: Record<string, never>;
         };
         CreatePlanRequest: {
-            /**
-             * Plan name
-             * @example Basic Plan
-             */
-            name: string;
-            /**
-             * Plan description
-             * @example Basic recurring plan with monthly billing
-             */
-            description?: string;
             /**
              * Plan type
              * @example recurring
@@ -683,11 +691,6 @@ export interface components {
              * @example request
              */
             unit?: string;
-            /**
-             * Usage quota for usage-based plans
-             * @example 10000
-             */
-            quota?: number;
             /**
              * Whether to rollover unused units
              * @example false
@@ -747,7 +750,48 @@ export interface components {
              */
             default?: boolean;
         };
-        UpdatePlanRequest: Record<string, never>;
+        UpdatePlanRequest: {
+            /** @enum {string} */
+            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+            /** Plan price */
+            price?: number;
+            /** Currency code (ISO 4217) */
+            currency?: string;
+            /** Setup fee */
+            setupFee?: number;
+            /** Trial days */
+            trialDays?: number;
+            /** Number of free units included */
+            freeUnits?: number;
+            /** @enum {string} */
+            billingModel?: "pre-paid" | "post-paid";
+            /** Price per unit for usage-based plans */
+            pricePerUnit?: number;
+            /** Unit name for usage-based plans */
+            unit?: string;
+            /** Whether to rollover unused units */
+            rolloverUnusedUnits?: boolean;
+            /** Base price for hybrid plans */
+            basePrice?: number;
+            /** Usage limits */
+            limits?: Record<string, number | undefined>;
+            /** Plan features */
+            features?: Record<string, unknown>;
+            /** Whether this is a free tier plan */
+            isFreeTier?: boolean;
+            /** Whether payment is required */
+            requiresPayment?: boolean;
+            /** @enum {string} */
+            status?: "active" | "inactive" | "archived";
+            /** Maximum number of active users */
+            maxActiveUsers?: number;
+            /** Access expiry in days */
+            accessExpiryDays?: number;
+            /** Additional metadata */
+            metadata?: Record<string, unknown>;
+            /** Whether this is the default plan */
+            default?: boolean;
+        };
         CreateCheckoutSessionRequest: {
             /**
              * Customer reference
@@ -814,6 +858,13 @@ export interface components {
              * @example prd_1A2B3C4D
              */
             productRef: string;
+            /**
+             * Plan reference to pre-select when creating a checkout session.
+             * If provided and the customer needs to purchase, the checkout page
+             * skips plan selection and shows the payment form directly.
+             * @example pln_2B3C4D5E
+             */
+            planRef?: string;
         };
         LimitResponse: {
             /**
@@ -890,10 +941,10 @@ export interface components {
              */
             reference: string;
             /**
-             * Plan name
-             * @example Pro Plan
+             * Product name
+             * @example API Gateway Manager
              */
-            planName: string;
+            productName: string;
             /**
              * Product reference
              * @example prd_abc123

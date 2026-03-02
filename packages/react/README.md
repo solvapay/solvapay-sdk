@@ -146,29 +146,29 @@ interface SolvaPayConfig {
 }
 ```
 
-### PlanSelector
+### PricingSelector
 
-Component for selecting and displaying available plans.
+Component for selecting and displaying available pricing options.
 
 **Props:**
 
-- `productRef?: string` - Product reference to filter plans
-- `fetcher?: (productRef: string) => Promise<Plan[]>` - Custom plan fetcher function
-- `onPlanSelect?: (plan: Plan) => void` - Callback when plan is selected
-- `renderPlan?: (plan: Plan) => React.ReactNode` - Custom plan renderer
+- `productRef?: string` - Product reference to filter pricing options
+- `fetcher?: (productRef: string) => Promise<Plan[]>` - Custom fetcher function
+- `onPlanSelect?: (plan: Plan) => void` - Callback when option is selected
+- `renderPlan?: (plan: Plan) => React.ReactNode` - Custom option renderer
 - `className?: string` - Container className
 
 **Example:**
 
 ```tsx
-import { PlanSelector, usePlans } from '@solvapay/react'
+import { PricingSelector, usePlans } from '@solvapay/react'
 
-function PlansPage() {
+function PricingPage() {
   const { plans, loading } = usePlans({ productRef: 'my-product' })
 
   return (
     <div>
-      {loading ? 'Loading...' : plans.map(plan => <div key={plan.reference}>{plan.name}</div>)}
+      {loading ? 'Loading...' : plans.map(plan => <div key={plan.reference}>{plan.price}/{plan.interval}</div>)}
     </div>
   )
 }
@@ -206,9 +206,9 @@ function CheckoutPage() {
 }
 ```
 
-### PlanBadge
+### ProductBadge
 
-Displays current purchase plan with render props or className pattern.
+Displays current product subscription with render props or className pattern.
 
 **Props:**
 
@@ -219,7 +219,7 @@ Displays current purchase plan with render props or className pattern.
 **Example:**
 
 ```tsx
-<PlanBadge className="badge badge-primary" />
+<ProductBadge className="badge badge-primary" />
 ```
 
 ### PurchaseGate
@@ -228,13 +228,13 @@ Controls access to content based on purchase status.
 
 **Props:**
 
-- `requirePlan?: string` - Optional plan name to require
+- `requireProduct?: string` - Optional product name to check for an active purchase
 - `children: (props) => React.ReactNode` - Render prop function
 
 **Example:**
 
 ```tsx
-<PurchaseGate requirePlan="Pro Plan">
+<PurchaseGate requireProduct="Pro Plan">
   {({ hasAccess, loading, purchases }) => {
     if (loading) return <Loading />
     if (!hasAccess) return <Paywall />

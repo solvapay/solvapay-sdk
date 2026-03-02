@@ -115,12 +115,16 @@ export interface SolvaPayClient {
   // DELETE: /v1/sdk/products/{productRef}
   deleteProduct?(productRef: string): Promise<void>
 
+  // POST: /v1/sdk/products/{productRef}/clone
+  cloneProduct?(productRef: string, overrides?: { name?: string }): Promise<{
+    reference: string
+    name: string
+  }>
+
   // GET: /v1/sdk/products/{productRef}/plans
   listPlans?(productRef: string): Promise<
     Array<{
       reference: string
-      name: string
-      description?: string
       price?: number
       currency?: string
       interval?: string
@@ -136,7 +140,16 @@ export interface SolvaPayClient {
     params: components['schemas']['CreatePlanRequest'] & { productRef: string },
   ): Promise<{
     reference: string
-    name: string
+  }>
+
+  // PUT: /v1/sdk/products/{productRef}/plans/{planRef}
+  updatePlan?(
+    productRef: string,
+    planRef: string,
+    params: Partial<components['schemas']['CreatePlanRequest']>,
+  ): Promise<{
+    reference: string
+    [key: string]: unknown
   }>
 
   // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}

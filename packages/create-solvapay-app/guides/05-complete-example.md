@@ -254,12 +254,12 @@ export default function HomePage() {
               <Skeleton className="h-5 w-48" />
             ) : activePurchase ? (
               <p className="text-slate-600">
-                You're on the <Badge variant="premium">{activePurchase.planName}</Badge> plan
+                You're on the <Badge variant="premium">{activePurchase.productName}</Badge> product
               </p>
             ) : shouldShowCancelledNotice && cancelledPurchase ? (
               <div className="space-y-2">
                 <p className="text-slate-600">
-                  Your <Badge variant="premium">{cancelledPurchase.planName}</Badge> purchase has been cancelled
+                  Your <Badge variant="premium">{cancelledPurchase.productName}</Badge> purchase has been cancelled
                 </p>
                 {cancelledPurchase.endDate && (
                   <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -355,7 +355,7 @@ export default function HomePage() {
                     ) : null;
                   })()}
                   <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledPurchase.planName} features until this date
+                    You'll continue to have access to {cancelledPurchase.productName} features until this date
                   </p>
                 </div>
               )}

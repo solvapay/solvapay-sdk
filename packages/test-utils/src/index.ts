@@ -7,14 +7,14 @@
 
 // Integration test setup utilities
 export {
-  createTestAgent,
   createTestPlan,
-  deleteTestAgent,
+  createTestProduct,
   deleteTestPlan,
+  deleteTestProduct,
   createTestProvider,
 } from './integration-setup'
 
-export type { TestProviderSetup, TestAgentSetup, TestPlanSetup } from './integration-setup'
+export type { TestProviderSetup, TestProductSetup, TestPlanSetup } from './integration-setup'
 
 // Stripe payment test helpers
 export {

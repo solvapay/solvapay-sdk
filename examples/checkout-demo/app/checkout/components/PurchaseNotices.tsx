@@ -52,7 +52,7 @@ export function PurchaseNotices({
                 </p>
               )}
               <p className="text-xs text-amber-700 mt-1">
-                You'll continue to have access to {cancelledPurchase.planName} features until
+                You'll continue to have access to {cancelledPurchase.productName} features until
                 this date
               </p>
             </div>

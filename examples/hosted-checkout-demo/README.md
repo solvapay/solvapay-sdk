@@ -346,13 +346,13 @@ import { PurchaseGate } from '@solvapay/react'
 </PurchaseGate>
 ```
 
-### 7. Navigation with Plan Badge
+### 7. Navigation with Product Badge
 
 ```tsx
 // app/components/Navigation.tsx
-import { PlanBadge } from '@solvapay/react';
+import { ProductBadge } from '@solvapay/react';
 
-<PlanBadge>
+<ProductBadge>
   {({ displayPlan, shouldShow }) => {
     if (!shouldShow) return null;
     return (
@@ -361,7 +361,7 @@ import { PlanBadge } from '@solvapay/react';
       </div>
     );
   }}
-</PlanBadge>
+</ProductBadge>
 
 <button onClick={handleViewPlans}>
   Upgrade
@@ -383,7 +383,7 @@ hosted-checkout-demo/
 │   │   └── sync-customer/
 │   │       └── route.ts          # Ensure customer exists
 │   ├── components/
-│   │   └── Navigation.tsx        # Nav with PlanBadge and upgrade button
+│   │   └── Navigation.tsx        # Nav with ProductBadge and upgrade button
 │   ├── lib/
 │   │   ├── customer.ts           # Customer ID management (Supabase auth)
 │   │   └── supabase.ts           # Supabase client setup

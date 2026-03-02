@@ -78,7 +78,7 @@ async function main() {
     // 3. Get Task (Free)
     console.log('\n3️⃣  Getting Task (Call 3/3 - Free)...')
     // Extract task ID from previous result if possible, otherwise skip or use dummy
-    // For demo simplicity, just calling list again to consume quota
+    // For demo simplicity, just calling list again to consume usage
     const result3 = await client.callTool({
       name: 'list_tasks',
       arguments: {
