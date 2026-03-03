@@ -136,6 +136,8 @@ export class SolvaPayPaywall {
   ): Promise<(args: TArgs) => Promise<TResult>> {
     const product = this.resolveProduct(metadata)
     const toolName = handler.name || 'anonymous'
+    const configuredPlanRef = metadata.plan?.trim()
+    const usagePlanRef = configuredPlanRef || 'unspecified'
 
     return async (args: TArgs): Promise<TResult> => {
       const startTime = Date.now()
@@ -159,13 +161,11 @@ export class SolvaPayPaywall {
       }
 
       try {
-        // Check limits with backend using the backend customer reference
-        const planRef = metadata.plan || toolName
-
+        // Only pass planRef if it was explicitly configured as a real plan reference.
         const limitsCheck = await this.apiClient.checkLimits({
           customerRef: backendCustomerRef,
           productRef: product,
-          planRef,
+          ...(configuredPlanRef ? { planRef: configuredPlanRef } : {}),
         })
 
         if (!limitsCheck.withinLimits) {
@@ -173,7 +173,7 @@ export class SolvaPayPaywall {
           await this.trackUsage(
             backendCustomerRef,
             product,
-            planRef,
+            usagePlanRef,
             toolName,
             'paywall',
             requestId,
@@ -196,7 +196,7 @@ export class SolvaPayPaywall {
         await this.trackUsage(
           backendCustomerRef,
           product,
-          planRef,
+          usagePlanRef,
           toolName,
           'success',
           requestId,
@@ -214,11 +214,10 @@ export class SolvaPayPaywall {
         }
         const latencyMs = Date.now() - startTime
         const outcome = error instanceof PaywallError ? 'paywall' : 'fail'
-        const planRef = metadata.plan || toolName
         await this.trackUsage(
           backendCustomerRef,
           product,
-          planRef,
+          usagePlanRef,
           toolName,
           outcome,
           requestId,

@@ -671,7 +671,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         process.env.SOLVAPAY_PRODUCT ||
         'default-product'
       // Resolve plan (support both planRef and plan)
-      const plan = options.planRef || options.plan || product
+      const plan = options.planRef || options.plan
 
       const metadata = { product, plan }
 
