@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { createMCPServer, registerMCPHandlers } from './server'
-import { mcpPublicBaseUrl, mcpServerId, oauthBaseUrl } from './config'
+import { mcpPublicBaseUrl, oauthBaseUrl, solvapayProductRef } from './config'
 
 type JsonRpcId = string | number | null
 
@@ -21,7 +21,7 @@ function getOrigin(req: Request): string {
   const explicit = mcpPublicBaseUrl.replace(/\/$/, '')
   if (explicit) return explicit
   const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http'
-  return `${proto}://${req.get('host') || '127.0.0.1:3004'}`
+  return `${proto}://${req.get('host') || 'localhost:3004'}`
 }
 
 function makeUnauthorizedJsonRpc(id: JsonRpcId) {
@@ -78,15 +78,15 @@ app.get('/.well-known/oauth-protected-resource', (req, res) => {
 })
 
 app.get('/.well-known/oauth-authorization-server', (_req, res) => {
-  if (!mcpServerId) {
+  if (!solvapayProductRef) {
     res.status(500).json({
-      error: 'MCP_SERVER_ID missing',
+      error: 'SOLVAPAY_PRODUCT_REF missing',
     })
     return
   }
 
   const registrationEndpoint =
-    `${oauthBaseUrl}/v1/oauth/register?mcp_server_id=${encodeURIComponent(mcpServerId)}`
+    `${oauthBaseUrl}/v1/oauth/register?product_ref=${encodeURIComponent(solvapayProductRef)}`
 
   res.json({
     issuer: oauthBaseUrl,
@@ -116,7 +116,10 @@ app.post('/mcp', async (req: Request, res: Response) => {
     return
   }
 
-  const sessionId = (req.headers['mcp-session-id'] as string | undefined) || ''
+  const sessionId =
+    (req.headers['mcp-session-id'] as string | undefined) ||
+    (typeof req.query.sessionId === 'string' ? req.query.sessionId : '') ||
+    ''
   let transport: StreamableHTTPServerTransport | null = null
 
   if (sessionId && sessions[sessionId]) {
@@ -177,7 +180,21 @@ app.post('/mcp', async (req: Request, res: Response) => {
 })
 
 app.get('/mcp', async (req: Request, res: Response) => {
-  const sessionId = (req.headers['mcp-session-id'] as string | undefined) || ''
+  const authHeader = req.headers.authorization
+  const customerRef = await resolveCustomerRef(authHeader)
+
+  if (!customerRef) {
+    withMcpChallenge(res, req)
+    res.status(401).json({
+      error: 'Unauthorized',
+    })
+    return
+  }
+
+  const sessionId =
+    (req.headers['mcp-session-id'] as string | undefined) ||
+    (typeof req.query.sessionId === 'string' ? req.query.sessionId : '') ||
+    ''
 
   if (!sessionId || !sessions[sessionId]) {
     res.status(400).json({
@@ -190,7 +207,10 @@ app.get('/mcp', async (req: Request, res: Response) => {
 })
 
 app.delete('/mcp', async (req: Request, res: Response) => {
-  const sessionId = (req.headers['mcp-session-id'] as string | undefined) || ''
+  const sessionId =
+    (req.headers['mcp-session-id'] as string | undefined) ||
+    (typeof req.query.sessionId === 'string' ? req.query.sessionId : '') ||
+    ''
 
   if (!sessionId || !sessions[sessionId]) {
     res.status(400).json({
@@ -203,7 +223,7 @@ app.delete('/mcp', async (req: Request, res: Response) => {
 })
 
 const port = parseInt(process.env.MCP_PORT || '3004', 10)
-const host = process.env.MCP_HOST || '127.0.0.1'
+const host = process.env.MCP_HOST || 'localhost'
 
 app.listen(port, host, () => {
   console.error(`MCP OAuth bridge listening on http://${host}:${port}`)

@@ -38,8 +38,8 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 async function main() {
-  const mcpBaseUrl = process.env.MCP_PUBLIC_BASE_URL || 'http://127.0.0.1:3004'
-  const redirectUri = process.env.OAUTH_REDIRECT_URI || 'http://127.0.0.1:6274/oauth/callback/debug'
+  const mcpBaseUrl = process.env.MCP_PUBLIC_BASE_URL || 'http://localhost:3004'
+  const redirectUri = process.env.OAUTH_REDIRECT_URI || 'http://localhost:6274/oauth/callback/debug'
 
   console.log(`1) Fetching resource metadata from ${mcpBaseUrl}`)
   await fetchJson(`${mcpBaseUrl}/.well-known/oauth-protected-resource`)
