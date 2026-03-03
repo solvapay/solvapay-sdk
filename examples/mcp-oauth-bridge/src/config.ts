@@ -1,12 +1,11 @@
 import { createSolvaPay, createSolvaPayClient } from '@solvapay/server'
 
 const apiClient = createSolvaPayClient({
-  apiKey: process.env.SOLVAPAY_SECRET_KEY || '',
+  apiKey: process.env.SOLVAPAY_SECRET_KEY!,
   apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL,
 })
 
-export const solvapayProductRef =
-  process.env.SOLVAPAY_PRODUCT_REF || process.env.SOLVAPAY_PRODUCT || 'mcp-oauth-bridge-product'
+export const solvapayProductRef = process.env.SOLVAPAY_PRODUCT_REF!
 
 export const solvaPay = createSolvaPay({
   apiClient,

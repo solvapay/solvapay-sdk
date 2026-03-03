@@ -77,6 +77,10 @@ export function verifyWebhook({
 // Export PaywallError for error handling
 export { PaywallError } from './paywall'
 
+// Export virtual tools for MCP server monetization
+export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
+export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
+
 // Export types
 export type {
   SolvaPayClient,

@@ -401,6 +401,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/user-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get user info and purchase status
+         * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL. Self-heals missing default-plan purchases for free tiers.
+         */
+        post: operations["UserInfoSdkController_getUserInfo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/usages": {
         parameters: {
             query?: never;
@@ -1541,6 +1561,84 @@ export interface components {
              * @example 2025-01-01T11:45:00.000Z
              */
             updatedAt: string;
+        };
+        UserInfoRequest: {
+            /**
+             * Customer reference
+             * @example cus_3C4D5E6F
+             */
+            customerRef: string;
+            /**
+             * Product reference
+             * @example prd_1A2B3C4D
+             */
+            productRef: string;
+        };
+        UserInfoUserDto: {
+            /** @example cus_3C4D5E6F */
+            reference: string;
+            /** @example John Doe */
+            name?: Record<string, never>;
+            /** @example john@example.com */
+            email: string;
+            /** @example auth_user_12345 */
+            externalRef?: Record<string, never>;
+        };
+        UserInfoUsageDto: {
+            /** @example 1000 */
+            total: number;
+            /** @example 250 */
+            used: number;
+            /** @example 750 */
+            remaining: number;
+            /** @example invocations */
+            unit: string;
+            /** @example 25 */
+            percentUsed?: Record<string, never>;
+        };
+        UserInfoPlanDto: {
+            /** @example pln_2B3C4D5E */
+            reference: string;
+            /** @example 2999 */
+            price: number;
+            /** @example USD */
+            currency: string;
+            /** @example recurring */
+            type: string;
+            /** @example monthly */
+            billingCycle?: Record<string, never>;
+            features?: Record<string, never>;
+            limits?: Record<string, never>;
+        };
+        UserInfoPurchaseDto: {
+            /** @example pur_1A2B3C4D */
+            reference: string;
+            /** @example active */
+            status: string;
+            /** @example My API Product */
+            productName: string;
+            /** @example recurring */
+            planType: string;
+            /** @example 2025-10-27T10:00:00Z */
+            startDate?: Record<string, never>;
+            /** @example 2025-11-27T10:00:00Z */
+            endDate?: Record<string, never>;
+            usage?: components["schemas"]["UserInfoUsageDto"];
+            plan?: components["schemas"]["UserInfoPlanDto"];
+        };
+        UserInfoResponse: {
+            /**
+             * Human-readable status summary
+             * @example Active subscription: My API Product (25% usage consumed)
+             */
+            status: string;
+            /**
+             * Customer portal session URL
+             * @example https://solvapay.com/customer/manage?id=abc123
+             */
+            verifyUrl?: Record<string, never>;
+            user?: components["schemas"]["UserInfoUserDto"];
+            purchase?: components["schemas"]["UserInfoPurchaseDto"];
         };
         DynamicClientRegistrationDto: {
             /** @example My AI Agent */
@@ -2708,6 +2806,44 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+        };
+    };
+    UserInfoSdkController_getUserInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInfoRequest"];
+            };
+        };
+        responses: {
+            /** @description User info with purchase status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserInfoResponse"];
+                };
+            };
+            /** @description Missing customerRef or productRef */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

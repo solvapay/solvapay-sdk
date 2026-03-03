@@ -1,9 +1,23 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { createTask, deleteTask, getTask, listTasks } from '@solvapay/demo-services'
-import { payable } from './config'
+import { payable, solvaPay, solvapayProductRef } from './config'
 import type { CreateTaskArgs, DeleteTaskArgs, GetTaskArgs, ListTasksArgs } from './types/mcp'
 
-export const tools: Tool[] = [
+const getCustomerRef = (args: Record<string, unknown>) => {
+  const auth = args?._auth as { customer_ref?: string } | undefined
+  return auth?.customer_ref || 'anonymous'
+}
+
+// ── Virtual tools (get_user_info, upgrade, manage_account) ─────────────
+
+const virtualTools = solvaPay.getVirtualTools({
+  product: solvapayProductRef,
+  getCustomerRef,
+})
+
+// ── Business tools ─────────────────────────────────────────────────────
+
+const businessTools: Tool[] = [
   {
     name: 'create_task',
     description: 'Create a new task (OAuth bearer token required)',
@@ -51,10 +65,17 @@ export const tools: Tool[] = [
   },
 ]
 
-const getCustomerRef = (args: Record<string, unknown>) => {
-  const auth = args?._auth as { customer_ref?: string } | undefined
-  return auth?.customer_ref || 'anonymous'
-}
+// Virtual tools first, then business tools (matching hosted MCP Pay ordering)
+export const tools: Tool[] = [
+  ...virtualTools.map(t => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+  })),
+  ...businessTools,
+]
+
+// ── Business tool handlers (paywall-protected) ─────────────────────────
 
 async function createTaskMCP(args: CreateTaskArgs) {
   const result = await createTask(args)
@@ -93,7 +114,11 @@ async function deleteTaskMCP(args: DeleteTaskArgs) {
   }
 }
 
-export const toolHandlers = {
+// Combine virtual tool handlers (no paywall) with business tool handlers (paywall-protected)
+const virtualToolHandlers = Object.fromEntries(virtualTools.map(t => [t.name, t.handler]))
+
+export const toolHandlers: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
+  ...virtualToolHandlers,
   create_task: payable.mcp(createTaskMCP, { getCustomerRef }),
   get_task: payable.mcp(getTaskMCP, { getCustomerRef }),
   list_tasks: payable.mcp(listTasksMCP, { getCustomerRef }),

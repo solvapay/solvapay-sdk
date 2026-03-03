@@ -17,6 +17,8 @@ import { createSolvaPayClient } from './client'
 import { SolvaPayPaywall } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
+import { createVirtualTools } from './virtual-tools'
+import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 
 /**
  * Configuration for creating a SolvaPay instance.
@@ -520,6 +522,36 @@ export interface SolvaPay {
   }>
 
   /**
+   * Get virtual tool definitions with bound handlers for MCP server integration.
+   *
+   * Returns an array of tool objects (name, description, inputSchema, handler)
+   * that provide self-service capabilities: user info, upgrade, and account management.
+   * These tools bypass the paywall and are not usage-tracked.
+   *
+   * Register the returned tools on your MCP server alongside your own tools.
+   *
+   * @param options - Virtual tools configuration
+   * @param options.product - Product reference (required)
+   * @param options.getCustomerRef - Function to extract customer ref from tool args
+   * @param options.exclude - Optional list of tool names to exclude
+   * @returns Array of virtual tool definitions with handlers
+   *
+   * @example
+   * ```typescript
+   * const virtualTools = solvaPay.getVirtualTools({
+   *   product: 'prd_myapi',
+   *   getCustomerRef: args => args._auth?.customer_ref || 'anonymous',
+   * });
+   *
+   * // Register on your MCP server
+   * for (const tool of virtualTools) {
+   *   // Add to tools/list and tools/call handlers
+   * }
+   * ```
+   */
+  getVirtualTools(options: VirtualToolsOptions): VirtualToolDefinition[]
+
+  /**
    * Direct access to the API client for advanced operations.
    *
    * Use this for operations not exposed by the SolvaPay interface,
@@ -660,6 +692,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     createCustomerSession(params) {
       return apiClient.createCustomerSession(params)
+    },
+
+    getVirtualTools(options: VirtualToolsOptions) {
+      return createVirtualTools(apiClient, options)
     },
 
     // Payable API for framework-specific handlers

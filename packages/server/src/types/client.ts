@@ -182,6 +182,12 @@ export interface SolvaPayClient {
     planRef?: string
   }): Promise<ProcessPaymentResult>
 
+  // POST: /v1/sdk/user-info
+  getUserInfo?(params: {
+    customerRef: string
+    productRef: string
+  }): Promise<components['schemas']['UserInfoResponse']>
+
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
     params: components['schemas']['CreateCheckoutSessionRequest'],
