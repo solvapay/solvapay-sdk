@@ -4,12 +4,13 @@ import { randomUUID } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { createMCPServer, registerMCPHandlers } from './server'
-import { mcpPublicBaseUrl, oauthBaseUrl, solvapayProductRef } from './config'
+import { mcpPublicBaseUrl, oauthBaseUrl, paywallEnabled, solvapayProductRef } from './config'
 
 type JsonRpcId = string | number | null
 
 type SessionEntry = {
   transport: StreamableHTTPServerTransport
+  customerRef?: string
 }
 
 const sessions: Record<string, SessionEntry> = {}
@@ -107,23 +108,36 @@ app.get('/health', (_req, res) => {
 
 app.post('/mcp', async (req: Request, res: Response) => {
   const id = (req.body as { id?: JsonRpcId } | undefined)?.id ?? null
-  const authHeader = req.headers.authorization
-  const customerRef = await resolveCustomerRef(authHeader)
-
-  if (!customerRef) {
-    withMcpChallenge(res, req)
-    res.status(401).json(makeUnauthorizedJsonRpc(id))
-    return
-  }
+  let customerRef = 'anonymous'
 
   const sessionId =
     (req.headers['mcp-session-id'] as string | undefined) ||
     (typeof req.query.sessionId === 'string' ? req.query.sessionId : '') ||
     ''
   let transport: StreamableHTTPServerTransport | null = null
+  let session: SessionEntry | undefined
 
   if (sessionId && sessions[sessionId]) {
-    transport = sessions[sessionId].transport
+    session = sessions[sessionId]
+    transport = session.transport
+  }
+
+  if (paywallEnabled) {
+    if (session?.customerRef) {
+      customerRef = session.customerRef
+    } else {
+      const authHeader = req.headers.authorization
+      const resolved = await resolveCustomerRef(authHeader)
+      if (!resolved) {
+        withMcpChallenge(res, req)
+        res.status(401).json(makeUnauthorizedJsonRpc(id))
+        return
+      }
+      customerRef = resolved
+      if (session) {
+        session.customerRef = resolved
+      }
+    }
   }
 
   if (!transport && isInitializeRequest(req.body)) {
@@ -133,7 +147,7 @@ app.post('/mcp', async (req: Request, res: Response) => {
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (sid: string) => {
-        sessions[sid] = { transport: transport! }
+        sessions[sid] = { transport: transport!, customerRef }
       },
     })
 
@@ -180,27 +194,25 @@ app.post('/mcp', async (req: Request, res: Response) => {
 })
 
 app.get('/mcp', async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization
-  const customerRef = await resolveCustomerRef(authHeader)
-
-  if (!customerRef) {
-    withMcpChallenge(res, req)
-    res.status(401).json({
-      error: 'Unauthorized',
-    })
-    return
-  }
-
   const sessionId =
     (req.headers['mcp-session-id'] as string | undefined) ||
     (typeof req.query.sessionId === 'string' ? req.query.sessionId : '') ||
     ''
 
   if (!sessionId || !sessions[sessionId]) {
-    res.status(400).json({
-      error: 'Missing or invalid MCP-Session-Id',
-    })
+    res.status(400).json({ error: 'Missing or invalid MCP-Session-Id' })
     return
+  }
+
+  if (paywallEnabled && !sessions[sessionId].customerRef) {
+    const authHeader = req.headers.authorization
+    const resolved = await resolveCustomerRef(authHeader)
+    if (!resolved) {
+      withMcpChallenge(res, req)
+      res.status(401).json({ error: 'Unauthorized' })
+      return
+    }
+    sessions[sessionId].customerRef = resolved
   }
 
   await sessions[sessionId].transport.handleRequest(req, res)

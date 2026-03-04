@@ -58,6 +58,13 @@ export interface CreateSolvaPayConfig {
    * Defaults to production API URL if not provided.
    */
   apiBaseUrl?: string
+
+  /**
+   * TTL in ms for the checkLimits cache (default 10 000).
+   * Positive results are cached and optimistically decremented to avoid
+   * redundant API calls during tool-call bursts.
+   */
+  limitsCacheTTL?: number
 }
 
 /**
@@ -634,6 +641,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
   // Create paywall instance with debug flag controlled by environment variable
   const paywall = new SolvaPayPaywall(apiClient, {
     debug: process.env.SOLVAPAY_DEBUG !== 'false',
+    limitsCacheTTL: resolvedConfig.limitsCacheTTL,
   })
 
   return {
@@ -722,9 +730,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             ...adapterOptions,
             getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
           })
+          const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (req: any, reply: any) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await handlerPromise
             return handler([req, reply])
           }
         },
@@ -739,9 +748,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             ...adapterOptions,
             getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
           })
+          const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (request: Request, context?: any) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await handlerPromise
             return handler([request, context])
           }
         },
@@ -756,8 +766,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             ...adapterOptions,
             getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
           })
+          const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
           return async (args: Record<string, unknown>) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await handlerPromise
             return handler(args)
           }
         },

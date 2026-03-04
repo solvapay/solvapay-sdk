@@ -10,10 +10,9 @@ const getCustomerRef = (args: Record<string, unknown>) => {
 
 // ── Virtual tools (get_user_info, upgrade, manage_account) ─────────────
 
-const virtualTools = solvaPay.getVirtualTools({
-  product: solvapayProductRef,
-  getCustomerRef,
-})
+const virtualTools = solvaPay
+  ? solvaPay.getVirtualTools({ product: solvapayProductRef, getCustomerRef })
+  : []
 
 // ── Business tools ─────────────────────────────────────────────────────
 
@@ -122,10 +121,11 @@ function directMcp(fn: (args: any) => Promise<unknown>) {
   })
 }
 
-const wrap = paywallEnabled
-  ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (fn: (args: any) => Promise<unknown>) => payable.mcp(fn, { getCustomerRef })
-  : directMcp
+const wrap =
+  paywallEnabled && payable
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fn: (args: any) => Promise<unknown>) => payable!.mcp(fn, { getCustomerRef })
+    : directMcp
 
 const virtualToolHandlers = Object.fromEntries(virtualTools.map(t => [t.name, t.handler]))
 

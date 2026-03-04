@@ -34,7 +34,8 @@ if (!apiKey) {
   process.exit(1)
 }
 
-const serverUrl = values.url
+const serverUrl = values.url!.replace(/\/$/, '')
+const mcpUrl = serverUrl.endsWith('/mcp') ? serverUrl : `${serverUrl}/mcp`
 const token = values.token
 const runs = parseInt(values.runs!, 10)
 const model = values.model!
@@ -226,7 +227,7 @@ function formatAgentReport(results: RunResult[]): string {
 }
 
 async function main() {
-  const client = new McpClient(serverUrl, token)
+  const client = new McpClient(mcpUrl, token)
 
   console.error(`Connecting to ${serverUrl}...`)
   await client.initSession()

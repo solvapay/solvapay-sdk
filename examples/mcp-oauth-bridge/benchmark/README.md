@@ -1,6 +1,6 @@
 # MCP Paywall Benchmark
 
-Measures the latency overhead that SolvaPay's paywall adds to MCP tool calls. Tests both the **SDK-integrated paywall** (`@solvapay/server` + `payable.mcp()`) and the **hosted MCP proxy** (nginx reverse proxy with backend policy gate).
+Measures the latency overhead that SolvaPay's paywall adds to MCP tool calls. Tests the **SDK-integrated paywall** (`@solvapay/server` + `payable.mcp()`) and the **hosted MCP proxy** (SolvaPay-managed reverse proxy with policy gate).
 
 All scripts output markdown to stdout, ready to paste into documentation.
 
@@ -9,43 +9,44 @@ All scripts output markdown to stdout, ready to paste into documentation.
 - Node.js 20+
 - `tsx` (already a dev dependency)
 - A deployed MCP server (with and/or without paywall enabled)
-- A valid bearer token for the server
-- `ANTHROPIC_API_KEY` env var (only for `agent.ts`)
+- `ANTHROPIC_API_KEY` env var (for `agent.ts` and `agent-compare.ts`)
 
 ## Quick Start
 
 ```bash
-# Run from the mcp-oauth-bridge directory
 cd examples/mcp-oauth-bridge
 
-# Micro-benchmark against a single server
+# Micro-benchmark a single server
 tsx benchmark/micro.ts \
   --url https://mcp.example.com \
   --token $TOKEN \
   --iterations 50
 
-# Save results to a file
-tsx benchmark/micro.ts \
-  --url https://mcp.example.com \
-  --token $TOKEN \
-  --label "SDK Paywall" \
-  > results-sdk.md
-
-# Agent benchmark (requires ANTHROPIC_API_KEY)
+# Single-server agent benchmark
 ANTHROPIC_API_KEY=sk-... tsx benchmark/agent.ts \
   --url https://mcp.example.com \
   --token $TOKEN \
   --runs 3
 
-# Compare two or three endpoints
-tsx benchmark/compare.ts \
-  --baseline https://mcp-direct.example.com \
-  --sdk https://mcp-sdk-paywall.example.com \
-  --proxy https://myapp.solvapay.com \
-  --token $TOKEN \
-  --iterations 50 \
-  --region "europe-west2" \
-  > comparison.md
+# Compare baseline vs SDK:
+ANTHROPIC_API_KEY=sk-... tsx benchmark/agent-compare.ts \
+  --baseline https://baseline.run.app \
+  --sdk https://sdk.run.app \
+  --runs 3 --region us-central1
+
+# Compare baseline vs hosted proxy:
+ANTHROPIC_API_KEY=sk-... tsx benchmark/agent-compare.ts \
+  --baseline https://baseline.run.app \
+  --proxy https://proxy.solvapay.com \
+  --runs 3 --region us-central1
+
+# 3-way comparison:
+ANTHROPIC_API_KEY=sk-... tsx benchmark/agent-compare.ts \
+  --baseline https://baseline.run.app \
+  --sdk https://sdk.run.app \
+  --proxy https://proxy.solvapay.com \
+  --runs 3 --region us-central1 \
+  > results.md
 ```
 
 ## Scripts
@@ -54,7 +55,7 @@ tsx benchmark/compare.ts \
 |--------|---------|-----------|
 | `micro.ts` | Deterministic per-tool latency measurement | `--url`, `--token`, `--iterations`, `--warmup`, `--label` |
 | `agent.ts` | Real LLM agent end-to-end measurement | `--url`, `--token`, `--runs`, `--model`, `--label` |
-| `compare.ts` | Side-by-side comparison (2-way or 3-way) | `--baseline`, `--sdk`, `--proxy`, `--token`, `--iterations`, `--region` |
+| `agent-compare.ts` | Side-by-side agent comparison (2 or 3-way) | `--baseline`, `--sdk`, `--proxy`, `--runs`, `--region` |
 
 ### micro.ts
 
@@ -72,34 +73,17 @@ Uses Claude to execute a realistic task management scenario. Measures tool call 
 - Runs multiple independent agent runs for statistical significance
 - Reports per-run breakdown (tool time vs LLM time vs wall time) and aggregate tool latency
 
-### compare.ts
+### agent-compare.ts
 
-Runs `micro.ts`-style benchmarks against multiple endpoints sequentially and produces a comparison table. Accepts any 2 or 3 of:
+Runs agent benchmarks against 2 or 3 endpoints and produces a comparison report with overhead deltas. Accepts any combination of:
 
 - `--baseline` — direct origin server (no paywall, no proxy)
 - `--sdk` — origin server with SDK-integrated paywall
 - `--proxy` — origin behind SolvaPay's hosted proxy
 
-When `--baseline` is provided, overhead is shown as deltas from baseline.
+OAuth tokens are acquired interactively for SDK and proxy endpoints (no flags needed).
 
-## Output Format
-
-All scripts output markdown suitable for documentation. Example comparison output:
-
-```markdown
-## Paywall Overhead Comparison
-
-- **Date:** 2026-03-04T14:40:00Z
-- **Region:** europe-west2
-- **Iterations:** 50
-
-### Per-Tool Mean Latency (ms)
-
-| Tool | Baseline | SDK Paywall | Hosted Proxy |
-|------|----------|-------------|--------------|
-| create_task | 12.1 | 45.2 (+33.1) | 52.8 (+40.7) |
-| list_tasks | 10.3 | 38.7 (+28.4) | 46.1 (+35.8) |
-```
+When `--baseline` is provided, overhead is shown as deltas from baseline for each non-baseline endpoint.
 
 ## Deployment Setup
 
@@ -107,7 +91,7 @@ To run a meaningful comparison, deploy three endpoints in the same region:
 
 1. **Baseline** — `mcp-oauth-bridge` with `PAYWALL_ENABLED=false`
 2. **SDK Paywall** — `mcp-oauth-bridge` with `PAYWALL_ENABLED=true` (needs `SOLVAPAY_SECRET_KEY`, `SOLVAPAY_PRODUCT_REF`, `SOLVAPAY_API_BASE_URL`)
-3. **Hosted Proxy** — register the baseline server in the SolvaPay dashboard; the proxy URL is `https://<subdomain>.solvapay.com/mcp`
+3. **Hosted Proxy** — register the baseline server in the SolvaPay Console; the proxy URL is `https://<subdomain>.solvapay.com`
 
 All three should use the same underlying task CRUD logic and share the same auth setup.
 
@@ -118,12 +102,12 @@ When benchmarking the hosted proxy, the nginx config can expose timing headers:
 - `X-Subrequest-Ms` — time spent on the backend policy check (auth, purchase verification, usage recording)
 - `X-Upstream-Response-Time` — time spent waiting for the origin MCP server
 
-The benchmark scripts automatically capture these when present and include a "Proxy Breakdown" section in the output.
+The benchmark scripts automatically capture these when present.
 
 ## Interpreting Results
 
 - **Mean overhead per call** is the primary metric — it tells you how much latency the paywall adds on average.
 - **p95/p99** show tail latency, useful for understanding worst-case user experience.
 - **Proxy breakdown** helps identify whether overhead comes from the policy check or the extra network hop.
-- For the SDK paywall, the first call in a session is slower (customer lookup not yet cached). Subsequent calls benefit from the 60-second customer cache.
+- For the SDK paywall, the first call in a session is slower (customer lookup not yet cached). Subsequent calls benefit from caching.
 - A well-configured same-region setup should show ~20-40ms overhead for the SDK paywall and ~30-50ms for the hosted proxy.

@@ -26,21 +26,23 @@ export interface ToolCallResult {
 }
 
 export class McpClient {
-  private serverUrl: string
-  private token: string
+  private mcpUrl: string
+  private token: string | null
   private sessionId: string | null = null
   private nextId = 1
 
-  constructor(serverUrl: string, token: string) {
-    this.serverUrl = serverUrl.replace(/\/$/, '')
-    this.token = token
+  constructor(mcpUrl: string, token?: string | null) {
+    this.mcpUrl = mcpUrl.replace(/\/$/, '')
+    this.token = token ?? null
   }
 
   private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${this.token}`,
+      Accept: 'application/json, text/event-stream',
+    }
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
     }
     if (this.sessionId) {
       headers['Mcp-Session-Id'] = this.sessionId
@@ -54,19 +56,37 @@ export class McpClient {
     headers: Headers
   }> {
     const start = performance.now()
-    const response = await fetch(`${this.serverUrl}/mcp`, {
+    const response = await fetch(this.mcpUrl, {
       method: 'POST',
       headers: this.buildHeaders(),
       body: JSON.stringify(body),
     })
     const latencyMs = performance.now() - start
 
+    const responseText = await response.text()
+
     if (!response.ok && response.status !== 200) {
-      const text = await response.text().catch(() => '')
-      throw new Error(`HTTP ${response.status}: ${text}`)
+      throw new Error(`HTTP ${response.status}: ${responseText}`)
     }
 
-    const json = (await response.json()) as JsonRpcResponse
+    if (!responseText) {
+      return { json: { jsonrpc: '2.0' as const, id: body.id ?? 0 }, latencyMs, headers: response.headers }
+    }
+
+    const contentType = response.headers.get('content-type') ?? ''
+    let json: JsonRpcResponse
+
+    if (contentType.includes('text/event-stream')) {
+      const dataLines = responseText
+        .split('\n')
+        .filter(line => line.startsWith('data:'))
+        .map(line => line.slice('data:'.length).trim())
+        .filter(Boolean)
+      if (dataLines.length === 0) throw new Error('SSE response contained no data line')
+      json = JSON.parse(dataLines[dataLines.length - 1]) as JsonRpcResponse
+    } else {
+      json = JSON.parse(responseText) as JsonRpcResponse
+    }
 
     const newSessionId = response.headers.get('mcp-session-id')
     if (newSessionId) {
@@ -145,7 +165,7 @@ export class McpClient {
   async closeSession(): Promise<void> {
     if (!this.sessionId) return
     try {
-      await fetch(`${this.serverUrl}/mcp`, {
+      await fetch(this.mcpUrl, {
         method: 'DELETE',
         headers: this.buildHeaders(),
       })

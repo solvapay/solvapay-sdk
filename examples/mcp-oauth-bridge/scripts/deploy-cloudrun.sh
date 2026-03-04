@@ -12,23 +12,19 @@
 #
 #   # Baseline (no paywall)
 #   ./scripts/deploy-cloudrun.sh \
-#     --project my-gcp-project \
 #     --service mcp-benchmark-baseline \
-#     --paywall false \
-#     --secret-key "$SOLVAPAY_SECRET_KEY" \
-#     --product-ref "$SOLVAPAY_PRODUCT_REF" \
-#     --api-url https://api.example.com \
-#     --oauth-url https://api.example.com
+#     --paywall false
 #
-#   # SDK paywall
+#   # SDK paywall (requires SolvaPay credentials)
+#   # First, store the secret key in Secret Manager:
+#   #   echo -n "$SOLVAPAY_SECRET_KEY" | gcloud secrets create solvapay-secret-key --data-file=-
 #   ./scripts/deploy-cloudrun.sh \
-#     --project my-gcp-project \
 #     --service mcp-benchmark-sdk \
 #     --paywall true \
-#     --secret-key "$SOLVAPAY_SECRET_KEY" \
+#     --secret-name solvapay-secret-key \
 #     --product-ref "$SOLVAPAY_PRODUCT_REF" \
-#     --api-url https://api.example.com \
-#     --oauth-url https://api.example.com
+#     --api-url https://api.solvapay.com \
+#     --oauth-url https://api.solvapay.com
 
 set -euo pipefail
 
@@ -40,8 +36,9 @@ PUBLIC_URL=""
 REGISTRY_REPO="solvapay-examples"
 IMAGE_NAME="mcp-oauth-bridge"
 
-PROJECT=""
+PROJECT="${GCLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}"
 SECRET_KEY=""
+SECRET_NAME=""
 PRODUCT_REF=""
 API_URL=""
 OAUTH_URL=""
@@ -54,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --paywall)     PAYWALL="$2"; shift 2 ;;
     --tag)         TAG="$2"; shift 2 ;;
     --secret-key)  SECRET_KEY="$2"; shift 2 ;;
+    --secret-name) SECRET_NAME="$2"; shift 2 ;;
     --product-ref) PRODUCT_REF="$2"; shift 2 ;;
     --api-url)     API_URL="$2"; shift 2 ;;
     --oauth-url)   OAUTH_URL="$2"; shift 2 ;;
@@ -61,14 +59,15 @@ while [[ $# -gt 0 ]]; do
     --help)
       echo "Usage: $0 [options]"
       echo ""
-      echo "Required:"
-      echo "  --project       GCP project ID"
-      echo "  --secret-key    SolvaPay API secret key"
+      echo "Required when --paywall true (default):"
+      echo "  --secret-name   Secret Manager secret name for SolvaPay API key (recommended)"
+      echo "  --secret-key    SolvaPay API secret key as plain text (alternative to --secret-name)"
       echo "  --product-ref   SolvaPay product reference"
       echo "  --api-url       SolvaPay API base URL"
       echo "  --oauth-url     SolvaPay OAuth base URL"
       echo ""
       echo "Optional:"
+      echo "  --project       GCP project ID (default: gcloud config project)"
       echo "  --region        GCP region (default: europe-west2)"
       echo "  --service       Cloud Run service name (default: mcp-oauth-bridge)"
       echo "  --paywall       Enable paywall: true|false (default: true)"
@@ -80,16 +79,27 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-for var in PROJECT SECRET_KEY PRODUCT_REF API_URL OAUTH_URL; do
-  if [[ -z "${!var}" ]]; then
-    echo "Error: --$(echo "$var" | tr '[:upper:]' '[:lower:]' | tr '_' '-') is required"
+if [[ -z "$PROJECT" ]]; then
+  echo "Error: --project is required (or set a default via gcloud config set project)"
+  exit 1
+fi
+
+if [[ "$PAYWALL" == "true" ]]; then
+  if [[ -z "$SECRET_KEY" && -z "$SECRET_NAME" ]]; then
+    echo "Error: --secret-name or --secret-key is required when --paywall true"
     exit 1
   fi
-done
+  for var in PRODUCT_REF API_URL OAUTH_URL; do
+    if [[ -z "${!var}" ]]; then
+      echo "Error: --$(echo "$var" | tr '[:upper:]' '[:lower:]' | tr '_' '-') is required when --paywall true"
+      exit 1
+    fi
+  done
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MONOREPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-DOCKERFILE="examples/mcp-oauth-bridge/Dockerfile"
+DOCKERFILE="${MONOREPO_ROOT}/examples/mcp-oauth-bridge/Dockerfile"
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT}/${REGISTRY_REPO}/${IMAGE_NAME}:${TAG}"
 
 echo "==> Ensuring Artifact Registry repository exists..."
@@ -103,6 +113,7 @@ gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
 echo "==> Building Docker image..."
 docker build \
+  --platform linux/amd64 \
   -t "$IMAGE_URI" \
   -f "$DOCKERFILE" \
   "$MONOREPO_ROOT"
@@ -110,7 +121,18 @@ docker build \
 echo "==> Pushing image to Artifact Registry..."
 docker push "$IMAGE_URI"
 
+ENV_VARS="PAYWALL_ENABLED=${PAYWALL},MCP_HOST=0.0.0.0,MCP_PORT=3004"
+SECRETS_FLAG=""
+
+if [[ -n "$SECRET_NAME" ]]; then
+  ENV_VARS="${ENV_VARS},SOLVAPAY_PRODUCT_REF=${PRODUCT_REF},SOLVAPAY_API_BASE_URL=${API_URL},SOLVAPAY_OAUTH_BASE_URL=${OAUTH_URL}"
+  SECRETS_FLAG="--set-secrets=SOLVAPAY_SECRET_KEY=${SECRET_NAME}:latest"
+elif [[ -n "$SECRET_KEY" ]]; then
+  ENV_VARS="${ENV_VARS},SOLVAPAY_SECRET_KEY=${SECRET_KEY},SOLVAPAY_PRODUCT_REF=${PRODUCT_REF},SOLVAPAY_API_BASE_URL=${API_URL},SOLVAPAY_OAUTH_BASE_URL=${OAUTH_URL}"
+fi
+
 echo "==> Deploying Cloud Run service: ${SERVICE}..."
+# shellcheck disable=SC2086
 gcloud run deploy "$SERVICE" \
   --image="$IMAGE_URI" \
   --region="$REGION" \
@@ -122,7 +144,8 @@ gcloud run deploy "$SERVICE" \
   --min-instances=1 \
   --max-instances=1 \
   --allow-unauthenticated \
-  --set-env-vars="PAYWALL_ENABLED=${PAYWALL},MCP_HOST=0.0.0.0,MCP_PORT=3004,SOLVAPAY_SECRET_KEY=${SECRET_KEY},SOLVAPAY_PRODUCT_REF=${PRODUCT_REF},SOLVAPAY_API_BASE_URL=${API_URL},SOLVAPAY_OAUTH_BASE_URL=${OAUTH_URL}"
+  --set-env-vars="$ENV_VARS" \
+  $SECRETS_FLAG
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE" \
   --region="$REGION" \

@@ -81,7 +81,13 @@ export class AdapterUtils {
 }
 
 /**
- * Create a protected handler using an adapter
+ * Create a protected handler using an adapter.
+ *
+ * The returned closure caches:
+ * - `backendRefCache`: resolved customer ref (input → cus_xxx) so ensureCustomer
+ *   is only called once per distinct customer identity.
+ * - `protectedHandler`: the closure returned by paywall.protect() is created once
+ *   and reused across invocations.
  */
 export async function createAdapterHandler<TContext, TResult>(
   adapter: Adapter<TContext, TResult>,
@@ -90,25 +96,26 @@ export async function createAdapterHandler<TContext, TResult>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   businessLogic: (args: any) => Promise<any>,
 ): Promise<(context: TContext) => Promise<TResult>> {
+  const backendRefCache = new Map<string, string>()
+  const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+  const protectedHandler = await paywall.protect(businessLogic, metadata, getCustomerRef)
+
   return async (context: TContext): Promise<TResult> => {
     try {
-      // Extract args and customer ref using the adapter
       const args = await adapter.extractArgs(context)
       const customerRef = await adapter.getCustomerRef(context)
 
-      // Add auth info to args
-      args.auth = { customer_ref: customerRef }
+      let backendRef = backendRefCache.get(customerRef)
+      if (!backendRef) {
+        backendRef = await paywall.ensureCustomer(customerRef, customerRef)
+        backendRefCache.set(customerRef, backendRef)
+      }
 
-      const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
-      const protectedHandler = await paywall.protect(businessLogic, metadata, getCustomerRef)
+      args.auth = { customer_ref: backendRef }
 
-      // Execute protected handler
       const result = await protectedHandler(args)
-
-      // Format response using the adapter
       return adapter.formatResponse(result, context)
     } catch (error) {
-      // Format error using the adapter
       return adapter.formatError(error as Error, context)
     }
   }

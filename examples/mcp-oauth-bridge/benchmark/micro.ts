@@ -32,7 +32,8 @@ if (!values.url || !values.token) {
   process.exit(1)
 }
 
-const serverUrl = values.url
+const serverUrl = values.url!.replace(/\/$/, '')
+const mcpUrl = serverUrl.endsWith('/mcp') ? serverUrl : `${serverUrl}/mcp`
 const token = values.token
 const iterations = parseInt(values.iterations!, 10)
 const warmup = parseInt(values.warmup!, 10)
@@ -97,7 +98,7 @@ async function runIteration(
 }
 
 async function main() {
-  const client = new McpClient(serverUrl, token)
+  const client = new McpClient(mcpUrl, token)
 
   console.error(`Connecting to ${serverUrl}...`)
   const { latencyMs: initLatency } = await client.initSession()
