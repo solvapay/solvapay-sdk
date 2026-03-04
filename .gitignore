@@ -2,10 +2,13 @@ node_modules
 dist
 .cache
 .next
-.env*
+.env
+.env.*
+!.env.example
 .npmrc
 .pnpm-store
 .turbo
+.cursor/
 .DS_Store
 *.tsbuildinfo
 examples/openai-custom-gpt-actions/user-plans.json
