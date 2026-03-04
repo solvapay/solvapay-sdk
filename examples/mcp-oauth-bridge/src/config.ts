@@ -15,5 +15,7 @@ export const payable = solvaPay.payable({
   product: solvapayProductRef,
 })
 
+export const paywallEnabled = process.env.PAYWALL_ENABLED !== 'false'
+
 export const mcpPublicBaseUrl = process.env.MCP_PUBLIC_BASE_URL || 'http://localhost:3004'
 export const oauthBaseUrl = process.env.SOLVAPAY_OAUTH_BASE_URL || 'http://localhost:3000'

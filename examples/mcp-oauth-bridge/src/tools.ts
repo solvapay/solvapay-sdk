@@ -1,6 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { createTask, deleteTask, getTask, listTasks } from '@solvapay/demo-services'
-import { payable, solvaPay, solvapayProductRef } from './config'
+import { payable, paywallEnabled, solvaPay, solvapayProductRef } from './config'
 import type { CreateTaskArgs, DeleteTaskArgs, GetTaskArgs, ListTasksArgs } from './types/mcp'
 
 const getCustomerRef = (args: Record<string, unknown>) => {
@@ -114,13 +114,25 @@ async function deleteTaskMCP(args: DeleteTaskArgs) {
   }
 }
 
-// Combine virtual tool handlers (no paywall) with business tool handlers (paywall-protected)
+// When paywall is disabled, wrap business logic in MCP response format directly
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function directMcp(fn: (args: any) => Promise<unknown>) {
+  return async (args: Record<string, unknown>) => ({
+    content: [{ type: 'text', text: JSON.stringify(await fn(args)) }],
+  })
+}
+
+const wrap = paywallEnabled
+  ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (fn: (args: any) => Promise<unknown>) => payable.mcp(fn, { getCustomerRef })
+  : directMcp
+
 const virtualToolHandlers = Object.fromEntries(virtualTools.map(t => [t.name, t.handler]))
 
 export const toolHandlers: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
   ...virtualToolHandlers,
-  create_task: payable.mcp(createTaskMCP, { getCustomerRef }),
-  get_task: payable.mcp(getTaskMCP, { getCustomerRef }),
-  list_tasks: payable.mcp(listTasksMCP, { getCustomerRef }),
-  delete_task: payable.mcp(deleteTaskMCP, { getCustomerRef }),
+  create_task: wrap(createTaskMCP),
+  get_task: wrap(getTaskMCP),
+  list_tasks: wrap(listTasksMCP),
+  delete_task: wrap(deleteTaskMCP),
 }

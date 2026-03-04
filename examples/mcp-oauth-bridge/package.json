@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch src --watch scripts --watch ../../packages/server/dist --watch ../../packages/core/dist --ext ts,js,mjs --exec \"tsx src/index.ts\"",
-    "build": "tsc",
+    "build": "tsup src/index.ts --format esm",
     "oauth:flow": "tsx scripts/run-oauth-flow.ts"
   },
   "dependencies": {
