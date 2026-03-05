@@ -109,7 +109,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         name: defaultProduct.name,
       })
 
-      // Fetch plans for the default product
+      // Fetch plans for the default product, preferring a free-tier plan
       console.log('🔍 Fetching default plan...')
       const plans = await apiClient.listPlans(defaultProduct.reference)
       if (!plans || plans.length === 0) {
@@ -117,7 +117,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
           `No plans found for product ${defaultProduct.reference}. Please create at least one plan.`,
         )
       }
-      defaultPlan = plans[0]
+      defaultPlan =
+        plans.find((p: any) => p.isFreeTier && (p.freeUnits ?? 0) > 0) || plans[0]
       console.log('✅ Default plan fetched:', {
         reference: defaultPlan.reference,
         name: defaultPlan.name,
@@ -474,10 +475,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
     it('should correctly track usage against free units and block when exhausted', async () => {
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
 
-      // Get initial limits
+      // Get initial limits (pass planRef so backend can auto-provision free-tier purchase)
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -503,6 +505,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const afterFreeUnitsCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       expect(afterFreeUnitsCheck.remaining).toBeLessThanOrEqual(0)
@@ -523,6 +526,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const finalCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       expect(finalCheck.withinLimits).toBe(false)
@@ -537,10 +541,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const testCustomer = `test_freeunits_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(testCustomer)
 
-      // Get initial limits
+      // Get initial limits (pass planRef so backend can auto-provision free-tier purchase)
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -549,8 +554,10 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       expect(freeUnits).toBeGreaterThan(0)
       expect(initialCheck.withinLimits).toBe(true)
 
-      // Create protected handler
-      const payable = solvaPay.payable({
+      // Use a fresh SolvaPay instance with no limits cache so every call hits the backend.
+      // This avoids race conditions between the SDK's optimistic cache and background trackUsage.
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
         productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
@@ -564,6 +571,9 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
           auth: { customer_ref: testCustomer },
         })
         expect(result).toHaveProperty('success', true)
+        // With limitsCacheTTL: 0, each call goes to the API. Give trackUsage time to complete
+        // before the next call so the backend's usage count stays accurate.
+        await new Promise(r => setTimeout(r, 200))
       }
 
       // Next calls should be blocked with PaywallError
@@ -590,10 +600,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const testCustomer = `test_partial_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(testCustomer)
 
-      // Get initial limits
+      // Get initial limits (pass planRef so backend can auto-provision free-tier purchase)
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -620,6 +631,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const midCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       // Should still be within limits
