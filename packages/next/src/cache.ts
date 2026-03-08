@@ -41,6 +41,18 @@ export interface PurchaseCheckResult {
     productReference?: string
     status?: string
     startDate?: string
+    planSnapshot?: {
+      meterId?: string
+      limit?: number
+      freeUnits?: number
+    }
+    usage?: {
+      used?: number
+      overageUnits?: number
+      overageCost?: number
+      periodStart?: string
+      periodEnd?: string
+    }
     [key: string]: unknown
   }>
 }

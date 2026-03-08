@@ -374,6 +374,7 @@ export interface SolvaPay {
     remaining: number
     plan: string
     checkoutUrl?: string
+    meterName?: string
   }>
 
   /**

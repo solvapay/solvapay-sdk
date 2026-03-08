@@ -105,9 +105,9 @@ export async function createTestPlan(
       currency: 'USD',
       billingModel: 'pre-paid',
       pricePerUnit: 0,
-      unit: 'requests',
       isFreeTier: true,
       freeUnits: freeUnits,
+      limit: freeUnits,
       features: [`${freeUnits} free requests`],
       limits: {
         monthlyRequests: freeUnits,

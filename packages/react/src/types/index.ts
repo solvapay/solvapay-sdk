@@ -9,7 +9,7 @@ import type { AuthAdapter } from '../adapters/auth'
 export interface PurchaseInfo {
   reference: string
   productName: string
-  productReference: string
+  productReference?: string
   status: string
   startDate: string
   endDate?: string
@@ -22,11 +22,21 @@ export interface PurchaseInfo {
   nextBillingDate?: string
   billingCycle?: string
   transactionId?: string
+  planSnapshot?: {
+    meterId?: string
+    limit?: number
+    freeUnits?: number
+    pricePerUnit?: number
+    planType?: string
+    billingCycle?: string | null
+    features?: Record<string, unknown> | null
+  }
   usage?: {
     used: number
-    freeUnits: number | null
-    unit: string
-    remaining: number | null
+    overageUnits?: number
+    overageCost?: number
+    periodStart?: string
+    periodEnd?: string
   }
 }
 

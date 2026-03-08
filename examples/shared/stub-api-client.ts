@@ -284,6 +284,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
     withinLimits: boolean
     remaining: number
     plan: string
+    meterName?: string
+    checkoutSessionId?: string
     checkoutUrl?: string
   }> {
     // Simulate API delay
@@ -305,6 +307,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           withinLimits: true,
           remaining: 999999,
           plan: customer.plan,
+          meterName: 'api_requests',
         }
       }
 
@@ -315,6 +318,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           withinLimits: true,
           remaining: customer.credits,
           plan: customer.plan || 'paid',
+          meterName: 'api_requests',
         }
       }
 
@@ -337,6 +341,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           withinLimits: true,
           remaining: this.freeTierLimit - 1,
           plan: 'free',
+          meterName: 'api_requests',
         }
       }
 
@@ -357,6 +362,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         withinLimits,
         remaining,
         plan: 'free',
+        meterName: 'api_requests' as string | undefined,
       }
 
       // Add checkout URL if limits exceeded
@@ -679,6 +685,10 @@ export class StubSolvaPayClient implements SolvaPayClient {
       interval?: string
       isFreeTier?: boolean
       freeUnits?: number
+      meterId?: string
+      limit?: number
+      pricePerUnit?: number
+      billingModel?: string
       metadata?: Record<string, unknown>
       [key: string]: unknown
     }>
@@ -693,6 +703,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         currency: 'USD',
         isFreeTier: true,
         freeUnits: this.freeTierLimit,
+        limit: this.freeTierLimit,
       },
       {
         reference: 'plan_pro',
@@ -700,6 +711,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         currency: 'USD',
         interval: 'month',
         isFreeTier: false,
+        limit: 0,
       },
     ]
   }

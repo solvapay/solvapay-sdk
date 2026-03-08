@@ -4,115 +4,6 @@
  */
 
 export interface paths {
-    "/v1/sdk/products": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List products
-         * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and MCP Pay flag.
-         */
-        get: operations["ProductSdkController_listProducts"];
-        put?: never;
-        /**
-         * Create a product
-         * @description Creates a new product for the authenticated provider.
-         */
-        post: operations["ProductSdkController_createProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/products/{productRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get a product by reference
-         * @description Retrieves a product by its reference or ID, including embedded plans.
-         */
-        get: operations["ProductSdkController_getProduct"];
-        /**
-         * Update a product
-         * @description Updates an existing product. Only provided fields are updated.
-         */
-        put: operations["ProductSdkController_updateProduct"];
-        post?: never;
-        /**
-         * Delete a product
-         * @description Deletes a product permanently in sandbox or when no purchases exist. In live mode with purchases, the product is deactivated instead.
-         */
-        delete: operations["ProductSdkController_deleteProduct"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/products/{productRef}/clone": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Clone a product
-         * @description Deep-copies a product including all its plans. Generates new references for the clone.
-         */
-        post: operations["ProductSdkController_cloneProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/products/{productRef}/plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List plans for a product */
-        get: operations["PlanSdkController_listPlans"];
-        put?: never;
-        /** Create a plan for a product */
-        post: operations["PlanSdkController_createPlan"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/products/{productRef}/plans/{planRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a plan for a product */
-        get: operations["PlanSdkController_getPlan"];
-        /** Update a plan for a product */
-        put: operations["PlanSdkController_updatePlan"];
-        post?: never;
-        /** Delete a plan from a product */
-        delete: operations["PlanSdkController_deletePlan"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/sdk/payment-intents": {
         parameters: {
             query?: never;
@@ -191,6 +82,115 @@ export interface paths {
          * @description Creates a hosted checkout session for a customer to purchase a product plan. Returns a session ID and checkout URL for redirect.
          */
         post: operations["CheckoutSessionSdkController_createCheckoutSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/products/{productRef}/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List plans for a product */
+        get: operations["PlanSdkController_listPlans"];
+        put?: never;
+        /** Create a plan for a product */
+        post: operations["PlanSdkController_createPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/products/{productRef}/plans/{planRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a plan for a product */
+        get: operations["PlanSdkController_getPlan"];
+        /** Update a plan for a product */
+        put: operations["PlanSdkController_updatePlan"];
+        post?: never;
+        /** Delete a plan from a product */
+        delete: operations["PlanSdkController_deletePlan"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List products
+         * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and MCP Pay flag.
+         */
+        get: operations["ProductSdkController_listProducts"];
+        put?: never;
+        /**
+         * Create a product
+         * @description Creates a new product for the authenticated provider.
+         */
+        post: operations["ProductSdkController_createProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/products/{productRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a product by reference
+         * @description Retrieves a product by its reference or ID, including embedded plans.
+         */
+        get: operations["ProductSdkController_getProduct"];
+        /**
+         * Update a product
+         * @description Updates an existing product. Only provided fields are updated.
+         */
+        put: operations["ProductSdkController_updateProduct"];
+        post?: never;
+        /**
+         * Delete a product
+         * @description Deletes a product permanently in sandbox or when no purchases exist. In live mode with purchases, the product is deactivated instead.
+         */
+        delete: operations["ProductSdkController_deleteProduct"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/products/{productRef}/clone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clone a product
+         * @description Deep-copies a product including all its plans. Generates new references for the clone.
+         */
+        post: operations["ProductSdkController_cloneProduct"];
         delete?: never;
         options?: never;
         head?: never;
@@ -412,7 +412,7 @@ export interface paths {
         put?: never;
         /**
          * Get user info and purchase status
-         * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL. Self-heals missing default-plan purchases for free tiers.
+         * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
          */
         post: operations["UserInfoSdkController_getUserInfo"];
         delete?: never;
@@ -432,7 +432,7 @@ export interface paths {
         put?: never;
         /**
          * Record a usage event
-         * @description Records a usage event for a customer against a product. Atomically increments usage counters on the active purchase and appends an event to the usage log.
+         * @description Records a usage event against a named meter. Events are stored in a high-performance timeseries collection.
          */
         post: operations["UsageSdkController_recordUsage"];
         delete?: never;
@@ -452,9 +452,49 @@ export interface paths {
         put?: never;
         /**
          * Record bulk usage events
-         * @description Records multiple usage events in a single request. Each event is processed independently.
+         * @description Records multiple meter events in a single request.
          */
         post: operations["UsageSdkController_recordBulkUsage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/meter-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a meter event
+         * @description Records a single usage event against a named meter.
+         */
+        post: operations["MeterSdkController_recordEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/meter-events/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record meter events in bulk
+         * @description Records multiple usage events in a single request for high throughput.
+         */
+        post: operations["MeterSdkController_recordBulkEvents"];
         delete?: never;
         options?: never;
         head?: never;
@@ -515,524 +555,34 @@ export interface components {
             tosAcceptance?: Record<string, never>;
         };
         CreateSecretKey: Record<string, never>;
-        CheckName: Record<string, never>;
-        CreateAdminAgent: Record<string, never>;
-        UpdateAdminAgent: Record<string, never>;
-        CreateAgentRequest: Record<string, never>;
-        UpdateAgentRequest: Record<string, never>;
-        Signup: Record<string, never>;
+        Signup: {
+            name: string;
+            email: string;
+            /** @enum {string} */
+            type?: "provider" | "admin";
+        };
         AuthResponse: Record<string, never>;
-        Login: Record<string, never>;
-        VerifyLoginCode: Record<string, never>;
-        VerifyEmail: Record<string, never>;
-        GoLiveChecklistItemDto: Record<string, never>;
-        GoLiveChecklistDto: Record<string, never>;
+        Login: {
+            /** @description Email to send a 6-digit login code to */
+            email: string;
+        };
+        VerifyLoginCode: {
+            email: string;
+            /** @description 6-digit login code sent to email */
+            code: string;
+        };
+        VerifyEmail: {
+            emailVerificationCode: string;
+        };
         CreateUser: Record<string, never>;
         UpdateUser: Record<string, never>;
         UpdateProfile: Record<string, never>;
         UpdatePreferences: Record<string, never>;
-        RequestEmailChange: Record<string, never>;
-        CreateProductRequest: {
-            /**
-             * Product name
-             * @example AI Writing Assistant
-             */
-            name: string;
-            /**
-             * Product description
-             * @example AI-powered writing tool
-             */
-            description?: string;
-            /** @description URL to the product image */
-            imageUrl?: string;
-            /**
-             * Free-form product type defined by the provider
-             * @example Coding Assistant
-             */
-            productType?: string;
-            /**
-             * Whether this product uses MCP Pay proxy
-             * @default false
-             */
-            isMcpPay: boolean;
-            /** @description Product-specific configuration */
-            config?: Record<string, never>;
-            /** @description Arbitrary key-value metadata */
-            metadata?: Record<string, never>;
+        RequestEmailChange: {
+            newEmail: string;
         };
-        SdkPlanResponse: {
-            /**
-             * Plan ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
-             * Plan reference
-             * @example pln_1A2B3C4D
-             */
-            reference: string;
-            /**
-             * Plan price
-             * @example 29.99
-             */
-            price: number;
-            /**
-             * Currency code (ISO 4217)
-             * @example USD
-             */
-            currency: string;
-            /**
-             * Currency symbol
-             * @example $
-             */
-            currencySymbol?: string;
-            /**
-             * Billing cycle
-             * @example monthly
-             */
-            billingCycle?: string;
-            /**
-             * Billing model
-             * @example pre-paid
-             */
-            billingModel?: string;
-            /**
-             * Price per unit
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Unit name
-             * @example request
-             */
-            unit?: string;
-            /**
-             * Included free units
-             * @example 1000
-             */
-            freeUnits?: number;
-            /** @description Usage limits */
-            limits?: Record<string, never>;
-            /** @description Plan features */
-            features?: Record<string, never>;
-            /**
-             * Whether this is a free tier plan
-             * @example false
-             */
-            isFreeTier: boolean;
-            /**
-             * Whether payment is required
-             * @example true
-             */
-            requiresPayment: boolean;
-            /**
-             * Whether the plan is active
-             * @example true
-             */
-            isActive: boolean;
-            /**
-             * Plan status
-             * @example active
-             */
-            status: string;
-            /** @description Creation timestamp */
-            createdAt: string;
-            /** @description Last update timestamp */
-            updatedAt: string;
-        };
-        SdkProductResponse: {
-            /**
-             * Product ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
-             * Product reference
-             * @example prd_1A2B3C4D
-             */
-            reference: string;
-            /**
-             * Product name
-             * @example AI Writing Assistant
-             */
-            name: string;
-            /** @description Product description */
-            description?: string;
-            /** @description URL to the product image */
-            imageUrl?: string;
-            /** @description Free-form product type */
-            productType?: string;
-            /**
-             * Product status
-             * @example active
-             */
-            status: string;
-            /**
-             * Product balance in cents
-             * @example 0
-             */
-            balance: number;
-            /**
-             * Total number of transactions
-             * @example 0
-             */
-            totalTransactions: number;
-            /**
-             * Whether this product uses MCP Pay proxy
-             * @example false
-             */
-            isMcpPay: boolean;
-            /** @description Product-specific configuration */
-            config?: Record<string, never>;
-            /** @description Arbitrary key-value metadata */
-            metadata?: Record<string, never>;
-            /** @description Creation timestamp */
-            createdAt: string;
-            /** @description Last update timestamp */
-            updatedAt: string;
-            /** @description Plans associated with this product */
-            plans?: components["schemas"]["SdkPlanResponse"][];
-        };
-        UpdateProductRequest: {
-            /** @description Product name */
-            name?: string;
-            /** @description Product description */
-            description?: string;
-            /** @description URL to the product image */
-            imageUrl?: string;
-            /** @description Free-form product type defined by the provider */
-            productType?: string;
-            /**
-             * Product status
-             * @enum {string}
-             */
-            status?: "active" | "inactive" | "suspended";
-            /** @description Product-specific configuration */
-            config?: Record<string, never>;
-            /** @description Arbitrary key-value metadata */
-            metadata?: Record<string, never>;
-        };
-        CreatePlanRequest: {
-            /**
-             * Plan type
-             * @example recurring
-             * @enum {string}
-             */
-            type?: "recurring" | "usage-based" | "hybrid" | "one-time";
-            /**
-             * Billing cycle (required for recurring/hybrid, optional for post-paid usage-based)
-             * @example monthly
-             * @enum {string}
-             */
-            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
-            /**
-             * Plan price
-             * @example 29.99
-             */
-            price?: number;
-            /**
-             * Currency code (ISO 4217)
-             * @example USD
-             * @enum {string}
-             */
-            currency?: "USD" | "EUR" | "GBP" | "SEK" | "NOK" | "DKK" | "CAD" | "AUD" | "JPY" | "CHF" | "PLN" | "CZK" | "HUF" | "RON" | "BGN" | "HRK" | "RSD" | "MKD" | "BAM" | "ALL" | "ISK" | "TRY" | "RUB" | "UAH" | "BYN" | "MDL" | "GEL" | "AMD" | "AZN" | "KZT" | "KGS" | "TJS" | "TMT" | "UZS" | "MNT" | "CNY" | "KRW" | "THB" | "VND" | "IDR" | "MYR" | "SGD" | "PHP" | "INR" | "PKR" | "BDT" | "LKR" | "NPR" | "AFN" | "IRR" | "IQD" | "JOD" | "KWD" | "LBP" | "OMR" | "QAR" | "SAR" | "SYP" | "AED" | "YER" | "ILS" | "EGP" | "MAD" | "TND" | "DZD" | "LYD" | "SDG" | "ETB" | "KES" | "TZS" | "UGX" | "RWF" | "BIF" | "DJF" | "SOS" | "ERN" | "SLL" | "GMD" | "GNF" | "CVE" | "STN" | "AOA" | "ZAR" | "BWP" | "SZL" | "LSL" | "NAD" | "ZMW" | "ZWL" | "MZN" | "MWK" | "MGA" | "MUR" | "SCR" | "KMF" | "MVR";
-            /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
-             * Number of free units included
-             * @example 100
-             */
-            freeUnits?: number;
-            /**
-             * Billing model for usage-based plans
-             * @example pre-paid
-             * @enum {string}
-             */
-            billingModel?: "pre-paid" | "post-paid";
-            /**
-             * Price per unit for usage-based plans
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Unit name for usage-based plans
-             * @example request
-             */
-            unit?: string;
-            /**
-             * Whether to rollover unused units
-             * @example false
-             */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
-            /**
-             * Usage limits (shape varies by plan type)
-             * @example {
-             *       "maxTransactions": 1000
-             *     }
-             */
-            limits?: Record<string, never>;
-            /**
-             * Plan features (generic key/value, shape is provider-defined)
-             * @example {
-             *       "apiAccess": true,
-             *       "prioritySupport": false
-             *     }
-             */
-            features?: Record<string, never>;
-            /**
-             * Whether this is a free tier plan
-             * @example false
-             */
-            isFreeTier?: boolean;
-            /**
-             * Whether payment is required
-             * @example true
-             */
-            requiresPayment?: boolean;
-            /**
-             * Plan status
-             * @example active
-             * @enum {string}
-             */
-            status?: "active" | "inactive" | "archived";
-            /**
-             * Maximum number of active users
-             * @example 10
-             */
-            maxActiveUsers?: number;
-            /**
-             * Access expiry in days
-             * @example 30
-             */
-            accessExpiryDays?: number;
-            /** @description Additional metadata */
-            metadata?: Record<string, never>;
-            /**
-             * Whether this is the default plan
-             * @example false
-             */
-            default?: boolean;
-        };
-        Plan: {
-            /**
-             * Plan ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
-             * Plan reference
-             * @example pln_1A2B3C4D
-             */
-            reference: string;
-            /**
-             * Plan price
-             * @example 29.99
-             */
-            price: number;
-            /**
-             * Currency code (ISO 4217)
-             * @example USD
-             */
-            currency: string;
-            /**
-             * Currency symbol (derived from currency)
-             * @example $
-             */
-            currencySymbol?: string;
-            /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
-             * Number of free units included
-             * @example 100
-             */
-            freeUnits?: number;
-            /**
-             * Billing cycle
-             * @example monthly
-             */
-            billingCycle?: string;
-            /**
-             * Billing model
-             * @example pre-paid
-             */
-            billingModel?: string;
-            /**
-             * Price per unit
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Unit name
-             * @example request
-             */
-            unit?: string;
-            /** @description Whether to rollover unused units */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
-            /** @description Usage limits */
-            limits?: Record<string, never>;
-            /** @description Plan features */
-            features?: Record<string, never>;
-            /**
-             * Whether this is a free tier plan
-             * @example false
-             */
-            isFreeTier: boolean;
-            /**
-             * Whether payment is required
-             * @example true
-             */
-            requiresPayment: boolean;
-            /**
-             * Whether the plan is active (derived from status)
-             * @example true
-             */
-            isActive: boolean;
-            /** @description Maximum number of active users */
-            maxActiveUsers?: number;
-            /** @description Access expiry in days */
-            accessExpiryDays?: number;
-            /**
-             * Plan status
-             * @example active
-             */
-            status: string;
-            /** @description Creation timestamp */
-            createdAt: string;
-            /** @description Last update timestamp */
-            updatedAt: string;
-        };
-        UpdatePlanRequest: {
-            /**
-             * Billing cycle
-             * @example monthly
-             * @enum {string}
-             */
-            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
-            /**
-             * Plan price
-             * @example 29.99
-             */
-            price?: number;
-            /**
-             * Currency code (ISO 4217)
-             * @example USD
-             */
-            currency?: string;
-            /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
-             * Number of free units included
-             * @example 100
-             */
-            freeUnits?: number;
-            /**
-             * Billing model for usage-based plans
-             * @example pre-paid
-             * @enum {string}
-             */
-            billingModel?: "pre-paid" | "post-paid";
-            /**
-             * Price per unit for usage-based plans
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Unit name for usage-based plans
-             * @example request
-             */
-            unit?: string;
-            /**
-             * Whether to rollover unused units
-             * @example false
-             */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
-            /**
-             * Usage limits (shape varies by plan type)
-             * @example {
-             *       "maxTransactions": 1000
-             *     }
-             */
-            limits?: Record<string, never>;
-            /**
-             * Plan features (generic key/value, shape is provider-defined)
-             * @example {
-             *       "apiAccess": true,
-             *       "prioritySupport": false
-             *     }
-             */
-            features?: Record<string, never>;
-            /**
-             * Whether this is a free tier plan
-             * @example false
-             */
-            isFreeTier?: boolean;
-            /**
-             * Whether payment is required
-             * @example true
-             */
-            requiresPayment?: boolean;
-            /**
-             * Plan status
-             * @example active
-             * @enum {string}
-             */
-            status?: "active" | "inactive" | "archived";
-            /**
-             * Maximum number of active users
-             * @example 10
-             */
-            maxActiveUsers?: number;
-            /**
-             * Access expiry in days
-             * @example 30
-             */
-            accessExpiryDays?: number;
-            /** @description Additional metadata */
-            metadata?: Record<string, never>;
-            /**
-             * Whether this is the default plan
-             * @example false
-             */
-            default?: boolean;
+        VerifyEmailChange: {
+            code: string;
         };
         CreateCheckoutSessionRequest: {
             /**
@@ -1138,6 +688,571 @@ export interface components {
             /** @description Terms of Service acceptance */
             tosAcceptance?: components["schemas"]["TosAcceptance"];
         };
+        Plan: {
+            /**
+             * Plan ID
+             * @example 507f1f77bcf86cd799439011
+             */
+            id: string;
+            /**
+             * Plan reference
+             * @example pln_1A2B3C4D
+             */
+            reference: string;
+            /**
+             * Plan price
+             * @example 29.99
+             */
+            price: number;
+            /**
+             * Currency code (ISO 4217)
+             * @example USD
+             */
+            currency: string;
+            /**
+             * Currency symbol (derived from currency)
+             * @example $
+             */
+            currencySymbol?: string;
+            /**
+             * Setup fee
+             * @example 0
+             */
+            setupFee?: number;
+            /**
+             * Trial days
+             * @example 7
+             */
+            trialDays?: number;
+            /**
+             * Number of free units included
+             * @example 100
+             */
+            freeUnits?: number;
+            /**
+             * Billing cycle
+             * @example monthly
+             */
+            billingCycle?: string;
+            /**
+             * Billing model
+             * @example pre-paid
+             */
+            billingModel?: string;
+            /**
+             * Price per unit
+             * @example 0.01
+             */
+            pricePerUnit?: number;
+            /**
+             * Meter ID (ObjectId)
+             * @example 507f1f77bcf86cd799439011
+             */
+            meterId?: string;
+            /**
+             * Usage limit for the meter
+             * @example 10000
+             */
+            limit?: number;
+            /** @description Whether to rollover unused units */
+            rolloverUnusedUnits?: boolean;
+            /**
+             * Base price for hybrid plans
+             * @example 29.99
+             */
+            basePrice?: number;
+            /** @description Usage limits */
+            limits?: {
+                [key: string]: unknown;
+            };
+            /** @description Plan features */
+            features?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Whether this is a free tier plan
+             * @example false
+             */
+            isFreeTier: boolean;
+            /**
+             * Whether payment is required
+             * @example true
+             */
+            requiresPayment: boolean;
+            /**
+             * Whether the plan is active (derived from status)
+             * @example true
+             */
+            isActive: boolean;
+            /** @description Maximum number of active users */
+            maxActiveUsers?: number;
+            /** @description Access expiry in days */
+            accessExpiryDays?: number;
+            /**
+             * Plan status
+             * @example active
+             */
+            status: string;
+            /** @description Creation timestamp */
+            createdAt: string;
+            /** @description Last update timestamp */
+            updatedAt: string;
+        };
+        CreatePlanRequest: {
+            /**
+             * Plan type
+             * @example recurring
+             * @enum {string}
+             */
+            type?: "recurring" | "usage-based" | "hybrid" | "one-time";
+            /**
+             * Billing cycle (required for recurring/hybrid, optional for post-paid usage-based)
+             * @example monthly
+             * @enum {string}
+             */
+            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+            /**
+             * Plan price
+             * @example 29.99
+             */
+            price?: number;
+            /**
+             * Currency code (ISO 4217)
+             * @example USD
+             * @enum {string}
+             */
+            currency?: "USD" | "EUR" | "GBP" | "SEK" | "NOK" | "DKK" | "CAD" | "AUD" | "JPY" | "CHF" | "PLN" | "CZK" | "HUF" | "RON" | "BGN" | "HRK" | "RSD" | "MKD" | "BAM" | "ALL" | "ISK" | "TRY" | "RUB" | "UAH" | "BYN" | "MDL" | "GEL" | "AMD" | "AZN" | "KZT" | "KGS" | "TJS" | "TMT" | "UZS" | "MNT" | "CNY" | "KRW" | "THB" | "VND" | "IDR" | "MYR" | "SGD" | "PHP" | "INR" | "PKR" | "BDT" | "LKR" | "NPR" | "AFN" | "IRR" | "IQD" | "JOD" | "KWD" | "LBP" | "OMR" | "QAR" | "SAR" | "SYP" | "AED" | "YER" | "ILS" | "EGP" | "MAD" | "TND" | "DZD" | "LYD" | "SDG" | "ETB" | "KES" | "TZS" | "UGX" | "RWF" | "BIF" | "DJF" | "SOS" | "ERN" | "SLL" | "GMD" | "GNF" | "CVE" | "STN" | "AOA" | "ZAR" | "BWP" | "SZL" | "LSL" | "NAD" | "ZMW" | "ZWL" | "MZN" | "MWK" | "MGA" | "MUR" | "SCR" | "KMF" | "MVR";
+            /**
+             * Setup fee
+             * @example 0
+             */
+            setupFee?: number;
+            /**
+             * Trial days
+             * @example 7
+             */
+            trialDays?: number;
+            /**
+             * Number of free units included
+             * @example 100
+             */
+            freeUnits?: number;
+            /**
+             * Billing model for usage-based plans
+             * @example pre-paid
+             * @enum {string}
+             */
+            billingModel?: "pre-paid" | "post-paid";
+            /**
+             * Price per unit for usage-based plans
+             * @example 0.01
+             */
+            pricePerUnit?: number;
+            /**
+             * Meter ID (ObjectId) for usage-based plans
+             * @example 507f1f77bcf86cd799439011
+             */
+            meterId?: string;
+            /**
+             * Usage limit for the meter
+             * @example 10000
+             */
+            limit?: number;
+            /**
+             * Whether to rollover unused units
+             * @example false
+             */
+            rolloverUnusedUnits?: boolean;
+            /**
+             * Base price for hybrid plans
+             * @example 29.99
+             */
+            basePrice?: number;
+            /**
+             * Usage limits (shape varies by plan type)
+             * @example {
+             *       "maxTransactions": 1000
+             *     }
+             */
+            limits?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Plan features (generic key/value, shape is provider-defined)
+             * @example {
+             *       "apiAccess": true,
+             *       "prioritySupport": false
+             *     }
+             */
+            features?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Whether this is a free tier plan
+             * @example false
+             */
+            isFreeTier?: boolean;
+            /**
+             * Whether payment is required
+             * @example true
+             */
+            requiresPayment?: boolean;
+            /**
+             * Plan status
+             * @example active
+             * @enum {string}
+             */
+            status?: "active" | "inactive" | "archived";
+            /**
+             * Maximum number of active users
+             * @example 10
+             */
+            maxActiveUsers?: number;
+            /**
+             * Access expiry in days
+             * @example 30
+             */
+            accessExpiryDays?: number;
+            /** @description Additional metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Whether this is the default plan
+             * @example false
+             */
+            default?: boolean;
+        };
+        UpdatePlanRequest: {
+            /**
+             * Billing cycle
+             * @example monthly
+             * @enum {string}
+             */
+            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+            /**
+             * Plan price
+             * @example 29.99
+             */
+            price?: number;
+            /**
+             * Currency code (ISO 4217)
+             * @example USD
+             */
+            currency?: string;
+            /**
+             * Setup fee
+             * @example 0
+             */
+            setupFee?: number;
+            /**
+             * Trial days
+             * @example 7
+             */
+            trialDays?: number;
+            /**
+             * Number of free units included
+             * @example 100
+             */
+            freeUnits?: number;
+            /**
+             * Billing model for usage-based plans
+             * @example pre-paid
+             * @enum {string}
+             */
+            billingModel?: "pre-paid" | "post-paid";
+            /**
+             * Price per unit for usage-based plans
+             * @example 0.01
+             */
+            pricePerUnit?: number;
+            /**
+             * Meter ID (ObjectId) for usage-based plans
+             * @example 507f1f77bcf86cd799439011
+             */
+            meterId?: string;
+            /**
+             * Usage limit for the meter
+             * @example 10000
+             */
+            limit?: number;
+            /**
+             * Whether to rollover unused units
+             * @example false
+             */
+            rolloverUnusedUnits?: boolean;
+            /**
+             * Base price for hybrid plans
+             * @example 29.99
+             */
+            basePrice?: number;
+            /**
+             * Usage limits (shape varies by plan type)
+             * @example {
+             *       "maxTransactions": 1000
+             *     }
+             */
+            limits?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Plan features (generic key/value, shape is provider-defined)
+             * @example {
+             *       "apiAccess": true,
+             *       "prioritySupport": false
+             *     }
+             */
+            features?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Whether this is a free tier plan
+             * @example false
+             */
+            isFreeTier?: boolean;
+            /**
+             * Whether payment is required
+             * @example true
+             */
+            requiresPayment?: boolean;
+            /**
+             * Plan status
+             * @example active
+             * @enum {string}
+             */
+            status?: "active" | "inactive" | "archived";
+            /**
+             * Maximum number of active users
+             * @example 10
+             */
+            maxActiveUsers?: number;
+            /**
+             * Access expiry in days
+             * @example 30
+             */
+            accessExpiryDays?: number;
+            /** @description Additional metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Whether this is the default plan
+             * @example false
+             */
+            default?: boolean;
+        };
+        ProductConfigDto: {
+            /**
+             * Fulfillment type
+             * @example digital
+             */
+            fulfillmentType?: string;
+            /**
+             * Validity period in days
+             * @example 30
+             */
+            validityPeriod?: number;
+            /**
+             * Delivery method
+             * @example api
+             */
+            deliveryMethod?: string;
+        };
+        CreateProductRequest: {
+            /**
+             * Product name
+             * @example AI Writing Assistant
+             */
+            name: string;
+            /**
+             * Product description
+             * @example AI-powered writing tool
+             */
+            description?: string;
+            /** @description URL to the product image */
+            imageUrl?: string;
+            /**
+             * Free-form product type defined by the provider
+             * @example Coding Assistant
+             */
+            productType?: string;
+            /**
+             * Whether this product uses MCP Pay proxy
+             * @default false
+             */
+            isMcpPay: boolean;
+            /** @description Product-specific configuration */
+            config?: components["schemas"]["ProductConfigDto"];
+            /** @description Arbitrary key-value metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        SdkPlanResponse: {
+            /**
+             * Plan ID
+             * @example 507f1f77bcf86cd799439011
+             */
+            id: string;
+            /**
+             * Plan reference
+             * @example pln_1A2B3C4D
+             */
+            reference: string;
+            /**
+             * Plan price
+             * @example 29.99
+             */
+            price: number;
+            /**
+             * Currency code (ISO 4217)
+             * @example USD
+             */
+            currency: string;
+            /**
+             * Currency symbol
+             * @example $
+             */
+            currencySymbol?: string;
+            /**
+             * Billing cycle
+             * @example monthly
+             */
+            billingCycle?: string;
+            /**
+             * Billing model
+             * @example pre-paid
+             */
+            billingModel?: string;
+            /**
+             * Price per unit
+             * @example 0.01
+             */
+            pricePerUnit?: number;
+            /**
+             * Meter ID (ObjectId)
+             * @example 507f1f77bcf86cd799439011
+             */
+            meterId?: string;
+            /**
+             * Usage limit for the meter
+             * @example 10000
+             */
+            limit?: number;
+            /**
+             * Included free units
+             * @example 1000
+             */
+            freeUnits?: number;
+            /** @description Usage limits */
+            limits?: {
+                [key: string]: unknown;
+            };
+            /** @description Plan features */
+            features?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Whether this is a free tier plan
+             * @example false
+             */
+            isFreeTier: boolean;
+            /**
+             * Whether payment is required
+             * @example true
+             */
+            requiresPayment: boolean;
+            /**
+             * Whether the plan is active
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * Plan status
+             * @example active
+             */
+            status: string;
+            /** @description Creation timestamp */
+            createdAt: string;
+            /** @description Last update timestamp */
+            updatedAt: string;
+        };
+        SdkProductResponse: {
+            /**
+             * Product ID
+             * @example 507f1f77bcf86cd799439011
+             */
+            id: string;
+            /**
+             * Product reference
+             * @example prd_1A2B3C4D
+             */
+            reference: string;
+            /**
+             * Product name
+             * @example AI Writing Assistant
+             */
+            name: string;
+            /** @description Product description */
+            description?: string;
+            /** @description URL to the product image */
+            imageUrl?: string;
+            /** @description Free-form product type */
+            productType?: string;
+            /**
+             * Product status
+             * @example active
+             */
+            status: string;
+            /**
+             * Product balance in cents
+             * @example 0
+             */
+            balance: number;
+            /**
+             * Total number of transactions
+             * @example 0
+             */
+            totalTransactions: number;
+            /**
+             * Whether this product uses MCP Pay proxy
+             * @example false
+             */
+            isMcpPay: boolean;
+            /** @description Product-specific configuration */
+            config?: components["schemas"]["ProductConfigDto"];
+            /** @description Arbitrary key-value metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** @description Creation timestamp */
+            createdAt: string;
+            /** @description Last update timestamp */
+            updatedAt: string;
+            /** @description Plans associated with this product */
+            plans?: components["schemas"]["SdkPlanResponse"][];
+        };
+        UpdateProductRequest: {
+            /** @description Product name */
+            name?: string;
+            /** @description Product description */
+            description?: string;
+            /** @description URL to the product image */
+            imageUrl?: string;
+            /** @description Free-form product type defined by the provider */
+            productType?: string;
+            /**
+             * Product status
+             * @enum {string}
+             */
+            status?: "active" | "inactive" | "suspended";
+            /** @description Product-specific configuration */
+            config?: components["schemas"]["ProductConfigDto"];
+            /** @description Arbitrary key-value metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
         McpToolDto: {
             /**
              * Tool name
@@ -1209,7 +1324,7 @@ export interface components {
              * Default plan ID for tool access gating
              * @example pln_default
              */
-            defaultPlanId: string;
+            defaultPlanId?: string;
             /**
              * Associated product ID
              * @example 507f1f77bcf86cd799439011
@@ -1247,6 +1362,88 @@ export interface components {
              */
             balance?: number;
         };
+        PlanSnapshotDto: {
+            /**
+             * Plan reference
+             * @example pln_1A2B3C4D
+             */
+            reference?: string;
+            /**
+             * Plan price in cents
+             * @example 2999
+             */
+            price: number;
+            /**
+             * Currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * Plan type
+             * @example recurring
+             */
+            planType: string;
+            /**
+             * Billing cycle
+             * @example monthly
+             */
+            billingCycle?: string | null;
+            /** @description Plan features */
+            features?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Usage limits */
+            limits?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Meter ObjectId reference
+             * @example 507f1f77bcf86cd799439011
+             */
+            meterId?: string;
+            /**
+             * Usage limit for the meter
+             * @example 5000
+             */
+            limit?: number;
+            /**
+             * Number of free units included
+             * @example 100
+             */
+            freeUnits?: number;
+            /**
+             * Price per usage unit in cents
+             * @example 10
+             */
+            pricePerUnit?: number;
+        };
+        UsageBillingDto: {
+            /**
+             * Units consumed in current period
+             * @example 150
+             */
+            used: number;
+            /**
+             * Units exceeding the plan limit
+             * @example 0
+             */
+            overageUnits: number;
+            /**
+             * Overage cost in cents
+             * @example 0
+             */
+            overageCost: number;
+            /**
+             * Period start date
+             * @example 2025-10-01T00:00:00Z
+             */
+            periodStart?: string;
+            /**
+             * Period end date
+             * @example 2025-11-01T00:00:00Z
+             */
+            periodEnd?: string;
+        };
         PurchaseResponse: {
             /**
              * Purchase ID
@@ -1283,18 +1480,8 @@ export interface components {
              * @example API Gateway Manager
              */
             productName?: string;
-            /**
-             * Plan snapshot at time of purchase
-             * @example {
-             *       "price": 2999,
-             *       "currency": "USD",
-             *       "planType": "recurring",
-             *       "billingCycle": "monthly",
-             *       "features": null,
-             *       "limits": null
-             *     }
-             */
-            planSnapshot: Record<string, never>;
+            /** @description Plan snapshot at time of purchase */
+            planSnapshot: components["schemas"]["PlanSnapshotDto"];
             /**
              * Purchase status
              * @example active
@@ -1316,17 +1503,8 @@ export interface components {
             endDate?: string;
             /** @description Paid at timestamp */
             paidAt?: string;
-            /**
-             * Usage information for usage-based plans
-             * @example {
-             *       "used": 150,
-             *       "freeUnits": 1000,
-             *       "unit": "requests",
-             *       "overageUnits": 0,
-             *       "overageCost": 0
-             *     }
-             */
-            usage?: Record<string, never>;
+            /** @description Usage billing state for usage-based plans */
+            usage?: components["schemas"]["UsageBillingDto"];
             /**
              * Is recurring
              * @example true
@@ -1392,6 +1570,11 @@ export interface components {
              * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
              */
             checkoutUrl?: string;
+            /**
+             * The meter name to use when tracking usage events
+             * @example api_requests
+             */
+            meterName?: string;
         };
         CreateCustomerSessionRequest: {
             /**
@@ -1578,11 +1761,11 @@ export interface components {
             /** @example cus_3C4D5E6F */
             reference: string;
             /** @example John Doe */
-            name?: Record<string, never>;
+            name?: string | null;
             /** @example john@example.com */
             email: string;
             /** @example auth_user_12345 */
-            externalRef?: Record<string, never>;
+            externalRef?: string | null;
         };
         UserInfoUsageDto: {
             /** @example 1000 */
@@ -1591,24 +1774,32 @@ export interface components {
             used: number;
             /** @example 750 */
             remaining: number;
-            /** @example invocations */
-            unit: string;
+            /**
+             * Meter ObjectId reference
+             * @example 507f1f77bcf86cd799439011
+             */
+            meterId?: string;
             /** @example 25 */
-            percentUsed?: Record<string, never>;
+            percentUsed?: number | null;
         };
         UserInfoPlanDto: {
             /** @example pln_2B3C4D5E */
             reference: string;
-            /** @example 2999 */
+            /**
+             * Price in minor currency units (e.g. cents)
+             * @example 2999
+             */
             price: number;
             /** @example USD */
             currency: string;
             /** @example recurring */
             type: string;
             /** @example monthly */
-            billingCycle?: Record<string, never>;
-            features?: Record<string, never>;
-            limits?: Record<string, never>;
+            billingCycle?: string | null;
+            features?: string[] | null;
+            limits?: {
+                [key: string]: unknown;
+            } | null;
         };
         UserInfoPurchaseDto: {
             /** @example pur_1A2B3C4D */
@@ -1620,9 +1811,9 @@ export interface components {
             /** @example recurring */
             planType: string;
             /** @example 2025-10-27T10:00:00Z */
-            startDate?: Record<string, never>;
+            startDate?: string | null;
             /** @example 2025-11-27T10:00:00Z */
-            endDate?: Record<string, never>;
+            endDate?: string | null;
             usage?: components["schemas"]["UserInfoUsageDto"];
             plan?: components["schemas"]["UserInfoPlanDto"];
         };
@@ -1636,7 +1827,7 @@ export interface components {
              * Customer portal session URL
              * @example https://solvapay.com/customer/manage?id=abc123
              */
-            verifyUrl?: Record<string, never>;
+            verifyUrl?: string | null;
             user?: components["schemas"]["UserInfoUserDto"];
             purchase?: components["schemas"]["UserInfoPurchaseDto"];
         };
@@ -1725,6 +1916,77 @@ export interface components {
             redirect_uri: string;
             /** @description The state parameter returned by GitHub (contains client_id) */
             state: string;
+        };
+        CreateMeterDto: {
+            /**
+             * Unique meter name (per provider)
+             * @example api_requests
+             */
+            name: string;
+            /**
+             * Human-readable display name
+             * @example API Requests
+             */
+            displayName: string;
+            /**
+             * Optional description
+             * @example Tracks API call volume
+             */
+            description?: string;
+            /**
+             * Aggregation method for events
+             * @default count
+             * @enum {string}
+             */
+            aggregation: "count" | "sum" | "max" | "min" | "avg";
+            /**
+             * Unit label
+             * @default requests
+             * @example requests
+             */
+            unit: string;
+        };
+        UpdateMeterDto: {
+            /** @example API Requests v2 */
+            displayName?: string;
+            /** @example Updated description */
+            description?: string;
+            /** @enum {string} */
+            status?: "active" | "archived";
+        };
+        RecordMeterEventDto: {
+            /**
+             * Meter name to record against
+             * @example api_requests
+             */
+            meterName: string;
+            /**
+             * Customer reference
+             * @example cus_ABC123
+             */
+            customerId: string;
+            /**
+             * Numeric value (default 1)
+             * @default 1
+             * @example 1
+             */
+            value: number;
+            /**
+             * Arbitrary key-value tags
+             * @example {
+             *       "endpoint": "/api/v1/search",
+             *       "region": "us-east-1"
+             *     }
+             */
+            properties?: {
+                [key: string]: unknown;
+            };
+            /** @description ISO 8601 timestamp (defaults to now) */
+            timestamp?: string;
+        };
+        RecordBulkMeterEventsDto: {
+            /** @description Array of events to record */
+            events: components["schemas"]["RecordMeterEventDto"][];
         };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
@@ -1838,359 +2100,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    ProductSdkController_listProducts: {
-        parameters: {
-            query?: {
-                /** @description Max results (1-100) */
-                limit?: number;
-                /** @description Pagination offset */
-                offset?: number;
-                /** @description Search by name or description */
-                search?: string;
-                /** @description Filter by status */
-                status?: "active" | "inactive" | "suspended";
-                /** @description Filter MCP Pay products */
-                isMcpPay?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Products retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProductSdkController_createProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateProductRequest"];
-            };
-        };
-        responses: {
-            /** @description Product created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SdkProductResponse"];
-                };
-            };
-            /** @description Missing required fields or validation error */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProductSdkController_getProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Product retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SdkProductResponse"];
-                };
-            };
-            /** @description Product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProductSdkController_updateProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProductRequest"];
-            };
-        };
-        responses: {
-            /** @description Product updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SdkProductResponse"];
-                };
-            };
-            /** @description Product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProductSdkController_deleteProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Product deleted or deactivated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProductSdkController_cloneProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID to clone */
-                productRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Product cloned successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SdkProductResponse"];
-                };
-            };
-            /** @description Product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PlanSdkController_listPlans: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Plans retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        plans?: components["schemas"]["Plan"][];
-                        /** @description Total number of plans for the product */
-                        total?: number;
-                        limit?: number;
-                        offset?: number;
-                    };
-                };
-            };
-            /** @description Product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PlanSdkController_createPlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePlanRequest"];
-            };
-        };
-        responses: {
-            /** @description Plan created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Plan"];
-                };
-            };
-            /** @description Product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PlanSdkController_getPlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-                /** @description Plan reference or ID */
-                planRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Plan retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Plan"];
-                };
-            };
-            /** @description Plan or product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PlanSdkController_updatePlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-                /** @description Plan reference or ID */
-                planRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePlanRequest"];
-            };
-        };
-        responses: {
-            /** @description Plan updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Plan"];
-                };
-            };
-            /** @description Plan or product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PlanSdkController_deletePlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-                /** @description Plan reference or ID */
-                planRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Plan deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Plan or product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     PaymentIntentSdkController_getPaymentIntents: {
         parameters: {
             query?: {
@@ -2418,6 +2327,359 @@ export interface operations {
             };
             /** @description Missing customerRef or productRef */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanSdkController_listPlans: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plans retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        plans?: components["schemas"]["Plan"][];
+                        /** @description Total number of plans for the product */
+                        total?: number;
+                        limit?: number;
+                        offset?: number;
+                    };
+                };
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanSdkController_createPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Plan created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Plan"];
+                };
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanSdkController_getPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+                /** @description Plan reference or ID */
+                planRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Plan"];
+                };
+            };
+            /** @description Plan or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanSdkController_updatePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+                /** @description Plan reference or ID */
+                planRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Plan updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Plan"];
+                };
+            };
+            /** @description Plan or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanSdkController_deletePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+                /** @description Plan reference or ID */
+                planRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan deleted successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_listProducts: {
+        parameters: {
+            query?: {
+                /** @description Max results (1-100) */
+                limit?: number;
+                /** @description Pagination offset */
+                offset?: number;
+                /** @description Search by name or description */
+                search?: string;
+                /** @description Filter by status */
+                status?: "active" | "inactive" | "suspended";
+                /** @description Filter MCP Pay products */
+                isMcpPay?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Products retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_createProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Product created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdkProductResponse"];
+                };
+            };
+            /** @description Missing required fields or validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_getProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdkProductResponse"];
+                };
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_updateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Product updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdkProductResponse"];
+                };
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_deleteProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product deleted or deactivated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_cloneProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID to clone */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product cloned successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdkProductResponse"];
+                };
+            };
+            /** @description Product not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2858,34 +3120,26 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * Customer reference
+                     * Customer reference (userId for the meter event)
                      * @example cus_3C4D5E6F
                      */
                     customerRef: string;
                     /**
-                     * Product reference
-                     * @example prd_1A2B3C4D
+                     * Meter name to record against
+                     * @example api_requests
                      */
-                    productRef: string;
+                    meterName: string;
                     /**
                      * Number of usage units (default: 1)
                      * @example 1
                      */
                     units?: number;
-                    /**
-                     * Action type
-                     * @example api_call
-                     * @enum {string}
-                     */
-                    action?: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
-                    /** @description Tool or feature name */
-                    toolName?: string;
-                    /** @description Custom action key for custom action types */
-                    customActionKey?: string;
-                    /** @description Human-readable description of the event */
-                    description?: string;
-                    /** @description Arbitrary metadata */
-                    metadata?: Record<string, never>;
+                    /** @description Arbitrary event properties */
+                    properties?: {
+                        [key: string]: unknown;
+                    };
+                    /** @description ISO 8601 timestamp (defaults to now) */
+                    timestamp?: string;
                 };
             };
         };
@@ -2899,25 +3153,13 @@ export interface operations {
                     "application/json": {
                         /** @example true */
                         success?: boolean;
-                        /**
-                         * @example success
-                         * @enum {string}
-                         */
-                        outcome?: "success" | "paywall";
                         /** @example 1 */
                         units?: number;
                     };
                 };
             };
-            /** @description Missing customerRef or productRef */
+            /** @description Missing customerRef or meterName */
             400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Customer or product not found */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2937,9 +3179,12 @@ export interface operations {
                 "application/json": {
                     events: {
                         customerRef: string;
-                        productRef: string;
+                        meterName: string;
                         units?: number;
-                        action?: string;
+                        properties?: {
+                            [key: string]: unknown;
+                        };
+                        timestamp?: string;
                     }[];
                 };
             };
@@ -2953,6 +3198,76 @@ export interface operations {
                 content?: never;
             };
             /** @description Events array is required and must not be empty */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeterSdkController_recordEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordMeterEventDto"];
+            };
+        };
+        responses: {
+            /** @description Event recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        success?: boolean;
+                    };
+                };
+            };
+            /** @description Invalid meter name or meter is archived */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeterSdkController_recordBulkEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordBulkMeterEventsDto"];
+            };
+        };
+        responses: {
+            /** @description Events recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        success?: boolean;
+                        /** @example 50 */
+                        inserted?: number;
+                    };
+                };
+            };
+            /** @description Invalid meter name or meter is archived */
             400: {
                 headers: {
                     [name: string]: unknown;

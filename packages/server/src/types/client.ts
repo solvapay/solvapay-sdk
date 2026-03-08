@@ -9,7 +9,7 @@ import type { components } from './generated'
 /**
  * Extended LimitResponse with plan field
  */
-export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { plan: string }
+export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { plan: string; meterName?: string }
 
 /**
  * Extended CustomerResponse with proper field mapping
@@ -127,6 +127,10 @@ export interface SolvaPayClient {
       interval?: string
       isFreeTier?: boolean
       freeUnits?: number
+      meterId?: string
+      limit?: number
+      pricePerUnit?: number
+      billingModel?: string
       metadata?: Record<string, unknown>
       [key: string]: unknown
     }>

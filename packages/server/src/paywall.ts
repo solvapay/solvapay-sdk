@@ -96,6 +96,7 @@ const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
 interface LimitsCacheEntry {
   remaining: number
   checkoutUrl?: string
+  meterName?: string
   timestamp: number
 }
 
@@ -169,6 +170,8 @@ export class SolvaPayPaywall {
         backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
       }
 
+      let resolvedMeterName: string | undefined
+
       try {
         const limitsCacheKey = `${backendCustomerRef}:${product}:${configuredPlanRef || ''}`
         const cachedLimits = this.limitsCache.get(limitsCacheKey)
@@ -190,6 +193,7 @@ export class SolvaPayPaywall {
           withinLimits = true
           remaining = cachedLimits.remaining
           checkoutUrl = cachedLimits.checkoutUrl
+          resolvedMeterName = cachedLimits.meterName
         } else {
           if (cachedLimits) {
             this.limitsCache.delete(limitsCacheKey)
@@ -203,11 +207,13 @@ export class SolvaPayPaywall {
           withinLimits = limitsCheck.withinLimits
           remaining = limitsCheck.remaining
           checkoutUrl = limitsCheck.checkoutUrl
+          resolvedMeterName = limitsCheck.meterName
 
           if (withinLimits && remaining > 0) {
             this.limitsCache.set(limitsCacheKey, {
               remaining,
               checkoutUrl,
+              meterName: resolvedMeterName,
               timestamp: now,
             })
           }
@@ -219,7 +225,7 @@ export class SolvaPayPaywall {
             backendCustomerRef,
             product,
             usagePlanRef,
-            toolName,
+            resolvedMeterName || toolName,
             'paywall',
             requestId,
             latencyMs,
@@ -240,7 +246,7 @@ export class SolvaPayPaywall {
           backendCustomerRef,
           product,
           usagePlanRef,
-          toolName,
+          resolvedMeterName || toolName,
           'success',
           requestId,
           latencyMs,
@@ -248,24 +254,24 @@ export class SolvaPayPaywall {
 
         return result
       } catch (error) {
-        // Log error details for debugging, but format it clearly without full stack traces
         if (error instanceof Error) {
           const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error'
           this.log(`❌ Error in paywall [${errorType}]: ${error.message}`)
         } else {
           this.log(`❌ Error in paywall:`, error)
         }
-        const latencyMs = Date.now() - startTime
-        const outcome = error instanceof PaywallError ? 'paywall' : 'fail'
-        this.trackUsage(
-          backendCustomerRef,
-          product,
-          usagePlanRef,
-          toolName,
-          outcome,
-          requestId,
-          latencyMs,
-        )
+        if (!(error instanceof PaywallError)) {
+          const latencyMs = Date.now() - startTime
+          this.trackUsage(
+            backendCustomerRef,
+            product,
+            usagePlanRef,
+            resolvedMeterName || toolName,
+            'fail',
+            requestId,
+            latencyMs,
+          )
+        }
         throw error
       }
     }
@@ -498,7 +504,7 @@ export class SolvaPayPaywall {
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          meterName: toolName ? `tool:${toolName}` : 'api_requests',
+          meterName: toolName || 'api_requests',
           units: 1,
           properties: { outcome, requestId, actionDuration },
           timestamp: new Date().toISOString(),
