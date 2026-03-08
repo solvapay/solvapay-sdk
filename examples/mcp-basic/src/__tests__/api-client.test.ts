@@ -123,12 +123,8 @@ describe('StubSolvaPayClient', () => {
     it('should track usage events', async () => {
       const usageParams = {
         customerRef: 'test_customer',
-        productRef: 'test_product',
-        planRef: 'test_plan',
-        outcome: 'success' as const,
-        action: 'test_tool',
-        requestId: 'test_request_id',
-        actionDuration: 150,
+        meterName: 'api_requests',
+        units: 1,
         timestamp: new Date().toISOString(),
       }
 

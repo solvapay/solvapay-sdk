@@ -523,14 +523,14 @@ export interface components {
         Signup: Record<string, never>;
         AuthResponse: Record<string, never>;
         Login: Record<string, never>;
-        ForgotPassword: Record<string, never>;
-        ResetPassword: Record<string, never>;
+        VerifyLoginCode: Record<string, never>;
         VerifyEmail: Record<string, never>;
+        GoLiveChecklistItemDto: Record<string, never>;
+        GoLiveChecklistDto: Record<string, never>;
         CreateUser: Record<string, never>;
         UpdateUser: Record<string, never>;
         UpdateProfile: Record<string, never>;
         UpdatePreferences: Record<string, never>;
-        ChangePassword: Record<string, never>;
         RequestEmailChange: Record<string, never>;
         CreateProductRequest: {
             /**

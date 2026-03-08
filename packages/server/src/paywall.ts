@@ -487,8 +487,8 @@ export class SolvaPayPaywall {
 
   async trackUsage(
     customerRef: string,
-    productRef: string,
-    planRef: string,
+    _productRef: string,
+    _planRef: string,
     toolName: string,
     outcome: 'success' | 'paywall' | 'fail',
     requestId: string,
@@ -498,12 +498,9 @@ export class SolvaPayPaywall {
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          productRef,
-          planRef,
-          outcome,
-          action: toolName,
-          requestId,
-          actionDuration,
+          meterName: toolName ? `tool:${toolName}` : 'api_requests',
+          units: 1,
+          properties: { outcome, requestId, actionDuration },
           timestamp: new Date().toISOString(),
         }),
       {

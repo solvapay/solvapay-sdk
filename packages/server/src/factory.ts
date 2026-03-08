@@ -396,25 +396,18 @@ export interface SolvaPay {
    * ```typescript
    * await solvaPay.trackUsage({
    *   customerRef: 'user_123',
-   *   productRef: 'prd_myapi',
-   *   planRef: 'pln_premium',
-   *   outcome: 'success',
-   *   action: 'api_call',
-   *   requestId: 'req_123',
-   *   actionDuration: 150,
-   *   timestamp: new Date().toISOString()
+   *   meterName: 'api_requests',
+   *   units: 1,
+   *   properties: { endpoint: '/search' },
    * });
    * ```
    */
   trackUsage(params: {
     customerRef: string
-    productRef: string
-    planRef: string
-    outcome: 'success' | 'paywall' | 'fail'
-    action?: string
-    requestId: string
-    actionDuration: number
-    timestamp: string
+    meterName?: string
+    units?: number
+    properties?: Record<string, unknown>
+    timestamp?: string
   }): Promise<void>
 
   /**

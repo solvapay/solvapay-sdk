@@ -221,11 +221,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       await expect(
         apiClient.trackUsage({
           customerRef: customerRef,
-          productRef: defaultProduct.reference,
-          planRef: defaultPlan.reference,
-          outcome: 'success',
-          requestId: `req_${Date.now()}`,
-          actionDuration: 100,
+          meterName: 'api_requests',
+          units: 1,
           timestamp: new Date().toISOString(),
         }),
       ).resolves.toBeUndefined()
@@ -257,12 +254,10 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         const deniedUsageCount = 3
         for (let i = 0; i < deniedUsageCount; i++) {
           await apiClient.trackUsage({
-            requestId: `req_denied_${Date.now()}_${i}`,
             customerRef: customerRef,
-            productRef: defaultProduct.reference,
-            planRef: defaultPlan.reference,
-            outcome: 'paywall', // Track that it was blocked
-            actionDuration: 50,
+            meterName: 'api_requests',
+            units: 1,
+            properties: { outcome: 'paywall' },
             timestamp: new Date().toISOString(),
           })
         }
@@ -289,12 +284,9 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       for (let i = 0; i < usageCount; i++) {
         usageRequests.push(
           apiClient.trackUsage({
-            requestId: `req_${Date.now()}_${i}`,
             customerRef: customerRef,
-            productRef: defaultProduct.reference,
-            planRef: defaultPlan.reference,
-            outcome: 'success',
-            actionDuration: 100,
+            meterName: 'api_requests',
+            units: 1,
             timestamp: new Date().toISOString(),
           }),
         )
@@ -505,12 +497,9 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         await Promise.all(
           Array.from({ length: batch }, (_, i) =>
             apiClient.trackUsage({
-              requestId: `req_burn_${Date.now()}_${offset + i}`,
               customerRef,
-              productRef: defaultProduct.reference,
-              planRef: defaultPlan.reference,
-              outcome: 'success',
-              actionDuration: 10,
+              meterName: 'api_requests',
+              units: 1,
               timestamp: new Date().toISOString(),
             }),
           ),
@@ -541,12 +530,9 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       // Use the remaining units one-by-one
       for (let i = 0; i < boundary; i++) {
         await apiClient.trackUsage({
-          requestId: `req_tail_${Date.now()}_${i}`,
           customerRef: customerRef,
-          productRef: defaultProduct.reference,
-          planRef: defaultPlan.reference,
-          outcome: 'success',
-          actionDuration: 100,
+          meterName: 'api_requests',
+          units: 1,
           timestamp: new Date().toISOString(),
         })
       }
@@ -563,12 +549,10 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       // Attempt one more usage - should be blocked (tracked as 'paywall')
       await apiClient.trackUsage({
-        requestId: `req_exceed_${Date.now()}`,
         customerRef: customerRef,
-        productRef: defaultProduct.reference,
-        planRef: defaultPlan.reference,
-        outcome: 'paywall',
-        actionDuration: 50,
+        meterName: 'api_requests',
+        units: 1,
+        properties: { outcome: 'paywall' },
         timestamp: new Date().toISOString(),
       })
 
@@ -668,12 +652,9 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       for (let i = 0; i < usageCount; i++) {
         await apiClient.trackUsage({
-          requestId: `req_partial_${Date.now()}_${i}`,
           customerRef: customerRef,
-          productRef: defaultProduct.reference,
-          planRef: defaultPlan.reference,
-          outcome: 'success',
-          actionDuration: 100,
+          meterName: 'api_requests',
+          units: 1,
           timestamp: new Date().toISOString(),
         })
       }

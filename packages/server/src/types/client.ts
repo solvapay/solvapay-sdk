@@ -67,12 +67,9 @@ export interface SolvaPayClient {
   // POST: /v1/sdk/usages
   trackUsage(params: {
     customerRef: string
-    productRef: string
-    planRef: string
-    outcome: string
-    action?: string
-    requestId?: string
-    actionDuration?: number
+    meterName?: string
+    units?: number
+    properties?: Record<string, unknown>
     timestamp?: string
   }): Promise<void>
 

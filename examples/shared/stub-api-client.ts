@@ -376,20 +376,16 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async trackUsage(params: {
     customerRef: string
-    productRef: string
-    planRef: string
-    outcome: 'success' | 'paywall' | 'fail'
-    action?: string
-    requestId: string
-    actionDuration: number
-    timestamp: string
+    meterName?: string
+    units?: number
+    properties?: Record<string, unknown>
+    timestamp?: string
   }): Promise<void> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.trackUsage))
 
     this.log(`📡 Stub Request: POST /v1/sdk/usages`)
     this.log(
-      `   Outcome: ${params.outcome}, Duration: ${params.actionDuration}ms, Action: ${params.action || 'unknown'}`,
+      `   Meter: ${params.meterName || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerRef}`,
     )
   }
 
