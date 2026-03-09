@@ -1673,6 +1673,8 @@ export interface components {
              * @example Customer request
              */
             cancellationReason?: string;
+            /** @description Snapshot of the plan at time of purchase */
+            planSnapshot?: Record<string, never>;
         };
         CustomerResponse: {
             /**

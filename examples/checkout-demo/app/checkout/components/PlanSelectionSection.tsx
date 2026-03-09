@@ -4,20 +4,15 @@ import { formatPrice, isFreePlan } from '../utils/planHelpers'
 interface PlanSelectionSectionProps {
   plans: Plan[]
   selectedPlanIndex: number
-  activePlanName: string | null
+  activePlanRef: string | null
   onSelectPlan: (index: number) => void
   className?: string
 }
 
-/**
- * Plan Selection Section Component
- *
- * Displays plan cards in a grid with selection state
- */
 export function PlanSelectionSection({
   plans,
   selectedPlanIndex,
-  activePlanName,
+  activePlanRef,
   onSelectPlan,
   className = '',
 }: PlanSelectionSectionProps) {
@@ -25,7 +20,7 @@ export function PlanSelectionSection({
     <div className={`grid grid-cols-2 gap-4 ${className}`}>
       {plans.map((plan, index) => {
         const isFree = isFreePlan(plan)
-        const isCurrentPlan = plan.reference === activePlanName
+        const isCurrentPlan = plan.reference === activePlanRef
         const isSelected = !isFree && selectedPlanIndex === index
         const planPrice = formatPrice(plan.price)
 

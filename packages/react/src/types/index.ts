@@ -23,6 +23,7 @@ export interface PurchaseInfo {
   billingCycle?: string
   transactionId?: string
   planSnapshot?: {
+    reference?: string
     meterId?: string
     limit?: number
     freeUnits?: number

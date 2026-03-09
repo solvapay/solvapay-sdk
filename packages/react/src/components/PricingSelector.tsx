@@ -88,7 +88,7 @@ export const PricingSelector: React.FC<PricingSelectorProps> = ({
 
   const isCurrentPlan = useCallback(
     (planRef: string): boolean => {
-      return activePurchase?.productName === planRef
+      return activePurchase?.planSnapshot?.reference === planRef
     },
     [activePurchase],
   )

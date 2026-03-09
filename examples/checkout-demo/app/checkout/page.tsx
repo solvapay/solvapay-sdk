@@ -207,7 +207,7 @@ export default function CheckoutPage() {
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanName={activePurchase?.productName || null}
+                      activePlanRef={activePurchase?.planSnapshot?.reference ?? null}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
