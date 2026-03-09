@@ -271,6 +271,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
     },
 
+    // POST: /v1/sdk/products/{productRef}/clone
+    async cloneProduct(productRef, overrides) {
+      const url = `${base}/v1/sdk/products/${productRef}/clone`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(overrides || {}),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Clone product failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
     // GET: /v1/sdk/products/{productRef}/plans
     async listPlans(productRef) {
       const url = `${base}/v1/sdk/products/${productRef}/plans`
@@ -326,6 +345,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       const result = await res.json()
       return result
+    },
+
+    // PUT: /v1/sdk/products/{productRef}/plans/{planRef}
+    async updatePlan(productRef, planRef, params) {
+      const url = `${base}/v1/sdk/products/${productRef}/plans/${planRef}`
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Update plan failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
     },
 
     // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
@@ -474,6 +512,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       return result
+    },
+
+    // POST: /v1/sdk/user-info
+    async getUserInfo(params) {
+      const url = `${base}/v1/sdk/user-info`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get user info failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
     },
 
     // POST: /v1/sdk/checkout-sessions

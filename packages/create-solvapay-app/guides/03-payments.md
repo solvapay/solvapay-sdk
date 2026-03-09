@@ -21,9 +21,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createCheckoutSession } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json()
+  const { planRef, productRef } = await request.json()
 
-  const result = await createCheckoutSession(request, { agentRef, planRef })
+  const result = await createCheckoutSession(request, { productRef, planRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
@@ -140,7 +140,7 @@ import { usePurchase, usePurchaseStatus } from '@solvapay/react';
 import { getAccessToken } from './lib/supabase';
 
 export default function HomePage() {
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
+  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF;
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -168,8 +168,8 @@ export default function HomePage() {
 
   // Handle redirect to hosted checkout page
   const handleViewPlans = useCallback(async (planRef?: string) => {
-    if (!agentRef) {
-      setError('Agent reference is not configured');
+    if (!productRef) {
+      setError('Product reference is not configured');
       return;
     }
 
@@ -187,8 +187,8 @@ export default function HomePage() {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      const requestBody: { agentRef: string; planRef?: string } = {
-        agentRef,
+      const requestBody: { productRef: string; planRef?: string } = {
+        productRef,
       };
 
       if (planRef) {
@@ -220,7 +220,7 @@ export default function HomePage() {
       setError(err instanceof Error ? err.message : 'Failed to redirect to checkout');
       setIsRedirecting(false);
     }
-  }, [agentRef]);
+  }, [productRef]);
 
   // Handle redirect to hosted customer management page
   const handleManagePurchase = useCallback(async () => {
@@ -279,7 +279,7 @@ export default function HomePage() {
           ) : activePurchase ? (
             <p className="text-slate-600">
               You're on the <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activePurchase.planName}
+                {activePurchase.productName}
               </span> plan
             </p>
           ) : (
@@ -508,7 +508,7 @@ return <PremiumContent />;
 const { activePaidPurchase, cancelledPurchase, shouldShowCancelledNotice } = usePurchaseStatus([]);
 
 if (activePaidPurchase) {
-  return <SuccessBanner>Active: {activePaidPurchase.planName}</SuccessBanner>;
+  return <SuccessBanner>Active: {activePaidPurchase.productName}</SuccessBanner>;
 }
 
 if (shouldShowCancelledNotice && cancelledPurchase) {

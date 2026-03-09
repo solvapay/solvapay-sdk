@@ -110,6 +110,24 @@ pnpm install
 pnpm dev
 ```
 
+### MCP OAuth Bridge (`mcp-oauth-bridge`)
+
+A non-hosted MCP server example demonstrating:
+
+- Local `/.well-known/*` discovery endpoints
+- OAuth + dynamic client registration against SolvaPay backend
+- Bearer-token protected `/mcp` endpoint with RFC9728 challenge responses
+- `payable.mcp()` with customer identity from OAuth context
+
+**Run the example:**
+
+```bash
+cd examples/mcp-oauth-bridge
+pnpm install
+cp .env.example .env
+pnpm dev
+```
+
 The Express example requires environment variables for configuration:
 
 ### Express Example
@@ -165,6 +183,10 @@ PORT=3001
 
    # MCP basic example
    cd examples/mcp-basic
+   pnpm dev
+
+   # MCP OAuth bridge example
+   cd examples/mcp-oauth-bridge
    pnpm dev
    ```
 

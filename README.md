@@ -67,6 +67,8 @@ See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed 
 
 ### Server-Side: Paywall Protection
 
+Products are created in the SolvaPay UI, and are available for SDK integration by default.
+
 ```typescript
 import { createSolvaPay } from '@solvapay/server'
 
@@ -75,9 +77,9 @@ const solvaPay = createSolvaPay({
   apiKey: process.env.SOLVAPAY_SECRET_KEY,
 })
 
-// Create payable handlers for your agent
+// Create payable handlers for your product
 const payable = solvaPay.payable({
-  agent: 'agt_YOUR_AGENT',
+  product: 'prd_YOUR_PRODUCT',
   plan: 'pln_YOUR_PLAN',
 })
 
@@ -126,7 +128,7 @@ function CheckoutPage() {
   return (
     <PaymentForm
       planRef="pln_YOUR_PLAN"
-      agentRef="agt_YOUR_AGENT"
+      productRef="prd_YOUR_PRODUCT"
       onSuccess={() => console.log('Payment successful!')}
     />
   )
@@ -150,13 +152,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { planRef, agentRef } = await request.json()
+  const { planRef, productRef } = await request.json()
 
-  if (!planRef || !agentRef) {
+  if (!planRef || !productRef) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await createPaymentIntent(request, { planRef, agentRef })
+  const result = await createPaymentIntent(request, { planRef, productRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
@@ -165,13 +167,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { processPayment } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  const { paymentIntentId, agentRef, planRef } = await request.json()
+  const { paymentIntentId, productRef, planRef } = await request.json()
 
-  if (!paymentIntentId || !agentRef) {
+  if (!paymentIntentId || !productRef) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  const result = await processPayment(request, { paymentIntentId, agentRef, planRef })
+  const result = await processPayment(request, { paymentIntentId, productRef, planRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
@@ -211,11 +213,11 @@ export async function POST(req: Request) {
     return userIdOrError
   }
 
-  const { planRef, agentRef } = await req.json()
+  const { planRef, productRef } = await req.json()
   const paymentIntent = await solvaPay.createPaymentIntent({
     planRef,
     customerRef: userIdOrError, // Use userId as customerRef
-    agentRef,
+    productRef,
   })
 
   return Response.json(paymentIntent)

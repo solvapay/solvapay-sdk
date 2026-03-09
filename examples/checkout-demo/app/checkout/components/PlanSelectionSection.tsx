@@ -4,20 +4,15 @@ import { formatPrice, isFreePlan } from '../utils/planHelpers'
 interface PlanSelectionSectionProps {
   plans: Plan[]
   selectedPlanIndex: number
-  activePlanName: string | null
+  activePlanRef: string | null
   onSelectPlan: (index: number) => void
   className?: string
 }
 
-/**
- * Plan Selection Section Component
- *
- * Displays plan cards in a grid with selection state
- */
 export function PlanSelectionSection({
   plans,
   selectedPlanIndex,
-  activePlanName,
+  activePlanRef,
   onSelectPlan,
   className = '',
 }: PlanSelectionSectionProps) {
@@ -25,7 +20,7 @@ export function PlanSelectionSection({
     <div className={`grid grid-cols-2 gap-4 ${className}`}>
       {plans.map((plan, index) => {
         const isFree = isFreePlan(plan)
-        const isCurrentPlan = plan.name === activePlanName
+        const isCurrentPlan = plan.reference === activePlanRef
         const isSelected = !isFree && selectedPlanIndex === index
         const planPrice = formatPrice(plan.price)
 
@@ -67,7 +62,7 @@ export function PlanSelectionSection({
             {/* Current Plan Badge */}
             {isCurrentPlan && (
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-medium px-3 py-1 rounded-full">
-                Current Plan
+                Current
               </div>
             )}
 
@@ -78,9 +73,9 @@ export function PlanSelectionSection({
               </div>
             )}
 
-            {/* Plan Price and Name */}
+            {/* Plan Price and Reference */}
             <div className="text-2xl font-bold text-slate-900 mb-1">${planPrice}</div>
-            <div className="text-sm text-slate-600">{plan.name}</div>
+            <div className="text-sm text-slate-600">{plan.interval ? `/${plan.interval}` : 'one-time'}</div>
           </div>
         )
       })}

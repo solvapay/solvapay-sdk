@@ -75,7 +75,7 @@ const auth = new SupabaseAuthAdapter({
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
 
 // Use with Next.js adapter
-export const POST = solvaPay.payable({ agent: 'my-api' }).next(
+export const POST = solvaPay.payable({ product: 'my-api' }).next(
   async args => {
     return { result: 'success' }
   },

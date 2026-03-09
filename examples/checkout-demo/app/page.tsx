@@ -101,16 +101,16 @@ export default function HomePage() {
             <p className="text-slate-600">
               You're on the{' '}
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activePurchase.planName}
+                {activePurchase.productName}
               </span>{' '}
-              plan
+              product
             </p>
           ) : shouldShowCancelledNotice && cancelledPurchase ? (
             <div className="space-y-2">
               <p className="text-slate-600">
                 Your{' '}
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                  {cancelledPurchase.planName}
+                  {cancelledPurchase.productName}
                 </span>{' '}
                 purchase has been cancelled
               </p>
@@ -128,7 +128,7 @@ export default function HomePage() {
                     ) : null
                   })()}
                   <p className="text-xs text-amber-700 mt-1">
-                    You'll continue to have access to {cancelledPurchase.planName} features
+                    You'll continue to have access to {cancelledPurchase.productName} features
                     until this date
                   </p>
                 </div>
@@ -203,7 +203,7 @@ export default function HomePage() {
                     ) : null
                   })()}
                   <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledPurchase.planName} features
+                    You'll continue to have access to {cancelledPurchase.productName} features
                     until this date
                   </p>
                 </div>
@@ -218,7 +218,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Upgrade your plan</p>
+              <p className="text-slate-900 mb-2 font-medium">Upgrade your subscription</p>
               <p className="text-slate-600 text-sm mb-6">
                 Get access to advanced features and more
               </p>

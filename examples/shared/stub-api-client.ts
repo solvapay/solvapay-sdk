@@ -280,10 +280,12 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
-  async checkLimits(params: { customerRef: string; productRef: string }): Promise<{
+  async checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
+    meterName?: string
+    checkoutSessionId?: string
     checkoutUrl?: string
   }> {
     // Simulate API delay
@@ -305,6 +307,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           withinLimits: true,
           remaining: 999999,
           plan: customer.plan,
+          meterName: 'api_requests',
         }
       }
 
@@ -315,6 +318,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           withinLimits: true,
           remaining: customer.credits,
           plan: customer.plan || 'paid',
+          meterName: 'api_requests',
         }
       }
 
@@ -337,6 +341,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           withinLimits: true,
           remaining: this.freeTierLimit - 1,
           plan: 'free',
+          meterName: 'api_requests',
         }
       }
 
@@ -357,6 +362,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         withinLimits,
         remaining,
         plan: 'free',
+        meterName: 'api_requests' as string | undefined,
       }
 
       // Add checkout URL if limits exceeded
@@ -376,20 +382,16 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async trackUsage(params: {
     customerRef: string
-    productRef: string
-    planRef: string
-    outcome: 'success' | 'paywall' | 'fail'
-    action?: string
-    requestId: string
-    actionDuration: number
-    timestamp: string
+    meterName?: string
+    units?: number
+    properties?: Record<string, unknown>
+    timestamp?: string
   }): Promise<void> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.trackUsage))
 
     this.log(`📡 Stub Request: POST /v1/sdk/usages`)
     this.log(
-      `   Outcome: ${params.outcome}, Duration: ${params.actionDuration}ms, Action: ${params.action || 'unknown'}`,
+      `   Meter: ${params.meterName || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerRef}`,
     )
   }
 
@@ -670,6 +672,102 @@ export class StubSolvaPayClient implements SolvaPayClient {
     customerData[customerRef].plan = plan
     await this.saveCustomerData(customerData)
     this.log(`📋 Set plan for ${customerRef} to ${plan}`)
+  }
+
+  /**
+   * List plans for a product (product-scoped)
+   */
+  async listPlans(productRef: string): Promise<
+    Array<{
+      reference: string
+      price?: number
+      currency?: string
+      interval?: string
+      isFreeTier?: boolean
+      freeUnits?: number
+      meterId?: string
+      limit?: number
+      pricePerUnit?: number
+      billingModel?: string
+      metadata?: Record<string, unknown>
+      [key: string]: unknown
+    }>
+  > {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: GET /v1/sdk/products/${productRef}/plans`)
+
+    return [
+      {
+        reference: 'plan_free',
+        price: 0,
+        currency: 'USD',
+        isFreeTier: true,
+        freeUnits: this.freeTierLimit,
+        limit: this.freeTierLimit,
+      },
+      {
+        reference: 'plan_pro',
+        price: 29,
+        currency: 'USD',
+        interval: 'month',
+        isFreeTier: false,
+        limit: 0,
+      },
+    ]
+  }
+
+  /**
+   * Create a plan under a product (product-scoped)
+   */
+  async createPlan(params: {
+    productRef: string
+    type?: string
+    price?: number
+    [key: string]: unknown
+  }): Promise<{ reference: string }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: POST /v1/sdk/products/${params.productRef}/plans`)
+
+    const reference = `plan_${Math.random().toString(36).slice(2, 10)}`
+    return { reference }
+  }
+
+  /**
+   * Update a plan under a product (product-scoped)
+   */
+  async updatePlan(
+    productRef: string,
+    planRef: string,
+    params: Record<string, unknown>,
+  ): Promise<{ reference: string; [key: string]: unknown }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: PUT /v1/sdk/products/${productRef}/plans/${planRef}`)
+    return {
+      reference: planRef,
+    }
+  }
+
+  /**
+   * Delete a plan from a product (product-scoped)
+   */
+  async deletePlan(productRef: string, planRef: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: DELETE /v1/sdk/products/${productRef}/plans/${planRef}`)
+  }
+
+  /**
+   * Clone a product
+   */
+  async cloneProduct(
+    productRef: string,
+    overrides?: { name?: string },
+  ): Promise<{ reference: string; name: string }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+    this.log(`📡 Stub Request: POST /v1/sdk/products/${productRef}/clone`)
+
+    const reference = `prd_${Math.random().toString(36).slice(2, 10)}`
+    const name = overrides?.name || `Clone of ${productRef}`
+    return { reference, name }
   }
 
   /**

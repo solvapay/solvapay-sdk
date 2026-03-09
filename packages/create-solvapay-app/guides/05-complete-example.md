@@ -62,7 +62,7 @@ import { Badge } from './components/ui/Badge';
 
 export default function HomePage() {
   const router = useRouter();
-  const agentRef = process.env.NEXT_PUBLIC_AGENT_REF;
+  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF;
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,8 +93,8 @@ export default function HomePage() {
 
   // Handle redirect to hosted checkout page
   const handleViewPlans = useCallback(async (planRef?: string) => {
-    if (!agentRef) {
-      setError('Agent reference is not configured');
+    if (!productRef) {
+      setError('Product reference is not configured');
       return;
     }
 
@@ -112,8 +112,8 @@ export default function HomePage() {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      const requestBody: { agentRef: string; planRef?: string } = {
-        agentRef,
+      const requestBody: { productRef: string; planRef?: string } = {
+        productRef,
       };
 
       if (planRef) {
@@ -145,7 +145,7 @@ export default function HomePage() {
       setError(err instanceof Error ? err.message : 'Failed to redirect to checkout');
       setIsRedirecting(false);
     }
-  }, [agentRef]);
+  }, [productRef]);
 
   // Handle redirect to hosted customer management page
   const handleManagePurchase = useCallback(async () => {
@@ -254,12 +254,12 @@ export default function HomePage() {
               <Skeleton className="h-5 w-48" />
             ) : activePurchase ? (
               <p className="text-slate-600">
-                You're on the <Badge variant="premium">{activePurchase.planName}</Badge> plan
+                You're on the <Badge variant="premium">{activePurchase.productName}</Badge> product
               </p>
             ) : shouldShowCancelledNotice && cancelledPurchase ? (
               <div className="space-y-2">
                 <p className="text-slate-600">
-                  Your <Badge variant="premium">{cancelledPurchase.planName}</Badge> purchase has been cancelled
+                  Your <Badge variant="premium">{cancelledPurchase.productName}</Badge> purchase has been cancelled
                 </p>
                 {cancelledPurchase.endDate && (
                   <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -355,7 +355,7 @@ export default function HomePage() {
                     ) : null;
                   })()}
                   <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledPurchase.planName} features until this date
+                    You'll continue to have access to {cancelledPurchase.productName} features until this date
                   </p>
                 </div>
               )}

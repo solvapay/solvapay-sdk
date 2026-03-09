@@ -17,7 +17,7 @@ export const PaywallErrorResponseSchema = z
     error: z.string().describe('Error message'),
     success: z.boolean().describe('Request success status'),
     product: z.string().describe('The product that triggered the paywall'),
-    checkoutUrl: z.string().describe('URL to upgrade the plan'),
+    checkoutUrl: z.string().describe('URL to upgrade'),
     message: z.string().describe('Human-readable paywall message'),
   })
   .openapi('PaywallErrorResponse')
@@ -85,22 +85,22 @@ export const TaskParamsSchema = z.object({
   id: z.string().describe('The unique identifier of the task'),
 })
 
-// Simplified plan info schema for OpenAPI (exposes only what users need to know)
-export const UserPlanInfoSchema = z
+// Simplified subscription info schema for OpenAPI (exposes only what users need to know)
+export const UserSubscriptionInfoSchema = z
   .object({
-    planRef: z.string().describe('Plan reference identifier'),
-    planName: z.string().describe('Plan name'),
-    planType: z.enum(['recurring', 'usage-based', 'one-time', 'hybrid']).describe('Plan type'),
+    productName: z.string().describe('Product name'),
     status: z.enum(['pending', 'active', 'expired', 'cancelled', 'suspended', 'refunded']).describe('Purchase status'),
-    isActive: z.boolean().describe('Whether the plan is currently active (status is active or trialing)'),
-    isRecurring: z.boolean().describe('Whether this is a recurring purchase'),
+    isActive: z.boolean().describe('Whether the subscription is currently active (status is active or trialing)'),
   })
-  .openapi('UserPlanInfo')
+  .openapi('UserSubscriptionInfo')
 
-// User Plan schema (for /api/user/plan endpoint)
-export const UserPlanSchema = z
+/** @deprecated Use UserSubscriptionInfoSchema instead */
+export const UserPlanInfoSchema = UserSubscriptionInfoSchema
+
+// User subscription schema (for /api/user/subscription endpoint)
+export const UserSubscriptionSchema = z
   .object({
-    plan: UserPlanInfoSchema.nullable().describe('Active or trialing plan information, or null if user has no active plan'),
+    subscription: UserSubscriptionInfoSchema.nullable().describe('Active subscription information, or null if user has no active subscription'),
     customer: z.object({
       customerRef: z.string().describe('Customer reference identifier'),
       email: z.string().optional().describe('Customer email'),
@@ -108,7 +108,10 @@ export const UserPlanSchema = z
     }).optional().describe('Customer information (not present on error)'),
     error: z.string().optional().describe('Error message if request failed'),
   })
-  .openapi('UserPlan')
+  .openapi('UserSubscription')
+
+/** @deprecated Use UserSubscriptionSchema instead */
+export const UserPlanSchema = UserSubscriptionSchema
 
 // User Info schema (for /api/user/info endpoint)
 export const UserInfoSchema = z
@@ -130,7 +133,11 @@ export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>
 export type TaskList = z.infer<typeof TaskListSchema>
 export type TaskResponse = z.infer<typeof TaskResponseSchema>
 export type DeleteTaskResponse = z.infer<typeof DeleteTaskResponseSchema>
-export type UserPlanInfo = z.infer<typeof UserPlanInfoSchema>
-export type UserPlan = z.infer<typeof UserPlanSchema>
+export type UserSubscriptionInfo = z.infer<typeof UserSubscriptionInfoSchema>
+export type UserSubscription = z.infer<typeof UserSubscriptionSchema>
+/** @deprecated */
+export type UserPlanInfo = UserSubscriptionInfo
+/** @deprecated */
+export type UserPlan = UserSubscription
 export type UserInfo = z.infer<typeof UserInfoSchema>
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>

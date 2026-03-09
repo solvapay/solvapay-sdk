@@ -19,7 +19,6 @@ export interface TestProductSetup {
 
 export interface TestPlanSetup {
   reference: string
-  name: string
   productRef: string
   isFreeTier: boolean
   freeUnits: number
@@ -92,11 +91,8 @@ export async function createTestPlan(
   apiBaseUrl: string,
   secretKey: string,
   productRef: string,
-  name?: string,
   freeUnits: number = 5,
 ): Promise<TestPlanSetup> {
-  const planName = name || `SDK Test Plan ${Date.now()}`
-
   const response = await fetch(`${apiBaseUrl}/v1/sdk/products/${productRef}/plans`, {
     method: 'POST',
     headers: {
@@ -104,17 +100,14 @@ export async function createTestPlan(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: planName,
-      description: 'Temporary plan for SDK integration tests',
       type: 'usage-based',
       price: 0,
       currency: 'USD',
       billingModel: 'pre-paid',
       pricePerUnit: 0,
-      unit: 'requests',
-      quota: freeUnits,
       isFreeTier: true,
       freeUnits: freeUnits,
+      limit: freeUnits,
       features: [`${freeUnits} free requests`],
       limits: {
         monthlyRequests: freeUnits,
@@ -133,7 +126,6 @@ export async function createTestPlan(
   const data = await response.json()
   return {
     reference: data.data?.reference || data.reference,
-    name: data.data?.name || data.name,
     productRef,
     isFreeTier: true,
     freeUnits,

@@ -17,6 +17,8 @@ import { createSolvaPayClient } from './client'
 import { SolvaPayPaywall } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
+import { createVirtualTools } from './virtual-tools'
+import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 
 /**
  * Configuration for creating a SolvaPay instance.
@@ -56,6 +58,13 @@ export interface CreateSolvaPayConfig {
    * Defaults to production API URL if not provided.
    */
   apiBaseUrl?: string
+
+  /**
+   * TTL in ms for the checkLimits cache (default 10 000).
+   * Positive results are cached and optimistically decremented to avoid
+   * redundant API calls during tool-call bursts.
+   */
+  limitsCacheTTL?: number
 }
 
 /**
@@ -350,7 +359,8 @@ export interface SolvaPay {
    * ```typescript
    * const limits = await solvaPay.checkLimits({
    *   customerRef: 'user_123',
-   *   productRef: 'prd_myapi'
+   *   productRef: 'prd_myapi',
+   *   planRef: 'pln_premium'
    * });
    *
    * if (!limits.withinLimits) {
@@ -359,11 +369,12 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: { customerRef: string; productRef: string }): Promise<{
+  checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
     checkoutUrl?: string
+    meterName?: string
   }>
 
   /**
@@ -386,25 +397,18 @@ export interface SolvaPay {
    * ```typescript
    * await solvaPay.trackUsage({
    *   customerRef: 'user_123',
-   *   productRef: 'prd_myapi',
-   *   planRef: 'pln_premium',
-   *   outcome: 'success',
-   *   action: 'api_call',
-   *   requestId: 'req_123',
-   *   actionDuration: 150,
-   *   timestamp: new Date().toISOString()
+   *   meterName: 'api_requests',
+   *   units: 1,
+   *   properties: { endpoint: '/search' },
    * });
    * ```
    */
   trackUsage(params: {
     customerRef: string
-    productRef: string
-    planRef: string
-    outcome: 'success' | 'paywall' | 'fail'
-    action?: string
-    requestId: string
-    actionDuration: number
-    timestamp: string
+    meterName?: string
+    units?: number
+    properties?: Record<string, unknown>
+    timestamp?: string
   }): Promise<void>
 
   /**
@@ -519,6 +523,36 @@ export interface SolvaPay {
   }>
 
   /**
+   * Get virtual tool definitions with bound handlers for MCP server integration.
+   *
+   * Returns an array of tool objects (name, description, inputSchema, handler)
+   * that provide self-service capabilities: user info, upgrade, and account management.
+   * These tools bypass the paywall and are not usage-tracked.
+   *
+   * Register the returned tools on your MCP server alongside your own tools.
+   *
+   * @param options - Virtual tools configuration
+   * @param options.product - Product reference (required)
+   * @param options.getCustomerRef - Function to extract customer ref from tool args
+   * @param options.exclude - Optional list of tool names to exclude
+   * @returns Array of virtual tool definitions with handlers
+   *
+   * @example
+   * ```typescript
+   * const virtualTools = solvaPay.getVirtualTools({
+   *   product: 'prd_myapi',
+   *   getCustomerRef: args => args._auth?.customer_ref || 'anonymous',
+   * });
+   *
+   * // Register on your MCP server
+   * for (const tool of virtualTools) {
+   *   // Add to tools/list and tools/call handlers
+   * }
+   * ```
+   */
+  getVirtualTools(options: VirtualToolsOptions): VirtualToolDefinition[]
+
+  /**
    * Direct access to the API client for advanced operations.
    *
    * Use this for operations not exposed by the SolvaPay interface,
@@ -601,6 +635,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
   // Create paywall instance with debug flag controlled by environment variable
   const paywall = new SolvaPayPaywall(apiClient, {
     debug: process.env.SOLVAPAY_DEBUG !== 'false',
+    limitsCacheTTL: resolvedConfig.limitsCacheTTL,
   })
 
   return {
@@ -661,6 +696,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.createCustomerSession(params)
     },
 
+    getVirtualTools(options: VirtualToolsOptions) {
+      return createVirtualTools(apiClient, options)
+    },
+
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
       // Resolve product name (support both productRef and product)
@@ -670,7 +709,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         process.env.SOLVAPAY_PRODUCT ||
         'default-product'
       // Resolve plan (support both planRef and plan)
-      const plan = options.planRef || options.plan || product
+      const plan = options.planRef || options.plan
 
       const metadata = { product, plan }
 
@@ -681,10 +720,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: HttpAdapterOptions,
         ) {
-          const adapter = new HttpAdapter(adapterOptions)
+          const adapter = new HttpAdapter({
+            ...adapterOptions,
+            getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
+          })
+          const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (req: any, reply: any) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await handlerPromise
             return handler([req, reply])
           }
         },
@@ -695,10 +738,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: NextAdapterOptions,
         ) {
-          const adapter = new NextAdapter(adapterOptions)
+          const adapter = new NextAdapter({
+            ...adapterOptions,
+            getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
+          })
+          const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return async (request: Request, context?: any) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await handlerPromise
             return handler([request, context])
           }
         },
@@ -709,9 +756,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           adapterOptions?: McpAdapterOptions,
         ) {
-          const adapter = new McpAdapter(adapterOptions)
+          const adapter = new McpAdapter({
+            ...adapterOptions,
+            getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
+          })
+          const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
           return async (args: Record<string, unknown>) => {
-            const handler = await createAdapterHandler(adapter, paywall, metadata, businessLogic)
+            const handler = await handlerPromise
             return handler(args)
           }
         },
@@ -722,7 +773,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           businessLogic: (args: any) => Promise<T>,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ): Promise<(args: any) => Promise<T>> {
-          const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+          const getCustomerRef = (args: PaywallArgs): string => {
+            const configuredRef = options.getCustomerRef?.(args as unknown as Record<string, unknown>)
+            if (typeof configuredRef === 'string') {
+              return configuredRef
+            }
+            return args.auth?.customer_ref || 'anonymous'
+          }
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },
       }

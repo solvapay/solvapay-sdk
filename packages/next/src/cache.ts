@@ -37,10 +37,22 @@ export interface PurchaseCheckResult {
   name?: string
   purchases: Array<{
     reference: string
-    planName?: string
+    productName?: string
     productReference?: string
     status?: string
     startDate?: string
+    planSnapshot?: {
+      meterId?: string
+      limit?: number
+      freeUnits?: number
+    }
+    usage?: {
+      used?: number
+      overageUnits?: number
+      overageCost?: number
+      periodStart?: string
+      periodEnd?: string
+    }
     [key: string]: unknown
   }>
 }

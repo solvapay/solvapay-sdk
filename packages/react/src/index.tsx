@@ -11,9 +11,9 @@ export { SolvaPayProvider } from './SolvaPayProvider'
 export { PaymentForm } from './PaymentForm'
 
 // Headless Components
-export { PlanBadge } from './components/PlanBadge'
+export { ProductBadge, PlanBadge } from './components/ProductBadge'
 export { PurchaseGate } from './components/PurchaseGate'
-export { PlanSelector } from './components/PlanSelector'
+export { PricingSelector, PlanSelector } from './components/PricingSelector'
 export { Spinner } from './components/Spinner'
 export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 
@@ -34,8 +34,10 @@ export type {
   PurchaseInfo,
   CustomerPurchaseData,
   PaymentIntentResult,
+  ProductBadgeProps,
   PlanBadgeProps,
   PurchaseGateProps,
+  PricingSelectorProps,
   PlanSelectorProps,
   PaymentFormProps,
   PaymentError,

@@ -98,27 +98,45 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       // Step 2: Fetch default product and plan
       console.log('Step 2: Fetching default product and plan from account...')
 
-      console.log('🔍 Fetching default product...')
+      console.log('🔍 Fetching products & plans...')
       const products = await apiClient.listProducts()
       if (!products || products.length === 0) {
         throw new Error('No products found in account. Please create at least one product.')
       }
-      defaultProduct = products[0]
-      console.log('✅ Default product fetched:', {
+
+      // Search across ALL products for a free-tier plan with a small unit count.
+      // This keeps tests fast even if some plans have thousands of free units.
+      let bestProduct: any = null
+      let bestPlan: any = null
+
+      for (const product of products) {
+        const plans = await apiClient.listPlans(product.reference)
+        if (!plans?.length) continue
+
+        for (const plan of plans) {
+          const units = plan.freeUnits ?? 0
+          if (plan.isFreeTier && units > 0) {
+            if (!bestPlan || units < (bestPlan.freeUnits ?? Infinity)) {
+              bestProduct = product
+              bestPlan = plan
+            }
+          }
+        }
+
+        // Fallback: remember the first product/plan in case no free-tier plan exists
+        if (!bestProduct) {
+          bestProduct = product
+          bestPlan = plans[0]
+        }
+      }
+
+      defaultProduct = bestProduct
+      defaultPlan = bestPlan
+      console.log('✅ Selected product:', {
         reference: defaultProduct.reference,
         name: defaultProduct.name,
       })
-
-      // Fetch plans for the default product
-      console.log('🔍 Fetching default plan...')
-      const plans = await apiClient.listPlans(defaultProduct.reference)
-      if (!plans || plans.length === 0) {
-        throw new Error(
-          `No plans found for product ${defaultProduct.reference}. Please create at least one plan.`,
-        )
-      }
-      defaultPlan = plans[0]
-      console.log('✅ Default plan fetched:', {
+      console.log('✅ Selected plan:', {
         reference: defaultPlan.reference,
         name: defaultPlan.name,
         isFreeTier: defaultPlan.isFreeTier,
@@ -203,11 +221,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       await expect(
         apiClient.trackUsage({
           customerRef: customerRef,
-          productRef: defaultProduct.reference,
-          planRef: defaultPlan.reference,
-          outcome: 'success',
-          requestId: `req_${Date.now()}`,
-          actionDuration: 100,
+          meterName: 'api_requests',
+          units: 1,
           timestamp: new Date().toISOString(),
         }),
       ).resolves.toBeUndefined()
@@ -239,12 +254,10 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         const deniedUsageCount = 3
         for (let i = 0; i < deniedUsageCount; i++) {
           await apiClient.trackUsage({
-            requestId: `req_denied_${Date.now()}_${i}`,
             customerRef: customerRef,
-            productRef: defaultProduct.reference,
-            planRef: defaultPlan.reference,
-            outcome: 'paywall', // Track that it was blocked
-            actionDuration: 50,
+            meterName: 'api_requests',
+            units: 1,
+            properties: { outcome: 'paywall' },
             timestamp: new Date().toISOString(),
           })
         }
@@ -271,12 +284,9 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       for (let i = 0; i < usageCount; i++) {
         usageRequests.push(
           apiClient.trackUsage({
-            requestId: `req_${Date.now()}_${i}`,
             customerRef: customerRef,
-            productRef: defaultProduct.reference,
-            planRef: defaultPlan.reference,
-            outcome: 'success',
-            actionDuration: 100,
+            meterName: 'api_requests',
+            units: 1,
             timestamp: new Date().toISOString(),
           }),
         )
@@ -471,13 +481,40 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
   // ============================================================================
 
   describe('Free Tier - Usage Tracking & Limit Enforcement', () => {
+    /**
+     * Helper: burn through free units quickly using bulk trackUsage calls.
+     * Leaves `leaveRemaining` units so the caller can test the boundary.
+     */
+    async function burnFreeUnits(
+      customerRef: string,
+      total: number,
+      leaveRemaining: number,
+    ) {
+      const toBurn = Math.max(0, total - leaveRemaining)
+      const batchSize = 50
+      for (let offset = 0; offset < toBurn; offset += batchSize) {
+        const batch = Math.min(batchSize, toBurn - offset)
+        await Promise.all(
+          Array.from({ length: batch }, (_, i) =>
+            apiClient.trackUsage({
+              customerRef,
+              meterName: 'api_requests',
+              units: 1,
+              timestamp: new Date().toISOString(),
+            }),
+          ),
+        )
+      }
+    }
+
     it('should correctly track usage against free units and block when exhausted', async () => {
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
 
-      // Get initial limits
+      // Get initial limits (pass planRef so backend can auto-provision free-tier purchase)
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -486,15 +523,16 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       expect(freeUnits).toBeGreaterThan(0)
       expect(initialCheck.withinLimits).toBe(true)
 
-      // Use exactly freeUnits - all should succeed
-      for (let i = 0; i < freeUnits; i++) {
+      // Fast-forward most units, leave 3 to test the boundary one-by-one
+      const boundary = Math.min(freeUnits, 3)
+      await burnFreeUnits(customerRef, freeUnits, boundary)
+
+      // Use the remaining units one-by-one
+      for (let i = 0; i < boundary; i++) {
         await apiClient.trackUsage({
-          requestId: `req_success_${Date.now()}_${i}`,
           customerRef: customerRef,
-          productRef: defaultProduct.reference,
-          planRef: defaultPlan.reference,
-          outcome: 'success',
-          actionDuration: 100,
+          meterName: 'api_requests',
+          units: 1,
           timestamp: new Date().toISOString(),
         })
       }
@@ -503,6 +541,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const afterFreeUnitsCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       expect(afterFreeUnitsCheck.remaining).toBeLessThanOrEqual(0)
@@ -510,12 +549,10 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       // Attempt one more usage - should be blocked (tracked as 'paywall')
       await apiClient.trackUsage({
-        requestId: `req_exceed_${Date.now()}`,
         customerRef: customerRef,
-        productRef: defaultProduct.reference,
-        planRef: defaultPlan.reference,
-        outcome: 'paywall',
-        actionDuration: 50,
+        meterName: 'api_requests',
+        units: 1,
+        properties: { outcome: 'paywall' },
         timestamp: new Date().toISOString(),
       })
 
@@ -523,6 +560,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const finalCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       expect(finalCheck.withinLimits).toBe(false)
@@ -537,10 +575,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const testCustomer = `test_freeunits_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(testCustomer)
 
-      // Get initial limits
+      // Get initial limits (pass planRef so backend can auto-provision free-tier purchase)
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -549,21 +588,27 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       expect(freeUnits).toBeGreaterThan(0)
       expect(initialCheck.withinLimits).toBe(true)
 
-      // Create protected handler
-      const payable = solvaPay.payable({
+      // Fast-forward most units via direct API, leave 3 for protected-handler testing
+      const boundary = Math.min(freeUnits, 3)
+      await burnFreeUnits(customerRef, freeUnits, boundary)
+
+      // Use a fresh SolvaPay instance with no limits cache so every call hits the backend.
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
         productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
 
-      // Use all free units - should succeed
-      for (let i = 0; i < freeUnits; i++) {
+      // Use the remaining units through the protected handler — should succeed
+      for (let i = 0; i < boundary; i++) {
         const result = await protectedHandler({
           title: `Task ${i + 1}`,
           description: 'Within free tier',
           auth: { customer_ref: testCustomer },
         })
         expect(result).toHaveProperty('success', true)
+        await new Promise(r => setTimeout(r, 200))
       }
 
       // Next calls should be blocked with PaywallError
@@ -583,17 +628,18 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         }),
       ).rejects.toThrow('Payment required')
 
-      console.log(`✅ Protected function exhaustion verified: ${freeUnits} succeeded, 2 blocked`)
+      console.log(`✅ Protected function exhaustion verified: ${boundary} via handler, 2 blocked`)
     })
 
     it('should accurately report remaining units after partial consumption', async () => {
       const testCustomer = `test_partial_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(testCustomer)
 
-      // Get initial limits
+      // Get initial limits (pass planRef so backend can auto-provision free-tier purchase)
       const initialCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       const freeUnits = initialCheck.remaining
@@ -601,17 +647,14 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       expect(freeUnits).toBeGreaterThanOrEqual(2)
 
-      // Use approximately half the free units
-      const usageCount = Math.floor(freeUnits / 2)
+      // Use a small fixed number of units (cap at 5 to keep the test fast)
+      const usageCount = Math.min(Math.floor(freeUnits / 2), 5)
 
       for (let i = 0; i < usageCount; i++) {
         await apiClient.trackUsage({
-          requestId: `req_partial_${Date.now()}_${i}`,
           customerRef: customerRef,
-          productRef: defaultProduct.reference,
-          planRef: defaultPlan.reference,
-          outcome: 'success',
-          actionDuration: 100,
+          meterName: 'api_requests',
+          units: 1,
           timestamp: new Date().toISOString(),
         })
       }
@@ -620,6 +663,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const midCheck = await apiClient.checkLimits({
         customerRef: customerRef,
         productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
       })
 
       // Should still be within limits

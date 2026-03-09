@@ -93,19 +93,29 @@ const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
   cacheErrors: false, // Don't cache errors - retry on next request
 })
 
+interface LimitsCacheEntry {
+  remaining: number
+  checkoutUrl?: string
+  meterName?: string
+  timestamp: number
+}
+
 /**
  * Universal SolvaPay Protection - One API for everything
  */
 export class SolvaPayPaywall {
   private customerCreationAttempts = new Set<string>()
-  private customerRefMapping = new Map<string, string>() // input ref -> backend ref
+  private customerRefMapping = new Map<string, string>()
   private debug: boolean
+  private limitsCache = new Map<string, LimitsCacheEntry>()
+  private limitsCacheTTL: number
 
   constructor(
     private apiClient: SolvaPayClient,
-    options: { debug?: boolean } = {},
+    options: { debug?: boolean; limitsCacheTTL?: number } = {},
   ) {
     this.debug = options.debug ?? process.env.SOLVAPAY_DEBUG === 'true'
+    this.limitsCacheTTL = options.limitsCacheTTL ?? 10_000
   }
 
   private log(...args: unknown[]): void {
@@ -136,6 +146,8 @@ export class SolvaPayPaywall {
   ): Promise<(args: TArgs) => Promise<TResult>> {
     const product = this.resolveProduct(metadata)
     const toolName = handler.name || 'anonymous'
+    const configuredPlanRef = metadata.plan?.trim()
+    const usagePlanRef = configuredPlanRef || 'unspecified'
 
     return async (args: TArgs): Promise<TResult> => {
       const startTime = Date.now()
@@ -158,22 +170,62 @@ export class SolvaPayPaywall {
         backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
       }
 
+      let resolvedMeterName: string | undefined
+
       try {
-        // Check limits with backend using the backend customer reference
-        const planRef = metadata.plan || toolName
+        const limitsCacheKey = `${backendCustomerRef}:${product}:${configuredPlanRef || ''}`
+        const cachedLimits = this.limitsCache.get(limitsCacheKey)
+        const now = Date.now()
 
-        const limitsCheck = await this.apiClient.checkLimits({
-          customerRef: backendCustomerRef,
-          productRef: product,
-        })
+        let withinLimits: boolean
+        let remaining: number
+        let checkoutUrl: string | undefined
 
-        if (!limitsCheck.withinLimits) {
+        if (
+          cachedLimits &&
+          now - cachedLimits.timestamp < this.limitsCacheTTL &&
+          cachedLimits.remaining > 0
+        ) {
+          cachedLimits.remaining--
+          if (cachedLimits.remaining <= 0) {
+            this.limitsCache.delete(limitsCacheKey)
+          }
+          withinLimits = true
+          remaining = cachedLimits.remaining
+          checkoutUrl = cachedLimits.checkoutUrl
+          resolvedMeterName = cachedLimits.meterName
+        } else {
+          if (cachedLimits) {
+            this.limitsCache.delete(limitsCacheKey)
+          }
+          const limitsCheck = await this.apiClient.checkLimits({
+            customerRef: backendCustomerRef,
+            productRef: product,
+            ...(configuredPlanRef ? { planRef: configuredPlanRef } : {}),
+          })
+
+          withinLimits = limitsCheck.withinLimits
+          remaining = limitsCheck.remaining
+          checkoutUrl = limitsCheck.checkoutUrl
+          resolvedMeterName = limitsCheck.meterName
+
+          if (withinLimits && remaining > 0) {
+            this.limitsCache.set(limitsCacheKey, {
+              remaining,
+              checkoutUrl,
+              meterName: resolvedMeterName,
+              timestamp: now,
+            })
+          }
+        }
+
+        if (!withinLimits) {
           const latencyMs = Date.now() - startTime
-          await this.trackUsage(
+          this.trackUsage(
             backendCustomerRef,
             product,
-            planRef,
-            toolName,
+            usagePlanRef,
+            resolvedMeterName || toolName,
             'paywall',
             requestId,
             latencyMs,
@@ -182,21 +234,19 @@ export class SolvaPayPaywall {
           throw new PaywallError('Payment required', {
             kind: 'payment_required',
             product,
-            checkoutUrl: limitsCheck.checkoutUrl || '',
-            message: `Plan purchase required. Remaining: ${limitsCheck.remaining}`,
+            checkoutUrl: checkoutUrl || '',
+            message: `Purchase required. Remaining: ${remaining}`,
           })
         }
 
-        // Execute the protected handler
         const result = await handler(args)
 
-        // Track successful usage
         const latencyMs = Date.now() - startTime
-        await this.trackUsage(
+        this.trackUsage(
           backendCustomerRef,
           product,
-          planRef,
-          toolName,
+          usagePlanRef,
+          resolvedMeterName || toolName,
           'success',
           requestId,
           latencyMs,
@@ -204,25 +254,24 @@ export class SolvaPayPaywall {
 
         return result
       } catch (error) {
-        // Log error details for debugging, but format it clearly without full stack traces
         if (error instanceof Error) {
           const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error'
           this.log(`❌ Error in paywall [${errorType}]: ${error.message}`)
         } else {
           this.log(`❌ Error in paywall:`, error)
         }
-        const latencyMs = Date.now() - startTime
-        const outcome = error instanceof PaywallError ? 'paywall' : 'fail'
-        const planRef = metadata.plan || toolName
-        await this.trackUsage(
-          backendCustomerRef,
-          product,
-          planRef,
-          toolName,
-          outcome,
-          requestId,
-          latencyMs,
-        )
+        if (!(error instanceof PaywallError)) {
+          const latencyMs = Date.now() - startTime
+          this.trackUsage(
+            backendCustomerRef,
+            product,
+            usagePlanRef,
+            resolvedMeterName || toolName,
+            'fail',
+            requestId,
+            latencyMs,
+          )
+        }
         throw error
       }
     }
@@ -444,39 +493,32 @@ export class SolvaPayPaywall {
 
   async trackUsage(
     customerRef: string,
-    productRef: string,
-    planRef: string,
+    _productRef: string,
+    _planRef: string,
     toolName: string,
     outcome: 'success' | 'paywall' | 'fail',
     requestId: string,
     actionDuration: number,
   ): Promise<void> {
-    // TODO: review if we should use withRetry for all API calls
     await withRetry(
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          productRef,
-          planRef,
-          outcome,
-          action: toolName,
-          requestId,
-          actionDuration,
+          meterName: toolName || 'api_requests',
+          units: 1,
+          properties: { outcome, requestId, actionDuration },
           timestamp: new Date().toISOString(),
         }),
       {
         maxRetries: 2,
         initialDelay: 500,
-        shouldRetry: error => error.message.includes('Customer not found'), // TODO: review if this is needed and what to check for
-        onRetry: (error, attempt) => {
-           
+        shouldRetry: error => error.message.includes('Customer not found'),
+        onRetry: (_error, attempt) => {
           console.warn(`⚠️  Customer not found (attempt ${attempt + 1}/3), retrying in 500ms...`)
         },
       },
     ).catch(error => {
-       
       console.error('Usage tracking failed:', error)
-      // Don't throw - tracking is not critical
     })
   }
 }

@@ -9,7 +9,6 @@ import type { PurchaseInfo } from '../../types'
 
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
-  planName: 'Test Plan',
   productName: 'Test Product',
   productReference: 'prd_123',
   status: 'active',
@@ -21,25 +20,25 @@ const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => 
 describe('filterPurchases', () => {
   it('should filter to only include active purchases', () => {
     const purchases = [
-      createPurchase({ status: 'active', planName: 'Active Plan' }),
-      createPurchase({ status: 'cancelled', planName: 'Cancelled Plan' }),
-      createPurchase({ status: 'expired', planName: 'Expired Plan' }),
-      createPurchase({ status: 'active', planName: 'Another Active' }),
+      createPurchase({ status: 'active', productName: 'Active Product' }),
+      createPurchase({ status: 'cancelled', productName: 'Cancelled Product' }),
+      createPurchase({ status: 'expired', productName: 'Expired Product' }),
+      createPurchase({ status: 'active', productName: 'Another Active' }),
     ]
 
     const filtered = filterPurchases(purchases)
 
     expect(filtered).toHaveLength(2)
     expect(filtered.every(purchase => purchase.status === 'active')).toBe(true)
-    expect(filtered.some(purchase => purchase.planName === 'Active Plan')).toBe(true)
-    expect(filtered.some(purchase => purchase.planName === 'Another Active')).toBe(true)
+    expect(filtered.some(purchase => purchase.productName === 'Active Product')).toBe(true)
+    expect(filtered.some(purchase => purchase.productName === 'Another Active')).toBe(true)
   })
 
   it('should include cancelled purchases with status active', () => {
     const purchases = [
       createPurchase({
         status: 'active',
-        planName: 'Cancelled but Active',
+        productName: 'Cancelled but Active',
         cancelledAt: '2024-06-01T00:00:00Z',
       }),
     ]
@@ -54,9 +53,9 @@ describe('filterPurchases', () => {
 describe('getActivePurchases', () => {
   it('should return only purchases with status active', () => {
     const purchases = [
-      createPurchase({ status: 'active', planName: 'Active 1' }),
-      createPurchase({ status: 'active', planName: 'Active 2' }),
-      createPurchase({ status: 'cancelled', planName: 'Cancelled' }),
+      createPurchase({ status: 'active', productName: 'Active 1' }),
+      createPurchase({ status: 'active', productName: 'Active 2' }),
+      createPurchase({ status: 'cancelled', productName: 'Cancelled' }),
     ]
 
     const active = getActivePurchases(purchases)
@@ -76,25 +75,25 @@ describe('getCancelledPurchasesWithEndDate', () => {
         status: 'active',
         cancelledAt: '2024-06-01T00:00:00Z',
         endDate: futureDate.toISOString(),
-        planName: 'Cancelled Active',
+        productName: 'Cancelled Active',
       }),
       createPurchase({
         status: 'active',
         cancelledAt: undefined,
-        planName: 'Not Cancelled',
+        productName: 'Not Cancelled',
       }),
       createPurchase({
         status: 'active',
         cancelledAt: '2024-06-01T00:00:00Z',
         endDate: '2024-01-01T00:00:00Z', // Past date
-        planName: 'Expired Cancelled',
+        productName: 'Expired Cancelled',
       }),
     ]
 
     const cancelled = getCancelledPurchasesWithEndDate(purchases)
 
     expect(cancelled).toHaveLength(1)
-    expect(cancelled[0].planName).toBe('Cancelled Active')
+    expect(cancelled[0].productName).toBe('Cancelled Active')
   })
 })
 

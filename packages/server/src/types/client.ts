@@ -9,7 +9,7 @@ import type { components } from './generated'
 /**
  * Extended LimitResponse with plan field
  */
-export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { plan: string }
+export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { plan: string; meterName?: string }
 
 /**
  * Extended CustomerResponse with proper field mapping
@@ -67,12 +67,9 @@ export interface SolvaPayClient {
   // POST: /v1/sdk/usages
   trackUsage(params: {
     customerRef: string
-    productRef: string
-    planRef: string
-    outcome: string
-    action?: string
-    requestId?: string
-    actionDuration?: number
+    meterName?: string
+    units?: number
+    properties?: Record<string, unknown>
     timestamp?: string
   }): Promise<void>
 
@@ -115,17 +112,25 @@ export interface SolvaPayClient {
   // DELETE: /v1/sdk/products/{productRef}
   deleteProduct?(productRef: string): Promise<void>
 
+  // POST: /v1/sdk/products/{productRef}/clone
+  cloneProduct?(productRef: string, overrides?: { name?: string }): Promise<{
+    reference: string
+    name: string
+  }>
+
   // GET: /v1/sdk/products/{productRef}/plans
   listPlans?(productRef: string): Promise<
     Array<{
       reference: string
-      name: string
-      description?: string
       price?: number
       currency?: string
       interval?: string
       isFreeTier?: boolean
       freeUnits?: number
+      meterId?: string
+      limit?: number
+      pricePerUnit?: number
+      billingModel?: string
       metadata?: Record<string, unknown>
       [key: string]: unknown
     }>
@@ -136,7 +141,16 @@ export interface SolvaPayClient {
     params: components['schemas']['CreatePlanRequest'] & { productRef: string },
   ): Promise<{
     reference: string
-    name: string
+  }>
+
+  // PUT: /v1/sdk/products/{productRef}/plans/{planRef}
+  updatePlan?(
+    productRef: string,
+    planRef: string,
+    params: Partial<components['schemas']['CreatePlanRequest']>,
+  ): Promise<{
+    reference: string
+    [key: string]: unknown
   }>
 
   // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
@@ -168,6 +182,12 @@ export interface SolvaPayClient {
     customerRef: string
     planRef?: string
   }): Promise<ProcessPaymentResult>
+
+  // POST: /v1/sdk/user-info
+  getUserInfo?(params: {
+    customerRef: string
+    productRef: string
+  }): Promise<components['schemas']['UserInfoResponse']>
 
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(

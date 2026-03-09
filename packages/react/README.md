@@ -85,10 +85,10 @@ import { SolvaPayProvider } from '@solvapay/react'
 export default function App() {
   return (
     <SolvaPayProvider
-      createPayment={async ({ planRef, agentRef }) => {
+      createPayment={async ({ planRef, productRef }) => {
         const res = await fetch('/api/custom/payment', {
           method: 'POST',
-          body: JSON.stringify({ planRef, agentRef }),
+          body: JSON.stringify({ planRef, productRef }),
         })
         if (!res.ok) throw new Error('Failed to create payment')
         return res.json()
@@ -124,9 +124,9 @@ Headless context provider that manages purchase state, payment methods, and cust
 - `config?: SolvaPayConfig` - Configuration object (optional)
   - `config.api?` - Custom API route paths
   - `config.auth?` - Auth adapter configuration
-- `createPayment?: (params: { planRef: string; agentRef?: string }) => Promise<PaymentIntentResult>` - Custom payment creation function (optional, overrides config)
+- `createPayment?: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>` - Custom payment creation function (optional, overrides config)
 - `checkPurchase?: (customerRef: string) => Promise<CustomerPurchaseData>` - Custom purchase check function (optional, overrides config)
-- `processPayment?: (params: { paymentIntentId: string; agentRef: string; planRef?: string }) => Promise<ProcessPaymentResult>` - Custom payment processing function (optional)
+- `processPayment?: (params: { paymentIntentId: string; productRef: string; planRef?: string }) => Promise<ProcessPaymentResult>` - Custom payment processing function (optional)
 - `children: React.ReactNode` - Child components
 
 **Config Options:**
@@ -146,29 +146,29 @@ interface SolvaPayConfig {
 }
 ```
 
-### PlanSelector
+### PricingSelector
 
-Component for selecting and displaying available plans.
+Component for selecting and displaying available pricing options.
 
 **Props:**
 
-- `agentRef?: string` - Agent reference to filter plans
-- `fetcher?: (agentRef: string) => Promise<Plan[]>` - Custom plan fetcher function
-- `onPlanSelect?: (plan: Plan) => void` - Callback when plan is selected
-- `renderPlan?: (plan: Plan) => React.ReactNode` - Custom plan renderer
+- `productRef?: string` - Product reference to filter pricing options
+- `fetcher?: (productRef: string) => Promise<Plan[]>` - Custom fetcher function
+- `onPlanSelect?: (plan: Plan) => void` - Callback when option is selected
+- `renderPlan?: (plan: Plan) => React.ReactNode` - Custom option renderer
 - `className?: string` - Container className
 
 **Example:**
 
 ```tsx
-import { PlanSelector, usePlans } from '@solvapay/react'
+import { PricingSelector, usePlans } from '@solvapay/react'
 
-function PlansPage() {
-  const { plans, loading } = usePlans({ agentRef: 'my-agent' })
+function PricingPage() {
+  const { plans, loading } = usePlans({ productRef: 'my-product' })
 
   return (
     <div>
-      {loading ? 'Loading...' : plans.map(plan => <div key={plan.reference}>{plan.name}</div>)}
+      {loading ? 'Loading...' : plans.map(plan => <div key={plan.reference}>{plan.price}/{plan.interval}</div>)}
     </div>
   )
 }
@@ -181,7 +181,7 @@ Payment form component using Stripe PaymentElement. Automatically handles Stripe
 **Props:**
 
 - `planRef: string` - Plan reference for the payment
-- `agentRef?: string` - Optional agent reference
+- `productRef?: string` - Optional product reference
 - `onSuccess?: (paymentIntent: PaymentIntent) => void` - Callback on successful payment
 - `onError?: (error: Error) => void` - Callback on payment error
 - `returnUrl?: string` - Return URL after payment
@@ -199,16 +199,16 @@ function CheckoutPage() {
   return (
     <PaymentForm
       planRef="pln_YOUR_PLAN"
-      agentRef="agt_YOUR_AGENT"
+      productRef="prd_YOUR_PRODUCT"
       onSuccess={() => console.log('Payment successful!')}
     />
   )
 }
 ```
 
-### PlanBadge
+### ProductBadge
 
-Displays current purchase plan with render props or className pattern.
+Displays current product subscription with render props or className pattern.
 
 **Props:**
 
@@ -219,7 +219,7 @@ Displays current purchase plan with render props or className pattern.
 **Example:**
 
 ```tsx
-<PlanBadge className="badge badge-primary" />
+<ProductBadge className="badge badge-primary" />
 ```
 
 ### PurchaseGate
@@ -228,13 +228,13 @@ Controls access to content based on purchase status.
 
 **Props:**
 
-- `requirePlan?: string` - Optional plan name to require
+- `requireProduct?: string` - Optional product name to check for an active purchase
 - `children: (props) => React.ReactNode` - Render prop function
 
 **Example:**
 
 ```tsx
-<PurchaseGate requirePlan="Pro Plan">
+<PurchaseGate requireProduct="Pro Plan">
   {({ hasAccess, loading, purchases }) => {
     if (loading) return <Loading />
     if (!hasAccess) return <Paywall />
@@ -270,7 +270,7 @@ const {
   error, // Error object if fetch failed
   refetch, // Function to refetch plans
 } = usePlans({
-  agentRef: 'my-agent', // Optional agent reference
+  productRef: 'my-product', // Optional product reference
   fetcher: customFetcher, // Optional custom fetcher function
 })
 ```

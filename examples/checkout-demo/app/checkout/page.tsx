@@ -189,9 +189,9 @@ export default function CheckoutPage() {
           <SuccessMessage />
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your plan</h2>
+            <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your pricing</h2>
 
-            {loading && <div className="text-center py-8 text-slate-500">Loading plans...</div>}
+            {loading && <div className="text-center py-8 text-slate-500">Loading pricing...</div>}
 
             {error && !loading && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-center">
@@ -207,7 +207,7 @@ export default function CheckoutPage() {
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanName={activePurchase?.planName || null}
+                      activePlanRef={activePurchase?.planSnapshot?.reference ?? null}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
