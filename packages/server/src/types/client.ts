@@ -119,22 +119,7 @@ export interface SolvaPayClient {
   }>
 
   // GET: /v1/sdk/products/{productRef}/plans
-  listPlans?(productRef: string): Promise<
-    Array<{
-      reference: string
-      price?: number
-      currency?: string
-      interval?: string
-      isFreeTier?: boolean
-      freeUnits?: number
-      meterId?: string
-      limit?: number
-      pricePerUnit?: number
-      billingModel?: string
-      metadata?: Record<string, unknown>
-      [key: string]: unknown
-    }>
-  >
+  listPlans?(productRef: string): Promise<Array<components['schemas']['Plan']>>
 
   // POST: /v1/sdk/products/{productRef}/plans
   createPlan?(

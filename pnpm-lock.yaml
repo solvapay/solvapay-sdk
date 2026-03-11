@@ -623,6 +623,9 @@ importers:
       '@solvapay/demo-services':
         specifier: workspace:*
         version: link:../demo-services
+      '@solvapay/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -647,9 +650,6 @@ importers:
 
   packages/test-utils:
     devDependencies:
-      '@solvapay/server':
-        specifier: workspace:*
-        version: link:../server
       typescript:
         specifier: ^5.5.4
         version: 5.9.3

@@ -559,7 +559,7 @@ export interface components {
             name: string;
             email: string;
             /** @enum {string} */
-            type?: "provider" | "admin";
+            type?: "provider" | "admin" | "super_admin";
         };
         AuthResponse: Record<string, never>;
         Login: {
@@ -690,6 +690,12 @@ export interface components {
         };
         Plan: {
             /**
+             * Plan type exposed in SDK
+             * @example recurring
+             * @enum {string}
+             */
+            type: "recurring" | "one-time";
+            /**
              * Plan ID
              * @example 507f1f77bcf86cd799439011
              */
@@ -715,16 +721,6 @@ export interface components {
              */
             currencySymbol?: string;
             /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
              * Number of free units included
              * @example 100
              */
@@ -735,16 +731,6 @@ export interface components {
              */
             billingCycle?: string;
             /**
-             * Billing model
-             * @example pre-paid
-             */
-            billingModel?: string;
-            /**
-             * Price per unit
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
              * Meter ID (ObjectId)
              * @example 507f1f77bcf86cd799439011
              */
@@ -754,13 +740,6 @@ export interface components {
              * @example 10000
              */
             limit?: number;
-            /** @description Whether to rollover unused units */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
             /** @description Usage limits */
             limits?: {
                 [key: string]: unknown;
@@ -800,11 +779,11 @@ export interface components {
         };
         CreatePlanRequest: {
             /**
-             * Plan type
+             * Plan type exposed in SDK
              * @example recurring
              * @enum {string}
              */
-            type?: "recurring" | "usage-based" | "hybrid" | "one-time";
+            type?: "recurring" | "one-time";
             /**
              * Billing cycle (required for recurring/hybrid, optional for post-paid usage-based)
              * @example monthly
@@ -823,33 +802,12 @@ export interface components {
              */
             currency?: "USD" | "EUR" | "GBP" | "SEK" | "NOK" | "DKK" | "CAD" | "AUD" | "JPY" | "CHF" | "PLN" | "CZK" | "HUF" | "RON" | "BGN" | "HRK" | "RSD" | "MKD" | "BAM" | "ALL" | "ISK" | "TRY" | "RUB" | "UAH" | "BYN" | "MDL" | "GEL" | "AMD" | "AZN" | "KZT" | "KGS" | "TJS" | "TMT" | "UZS" | "MNT" | "CNY" | "KRW" | "THB" | "VND" | "IDR" | "MYR" | "SGD" | "PHP" | "INR" | "PKR" | "BDT" | "LKR" | "NPR" | "AFN" | "IRR" | "IQD" | "JOD" | "KWD" | "LBP" | "OMR" | "QAR" | "SAR" | "SYP" | "AED" | "YER" | "ILS" | "EGP" | "MAD" | "TND" | "DZD" | "LYD" | "SDG" | "ETB" | "KES" | "TZS" | "UGX" | "RWF" | "BIF" | "DJF" | "SOS" | "ERN" | "SLL" | "GMD" | "GNF" | "CVE" | "STN" | "AOA" | "ZAR" | "BWP" | "SZL" | "LSL" | "NAD" | "ZMW" | "ZWL" | "MZN" | "MWK" | "MGA" | "MUR" | "SCR" | "KMF" | "MVR";
             /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
              * Number of free units included
              * @example 100
              */
             freeUnits?: number;
             /**
-             * Billing model for usage-based plans
-             * @example pre-paid
-             * @enum {string}
-             */
-            billingModel?: "pre-paid" | "post-paid";
-            /**
-             * Price per unit for usage-based plans
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Meter ID (ObjectId) for usage-based plans
+             * Meter ID (ObjectId) for free usage metering
              * @example 507f1f77bcf86cd799439011
              */
             meterId?: string;
@@ -858,16 +816,6 @@ export interface components {
              * @example 10000
              */
             limit?: number;
-            /**
-             * Whether to rollover unused units
-             * @example false
-             */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
             /**
              * Usage limits (shape varies by plan type)
              * @example {
@@ -941,33 +889,12 @@ export interface components {
              */
             currency?: string;
             /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
              * Number of free units included
              * @example 100
              */
             freeUnits?: number;
             /**
-             * Billing model for usage-based plans
-             * @example pre-paid
-             * @enum {string}
-             */
-            billingModel?: "pre-paid" | "post-paid";
-            /**
-             * Price per unit for usage-based plans
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Meter ID (ObjectId) for usage-based plans
+             * Meter ID (ObjectId) for free usage metering
              * @example 507f1f77bcf86cd799439011
              */
             meterId?: string;
@@ -976,16 +903,6 @@ export interface components {
              * @example 10000
              */
             limit?: number;
-            /**
-             * Whether to rollover unused units
-             * @example false
-             */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
             /**
              * Usage limits (shape varies by plan type)
              * @example {
@@ -1572,7 +1489,7 @@ export interface components {
             checkoutUrl?: string;
             /**
              * The meter name to use when tracking usage events
-             * @example api_requests
+             * @example requests
              */
             meterName?: string;
         };
@@ -1922,12 +1839,12 @@ export interface components {
         CreateMeterDto: {
             /**
              * Unique meter name (per provider)
-             * @example api_requests
+             * @example requests
              */
             name: string;
             /**
              * Human-readable display name
-             * @example API Requests
+             * @example Requests
              */
             displayName: string;
             /**
@@ -1959,7 +1876,7 @@ export interface components {
         RecordMeterEventDto: {
             /**
              * Meter name to record against
-             * @example api_requests
+             * @example requests
              */
             meterName: string;
             /**
@@ -3128,7 +3045,7 @@ export interface operations {
                     customerRef: string;
                     /**
                      * Meter name to record against
-                     * @example api_requests
+                     * @example requests
                      */
                     meterName: string;
                     /**
