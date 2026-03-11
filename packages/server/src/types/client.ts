@@ -121,6 +121,7 @@ export interface SolvaPayClient {
   // GET: /v1/sdk/products/{productRef}/plans
   listPlans?(productRef: string): Promise<
     Array<{
+      type?: 'recurring' | 'one-time'
       reference: string
       price?: number
       currency?: string
@@ -129,8 +130,6 @@ export interface SolvaPayClient {
       freeUnits?: number
       meterId?: string
       limit?: number
-      pricePerUnit?: number
-      billingModel?: string
       metadata?: Record<string, unknown>
       [key: string]: unknown
     }>
