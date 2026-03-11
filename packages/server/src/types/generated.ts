@@ -690,6 +690,12 @@ export interface components {
         };
         Plan: {
             /**
+             * Plan type exposed in SDK
+             * @example recurring
+             * @enum {string}
+             */
+            type: "recurring" | "one-time";
+            /**
              * Plan ID
              * @example 507f1f77bcf86cd799439011
              */
