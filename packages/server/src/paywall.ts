@@ -145,9 +145,9 @@ export class SolvaPayPaywall {
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
     const product = this.resolveProduct(metadata)
-    const toolName = handler.name || 'anonymous'
     const configuredPlanRef = metadata.plan?.trim()
     const usagePlanRef = configuredPlanRef || 'unspecified'
+    const usageType = metadata.usageType || 'requests'
 
     return async (args: TArgs): Promise<TResult> => {
       const startTime = Date.now()
@@ -202,6 +202,8 @@ export class SolvaPayPaywall {
             customerRef: backendCustomerRef,
             productRef: product,
             ...(configuredPlanRef ? { planRef: configuredPlanRef } : {}),
+            usageType,
+            meterName: usageType,
           })
 
           withinLimits = limitsCheck.withinLimits
@@ -225,7 +227,7 @@ export class SolvaPayPaywall {
             backendCustomerRef,
             product,
             usagePlanRef,
-            resolvedMeterName || toolName,
+            resolvedMeterName || usageType,
             'paywall',
             requestId,
             latencyMs,
@@ -246,7 +248,7 @@ export class SolvaPayPaywall {
           backendCustomerRef,
           product,
           usagePlanRef,
-          resolvedMeterName || toolName,
+          resolvedMeterName || usageType,
           'success',
           requestId,
           latencyMs,
@@ -266,7 +268,7 @@ export class SolvaPayPaywall {
             backendCustomerRef,
             product,
             usagePlanRef,
-            resolvedMeterName || toolName,
+            resolvedMeterName || usageType,
             'fail',
             requestId,
             latencyMs,
@@ -495,7 +497,7 @@ export class SolvaPayPaywall {
     customerRef: string,
     _productRef: string,
     _planRef: string,
-    toolName: string,
+    meterName: string,
     outcome: 'success' | 'paywall' | 'fail',
     requestId: string,
     actionDuration: number,
@@ -504,7 +506,7 @@ export class SolvaPayPaywall {
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          meterName: toolName || 'api_requests',
+          meterName: meterName || 'requests',
           units: 1,
           properties: { outcome, requestId, actionDuration },
           timestamp: new Date().toISOString(),

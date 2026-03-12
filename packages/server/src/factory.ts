@@ -369,7 +369,13 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
+  checkLimits(params: {
+    customerRef: string
+    productRef: string
+    planRef?: string
+    meterName?: 'requests' | 'tokens'
+    usageType?: 'requests' | 'tokens'
+  }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -397,7 +403,7 @@ export interface SolvaPay {
    * ```typescript
    * await solvaPay.trackUsage({
    *   customerRef: 'user_123',
-   *   meterName: 'api_requests',
+   *   meterName: 'requests',
    *   units: 1,
    *   properties: { endpoint: '/search' },
    * });
@@ -711,7 +717,8 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       // Resolve plan (support both planRef and plan)
       const plan = options.planRef || options.plan
 
-      const metadata = { product, plan }
+      const usageType = options.usageType || 'requests'
+      const metadata = { product, plan, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

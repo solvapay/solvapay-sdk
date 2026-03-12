@@ -68,6 +68,11 @@ export interface PayableOptions {
   planRef?: string
 
   /**
+   * Usage meter type to charge against (defaults to 'requests')
+   */
+  usageType?: 'requests' | 'tokens'
+
+  /**
    * Optional function to extract customer reference from context
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
