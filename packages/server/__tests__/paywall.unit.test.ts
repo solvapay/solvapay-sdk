@@ -21,8 +21,7 @@ class MockApiClient implements SolvaPayClient {
     const bareRef = params.customerRef.startsWith('cus_')
       ? params.customerRef.slice(4)
       : params.customerRef
-    const userPlan =
-      this.userPlans.get(params.customerRef) || this.userPlans.get(bareRef) || 'free'
+    const userPlan = this.userPlans.get(params.customerRef) || this.userPlans.get(bareRef) || 'free'
 
     // Pro/premium users have unlimited access
     if (userPlan === 'pro' || userPlan === 'premium') {
@@ -457,7 +456,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       }
 
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ product: 'meter-test' })
+      const payable = solvaPay.payable({ product: 'meter-test', usageType: 'tokens' })
       const protectedHandler = await payable.function(handler)
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
