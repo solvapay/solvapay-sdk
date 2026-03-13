@@ -470,7 +470,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Track usage to deduct 1 credit
       await apiClient.trackUsage({
         customerRef: customerRef,
-        meterName: 'api_requests',
+        meterName: 'requests',
         units: 1,
         timestamp: new Date().toISOString(),
       })

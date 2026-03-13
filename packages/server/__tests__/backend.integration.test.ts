@@ -221,7 +221,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       await expect(
         apiClient.trackUsage({
           customerRef: customerRef,
-          meterName: 'api_requests',
+          meterName: 'requests',
           units: 1,
           timestamp: new Date().toISOString(),
         }),
@@ -255,7 +255,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         for (let i = 0; i < deniedUsageCount; i++) {
           await apiClient.trackUsage({
             customerRef: customerRef,
-            meterName: 'api_requests',
+            meterName: 'requests',
             units: 1,
             properties: { outcome: 'paywall' },
             timestamp: new Date().toISOString(),
@@ -285,7 +285,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         usageRequests.push(
           apiClient.trackUsage({
             customerRef: customerRef,
-            meterName: 'api_requests',
+            meterName: 'requests',
             units: 1,
             timestamp: new Date().toISOString(),
           }),
@@ -498,7 +498,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
           Array.from({ length: batch }, (_, i) =>
             apiClient.trackUsage({
               customerRef,
-              meterName: 'api_requests',
+              meterName: 'requests',
               units: 1,
               timestamp: new Date().toISOString(),
             }),
@@ -531,7 +531,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       for (let i = 0; i < boundary; i++) {
         await apiClient.trackUsage({
           customerRef: customerRef,
-          meterName: 'api_requests',
+          meterName: 'requests',
           units: 1,
           timestamp: new Date().toISOString(),
         })
@@ -550,7 +550,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       // Attempt one more usage - should be blocked (tracked as 'paywall')
       await apiClient.trackUsage({
         customerRef: customerRef,
-        meterName: 'api_requests',
+        meterName: 'requests',
         units: 1,
         properties: { outcome: 'paywall' },
         timestamp: new Date().toISOString(),
@@ -653,7 +653,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       for (let i = 0; i < usageCount; i++) {
         await apiClient.trackUsage({
           customerRef: customerRef,
-          meterName: 'api_requests',
+          meterName: 'requests',
           units: 1,
           timestamp: new Date().toISOString(),
         })
