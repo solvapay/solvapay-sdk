@@ -1465,6 +1465,16 @@ export interface components {
              * @example pln_2B3C4D5E
              */
             planRef?: string;
+            /**
+             * Canonical usage meter name used for limit checks (for example: requests, tokens).
+             * @example requests
+             */
+            meterName?: string;
+            /**
+             * Usage type alias for meterName. If both are provided, meterName takes precedence.
+             * @example requests
+             */
+            usageType?: string;
         };
         LimitResponse: {
             /**
@@ -1499,6 +1509,11 @@ export interface components {
              * @example cus_3c4d5e6f7g8h
              */
             customerRef: string;
+            /**
+             * Optional product reference or ID to scope the customer manage page to a single product.
+             * @example prd_1a2b3c4d5e6f
+             */
+            productRef?: string;
         };
         CustomerSessionResponse: {
             /**

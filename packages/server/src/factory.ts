@@ -511,6 +511,7 @@ export interface SolvaPay {
    *
    * @param params - Customer session parameters
    * @param params.customerRef - Customer reference
+   * @param params.productRef - Optional product reference for scoping portal view
    * @returns Customer portal session with redirect URL
    *
    * @example
@@ -523,7 +524,7 @@ export interface SolvaPay {
    * window.location.href = session.customerUrl;
    * ```
    */
-  createCustomerSession(params: { customerRef: string }): Promise<{
+  createCustomerSession(params: { customerRef: string; productRef?: string }): Promise<{
     sessionId: string
     customerUrl: string
   }>

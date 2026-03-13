@@ -158,13 +158,14 @@ function createUpgradeHandler(
 
 function createManageAccountHandler(
   apiClient: SolvaPayClient,
+  productRef: string,
   getCustomerRef: (args: Record<string, unknown>) => string,
 ) {
   return async (args: Record<string, unknown>) => {
     const customerRef = getCustomerRef(args)
 
     try {
-      const session = await apiClient.createCustomerSession({ customerRef })
+      const session = await apiClient.createCustomerSession({ customerRef, productRef })
       const portalUrl = session.customerUrl
 
       const responseText =
@@ -205,7 +206,7 @@ export function createVirtualTools(
     },
     {
       ...TOOL_MANAGE_ACCOUNT,
-      handler: createManageAccountHandler(apiClient, getCustomerRef),
+      handler: createManageAccountHandler(apiClient, product, getCustomerRef),
     },
   ]
 
