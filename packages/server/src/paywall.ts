@@ -173,7 +173,7 @@ export class SolvaPayPaywall {
       let resolvedMeterName: string | undefined
 
       try {
-        const limitsCacheKey = `${backendCustomerRef}:${product}:${configuredPlanRef || ''}`
+        const limitsCacheKey = `${backendCustomerRef}:${product}:${configuredPlanRef || ''}:${usageType}`
         const cachedLimits = this.limitsCache.get(limitsCacheKey)
         const now = Date.now()
 

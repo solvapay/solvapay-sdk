@@ -531,6 +531,29 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
       vi.useRealTimers()
     })
+
+    it('should keep cache entries isolated by usageType', async () => {
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ success: true })
+
+      const requestsPayable = solvaPay.payable({
+        product: 'cache-usage-type',
+        usageType: 'requests',
+      })
+      const tokensPayable = solvaPay.payable({
+        product: 'cache-usage-type',
+        usageType: 'tokens',
+      })
+
+      const requestsHandler = await requestsPayable.function(handler)
+      const tokensHandler = await tokensPayable.function(handler)
+
+      await requestsHandler({ auth: { customer_ref: 'cus_usage_type_user' } })
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      await tokensHandler({ auth: { customer_ref: 'cus_usage_type_user' } })
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('Error Types & Handling', () => {
