@@ -369,7 +369,13 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
+  checkLimits(params: {
+    customerRef: string
+    productRef: string
+    planRef?: string
+    meterName?: 'requests' | 'tokens'
+    usageType?: 'requests' | 'tokens'
+  }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -396,7 +402,7 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * await solvaPay.trackUsage({
-   *   customerId: 'cus_3C4D5E6F',
+   *   customerRef: 'cus_3C4D5E6F',
    *   actionType: 'api_call',
    *   units: 1,
    *   outcome: 'success',
@@ -405,7 +411,7 @@ export interface SolvaPay {
    * ```
    */
   trackUsage(params: {
-    customerId: string
+    customerRef: string
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
@@ -504,7 +510,7 @@ export interface SolvaPay {
    * @returns The generated event ID
    */
   createEvent(params: {
-    customerId: string
+    customerRef: string
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
@@ -535,6 +541,7 @@ export interface SolvaPay {
    *
    * @param params - Customer session parameters
    * @param params.customerRef - Customer reference
+   * @param params.productRef - Optional product reference for scoping portal view
    * @returns Customer portal session with redirect URL
    *
    * @example
@@ -547,7 +554,7 @@ export interface SolvaPay {
    * window.location.href = session.customerUrl;
    * ```
    */
-  createCustomerSession(params: { customerRef: string }): Promise<{
+  createCustomerSession(params: { customerRef: string; productRef?: string }): Promise<{
     sessionId: string
     customerUrl: string
   }>
@@ -748,7 +755,8 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       // Resolve plan (support both planRef and plan)
       const plan = options.planRef || options.plan
 
-      const metadata = { product, plan }
+      const usageType = options.usageType || 'requests'
+      const metadata = { product, plan, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

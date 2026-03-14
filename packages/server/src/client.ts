@@ -101,11 +101,13 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // POST: /v1/sdk/usages
     async trackUsage(params) {
       const url = `${base}/v1/sdk/usages`
+      const { customerRef, ...rest } = params
+      const body = { ...rest, customerId: customerRef }
 
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(params),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -536,11 +538,13 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // POST: /v1/sdk/events
     async createEvent(params) {
       const url = `${base}/v1/sdk/events`
+      const { customerRef, ...rest } = params
+      const body = { ...rest, customerId: customerRef }
 
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(params),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {

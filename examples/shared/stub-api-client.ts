@@ -381,7 +381,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
    * Track usage for analytics
    */
   async trackUsage(params: {
-    customerId: string
+    customerRef: string
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
@@ -397,12 +397,12 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     this.log(`📡 Stub Request: POST /v1/sdk/usages`)
     this.log(
-      `   Action: ${params.metadata?.action || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerId}`,
+      `   Action: ${params.metadata?.action || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerRef}`,
     )
   }
 
   async createEvent(params: {
-    customerId: string
+    customerRef: string
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'

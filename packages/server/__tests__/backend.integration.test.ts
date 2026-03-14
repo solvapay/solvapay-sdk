@@ -220,7 +220,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       // trackUsage returns void - just verify it doesn't throw
       await expect(
         apiClient.trackUsage({
-          customerId: customerRef,
+          customerRef: customerRef,
           actionType: 'api_call',
           units: 1,
           outcome: 'success',
@@ -255,9 +255,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         const deniedUsageCount = 3
         for (let i = 0; i < deniedUsageCount; i++) {
           await apiClient.trackUsage({
-            customerId: customerRef,
+            customerRef: customerRef,
             actionType: 'api_call',
-            
             units: 1,
             outcome: 'paywall',
             timestamp: new Date().toISOString(),
@@ -286,9 +285,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       for (let i = 0; i < usageCount; i++) {
         usageRequests.push(
           apiClient.trackUsage({
-            customerId: customerRef,
+            customerRef: customerRef,
             actionType: 'api_call',
-            
             units: 1,
             outcome: 'success',
             timestamp: new Date().toISOString(),
@@ -501,9 +499,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         await Promise.all(
           Array.from({ length: batch }, (_, i) =>
             apiClient.trackUsage({
-              customerId: customerRef,
+              customerRef: customerRef,
               actionType: 'api_call',
-              
               units: 1,
               outcome: 'success',
               timestamp: new Date().toISOString(),
@@ -536,9 +533,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       // Use the remaining units one-by-one
       for (let i = 0; i < boundary; i++) {
         await apiClient.trackUsage({
-          customerId: customerRef,
+          customerRef: customerRef,
           actionType: 'api_call',
-          
           units: 1,
           outcome: 'success',
           timestamp: new Date().toISOString(),
@@ -557,7 +553,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       // Attempt one more usage - should be blocked (tracked as 'paywall')
       await apiClient.trackUsage({
-        customerId: customerRef,
+        customerRef: customerRef,
         actionType: 'api_call',
         units: 1,
         outcome: 'paywall',
@@ -660,9 +656,8 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       for (let i = 0; i < usageCount; i++) {
         await apiClient.trackUsage({
-          customerId: customerRef,
+          customerRef: customerRef,
           actionType: 'api_call',
-          
           units: 1,
           outcome: 'success',
           timestamp: new Date().toISOString(),
@@ -955,7 +950,7 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       const unitsToTrack = Math.min(3, initialRemaining)
       for (let i = 0; i < unitsToTrack; i++) {
         await apiClient.trackUsage({
-          customerId: freshCustomer,
+          customerRef: freshCustomer,
           actionType: 'api_call',
           units: 1,
           outcome: 'success',

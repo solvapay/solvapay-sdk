@@ -6,6 +6,12 @@
 
 import type { components } from './generated'
 
+export type UsageMeterType = 'requests' | 'tokens'
+export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
+  meterName?: string
+  usageType?: UsageMeterType
+}
+
 /**
  * Extended LimitResponse with plan field
  */
@@ -62,11 +68,11 @@ export interface ProcessPaymentResult {
  */
 export interface SolvaPayClient {
   // POST: /v1/sdk/limits
-  checkLimits(params: components['schemas']['CheckLimitRequest']): Promise<LimitResponseWithPlan>
+  checkLimits(params: CheckLimitsRequest): Promise<LimitResponseWithPlan>
 
   // POST: /v1/sdk/usages
   trackUsage(params: {
-    customerId: string
+    customerRef: string
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
@@ -197,7 +203,7 @@ export interface SolvaPayClient {
 
   // POST: /v1/sdk/usages
   createEvent?(params: {
-    customerId: string
+    customerRef: string
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'

@@ -6,8 +6,34 @@
  * helpers for confirming payments and waiting for webhook processing.
  */
 
-import type { SolvaPayClient } from '@solvapay/server'
 import { testLog } from './test-logger'
+
+/**
+ * Minimal subset of SolvaPayClient used by test helpers.
+ * Defined locally to avoid a cyclic workspace dependency on @solvapay/server.
+ */
+interface TestSolvaPayClient {
+  createPaymentIntent?(params: {
+    productRef: string
+    planRef: string
+    customerRef: string
+    idempotencyKey?: string
+  }): Promise<{
+    id: string
+    clientSecret: string
+    publishableKey: string
+    accountId?: string
+  }>
+  checkLimits(params: {
+    customerRef: string
+    productRef: string
+  }): Promise<{
+    withinLimits: boolean
+    remaining: number
+    plan: string
+    checkoutUrl?: string
+  }>
+}
 
 /**
  * Stripe test card payment methods
@@ -44,7 +70,7 @@ export const STRIPE_TEST_CARDS = {
  * ```
  */
 export async function createTestPaymentIntent(
-  apiClient: SolvaPayClient,
+  apiClient: TestSolvaPayClient,
   productRef: string,
   planRef: string,
   customerRef: string,
@@ -162,7 +188,7 @@ export async function confirmPaymentWithTestCard(
  * ```
  */
 export async function waitForWebhookProcessing(
-  apiClient: SolvaPayClient,
+  apiClient: TestSolvaPayClient,
   customerRef: string,
   productRef: string,
   planRef: string,

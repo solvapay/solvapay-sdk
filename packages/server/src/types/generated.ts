@@ -1245,6 +1245,11 @@ export interface components {
              * @example cus_3c4d5e6f7g8h
              */
             customerRef: string;
+            /**
+             * Optional product reference or ID to scope the customer manage page to a single product.
+             * @example prd_1a2b3c4d5e6f
+             */
+            productRef?: string;
         };
         CustomerSessionResponse: {
             /**
@@ -1914,6 +1919,43 @@ export interface components {
             redirect_uri: string;
             /** @description The state parameter returned by GitHub (contains client_id) */
             state: string;
+        };
+        CreateMeterDto: {
+            /**
+             * Unique meter name (per provider)
+             * @example requests
+             */
+            name: string;
+            /**
+             * Human-readable display name
+             * @example Requests
+             */
+            displayName: string;
+            /**
+             * Optional description
+             * @example Tracks API call volume
+             */
+            description?: string;
+            /**
+             * Aggregation method for events
+             * @default count
+             * @enum {string}
+             */
+            aggregation: "count" | "sum" | "max" | "min" | "avg";
+            /**
+             * Unit label
+             * @default requests
+             * @example requests
+             */
+            unit: string;
+        };
+        UpdateMeterDto: {
+            /** @example API Requests v2 */
+            displayName?: string;
+            /** @example Updated description */
+            description?: string;
+            /** @enum {string} */
+            status?: "active" | "archived";
         };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
