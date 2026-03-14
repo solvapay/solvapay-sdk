@@ -66,11 +66,17 @@ export interface SolvaPayClient {
 
   // POST: /v1/sdk/usages
   trackUsage(params: {
-    customerRef: string
-    meterName?: string
+    customerId: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
-    properties?: Record<string, unknown>
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
     timestamp?: string
+    idempotencyKey?: string
   }): Promise<void>
 
   // POST: /v1/sdk/customers
@@ -127,7 +133,7 @@ export interface SolvaPayClient {
       interval?: string
       isFreeTier?: boolean
       freeUnits?: number
-      meterId?: string
+      measures?: string
       limit?: number
       pricePerUnit?: number
       billingModel?: string
@@ -188,6 +194,21 @@ export interface SolvaPayClient {
     customerRef: string
     productRef: string
   }): Promise<components['schemas']['UserInfoResponse']>
+
+  // POST: /v1/sdk/usages
+  createEvent?(params: {
+    customerId: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+    units?: number
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
+    timestamp?: string
+    idempotencyKey?: string
+  }): Promise<{ eventId: string }>
 
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(

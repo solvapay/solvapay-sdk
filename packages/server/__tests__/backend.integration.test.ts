@@ -220,9 +220,10 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       // trackUsage returns void - just verify it doesn't throw
       await expect(
         apiClient.trackUsage({
-          customerRef: customerRef,
-          meterName: 'api_requests',
+          customerId: customerRef,
+          actionType: 'api_call',
           units: 1,
+          outcome: 'success',
           timestamp: new Date().toISOString(),
         }),
       ).resolves.toBeUndefined()
@@ -254,10 +255,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         const deniedUsageCount = 3
         for (let i = 0; i < deniedUsageCount; i++) {
           await apiClient.trackUsage({
-            customerRef: customerRef,
-            meterName: 'api_requests',
+            customerId: customerRef,
+            actionType: 'api_call',
+            
             units: 1,
-            properties: { outcome: 'paywall' },
+            outcome: 'paywall',
             timestamp: new Date().toISOString(),
           })
         }
@@ -284,9 +286,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       for (let i = 0; i < usageCount; i++) {
         usageRequests.push(
           apiClient.trackUsage({
-            customerRef: customerRef,
-            meterName: 'api_requests',
+            customerId: customerRef,
+            actionType: 'api_call',
+            
             units: 1,
+            outcome: 'success',
             timestamp: new Date().toISOString(),
           }),
         )
@@ -497,9 +501,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
         await Promise.all(
           Array.from({ length: batch }, (_, i) =>
             apiClient.trackUsage({
-              customerRef,
-              meterName: 'api_requests',
+              customerId: customerRef,
+              actionType: 'api_call',
+              
               units: 1,
+              outcome: 'success',
               timestamp: new Date().toISOString(),
             }),
           ),
@@ -530,9 +536,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
       // Use the remaining units one-by-one
       for (let i = 0; i < boundary; i++) {
         await apiClient.trackUsage({
-          customerRef: customerRef,
-          meterName: 'api_requests',
+          customerId: customerRef,
+          actionType: 'api_call',
+          
           units: 1,
+          outcome: 'success',
           timestamp: new Date().toISOString(),
         })
       }
@@ -549,10 +557,10 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       // Attempt one more usage - should be blocked (tracked as 'paywall')
       await apiClient.trackUsage({
-        customerRef: customerRef,
-        meterName: 'api_requests',
+        customerId: customerRef,
+        actionType: 'api_call',
         units: 1,
-        properties: { outcome: 'paywall' },
+        outcome: 'paywall',
         timestamp: new Date().toISOString(),
       })
 
@@ -652,9 +660,11 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
 
       for (let i = 0; i < usageCount; i++) {
         await apiClient.trackUsage({
-          customerRef: customerRef,
-          meterName: 'api_requests',
+          customerId: customerRef,
+          actionType: 'api_call',
+          
           units: 1,
+          outcome: 'success',
           timestamp: new Date().toISOString(),
         })
       }
@@ -679,7 +689,293 @@ describeIntegration('Backend Integration - Real API with Auto-Discovered Product
   })
 
   // ============================================================================
-  // Test 5: Error Handling & Edge Cases
+  // Test 5: Usage Recording - New Fields & Validation
+  // ============================================================================
+
+  describe('Usage Recording - End-to-End', () => {
+    const BASE_URL = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SOLVAPAY_SECRET_KEY}`,
+    }
+
+    async function rawUsagePost(body: Record<string, unknown>): Promise<{ status: number; body: any }> {
+      const res = await fetch(`${BASE_URL}/v1/sdk/usages`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(body),
+      })
+      const text = await res.text()
+      let json: any
+      try { json = JSON.parse(text) } catch { json = text }
+      return { status: res.status, body: json }
+    }
+
+    async function rawBulkUsagePost(body: Record<string, unknown>): Promise<{ status: number; body: any }> {
+      const res = await fetch(`${BASE_URL}/v1/sdk/usages/bulk`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(body),
+      })
+      const text = await res.text()
+      let json: any
+      try { json = JSON.parse(text) } catch { json = text }
+      return { status: res.status, body: json }
+    }
+
+    let usageCustomerRef: string
+
+    beforeAll(async () => {
+      usageCustomerRef = await solvaPay.ensureCustomer(
+        `test_usage_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      )
+    })
+
+    it('should record usage and return a reference', async () => {
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 1,
+      })
+
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(res.body.reference).toBeDefined()
+      expect(typeof res.body.reference).toBe('string')
+      console.log(`  recorded reference: ${res.body.reference}`)
+    })
+
+    it('should accept all action types', async () => {
+      const actionTypes = ['transaction', 'api_call', 'hour', 'email', 'storage', 'custom'] as const
+
+      for (const actionType of actionTypes) {
+        const res = await rawUsagePost({
+          customerId: usageCustomerRef,
+          actionType,
+          units: 1,
+        })
+        expect(res.status).toBe(200)
+        expect(res.body.success).toBe(true)
+      }
+      console.log(`  all ${actionTypes.length} action types accepted`)
+    })
+
+    it('should accept all outcome values', async () => {
+      const outcomes = ['success', 'paywall', 'fail'] as const
+
+      for (const outcome of outcomes) {
+        const res = await rawUsagePost({
+          customerId: usageCustomerRef,
+          actionType: 'api_call',
+          outcome,
+          units: 1,
+        })
+        expect(res.status).toBe(200)
+        expect(res.body.success).toBe(true)
+      }
+      console.log(`  all 3 outcome values accepted`)
+    })
+
+    it('should record usage with metadata, description, and duration', async () => {
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 3,
+        outcome: 'success',
+        description: 'Full-text search across knowledge base',
+        duration: 1250,
+        metadata: { toolName: 'search_documents', query: 'test query', resultCount: 42 },
+        timestamp: new Date().toISOString(),
+      })
+
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(res.body.reference).toBeDefined()
+      console.log(`  comprehensive usage recorded: ${res.body.reference}`)
+    })
+
+    it('should enforce idempotency — same key returns success without duplicate', async () => {
+      const idempotencyKey = `idem_${Date.now()}_${Math.random().toString(36).substring(7)}`
+
+      const first = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 1,
+        idempotencyKey,
+      })
+      expect(first.status).toBe(200)
+      expect(first.body.success).toBe(true)
+      const firstRef = first.body.reference
+
+      const second = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 1,
+        idempotencyKey,
+      })
+      expect(second.status).toBe(200)
+      expect(second.body.success).toBe(true)
+      expect(second.body.reference).toBe(firstRef)
+      console.log(`  idempotency: both calls returned same reference ${firstRef}`)
+    })
+
+    it('should reject missing customerId', async () => {
+      const res = await rawUsagePost({
+        actionType: 'api_call',
+        units: 1,
+      })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should reject invalid actionType', async () => {
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'invalid_type',
+        units: 1,
+      })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should reject invalid outcome', async () => {
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        outcome: 'unknown',
+        units: 1,
+      })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should reject units exceeding 100,000', async () => {
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 100_001,
+      })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should reject negative units', async () => {
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: -1,
+      })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should reject timestamp too far in the future (>24h)', async () => {
+      const futureDate = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString()
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 1,
+        timestamp: futureDate,
+      })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should reject timestamp too far in the past (>30d)', async () => {
+      const pastDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString()
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 1,
+        timestamp: pastDate,
+      })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should accept a valid past timestamp (within 30d)', async () => {
+      const validPast = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      const res = await rawUsagePost({
+        customerId: usageCustomerRef,
+        actionType: 'api_call',
+        units: 1,
+        timestamp: validPast,
+      })
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+    })
+
+    it('should record bulk usage with new fields', async () => {
+      const events = [
+        { customerId: usageCustomerRef, actionType: 'api_call', units: 1, outcome: 'success', metadata: { toolName: 'tool_a' } },
+        { customerId: usageCustomerRef, actionType: 'transaction', units: 2, outcome: 'success', metadata: { toolName: 'tool_b' } },
+        { customerId: usageCustomerRef, actionType: 'email', units: 1, outcome: 'fail', description: 'delivery failed' },
+      ]
+
+      const res = await rawBulkUsagePost({ events })
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(res.body.inserted).toBe(3)
+      console.log(`  bulk recorded ${res.body.inserted} events`)
+    })
+
+    it('should reject bulk with empty events array', async () => {
+      const res = await rawBulkUsagePost({ events: [] })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should reject bulk when any event is missing customerId', async () => {
+      const events = [
+        { customerId: usageCustomerRef, actionType: 'api_call', units: 1 },
+        { actionType: 'api_call', units: 1 },
+      ]
+      const res = await rawBulkUsagePost({ events })
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('Validation failed')
+    })
+
+    it('should verify usage affects limits correctly', async () => {
+      const freshCustomer = await solvaPay.ensureCustomer(
+        `test_limits_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      )
+
+      const initialLimits = await apiClient.checkLimits({
+        customerRef: freshCustomer,
+        productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
+      })
+
+      const initialRemaining = initialLimits.remaining
+      if (initialRemaining <= 0) {
+        console.log('  skipping limits verification — plan has 0 free units')
+        return
+      }
+
+      const unitsToTrack = Math.min(3, initialRemaining)
+      for (let i = 0; i < unitsToTrack; i++) {
+        await apiClient.trackUsage({
+          customerId: freshCustomer,
+          actionType: 'api_call',
+          units: 1,
+          outcome: 'success',
+        })
+      }
+
+      const afterLimits = await apiClient.checkLimits({
+        customerRef: freshCustomer,
+        productRef: defaultProduct.reference,
+        planRef: defaultPlan.reference,
+      })
+
+      expect(afterLimits.remaining).toBeLessThan(initialRemaining)
+      expect(afterLimits.remaining).toBe(initialRemaining - unitsToTrack)
+      console.log(`  limits: ${initialRemaining} -> ${afterLimits.remaining} after ${unitsToTrack} units`)
+    })
+  })
+
+  // ============================================================================
+  // Test 6: Error Handling & Edge Cases
   // ============================================================================
 
   describe('Error Handling - API Errors & Edge Cases', () => {

@@ -495,7 +495,7 @@ export class SolvaPayPaywall {
     customerRef: string,
     _productRef: string,
     _planRef: string,
-    toolName: string,
+    action: string,
     outcome: 'success' | 'paywall' | 'fail',
     requestId: string,
     actionDuration: number,
@@ -503,10 +503,12 @@ export class SolvaPayPaywall {
     await withRetry(
       () =>
         this.apiClient.trackUsage({
-          customerRef,
-          meterName: toolName || 'api_requests',
+          customerId: customerRef,
+          actionType: 'api_call',
           units: 1,
-          properties: { outcome, requestId, actionDuration },
+          outcome,
+          duration: actionDuration,
+          metadata: { action: action || 'api_requests', requestId },
           timestamp: new Date().toISOString(),
         }),
       {

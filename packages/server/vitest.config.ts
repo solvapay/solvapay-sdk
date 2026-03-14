@@ -28,7 +28,7 @@ export default defineConfig({
     include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts'],
     // Increase timeout for integration tests (default is 5000ms)
     // Integration tests make multiple slow API calls to real backend
-    testTimeout: 30000, // 30 seconds
+    testTimeout: 120000, // 120 seconds — exhaustion tests burn through many units
     hookTimeout: 30000, // 30 seconds for setup/teardown hooks
     env: {
       // Make .env variables available in tests

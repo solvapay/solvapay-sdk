@@ -396,19 +396,26 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * await solvaPay.trackUsage({
-   *   customerRef: 'user_123',
-   *   meterName: 'api_requests',
+   *   customerId: 'cus_3C4D5E6F',
+   *   actionType: 'api_call',
    *   units: 1,
-   *   properties: { endpoint: '/search' },
+   *   outcome: 'success',
+   *   metadata: { toolName: 'search', endpoint: '/search' },
    * });
    * ```
    */
   trackUsage(params: {
-    customerRef: string
-    meterName?: string
+    customerId: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
-    properties?: Record<string, unknown>
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
     timestamp?: string
+    idempotencyKey?: string
   }): Promise<void>
 
   /**
@@ -487,6 +494,29 @@ export interface SolvaPay {
    * window.location.href = session.checkoutUrl;
    * ```
    */
+  /**
+   * Publish a usage event.
+   *
+   * Records a usage event against the authenticated provider. Only usage events
+   * are accepted from the SDK. The backend validates and authorises the event.
+   *
+   * @param params - Usage event parameters
+   * @returns The generated event ID
+   */
+  createEvent(params: {
+    customerId: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+    units?: number
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
+    timestamp?: string
+    idempotencyKey?: string
+  }): Promise<{ eventId: string }>
+
   createCheckoutSession(params: {
     productRef: string
     customerRef: string
@@ -682,6 +712,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     getCustomer(params) {
       return apiClient.getCustomer(params)
+    },
+
+    createEvent(params) {
+      if (!apiClient.createEvent) {
+        throw new SolvaPayError('createEvent is not available on this API client')
+      }
+      return apiClient.createEvent(params)
     },
 
     createCheckoutSession(params) {

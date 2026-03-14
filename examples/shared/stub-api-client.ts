@@ -381,18 +381,40 @@ export class StubSolvaPayClient implements SolvaPayClient {
    * Track usage for analytics
    */
   async trackUsage(params: {
-    customerRef: string
-    meterName?: string
+    customerId: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
-    properties?: Record<string, unknown>
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
     timestamp?: string
+    idempotencyKey?: string
   }): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, this.delays.trackUsage))
 
     this.log(`📡 Stub Request: POST /v1/sdk/usages`)
     this.log(
-      `   Meter: ${params.meterName || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerRef}`,
+      `   Action: ${params.metadata?.action || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerId}`,
     )
+  }
+
+  async createEvent(params: {
+    customerId: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+    units?: number
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
+    timestamp?: string
+    idempotencyKey?: string
+  }): Promise<{ eventId: string }> {
+    return { eventId: `evt_stub_${Date.now().toString(36)}` }
   }
 
   /**
@@ -685,7 +707,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       interval?: string
       isFreeTier?: boolean
       freeUnits?: number
-      meterId?: string
+      measures?: string
       limit?: number
       pricePerUnit?: number
       billingModel?: string

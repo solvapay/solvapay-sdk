@@ -197,6 +197,190 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/usages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a usage event
+         * @description Records a usage event into the Usage timeseries collection.
+         */
+        post: operations["UsageSdkController_recordUsage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/usages/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record bulk usage events
+         * @description Records multiple usage events in a single request.
+         */
+        post: operations["UsageSdkController_recordBulkUsage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/meter-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a meter event
+         * @description Records a single usage event against a named meter.
+         */
+        post: operations["MeterEventsSdkController_recordEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/meter-events/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record meter events in bulk
+         * @description Records multiple usage events in a single request for high throughput.
+         */
+        post: operations["MeterEventsSdkController_recordBulkEvents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer by reference, externalRef, or email
+         * @description Retrieves a customer's details using their unique reference ID, externalRef, or email. Use query parameter 'reference' to look up by customer reference, 'externalRef' for external auth ID, or 'email' for customer email. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomerByQuery"];
+        put?: never;
+        /**
+         * Create a new customer
+         * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will purchase your products. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
+         */
+        post: operations["CustomerSdkController_createCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/{reference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer by reference
+         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a customer session
+         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
+         */
+        post: operations["CustomerSdkController_createCustomerSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer session by sessionId
+         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and purchases. The session must belong to the authenticated provider.
+         */
+        get: operations["CustomerSdkController_getCustomerSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/user-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get user info and purchase status
+         * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
+         */
+        post: operations["UserInfoSdkController_getUserInfo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/purchases": {
         parameters: {
             query?: never;
@@ -317,190 +501,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/customers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer by reference, externalRef, or email
-         * @description Retrieves a customer's details using their unique reference ID, externalRef, or email. Use query parameter 'reference' to look up by customer reference, 'externalRef' for external auth ID, or 'email' for customer email. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
-         */
-        get: operations["CustomerSdkController_getCustomerByQuery"];
-        put?: never;
-        /**
-         * Create a new customer
-         * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will purchase your products. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
-         */
-        post: operations["CustomerSdkController_createCustomer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/{reference}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer by reference
-         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
-         */
-        get: operations["CustomerSdkController_getCustomer"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/customer-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a customer session
-         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
-         */
-        post: operations["CustomerSdkController_createCustomerSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/customer-sessions/{sessionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer session by sessionId
-         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and purchases. The session must belong to the authenticated provider.
-         */
-        get: operations["CustomerSdkController_getCustomerSession"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/user-info": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Get user info and purchase status
-         * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
-         */
-        post: operations["UserInfoSdkController_getUserInfo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/usages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record a usage event
-         * @description Records a usage event against a named meter. Events are stored in a high-performance timeseries collection.
-         */
-        post: operations["UsageSdkController_recordUsage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/usages/bulk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record bulk usage events
-         * @description Records multiple meter events in a single request.
-         */
-        post: operations["UsageSdkController_recordBulkUsage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/meter-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record a meter event
-         * @description Records a single usage event against a named meter.
-         */
-        post: operations["MeterSdkController_recordEvent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/meter-events/bulk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record meter events in bulk
-         * @description Records multiple usage events in a single request for high throughput.
-         */
-        post: operations["MeterSdkController_recordBulkEvents"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -559,7 +559,7 @@ export interface components {
             name: string;
             email: string;
             /** @enum {string} */
-            type?: "provider" | "admin";
+            type?: "provider" | "admin" | "super_admin";
         };
         AuthResponse: Record<string, never>;
         Login: {
@@ -690,6 +690,12 @@ export interface components {
         };
         Plan: {
             /**
+             * Plan type exposed in SDK
+             * @example recurring
+             * @enum {string}
+             */
+            type: "recurring" | "one-time";
+            /**
              * Plan ID
              * @example 507f1f77bcf86cd799439011
              */
@@ -715,20 +721,20 @@ export interface components {
              */
             currencySymbol?: string;
             /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
              * Number of free units included
              * @example 100
              */
             freeUnits?: number;
+            /**
+             * One-time setup fee
+             * @example 500
+             */
+            setupFee?: number;
+            /**
+             * Free trial period in days
+             * @example 14
+             */
+            trialDays?: number;
             /**
              * Billing cycle
              * @example monthly
@@ -737,30 +743,29 @@ export interface components {
             /**
              * Billing model
              * @example pre-paid
+             * @enum {string}
              */
-            billingModel?: string;
+            billingModel?: "pre-paid" | "post-paid";
             /**
-             * Price per unit
+             * Price per usage unit
              * @example 0.01
              */
             pricePerUnit?: number;
             /**
-             * Meter ID (ObjectId)
-             * @example 507f1f77bcf86cd799439011
+             * What the plan measures for usage tracking
+             * @example requests
              */
-            meterId?: string;
+            measures?: string;
             /**
              * Usage limit for the meter
              * @example 10000
              */
             limit?: number;
-            /** @description Whether to rollover unused units */
-            rolloverUnusedUnits?: boolean;
             /**
-             * Base price for hybrid plans
-             * @example 29.99
+             * Whether unused units roll over to next period
+             * @example false
              */
-            basePrice?: number;
+            rolloverUnusedUnits?: boolean;
             /** @description Usage limits */
             limits?: {
                 [key: string]: unknown;
@@ -800,11 +805,11 @@ export interface components {
         };
         CreatePlanRequest: {
             /**
-             * Plan type
+             * Plan type exposed in SDK
              * @example recurring
              * @enum {string}
              */
-            type?: "recurring" | "usage-based" | "hybrid" | "one-time";
+            type?: "recurring" | "one-time";
             /**
              * Billing cycle (required for recurring/hybrid, optional for post-paid usage-based)
              * @example monthly
@@ -823,51 +828,15 @@ export interface components {
              */
             currency?: "USD" | "EUR" | "GBP" | "SEK" | "NOK" | "DKK" | "CAD" | "AUD" | "JPY" | "CHF" | "PLN" | "CZK" | "HUF" | "RON" | "BGN" | "HRK" | "RSD" | "MKD" | "BAM" | "ALL" | "ISK" | "TRY" | "RUB" | "UAH" | "BYN" | "MDL" | "GEL" | "AMD" | "AZN" | "KZT" | "KGS" | "TJS" | "TMT" | "UZS" | "MNT" | "CNY" | "KRW" | "THB" | "VND" | "IDR" | "MYR" | "SGD" | "PHP" | "INR" | "PKR" | "BDT" | "LKR" | "NPR" | "AFN" | "IRR" | "IQD" | "JOD" | "KWD" | "LBP" | "OMR" | "QAR" | "SAR" | "SYP" | "AED" | "YER" | "ILS" | "EGP" | "MAD" | "TND" | "DZD" | "LYD" | "SDG" | "ETB" | "KES" | "TZS" | "UGX" | "RWF" | "BIF" | "DJF" | "SOS" | "ERN" | "SLL" | "GMD" | "GNF" | "CVE" | "STN" | "AOA" | "ZAR" | "BWP" | "SZL" | "LSL" | "NAD" | "ZMW" | "ZWL" | "MZN" | "MWK" | "MGA" | "MUR" | "SCR" | "KMF" | "MVR";
             /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
              * Number of free units included
              * @example 100
              */
             freeUnits?: number;
             /**
-             * Billing model for usage-based plans
-             * @example pre-paid
-             * @enum {string}
-             */
-            billingModel?: "pre-paid" | "post-paid";
-            /**
-             * Price per unit for usage-based plans
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Meter ID (ObjectId) for usage-based plans
-             * @example 507f1f77bcf86cd799439011
-             */
-            meterId?: string;
-            /**
              * Usage limit for the meter
              * @example 10000
              */
             limit?: number;
-            /**
-             * Whether to rollover unused units
-             * @example false
-             */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
             /**
              * Usage limits (shape varies by plan type)
              * @example {
@@ -941,51 +910,15 @@ export interface components {
              */
             currency?: string;
             /**
-             * Setup fee
-             * @example 0
-             */
-            setupFee?: number;
-            /**
-             * Trial days
-             * @example 7
-             */
-            trialDays?: number;
-            /**
              * Number of free units included
              * @example 100
              */
             freeUnits?: number;
             /**
-             * Billing model for usage-based plans
-             * @example pre-paid
-             * @enum {string}
-             */
-            billingModel?: "pre-paid" | "post-paid";
-            /**
-             * Price per unit for usage-based plans
-             * @example 0.01
-             */
-            pricePerUnit?: number;
-            /**
-             * Meter ID (ObjectId) for usage-based plans
-             * @example 507f1f77bcf86cd799439011
-             */
-            meterId?: string;
-            /**
              * Usage limit for the meter
              * @example 10000
              */
             limit?: number;
-            /**
-             * Whether to rollover unused units
-             * @example false
-             */
-            rolloverUnusedUnits?: boolean;
-            /**
-             * Base price for hybrid plans
-             * @example 29.99
-             */
-            basePrice?: number;
             /**
              * Usage limits (shape varies by plan type)
              * @example {
@@ -1115,6 +1048,16 @@ export interface components {
              */
             currencySymbol?: string;
             /**
+             * One-time setup fee
+             * @example 500
+             */
+            setupFee?: number;
+            /**
+             * Free trial period in days
+             * @example 14
+             */
+            trialDays?: number;
+            /**
              * Billing cycle
              * @example monthly
              */
@@ -1130,15 +1073,20 @@ export interface components {
              */
             pricePerUnit?: number;
             /**
-             * Meter ID (ObjectId)
-             * @example 507f1f77bcf86cd799439011
+             * What the plan measures for usage tracking
+             * @example requests
              */
-            meterId?: string;
+            measures?: string;
             /**
              * Usage limit for the meter
              * @example 10000
              */
             limit?: number;
+            /**
+             * Whether unused units roll over to next period
+             * @example false
+             */
+            rolloverUnusedUnits?: boolean;
             /**
              * Included free units
              * @example 1000
@@ -1252,6 +1200,301 @@ export interface components {
             metadata?: {
                 [key: string]: unknown;
             };
+        };
+        RecordMeterEventDto: {
+            /**
+             * Meter name to record against
+             * @example requests
+             */
+            meterName: string;
+            /**
+             * Customer reference
+             * @example cus_ABC123
+             */
+            customerId: string;
+            /**
+             * Numeric value (default 1)
+             * @default 1
+             * @example 1
+             */
+            value: number;
+            /**
+             * Arbitrary key-value tags
+             * @example {
+             *       "endpoint": "/api/v1/search",
+             *       "region": "us-east-1"
+             *     }
+             */
+            properties?: {
+                [key: string]: unknown;
+            };
+            /** @description Product ID to scope the usage event to */
+            productId?: string;
+            /** @description Product reference to scope the usage event to */
+            productReference?: string;
+            /** @description ISO 8601 timestamp (defaults to now) */
+            timestamp?: string;
+        };
+        RecordBulkMeterEventsDto: {
+            /** @description Array of events to record */
+            events: components["schemas"]["RecordMeterEventDto"][];
+        };
+        CreateCustomerSessionRequest: {
+            /**
+             * Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+        };
+        CustomerSessionResponse: {
+            /**
+             * Customer session ID
+             * @example 507f1f77bcf86cd799439011
+             */
+            id: string;
+            /**
+             * Public session ID used in customer URL
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * Session status
+             * @example active
+             */
+            status: string;
+            /**
+             * Customer URL to open the customer page
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+        };
+        CreateCustomerRequest: {
+            /**
+             * Customer email address (required)
+             * @example customer@example.com
+             */
+            email: string;
+            /**
+             * Customer full name (optional)
+             * @example John Doe
+             */
+            name?: string;
+            /**
+             * External reference ID from your auth system to map this customer to an auth user (optional)
+             * @example auth_user_12345
+             */
+            externalRef?: string;
+        };
+        PurchaseInfo: {
+            /**
+             * Purchase reference
+             * @example pur_1A2B3C4D
+             */
+            reference: string;
+            /**
+             * Product name
+             * @example API Gateway Manager
+             */
+            productName: string;
+            /**
+             * Product reference
+             * @example prd_abc123
+             */
+            productReference?: string;
+            /**
+             * Purchase status
+             * @example active
+             */
+            status: string;
+            /**
+             * Start date
+             * @example 2025-10-27T10:00:00Z
+             */
+            startDate: string;
+            /**
+             * Amount paid in original currency (in cents)
+             * @example 9900
+             */
+            amount: number;
+            /**
+             * Currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * End date of purchase
+             * @example 2025-11-27T10:00:00Z
+             */
+            endDate?: string;
+            /**
+             * When purchase was cancelled
+             * @example 2025-10-28T10:00:00Z
+             */
+            cancelledAt?: string;
+            /**
+             * Reason for cancellation
+             * @example Customer request
+             */
+            cancellationReason?: string;
+            /** @description Snapshot of the plan at time of purchase */
+            planSnapshot?: Record<string, never>;
+        };
+        CustomerResponse: {
+            /**
+             * Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            reference: string;
+            /**
+             * Customer full name
+             * @example John Doe
+             */
+            name: string;
+            /**
+             * Customer email address
+             * @example customer@example.com
+             */
+            email: string;
+            /**
+             * External reference ID from your auth system (if set during creation or update)
+             * @example auth_user_12345
+             */
+            externalRef?: string;
+            /** @description Active purchases */
+            purchases?: components["schemas"]["PurchaseInfo"][];
+        };
+        CreateCustomerSessionResponse: {
+            /**
+             * Customer session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * Full customer URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+        };
+        GetCustomerSessionResponse: {
+            /**
+             * Customer session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * Session status
+             * @example active
+             * @enum {string}
+             */
+            status: "active" | "expired" | "used";
+            /**
+             * Full customer URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+             */
+            customerUrl: string;
+            /**
+             * Session expiration date
+             * @example 2025-01-01T12:00:00.000Z
+             */
+            expiresAt: string;
+            /** @description Customer object from session data */
+            customer: components["schemas"]["CustomerResponse"];
+            /**
+             * Session creation date
+             * @example 2025-01-01T11:45:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Session last update date
+             * @example 2025-01-01T11:45:00.000Z
+             */
+            updatedAt: string;
+        };
+        UserInfoRequest: {
+            /**
+             * Customer reference
+             * @example cus_3C4D5E6F
+             */
+            customerRef: string;
+            /**
+             * Product reference
+             * @example prd_1A2B3C4D
+             */
+            productRef: string;
+        };
+        UserInfoUserDto: {
+            /** @example cus_3C4D5E6F */
+            reference: string;
+            /** @example John Doe */
+            name?: string | null;
+            /** @example john@example.com */
+            email: string;
+            /** @example auth_user_12345 */
+            externalRef?: string | null;
+        };
+        UserInfoUsageDto: {
+            /** @example 1000 */
+            total: number;
+            /** @example 250 */
+            used: number;
+            /** @example 750 */
+            remaining: number;
+            /**
+             * Meter ObjectId reference
+             * @example 507f1f77bcf86cd799439011
+             */
+            meterId?: string;
+            /** @example 25 */
+            percentUsed?: number | null;
+        };
+        UserInfoPlanDto: {
+            /** @example pln_2B3C4D5E */
+            reference: string;
+            /**
+             * Price in minor currency units (e.g. cents)
+             * @example 2999
+             */
+            price: number;
+            /** @example USD */
+            currency: string;
+            /** @example recurring */
+            type: string;
+            /** @example monthly */
+            billingCycle?: string | null;
+            features?: string[] | null;
+            limits?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        UserInfoPurchaseDto: {
+            /** @example pur_1A2B3C4D */
+            reference: string;
+            /** @example active */
+            status: string;
+            /** @example My API Product */
+            productName: string;
+            /** @example recurring */
+            planType: string;
+            /** @example 2025-10-27T10:00:00Z */
+            startDate?: string | null;
+            /** @example 2025-11-27T10:00:00Z */
+            endDate?: string | null;
+            usage?: components["schemas"]["UserInfoUsageDto"];
+            plan?: components["schemas"]["UserInfoPlanDto"];
+        };
+        UserInfoResponse: {
+            /**
+             * Human-readable status summary
+             * @example Active subscription: My API Product (25% usage consumed)
+             */
+            status: string;
+            /**
+             * Customer portal session URL
+             * @example https://solvapay.com/customer/manage?id=abc123
+             */
+            verifyUrl?: string | null;
+            user?: components["schemas"]["UserInfoUserDto"];
+            purchase?: components["schemas"]["UserInfoPurchaseDto"];
         };
         McpToolDto: {
             /**
@@ -1548,6 +1791,16 @@ export interface components {
              * @example pln_2B3C4D5E
              */
             planRef?: string;
+            /**
+             * Canonical usage meter name used for limit checks (for example: requests, tokens).
+             * @example requests
+             */
+            meterName?: string;
+            /**
+             * Usage type alias for meterName. If both are provided, meterName takes precedence.
+             * @example requests
+             */
+            usageType?: string;
         };
         LimitResponse: {
             /**
@@ -1572,266 +1825,9 @@ export interface components {
             checkoutUrl?: string;
             /**
              * The meter name to use when tracking usage events
-             * @example api_requests
+             * @example requests
              */
             meterName?: string;
-        };
-        CreateCustomerSessionRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-        };
-        CustomerSessionResponse: {
-            /**
-             * Customer session ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
-             * Public session ID used in customer URL
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            sessionId: string;
-            /**
-             * Session status
-             * @example active
-             */
-            status: string;
-            /**
-             * Customer URL to open the customer page
-             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-             */
-            customerUrl: string;
-        };
-        CreateCustomerRequest: {
-            /**
-             * Customer email address (required)
-             * @example customer@example.com
-             */
-            email: string;
-            /**
-             * Customer full name (optional)
-             * @example John Doe
-             */
-            name?: string;
-            /**
-             * External reference ID from your auth system to map this customer to an auth user (optional)
-             * @example auth_user_12345
-             */
-            externalRef?: string;
-        };
-        PurchaseInfo: {
-            /**
-             * Purchase reference
-             * @example pur_1A2B3C4D
-             */
-            reference: string;
-            /**
-             * Product name
-             * @example API Gateway Manager
-             */
-            productName: string;
-            /**
-             * Product reference
-             * @example prd_abc123
-             */
-            productReference?: string;
-            /**
-             * Purchase status
-             * @example active
-             */
-            status: string;
-            /**
-             * Start date
-             * @example 2025-10-27T10:00:00Z
-             */
-            startDate: string;
-            /**
-             * Amount paid in original currency (in cents)
-             * @example 9900
-             */
-            amount: number;
-            /**
-             * Currency code
-             * @example USD
-             */
-            currency: string;
-            /**
-             * End date of purchase
-             * @example 2025-11-27T10:00:00Z
-             */
-            endDate?: string;
-            /**
-             * When purchase was cancelled
-             * @example 2025-10-28T10:00:00Z
-             */
-            cancelledAt?: string;
-            /**
-             * Reason for cancellation
-             * @example Customer request
-             */
-            cancellationReason?: string;
-            /** @description Snapshot of the plan at time of purchase */
-            planSnapshot?: Record<string, never>;
-        };
-        CustomerResponse: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            reference: string;
-            /**
-             * Customer full name
-             * @example John Doe
-             */
-            name: string;
-            /**
-             * Customer email address
-             * @example customer@example.com
-             */
-            email: string;
-            /**
-             * External reference ID from your auth system (if set during creation or update)
-             * @example auth_user_12345
-             */
-            externalRef?: string;
-            /** @description Active purchases */
-            purchases?: components["schemas"]["PurchaseInfo"][];
-        };
-        CreateCustomerSessionResponse: {
-            /**
-             * Customer session ID/token
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            sessionId: string;
-            /**
-             * Full customer URL based on backend configuration (ready to redirect customer)
-             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-             */
-            customerUrl: string;
-        };
-        GetCustomerSessionResponse: {
-            /**
-             * Customer session ID/token
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            sessionId: string;
-            /**
-             * Session status
-             * @example active
-             * @enum {string}
-             */
-            status: "active" | "expired" | "used";
-            /**
-             * Full customer URL based on backend configuration (ready to redirect customer)
-             * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-             */
-            customerUrl: string;
-            /**
-             * Session expiration date
-             * @example 2025-01-01T12:00:00.000Z
-             */
-            expiresAt: string;
-            /** @description Customer object from session data */
-            customer: components["schemas"]["CustomerResponse"];
-            /**
-             * Session creation date
-             * @example 2025-01-01T11:45:00.000Z
-             */
-            createdAt: string;
-            /**
-             * Session last update date
-             * @example 2025-01-01T11:45:00.000Z
-             */
-            updatedAt: string;
-        };
-        UserInfoRequest: {
-            /**
-             * Customer reference
-             * @example cus_3C4D5E6F
-             */
-            customerRef: string;
-            /**
-             * Product reference
-             * @example prd_1A2B3C4D
-             */
-            productRef: string;
-        };
-        UserInfoUserDto: {
-            /** @example cus_3C4D5E6F */
-            reference: string;
-            /** @example John Doe */
-            name?: string | null;
-            /** @example john@example.com */
-            email: string;
-            /** @example auth_user_12345 */
-            externalRef?: string | null;
-        };
-        UserInfoUsageDto: {
-            /** @example 1000 */
-            total: number;
-            /** @example 250 */
-            used: number;
-            /** @example 750 */
-            remaining: number;
-            /**
-             * Meter ObjectId reference
-             * @example 507f1f77bcf86cd799439011
-             */
-            meterId?: string;
-            /** @example 25 */
-            percentUsed?: number | null;
-        };
-        UserInfoPlanDto: {
-            /** @example pln_2B3C4D5E */
-            reference: string;
-            /**
-             * Price in minor currency units (e.g. cents)
-             * @example 2999
-             */
-            price: number;
-            /** @example USD */
-            currency: string;
-            /** @example recurring */
-            type: string;
-            /** @example monthly */
-            billingCycle?: string | null;
-            features?: string[] | null;
-            limits?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        UserInfoPurchaseDto: {
-            /** @example pur_1A2B3C4D */
-            reference: string;
-            /** @example active */
-            status: string;
-            /** @example My API Product */
-            productName: string;
-            /** @example recurring */
-            planType: string;
-            /** @example 2025-10-27T10:00:00Z */
-            startDate?: string | null;
-            /** @example 2025-11-27T10:00:00Z */
-            endDate?: string | null;
-            usage?: components["schemas"]["UserInfoUsageDto"];
-            plan?: components["schemas"]["UserInfoPlanDto"];
-        };
-        UserInfoResponse: {
-            /**
-             * Human-readable status summary
-             * @example Active subscription: My API Product (25% usage consumed)
-             */
-            status: string;
-            /**
-             * Customer portal session URL
-             * @example https://solvapay.com/customer/manage?id=abc123
-             */
-            verifyUrl?: string | null;
-            user?: components["schemas"]["UserInfoUserDto"];
-            purchase?: components["schemas"]["UserInfoPurchaseDto"];
         };
         DynamicClientRegistrationDto: {
             /** @example My AI Agent */
@@ -1918,77 +1914,6 @@ export interface components {
             redirect_uri: string;
             /** @description The state parameter returned by GitHub (contains client_id) */
             state: string;
-        };
-        CreateMeterDto: {
-            /**
-             * Unique meter name (per provider)
-             * @example api_requests
-             */
-            name: string;
-            /**
-             * Human-readable display name
-             * @example API Requests
-             */
-            displayName: string;
-            /**
-             * Optional description
-             * @example Tracks API call volume
-             */
-            description?: string;
-            /**
-             * Aggregation method for events
-             * @default count
-             * @enum {string}
-             */
-            aggregation: "count" | "sum" | "max" | "min" | "avg";
-            /**
-             * Unit label
-             * @default requests
-             * @example requests
-             */
-            unit: string;
-        };
-        UpdateMeterDto: {
-            /** @example API Requests v2 */
-            displayName?: string;
-            /** @example Updated description */
-            description?: string;
-            /** @enum {string} */
-            status?: "active" | "archived";
-        };
-        RecordMeterEventDto: {
-            /**
-             * Meter name to record against
-             * @example api_requests
-             */
-            meterName: string;
-            /**
-             * Customer reference
-             * @example cus_ABC123
-             */
-            customerId: string;
-            /**
-             * Numeric value (default 1)
-             * @default 1
-             * @example 1
-             */
-            value: number;
-            /**
-             * Arbitrary key-value tags
-             * @example {
-             *       "endpoint": "/api/v1/search",
-             *       "region": "us-east-1"
-             *     }
-             */
-            properties?: {
-                [key: string]: unknown;
-            };
-            /** @description ISO 8601 timestamp (defaults to now) */
-            timestamp?: string;
-        };
-        RecordBulkMeterEventsDto: {
-            /** @description Array of events to record */
-            events: components["schemas"]["RecordMeterEventDto"][];
         };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
@@ -2689,197 +2614,188 @@ export interface operations {
             };
         };
     };
-    PurchaseSdkController_listPurchases: {
+    UsageSdkController_recordUsage: {
         parameters: {
-            query?: {
-                /** @description Filter by purchase status */
-                status?: "pending" | "active" | "trialing" | "past_due" | "cancelled" | "expired" | "suspended" | "refunded";
-                /** @description Filter by product ID */
-                productId?: string;
-                /** @description Filter by customer ID */
-                customerId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Purchases retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        purchases?: components["schemas"]["PurchaseResponse"][];
-                    };
-                };
-            };
-        };
-    };
-    PurchaseSdkController_getPurchasesForCustomer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Customer reference or ID */
-                customerRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Customer purchases retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        purchases?: components["schemas"]["PurchaseResponse"][];
-                    };
-                };
-            };
-            /** @description Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PurchaseSdkController_getPurchasesForProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Product reference or ID */
-                productRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Product purchases retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        purchases?: components["schemas"]["PurchaseResponse"][];
-                    };
-                };
-            };
-            /** @description Product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PurchaseSdkController_getPurchase: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Purchase ID or reference */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Purchase retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PurchaseResponse"];
-                };
-            };
-            /** @description Purchase not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    PurchaseSdkController_cancelPurchase: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Purchase reference or ID */
-                purchaseRef: string;
-            };
-            cookie?: never;
-        };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CancelPurchaseRequest"];
+                "application/json": {
+                    /**
+                     * Customer identifier
+                     * @example cus_3C4D5E6F
+                     */
+                    customerId: string;
+                    /**
+                     * Action type (default: api_call)
+                     * @example api_call
+                     * @enum {string}
+                     */
+                    actionType?: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
+                    /**
+                     * Number of usage units (default: 1)
+                     * @example 1
+                     */
+                    units?: number;
+                    /** @description Product reference */
+                    productReference?: string;
+                    /** @description Purchase reference */
+                    purchaseReference?: string;
+                    /**
+                     * Outcome (default: success)
+                     * @enum {string}
+                     */
+                    outcome?: "success" | "paywall" | "fail";
+                    /** @description Arbitrary event properties */
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
+                    /**
+                     * Format: date-time
+                     * @description ISO 8601 timestamp (defaults to now)
+                     */
+                    timestamp?: string;
+                    /** @description Unique key to prevent duplicate recording (max 256 chars) */
+                    idempotencyKey?: string;
+                };
             };
         };
         responses: {
-            /** @description Purchase cancelled successfully */
+            /** @description Usage recorded successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
+                        /** @example true */
                         success?: boolean;
-                        purchase?: components["schemas"]["PurchaseResponse"];
+                        /** @example usage_A1B2C3D4 */
+                        reference?: string;
                     };
                 };
             };
-            /** @description Purchase not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    LimitsSdkController_checkLimits: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckLimitRequest"];
-            };
-        };
-        responses: {
-            /** @description Limit check result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LimitResponse"];
-                };
-            };
-            /** @description Missing customerRef or productRef */
+            /** @description Validation failed */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Customer or product not found */
-            404: {
+        };
+    };
+    UsageSdkController_recordBulkUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    events: {
+                        customerId: string;
+                        /** @enum {string} */
+                        actionType?: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
+                        units?: number;
+                        productReference?: string;
+                        purchaseReference?: string;
+                        /** @enum {string} */
+                        outcome?: "success" | "paywall" | "fail";
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        /** Format: date-time */
+                        timestamp?: string;
+                        idempotencyKey?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Bulk usage events processed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeterEventsSdkController_recordEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordMeterEventDto"];
+            };
+        };
+        responses: {
+            /** @description Event recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        success?: boolean;
+                    };
+                };
+            };
+            /** @description Invalid meter name or meter is archived */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeterEventsSdkController_recordBulkEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordBulkMeterEventsDto"];
+            };
+        };
+        responses: {
+            /** @description Events recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        success?: boolean;
+                        /** @example 50 */
+                        inserted?: number;
+                    };
+                };
+            };
+            /** @description Invalid meter name or meter is archived */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3111,57 +3027,60 @@ export interface operations {
             };
         };
     };
-    UsageSdkController_recordUsage: {
+    PurchaseSdkController_listPurchases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter by purchase status */
+                status?: "pending" | "active" | "trialing" | "past_due" | "cancelled" | "expired" | "suspended" | "refunded";
+                /** @description Filter by product ID */
+                productId?: string;
+                /** @description Filter by customer ID */
+                customerId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /**
-                     * Customer reference (userId for the meter event)
-                     * @example cus_3C4D5E6F
-                     */
-                    customerRef: string;
-                    /**
-                     * Meter name to record against
-                     * @example api_requests
-                     */
-                    meterName: string;
-                    /**
-                     * Number of usage units (default: 1)
-                     * @example 1
-                     */
-                    units?: number;
-                    /** @description Arbitrary event properties */
-                    properties?: {
-                        [key: string]: unknown;
-                    };
-                    /** @description ISO 8601 timestamp (defaults to now) */
-                    timestamp?: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Usage recorded successfully */
+            /** @description Purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @example true */
-                        success?: boolean;
-                        /** @example 1 */
-                        units?: number;
+                        purchases?: components["schemas"]["PurchaseResponse"][];
                     };
                 };
             };
-            /** @description Missing customerRef or meterName */
-            400: {
+        };
+    };
+    PurchaseSdkController_getPurchasesForCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer reference or ID */
+                customerRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer purchases retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        purchases?: components["schemas"]["PurchaseResponse"][];
+                    };
+                };
+            };
+            /** @description Customer not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3169,38 +3088,31 @@ export interface operations {
             };
         };
     };
-    UsageSdkController_recordBulkUsage: {
+    PurchaseSdkController_getPurchasesForProduct: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    events: {
-                        customerRef: string;
-                        meterName: string;
-                        units?: number;
-                        properties?: {
-                            [key: string]: unknown;
-                        };
-                        timestamp?: string;
-                    }[];
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Bulk usage events processed */
+            /** @description Product purchases retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        purchases?: components["schemas"]["PurchaseResponse"][];
+                    };
+                };
             };
-            /** @description Events array is required and must not be empty */
-            400: {
+            /** @description Product not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3208,33 +3120,29 @@ export interface operations {
             };
         };
     };
-    MeterSdkController_recordEvent: {
+    PurchaseSdkController_getPurchase: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Purchase ID or reference */
+                id: string;
+            };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RecordMeterEventDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Event recorded */
+            /** @description Purchase retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example true */
-                        success?: boolean;
-                    };
+                    "application/json": components["schemas"]["PurchaseResponse"];
                 };
             };
-            /** @description Invalid meter name or meter is archived */
-            400: {
+            /** @description Purchase not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3242,7 +3150,44 @@ export interface operations {
             };
         };
     };
-    MeterSdkController_recordBulkEvents: {
+    PurchaseSdkController_cancelPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Purchase reference or ID */
+                purchaseRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelPurchaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Purchase cancelled successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success?: boolean;
+                        purchase?: components["schemas"]["PurchaseResponse"];
+                    };
+                };
+            };
+            /** @description Purchase not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LimitsSdkController_checkLimits: {
         parameters: {
             query?: never;
             header?: never;
@@ -3251,26 +3196,28 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RecordBulkMeterEventsDto"];
+                "application/json": components["schemas"]["CheckLimitRequest"];
             };
         };
         responses: {
-            /** @description Events recorded */
+            /** @description Limit check result */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example true */
-                        success?: boolean;
-                        /** @example 50 */
-                        inserted?: number;
-                    };
+                    "application/json": components["schemas"]["LimitResponse"];
                 };
             };
-            /** @description Invalid meter name or meter is archived */
+            /** @description Missing customerRef or productRef */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer or product not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
