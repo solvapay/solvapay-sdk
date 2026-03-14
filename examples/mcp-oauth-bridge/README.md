@@ -35,6 +35,37 @@ Server default: `http://localhost:3004`
 - `SOLVAPAY_SECRET_KEY`: backend API key for SDK metering checks
 - `SOLVAPAY_API_BASE_URL`: backend API base URL for SDK metering checks
 
+## Optional bootstrap setup
+
+You can bootstrap product + plans + MCP mapping in one API call before running the bridge:
+
+```ts
+import { createSolvaPay } from '@solvapay/server'
+
+const solvaPay = createSolvaPay({
+  apiKey: process.env.SOLVAPAY_SECRET_KEY!,
+  apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL,
+})
+
+await solvaPay.bootstrapMcpProduct({
+  name: 'Bridge Example',
+  originUrl: 'https://origin.example.com/mcp',
+  plans: [
+    { key: 'free', name: 'Free', price: 0, billingCycle: 'monthly', freeUnits: 1000 },
+    { key: 'pro', name: 'Pro', price: 20, billingCycle: 'monthly' },
+  ],
+  defaultPlanKey: 'free',
+  tools: [
+    { name: 'list_tasks', planKeys: ['free'] },
+    { name: 'create_task', planKeys: ['pro'] },
+    { name: 'health_check', noPlan: true },
+  ],
+})
+```
+
+`isFreeTier` and `requiresPayment` are optional overrides. If omitted, SolvaPay infers them from
+`key` and `price`. A free plan can still include `billingCycle` and `freeUnits`.
+
 ## End-to-end OAuth flow script
 
 ```bash
