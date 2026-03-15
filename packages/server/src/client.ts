@@ -101,11 +101,13 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // POST: /v1/sdk/usages
     async trackUsage(params) {
       const url = `${base}/v1/sdk/usages`
+      const { customerRef, ...rest } = params
+      const body = { ...rest, customerId: customerRef }
 
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(params),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -547,6 +549,27 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
         throw new SolvaPayError(`Get user info failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/events
+    async createEvent(params) {
+      const url = `${base}/v1/sdk/events`
+      const { customerRef, ...rest } = params
+      const body = { ...rest, customerId: customerRef }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Create event failed (${res.status}): ${error}`)
       }
 
       return await res.json()

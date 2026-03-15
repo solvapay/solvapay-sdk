@@ -282,7 +282,11 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
-  async checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
+  async checkLimits(params: {
+    customerRef: string
+    productRef: string
+    planRef?: string
+  }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -384,17 +388,39 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async trackUsage(params: {
     customerRef: string
-    meterName?: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
-    properties?: Record<string, unknown>
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
     timestamp?: string
+    idempotencyKey?: string
   }): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, this.delays.trackUsage))
 
     this.log(`📡 Stub Request: POST /v1/sdk/usages`)
     this.log(
-      `   Meter: ${params.meterName || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerRef}`,
+      `   Action: ${params.metadata?.action || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerRef}`,
     )
+  }
+
+  async createEvent(_params: {
+    customerRef: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+    units?: number
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
+    timestamp?: string
+    idempotencyKey?: string
+  }): Promise<{ eventId: string }> {
+    return { eventId: `evt_stub_${Date.now().toString(36)}` }
   }
 
   /**
@@ -744,7 +770,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   async updatePlan(
     productRef: string,
     planRef: string,
-    params: Record<string, unknown>,
+    _params: Record<string, unknown>,
   ): Promise<{ reference: string; [key: string]: unknown }> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
     this.log(`📡 Stub Request: PUT /v1/sdk/products/${productRef}/plans/${planRef}`)
@@ -779,7 +805,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Get checkout URL for a customer
    */
-  getCheckoutUrl(customerRef: string, product: string): string {
+  getCheckoutUrl(customerRef: string): string {
     return `${this.baseUrl}/checkout?plan=pro&customer_ref=${encodeURIComponent(customerRef)}&return_url=${encodeURIComponent(this.baseUrl)}`
   }
 
