@@ -88,7 +88,7 @@ export interface ToolPlanMappingInput {
 }
 
 export interface McpBootstrapRequest {
-  name: string
+  name?: string
   description?: string
   imageUrl?: string
   productType?: string

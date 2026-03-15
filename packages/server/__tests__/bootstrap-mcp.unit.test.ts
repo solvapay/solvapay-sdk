@@ -41,6 +41,8 @@ describe('MCP bootstrap SDK wrapper', () => {
         free: { id: 'plan_free_1', reference: 'pln_FREE123', name: 'Free' },
         pro: { id: 'plan_pro_1', reference: 'pln_PRO123', name: 'Pro' },
       },
+      toolsAutoMapped: true,
+      autoMappedTools: [{ name: 'list_docs', description: 'List docs' }],
     }
 
     vi.mocked(fetch).mockResolvedValue(
@@ -66,6 +68,8 @@ describe('MCP bootstrap SDK wrapper', () => {
     })
 
     expect(result).toEqual(payload)
+    expect(result?.toolsAutoMapped).toBe(true)
+    expect(result?.autoMappedTools?.[0]?.name).toBe('list_docs')
     expect(fetch).toHaveBeenCalledWith(
       'https://api.example.com/v1/sdk/products/mcp/bootstrap',
       expect.objectContaining({
@@ -131,12 +135,12 @@ describe('MCP bootstrap SDK wrapper', () => {
     expect(bootstrapMcpProduct).toHaveBeenCalledWith(request)
   })
 
-  it('supports minimal bootstrap request without explicit plans', async () => {
+  it('supports bootstrap request without explicit name when backend derives metadata', async () => {
     const payload: McpBootstrapResponse = {
       product: {
         id: 'prd_2',
         reference: 'prd_TEST456',
-        name: 'Minimal Bootstrap',
+        name: 'origin-example-com',
         status: 'active',
         balance: 0,
         totalTransactions: 0,
@@ -170,7 +174,6 @@ describe('MCP bootstrap SDK wrapper', () => {
     })
 
     const result = await client.bootstrapMcpProduct?.({
-      name: 'Minimal Bootstrap',
       originUrl: 'https://origin.example.com/mcp',
       tools: [{ name: 'health_check', noPlan: true }],
     })
@@ -189,7 +192,6 @@ describe('MCP bootstrap SDK wrapper', () => {
     }
 
     const request: McpBootstrapRequest = {
-      name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
       freePlan: { name: 'Starter', freeUnits: 500 },
       paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
@@ -198,6 +200,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     }
 
     expect(request.tools?.[0].name).toBe('list_docs')
+    expect(request.name).toBeUndefined()
     expect(request.freePlan?.name).toBe('Starter')
     expect(request.paidPlans?.[0].currency).toBe('USD')
   })
