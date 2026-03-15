@@ -93,6 +93,7 @@ export interface McpBootstrapRequest {
   imageUrl?: string
   productType?: string
   originUrl: string
+  /** Optional token combined with provider name to derive the final MCP subdomain. */
   mcpDomain?: string
   authHeaderName?: string
   authApiKey?: string
