@@ -16,7 +16,8 @@ export type {
   CheckLimitsRequest,
   McpBootstrapRequest,
   McpBootstrapResponse,
-  McpBootstrapPlanInput,
+  McpBootstrapFreePlanConfig,
+  McpBootstrapPaidPlanInput,
   ToolPlanMappingInput,
 } from './client'
 // Re-export SolvaPayClient interface from types/client.ts

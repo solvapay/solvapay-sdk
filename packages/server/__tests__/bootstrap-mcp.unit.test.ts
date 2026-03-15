@@ -60,11 +60,8 @@ describe('MCP bootstrap SDK wrapper', () => {
     const result = await client.bootstrapMcpProduct?.({
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
-      plans: [
-        { key: 'free', name: 'Free', price: 0, billingCycle: 'monthly', freeUnits: 1000 },
-        { key: 'pro', name: 'Pro', price: 20, billingCycle: 'monthly' },
-      ],
-      defaultPlanKey: 'free',
+      freePlan: { freeUnits: 1000 },
+      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
       tools: [{ name: 'list_docs', planKeys: ['free'] }],
     })
 
@@ -97,10 +94,7 @@ describe('MCP bootstrap SDK wrapper', () => {
       await client.bootstrapMcpProduct?.({
         name: 'Docs Assistant',
         originUrl: 'https://origin.example.com/mcp',
-        plans: [
-          { key: 'free', name: 'Free', price: 0, billingCycle: 'monthly', freeUnits: 1000 },
-          { key: 'pro', name: 'Pro', price: 20, billingCycle: 'monthly' },
-        ],
+        paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
         tools: [{ name: 'search_docs', planKeys: ['enterprise'] }],
       })
       throw new Error('Expected bootstrapMcpProduct to throw')
@@ -129,15 +123,61 @@ describe('MCP bootstrap SDK wrapper', () => {
     const request: McpBootstrapRequest = {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
-      plans: [
-        { key: 'free', name: 'Free', price: 0, billingCycle: 'monthly', freeUnits: 1000 },
-        { key: 'pro', name: 'Pro', price: 20, billingCycle: 'monthly' },
-      ],
-      defaultPlanKey: 'free',
+      freePlan: { freeUnits: 1000 },
+      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
     }
 
     await sdk.bootstrapMcpProduct(request)
     expect(bootstrapMcpProduct).toHaveBeenCalledWith(request)
+  })
+
+  it('supports minimal bootstrap request without explicit plans', async () => {
+    const payload: McpBootstrapResponse = {
+      product: {
+        id: 'prd_2',
+        reference: 'prd_TEST456',
+        name: 'Minimal Bootstrap',
+        status: 'active',
+        balance: 0,
+        totalTransactions: 0,
+        isMcpPay: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      mcpServer: {
+        id: 'mcp_2',
+        reference: 'mcp_TEST456',
+        url: 'https://origin.example.com/mcp',
+        defaultPlanId: 'plan_free_2',
+      },
+      planMap: {
+        free: { id: 'plan_free_2', reference: 'pln_FREE456', name: 'Free' },
+      },
+    }
+
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 201,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+
+    const client = createSolvaPayClient({
+      apiKey: 'sk_sandbox_test',
+      apiBaseUrl: 'https://api.example.com',
+    })
+
+    const result = await client.bootstrapMcpProduct?.({
+      name: 'Minimal Bootstrap',
+      originUrl: 'https://origin.example.com/mcp',
+      tools: [{ name: 'health_check', noPlan: true }],
+    })
+
+    expect(result?.planMap.free).toBeDefined()
+    expect(result?.planMap.pro).toBeUndefined()
+    expect(result).not.toHaveProperty('appliedDefaults')
   })
 
   it('keeps bootstrap request and tool mapping types compile-safe', () => {
@@ -151,15 +191,14 @@ describe('MCP bootstrap SDK wrapper', () => {
     const request: McpBootstrapRequest = {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
-      plans: [
-        { key: 'free', name: 'Free', price: 0, billingCycle: 'monthly', freeUnits: 1000 },
-        { key: 'pro', name: 'Pro', price: 20, billingCycle: 'monthly' },
-      ],
-      defaultPlanKey: 'free',
+      freePlan: { name: 'Starter', freeUnits: 500 },
+      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
       tools: [tool],
       metadata: { stage: 'test' },
     }
 
     expect(request.tools?.[0].name).toBe('list_docs')
+    expect(request.freePlan?.name).toBe('Starter')
+    expect(request.paidPlans?.[0].currency).toBe('USD')
   })
 })

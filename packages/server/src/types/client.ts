@@ -59,21 +59,19 @@ export interface ProcessPaymentResult {
   status: 'completed'
 }
 
-export interface McpBootstrapPlanInput {
+export interface McpBootstrapFreePlanConfig {
+  name?: string
+  freeUnits?: number
+}
+
+export interface McpBootstrapPaidPlanInput {
   key: string
   name: string
-  type?: 'recurring' | 'one-time'
-  billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
+  /** Price in cents (e.g. 2000 = $20.00) */
   price: number
-  currency?: string
-  /**
-   * Optional override. If omitted, backend infers this as true when key is "free" or price is 0.
-   */
-  isFreeTier?: boolean
-  /**
-   * Optional override. If omitted, backend infers this as true when price is greater than 0.
-   */
-  requiresPayment?: boolean
+  currency: string
+  billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
+  type?: 'recurring' | 'one-time'
   freeUnits?: number
   meterId?: string
   limit?: number
@@ -96,12 +94,10 @@ export interface McpBootstrapRequest {
   productType?: string
   originUrl: string
   mcpDomain?: string
-  defaultPlanKey?: string
-  defaultPlanRef?: string
-  defaultPlanId?: string
   authHeaderName?: string
   authApiKey?: string
-  plans: McpBootstrapPlanInput[]
+  freePlan?: McpBootstrapFreePlanConfig
+  paidPlans?: McpBootstrapPaidPlanInput[]
   tools?: ToolPlanMappingInput[]
   metadata?: Record<string, unknown>
 }
@@ -117,6 +113,8 @@ export interface McpBootstrapResponse {
     defaultPlanId?: string
   }
   planMap: Record<string, { id: string; reference: string; name?: string }>
+  toolsAutoMapped?: boolean
+  autoMappedTools?: Array<{ name: string; description?: string }>
 }
 
 /**
