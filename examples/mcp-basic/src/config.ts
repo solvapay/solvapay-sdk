@@ -16,6 +16,8 @@ const apiClient = createStubClient({
  */
 export const solvaPay = createSolvaPay({
   apiClient,
+  // Disable limits cache for deterministic demo/test behavior in fast MCP HTTP calls.
+  limitsCacheTTL: 0,
 })
 
 /**

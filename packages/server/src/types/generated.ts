@@ -177,6 +177,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/products/mcp/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bootstrap MCP product integration
+         * @description Creates an MCP-enabled product, provisions plans, configures origin URL, and maps tools to plans in one request.
+         */
+        post: operations["ProductSdkController_bootstrapMcpProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/products/{productRef}/clone": {
         parameters: {
             query?: never;
@@ -633,6 +653,13 @@ export interface components {
              */
             checkoutUrl: string;
         };
+        SelectCustomerSessionProductRequest: {
+            /**
+             * Product reference or ID to scope the customer manage session
+             * @example prd_1a2b3c4d5e6f
+             */
+            productRef: string;
+        };
         CancelRenewalRequest: {
             /** @description Reason for cancelling renewal */
             reason?: string;
@@ -706,8 +733,8 @@ export interface components {
              */
             reference: string;
             /**
-             * Plan price
-             * @example 29.99
+             * Plan price in cents
+             * @example 2999
              */
             price: number;
             /**
@@ -817,8 +844,8 @@ export interface components {
              */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
             /**
-             * Plan price
-             * @example 29.99
+             * Plan price in cents
+             * @example 2999
              */
             price?: number;
             /**
@@ -900,8 +927,8 @@ export interface components {
              */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
             /**
-             * Plan price
-             * @example 29.99
+             * Plan price in cents
+             * @example 2999
              */
             price?: number;
             /**
@@ -1033,8 +1060,8 @@ export interface components {
              */
             reference: string;
             /**
-             * Plan price
-             * @example 29.99
+             * Plan price in cents
+             * @example 2999
              */
             price: number;
             /**
@@ -1068,8 +1095,8 @@ export interface components {
              */
             billingModel?: string;
             /**
-             * Price per unit
-             * @example 0.01
+             * Price per unit in cents
+             * @example 10
              */
             pricePerUnit?: number;
             /**
@@ -1179,6 +1206,20 @@ export interface components {
             updatedAt: string;
             /** @description Plans associated with this product */
             plans?: components["schemas"]["SdkPlanResponse"][];
+            /**
+             * MCP linkage details for MCP-enabled products
+             * @example {
+             *       "mcpServerId": "67f90f1f1b1c9c0b8df0f111",
+             *       "mcpServerReference": "mcp_ABC123",
+             *       "mcpSubdomain": "acme-docs",
+             *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
+             *       "originUrl": "https://origin.example.com/mcp",
+             *       "defaultPlanId": "67f90f1f1b1c9c0b8df0f001"
+             *     }
+             */
+            mcp?: {
+                [key: string]: unknown;
+            };
         };
         UpdateProductRequest: {
             /** @description Product name */
@@ -1200,6 +1241,234 @@ export interface components {
             metadata?: {
                 [key: string]: unknown;
             };
+        };
+        McpBootstrapFreePlanConfig: {
+            /**
+             * Free plan display name override
+             * @example Starter
+             */
+            name?: string;
+            /**
+             * Included free units (default 1000)
+             * @example 500
+             */
+            freeUnits?: number;
+        };
+        McpBootstrapPaidPlanInput: {
+            /**
+             * Logical plan key (must not be "free")
+             * @example pro
+             */
+            key: string;
+            /**
+             * Plan display name
+             * @example Pro
+             */
+            name: string;
+            /**
+             * Plan price in cents (must be > 0)
+             * @example 2000
+             */
+            price: number;
+            /**
+             * Currency code (ISO 4217)
+             * @example USD
+             */
+            currency: string;
+            /**
+             * Billing cycle for recurring plans
+             * @example monthly
+             * @enum {string}
+             */
+            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+            /**
+             * Plan type
+             * @example recurring
+             * @enum {string}
+             */
+            type?: "recurring" | "one-time";
+            /**
+             * Included free units
+             * @example 1000
+             */
+            freeUnits?: number;
+            /**
+             * Meter id for usage tracking
+             * @example 67f90f1f1b1c9c0b8df0f001
+             */
+            meterId?: string;
+            /**
+             * Plan usage limit
+             * @example 10000
+             */
+            limit?: number;
+            /** @description Plan features */
+            features?: {
+                [key: string]: unknown;
+            };
+        };
+        McpBootstrapToolInput: {
+            /**
+             * Tool name
+             * @example search_docs
+             */
+            name: string;
+            /**
+             * Tool description
+             * @example Search indexed documents
+             */
+            description?: string;
+            /**
+             * If true, tool is publicly available without a plan
+             * @example false
+             */
+            noPlan?: boolean;
+            /**
+             * Direct plan IDs allowed for this tool
+             * @example [
+             *       "67f90f1f1b1c9c0b8df0f001"
+             *     ]
+             */
+            planIds?: string[];
+            /**
+             * Plan references allowed for this tool
+             * @example [
+             *       "pln_ABC123"
+             *     ]
+             */
+            planRefs?: string[];
+            /**
+             * Bootstrap plan keys allowed for this tool (for example free or starter_paid)
+             * @example [
+             *       "free"
+             *     ]
+             */
+            planKeys?: string[];
+        };
+        McpBootstrapRequest: {
+            /**
+             * Product name (optional when derivable from origin MCP metadata)
+             * @example Acme MCP Toolkit
+             */
+            name?: string;
+            /**
+             * Product description
+             * @example MCP toolkit with tiered access
+             */
+            description?: string;
+            /** @description Product image URL */
+            imageUrl?: string;
+            /**
+             * Free-form product type
+             * @example MCP Server
+             */
+            productType?: string;
+            /**
+             * Origin MCP server URL (must be https)
+             * @example https://origin.example.com/mcp
+             */
+            originUrl: string;
+            /**
+             * Domain slug input for MCP server name/subdomain normalization
+             * @example acme-docs
+             */
+            mcpDomain?: string;
+            /**
+             * Optional auth header name forwarded to origin server
+             * @example X-API-Key
+             */
+            authHeaderName?: string;
+            /**
+             * Optional auth API key forwarded to origin server
+             * @example sk-origin-123
+             */
+            authApiKey?: string;
+            /** @description Free plan config overrides. A free plan is always created; this just customizes name/freeUnits. */
+            freePlan?: components["schemas"]["McpBootstrapFreePlanConfig"];
+            /** @description Paid plan definitions requiring price + currency */
+            paidPlans?: components["schemas"]["McpBootstrapPaidPlanInput"][];
+            /** @description Tool to plan mapping configuration */
+            tools?: components["schemas"]["McpBootstrapToolInput"][];
+            /** @description Arbitrary product metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        McpBootstrapResult: {
+            /** @description Created product */
+            product: components["schemas"]["SdkProductResponse"];
+            /**
+             * Created or updated MCP server identity
+             * @example {
+             *       "id": "67f90f1f1b1c9c0b8df0f111",
+             *       "reference": "mcp_ABC123",
+             *       "subdomain": "acme-docs",
+             *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
+             *       "url": "https://origin.example.com/mcp",
+             *       "defaultPlanId": "67f90f1f1b1c9c0b8df0f001"
+             *     }
+             */
+            mcpServer: {
+                [key: string]: unknown;
+            };
+            /**
+             * Resolved plan mapping by bootstrap key
+             * @example {
+             *       "free": {
+             *         "id": "67f90f1f1b1c9c0b8df0f001",
+             *         "reference": "pln_FREE123",
+             *         "name": "Free"
+             *       }
+             *     }
+             */
+            planMap: {
+                [key: string]: unknown;
+            };
+            /**
+             * True when tools were auto-discovered from origin because the request omitted tools
+             * @example true
+             */
+            toolsAutoMapped?: boolean;
+            /** @description Auto-discovered tools used during bootstrap */
+            autoMappedTools?: {
+                name?: string;
+                description?: string;
+            }[];
+        };
+        McpBootstrapPreviewResult: {
+            /** @description Discovered tools from the origin MCP server */
+            discoveredTools: {
+                name?: string;
+                description?: string;
+            }[];
+            /** @description Validation status for the provided bootstrap payload */
+            validation: {
+                valid?: boolean;
+                errors?: components["schemas"]["McpBootstrapPreviewValidationError"][];
+            };
+            /**
+             * Product name derived from origin MCP metadata or hostname fallback
+             * @example acme-origin-mcp
+             */
+            derivedName?: string;
+            /**
+             * Product description derived from origin server instructions
+             * @example MCP toolkit for document retrieval and summarization.
+             */
+            derivedDescription?: string;
+            /** @description Source of derived metadata */
+            metadataSource: {
+                /** @enum {string} */
+                name?: "request" | "origin" | "hostname";
+                /** @enum {string} */
+                description?: "request" | "instructions" | "none";
+            };
+            /** @description Suggested default tool-to-plan mapping for UI review */
+            suggestedMapping: {
+                name?: string;
+                description?: string;
+                planKey?: string;
+            }[];
         };
         RecordMeterEventDto: {
             /**
@@ -1569,7 +1838,7 @@ export interface components {
             /** @description Registered tools for this server */
             tools?: components["schemas"]["McpToolDto"][];
             /**
-             * Default plan ID for tool access gating
+             * Default plan ID for tool access gating. Must belong to the linked product and be a free-tier plan (isFreeTier=true or price=0).
              * @example pln_default
              */
             defaultPlanId?: string;
@@ -1920,43 +2189,6 @@ export interface components {
             /** @description The state parameter returned by GitHub (contains client_id) */
             state: string;
         };
-        CreateMeterDto: {
-            /**
-             * Unique meter name (per provider)
-             * @example requests
-             */
-            name: string;
-            /**
-             * Human-readable display name
-             * @example Requests
-             */
-            displayName: string;
-            /**
-             * Optional description
-             * @example Tracks API call volume
-             */
-            description?: string;
-            /**
-             * Aggregation method for events
-             * @default count
-             * @enum {string}
-             */
-            aggregation: "count" | "sum" | "max" | "min" | "avg";
-            /**
-             * Unit label
-             * @default requests
-             * @example requests
-             */
-            unit: string;
-        };
-        UpdateMeterDto: {
-            /** @example API Requests v2 */
-            displayName?: string;
-            /** @example Updated description */
-            description?: string;
-            /** @enum {string} */
-            status?: "active" | "archived";
-        };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
         UpdateThemePreferenceDto: {
@@ -1996,6 +2228,11 @@ export interface components {
             dark?: components["schemas"]["ThemeModeColorsDto"];
         };
         UpdateBrandThemeDto: {
+            /**
+             * Logo image URL displayed in hosted page headers
+             * @example /ui/files/download/provider-assets/provider-123/logos/logo.png
+             */
+            logo?: string;
             /**
              * Provider's brand name displayed on hosted pages
              * @example Acme Corp
@@ -2059,6 +2296,10 @@ export interface components {
             customFields?: {
                 [key: string]: string;
             };
+        };
+        /** @description Auto-generated fallback schema for unresolved reference: McpBootstrapPreviewValidationError */
+        McpBootstrapPreviewValidationError: {
+            [key: string]: unknown;
         };
     };
     responses: never;
@@ -2619,6 +2860,37 @@ export interface operations {
             };
             /** @description Product not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_bootstrapMcpProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpBootstrapRequest"];
+            };
+        };
+        responses: {
+            /** @description MCP product bootstrapped successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpBootstrapResult"];
+                };
+            };
+            /** @description Invalid bootstrap request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

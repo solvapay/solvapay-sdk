@@ -59,6 +59,64 @@ export interface ProcessPaymentResult {
   status: 'completed'
 }
 
+export interface McpBootstrapFreePlanConfig {
+  name?: string
+  freeUnits?: number
+}
+
+export interface McpBootstrapPaidPlanInput {
+  key: string
+  name: string
+  /** Price in cents (e.g. 2000 = $20.00) */
+  price: number
+  currency: string
+  billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
+  type?: 'recurring' | 'one-time'
+  freeUnits?: number
+  meterId?: string
+  limit?: number
+  features?: Record<string, unknown>
+}
+
+export interface ToolPlanMappingInput {
+  name: string
+  description?: string
+  noPlan?: boolean
+  planIds?: string[]
+  planRefs?: string[]
+  planKeys?: string[]
+}
+
+export interface McpBootstrapRequest {
+  name?: string
+  description?: string
+  imageUrl?: string
+  productType?: string
+  originUrl: string
+  mcpDomain?: string
+  authHeaderName?: string
+  authApiKey?: string
+  freePlan?: McpBootstrapFreePlanConfig
+  paidPlans?: McpBootstrapPaidPlanInput[]
+  tools?: ToolPlanMappingInput[]
+  metadata?: Record<string, unknown>
+}
+
+export interface McpBootstrapResponse {
+  product: components['schemas']['SdkProductResponse']
+  mcpServer: {
+    id?: string
+    reference?: string
+    subdomain?: string
+    mcpProxyUrl?: string
+    url: string
+    defaultPlanId?: string
+  }
+  planMap: Record<string, { id: string; reference: string; name?: string }>
+  toolsAutoMapped?: boolean
+  autoMappedTools?: Array<{ name: string; description?: string }>
+}
+
 /**
  * SolvaPay API Client Interface
  *
@@ -114,6 +172,9 @@ export interface SolvaPayClient {
     reference: string
     name: string
   }>
+
+  // POST: /v1/sdk/products/mcp/bootstrap
+  bootstrapMcpProduct?(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
 
   // PUT: /v1/sdk/products/{productRef}
   updateProduct?(
