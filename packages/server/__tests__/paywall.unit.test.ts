@@ -440,21 +440,21 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].customerRef).toContain('test_user')
     })
 
-    it('should derive action from handler function name', async () => {
+    it('should derive action from usageType default', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({})
       const protectedHandler = await payable.function(handler)
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
 
-      expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('spy')
+      expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('requests')
     })
 
     it('should use meterName from checkLimits response as action', async () => {
       const originalCheckLimits = mockApiClient.checkLimits.bind(mockApiClient)
       mockApiClient.checkLimits = async (params: any) => {
         const result = await originalCheckLimits(params)
-        return { ...result, meterName: 'requests' }
+        return { ...result, meterName: 'api_calls' }
       }
 
       const handler = vi.fn().mockResolvedValue({ success: true })
@@ -463,7 +463,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
 
-      expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('api_requests')
+      expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('api_calls')
     })
 
     it('should include outcome and requestId in usage tracking', async () => {
