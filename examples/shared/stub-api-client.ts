@@ -20,6 +20,8 @@ import type { SolvaPayClient, CustomerResponseMapped } from '@solvapay/server'
 // Re-export the interface from SDK for convenience
 export type { SolvaPayClient }
 
+type ListPlansResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['listPlans']>>>
+
 interface FreeTierData {
   [customerPlanKey: string]: {
     count: number
@@ -677,40 +679,44 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * List plans for a product (product-scoped)
    */
-  async listPlans(productRef: string): Promise<
-    Array<{
-      reference: string
-      price?: number
-      currency?: string
-      interval?: string
-      isFreeTier?: boolean
-      freeUnits?: number
-      meterId?: string
-      limit?: number
-      pricePerUnit?: number
-      billingModel?: string
-      metadata?: Record<string, unknown>
-      [key: string]: unknown
-    }>
-  > {
+  async listPlans(productRef: string): Promise<ListPlansResponse> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
     this.log(`📡 Stub Request: GET /v1/sdk/products/${productRef}/plans`)
 
+    const now = new Date().toISOString()
+
     return [
       {
+        type: 'recurring',
+        id: 'plan_free_stub',
         reference: 'plan_free',
         price: 0,
         currency: 'USD',
+        currencySymbol: '$',
+        billingCycle: 'monthly',
         isFreeTier: true,
+        requiresPayment: false,
+        isActive: true,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
         freeUnits: this.freeTierLimit,
         limit: this.freeTierLimit,
       },
       {
+        type: 'recurring',
+        id: 'plan_pro_stub',
         reference: 'plan_pro',
         price: 29,
         currency: 'USD',
-        interval: 'month',
+        currencySymbol: '$',
+        billingCycle: 'monthly',
         isFreeTier: false,
+        requiresPayment: true,
+        isActive: true,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
         limit: 0,
       },
     ]

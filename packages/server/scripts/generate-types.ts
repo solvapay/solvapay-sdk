@@ -9,7 +9,61 @@ const EXCLUDED_PATH_PREFIXES = ['/v1/sdk/agents']
 
 interface OpenAPISpec {
   paths?: Record<string, any>
+  components?: {
+    schemas?: Record<string, any>
+    [key: string]: any
+  }
   [key: string]: any
+}
+
+function collectSchemaRefs(node: unknown, refs: Set<string>): void {
+  if (!node || typeof node !== 'object') {
+    return
+  }
+
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectSchemaRefs(item, refs)
+    }
+    return
+  }
+
+  const objectNode = node as Record<string, unknown>
+  const refValue = objectNode.$ref
+  if (typeof refValue === 'string') {
+    const match = refValue.match(/^#\/components\/schemas\/(.+)$/)
+    if (match) {
+      refs.add(match[1])
+    }
+  }
+
+  for (const value of Object.values(objectNode)) {
+    collectSchemaRefs(value, refs)
+  }
+}
+
+function addMissingSchemaPlaceholders(spec: OpenAPISpec): number {
+  const refs = new Set<string>()
+  collectSchemaRefs(spec, refs)
+
+  spec.components ??= {}
+  spec.components.schemas ??= {}
+
+  let addedCount = 0
+  for (const schemaName of refs) {
+    if (spec.components.schemas[schemaName]) {
+      continue
+    }
+
+    spec.components.schemas[schemaName] = {
+      type: 'object',
+      additionalProperties: true,
+      description: `Auto-generated fallback schema for unresolved reference: ${schemaName}`,
+    }
+    addedCount += 1
+  }
+
+  return addedCount
 }
 
 async function main(): Promise<void> {
@@ -67,6 +121,13 @@ async function main(): Promise<void> {
     const filteredSpec: OpenAPISpec = {
       ...spec,
       paths: filteredPaths,
+    }
+
+    const missingSchemasAdded = addMissingSchemaPlaceholders(filteredSpec)
+    if (missingSchemasAdded > 0) {
+      console.warn(
+        `Added ${missingSchemasAdded} placeholder component schema(s) for unresolved $ref values`,
+      )
     }
 
     // Write filtered spec to temp file
