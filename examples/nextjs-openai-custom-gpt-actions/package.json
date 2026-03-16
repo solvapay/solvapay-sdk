@@ -31,7 +31,7 @@
     "@solvapay/react": "workspace:*",
     "@solvapay/react-supabase": "workspace:*",
     "@solvapay/server": "workspace:*",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.99.1",
     "dotenv": "^16.0.0",
     "jose": "^5.10.0",
     "next": "^15.5.7",

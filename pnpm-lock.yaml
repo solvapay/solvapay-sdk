@@ -117,8 +117,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0(@stripe/stripe-js@8.3.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@supabase/supabase-js':
-        specifier: ^2.39.0
-        version: 2.80.0
+        specifier: ^2.99.1
+        version: 2.99.1
       jose:
         specifier: ^5.9.3
         version: 5.10.0
@@ -221,8 +221,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0(@stripe/stripe-js@8.3.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@supabase/supabase-js':
-        specifier: ^2.39.0
-        version: 2.80.0
+        specifier: ^2.99.1
+        version: 2.99.1
       jose:
         specifier: ^5.9.3
         version: 5.10.0
@@ -371,8 +371,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/server
       '@supabase/supabase-js':
-        specifier: ^2.39.0
-        version: 2.80.0
+        specifier: ^2.99.1
+        version: 2.99.1
       dotenv:
         specifier: ^16.0.0
         version: 16.6.1
@@ -541,16 +541,16 @@ importers:
     dependencies:
       '@stripe/react-stripe-js':
         specifier: ^5.3.0
-        version: 5.3.0(@stripe/stripe-js@8.3.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        version: 5.3.0(@stripe/stripe-js@8.3.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@stripe/stripe-js':
         specifier: ^8.3.0
         version: 8.3.0
       react:
         specifier: ^18.2.0 || ^19.0.0
-        version: 19.2.0
+        version: 19.2.1
       react-dom:
         specifier: ^18.2.0 || ^19.0.0
-        version: 19.2.0(react@19.2.0)
+        version: 19.2.1(react@19.2.1)
     devDependencies:
       '@solvapay/server':
         specifier: workspace:*
@@ -563,7 +563,7 @@ importers:
         version: 6.9.1
       '@testing-library/react':
         specifier: ^14.1.2
-        version: 14.3.1(@types/react@18.3.26)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        version: 14.3.1(@types/react@18.3.26)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@testing-library/user-event':
         specifier: ^14.5.1
         version: 14.6.1(@testing-library/dom@9.3.4)
@@ -1711,24 +1711,48 @@ packages:
     resolution: {integrity: sha512-q2LyCVJGN4p7d92cOI7scWOoNwxJhZuFRwiimSUGJGI5zX7ubf1WUPznwOmYEn8WVo3Io+MyMinA7era6j5KPw==}
     engines: {node: '>=20.0.0'}
 
+  '@supabase/auth-js@2.99.1':
+    resolution: {integrity: sha512-x7lKKTvKjABJt/FYcRSPiTT01Xhm2FF8RhfL8+RHMkmlwmRQ88/lREupIHKwFPW0W6pTCJqkZb7Yhpw/EZ+fNw==}
+    engines: {node: '>=20.0.0'}
+
   '@supabase/functions-js@2.80.0':
     resolution: {integrity: sha512-0S/k8LRtoblrbzy4ir9m4WuvU/XTkb1EwL/33/oJexCUHCXtsqaPJ3eKfr1GWtNqTa1zryv6sXs3Fpv7lKCsMQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/functions-js@2.99.1':
+    resolution: {integrity: sha512-WQE62W5geYImCO4jzFxCk/avnK7JmOdtqu2eiPz3zOaNiIJajNRSAwMMDgEGd2EMs+sUVYj1LfBjfmW3EzHgIA==}
     engines: {node: '>=20.0.0'}
 
   '@supabase/postgrest-js@2.80.0':
     resolution: {integrity: sha512-yKzehXlRbDoXIQefdRQnvaI9BEogoWIp/7+y/m5enZDKW2IP9aAgq5tU72sThcwftDJvknnIpEHAABG3qviEng==}
     engines: {node: '>=20.0.0'}
 
+  '@supabase/postgrest-js@2.99.1':
+    resolution: {integrity: sha512-gtw2ibJrADvfqrpUWXGNlrYUvxttF4WVWfPpTFKOb2IRj7B6YRWMDgcrYqIuD4ZEabK4m6YKQCCGy6clgf1lPA==}
+    engines: {node: '>=20.0.0'}
+
   '@supabase/realtime-js@2.80.0':
     resolution: {integrity: sha512-cXK6Gs4UDylN8oz40omi01QK0cSCBVj0efXC1WodpENTuDnrkUs28W8/eslEnAtlawaVtikC1Q92mpz9+o85Mg==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/realtime-js@2.99.1':
+    resolution: {integrity: sha512-9EDdy/5wOseGFqxW88ShV9JMRhm7f+9JGY5x+LqT8c7R0X1CTLwg5qie8FiBWcXTZ+68yYxVWunI+7W4FhkWOg==}
     engines: {node: '>=20.0.0'}
 
   '@supabase/storage-js@2.80.0':
     resolution: {integrity: sha512-Iepod83h2WoMCaLC9pGb3QOT67Kn3RlUdbXpo3uvbDKfPU8EgytS4RVaPmDjhqDjj8AGaiz9mk/ppd2Q2WS+gw==}
     engines: {node: '>=20.0.0'}
 
+  '@supabase/storage-js@2.99.1':
+    resolution: {integrity: sha512-mf7zPfqofI62SOoyQJeNUVxe72E4rQsbWim6lTDPeLu3lHija/cP5utlQADGrjeTgOUN6znx/rWn7SjrETP1dw==}
+    engines: {node: '>=20.0.0'}
+
   '@supabase/supabase-js@2.80.0':
     resolution: {integrity: sha512-n8pkXQxuo5zCWXX5cbSNZj1vuWS8IVNGWTmP1m31Iq1k0e8lPZ07PF08TRV79HHq3mEPP/Ko//BQuflHvY2o8w==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/supabase-js@2.99.1':
+    resolution: {integrity: sha512-5MRoYD9ffXq8F6a036dm65YoSHisC3by/d22mauKE99Vrwf792KxYIIr/iqCX7E4hkuugbPZ5EGYHTB7MKy6Vg==}
     engines: {node: '>=20.0.0'}
 
   '@swc/helpers@0.5.15':
@@ -1826,6 +1850,9 @@ packages:
 
   '@types/phoenix@1.6.6':
     resolution: {integrity: sha512-PIzZZlEppgrpoT2QgbnDU+MMzuR6BbCjllj0bM70lWoejMeNJAxCchxnv7J3XFkI8MpygtRpzXrIlmWUBclP5A==}
+
+  '@types/phoenix@1.6.7':
+    resolution: {integrity: sha512-oN9ive//QSBkf19rfDv45M7eZPi0eEXylht2OLEXicu5b4KoQ1OzXIw+xDSGWxSxe1JmepRR/ZH283vsu518/Q==}
 
   '@types/prop-types@15.7.15':
     resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
@@ -2456,6 +2483,7 @@ packages:
   conventional-changelog-cli@5.0.0:
     resolution: {integrity: sha512-9Y8fucJe18/6ef6ZlyIlT2YQUbczvoQZZuYmDLaGvcSBP+M6h+LAvf7ON7waRxKJemcCII8Yqu5/8HEfskTxJQ==}
     engines: {node: '>=18'}
+    deprecated: This package is no longer maintained. Please use the conventional-changelog package instead.
     hasBin: true
 
   conventional-changelog-codemirror@5.0.0:
@@ -3162,16 +3190,19 @@ packages:
   git-raw-commits@4.0.0:
     resolution: {integrity: sha512-ICsMM1Wk8xSGMowkOmPrzo2Fgmfo4bMHLNX6ytHjajRJUqvHOw/TFapQ+QG75c3X/tTDDhOSRPGC52dDbNM8FQ==}
     engines: {node: '>=16'}
+    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
     hasBin: true
 
   git-raw-commits@5.0.0:
     resolution: {integrity: sha512-I2ZXrXeOc0KrCvC7swqtIFXFN+rbjnC7b2T943tvemIOVNl+XP8YnA9UVwqFhzzLClnSA60KR/qEjLpXzs73Qg==}
     engines: {node: '>=18'}
+    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
     hasBin: true
 
   git-semver-tags@8.0.0:
     resolution: {integrity: sha512-N7YRIklvPH3wYWAR2vysaqGLPRcpwQ0GKdlqTiVN5w1UmCdaeY3K8s6DMKRCh54DDdzyt/OAB6C8jgVtb7Y2Fg==}
     engines: {node: '>=18'}
+    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
     hasBin: true
 
   glob-parent@5.1.2:
@@ -3184,17 +3215,19 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@11.0.3:
     resolution: {integrity: sha512-2Nim7dha1KVkaiF4q6Dj+ngPPMdfvLJEOpZk/jKiUAkqKebpGAWQXAq9z1xu9HKu5lWfqw/FASuccEjyznjPaA==}
     engines: {node: 20 || >=22}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@8.1.0:
     resolution: {integrity: sha512-r8hpEjiQEYlF2QU0df3dS+nxxSIreXQS1qRhMJM0Q5NDdR386C7jb7Hwwod8Fgiuex+k0GFjgft18yvxm5XoCQ==}
     engines: {node: '>=12'}
-    deprecated: Glob versions prior to v9 are no longer supported
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   global-directory@4.0.1:
     resolution: {integrity: sha512-wHTUcDUoZ1H5/0iVqEudYW4/kAlN5cZ3j/bXn0Dpbizl9iaUVeWSHqiOjsgk6OW2bkLclbBjzewBz6weQ1zA2Q==}
@@ -3277,6 +3310,10 @@ packages:
   human-signals@5.0.0:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
     engines: {node: '>=16.17.0'}
+
+  iceberg-js@0.8.1:
+    resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
+    engines: {node: '>=20.0.0'}
 
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -3859,6 +3896,7 @@ packages:
   next@15.5.7:
     resolution: {integrity: sha512-+t2/0jIJ48kUpGKkdlhgkv+zPTEOoXyr60qXe68eB/pl3CMJaLeIGjzp5D6Oqt25hCBiBTt8wEeeAzfJvUKnPQ==}
     engines: {node: ^18.18.0 || ^19.8.0 || >= 20.0.0}
+    deprecated: This version has a security vulnerability. Please upgrade to a patched version. See https://nextjs.org/blog/security-update-2025-12-11 for more details.
     hasBin: true
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
@@ -4287,11 +4325,6 @@ packages:
     peerDependencies:
       react: ^18.3.1
 
-  react-dom@19.2.0:
-    resolution: {integrity: sha512-UlbRu4cAiGaIewkPyiRGJk0imDN2T3JjieT6spoL2UeSf5od4n5LB/mQ4ejmxhCFT1tYe8IvaFulzynWovsEFQ==}
-    peerDependencies:
-      react: ^19.2.0
-
   react-dom@19.2.1:
     resolution: {integrity: sha512-ibrK8llX2a4eOskq1mXKu/TGZj9qzomO+sNfO98M6d9zIPOEhlBkMkBUBLd1vgS0gQsLDBzA+8jJBVXDnfHmJg==}
     peerDependencies:
@@ -4312,10 +4345,6 @@ packages:
 
   react@18.3.1:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
-    engines: {node: '>=0.10.0'}
-
-  react@19.2.0:
-    resolution: {integrity: sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==}
     engines: {node: '>=0.10.0'}
 
   react@19.2.1:
@@ -5104,6 +5133,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -5162,6 +5192,18 @@ packages:
 
   ws@8.18.3:
     resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  ws@8.19.0:
+    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -6128,13 +6170,6 @@ snapshots:
 
   '@sinclair/typebox@0.27.8': {}
 
-  '@stripe/react-stripe-js@5.3.0(@stripe/stripe-js@8.3.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
-    dependencies:
-      '@stripe/stripe-js': 8.3.0
-      prop-types: 15.8.1
-      react: 19.2.0
-      react-dom: 19.2.0(react@19.2.0)
-
   '@stripe/react-stripe-js@5.3.0(@stripe/stripe-js@8.3.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       '@stripe/stripe-js': 8.3.0
@@ -6148,11 +6183,23 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@supabase/auth-js@2.99.1':
+    dependencies:
+      tslib: 2.8.1
+
   '@supabase/functions-js@2.80.0':
     dependencies:
       tslib: 2.8.1
 
+  '@supabase/functions-js@2.99.1':
+    dependencies:
+      tslib: 2.8.1
+
   '@supabase/postgrest-js@2.80.0':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/postgrest-js@2.99.1':
     dependencies:
       tslib: 2.8.1
 
@@ -6166,8 +6213,23 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  '@supabase/realtime-js@2.99.1':
+    dependencies:
+      '@types/phoenix': 1.6.7
+      '@types/ws': 8.18.1
+      tslib: 2.8.1
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   '@supabase/storage-js@2.80.0':
     dependencies:
+      tslib: 2.8.1
+
+  '@supabase/storage-js@2.99.1':
+    dependencies:
+      iceberg-js: 0.8.1
       tslib: 2.8.1
 
   '@supabase/supabase-js@2.80.0':
@@ -6177,6 +6239,17 @@ snapshots:
       '@supabase/postgrest-js': 2.80.0
       '@supabase/realtime-js': 2.80.0
       '@supabase/storage-js': 2.80.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@supabase/supabase-js@2.99.1':
+    dependencies:
+      '@supabase/auth-js': 2.99.1
+      '@supabase/functions-js': 2.99.1
+      '@supabase/postgrest-js': 2.99.1
+      '@supabase/realtime-js': 2.99.1
+      '@supabase/storage-js': 2.99.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -6215,13 +6288,13 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@testing-library/react@14.3.1(@types/react@18.3.26)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@testing-library/react@14.3.1(@types/react@18.3.26)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       '@babel/runtime': 7.28.4
       '@testing-library/dom': 9.3.4
       '@types/react-dom': 18.3.7(@types/react@18.3.26)
-      react: 19.2.0
-      react-dom: 19.2.0(react@19.2.0)
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
     transitivePeerDependencies:
       - '@types/react'
 
@@ -6319,6 +6392,8 @@ snapshots:
       pg-types: 2.2.0
 
   '@types/phoenix@1.6.6': {}
+
+  '@types/phoenix@1.6.7': {}
 
   '@types/prop-types@15.7.15': {}
 
@@ -8171,6 +8246,8 @@ snapshots:
 
   human-signals@5.0.0: {}
 
+  iceberg-js@0.8.1: {}
+
   iconv-lite@0.4.24:
     dependencies:
       safer-buffer: 2.1.2
@@ -9162,11 +9239,6 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
-  react-dom@19.2.0(react@19.2.0):
-    dependencies:
-      react: 19.2.0
-      scheduler: 0.27.0
-
   react-dom@19.2.1(react@19.2.1):
     dependencies:
       react: 19.2.1
@@ -9183,8 +9255,6 @@ snapshots:
   react@18.3.1:
     dependencies:
       loose-envify: 1.4.0
-
-  react@19.2.0: {}
 
   react@19.2.1: {}
 
@@ -10253,6 +10323,8 @@ snapshots:
   wrappy@1.0.2: {}
 
   ws@8.18.3: {}
+
+  ws@8.19.0: {}
 
   xml-name-validator@5.0.0: {}
 
