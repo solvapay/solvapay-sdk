@@ -101,11 +101,13 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // POST: /v1/sdk/usages
     async trackUsage(params) {
       const url = `${base}/v1/sdk/usages`
+      const { customerRef, ...rest } = params
+      const body = { ...rest, customerId: customerRef }
 
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(params),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -253,6 +255,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       const result = await res.json()
       return result
+    },
+
+    // POST: /v1/sdk/products/mcp/bootstrap
+    async bootstrapMcpProduct(params) {
+      const url = `${base}/v1/sdk/products/mcp/bootstrap`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Bootstrap MCP product failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
     },
 
     // DELETE: /v1/sdk/products/{productRef}

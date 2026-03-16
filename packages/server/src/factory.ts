@@ -12,6 +12,8 @@ import type {
   NextAdapterOptions,
   McpAdapterOptions,
   CustomerResponseMapped,
+  McpBootstrapRequest,
+  McpBootstrapResponse,
 } from './types'
 import { createSolvaPayClient } from './client'
 import { SolvaPayPaywall } from './paywall'
@@ -369,7 +371,13 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: { customerRef: string; productRef: string; planRef?: string }): Promise<{
+  checkLimits(params: {
+    customerRef: string
+    productRef: string
+    planRef?: string
+    meterName?: 'requests' | 'tokens'
+    usageType?: 'requests' | 'tokens'
+  }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -396,19 +404,26 @@ export interface SolvaPay {
    * @example
    * ```typescript
    * await solvaPay.trackUsage({
-   *   customerRef: 'user_123',
-   *   meterName: 'api_requests',
+   *   customerRef: 'cus_3C4D5E6F',
+   *   actionType: 'api_call',
    *   units: 1,
-   *   properties: { endpoint: '/search' },
+   *   outcome: 'success',
+   *   metadata: { toolName: 'search', endpoint: '/search' },
    * });
    * ```
    */
   trackUsage(params: {
     customerRef: string
-    meterName?: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
-    properties?: Record<string, unknown>
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
     timestamp?: string
+    idempotencyKey?: string
   }): Promise<void>
 
   /**
@@ -505,6 +520,7 @@ export interface SolvaPay {
    *
    * @param params - Customer session parameters
    * @param params.customerRef - Customer reference
+   * @param params.productRef - Optional product reference for scoping portal view
    * @returns Customer portal session with redirect URL
    *
    * @example
@@ -517,10 +533,18 @@ export interface SolvaPay {
    * window.location.href = session.customerUrl;
    * ```
    */
-  createCustomerSession(params: { customerRef: string }): Promise<{
+  createCustomerSession(params: { customerRef: string; productRef?: string }): Promise<{
     sessionId: string
     customerUrl: string
   }>
+
+  /**
+   * Bootstrap an MCP-enabled product with plans and tool mappings.
+   *
+   * This helper wraps the backend orchestration endpoint and is intended for
+   * fast setup flows where you want one call for product + plans + MCP config.
+   */
+  bootstrapMcpProduct(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
 
   /**
    * Get virtual tool definitions with bound handlers for MCP server integration.
@@ -696,6 +720,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.createCustomerSession(params)
     },
 
+    bootstrapMcpProduct(params) {
+      if (!apiClient.bootstrapMcpProduct) {
+        throw new SolvaPayError('bootstrapMcpProduct is not available on this API client')
+      }
+      return apiClient.bootstrapMcpProduct(params)
+    },
+
     getVirtualTools(options: VirtualToolsOptions) {
       return createVirtualTools(apiClient, options)
     },
@@ -711,7 +742,8 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       // Resolve plan (support both planRef and plan)
       const plan = options.planRef || options.plan
 
-      const metadata = { product, plan }
+      const usageType = options.usageType || 'requests'
+      const metadata = { product, plan, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

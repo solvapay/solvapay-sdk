@@ -9,7 +9,17 @@
 export type { paths, components, operations } from './generated'
 
 // Re-export client types from types/client.ts
-export type { LimitResponseWithPlan, CustomerResponseMapped } from './client'
+export type {
+  LimitResponseWithPlan,
+  CustomerResponseMapped,
+  UsageMeterType,
+  CheckLimitsRequest,
+  McpBootstrapRequest,
+  McpBootstrapResponse,
+  McpBootstrapFreePlanConfig,
+  McpBootstrapPaidPlanInput,
+  ToolPlanMappingInput,
+} from './client'
 // Re-export SolvaPayClient interface from types/client.ts
 export type { SolvaPayClient } from './client'
 

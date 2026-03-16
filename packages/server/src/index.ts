@@ -96,7 +96,16 @@ export type {
 } from './types'
 
 // Export payment processing types
-export type { OneTimePurchaseInfo, ProcessPaymentResult, CustomerResponseMapped } from './types/client'
+export type {
+  OneTimePurchaseInfo,
+  ProcessPaymentResult,
+  CustomerResponseMapped,
+  McpBootstrapRequest,
+  McpBootstrapResponse,
+  McpBootstrapFreePlanConfig,
+  McpBootstrapPaidPlanInput,
+  ToolPlanMappingInput,
+} from './types/client'
 
 // Export utilities for general use
 export { withRetry } from './utils'

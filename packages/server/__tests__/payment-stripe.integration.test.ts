@@ -90,6 +90,8 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   } | null = null
 
   beforeAll(async () => {
+    ;(global as any).__SKIP_PAYMENT_TESTS__ = false
+
     if (!SOLVAPAY_SECRET_KEY || !STRIPE_TEST_SECRET_KEY) {
       console.log('\n⚠️  Skipping payment integration tests: Missing required configuration')
       console.log('   Required: USE_REAL_BACKEND=true, SOLVAPAY_SECRET_KEY, STRIPE_TEST_SECRET_KEY')
@@ -210,7 +212,11 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         console.log('✅ Stripe Connect account verified')
         console.log()
       } catch (error: any) {
-        if (error.message?.includes('does not have a Stripe account')) {
+        const message = String(error?.message || '').toLowerCase()
+        if (
+          message.includes('does not have a stripe account') ||
+          message.includes('does not have a payment account')
+        ) {
           console.log()
           console.warn('╔═══════════════════════════════════════════════════════════╗')
           console.warn('║  ⚠️  STRIPE NOT CONFIGURED - TESTS WILL BE SKIPPED       ║')
@@ -470,8 +476,9 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Track usage to deduct 1 credit
       await apiClient.trackUsage({
         customerRef: customerRef,
-        meterName: 'api_requests',
+        actionType: 'api_call',
         units: 1,
+        outcome: 'success',
         timestamp: new Date().toISOString(),
       })
 

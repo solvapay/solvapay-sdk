@@ -6,6 +6,12 @@
 
 import type { components } from './generated'
 
+export type UsageMeterType = 'requests' | 'tokens'
+export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
+  meterName?: string
+  usageType?: UsageMeterType
+}
+
 /**
  * Extended LimitResponse with plan field
  */
@@ -53,6 +59,65 @@ export interface ProcessPaymentResult {
   status: 'completed'
 }
 
+export interface McpBootstrapFreePlanConfig {
+  name?: string
+  freeUnits?: number
+}
+
+export interface McpBootstrapPaidPlanInput {
+  key: string
+  name: string
+  /** Price in cents (e.g. 2000 = $20.00) */
+  price: number
+  currency: string
+  billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
+  type?: 'recurring' | 'one-time'
+  freeUnits?: number
+  meterId?: string
+  limit?: number
+  features?: Record<string, unknown>
+}
+
+export interface ToolPlanMappingInput {
+  name: string
+  description?: string
+  noPlan?: boolean
+  planIds?: string[]
+  planRefs?: string[]
+  planKeys?: string[]
+}
+
+export interface McpBootstrapRequest {
+  name?: string
+  description?: string
+  imageUrl?: string
+  productType?: string
+  originUrl: string
+  /** Optional token combined with provider name to derive the final MCP subdomain. */
+  mcpDomain?: string
+  authHeaderName?: string
+  authApiKey?: string
+  freePlan?: McpBootstrapFreePlanConfig
+  paidPlans?: McpBootstrapPaidPlanInput[]
+  tools?: ToolPlanMappingInput[]
+  metadata?: Record<string, unknown>
+}
+
+export interface McpBootstrapResponse {
+  product: components['schemas']['SdkProductResponse']
+  mcpServer: {
+    id?: string
+    reference?: string
+    subdomain?: string
+    mcpProxyUrl?: string
+    url: string
+    defaultPlanId?: string
+  }
+  planMap: Record<string, { id: string; reference: string; name?: string }>
+  toolsAutoMapped?: boolean
+  autoMappedTools?: Array<{ name: string; description?: string }>
+}
+
 /**
  * SolvaPay API Client Interface
  *
@@ -62,15 +127,21 @@ export interface ProcessPaymentResult {
  */
 export interface SolvaPayClient {
   // POST: /v1/sdk/limits
-  checkLimits(params: components['schemas']['CheckLimitRequest']): Promise<LimitResponseWithPlan>
+  checkLimits(params: CheckLimitsRequest): Promise<LimitResponseWithPlan>
 
   // POST: /v1/sdk/usages
   trackUsage(params: {
     customerRef: string
-    meterName?: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
-    properties?: Record<string, unknown>
+    outcome?: 'success' | 'paywall' | 'fail'
+    productReference?: string
+    purchaseReference?: string
+    description?: string
+    metadata?: Record<string, unknown>
+    duration?: number
     timestamp?: string
+    idempotencyKey?: string
   }): Promise<void>
 
   // POST: /v1/sdk/customers
@@ -103,6 +174,9 @@ export interface SolvaPayClient {
     name: string
   }>
 
+  // POST: /v1/sdk/products/mcp/bootstrap
+  bootstrapMcpProduct?(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
+
   // PUT: /v1/sdk/products/{productRef}
   updateProduct?(
     productRef: string,
@@ -127,7 +201,7 @@ export interface SolvaPayClient {
       interval?: string
       isFreeTier?: boolean
       freeUnits?: number
-      meterId?: string
+      measures?: string
       limit?: number
       pricePerUnit?: number
       billingModel?: string

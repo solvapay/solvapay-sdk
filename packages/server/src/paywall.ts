@@ -145,9 +145,9 @@ export class SolvaPayPaywall {
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
     const product = this.resolveProduct(metadata)
-    const toolName = handler.name || 'anonymous'
     const configuredPlanRef = metadata.plan?.trim()
     const usagePlanRef = configuredPlanRef || 'unspecified'
+    const usageType = metadata.usageType || 'requests'
 
     return async (args: TArgs): Promise<TResult> => {
       const startTime = Date.now()
@@ -173,7 +173,7 @@ export class SolvaPayPaywall {
       let resolvedMeterName: string | undefined
 
       try {
-        const limitsCacheKey = `${backendCustomerRef}:${product}:${configuredPlanRef || ''}`
+        const limitsCacheKey = `${backendCustomerRef}:${product}:${configuredPlanRef || ''}:${usageType}`
         const cachedLimits = this.limitsCache.get(limitsCacheKey)
         const now = Date.now()
 
@@ -181,19 +181,27 @@ export class SolvaPayPaywall {
         let remaining: number
         let checkoutUrl: string | undefined
 
-        if (
-          cachedLimits &&
-          now - cachedLimits.timestamp < this.limitsCacheTTL &&
-          cachedLimits.remaining > 0
-        ) {
-          cachedLimits.remaining--
-          if (cachedLimits.remaining <= 0) {
-            this.limitsCache.delete(limitsCacheKey)
-          }
-          withinLimits = true
-          remaining = cachedLimits.remaining
+        const hasFreshCachedLimits =
+          cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
+
+        if (hasFreshCachedLimits) {
           checkoutUrl = cachedLimits.checkoutUrl
           resolvedMeterName = cachedLimits.meterName
+
+          if (cachedLimits.remaining > 0) {
+            cachedLimits.remaining--
+            if (cachedLimits.remaining <= 0) {
+              this.limitsCache.delete(limitsCacheKey)
+            }
+            withinLimits = true
+            remaining = cachedLimits.remaining
+          } else {
+            // A zero-remaining entry indicates we already consumed the final unit.
+            // Block one immediate follow-up request from cache, then force re-check next time.
+            withinLimits = false
+            remaining = 0
+            this.limitsCache.delete(limitsCacheKey)
+          }
         } else {
           if (cachedLimits) {
             this.limitsCache.delete(limitsCacheKey)
@@ -202,6 +210,7 @@ export class SolvaPayPaywall {
             customerRef: backendCustomerRef,
             productRef: product,
             ...(configuredPlanRef ? { planRef: configuredPlanRef } : {}),
+            meterName: usageType,
           })
 
           withinLimits = limitsCheck.withinLimits
@@ -209,7 +218,14 @@ export class SolvaPayPaywall {
           checkoutUrl = limitsCheck.checkoutUrl
           resolvedMeterName = limitsCheck.meterName
 
-          if (withinLimits && remaining > 0) {
+          const consumedAllowance = withinLimits && remaining > 0
+          if (consumedAllowance) {
+            // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
+            // so cached follow-up requests don't get an extra free call.
+            remaining = Math.max(0, remaining - 1)
+          }
+
+          if (consumedAllowance) {
             this.limitsCache.set(limitsCacheKey, {
               remaining,
               checkoutUrl,
@@ -225,7 +241,7 @@ export class SolvaPayPaywall {
             backendCustomerRef,
             product,
             usagePlanRef,
-            resolvedMeterName || toolName,
+            resolvedMeterName || usageType,
             'paywall',
             requestId,
             latencyMs,
@@ -246,7 +262,7 @@ export class SolvaPayPaywall {
           backendCustomerRef,
           product,
           usagePlanRef,
-          resolvedMeterName || toolName,
+          resolvedMeterName || usageType,
           'success',
           requestId,
           latencyMs,
@@ -266,7 +282,7 @@ export class SolvaPayPaywall {
             backendCustomerRef,
             product,
             usagePlanRef,
-            resolvedMeterName || toolName,
+            resolvedMeterName || usageType,
             'fail',
             requestId,
             latencyMs,
@@ -495,7 +511,7 @@ export class SolvaPayPaywall {
     customerRef: string,
     _productRef: string,
     _planRef: string,
-    toolName: string,
+    action: string,
     outcome: 'success' | 'paywall' | 'fail',
     requestId: string,
     actionDuration: number,
@@ -504,9 +520,12 @@ export class SolvaPayPaywall {
       () =>
         this.apiClient.trackUsage({
           customerRef,
-          meterName: toolName || 'api_requests',
+          actionType: 'api_call',
           units: 1,
-          properties: { outcome, requestId, actionDuration },
+          outcome,
+          productReference: _productRef,
+          duration: actionDuration,
+          metadata: { action: action || 'api_requests', requestId },
           timestamp: new Date().toISOString(),
         }),
       {

@@ -215,7 +215,7 @@ type Agent = components['schemas']['Agent']
 type Plan = components['schemas']['Plan']
 ```
 
-**Note:** The generated types complement the existing hand-written types in `src/types.ts`. Run `pnpm generate:types` whenever the backend API changes to keep types in sync.
+**Note:** The generated types complement the existing hand-written types in `src/types/client.ts`. Run `pnpm generate:types` whenever the backend API changes to keep types in sync.
 
 ## Testing
 
