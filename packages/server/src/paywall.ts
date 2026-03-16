@@ -212,6 +212,12 @@ export class SolvaPayPaywall {
           resolvedMeterName = limitsCheck.meterName
 
           if (withinLimits && remaining > 0) {
+            // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
+            // so cached follow-up requests don't get an extra free call.
+            remaining = Math.max(0, remaining - 1)
+          }
+
+          if (withinLimits && remaining > 0) {
             this.limitsCache.set(limitsCacheKey, {
               remaining,
               checkoutUrl,
@@ -509,6 +515,7 @@ export class SolvaPayPaywall {
           actionType: 'api_call',
           units: 1,
           outcome,
+          productReference: _productRef,
           duration: actionDuration,
           metadata: { action: action || 'api_requests', requestId },
           timestamp: new Date().toISOString(),

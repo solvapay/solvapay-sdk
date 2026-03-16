@@ -496,13 +496,13 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     it('should invalidate cache when remaining reaches 0', async () => {
       const checkLimitsSpy = vi
         .spyOn(mockApiClient, 'checkLimits')
-        .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' })
+        .mockResolvedValue({ withinLimits: true, remaining: 2, plan: 'free' })
 
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({ product: 'cache-invalidate' })
       const protectedHandler = await payable.function(handler)
 
-      // Call 1: API hit, caches remaining=1
+      // Call 1: API hit, request consumes one unit, caches remaining=1
       await protectedHandler({ auth: { customer_ref: 'cus_limit_user' } })
       expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
 

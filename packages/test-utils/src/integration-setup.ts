@@ -100,14 +100,18 @@ export async function createTestPlan(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      billingCycle: 'monthly',
       type: 'usage-based',
       price: 0,
       currency: 'USD',
       billingModel: 'pre-paid',
       pricePerUnit: 0,
       isFreeTier: true,
+      requiresPayment: false,
+      default: true,
       freeUnits: freeUnits,
       limit: freeUnits,
+      measures: 'requests',
       features: [`${freeUnits} free requests`],
       limits: {
         monthlyRequests: freeUnits,
