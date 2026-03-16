@@ -71,7 +71,7 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.0",
-    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "fastify": "^4.28.1",
     "glob": "^11.0.3",
     "jose": "^5.9.3",
