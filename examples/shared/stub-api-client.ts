@@ -407,22 +407,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
     )
   }
 
-  async createEvent(_params: {
-    customerRef: string
-    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
-    units?: number
-    outcome?: 'success' | 'paywall' | 'fail'
-    productReference?: string
-    purchaseReference?: string
-    description?: string
-    metadata?: Record<string, unknown>
-    duration?: number
-    timestamp?: string
-    idempotencyKey?: string
-  }): Promise<{ eventId: string }> {
-    return { eventId: `evt_stub_${Date.now().toString(36)}` }
-  }
-
   /**
    * Create a checkout session (for testing)
    */

@@ -263,21 +263,6 @@ export interface SolvaPayClient {
     productRef: string
   }): Promise<components['schemas']['UserInfoResponse']>
 
-  // POST: /v1/sdk/usages
-  createEvent?(params: {
-    customerRef: string
-    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
-    units?: number
-    outcome?: 'success' | 'paywall' | 'fail'
-    productReference?: string
-    purchaseReference?: string
-    description?: string
-    metadata?: Record<string, unknown>
-    duration?: number
-    timestamp?: string
-    idempotencyKey?: string
-  }): Promise<{ eventId: string }>
-
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
     params: components['schemas']['CreateCheckoutSessionRequest'],
