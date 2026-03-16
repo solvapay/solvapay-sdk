@@ -101,7 +101,7 @@ export async function createTestPlan(
     },
     body: JSON.stringify({
       billingCycle: 'monthly',
-      type: 'usage-based',
+      type: 'recurring',
       price: 0,
       currency: 'USD',
       billingModel: 'pre-paid',
