@@ -181,19 +181,27 @@ export class SolvaPayPaywall {
         let remaining: number
         let checkoutUrl: string | undefined
 
-        if (
-          cachedLimits &&
-          now - cachedLimits.timestamp < this.limitsCacheTTL &&
-          cachedLimits.remaining > 0
-        ) {
-          cachedLimits.remaining--
-          if (cachedLimits.remaining <= 0) {
-            this.limitsCache.delete(limitsCacheKey)
-          }
-          withinLimits = true
-          remaining = cachedLimits.remaining
+        const hasFreshCachedLimits =
+          cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
+
+        if (hasFreshCachedLimits) {
           checkoutUrl = cachedLimits.checkoutUrl
           resolvedMeterName = cachedLimits.meterName
+
+          if (cachedLimits.remaining > 0) {
+            cachedLimits.remaining--
+            if (cachedLimits.remaining <= 0) {
+              this.limitsCache.delete(limitsCacheKey)
+            }
+            withinLimits = true
+            remaining = cachedLimits.remaining
+          } else {
+            // A zero-remaining entry indicates we already consumed the final unit.
+            // Block one immediate follow-up request from cache, then force re-check next time.
+            withinLimits = false
+            remaining = 0
+            this.limitsCache.delete(limitsCacheKey)
+          }
         } else {
           if (cachedLimits) {
             this.limitsCache.delete(limitsCacheKey)
@@ -202,7 +210,6 @@ export class SolvaPayPaywall {
             customerRef: backendCustomerRef,
             productRef: product,
             ...(configuredPlanRef ? { planRef: configuredPlanRef } : {}),
-            usageType,
             meterName: usageType,
           })
 
@@ -211,13 +218,14 @@ export class SolvaPayPaywall {
           checkoutUrl = limitsCheck.checkoutUrl
           resolvedMeterName = limitsCheck.meterName
 
-          if (withinLimits && remaining > 0) {
+          const consumedAllowance = withinLimits && remaining > 0
+          if (consumedAllowance) {
             // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
             // so cached follow-up requests don't get an extra free call.
             remaining = Math.max(0, remaining - 1)
           }
 
-          if (withinLimits && remaining > 0) {
+          if (consumedAllowance) {
             this.limitsCache.set(limitsCacheKey, {
               remaining,
               checkoutUrl,
