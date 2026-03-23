@@ -49,7 +49,7 @@
     "jose": "^5.0.0"
   },
   "devDependencies": {
-    "tsup": "^8.0.1",
+    "tsup": "^8.5.1",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5"
   }
