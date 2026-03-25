@@ -1369,7 +1369,7 @@ export interface components {
              */
             originUrl: string;
             /**
-             * Domain slug input for MCP server name/subdomain normalization
+             * Optional final MCP subdomain override (for example, value returned by bootstrap-subdomain-checks)
              * @example acme-docs
              */
             mcpDomain?: string;
