@@ -164,7 +164,7 @@ describe('runInitCommand', () => {
       status: 'expired',
     })
 
-    await expect(runInitCommand()).rejects.toThrow('Timed out after 5 minutes')
+    await expect(runInitCommand()).rejects.toThrow('Timed out after 10 minutes')
   })
 
   it('exits cleanly when package.json is missing and user declines creation', async () => {

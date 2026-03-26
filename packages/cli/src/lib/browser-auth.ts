@@ -1,6 +1,6 @@
 import open from 'open'
 
-const FIVE_MINUTES_MS = 5 * 60 * 1000
+const INIT_EXCHANGE_TIMEOUT_MS = 10 * 60 * 1000
 const POLL_INTERVAL_MS = 2000
 
 export type InitSessionResponse = {
@@ -75,7 +75,7 @@ export const waitForExchange = async (
   const spinner = startSpinner('⏳ Waiting for authentication...')
 
   try {
-    while (Date.now() - startedAt < FIVE_MINUTES_MS) {
+    while (Date.now() - startedAt < INIT_EXCHANGE_TIMEOUT_MS) {
       const response = await fetch(
         `${apiBaseUrl}/v1/oauth/init/session/${encodeURIComponent(session.sessionId)}/exchange`,
         {
