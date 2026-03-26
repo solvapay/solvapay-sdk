@@ -39,8 +39,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && tsup src/edge.ts --format esm --dts --tsconfig tsconfig.build.json",
     "generate:types": "tsx scripts/generate-types.ts",
-    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts",
-    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts",
+    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts",
+    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts",
     "test:integration": "vitest run __tests__/backend.integration.test.ts",
     "test:integration:payment": "vitest run __tests__/payment-stripe.integration.test.ts",
     "test:all": "vitest run",

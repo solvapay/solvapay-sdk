@@ -7,6 +7,33 @@
 
 import { SolvaPayError } from '@solvapay/core'
 
+function parseHexSignature(signature: string): Uint8Array | null {
+  const normalizedSignature = signature.trim()
+  if (!/^[a-fA-F0-9]{64}$/.test(normalizedSignature)) {
+    return null
+  }
+
+  const bytes = new Uint8Array(normalizedSignature.length / 2)
+  for (let i = 0; i < normalizedSignature.length; i += 2) {
+    bytes[i / 2] = Number.parseInt(normalizedSignature.slice(i, i + 2), 16)
+  }
+
+  return bytes
+}
+
+function constantTimeEqualBytes(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) {
+    return false
+  }
+
+  let mismatch = 0
+  for (let i = 0; i < left.length; i += 1) {
+    mismatch |= left[i] ^ right[i]
+  }
+
+  return mismatch === 0
+}
+
 // Re-export the main client which is already edge-compatible (uses fetch)
 export { createSolvaPayClient } from './client'
 export type { ServerClientOptions } from './client'
@@ -88,12 +115,10 @@ export async function verifyWebhook({
     false,
     ['sign'],
   )
-  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(body))
-  const hex = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
+  const computedSignature = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(body)))
+  const providedSignature = parseHexSignature(signature)
 
-  if (hex !== signature) {
+  if (!providedSignature || !constantTimeEqualBytes(computedSignature, providedSignature)) {
     throw new SolvaPayError('Invalid webhook signature')
   }
 

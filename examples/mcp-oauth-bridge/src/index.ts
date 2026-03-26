@@ -98,7 +98,7 @@ app.get('/.well-known/oauth-authorization-server', (_req, res) => {
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     scopes_supported: ['openid', 'profile', 'email'],
-    code_challenge_methods_supported: ['S256', 'plain'],
+    code_challenge_methods_supported: ['S256'],
   })
 })
 

@@ -68,8 +68,19 @@ export function verifyWebhook({
   signature: string
   secret: string
 }) {
-  const hmac = crypto.createHmac('sha256', secret).update(body).digest('hex')
-  const ok = crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signature))
+  const computedHmac = crypto.createHmac('sha256', secret).update(body).digest()
+  const normalizedSignature = signature.trim()
+
+  if (!/^[a-fA-F0-9]{64}$/.test(normalizedSignature)) {
+    throw new SolvaPayError('Invalid webhook signature')
+  }
+
+  const providedSignature = Buffer.from(normalizedSignature, 'hex')
+  if (providedSignature.length !== computedHmac.length) {
+    throw new SolvaPayError('Invalid webhook signature')
+  }
+
+  const ok = crypto.timingSafeEqual(computedHmac, providedSignature)
   if (!ok) throw new SolvaPayError('Invalid webhook signature')
   return JSON.parse(body)
 }

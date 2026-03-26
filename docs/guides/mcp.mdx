@@ -288,7 +288,9 @@ const handler = payable.mcp(createTask, {
     try {
       return getCustomerRefFromBearerAuthHeader(header)
     } catch (error) {
-      if (error instanceof McpBearerAuthError) return 'anonymous'
+      if (error instanceof McpBearerAuthError) {
+        throw new Error('Unauthorized')
+      }
       throw error
     }
   },
@@ -297,6 +299,7 @@ const handler = payable.mcp(createTask, {
 
 These helpers only decode claims (`customerRef`, `customer_ref`, `sub`) and do not verify signatures.
 Use them after token validation (for example with `/v1/oauth/userinfo`).
+Fail closed on auth failures. Do not substitute fallback identities such as `anonymous`.
 
 ### Non-hosted OAuth Bridge Pattern
 
