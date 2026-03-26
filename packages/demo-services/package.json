@@ -22,7 +22,7 @@
     "@solvapay/core": "workspace:*"
   },
   "devDependencies": {
-    "tsup": "^8.0.1",
-    "typescript": "^5.5.4"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   }
 }
