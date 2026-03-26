@@ -6,7 +6,7 @@ Usage:
   solvapay <command>
 
 Commands:
-  init    Sign in and write SOLVAPAY_SECRET_KEY to .env
+  init    Authenticate, configure .env, and install SolvaPay SDK packages
 `
 
 const main = async () => {

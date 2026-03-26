@@ -36,7 +36,7 @@ const startSpinner = (message: string): SpinnerController => {
   return {
     stop: () => {
       clearInterval(timer)
-      process.stdout.write(`\r${message} ✓\n`)
+      process.stdout.write(`\r${' '.repeat(message.length + 4)}\r`)
     },
   }
 }
@@ -72,7 +72,7 @@ export const waitForExchange = async (
   session: InitSessionResponse,
 ): Promise<ExchangeResponse> => {
   const startedAt = Date.now()
-  const spinner = startSpinner('Waiting for you to finish in the browser...')
+  const spinner = startSpinner('⏳ Waiting for authentication...')
 
   try {
     while (Date.now() - startedAt < FIVE_MINUTES_MS) {

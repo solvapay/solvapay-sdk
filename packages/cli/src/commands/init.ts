@@ -4,32 +4,72 @@ import {
   verifySecretKey,
   waitForExchange,
 } from '../lib/browser-auth'
-import { writeSolvaPaySecretToEnv } from '../lib/env'
+import chalk from 'chalk'
+import { ensureEnvInGitignore, writeSolvaPaySecretToEnv } from '../lib/env'
+import { getInstallCommand, installSolvaPaySdk } from '../lib/install'
+import { detectPackageManager, ensureNodeProject } from '../lib/project'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
 
 const resolveApiBaseUrl = (): string =>
   (process.env.SOLVAPAY_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
 
+const ASCII_BANNER = ` ____        _            ____
+/ ___|  ___ | |_   ____ _|  _ \\ __ _ _   _
+\\___ \\ / _ \\| \\ \\ / / _\` | |_) / _\` | | | |
+ ___) | (_) | |\\ V / (_| |  __/ (_| | |_| |
+|____/ \\___/|_| \\_/ \\__,_|_|   \\__,_|\\__, |
+                                      |___/`
+
+const printBanner = (): void => {
+  process.stdout.write(`${chalk.cyanBright(ASCII_BANNER)}\n\n`)
+}
+
+const printQuickStart = (): void => {
+  process.stdout.write(`
+You're all set! Here's how to get started:
+
+  import { SolvaPay } from '@solvapay/server';
+  const sp = new SolvaPay();
+
+Docs: https://docs.solvapay.com
+`)
+}
+
 export const runInitCommand = async (): Promise<void> => {
   const apiBaseUrl = resolveApiBaseUrl()
+  const cwd = process.cwd()
+  printBanner()
 
-  process.stdout.write('Opening browser to sign in...\n')
+  const projectCheck = await ensureNodeProject()
+  if (projectCheck.action === 'cancelled') {
+    process.stdout.write('Initialization cancelled. Run `npm init -y` first, then `solvapay init`.\n')
+    return
+  }
+
+  const packageManager = await detectPackageManager(cwd)
+  if (projectCheck.action === 'created') {
+    process.stdout.write(`🔍 Detected ${packageManager} project (package.json created)\n`)
+  } else {
+    process.stdout.write(`🔍 Detected ${packageManager} project (package.json found)\n`)
+  }
+
+  process.stdout.write('🌐 Opening browser for authentication...\n')
   const initSession = await createInitSession(apiBaseUrl)
 
   const opened = await openAuthUrl(initSession.authUrl)
   if (!opened) {
-    process.stdout.write(`Open this URL to sign in: ${initSession.authUrl}\n`)
+    process.stdout.write(`   If it doesn't open, visit: ${initSession.authUrl}\n`)
   }
 
   const exchange = await waitForExchange(apiBaseUrl, initSession)
 
   if (exchange.status === 'cancelled') {
-    throw new Error('The browser flow was cancelled before completion.')
+    throw new Error('Authentication was cancelled. Run `solvapay init` again when you are ready.')
   }
   if (exchange.status === 'expired') {
     throw new Error(
-      'Timed out after 5 minutes waiting for browser auth. Please run `solvapay init` again.',
+      'Timed out after 5 minutes waiting for authentication. Run `solvapay init` again.',
     )
   }
   if (exchange.status !== 'complete' || !exchange.secretKey) {
@@ -37,26 +77,42 @@ export const runInitCommand = async (): Promise<void> => {
   }
 
   if (exchange.email) {
-    process.stdout.write(`✓ Authenticated as ${exchange.email}\n`)
+    process.stdout.write(`✅ Authenticated as ${exchange.email}\n`)
   } else {
-    process.stdout.write('✓ Authenticated\n')
+    process.stdout.write('✅ Authenticated\n')
   }
 
   const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey)
-  if (envWrite.action === 'unchanged') {
-    process.stdout.write('Skipped writing SOLVAPAY_SECRET_KEY to .env\n')
-    return
+  if (envWrite.action === 'created' || envWrite.action === 'appended' || envWrite.action === 'updated') {
+    process.stdout.write('📝 Secret key saved to .env\n')
+  } else {
+    process.stdout.write('📝 Kept existing SOLVAPAY_SECRET_KEY in .env\n')
   }
 
-  process.stdout.write('✓ SOLVAPAY_SECRET_KEY written to .env\n')
+  const gitignoreWrite = await ensureEnvInGitignore(cwd)
+  if (gitignoreWrite.action === 'created' || gitignoreWrite.action === 'appended') {
+    process.stdout.write('🔒 Added .env to .gitignore\n')
+  }
+
+  process.stdout.write('📦 Installing @solvapay/server and @solvapay/core...\n')
+  const installResult = await installSolvaPaySdk(packageManager, cwd)
+  if (installResult.ok) {
+    process.stdout.write('✅ @solvapay/server and @solvapay/core installed\n')
+  } else {
+    process.stdout.write(
+      `⚠️ Install failed (${installResult.warning || 'unknown error'}). Run manually: ${getInstallCommand(packageManager)}\n`,
+    )
+  }
 
   const verified = await verifySecretKey(apiBaseUrl, exchange.secretKey)
   if (verified.ok) {
-    process.stdout.write('✓ Connected to SolvaPay\n')
-    return
+    process.stdout.write('✅ Secret key verified with SolvaPay\n')
+  } else {
+    process.stdout.write(
+      `⚠️ Verification failed, but setup can still continue. Details: ${verified.warning}\n`,
+    )
   }
 
-  process.stdout.write(
-    `! Key written, but verification failed. You can continue. Details: ${verified.warning}\n`,
-  )
+  process.stdout.write('\n')
+  printQuickStart()
 }

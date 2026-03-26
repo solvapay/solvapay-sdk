@@ -11,6 +11,11 @@ export type EnvWriteResult = {
   action: 'created' | 'appended' | 'updated' | 'unchanged'
 }
 
+export type GitignoreEnvResult = {
+  filePath: string
+  action: 'created' | 'appended' | 'unchanged'
+}
+
 type EnvWriteOptions = {
   cwd?: string
   confirmOverwrite?: () => Promise<boolean>
@@ -25,12 +30,37 @@ const askOverwrite = async (): Promise<boolean> => {
   const rl = readline.createInterface({ input: stdin, output: stdout })
   try {
     const answer = (await rl.question(
-      'A SolvaPay key already exists. Overwrite? (y/n) ',
+      "You're already set up. Overwrite SOLVAPAY_SECRET_KEY? (y/N) ",
     )).trim().toLowerCase()
     return answer === 'y' || answer === 'yes'
   } finally {
     rl.close()
   }
+}
+
+const hasEnvGitignoreEntry = (content: string): boolean =>
+  content
+    .split('\n')
+    .map(line => line.trim())
+    .some(line => line === '.env' || line === '/.env')
+
+export const ensureEnvInGitignore = async (cwd: string = process.cwd()): Promise<GitignoreEnvResult> => {
+  const gitignorePath = path.join(cwd, '.gitignore')
+  const exists = await envFileExists(gitignorePath)
+
+  if (!exists) {
+    await writeFile(gitignorePath, '.env\n', 'utf8')
+    return { filePath: gitignorePath, action: 'created' }
+  }
+
+  const currentContent = await readFile(gitignorePath, 'utf8')
+  if (hasEnvGitignoreEntry(currentContent)) {
+    return { filePath: gitignorePath, action: 'unchanged' }
+  }
+
+  const next = `${normalizeTrailingNewline(currentContent)}.env\n`
+  await writeFile(gitignorePath, next, 'utf8')
+  return { filePath: gitignorePath, action: 'appended' }
 }
 
 const envFileExists = async (envPath: string): Promise<boolean> => {
