@@ -39,6 +39,7 @@ const PACKAGES_TO_TAG = [
   '@solvapay/server',
   '@solvapay/auth',
   '@solvapay/next',
+  '@solvapay/cli',
   'create-solvapay-app',
 ]
 
@@ -137,6 +138,7 @@ function main(): void {
   console.log('\n📝 Verify the tags:')
   console.log(`  npm dist-tag ls @solvapay/core`)
   console.log(`  npm dist-tag ls @solvapay/react`)
+  console.log(`  npm dist-tag ls @solvapay/cli`)
   console.log()
 }
 

@@ -16,6 +16,7 @@ const PACKAGES_TO_CHECK = [
   { name: '@solvapay/server', path: 'packages/server' },
   { name: '@solvapay/auth', path: 'packages/auth' },
   { name: '@solvapay/next', path: 'packages/next' },
+  { name: '@solvapay/cli', path: 'packages/cli' },
   { name: 'create-solvapay-app', path: 'packages/create-solvapay-app' },
 ]
 

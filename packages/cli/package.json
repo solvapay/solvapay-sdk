@@ -1,5 +1,5 @@
 {
-  "name": "solvapay",
+  "name": "@solvapay/cli",
   "version": "1.0.0-preview.18",
   "description": "SolvaPay CLI",
   "type": "module",
@@ -16,7 +16,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/solvapay/solvapay-sdk.git",
-    "directory": "packages/solvapay"
+    "directory": "packages/cli"
   },
   "engines": {
     "node": ">=18.17"
