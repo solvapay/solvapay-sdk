@@ -1,28 +1,41 @@
 /**
  * Validate Origin header to prevent DNS rebinding attacks
  */
-export function validateOrigin(origin: string | undefined, host: string): boolean {
+export function normalizeOrigin(origin: string): string | null {
+  try {
+    const url = new URL(origin)
+    return url.origin.toLowerCase()
+  } catch {
+    return null
+  }
+}
+
+export function parseAllowedOrigins(rawAllowedOrigins?: string): string[] {
+  if (!rawAllowedOrigins?.trim()) {
+    return []
+  }
+
+  return rawAllowedOrigins
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(origin => origin.length > 0)
+    .map(origin => normalizeOrigin(origin))
+    .filter((origin): origin is string => origin !== null)
+}
+
+export function validateOrigin(origin: string | undefined, allowedOrigins: string[]): boolean {
   if (!origin) {
     // Allow requests without Origin header (e.g., from same origin or curl)
     return true
   }
 
-  try {
-    const originUrl = new URL(origin)
-    // For localhost, allow localhost and 127.0.0.1
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return (
-        originUrl.hostname === 'localhost' ||
-        originUrl.hostname === '127.0.0.1' ||
-        originUrl.hostname === '[::1]'
-      )
-    }
-    // For production, validate against allowed origins
-    // You should configure this based on your deployment
-    return originUrl.hostname === host
-  } catch {
+  const normalizedOrigin = normalizeOrigin(origin)
+  if (!normalizedOrigin) {
     return false
   }
+
+  const allowedSet = new Set(allowedOrigins.map(allowedOrigin => allowedOrigin.toLowerCase()))
+  return allowedSet.has(normalizedOrigin)
 }
 
 /**

@@ -116,13 +116,17 @@ export const POST = solvaPay.payable({ product: 'my-api' }).next(
   {
     getCustomerRef: async req => {
       const userId = await auth.getUserIdFromRequest(req)
-      return userId ?? 'anonymous'
+      if (!userId) {
+        throw new Error('Unauthorized')
+      }
+      return userId
     },
   },
 )
 ```
 
 This automatically extracts the user ID from authentication tokens and uses it as the customer reference for paywall checks.
+Fail closed on missing/invalid auth. Do not fall back to shared identities like `anonymous`.
 
 For MCP bearer-token flows, the SDK also exports helper utilities:
 
@@ -139,7 +143,9 @@ const handler = solvaPay.payable({ product: 'my-api' }).mcp(
       try {
         return getCustomerRefFromBearerAuthHeader(args._authHeader as string | undefined)
       } catch (error) {
-        if (error instanceof McpBearerAuthError) return 'anonymous'
+        if (error instanceof McpBearerAuthError) {
+          throw new Error('Unauthorized')
+        }
         throw error
       }
     },
