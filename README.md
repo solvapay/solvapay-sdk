@@ -52,7 +52,7 @@ npm install @solvapay/auth
 
 ## Packages
 
-The SDK consists of **6 published packages**:
+The SDK consists of **8 published packages**:
 
 - **`@solvapay/core`** - Types, schemas, and shared utilities
 - **`@solvapay/server`** - Universal server SDK (Node + Edge runtime)
@@ -60,6 +60,8 @@ The SDK consists of **6 published packages**:
 - **`@solvapay/react-supabase`** - Supabase auth adapter for React Provider
 - **`@solvapay/auth`** - Authentication adapters and utilities for extracting user IDs from requests
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
+- **`create-solvapay-app`** - Project scaffolding CLI for starter apps
+- **`solvapay`** - CLI for auth bootstrap (`npx solvapay init`)
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed package design and boundaries.
 
@@ -353,7 +355,7 @@ See [`examples/README.md`](./examples/README.md) for detailed setup instructions
 
 ## Architecture
 
-This is a **monorepo** with 6 published packages built using Turborepo, tsup, and pnpm workspaces.
+This is a **monorepo** with 8 published packages built using Turborepo, tsup, and pnpm workspaces.
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for:
 

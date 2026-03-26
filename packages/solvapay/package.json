@@ -1,0 +1,39 @@
+{
+  "name": "solvapay",
+  "version": "1.0.0-preview.18",
+  "description": "SolvaPay CLI",
+  "type": "module",
+  "bin": {
+    "solvapay": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git",
+    "directory": "packages/solvapay"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}
