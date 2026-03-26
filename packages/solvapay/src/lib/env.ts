@@ -16,7 +16,7 @@ type EnvWriteOptions = {
   confirmOverwrite?: () => Promise<boolean>
 }
 
-const envKeyRegex = new RegExp(`^\\s*${SOLVAPAY_SECRET_KEY}\\s*=`, 'm')
+const envKeyRegex = new RegExp(`^[ \\t]*${SOLVAPAY_SECRET_KEY}[ \\t]*=`, 'm')
 
 const normalizeTrailingNewline = (content: string): string =>
   content.endsWith('\n') ? content : `${content}\n`
@@ -71,7 +71,7 @@ export const writeSolvaPaySecretToEnv = async (
   }
 
   const updatedContent = currentContent.replace(
-    /^\s*SOLVAPAY_SECRET_KEY\s*=.*$/m,
+    /^[ \t]*SOLVAPAY_SECRET_KEY[ \t]*=.*$/m,
     keyLine,
   )
   await writeFile(envPath, updatedContent, 'utf8')

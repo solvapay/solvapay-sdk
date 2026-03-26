@@ -16,7 +16,7 @@ export type ExchangeResponse = {
 }
 
 type SpinnerController = {
-  stop: () => void
+  stop: (isSuccess?: boolean) => void
 }
 
 const sleep = async (ms: number): Promise<void> =>
@@ -34,9 +34,9 @@ const startSpinner = (message: string): SpinnerController => {
   }, 100)
 
   return {
-    stop: () => {
+    stop: (isSuccess = false) => {
       clearInterval(timer)
-      process.stdout.write(`\r${message} ✓\n`)
+      process.stdout.write(`\r${message}${isSuccess ? ' ✓' : '  '}\n`)
     },
   }
 }
@@ -73,6 +73,7 @@ export const waitForExchange = async (
 ): Promise<ExchangeResponse> => {
   const startedAt = Date.now()
   const spinner = startSpinner('Waiting for you to finish in the browser...')
+  let isSuccess = false
 
   try {
     while (Date.now() - startedAt < FIVE_MINUTES_MS) {
@@ -102,6 +103,7 @@ export const waitForExchange = async (
         continue
       }
 
+      isSuccess = payload.status === 'complete'
       return payload
     }
 
@@ -109,7 +111,7 @@ export const waitForExchange = async (
       status: 'expired',
     }
   } finally {
-    spinner.stop()
+    spinner.stop(isSuccess)
   }
 }
 

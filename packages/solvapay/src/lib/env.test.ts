@@ -69,4 +69,21 @@ describe('writeSolvaPaySecretToEnv', () => {
       await rm(cwd, { recursive: true, force: true })
     }
   })
+
+  it('preserves blank lines before key when overwriting', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'DB_URL=db\n\nSOLVAPAY_SECRET_KEY=sk_live_old\n', 'utf8')
+      const result = await writeSolvaPaySecretToEnv('sk_live_new', {
+        cwd,
+        confirmOverwrite: async () => true,
+      })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toBe('DB_URL=db\n\nSOLVAPAY_SECRET_KEY=sk_live_new\n')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
 })
