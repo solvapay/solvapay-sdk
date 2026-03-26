@@ -30,6 +30,7 @@ const PACKAGES = [
   'packages/server/package.json',
   'packages/auth/package.json',
   'packages/next/package.json',
+  'packages/cli/package.json',
   'packages/create-solvapay-app/package.json',
 ]
 

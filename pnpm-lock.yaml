@@ -688,7 +688,7 @@ importers:
         specifier: ^2.0.5
         version: 2.1.9(@types/node@25.5.0)(jsdom@23.2.0)(lightningcss@1.32.0)
 
-  packages/solvapay:
+  packages/cli:
     dependencies:
       open:
         specifier: ^10.1.0

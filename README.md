@@ -61,7 +61,7 @@ The SDK consists of **8 published packages**:
 - **`@solvapay/auth`** - Authentication adapters and utilities for extracting user IDs from requests
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
 - **`create-solvapay-app`** - Project scaffolding CLI for starter apps
-- **`solvapay`** - CLI for auth bootstrap (`npx solvapay init`)
+- **`@solvapay/cli`** - CLI for auth bootstrap (`npx solvapay init`)
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed package design and boundaries.
 
