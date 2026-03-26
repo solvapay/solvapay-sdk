@@ -1,0 +1,26 @@
+.main {
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: 20px;
+  background: var(--color-background-primary, #0a0a0a);
+  color: var(--color-text-primary, #f5f5f5);
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: var(--font-heading-md-size, 1.5rem);
+}
+
+#time-value {
+  margin: 0 0 16px;
+  color: var(--color-text-secondary, #d4d4d4);
+}
+
+button {
+  border: 1px solid var(--color-border-primary, #525252);
+  border-radius: var(--border-radius-md, 10px);
+  padding: 8px 12px;
+  background: var(--color-background-secondary, #171717);
+  color: var(--color-text-primary, #f5f5f5);
+  cursor: pointer;
+}
