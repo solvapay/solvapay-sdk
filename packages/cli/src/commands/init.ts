@@ -6,7 +6,7 @@ import {
 } from '../lib/browser-auth'
 import chalk from 'chalk'
 import { ensureEnvInGitignore, writeSolvaPaySecretToEnv } from '../lib/env'
-import { getInstallCommand, installSolvaPaySdk } from '../lib/install'
+import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from '../lib/install'
 import { detectPackageManager, ensureNodeProject } from '../lib/project'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
@@ -34,6 +34,30 @@ You're all set! Here's how to get started:
 
 Docs: https://docs.solvapay.com
 `)
+}
+
+const createInstallProgressReporter = (): ((message: string) => void) => {
+  if (!process.stdout.isTTY) {
+    return message => {
+      process.stdout.write(`📦 ${message}\n`)
+    }
+  }
+
+  let lastRenderedLength = 0
+  return message => {
+    const line = `📦 ${message}`
+    const paddedLine =
+      line.length < lastRenderedLength ? `${line}${' '.repeat(lastRenderedLength - line.length)}` : line
+
+    process.stdout.write(`\r${paddedLine}`)
+    lastRenderedLength = line.length
+  }
+}
+
+const finishInstallProgressReporter = (): void => {
+  if (process.stdout.isTTY) {
+    process.stdout.write('\n')
+  }
 }
 
 export const runInitCommand = async (): Promise<void> => {
@@ -94,13 +118,19 @@ export const runInitCommand = async (): Promise<void> => {
     process.stdout.write('🔒 Added .env to .gitignore\n')
   }
 
-  process.stdout.write('📦 Installing @solvapay/server and @solvapay/core...\n')
-  const installResult = await installSolvaPaySdk(packageManager, cwd)
+  const onInstallProgress = createInstallProgressReporter()
+  onInstallProgress('Resolving packages')
+  const installResult = await installSolvaPaySdk(packageManager, cwd, onInstallProgress)
+  finishInstallProgressReporter()
   if (installResult.ok) {
-    process.stdout.write('✅ @solvapay/server and @solvapay/core installed\n')
+    process.stdout.write('✅ SolvaPay SDK packages installed\n')
+    const installedPackages = getSolvaPayBasePackages()
+    const packageList = installedPackages.join(', ')
+    process.stdout.write(`📦 Added ${installedPackages.length} packages: ${packageList}\n`)
   } else {
+    const manualInstallCommand = await getInstallCommand(packageManager)
     process.stdout.write(
-      `⚠️ Install failed (${installResult.warning || 'unknown error'}). Run manually: ${getInstallCommand(packageManager)}\n`,
+      `⚠️ Install failed (${installResult.warning || 'unknown error'}). Run manually: ${manualInstallCommand}\n`,
     )
   }
 

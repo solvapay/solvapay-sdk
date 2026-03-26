@@ -20,7 +20,7 @@
  *   4. Maintains version consistency across all packages
  *
  * Usage (for GitHub Actions):
- *   pnpm tag:latest 1.0.0-preview.9    # Tags specific version as latest
+ *   pnpm tag:latest 1.0.1              # Tags specific version as latest
  *   pnpm tag:latest                    # Uses current version from core package
  *
  * Prerequisites:

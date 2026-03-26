@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/server",
-  "version": "1.0.0-preview.18",
+  "version": "1.0.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -59,12 +59,12 @@
     "@solvapay/auth": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/test-utils": "workspace:^",
-    "dotenv": "^17.2.3",
-    "openapi-typescript": "^7.4.4",
-    "stripe": "^17.3.1",
-    "tsup": "^8.0.1",
-    "tsx": "^4.20.5",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "dotenv": "^17.3.1",
+    "openapi-typescript": "^7.13.0",
+    "stripe": "^21.0.1",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
   }
 }

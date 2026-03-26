@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/cli",
-  "version": "1.0.0-preview.18",
+  "version": "1.0.1",
   "description": "SolvaPay CLI",
   "type": "module",
   "bin": {
@@ -34,12 +34,12 @@
     "detect-package-manager": "^3.0.2",
     "fs-extra": "^11.3.4",
     "inquirer": "^13.3.2",
-    "open": "^10.1.0",
+    "open": "^11.0.0",
     "ora": "^9.3.0"
   },
   "devDependencies": {
-    "tsup": "^8.0.1",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
   }
 }

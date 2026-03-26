@@ -1,12 +1,11 @@
 name: Tag Version as Latest
 
 # Manual workflow to promote a specific version to the "latest" npm dist-tag
-# This is useful for promoting preview versions to latest
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to tag as latest (e.g., 1.0.0-preview.9)'
+        description: 'Version to tag as latest (e.g., 1.0.1 or 1.0.1-preview.1)'
         required: true
         type: string
       dry_run:

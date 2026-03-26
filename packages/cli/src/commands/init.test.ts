@@ -15,6 +15,7 @@ vi.mock('../lib/env', () => ({
 
 vi.mock('../lib/install', () => ({
   getInstallCommand: vi.fn(),
+  getSolvaPayBasePackages: vi.fn(),
   installSolvaPaySdk: vi.fn(),
 }))
 
@@ -30,7 +31,7 @@ import {
   waitForExchange,
 } from '../lib/browser-auth'
 import { ensureEnvInGitignore, writeSolvaPaySecretToEnv } from '../lib/env'
-import { getInstallCommand, installSolvaPaySdk } from '../lib/install'
+import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from '../lib/install'
 import { detectPackageManager, ensureNodeProject } from '../lib/project'
 
 describe('runInitCommand', () => {
@@ -38,6 +39,7 @@ describe('runInitCommand', () => {
 
   beforeEach(() => {
     output.length = 0
+    vi.clearAllMocks()
     vi.restoreAllMocks()
     vi.mocked(ensureNodeProject).mockResolvedValue({
       filePath: '/tmp/project/package.json',
@@ -50,10 +52,15 @@ describe('runInitCommand', () => {
     })
     vi.mocked(installSolvaPaySdk).mockResolvedValue({
       ok: true,
-      command: 'npm install @solvapay/server@latest @solvapay/core@latest',
+      command: 'npm install @solvapay/server@latest @solvapay/core@latest @solvapay/auth@latest',
     })
-    vi.mocked(getInstallCommand).mockReturnValue(
-      'npm install @solvapay/server@latest @solvapay/core@latest',
+    vi.mocked(getSolvaPayBasePackages).mockReturnValue([
+      '@solvapay/server',
+      '@solvapay/core',
+      '@solvapay/auth',
+    ])
+    vi.mocked(getInstallCommand).mockResolvedValue(
+      'npm install @solvapay/server@latest @solvapay/core@latest @solvapay/auth@latest',
     )
     vi.spyOn(process.stdout, 'write').mockImplementation(chunk => {
       output.push(String(chunk))
@@ -130,11 +137,11 @@ describe('runInitCommand', () => {
     })
     vi.mocked(installSolvaPaySdk).mockResolvedValue({
       ok: false,
-      command: 'npm install @solvapay/server@latest @solvapay/core@latest',
+      command: 'npm install @solvapay/server@latest @solvapay/core@latest @solvapay/auth@latest',
       warning: 'Installer exited with code 1',
     })
-    vi.mocked(getInstallCommand).mockReturnValue(
-      'npm install @solvapay/server@latest @solvapay/core@latest',
+    vi.mocked(getInstallCommand).mockResolvedValue(
+      'npm install @solvapay/server@latest @solvapay/core@latest @solvapay/auth@latest',
     )
     vi.mocked(verifySecretKey).mockResolvedValue({ ok: true })
 
@@ -142,7 +149,7 @@ describe('runInitCommand', () => {
 
     expect(output.join('')).toContain('Install failed')
     expect(output.join('')).toContain(
-      'Run manually: npm install @solvapay/server@latest @solvapay/core@latest',
+      'Run manually: npm install @solvapay/server@latest @solvapay/core@latest @solvapay/auth@latest',
     )
   })
 

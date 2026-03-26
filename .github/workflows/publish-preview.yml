@@ -54,6 +54,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check dependency health
+        run: pnpm deps:check
+
       # TODO: Re-enable example app tests once changes are merged from main branch and test issues are fixed
       # Note: Example app tests (@example/*) are currently excluded via --filter=!@example/* in package.json test script
       - name: Run tests
