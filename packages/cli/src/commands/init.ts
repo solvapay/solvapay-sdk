@@ -93,7 +93,7 @@ export const runInitCommand = async (): Promise<void> => {
   }
   if (exchange.status === 'expired') {
     throw new Error(
-      'Timed out after 5 minutes waiting for authentication. Run `solvapay init` again.',
+      'Timed out after 10 minutes waiting for authentication. Run `solvapay init` again.',
     )
   }
   if (exchange.status !== 'complete' || !exchange.secretKey) {
