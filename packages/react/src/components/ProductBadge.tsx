@@ -9,7 +9,8 @@ import type { ProductBadgeProps } from '../types'
  * Displays purchase status with complete styling control.
  * Supports render props, custom components, or className patterns.
  *
- * Hidden while loading or when no active purchase exists to prevent flickering.
+ * Hidden before initial data load or when no active purchase exists.
+ * Remains visible during background refetches to avoid flickering.
  *
  * @example
  * ```tsx
@@ -32,9 +33,16 @@ export const ProductBadge: React.FC<ProductBadgeProps> = ({
   className,
 }) => {
   const { purchases, loading, hasPaidPurchase, activePurchase } = usePurchase()
+  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!loading) {
+      setHasLoadedOnce(true)
+    }
+  }, [loading])
 
   const planToDisplay = activePurchase?.productName || null
-  const shouldShow = !loading && planToDisplay !== null
+  const shouldShow = planToDisplay !== null && (!loading || hasLoadedOnce)
 
   if (children) {
     return <>{children({ purchases, loading, displayPlan: planToDisplay, shouldShow })}</>

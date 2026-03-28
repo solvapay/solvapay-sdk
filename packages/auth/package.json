@@ -46,7 +46,7 @@
     "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
-    "jose": "^5.0.0"
+    "jose": "^6.2.2"
   },
   "devDependencies": {
     "tsup": "^8.5.1",
