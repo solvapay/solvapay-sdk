@@ -21,7 +21,7 @@ In scope:
 - `@solvapay/react` — types, hooks, components
 - `@solvapay/next` — helpers, cache types
 - `@solvapay/core` — minimal (no agent references today)
-- All 5 example apps + shared utilities
+- All example apps + shared utilities
 - API docs regeneration (typedoc)
 
 Out of scope:
@@ -516,16 +516,6 @@ No changes required (D19, D20).
 - `app/page.tsx`, `app/components/Navigation.tsx`: read new env var, update API body
 - `app/api/create-checkout-session/route.ts`: body `agentRef` -> `productRef`
 
-**`examples/nextjs-openai-custom-gpt-actions/`**: Heaviest changes (13 files).
-
-- `.env.local`, `.env.dev`, `env.example`: `NEXT_PUBLIC_AGENT_REF` -> `NEXT_PUBLIC_PRODUCT_REF`
-- `package.json`: `setup:env` script `SOLVAPAY_AGENT` -> `SOLVAPAY_PRODUCT`
-- `cloudbuild-dev.yaml`: build arg rename
-- `src/lib/schemas/index.ts`: zod schema `agent` field -> `product`
-- `src/app/api/tasks/route.ts`, `[id]/route.ts`: param renames
-- `src/app/api/create-checkout-session/route.ts`: body rename
-- Test files: fixture and assertion updates
-
 ## 6. New Types Summary
 
 Types introduced or updated by this refactoring (no `PaymentInfo` — billing data lives on `PurchaseInfo`):
@@ -624,16 +614,15 @@ interface PurchaseGateProps {
 29. Update `examples/mcp-basic/`
 30. Update `examples/checkout-demo/`
 31. Update `examples/hosted-checkout-demo/`
-32. Update `examples/nextjs-openai-custom-gpt-actions/`
-33. Verify all examples build
+32. Verify all examples build
 
 ### Phase 6: Docs and Release
 
-34. Regenerate API docs: `pnpm typedoc`
-35. Bump version to `1.0.0-preview.19`
-36. Full monorepo build: `pnpm build`
-37. Full test suite: `pnpm test`
-38. Publish
+33. Regenerate API docs: `pnpm typedoc`
+34. Bump version to `1.0.0-preview.19`
+35. Full monorepo build: `pnpm build`
+36. Full test suite: `pnpm test`
+37. Publish
 
 ## 8. Acceptance Criteria
 
@@ -648,7 +637,7 @@ interface PurchaseGateProps {
 - `PurchaseInfo` exposes `productName`, `productReference`, `planType`, `isRecurring`, `amount`, `transactionId`, `usage` fields.
 - `PurchaseGate` supports both `requireProduct` and `requirePlan` props.
 - `useCheckout` accepts options object: `useCheckout({ planRef, productRef })`.
-- All 5 example apps build and reference `NEXT_PUBLIC_PRODUCT_REF` / `SOLVAPAY_PRODUCT`.
+- All example apps build and reference `NEXT_PUBLIC_PRODUCT_REF` / `SOLVAPAY_PRODUCT`.
 
 ## 9. Risks and Mitigations
 

@@ -41,7 +41,7 @@ async function resolveCustomerRef(authHeader?: string): Promise<string | null> {
     return null
   }
 
-  const response = await fetch(`${oauthBaseUrl}/v1/oauth/userinfo`, {
+  const response = await fetch(`${oauthBaseUrl}/v1/customer/auth/userinfo`, {
     method: 'GET',
     headers: {
       Authorization: authHeader,
@@ -87,18 +87,18 @@ app.get('/.well-known/oauth-authorization-server', (_req, res) => {
   }
 
   const registrationEndpoint =
-    `${oauthBaseUrl}/v1/oauth/register?product_ref=${encodeURIComponent(solvapayProductRef)}`
+    `${oauthBaseUrl}/v1/customer/auth/register?product_ref=${encodeURIComponent(solvapayProductRef)}`
 
   res.json({
     issuer: oauthBaseUrl,
-    authorization_endpoint: `${oauthBaseUrl}/v1/oauth/authorize`,
-    token_endpoint: `${oauthBaseUrl}/v1/oauth/token`,
+    authorization_endpoint: `${oauthBaseUrl}/v1/customer/auth/authorize`,
+    token_endpoint: `${oauthBaseUrl}/v1/customer/auth/token`,
     registration_endpoint: registrationEndpoint,
     token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     scopes_supported: ['openid', 'profile', 'email'],
-    code_challenge_methods_supported: ['S256', 'plain'],
+    code_challenge_methods_supported: ['S256'],
   })
 })
 

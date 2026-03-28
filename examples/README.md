@@ -55,25 +55,6 @@ The server will start on `http://localhost:3001`
 - `GET /tasks/:id` - Get a specific task (protected)
 - `DELETE /tasks/:id` - Delete a task (protected)
 
-### Next.js OpenAI Custom GPT Actions (`nextjs-openai-custom-gpt-actions`)
-
-A Next.js application with React payment components demonstrating:
-
-- Payment flow using `SolvaPayProvider` and `PaymentForm`
-- Stripe integration for payment processing
-- Interactive checkout UI
-- OpenAI Custom GPT Actions integration
-
-**Run the example:**
-
-```bash
-cd examples/nextjs-openai-custom-gpt-actions
-pnpm install
-pnpm dev
-```
-
-The application will start on `http://localhost:3000`
-
 ### Checkout Demo (`checkout-demo`)
 
 A full-featured Next.js checkout application demonstrating:
@@ -171,10 +152,6 @@ PORT=3001
    ```bash
    # Express example (runs in stub mode by default)
    cd examples/express-basic
-   pnpm dev
-
-   # Next.js OpenAI Custom GPT Actions example
-   cd examples/nextjs-openai-custom-gpt-actions
    pnpm dev
 
    # Checkout demo example

@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 /**
- * Tag a specific version (or current version) of all @solvapay packages as "latest"
+ * Tag a specific version (or current version) of all published packages as "latest"
  *
  * ⚠️  INTERNAL SCRIPT - Used by GitHub Actions workflow
  *
@@ -15,17 +15,17 @@
  *
  * What it does:
  *   1. Verifies each package version exists on npm
- *   2. Tags all published @solvapay packages at that version as "latest"
+ *   2. Tags all published packages at that version as "latest"
  *   3. Skips any packages that haven't been published yet
  *   4. Maintains version consistency across all packages
  *
  * Usage (for GitHub Actions):
- *   pnpm tag:latest 1.0.0-preview.9    # Tags specific version as latest
+ *   pnpm tag:latest 1.0.1              # Tags specific version as latest
  *   pnpm tag:latest                    # Uses current version from core package
  *
  * Prerequisites:
  *   - Must be authenticated with npm (NODE_AUTH_TOKEN in CI)
- *   - Must have publish permissions for @solvapay packages
+ *   - Must have publish permissions for SolvaPay packages
  */
 
 import { readFileSync } from 'fs'
@@ -39,7 +39,7 @@ const PACKAGES_TO_TAG = [
   '@solvapay/server',
   '@solvapay/auth',
   '@solvapay/next',
-  'create-solvapay-app',
+  'solvapay',
 ]
 
 function getCurrentVersion(): string {
@@ -137,6 +137,7 @@ function main(): void {
   console.log('\n📝 Verify the tags:')
   console.log(`  npm dist-tag ls @solvapay/core`)
   console.log(`  npm dist-tag ls @solvapay/react`)
+  console.log(`  npm dist-tag ls solvapay`)
   console.log()
 }
 

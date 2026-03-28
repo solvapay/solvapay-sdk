@@ -52,7 +52,7 @@ npm install @solvapay/auth
 
 ## Packages
 
-The SDK consists of **6 published packages**:
+The SDK consists of **7 published packages**:
 
 - **`@solvapay/core`** - Types, schemas, and shared utilities
 - **`@solvapay/server`** - Universal server SDK (Node + Edge runtime)
@@ -60,6 +60,7 @@ The SDK consists of **6 published packages**:
 - **`@solvapay/react-supabase`** - Supabase auth adapter for React Provider
 - **`@solvapay/auth`** - Authentication adapters and utilities for extracting user IDs from requests
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
+- **`solvapay`** - CLI for auth bootstrap (`npx solvapay init`)
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed package design and boundaries.
 
@@ -324,19 +325,6 @@ Hosted checkout flow using redirect-based payments:
 cd examples/hosted-checkout-demo && pnpm dev
 ```
 
-### [nextjs-openai-custom-gpt-actions](./examples/nextjs-openai-custom-gpt-actions)
-
-OpenAI Custom GPT Actions integration:
-
-- OAuth 2.0 authentication flow
-- Paywall-protected API endpoints
-- OpenAPI schema generation
-- Payment flow for GPT Actions
-
-```bash
-cd examples/nextjs-openai-custom-gpt-actions && pnpm dev
-```
-
 ### [mcp-basic](./examples/mcp-basic)
 
 Model Context Protocol server with paywall:
@@ -353,7 +341,7 @@ See [`examples/README.md`](./examples/README.md) for detailed setup instructions
 
 ## Architecture
 
-This is a **monorepo** with 6 published packages built using Turborepo, tsup, and pnpm workspaces.
+This is a **monorepo** with 7 published packages built using Turborepo, tsup, and pnpm workspaces.
 
 See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for:
 

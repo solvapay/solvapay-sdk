@@ -16,7 +16,7 @@ const PACKAGES_TO_CHECK = [
   { name: '@solvapay/server', path: 'packages/server' },
   { name: '@solvapay/auth', path: 'packages/auth' },
   { name: '@solvapay/next', path: 'packages/next' },
-  { name: 'create-solvapay-app', path: 'packages/create-solvapay-app' },
+  { name: 'solvapay', path: 'packages/cli' },
 ]
 
 interface PackageInfo {
@@ -97,7 +97,7 @@ function main(): void {
   console.log('Testing pnpm filter pattern...\n')
   try {
     const result = execSync(
-      'pnpm --filter=@solvapay/* --filter=create-solvapay-app list --depth=0 --json',
+      'pnpm --filter=@solvapay/* --filter=solvapay list --depth=0 --json',
       { encoding: 'utf-8', cwd: process.cwd() },
     )
 
@@ -105,7 +105,7 @@ function main(): void {
     const packageNames = filtered.map((pkg: any) => pkg.name).sort()
 
     console.log(
-      `Found ${packageNames.length} package(s) matching filter '@solvapay/*' and 'create-solvapay-app':`,
+      `Found ${packageNames.length} package(s) matching filters '@solvapay/*' and 'solvapay':`,
     )
     packageNames.forEach((name: string) => {
       const pkg = packages.find(p => p.name === name)
@@ -127,9 +127,9 @@ function main(): void {
   console.log('\n📝 Next steps:')
   console.log('  1. Ensure all packages are built: pnpm build:packages')
   console.log(
-    '  2. Test dry-run publish: pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --dry-run --tag preview',
+    '  2. Test dry-run publish: pnpm --filter=@solvapay/* --filter=solvapay publish --dry-run',
   )
-  console.log('  3. If dry-run looks good, publish: pnpm publish:preview')
+  console.log('  3. If dry-run looks good, publish: pnpm publish:packages')
   console.log()
 }
 

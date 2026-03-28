@@ -274,7 +274,7 @@ export const config = {
 
 ```typescript
 // src/proxy.ts (in src/ folder, not project root)
-import { createSupabaseAuthMiddleware } from '@solvapay/next'
+import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
 
 // Use 'proxy' export for Next.js 16 (no deprecation warning)
 export const proxy = createSupabaseAuthMiddleware({
@@ -289,21 +289,21 @@ export const config = {
 **File Location Notes:**
 
 - **Next.js 15**: Place `middleware.ts` at project root
-- **Next.js 16 without `src/` folder**: Place `middleware.ts` or `proxy.ts` at project root
-- **Next.js 16 with `src/` folder**: Place `src/proxy.ts` or `src/middleware.ts` (in `src/` folder, not root)
+- **Next.js 16 without `src/` folder**: Place `proxy.ts` at project root
+- **Next.js 16 with `src/` folder**: Place `src/proxy.ts` (in `src/` folder, not root)
 
-> **Note:** Next.js 16 renamed "middleware" to "proxy". You can use either export name, but `proxy` is recommended to avoid deprecation warnings.
+> **Note:** Next.js 16 renamed "middleware" to "proxy". Use `proxy` to avoid deprecation warnings.
 
 ### Custom Middleware
 
 Alternatively, you can create your own middleware:
 
 ```typescript
-// middleware.ts (or src/proxy.ts for Next.js 16)
+// proxy.ts (or src/proxy.ts for Next.js 16)
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Extract user ID from your auth system
   const userId = await getUserIdFromAuth(request)
 

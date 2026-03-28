@@ -397,6 +397,28 @@ describe('MCP Streamable HTTP Transport with Paywall', () => {
     })
   })
 
+  describe('Origin validation', () => {
+    it('rejects disallowed browser origins', async () => {
+      const response = await fetch(`http://localhost:${MCP_PORT}/health`, {
+        headers: {
+          Origin: 'http://localhost:5173',
+        },
+      })
+
+      expect(response.status).toBe(403)
+    })
+
+    it('allows configured default server origin', async () => {
+      const response = await fetch(`http://localhost:${MCP_PORT}/health`, {
+        headers: {
+          Origin: `http://localhost:${MCP_PORT}`,
+        },
+      })
+
+      expect(response.status).toBe(200)
+    })
+  })
+
   describe('Tool Listing', () => {
     it('should list available tools', async () => {
       // Initialize first

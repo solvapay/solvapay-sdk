@@ -109,7 +109,12 @@ Or create a `.env` file:
 MCP_TRANSPORT=http
 MCP_PORT=3003
 MCP_HOST=localhost  # or 0.0.0.0 to bind to all interfaces
+MCP_ALLOWED_ORIGINS=http://localhost:3003
 ```
+
+`MCP_ALLOWED_ORIGINS` is a comma-separated allowlist of browser origins.
+By default, only the server origin is allowed. Add your frontend dev origin explicitly
+(for example `http://localhost:5173`) when testing browser clients.
 
 **Features:**
 - Uses official `@modelcontextprotocol/sdk` StreamableHTTPServerTransport
@@ -120,6 +125,11 @@ MCP_HOST=localhost  # or 0.0.0.0 to bind to all interfaces
 - Origin header validation for security
 - Resumability support with `Last-Event-ID`
 - Server-Sent Events (SSE) streaming support
+
+Security note:
+- This example is intentionally minimal and should not be used as-is for production auth.
+- HTTP mode now requires explicit origin allowlisting for browser access.
+- Requests without an `Origin` header (for example `curl`/server-to-server) are still allowed.
 
 **MCP Endpoint:**
 - `POST /mcp` - Send JSON-RPC messages (initialize, tool calls, etc.)

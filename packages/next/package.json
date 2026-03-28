@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/next",
-  "version": "1.0.0-preview.18",
+  "version": "1.0.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./middleware": {
+      "types": "./dist/middleware.d.ts",
+      "import": "./dist/middleware.js",
+      "require": "./dist/middleware.cjs"
     }
   },
   "files": [
@@ -29,7 +34,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external next",
+    "build": "tsup src/index.ts src/middleware.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external next",
     "test": "vitest run || exit 0",
     "test:watch": "vitest",
     "lint": "eslint src",
@@ -45,9 +50,9 @@
   },
   "devDependencies": {
     "@solvapay/test-utils": "workspace:*",
-    "next": "^15.5.7",
-    "tsup": "^8.0.1",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "next": "^16.2.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
   }
 }

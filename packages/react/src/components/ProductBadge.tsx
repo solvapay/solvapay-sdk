@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+import React from 'react'
 import { usePurchase } from '../hooks/usePurchase'
 import type { ProductBadgeProps } from '../types'
 
@@ -9,11 +9,8 @@ import type { ProductBadgeProps } from '../types'
  * Displays purchase status with complete styling control.
  * Supports render props, custom components, or className patterns.
  *
- * Prevents flickering by hiding the badge during initial load and when no purchase exists.
- * Shows the badge once loading completes AND an active purchase exists (paid or free).
- * Badge only updates when the product name actually changes (prevents unnecessary re-renders).
- *
- * Displays the primary active purchase (paid or free) to show current product status.
+ * Hidden before initial data load or when no active purchase exists.
+ * Remains visible during background refetches to avoid flickering.
  *
  * @example
  * ```tsx
@@ -26,7 +23,7 @@ import type { ProductBadgeProps } from '../types'
  *   )}
  * </ProductBadge>
  *
- * //ClassName pattern
+ * // ClassName pattern
  * <ProductBadge className="badge badge-primary" />
  * ```
  */
@@ -36,59 +33,16 @@ export const ProductBadge: React.FC<ProductBadgeProps> = ({
   className,
 }) => {
   const { purchases, loading, hasPaidPurchase, activePurchase } = usePurchase()
-  const [displayPlan, setDisplayPlan] = useState<string | null>(null)
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false)
 
-  const lastPlanRef = useRef<string | null>(null)
-  const lastLoadingRef = useRef<boolean>(true)
-  const previousPurchasesRef = useRef<typeof purchases>(purchases)
-
-  const currentPlanName = activePurchase?.productName || null
-
-  const effectivePlanName = currentPlanName
-
-  useEffect(() => {
-    if (!loading && !hasLoadedOnce) {
+  React.useEffect(() => {
+    if (!loading) {
       setHasLoadedOnce(true)
     }
+  }, [loading])
 
-    lastLoadingRef.current = loading
-  }, [loading, hasLoadedOnce])
-
-  useEffect(() => {
-    const previousPurchases = previousPurchasesRef.current
-
-    if (previousPurchases !== purchases) {
-      if (loading) {
-        setHasLoadedOnce(false)
-      }
-
-      setDisplayPlan(null)
-      lastPlanRef.current = null
-      previousPurchasesRef.current = purchases
-    }
-  }, [purchases, loading])
-
-  useEffect(() => {
-    const currentPlan = effectivePlanName
-    const previousPlan = lastPlanRef.current
-
-    if (currentPlan !== previousPlan) {
-      if (currentPlan !== null) {
-        lastPlanRef.current = currentPlan
-        setDisplayPlan(currentPlan)
-      } else {
-        lastPlanRef.current = null
-        setDisplayPlan(null)
-      }
-    } else if (currentPlan !== null && displayPlan === null) {
-      setDisplayPlan(currentPlan)
-    }
-  }, [effectivePlanName, displayPlan])
-
-  const shouldShow = effectivePlanName !== null && hasLoadedOnce
-
-  const planToDisplay = displayPlan ?? effectivePlanName
+  const planToDisplay = activePurchase?.productName || null
+  const shouldShow = planToDisplay !== null && (!loading || hasLoadedOnce)
 
   if (children) {
     return <>{children({ purchases, loading, displayPlan: planToDisplay, shouldShow })}</>

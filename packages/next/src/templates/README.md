@@ -16,7 +16,6 @@ These templates are reference files. Users should copy the code from the documen
 
 For detailed setup instructions, see:
 
-- `packages/create-solvapay-app/guides/02-authentication.md` - Authentication guide
 - `packages/next/README.md` - Package documentation
 
 ## File Location Summary

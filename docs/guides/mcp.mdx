@@ -288,7 +288,9 @@ const handler = payable.mcp(createTask, {
     try {
       return getCustomerRefFromBearerAuthHeader(header)
     } catch (error) {
-      if (error instanceof McpBearerAuthError) return 'anonymous'
+      if (error instanceof McpBearerAuthError) {
+        throw new Error('Unauthorized')
+      }
       throw error
     }
   },
@@ -296,7 +298,8 @@ const handler = payable.mcp(createTask, {
 ```
 
 These helpers only decode claims (`customerRef`, `customer_ref`, `sub`) and do not verify signatures.
-Use them after token validation (for example with `/v1/oauth/userinfo`).
+Use them after token validation (for example with `/v1/customer/auth/userinfo`).
+Fail closed on auth failures. Do not substitute fallback identities such as `anonymous`.
 
 ### Non-hosted OAuth Bridge Pattern
 
@@ -305,7 +308,7 @@ If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP prox
 1. Serve local discovery endpoints:
    - `/.well-known/oauth-protected-resource`
    - `/.well-known/oauth-authorization-server`
-2. Point discovery metadata to SolvaPay OAuth endpoints (`/v1/oauth/*`)
+2. Point discovery metadata to SolvaPay OAuth endpoints (`/v1/customer/auth/*`)
 3. Ensure `registration_endpoint` includes `mcp_server_id`
 4. Protect `/mcp` with bearer auth and return RFC9728 `WWW-Authenticate` challenge when missing
 

@@ -22,7 +22,6 @@ description: "This document provides an overview of all available examples in th
 | [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo)                         | Next.js    | Hosted             | Supabase         | Hosted checkout     | Intermediate   |
 | [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic)                                               | MCP Server | N/A (Paywall only) | Header-based     | MCP tool protection | Simple         |
 | [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-oauth-bridge)                                 | MCP Server | N/A (Paywall only) | OAuth + Bearer   | Non-hosted MCP OAuth bridge | Advanced |
-| [nextjs-openai-custom-gpt-actions](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions) | Next.js    | Hosted             | Supabase + OAuth | OpenAI GPT Actions  | Advanced       |
 
 ## Available Examples
 
@@ -141,30 +140,6 @@ description: "This document provides an overview of all available examples in th
 
 ---
 
-### 6. Next.js OpenAI Custom GPT Actions (`nextjs-openai-custom-gpt-actions`)
-
-**Purpose**: Complete integration for OpenAI Custom GPT Actions with OAuth and paywall.
-
-**Key Features**:
-
-- Next.js 15 with App Router
-- OAuth 2.0 for OpenAI Custom GPT Actions
-- Hosted checkout flow
-- Supabase authentication
-- OpenAPI documentation generation
-- Comprehensive testing suite
-
-**Best For**:
-
-- OpenAI Custom GPT Actions integration
-- OAuth 2.0 implementation
-- Production-ready applications
-- Complex authentication flows
-
-**Documentation**: [nextjs-openai-custom-gpt-actions README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/nextjs-openai-custom-gpt-actions/README.md)
-
----
-
 ## Prerequisites
 
 Before running any example, ensure you have:
@@ -204,7 +179,6 @@ Select an example based on your needs:
 - **Need payment flow?** → Use `checkout-demo` or `hosted-checkout-demo`
 - **Building MCP server?** → Use `mcp-basic`
 - **Building non-hosted MCP + OAuth bridge?** → Use `mcp-oauth-bridge`
-- **OpenAI integration?** → Use `nextjs-openai-custom-gpt-actions`
 
 ### 3. Setup Environment
 
@@ -343,33 +317,6 @@ pnpm dev
 - `payable.mcp()` with custom customer extraction
 
 **Requires**: SolvaPay backend OAuth endpoints and MCP server reference (`MCP_SERVER_ID`)
-
----
-
-### Next.js OpenAI Custom GPT Actions
-
-**Location**: `examples/nextjs-openai-custom-gpt-actions/`
-
-**Run**:
-
-```bash
-cd examples/nextjs-openai-custom-gpt-actions
-pnpm install
-cp env.example .env.local
-# Fill in all required credentials
-pnpm build:deps
-pnpm init:db  # Setup Supabase database
-pnpm dev
-```
-
-**Features Demonstrated**:
-
-- OAuth 2.0 flow
-- OpenAI Custom GPT Actions integration
-- OpenAPI documentation
-- Comprehensive testing
-
-**Requires**: SolvaPay API key, Supabase credentials, OAuth configuration
 
 ---
 

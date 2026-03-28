@@ -7,7 +7,7 @@ description: "This document describes the automated publishing and release proce
 
 The SolvaPay SDK uses an automated publishing workflow that:
 
-- Publishes seven packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `create-solvapay-app`
+- Publishes seven packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `solvapay`
 - Uses **fixed versioning** - all packages share the same version number
 - Auto-increments the **patch** version on every push to `main` branch
 - Generates changelogs using conventional commits
@@ -193,7 +193,7 @@ Runs manually via GitHub Actions UI (or on push to `dev` if enabled):
 
 1. **Validates** the version format
 2. **Checks** which packages exist on npm at that version
-3. **Tags** all published @solvapay packages as "latest"
+3. **Tags** all published packages as "latest"
 4. **Verifies** the tags were applied correctly
 
 This workflow is useful for promoting preview versions to latest without republishing. It includes an optional **dry run mode** to preview changes before applying them.
@@ -274,7 +274,12 @@ All packages are published with **public access**:
 - `@solvapay/server`
 - `@solvapay/auth`
 - `@solvapay/next`
-- `create-solvapay-app`
+- `solvapay`
+
+### CLI package name
+
+The CLI npm package is `solvapay`.
+The CLI command is `solvapay`.
 
 ## Authentication Best Practices
 
@@ -456,7 +461,7 @@ Sometimes you may want to make a preview version the "latest" version on npm (e.
 
 - Validates the version format
 - Checks which packages exist on npm at that version
-- Tags all published @solvapay packages at that version as "latest"
+- Tags all published packages at that version as "latest"
 - Skips any packages that haven't been published yet
 - Shows verification of the tags
 - No local setup or authentication required!

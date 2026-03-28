@@ -255,14 +255,15 @@ export default function CheckoutPage() {
 
 ### Authentication Middleware
 
-Set up middleware to extract user information and make it available to API routes:
+Set up authentication middleware (implemented in `proxy.ts`) to extract user
+information and make it available to API routes:
 
 ```typescript
-// middleware.ts
+// proxy.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserIdFromRequest } from '@solvapay/auth'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Extract user ID from auth token, session, etc.
   const authToken = request.headers.get('authorization')?.replace('Bearer ', '')
 
@@ -294,11 +295,12 @@ export const config = {
 
 ### Supabase Auth Middleware
 
-If using Supabase, use the provided middleware helper:
+If using Supabase, use the provided middleware helper (exported from
+`@solvapay/next/middleware` and used from `proxy.ts`):
 
 ```typescript
-// middleware.ts
-import { createSupabaseAuthMiddleware } from '@solvapay/next'
+// proxy.ts
+import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -306,7 +308,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
-export const middleware = createSupabaseAuthMiddleware({
+export const proxy = createSupabaseAuthMiddleware({
   supabase,
   // Optional: customize which routes to protect
   protectedPaths: ['/api/protected'],
@@ -466,7 +468,7 @@ app/
         └── route.ts
 lib/
 └── solvapay.ts
-middleware.ts
+proxy.ts
 ```
 
 ### Root Layout

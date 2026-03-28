@@ -802,7 +802,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       formData.append('token', accessToken)
       formData.append('token_type_hint', 'access_token')
 
-      const response = await fetch(`${this.baseUrl}/api/oauth/revoke`, {
+      const response = await fetch(`${this.baseUrl}/v1/customer/auth/revoke`, {
         method: 'POST',
         body: formData,
       })
@@ -840,7 +840,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       formData.append('token', refreshToken)
       formData.append('token_type_hint', 'refresh_token')
 
-      const response = await fetch(`${this.baseUrl}/api/oauth/revoke`, {
+      const response = await fetch(`${this.baseUrl}/v1/customer/auth/revoke`, {
         method: 'POST',
         body: formData,
       })

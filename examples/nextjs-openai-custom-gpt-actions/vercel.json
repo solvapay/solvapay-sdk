@@ -1,5 +1,0 @@
-{
-  "buildCommand": "cd ../.. && pnpm turbo build --filter=@example/nextjs-openai-custom-gpt-actions",
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "$schema": "https://openapi.vercel.sh/vercel.json"
-}

@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest, type JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import { createMCPServer, registerMCPHandlers } from './server'
 import { SimpleEventStore } from './event-store'
-import { validateOrigin, createErrorResponse } from './utils'
+import { validateOrigin, createErrorResponse, normalizeOrigin } from './utils'
 
 export interface SessionManager {
   transports: Record<string, StreamableHTTPServerTransport>
@@ -27,10 +27,10 @@ export function createSessionManager(): SessionManager {
 /**
  * Setup CORS middleware
  */
-export function setupCORS(app: express.Application, host: string): void {
+export function setupCORS(app: express.Application, allowedOrigins: string[]): void {
   app.use((req, res, next) => {
     const origin = req.headers.origin
-    if (origin && !validateOrigin(origin, host)) {
+    if (origin && !validateOrigin(origin, allowedOrigins)) {
       res.status(403).json(createErrorResponse(-32000, 'Invalid origin'))
       return
     }
@@ -398,10 +398,22 @@ export function setupShutdownHandler(sessionManager: SessionManager): void {
   })
 }
 
+function getDefaultAllowedOrigins(bindHost: string, port: number): string[] {
+  if (bindHost === 'localhost' || bindHost === '127.0.0.1') {
+    return [`http://localhost:${port}`, `http://127.0.0.1:${port}`]
+  }
+
+  return [`http://${bindHost}:${port}`]
+}
+
 /**
  * Start HTTP transport server
  */
-export async function startHTTPTransport(port: number, host: string): Promise<void> {
+export async function startHTTPTransport(
+  port: number,
+  host: string,
+  configuredAllowedOrigins: string[] = [],
+): Promise<void> {
   const app = express()
   
   // Parse JSON bodies
@@ -409,23 +421,33 @@ export async function startHTTPTransport(port: number, host: string): Promise<vo
   
   // Setup session management
   const sessionManager = createSessionManager()
+
+  // Bind to localhost for security (unless explicitly configured otherwise)
+  const bindHost = host === '0.0.0.0' ? '127.0.0.1' : host
+  const defaultAllowedOrigins = getDefaultAllowedOrigins(bindHost, port)
+  const normalizedConfiguredOrigins = configuredAllowedOrigins
+    .map(origin => normalizeOrigin(origin))
+    .filter((origin): origin is string => origin !== null)
+  const allowedOrigins = [
+    ...new Set([...defaultAllowedOrigins, ...normalizedConfiguredOrigins]),
+  ]
   
   // Setup middleware and routes
-  setupCORS(app, host)
+  setupCORS(app, allowedOrigins)
   setupPostEndpoint(app, sessionManager)
   setupGetEndpoint(app, sessionManager)
   setupDeleteEndpoint(app, sessionManager)
   setupHealthEndpoint(app)
   setupShutdownHandler(sessionManager)
 
-  // Bind to localhost for security (unless explicitly configured otherwise)
-  const bindHost = host === '0.0.0.0' ? '127.0.0.1' : host
-
   app.listen(port, bindHost, () => {
     console.error(`🚀 SolvaPay CRUD MCP Server started (Streamable HTTP mode)`)
     console.error(`💡 MCP Endpoint: http://${bindHost}:${port}/mcp`)
     console.error(`📝 Available tools: create_task, get_task, list_tasks, delete_task`)
-    console.error(`🔒 Security: Origin validation enabled, bound to ${bindHost}`)
+    console.error(`🔒 Security: Origin validation enabled, allowed origins: ${allowedOrigins.join(', ')}`)
+    console.error(
+      '🔐 Browser access requires explicit origin allowlisting via MCP_ALLOWED_ORIGINS for non-default origins',
+    )
   })
 }
 
