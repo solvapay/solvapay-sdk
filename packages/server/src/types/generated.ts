@@ -575,25 +575,6 @@ export interface components {
             tosAcceptance?: Record<string, never>;
         };
         CreateSecretKey: Record<string, never>;
-        Signup: {
-            name: string;
-            email: string;
-            /** @enum {string} */
-            type?: "provider" | "admin" | "super_admin";
-        };
-        AuthResponse: Record<string, never>;
-        Login: {
-            /** @description Email to send a 6-digit login code to */
-            email: string;
-        };
-        VerifyLoginCode: {
-            email: string;
-            /** @description 6-digit login code sent to email */
-            code: string;
-        };
-        VerifyEmail: {
-            emailVerificationCode: string;
-        };
         CreateUser: Record<string, never>;
         UpdateUser: Record<string, never>;
         UpdateProfile: Record<string, never>;
@@ -715,6 +696,134 @@ export interface components {
             /** @description Terms of Service acceptance */
             tosAcceptance?: components["schemas"]["TosAcceptance"];
         };
+        Signup: {
+            name: string;
+            email: string;
+            /** @enum {string} */
+            type?: "provider" | "admin" | "super_admin";
+        };
+        AuthUserDto: {
+            id: string;
+            name: string;
+            email: string;
+            /** @enum {string} */
+            type: "provider" | "admin" | "super_admin";
+            emailVerified: boolean;
+            /** @enum {string} */
+            authProvider: "local" | "google" | "github" | "facebook";
+            providerId?: string;
+            providerRole?: string;
+            preferences?: Record<string, never>;
+        };
+        AuthResponse: {
+            user: components["schemas"]["AuthUserDto"];
+            accessToken?: string;
+            refreshToken?: string;
+            expiresIn?: number;
+            message?: string;
+            requiresMfa?: boolean;
+            requiresMfaSetup?: boolean;
+        };
+        Login: {
+            /** @description Email to send a 6-digit login code to */
+            email: string;
+        };
+        VerifyLoginCode: {
+            email: string;
+            /** @description 6-digit login code sent to email */
+            code: string;
+        };
+        VerifyEmail: {
+            emailVerificationCode: string;
+        };
+        DynamicClientRegistrationDto: {
+            /** @example My AI Agent */
+            client_name: string;
+            /**
+             * @example [
+             *       "https://agent.example.com/callback"
+             *     ]
+             */
+            redirect_uris: string[];
+            /**
+             * @example [
+             *       "authorization_code",
+             *       "refresh_token"
+             *     ]
+             */
+            grant_types?: string[];
+            /**
+             * @example [
+             *       "code"
+             *     ]
+             */
+            response_types?: string[];
+            /** @example agent-123 */
+            software_id?: string;
+            /** @example 1.0.0 */
+            software_version?: string;
+            /** @example https://example.com/logo.png */
+            logo_uri?: string;
+            /** @example https://example.com/tos */
+            tos_uri?: string;
+            /** @example https://example.com/policy */
+            policy_uri?: string;
+            /** @example https://example.com */
+            client_uri?: string;
+        };
+        DynamicClientRegistrationResponseDto: {
+            /** @example client-id-123 */
+            client_id: string;
+            /** @example client-secret-456 */
+            client_secret: string;
+            /** @example 1734567890 */
+            client_id_issued_at: number;
+            /** @example 0 */
+            client_secret_expires_at: number;
+            /** @example My AI Agent */
+            client_name: string;
+            /**
+             * @example [
+             *       "https://agent.example.com/callback"
+             *     ]
+             */
+            redirect_uris: string[];
+            /**
+             * @example [
+             *       "authorization_code",
+             *       "refresh_token"
+             *     ]
+             */
+            grant_types: string[];
+            /**
+             * @example [
+             *       "code"
+             *     ]
+             */
+            response_types: string[];
+            /** @example openid profile email */
+            scope: string;
+            /** @example client_secret_basic */
+            token_endpoint_auth_method: string;
+        };
+        GoogleLoginDto: {
+            /** @description The authorization code returned by Google */
+            code: string;
+            /** @description The redirect URI used in the initial authorization request */
+            redirect_uri: string;
+            /** @description The state parameter returned by Google (contains client_id) */
+            state: string;
+        };
+        GithubLoginDto: {
+            /** @description The authorization code returned by GitHub */
+            code: string;
+            /** @description The redirect URI used in the initial authorization request */
+            redirect_uri: string;
+            /** @description The state parameter returned by GitHub (contains client_id) */
+            state: string;
+        };
+        CreateOAuthClientDto: Record<string, never>;
+        UpdateOAuthClientDto: Record<string, never>;
         Plan: {
             /**
              * Plan type exposed in SDK
@@ -1369,7 +1478,7 @@ export interface components {
              */
             originUrl: string;
             /**
-             * Domain slug input for MCP server name/subdomain normalization
+             * Optional final MCP subdomain override (for example, value returned by bootstrap-subdomain-checks)
              * @example acme-docs
              */
             mcpDomain?: string;
@@ -2102,92 +2211,6 @@ export interface components {
              * @example requests
              */
             meterName?: string;
-        };
-        DynamicClientRegistrationDto: {
-            /** @example My AI Agent */
-            client_name: string;
-            /**
-             * @example [
-             *       "https://agent.example.com/callback"
-             *     ]
-             */
-            redirect_uris: string[];
-            /**
-             * @example [
-             *       "authorization_code",
-             *       "refresh_token"
-             *     ]
-             */
-            grant_types?: string[];
-            /**
-             * @example [
-             *       "code"
-             *     ]
-             */
-            response_types?: string[];
-            /** @example agent-123 */
-            software_id?: string;
-            /** @example 1.0.0 */
-            software_version?: string;
-            /** @example https://example.com/logo.png */
-            logo_uri?: string;
-            /** @example https://example.com/tos */
-            tos_uri?: string;
-            /** @example https://example.com/policy */
-            policy_uri?: string;
-            /** @example https://example.com */
-            client_uri?: string;
-        };
-        DynamicClientRegistrationResponseDto: {
-            /** @example client-id-123 */
-            client_id: string;
-            /** @example client-secret-456 */
-            client_secret: string;
-            /** @example 1734567890 */
-            client_id_issued_at: number;
-            /** @example 0 */
-            client_secret_expires_at: number;
-            /** @example My AI Agent */
-            client_name: string;
-            /**
-             * @example [
-             *       "https://agent.example.com/callback"
-             *     ]
-             */
-            redirect_uris: string[];
-            /**
-             * @example [
-             *       "authorization_code",
-             *       "refresh_token"
-             *     ]
-             */
-            grant_types: string[];
-            /**
-             * @example [
-             *       "code"
-             *     ]
-             */
-            response_types: string[];
-            /** @example openid profile email */
-            scope: string;
-            /** @example client_secret_basic */
-            token_endpoint_auth_method: string;
-        };
-        GoogleLoginDto: {
-            /** @description The authorization code returned by Google */
-            code: string;
-            /** @description The redirect URI used in the initial authorization request */
-            redirect_uri: string;
-            /** @description The state parameter returned by Google (contains client_id) */
-            state: string;
-        };
-        GithubLoginDto: {
-            /** @description The authorization code returned by GitHub */
-            code: string;
-            /** @description The redirect URI used in the initial authorization request */
-            redirect_uri: string;
-            /** @description The state parameter returned by GitHub (contains client_id) */
-            state: string;
         };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;

@@ -42,7 +42,7 @@ export class SolvapayAuthAdapter implements AuthAdapter {
       }
 
       // Call SolvaPay userinfo endpoint to validate token and get user ID
-      const response = await fetch(`${this.apiBaseUrl}/v1/oauth/userinfo`, {
+      const response = await fetch(`${this.apiBaseUrl}/v1/customer/auth/userinfo`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,

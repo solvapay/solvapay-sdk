@@ -88,6 +88,6 @@ Script steps:
   - returns `401` JSON-RPC error
   - includes `WWW-Authenticate: Bearer resource_metadata=".../.well-known/oauth-protected-resource"`
 - If token is valid:
-  - customer identity is resolved via backend `/v1/oauth/userinfo`
+  - customer identity is resolved via backend `/v1/customer/auth/userinfo`
   - tool arguments are enriched with auth context
   - `payable.mcp(..., { getCustomerRef })` enforces limits/paywall

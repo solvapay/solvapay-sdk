@@ -12,8 +12,8 @@ export async function GET() {
     url: publicUrl,
     solvaPayConsoleUrl: process.env.SOLVAPAY_FRONTEND_URL || 'http://localhost:3000',
     oauth: {
-      authUrl: process.env.SOLVAPAY_AUTH_URL || 'https://api.solvapay.com/v1/oauth/authorize',
-      tokenUrl: process.env.SOLVAPAY_TOKEN_URL || 'https://api.solvapay.com/v1/oauth/token',
+      authUrl: process.env.SOLVAPAY_AUTH_URL || 'https://api.solvapay.com/v1/customer/auth/authorize',
+      tokenUrl: process.env.SOLVAPAY_TOKEN_URL || 'https://api.solvapay.com/v1/customer/auth/token',
     }
   })
 }

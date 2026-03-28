@@ -9,7 +9,7 @@ process.env.OAUTH_ISSUER = process.env.OAUTH_ISSUER || 'http://localhost:3000'
 process.env.OAUTH_CLIENT_ID = process.env.OAUTH_CLIENT_ID || 'test-client-id'
 process.env.OAUTH_CLIENT_SECRET = process.env.OAUTH_CLIENT_SECRET || 'test-client-secret'
 process.env.OAUTH_REDIRECT_URI =
-  process.env.OAUTH_REDIRECT_URI || 'http://localhost:3000/oauth/callback'
+  process.env.OAUTH_REDIRECT_URI || 'http://localhost:3000/customer/auth/callback'
 process.env.OAUTH_JWKS_SECRET = process.env.OAUTH_JWKS_SECRET || 'test-jwt-secret-key-32-bytes-long'
 process.env.CHECKOUT_BASE_URL = process.env.CHECKOUT_BASE_URL || 'http://localhost:3000'
 process.env.PUBLIC_URL = process.env.PUBLIC_URL || 'http://localhost:3000'
@@ -24,7 +24,7 @@ beforeAll(() => {
   process.env.OAUTH_CLIENT_ID = process.env.OAUTH_CLIENT_ID || 'test-client-id'
   process.env.OAUTH_CLIENT_SECRET = process.env.OAUTH_CLIENT_SECRET || 'test-client-secret'
   process.env.OAUTH_REDIRECT_URI =
-    process.env.OAUTH_REDIRECT_URI || 'http://localhost:3000/oauth/callback'
+    process.env.OAUTH_REDIRECT_URI || 'http://localhost:3000/customer/auth/callback'
   process.env.OAUTH_JWKS_SECRET =
     process.env.OAUTH_JWKS_SECRET || 'test-jwt-secret-key-32-bytes-long'
   process.env.CHECKOUT_BASE_URL = process.env.CHECKOUT_BASE_URL || 'http://localhost:3000'
