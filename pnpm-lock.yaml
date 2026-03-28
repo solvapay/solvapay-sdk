@@ -529,6 +529,15 @@ importers:
 
   packages/cli:
     dependencies:
+      '@solvapay/auth':
+        specifier: workspace:^
+        version: link:../auth
+      '@solvapay/core':
+        specifier: workspace:^
+        version: link:../core
+      '@solvapay/server':
+        specifier: workspace:^
+        version: link:../server
       chalk:
         specifier: ^5.6.2
         version: 5.6.2

@@ -42,7 +42,7 @@ const startSpinner = (message: string): SpinnerController => {
 }
 
 export const createInitSession = async (apiBaseUrl: string): Promise<InitSessionResponse> => {
-  const response = await fetch(`${apiBaseUrl}/v1/oauth/init/session`, {
+  const response = await fetch(`${apiBaseUrl}/v1/ui/provider/auth/cli-init/sessions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ export const waitForExchange = async (
   try {
     while (Date.now() - startedAt < INIT_EXCHANGE_TIMEOUT_MS) {
       const response = await fetch(
-        `${apiBaseUrl}/v1/oauth/init/session/${encodeURIComponent(session.sessionId)}/exchange`,
+        `${apiBaseUrl}/v1/ui/provider/auth/cli-init/sessions/${encodeURIComponent(session.sessionId)}/exchange`,
         {
           method: 'POST',
           headers: {

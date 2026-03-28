@@ -12,8 +12,14 @@ const body = JSON.stringify({
   },
 })
 
-const createSignature = (payloadBody: string, payloadSecret: string): string =>
-  crypto.createHmac('sha256', payloadSecret).update(payloadBody).digest('hex')
+const createSignature = (payloadBody: string, payloadSecret: string): string => {
+  const timestamp = Math.floor(Date.now() / 1000)
+  const hmac = crypto
+    .createHmac('sha256', payloadSecret)
+    .update(`${timestamp}.${payloadBody}`)
+    .digest('hex')
+  return `t=${timestamp},v1=${hmac}`
+}
 
 describe('verifyWebhook', () => {
   it('verifies valid signatures in node runtime', () => {
