@@ -15,7 +15,7 @@
  *
  * Options:
  *   --preview    Sync to latest preview tag instead of stable
- *   --tag <tag>  Sync to a specific tag (e.g., v1.0.1 or v1.0.0-preview.19)
+ *   --tag <tag>  Sync to a specific tag (e.g., v1.0.1 or v1.0.1-preview.1)
  *   --commit     Commit the changes after syncing
  */
 
@@ -30,6 +30,7 @@ const PACKAGES = [
   'packages/server/package.json',
   'packages/auth/package.json',
   'packages/next/package.json',
+  'packages/cli/package.json',
   'packages/create-solvapay-app/package.json',
 ]
 
@@ -37,30 +38,28 @@ function getLatestTag(preview: boolean = false): string {
   try {
     // Fetch all tags first
     execSync('git fetch --tags', { stdio: 'ignore' })
-    
+
     if (preview) {
-      // Get latest preview tag
       const tags = execSync('git tag -l "v*-preview.*" | sort -V', { encoding: 'utf-8' })
         .trim()
         .split('\n')
         .filter(Boolean)
-      
+
       if (tags.length === 0) {
         throw new Error('No preview tags found')
       }
-      
+
       return tags[tags.length - 1]
     } else {
-      // Get latest stable tag (exclude preview tags)
       const tags = execSync('git tag -l "v*" | grep -v "preview" | sort -V', { encoding: 'utf-8' })
         .trim()
         .split('\n')
         .filter(Boolean)
-      
+
       if (tags.length === 0) {
         throw new Error('No stable tags found')
       }
-      
+
       return tags[tags.length - 1]
     }
   } catch (error) {

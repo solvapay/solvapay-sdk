@@ -1,0 +1,29 @@
+{
+  "name": "@example/mcp-time-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cross-env INPUT=mcp-app.html vite build && tsc",
+    "serve": "tsx src/index.ts",
+    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"nodemon --watch src --watch dist/mcp-app.html --ext ts,css,html --exec \\\"tsx src/index.ts\\\"\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.3.1",
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "@solvapay/auth": "workspace:*",
+    "@solvapay/core": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "nodemon": "^3.1.14",
+    "rollup": "^4.60.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3",
+    "vite-plugin-singlefile": "^2.3.2"
+  }
+}

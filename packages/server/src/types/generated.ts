@@ -2214,6 +2214,30 @@ export interface components {
         };
         ExecuteAnalyticsQuery: Record<string, never>;
         ExecuteMultipleQueries: Record<string, never>;
+        CreateWebhookEndpointDto: {
+            /**
+             * Webhook endpoint URL
+             * @example https://example.com/webhook
+             */
+            url: string;
+            /**
+             * Webhook endpoint description
+             * @example Production webhook
+             */
+            description?: string;
+        };
+        UpdateWebhookEndpointDto: {
+            /**
+             * Webhook endpoint URL
+             * @example https://example.com/webhook
+             */
+            url?: string;
+            /**
+             * Webhook endpoint description
+             * @example Updated webhook
+             */
+            description?: string;
+        };
         UpdateThemePreferenceDto: {
             /**
              * Selected UI theme mode
@@ -2280,30 +2304,6 @@ export interface components {
             fontSize: string;
             /** @description Per-mode color overrides for light and dark themes */
             themes?: components["schemas"]["ThemeOverridesDto"];
-        };
-        CreateWebhookEndpointDto: {
-            /**
-             * Webhook endpoint URL
-             * @example https://example.com/webhook
-             */
-            url: string;
-            /**
-             * Webhook endpoint description
-             * @example Production webhook
-             */
-            description?: string;
-        };
-        UpdateWebhookEndpointDto: {
-            /**
-             * Webhook endpoint URL
-             * @example https://example.com/webhook
-             */
-            url?: string;
-            /**
-             * Webhook endpoint description
-             * @example Updated webhook
-             */
-            description?: string;
         };
         CreatePreregistrationDto: {
             /** @example jane@company.com */

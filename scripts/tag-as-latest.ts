@@ -20,7 +20,7 @@
  *   4. Maintains version consistency across all packages
  *
  * Usage (for GitHub Actions):
- *   pnpm tag:latest 1.0.0-preview.9    # Tags specific version as latest
+ *   pnpm tag:latest 1.0.1              # Tags specific version as latest
  *   pnpm tag:latest                    # Uses current version from core package
  *
  * Prerequisites:
@@ -39,6 +39,7 @@ const PACKAGES_TO_TAG = [
   '@solvapay/server',
   '@solvapay/auth',
   '@solvapay/next',
+  '@solvapay/cli',
   'create-solvapay-app',
 ]
 
@@ -137,6 +138,7 @@ function main(): void {
   console.log('\n📝 Verify the tags:')
   console.log(`  npm dist-tag ls @solvapay/core`)
   console.log(`  npm dist-tag ls @solvapay/react`)
+  console.log(`  npm dist-tag ls @solvapay/cli`)
   console.log()
 }
 

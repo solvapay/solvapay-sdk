@@ -1,12 +1,11 @@
 name: Tag Version as Latest
 
 # Manual workflow to promote a specific version to the "latest" npm dist-tag
-# This is useful for promoting preview versions to latest
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to tag as latest (e.g., 1.0.0-preview.9)'
+        description: 'Version to tag as latest (e.g., 1.0.1 or 1.0.1-preview.1)'
         required: true
         type: string
       dry_run:
@@ -63,10 +62,11 @@ jobs:
           echo "  - @solvapay/server@${{ inputs.version }}"
           echo "  - @solvapay/auth@${{ inputs.version }}"
           echo "  - @solvapay/next@${{ inputs.version }}"
+          echo "  - @solvapay/cli@${{ inputs.version }}"
           echo ""
           echo "Checking which versions exist on npm..."
 
-          PACKAGES=("@solvapay/core" "@solvapay/react" "@solvapay/react-supabase" "@solvapay/server" "@solvapay/auth" "@solvapay/next")
+          PACKAGES=("@solvapay/core" "@solvapay/react" "@solvapay/react-supabase" "@solvapay/server" "@solvapay/auth" "@solvapay/next" "@solvapay/cli")
 
           for pkg in "${PACKAGES[@]}"; do
             if npm view "$pkg@${{ inputs.version }}" version &> /dev/null; then
@@ -102,6 +102,8 @@ jobs:
           npm dist-tag ls @solvapay/auth || true
           echo ""
           npm dist-tag ls @solvapay/next || true
+          echo ""
+          npm dist-tag ls @solvapay/cli || true
 
       - name: Summary
         if: ${{ !inputs.dry_run }}
@@ -115,5 +117,6 @@ jobs:
           echo "  npm install @solvapay/server"
           echo "  npm install @solvapay/auth"
           echo "  npm install @solvapay/next"
+          echo "  npm install @solvapay/cli"
           echo ""
           echo "And they will get version ${{ inputs.version }}"

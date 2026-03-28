@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/auth",
-  "version": "1.0.0-preview.18",
+  "version": "1.0.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -49,8 +49,8 @@
     "jose": "^5.0.0"
   },
   "devDependencies": {
-    "tsup": "^8.0.1",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
   }
 }

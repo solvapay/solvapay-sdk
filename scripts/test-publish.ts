@@ -16,6 +16,7 @@ const PACKAGES_TO_CHECK = [
   { name: '@solvapay/server', path: 'packages/server' },
   { name: '@solvapay/auth', path: 'packages/auth' },
   { name: '@solvapay/next', path: 'packages/next' },
+  { name: '@solvapay/cli', path: 'packages/cli' },
   { name: 'create-solvapay-app', path: 'packages/create-solvapay-app' },
 ]
 
@@ -127,9 +128,9 @@ function main(): void {
   console.log('\n📝 Next steps:')
   console.log('  1. Ensure all packages are built: pnpm build:packages')
   console.log(
-    '  2. Test dry-run publish: pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --dry-run --tag preview',
+    '  2. Test dry-run publish: pnpm --filter=@solvapay/* --filter=create-solvapay-app publish --dry-run',
   )
-  console.log('  3. If dry-run looks good, publish: pnpm publish:preview')
+  console.log('  3. If dry-run looks good, publish: pnpm publish:packages')
   console.log()
 }
 

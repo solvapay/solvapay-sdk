@@ -54,6 +54,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check dependency health
+        run: pnpm deps:check
+
       # TODO: Re-enable example app tests once changes are merged from main branch and test issues are fixed
       # Note: Example app tests (@example/*) are currently excluded via --filter=!@example/* in package.json test script
       - name: Run tests
@@ -117,6 +120,7 @@ jobs:
                 'packages/server/package.json',
                 'packages/auth/package.json',
                 'packages/next/package.json',
+                'packages/cli/package.json',
                 'packages/create-solvapay-app/package.json'
               ];
               packages.forEach(pkg => {
@@ -144,6 +148,7 @@ jobs:
                   'packages/server/package.json',
                   'packages/auth/package.json',
                   'packages/next/package.json',
+                  'packages/cli/package.json',
                   'packages/create-solvapay-app/package.json'
                 ];
                 packages.forEach(pkg => {
@@ -164,6 +169,7 @@ jobs:
                   'packages/server/package.json',
                   'packages/auth/package.json',
                   'packages/next/package.json',
+                  'packages/cli/package.json',
                   'packages/create-solvapay-app/package.json'
                 ];
                 packages.forEach(pkg => {
@@ -220,7 +226,7 @@ jobs:
 
       # Note: Using --no-provenance flag because provenance signing only works with public repositories
       # This repository is private, so we skip provenance to avoid NPM 422 errors
-      # Publishes all 7 packages: @solvapay/core, @solvapay/react, @solvapay/react-supabase, @solvapay/server, @solvapay/auth, @solvapay/next, create-solvapay-app
+      # Publishes all 8 packages: @solvapay/core, @solvapay/react, @solvapay/react-supabase, @solvapay/server, @solvapay/auth, @solvapay/next, @solvapay/cli, create-solvapay-app
       - name: Publish preview to NPM
         run: pnpm publish:preview
         env:
