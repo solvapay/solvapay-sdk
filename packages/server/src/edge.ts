@@ -52,21 +52,28 @@ export {
 export type { ErrorResult, AuthenticatedUser } from './helpers'
 
 /**
- * Verify webhook signature using edge-compatible Web Crypto API
- * Works in: Vercel Edge Functions, Cloudflare Workers, Deno, Supabase Edge Functions
+ * Verify webhook signature using edge-compatible Web Crypto API.
  *
- * @param body - The raw webhook request body (string)
- * @param signature - The signature from x-solvapay-signature header
- * @param secret - Your webhook secret key
+ * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
+ * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
+ * (including the `whsec_` prefix). An optional tolerance (default 300 s) rejects
+ * stale signatures.
+ *
+ * Works in: Vercel Edge Functions, Cloudflare Workers, Deno, Supabase Edge Functions.
+ *
+ * @param params.body - Raw webhook request body (string)
+ * @param params.signature - Value of the `SV-Signature` header
+ * @param params.secret - Webhook signing secret (`whsec_…`)
+ * @param params.toleranceSec - Max age in seconds (default 300). Set to 0 to skip.
  * @returns Parsed webhook event object
- * @throws {SolvaPayError} If signature verification fails
+ * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid
  *
  * @example
  * ```typescript
  * // Supabase Edge Function
- * import { verifyWebhook } from '@solvapay/server';
+ * import { verifyWebhook } from '@solvapay/server/edge';
  *
- * const signature = req.headers.get('x-solvapay-signature');
+ * const signature = req.headers.get('sv-signature')!;
  * const body = await req.text();
  * const event = await verifyWebhook({ body, signature, secret });
  * ```
@@ -75,11 +82,35 @@ export async function verifyWebhook({
   body,
   signature,
   secret,
+  toleranceSec = 300,
 }: {
   body: string
   signature: string
   secret: string
+  toleranceSec?: number
 }) {
+  if (!signature) throw new SolvaPayError('Missing webhook signature')
+
+  const parts = signature.split(',')
+  const tPart = parts.find(p => p.startsWith('t='))
+  const v1Part = parts.find(p => p.startsWith('v1='))
+  if (!tPart || !v1Part) {
+    throw new SolvaPayError('Malformed webhook signature')
+  }
+
+  const timestamp = parseInt(tPart.slice(2), 10)
+  const receivedHmac = v1Part.slice(3)
+  if (Number.isNaN(timestamp) || !receivedHmac) {
+    throw new SolvaPayError('Malformed webhook signature')
+  }
+
+  if (toleranceSec > 0) {
+    const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp)
+    if (age > toleranceSec) {
+      throw new SolvaPayError('Webhook signature timestamp too old')
+    }
+  }
+
   const enc = new TextEncoder()
   const key = await crypto.subtle.importKey(
     'raw',
@@ -88,12 +119,12 @@ export async function verifyWebhook({
     false,
     ['sign'],
   )
-  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(body))
-  const hex = Array.from(new Uint8Array(sigBuf))
+  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(`${timestamp}.${body}`))
+  const expectedHmac = Array.from(new Uint8Array(sigBuf))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
 
-  if (hex !== signature) {
+  if (expectedHmac.length !== receivedHmac.length || expectedHmac !== receivedHmac) {
     throw new SolvaPayError('Invalid webhook signature')
   }
 

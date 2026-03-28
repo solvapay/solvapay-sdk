@@ -6,6 +6,7 @@ description: "This guide shows you how to handle SolvaPay webhooks to keep your 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Webhook Payload](#webhook-payload)
 - [Webhook Setup](#webhook-setup)
 - [Webhook Verification](#webhook-verification)
 - [Event Handling](#event-handling)
@@ -20,28 +21,68 @@ SolvaPay sends webhooks to notify your application about important events:
 - **Purchase Cancelled** - Purchase cancelled
 - **Payment Succeeded** - Payment processed successfully
 - **Payment Failed** - Payment processing failed
+- **Transaction Events** - Payment, fee, refund, commission, transfer
+- **Customer / Product / Plan Events** - Resource lifecycle events
 
 ### Webhook Flow
 
 ```
 SolvaPay Backend
     ↓
-Webhook Event
+Enqueue WebhookEvent + WebhookDelivery
+    ↓  (cron every 30 s, up to 20 per batch)
+POST to Your Endpoint
     ↓
-Your Webhook Endpoint
-    ↓
-Verify Signature
+Verify SV-Signature
     ↓
 Process Event
     ↓
-Update Your Database
+Return 2xx
 ```
+
+## Webhook Payload
+
+Every webhook delivery is a JSON POST with this structure:
+
+```json
+{
+  "id": "evt_abc123def456",
+  "type": "purchase.created",
+  "created": 1740000000,
+  "api_version": "2025-10-01",
+  "data": {
+    "object": { "..." },
+    "previous_attributes": null
+  },
+  "livemode": false,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  }
+}
+```
+
+### Headers
+
+| Header | Description |
+|---|---|
+| `SV-Signature` | `t={unix_ts},v1={hmac_hex}` — used for verification |
+| `SV-Event-Id` | Unique event ID (`evt_…`) |
+| `SV-Delivery` | Unique delivery ID (`dlv_…`) — use for idempotency |
+| `User-Agent` | `SolvaPay/1.0 (+webhooks)` |
+| `Content-Type` | `application/json` |
+
+### Signature Scheme
+
+The HMAC-SHA256 is computed over `"{timestamp}.{rawBody}"` using the full webhook
+signing secret (including the `whsec_` prefix) as the key. The result is sent in
+the `SV-Signature` header as `t={timestamp},v1={hex_digest}`.
 
 ## Webhook Setup
 
 ### 1. Configure Webhook Endpoint
 
-Set your webhook endpoint in the SolvaPay dashboard:
+Create an endpoint in the SolvaPay dashboard or via the API:
 
 ```
 https://your-app.com/api/webhooks/solvapay
@@ -52,32 +93,25 @@ https://your-app.com/api/webhooks/solvapay
 Create an endpoint to receive webhooks:
 
 ```typescript
-// app/api/webhooks/solvapay/route.ts (Next.js)
+// app/api/webhooks/solvapay/route.ts (Next.js App Router)
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhook } from '@solvapay/server'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify webhook signature
-    const payload = await request.text()
-    const signature = request.headers.get('x-solvapay-signature')
+    const body = await request.text()
+    const signature = request.headers.get('sv-signature')
 
     if (!signature) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
     }
 
-    const verified = verifyWebhook(payload, signature, {
+    const event = verifyWebhook({
+      body,
+      signature,
       secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
     })
 
-    if (!verified) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-    }
-
-    // Parse event
-    const event = JSON.parse(payload)
-
-    // Handle event
     await handleWebhookEvent(event)
 
     return NextResponse.json({ received: true })
@@ -97,24 +131,21 @@ import { verifyWebhook } from '@solvapay/server'
 
 const router = express.Router()
 
+// Use express.raw() so the body is available as a Buffer for signature verification
 router.post('/solvapay', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    const signature = req.headers['x-solvapay-signature'] as string
+    const signature = req.headers['sv-signature'] as string
 
     if (!signature) {
       return res.status(401).json({ error: 'Missing signature' })
     }
 
-    const payload = req.body.toString()
-    const verified = verifyWebhook(payload, signature, {
+    const event = verifyWebhook({
+      body: req.body.toString(),
+      signature,
       secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
     })
 
-    if (!verified) {
-      return res.status(401).json({ error: 'Invalid signature' })
-    }
-
-    const event = JSON.parse(payload)
     await handleWebhookEvent(event)
 
     res.json({ received: true })
@@ -136,14 +167,28 @@ Always verify webhook signatures to ensure requests are from SolvaPay:
 ```typescript
 import { verifyWebhook } from '@solvapay/server'
 
-const verified = verifyWebhook(payload, signature, {
+// verifyWebhook parses the SV-Signature header (t=…,v1=…), recomputes
+// the HMAC, and throws if the signature is invalid or too old (> 300 s).
+const event = verifyWebhook({
+  body: rawBodyString,
+  signature: svSignatureHeader,
   secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
 })
+```
 
-if (!verified) {
-  // Reject webhook
-  return res.status(401).json({ error: 'Invalid signature' })
-}
+### Edge Runtimes
+
+For Vercel Edge Functions, Cloudflare Workers, and Deno, import from the edge entry point.
+The edge version uses Web Crypto and returns a `Promise`:
+
+```typescript
+import { verifyWebhook } from '@solvapay/server/edge'
+
+const event = await verifyWebhook({
+  body: rawBodyString,
+  signature: svSignatureHeader,
+  secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
+})
 ```
 
 ### Environment Variables
@@ -154,7 +199,7 @@ Set your webhook secret:
 SOLVAPAY_WEBHOOK_SECRET=whsec_...
 ```
 
-Get your webhook secret from the SolvaPay dashboard.
+Get your webhook secret from the SolvaPay dashboard (shown once at endpoint creation, or via the reveal endpoint).
 
 ## Event Handling
 
@@ -164,45 +209,49 @@ Handle different event types:
 
 ```typescript
 interface WebhookEvent {
+  id: string
   type: string
+  created: number
+  api_version: string
   data: {
-    customerRef: string
-    purchaseId?: string
-    planRef?: string
-    status?: string
-    // ... other event data
+    object: Record<string, any>
+    previous_attributes?: Record<string, any> | null
   }
-  timestamp: string
+  livemode: boolean
+  request: {
+    id?: string | null
+    idempotency_key?: string | null
+  }
 }
 ```
 
-### Handle Purchase Events
+### Handle Events
 
 ```typescript
 async function handleWebhookEvent(event: WebhookEvent) {
   switch (event.type) {
     case 'purchase.created':
-      await handlePurchaseCreated(event.data)
+      await handlePurchaseCreated(event.data.object)
       break
 
     case 'purchase.updated':
-      await handlePurchaseUpdated(event.data)
+      await handlePurchaseUpdated(event.data.object)
       break
 
     case 'purchase.cancelled':
-      await handlePurchaseCancelled(event.data)
+      await handlePurchaseCancelled(event.data.object)
       break
 
     case 'payment.succeeded':
-      await handlePaymentSucceeded(event.data)
+      await handlePaymentSucceeded(event.data.object)
       break
 
     case 'payment.failed':
-      await handlePaymentFailed(event.data)
+      await handlePaymentFailed(event.data.object)
       break
 
     default:
-      console.log('Unknown event type:', event.type)
+      console.log('Unhandled event type:', event.type)
   }
 }
 ```
@@ -210,97 +259,53 @@ async function handleWebhookEvent(event: WebhookEvent) {
 ### Purchase Created
 
 ```typescript
-async function handlePurchaseCreated(data: any) {
-  const { customerRef, purchaseId, planRef } = data
+async function handlePurchaseCreated(object: any) {
+  const { id, customer, plan, product, amount, currency } = object
 
-  // Update your database
   await db.purchases.create({
-    customerRef,
-    purchaseId,
-    planRef,
+    purchaseId: id,
+    customerRef: customer,
+    planRef: plan,
+    productRef: product,
+    amount,
+    currency,
     status: 'active',
   })
 
-  // Clear purchase cache
-  await clearPurchaseCache(customerRef)
-
-  // Send welcome email, etc.
-  await sendWelcomeEmail(customerRef)
-}
-```
-
-### Purchase Updated
-
-```typescript
-async function handlePurchaseUpdated(data: any) {
-  const { customerRef, purchaseId, planRef, status } = data
-
-  // Update purchase in database
-  await db.purchases.update({
-    where: { purchaseId },
-    data: { planRef, status },
-  })
-
-  // Clear cache
-  await clearPurchaseCache(customerRef)
+  await clearPurchaseCache(customer)
 }
 ```
 
 ### Purchase Cancelled
 
 ```typescript
-async function handlePurchaseCancelled(data: any) {
-  const { customerRef, purchaseId } = data
+async function handlePurchaseCancelled(object: any) {
+  const { id, customer } = object
 
-  // Update purchase status
   await db.purchases.update({
-    where: { purchaseId },
+    where: { purchaseId: id },
     data: { status: 'cancelled', cancelledAt: new Date() },
   })
 
-  // Clear cache
-  await clearPurchaseCache(customerRef)
-
-  // Send cancellation email
-  await sendCancellationEmail(customerRef)
+  await clearPurchaseCache(customer)
 }
 ```
 
 ### Payment Succeeded
 
 ```typescript
-async function handlePaymentSucceeded(data: any) {
-  const { customerRef, paymentIntentId, amount } = data
+async function handlePaymentSucceeded(object: any) {
+  const { id, amount, currency, customer } = object
 
-  // Record payment
   await db.payments.create({
-    customerRef,
-    paymentIntentId,
+    paymentIntentId: id,
+    customer,
     amount,
+    currency,
     status: 'succeeded',
   })
 
-  // Clear cache
-  await clearPurchaseCache(customerRef)
-}
-```
-
-### Payment Failed
-
-```typescript
-async function handlePaymentFailed(data: any) {
-  const { customerRef, paymentIntentId, error } = data
-
-  // Record failed payment
-  await db.payments.create({
-    customerRef,
-    paymentIntentId,
-    status: 'failed',
-    error: error.message,
-  })
-
-  // Notify user
-  await sendPaymentFailedEmail(customerRef, error)
+  await clearPurchaseCache(customer)
 }
 ```
 
@@ -312,31 +317,22 @@ async function handlePaymentFailed(data: any) {
 // app/api/webhooks/solvapay/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhook } from '@solvapay/server'
-import { clearPurchaseCache } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get raw body for signature verification
-    const payload = await request.text()
-    const signature = request.headers.get('x-solvapay-signature')
+    const body = await request.text()
+    const signature = request.headers.get('sv-signature')
 
     if (!signature) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
     }
 
-    // Verify webhook signature
-    const verified = verifyWebhook(payload, signature, {
+    const event = verifyWebhook({
+      body,
+      signature,
       secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
     })
 
-    if (!verified) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-    }
-
-    // Parse event
-    const event = JSON.parse(payload)
-
-    // Handle event
     await handleWebhookEvent(event)
 
     return NextResponse.json({ received: true })
@@ -353,23 +349,19 @@ async function handleWebhookEvent(event: any) {
     case 'purchase.created':
     case 'purchase.updated':
     case 'purchase.cancelled':
-      // Clear purchase cache
-      if (data.customerRef) {
-        await clearPurchaseCache(data.customerRef)
+      if (data.object.customer) {
+        await clearPurchaseCache(data.object.customer)
       }
-
-      // Update database
-      await updatePurchaseInDatabase(data)
+      await updatePurchaseInDatabase(data.object)
       break
 
     case 'payment.succeeded':
     case 'payment.failed':
-      // Handle payment events
-      await handlePaymentEvent(type, data)
+      await handlePaymentEvent(type, data.object)
       break
 
     default:
-      console.log('Unknown event type:', type)
+      console.log('Unhandled event type:', type)
   }
 }
 ```
@@ -380,29 +372,23 @@ async function handleWebhookEvent(event: any) {
 // routes/webhooks.ts
 import express from 'express'
 import { verifyWebhook } from '@solvapay/server'
-import { clearPurchaseCache } from '@solvapay/next'
 
 const router = express.Router()
 
-// Important: Use express.raw() to get raw body for signature verification
 router.post('/solvapay', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    const signature = req.headers['x-solvapay-signature'] as string
+    const signature = req.headers['sv-signature'] as string
 
     if (!signature) {
       return res.status(401).json({ error: 'Missing signature' })
     }
 
-    const payload = req.body.toString()
-    const verified = verifyWebhook(payload, signature, {
+    const event = verifyWebhook({
+      body: req.body.toString(),
+      signature,
       secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
     })
 
-    if (!verified) {
-      return res.status(401).json({ error: 'Invalid signature' })
-    }
-
-    const event = JSON.parse(payload)
     await handleWebhookEvent(event)
 
     res.json({ received: true })
@@ -419,15 +405,15 @@ async function handleWebhookEvent(event: any) {
     case 'purchase.created':
     case 'purchase.updated':
     case 'purchase.cancelled':
-      if (data.customerRef) {
-        await clearPurchaseCache(data.customerRef)
+      if (data.object.customer) {
+        await clearPurchaseCache(data.object.customer)
       }
-      await updatePurchaseInDatabase(data)
+      await updatePurchaseInDatabase(data.object)
       break
 
     case 'payment.succeeded':
     case 'payment.failed':
-      await handlePaymentEvent(type, data)
+      await handlePaymentEvent(type, data.object)
       break
   }
 }
@@ -437,19 +423,17 @@ export default router
 
 ## Best Practices
 
-1. **Always Verify Signatures**: Never process webhooks without verifying the signature.
+1. **Always Verify Signatures** — Never process webhooks without verifying `SV-Signature`.
 
-2. **Use Idempotency**: Handle duplicate webhook deliveries gracefully.
+2. **Use the Delivery ID for Idempotency** — The `SV-Delivery` header is unique per delivery attempt. Store processed delivery IDs and ignore duplicates.
 
-3. **Process Asynchronously**: Process webhooks asynchronously to respond quickly.
+3. **Respond Quickly** — Return a 2xx within 10 seconds. Move heavy processing to a background queue.
 
-4. **Log Events**: Log all webhook events for debugging and auditing.
+4. **Handle Unknown Events Gracefully** — Log and return 200 for unrecognised `type` values so the delivery succeeds.
 
-5. **Handle Errors Gracefully**: Return appropriate status codes and log errors.
+5. **Expect Retries** — Deliveries are retried with exponential backoff (1 min → 72 hours, up to 12 attempts). After 12 failures the endpoint is auto-disabled.
 
-6. **Clear Caches**: Clear purchase caches when purchase events occur.
-
-7. **Update Database**: Keep your database in sync with webhook events.
+6. **Keep the Raw Body** — Signature verification requires the exact body bytes. Use `express.raw()` or `request.text()`, not a parsed JSON object.
 
 ## Testing Webhooks
 
@@ -462,25 +446,34 @@ npm run dev
 # In another terminal, expose with ngrok
 ngrok http 3000
 
-# Use ngrok URL in SolvaPay dashboard webhook settings
+# Use the ngrok URL when creating a webhook endpoint in the SolvaPay dashboard
 ```
 
-### Test Webhook Payload
+### Send a Test Event
 
-```typescript
-// Test webhook locally
-const testEvent = {
-  type: 'purchase.created',
-  data: {
-    customerRef: 'user_123',
-    purchaseId: 'sub_123',
-    planRef: 'pln_premium',
-  },
-  timestamp: new Date().toISOString(),
-}
+Use the dashboard test button or the API:
 
-await handleWebhookEvent(testEvent)
+```bash
+curl -X POST https://api.solvapay.com/v1/ui/webhooks/{endpointId}/test \
+  -H "Authorization: Bearer $TOKEN"
 ```
+
+This sends a `payment.succeeded` test event to the endpoint.
+
+## Retry Schedule
+
+| Attempt | Delay |
+|---|---|
+| 1 | 60 s |
+| 2 | 5 min |
+| 3 | 15 min |
+| 4 | 1 hour |
+| 5 | 6 hours |
+| 6 | 24 hours |
+| 7 | 48 hours |
+| 8+ | 72 hours |
+
+Max 12 attempts. After that the endpoint is disabled automatically.
 
 ## Next Steps
 
