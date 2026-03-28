@@ -151,21 +151,22 @@ import { SolvaPayProvider } from '@solvapay/react'
 
 ### 2. Authentication Setup
 
-This demo uses Supabase for authentication with Next.js middleware as the default approach:
+This demo uses Supabase authentication middleware as the default approach
+(`proxy.ts` in Next.js 16):
 
 **Middleware Approach (Default):**
 
-The `middleware.ts` file extracts user IDs from Supabase JWT tokens and sets them as headers for all API routes:
+The `proxy.ts` file implements authentication middleware that extracts user IDs from Supabase JWT tokens and sets them as headers for all API routes:
 
 ```tsx
-// middleware.ts
+// proxy.ts
 import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
 
 const auth = new SupabaseAuthAdapter({
   jwtSecret: process.env.SUPABASE_JWT_SECRET!,
 })
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const userId = await auth.getUserIdFromRequest(request)
 
   if (!userId) {
@@ -389,7 +390,7 @@ hosted-checkout-demo/
 │   │   └── supabase.ts           # Supabase client setup
 │   ├── layout.tsx                # Root layout with SolvaPayProvider
 │   └── page.tsx                   # Home with locked content
-├── middleware.ts                 # Authentication middleware (extracts userId)
+├── proxy.ts                      # Authentication proxy (extracts userId)
 ├── package.json
 ├── next.config.mjs
 ├── tsconfig.json

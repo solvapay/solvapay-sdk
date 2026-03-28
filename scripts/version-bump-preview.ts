@@ -11,7 +11,6 @@ const PACKAGES_TO_VERSION = [
   'packages/auth/package.json',
   'packages/next/package.json',
   'packages/cli/package.json',
-  'packages/create-solvapay-app/package.json',
 ]
 
 interface ParsedVersion {

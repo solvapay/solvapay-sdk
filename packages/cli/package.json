@@ -1,5 +1,5 @@
 {
-  "name": "@solvapay/cli",
+  "name": "solvapay",
   "version": "1.0.1",
   "description": "SolvaPay CLI",
   "type": "module",

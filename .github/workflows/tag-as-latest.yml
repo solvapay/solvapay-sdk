@@ -62,11 +62,11 @@ jobs:
           echo "  - @solvapay/server@${{ inputs.version }}"
           echo "  - @solvapay/auth@${{ inputs.version }}"
           echo "  - @solvapay/next@${{ inputs.version }}"
-          echo "  - @solvapay/cli@${{ inputs.version }}"
+          echo "  - solvapay@${{ inputs.version }}"
           echo ""
           echo "Checking which versions exist on npm..."
 
-          PACKAGES=("@solvapay/core" "@solvapay/react" "@solvapay/react-supabase" "@solvapay/server" "@solvapay/auth" "@solvapay/next" "@solvapay/cli")
+          PACKAGES=("@solvapay/core" "@solvapay/react" "@solvapay/react-supabase" "@solvapay/server" "@solvapay/auth" "@solvapay/next" "solvapay")
 
           for pkg in "${PACKAGES[@]}"; do
             if npm view "$pkg@${{ inputs.version }}" version &> /dev/null; then
@@ -103,7 +103,7 @@ jobs:
           echo ""
           npm dist-tag ls @solvapay/next || true
           echo ""
-          npm dist-tag ls @solvapay/cli || true
+          npm dist-tag ls solvapay || true
 
       - name: Summary
         if: ${{ !inputs.dry_run }}
@@ -117,6 +117,6 @@ jobs:
           echo "  npm install @solvapay/server"
           echo "  npm install @solvapay/auth"
           echo "  npm install @solvapay/next"
-          echo "  npm install @solvapay/cli"
+          echo "  npm install solvapay"
           echo ""
           echo "And they will get version ${{ inputs.version }}"

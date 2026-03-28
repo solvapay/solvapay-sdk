@@ -7,7 +7,7 @@
  * For Next.js 16 projects with src/ folder structure, use middleware-next16.ts instead
  */
 
-import { createSupabaseAuthMiddleware } from '@solvapay/next'
+import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
 
 /**
  * Next.js Middleware for Authentication

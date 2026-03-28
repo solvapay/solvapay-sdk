@@ -193,7 +193,7 @@ const findPublishableVersionDrift = (): string[] => {
     if (!packageJson.version) {
       continue
     }
-    if (!packageJson.name.startsWith('@solvapay/') && packageJson.name !== 'create-solvapay-app') {
+    if (!packageJson.name.startsWith('@solvapay/') && packageJson.name !== 'solvapay') {
       continue
     }
 

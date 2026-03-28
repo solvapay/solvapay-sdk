@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.js"
   },
   "dependencies": {
     "@solvapay/auth": "workspace:*",
@@ -23,6 +23,7 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

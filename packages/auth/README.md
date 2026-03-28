@@ -213,14 +213,16 @@ Both adapters and Next.js utilities work in Edge runtimes (Vercel Edge Functions
 
 ## Next.js Integration
 
-These utilities work seamlessly with Next.js middleware. Typically, you'll set the `x-user-id` header in your middleware after authentication:
+These utilities work seamlessly with Next.js authentication middleware.
+In Next.js 16, this middleware lives in `proxy.ts` and typically sets the
+`x-user-id` header after authentication:
 
 ```ts
-// middleware.ts
+// proxy.ts
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Extract user ID from your auth system (Supabase, Auth0, etc.)
   const userId = await getUserIdFromAuth(request)
 

@@ -31,7 +31,6 @@ const PACKAGES = [
   'packages/auth/package.json',
   'packages/next/package.json',
   'packages/cli/package.json',
-  'packages/create-solvapay-app/package.json',
 ]
 
 function getLatestTag(preview: boolean = false): string {

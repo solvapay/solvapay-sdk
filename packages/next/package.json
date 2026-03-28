@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./middleware": {
+      "types": "./dist/middleware.d.ts",
+      "import": "./dist/middleware.js",
+      "require": "./dist/middleware.cjs"
     }
   },
   "files": [
@@ -29,7 +34,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external next",
+    "build": "tsup src/index.ts src/middleware.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external next",
     "test": "vitest run || exit 0",
     "test:watch": "vitest",
     "lint": "eslint src",

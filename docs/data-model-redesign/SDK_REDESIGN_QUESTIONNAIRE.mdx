@@ -5,7 +5,7 @@ description: "Questionnaire to inform the redesign of the SolvaPay SDK for the P
 
 ## Context
 
-The SDK is a monorepo with 6 published packages (`@solvapay/core`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/react`, `@solvapay/next`, `@solvapay/react-supabase`) and 5 example apps. Current version: `1.0.0-preview.18`. No external users.
+The SDK is a monorepo with 6 published packages (`@solvapay/core`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/react`, `@solvapay/next`, `@solvapay/react-supabase`) and multiple example apps. Current version: `1.0.0-preview.18`. No external users.
 
 The backend is replacing the Agent/MCP Server dual-entity model with a unified Product entity (backend decisions D1-D18). The SDK currently references `agent`/`agentRef` in ~40 touchpoints across all packages. `PaymentIntent` stays as the SDK payment flow concept — there is no separate Payment entity. Each Purchase serves as the billing record for its period.
 
@@ -359,7 +359,7 @@ After the backend deploys new OpenAPI spec (with `/v1/sdk/products` routes repla
 
 > _Rationale: generated.ts is auto-produced from OpenAPI. The change cascades from backend. No manual editing of generated.ts needed._
 
-### D23. Update all 5 example apps simultaneously
+### D23. Update example apps simultaneously
 
 All examples are small and reference agent terminology. Update in one pass:
 
@@ -369,7 +369,6 @@ All examples are small and reference agent terminology. Update in one pass:
 | `mcp-basic`                        | `payable({ agent })` -> `payable({ product })`, env vars |
 | `checkout-demo`                    | agentRef in payment flow -> productRef                   |
 | `hosted-checkout-demo`             | agentRef in checkout flow -> productRef                  |
-| `nextjs-openai-custom-gpt-actions` | agentRef in API routes -> productRef                     |
 
 Also update `examples/shared/` if it contains shared config referencing agents.
 
@@ -626,6 +625,6 @@ Options:
 3. **Update `@solvapay/server`** — types, client, paywall, factory, helpers
 4. **Update `@solvapay/next`** — helpers, cache types
 5. **Update `@solvapay/react`** — types, hooks, components
-6. **Update all 5 example apps**
+6. **Update all example apps**
 7. **Regenerate API docs** via typedoc
 8. **Publish `1.0.0-preview.19`**

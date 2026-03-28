@@ -7,7 +7,7 @@ description: "This document describes the automated publishing and release proce
 
 The SolvaPay SDK uses an automated publishing workflow that:
 
-- Publishes eight packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, and `create-solvapay-app`
+- Publishes seven packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `solvapay`
 - Uses **fixed versioning** - all packages share the same version number
 - Auto-increments the **patch** version on every push to `main` branch
 - Generates changelogs using conventional commits
@@ -92,7 +92,7 @@ pnpm version:bump:major
 
 These commands will:
 
-1. Update all eight package.json files with the new version
+1. Update all seven package.json files with the new version
 2. Generate changelog based on conventional commits
 3. Show you the next steps (commit and push)
 
@@ -193,7 +193,7 @@ Runs manually via GitHub Actions UI (or on push to `dev` if enabled):
 
 1. **Validates** the version format
 2. **Checks** which packages exist on npm at that version
-3. **Tags** all published @solvapay packages as "latest"
+3. **Tags** all published packages as "latest"
 4. **Verifies** the tags were applied correctly
 
 This workflow is useful for promoting preview versions to latest without republishing. It includes an optional **dry run mode** to preview changes before applying them.
@@ -274,13 +274,12 @@ All packages are published with **public access**:
 - `@solvapay/server`
 - `@solvapay/auth`
 - `@solvapay/next`
-- `@solvapay/cli`
-- `create-solvapay-app`
+- `solvapay`
 
-### CLI package rename
+### CLI package name
 
-The CLI npm package moved from `solvapay` to `@solvapay/cli`.
-The CLI command is unchanged: `solvapay`.
+The CLI npm package is `solvapay`.
+The CLI command is `solvapay`.
 
 ## Authentication Best Practices
 
@@ -391,7 +390,7 @@ This will:
 - Detect your current version (e.g., `0.1.0`)
 - Increment to next preview (e.g., `0.1.0-preview.1`)
 - If already a preview, increment the number (e.g., `0.1.0-preview.1` → `0.1.0-preview.2`)
-- Update all eight package.json files
+- Update all seven package.json files
 
 #### Step 2: Build Packages
 
@@ -405,7 +404,7 @@ pnpm build:packages
 pnpm publish:preview
 ```
 
-This publishes all eight packages with the `preview` dist-tag.
+This publishes all seven packages with the `preview` dist-tag.
 
 #### Step 4: Commit and Push
 
@@ -462,7 +461,7 @@ Sometimes you may want to make a preview version the "latest" version on npm (e.
 
 - Validates the version format
 - Checks which packages exist on npm at that version
-- Tags all published @solvapay packages at that version as "latest"
+- Tags all published packages at that version as "latest"
 - Skips any packages that haven't been published yet
 - Shows verification of the tags
 - No local setup or authentication required!

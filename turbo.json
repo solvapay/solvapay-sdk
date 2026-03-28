@@ -26,10 +26,6 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "@example/nextjs-openai-custom-gpt-actions#build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "generated/**"]
-    },
     "dev": {
       "persistent": true,
       "cache": false
