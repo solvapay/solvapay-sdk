@@ -428,9 +428,9 @@ export async function startHTTPTransport(
   const normalizedConfiguredOrigins = configuredAllowedOrigins
     .map(origin => normalizeOrigin(origin))
     .filter((origin): origin is string => origin !== null)
-  const allowedOrigins = normalizedConfiguredOrigins.length
-    ? normalizedConfiguredOrigins
-    : defaultAllowedOrigins
+  const allowedOrigins = [
+    ...new Set([...defaultAllowedOrigins, ...normalizedConfiguredOrigins]),
+  ]
   
   // Setup middleware and routes
   setupCORS(app, allowedOrigins)
