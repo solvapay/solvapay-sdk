@@ -6,6 +6,7 @@
  */
 
 import { SolvaPayError } from '@solvapay/core'
+import type { WebhookEvent } from './types/webhook'
 
 // Re-export the main client which is already edge-compatible (uses fetch)
 export { createSolvaPayClient } from './client'
@@ -30,6 +31,8 @@ export type {
   PaywallStructuredContent,
   PaywallToolResult,
   RetryOptions,
+  WebhookEvent,
+  WebhookEventType,
 } from './types'
 
 // Export retry utility for general use
@@ -56,16 +59,15 @@ export type { ErrorResult, AuthenticatedUser } from './helpers'
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
- * (including the `whsec_` prefix). An optional tolerance (default 300 s) rejects
- * stale signatures.
+ * (including the `whsec_` prefix). Signatures older than 5 minutes are rejected to
+ * prevent replay attacks.
  *
  * Works in: Vercel Edge Functions, Cloudflare Workers, Deno, Supabase Edge Functions.
  *
  * @param params.body - Raw webhook request body (string)
  * @param params.signature - Value of the `SV-Signature` header
  * @param params.secret - Webhook signing secret (`whsec_…`)
- * @param params.toleranceSec - Max age in seconds (default 300). Set to 0 to skip.
- * @returns Parsed webhook event object
+ * @returns Parsed and typed {@link WebhookEvent} object
  * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid
  *
  * @example
@@ -78,17 +80,25 @@ export type { ErrorResult, AuthenticatedUser } from './helpers'
  * const event = await verifyWebhook({ body, signature, secret });
  * ```
  */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let mismatch = 0
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return mismatch === 0
+}
+
 export async function verifyWebhook({
   body,
   signature,
   secret,
-  toleranceSec = 300,
 }: {
   body: string
   signature: string
   secret: string
-  toleranceSec?: number
-}) {
+}): Promise<WebhookEvent> {
+  const toleranceSec = 300
   if (!signature) throw new SolvaPayError('Missing webhook signature')
 
   const parts = signature.split(',')
@@ -124,9 +134,13 @@ export async function verifyWebhook({
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
 
-  if (expectedHmac.length !== receivedHmac.length || expectedHmac !== receivedHmac) {
+  if (!timingSafeEqual(expectedHmac, receivedHmac)) {
     throw new SolvaPayError('Invalid webhook signature')
   }
 
-  return JSON.parse(body)
+  try {
+    return JSON.parse(body) as WebhookEvent
+  } catch {
+    throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
+  }
 }

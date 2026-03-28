@@ -7,6 +7,7 @@
 
 import crypto from 'node:crypto'
 import { SolvaPayError } from '@solvapay/core'
+import type { WebhookEvent } from './types/webhook'
 
 // Main factory for unified API
 export { createSolvaPay } from './factory'
@@ -21,15 +22,14 @@ export type { ServerClientOptions } from './client'
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
- * (including the `whsec_` prefix). An optional tolerance (default 300 s) rejects
- * stale signatures.
+ * (including the `whsec_` prefix). Signatures older than 5 minutes are rejected to
+ * prevent replay attacks.
  *
  * @param params - Webhook verification parameters
  * @param params.body - Raw request body as string (must be exactly as received)
  * @param params.signature - Value of the `SV-Signature` header
  * @param params.secret - Webhook signing secret from SolvaPay dashboard (`whsec_…`)
- * @param params.toleranceSec - Max age in seconds (default 300). Set to 0 to skip.
- * @returns Parsed webhook payload as object
+ * @returns Parsed and typed {@link WebhookEvent} object
  * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid
  *
  * @example
@@ -63,13 +63,12 @@ export function verifyWebhook({
   body,
   signature,
   secret,
-  toleranceSec = 300,
 }: {
   body: string
   signature: string
   secret: string
-  toleranceSec?: number
-}) {
+}): WebhookEvent {
+  const toleranceSec = 300
   if (!signature) throw new SolvaPayError('Missing webhook signature')
 
   const parts = signature.split(',')
@@ -103,7 +102,11 @@ export function verifyWebhook({
   const ok = crypto.timingSafeEqual(Buffer.from(expectedHmac), Buffer.from(receivedHmac))
   if (!ok) throw new SolvaPayError('Invalid webhook signature')
 
-  return JSON.parse(body)
+  try {
+    return JSON.parse(body) as WebhookEvent
+  } catch {
+    throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
+  }
 }
 
 // Export PaywallError for error handling
@@ -125,6 +128,8 @@ export type {
   PaywallStructuredContent,
   PaywallToolResult,
   RetryOptions,
+  WebhookEvent,
+  WebhookEventType,
 } from './types'
 
 // Export payment processing types

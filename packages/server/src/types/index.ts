@@ -39,3 +39,6 @@ export type {
   NextAdapterOptions,
   McpAdapterOptions,
 } from './options'
+
+// Re-export webhook types
+export type { WebhookEvent, WebhookEventType } from './webhook'
