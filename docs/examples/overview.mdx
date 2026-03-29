@@ -20,7 +20,7 @@ description: "This document provides an overview of all available examples in th
 | [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic)                                       | Express.js | N/A (Paywall only) | Header-based     | API protection      | Simple         |
 | [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo)                                       | Next.js    | Embedded           | Supabase         | Full payment flow   | Advanced       |
 | [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo)                         | Next.js    | Hosted             | Supabase         | Hosted checkout     | Intermediate   |
-| [mcp-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic)                                               | MCP Server | N/A (Paywall only) | Header-based     | MCP tool protection | Simple         |
+| [mcp-time-app](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-time-app)                                         | MCP App    | N/A (Paywall only) | OAuth + Bearer   | MCP app UI + tools  | Intermediate   |
 | [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-oauth-bridge)                                 | MCP Server | N/A (Paywall only) | OAuth + Bearer   | Non-hosted MCP OAuth bridge | Advanced |
 
 ## Available Examples
@@ -95,26 +95,26 @@ description: "This document provides an overview of all available examples in th
 
 ---
 
-### 4. MCP Basic (`mcp-basic`)
+### 4. MCP Time App (`mcp-time-app`)
 
-**Purpose**: Demonstrates paywall protection for Model Context Protocol (MCP) servers.
+**Purpose**: Demonstrates an MCP App with an interactive UI resource and paywall-protected tool calls.
 
 **Key Features**:
 
-- MCP server integration
+- MCP app integration with `@modelcontextprotocol/ext-apps`
 - Tool protection with paywall
-- Persistent free tier tracking
-- Usage analytics
-- File-based storage simulation
+- Interactive app resource (`mcp-app://` UI)
+- OAuth discovery bridge integration
+- Bearer token protected MCP endpoint
 
 **Best For**:
 
-- MCP server developers
-- AI agent monetization
-- Tool access control
+- MCP app developers
+- Teams building UI-rich MCP experiences
+- Tool access control with OAuth identity
 - Usage-based pricing models
 
-**Documentation**: [mcp-basic README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-basic/README.md)
+**Documentation**: [mcp-time-app README](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-time-app/README.md)
 
 ---
 
@@ -177,7 +177,7 @@ Select an example based on your needs:
 
 - **New to SolvaPay?** → Start with `express-basic`
 - **Need payment flow?** → Use `checkout-demo` or `hosted-checkout-demo`
-- **Building MCP server?** → Use `mcp-basic`
+- **Building an MCP App with UI?** → Use `mcp-time-app`
 - **Building non-hosted MCP + OAuth bridge?** → Use `mcp-oauth-bridge`
 
 ### 3. Setup Environment
@@ -273,26 +273,27 @@ pnpm dev
 
 ---
 
-### MCP Basic
+### MCP Time App
 
-**Location**: `examples/mcp-basic/`
+**Location**: `examples/mcp-time-app/`
 
 **Run**:
 
 ```bash
-cd examples/mcp-basic
+cd examples/mcp-time-app
 pnpm install
-pnpm start
+cp .env.example .env
+pnpm dev
 ```
 
 **Features Demonstrated**:
 
-- MCP server integration
-- MCP adapter usage
-- Tool protection
-- Usage tracking
+- MCP app server + UI resource integration
+- Tool protection with `payable.mcp()`
+- OAuth discovery bridge setup
+- Interactive app resource rendering
 
-**No authentication required** - uses header-based customer identification.
+**Requires**: SolvaPay backend OAuth endpoints and MCP server reference (`MCP_SERVER_ID`)
 
 ---
 
@@ -324,7 +325,7 @@ pnpm dev
 
 ### 1. Start Simple
 
-Begin with `express-basic` or `mcp-basic` to understand core concepts before moving to more complex examples.
+Begin with `express-basic` to understand core paywall concepts, then move to `mcp-time-app` or `mcp-oauth-bridge` for MCP-specific patterns.
 
 ### 2. Use Stub Client for Development
 

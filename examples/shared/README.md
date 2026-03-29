@@ -63,7 +63,7 @@ const apiClient = createSolvaPayClient({
 ## Examples Using This
 
 - **express-basic** - Express.js API with paywall protection
-- **mcp-basic** - Model Context Protocol server with paywalls
+- **mcp-oauth-bridge** - MCP server with OAuth bridge and paywall protection
 - More examples coming soon...
 
 ## Implementation Notes

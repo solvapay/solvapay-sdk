@@ -22,7 +22,11 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "@example/mcp-basic#build": {
+    "@example/mcp-oauth-bridge#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@example/mcp-time-app#build": {
       "dependsOn": ["^build"],
       "outputs": []
     },

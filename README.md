@@ -325,16 +325,30 @@ Hosted checkout flow using redirect-based payments:
 cd examples/hosted-checkout-demo && pnpm dev
 ```
 
-### [mcp-basic](./examples/mcp-basic)
+### [mcp-oauth-bridge](./examples/mcp-oauth-bridge)
 
-Model Context Protocol server with paywall:
+Model Context Protocol server with OAuth bridge and paywall:
 
-- Protect MCP tools with `.mcp()` adapter
-- Integration with Claude Desktop and other MCP clients
-- Pay-per-use pricing model
+- Local OAuth discovery metadata endpoints
+- Bearer token protected `/mcp` endpoint
+- Dynamic client registration and OAuth flow support
+- `payable.mcp()` with customer identity from OAuth context
 
 ```bash
-cd examples/mcp-basic && pnpm dev
+cd examples/mcp-oauth-bridge && pnpm dev
+```
+
+### [mcp-time-app](./examples/mcp-time-app)
+
+Model Context Protocol app with UI resource and paywall:
+
+- MCP app resource integration via `@modelcontextprotocol/ext-apps`
+- Tool + app resource registration on a single server
+- OAuth bridge integration for secure MCP access
+- `payable.mcp()` with product-level paywall protection
+
+```bash
+cd examples/mcp-time-app && pnpm dev
 ```
 
 See [`examples/README.md`](./examples/README.md) for detailed setup instructions.
