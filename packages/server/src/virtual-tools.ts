@@ -129,7 +129,7 @@ function createUpgradeHandler(
 
     try {
       const result = await apiClient.createCheckoutSession({
-        customerReference: customerRef,
+        customerRef,
         productRef,
         ...(planRef && { planRef }),
       })

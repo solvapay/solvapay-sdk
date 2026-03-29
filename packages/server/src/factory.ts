@@ -727,7 +727,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     createCheckoutSession(params) {
       return apiClient.createCheckoutSession({
-        customerReference: params.customerRef,
+        customerRef: params.customerRef,
         productRef: params.productRef,
         planRef: params.planRef,
       })

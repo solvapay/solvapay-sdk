@@ -4,7 +4,7 @@
  * Types related to the SolvaPay API client and backend communication.
  */
 
-import type { components } from './generated'
+import type { components, operations } from './generated'
 
 export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
@@ -265,7 +265,7 @@ export interface SolvaPayClient {
 
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
-    params: components['schemas']['CreateCheckoutSessionRequest'],
+    params: operations['CheckoutSessionSdkController_createCheckoutSession']['requestBody']['content']['application/json'],
   ): Promise<components['schemas']['CheckoutSessionResponse']>
 
   // POST: /v1/sdk/customers/customer-sessions
