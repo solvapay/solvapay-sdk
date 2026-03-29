@@ -37,14 +37,14 @@ This demo uses **hosted checkout** - users are redirected to `solvapay.com` for 
 
 1. **Checkout Flow**:
    - User clicks "View Plans" or "Upgrade"
-   - Frontend calls `/api/create-checkout-token` to generate a secure token
+   - Frontend calls `/api/create-checkout-session` to generate a secure session
    - User is redirected to `solvapay.com/checkout?token=<token>`
    - User completes checkout on hosted page
    - User is redirected back to app after successful checkout
 
 2. **Purchase Management Flow**:
    - User clicks "Manage Purchase"
-   - Frontend calls `/api/create-manage-customer-token` to generate a secure token
+   - Frontend calls `/api/create-customer-session` to generate a secure session
    - User is redirected to `solvapay.com/customer?token=<token>`
    - User manages purchase on hosted page
    - User is redirected back to app when done
@@ -189,7 +189,7 @@ import { getAccessToken } from './lib/supabase'
 
 const handleViewPlans = async () => {
   const accessToken = await getAccessToken()
-  const res = await fetch('/api/create-checkout-token', {
+  const res = await fetch('/api/create-checkout-session', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -205,7 +205,7 @@ const handleViewPlans = async () => {
 ### 3. Hosted Checkout Token Generation
 
 ```typescript
-// app/api/create-checkout-token/route.ts
+// app/api/create-checkout-session/route.ts
 import { createSolvaPay } from '@solvapay/server'
 import { requireUserId } from '@solvapay/auth'
 
@@ -220,9 +220,9 @@ export async function POST(request: NextRequest) {
   // Ensure customer exists
   const customerRef = await solvaPay.ensureCustomer(userId, userId)
 
-  // Call backend API to create checkout token
+  // Call backend API to create checkout session
   const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
-  const response = await fetch(`${apiBaseUrl}/api/create-checkout-token`, {
+  const response = await fetch(`${apiBaseUrl}/api/create-checkout-session`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
 ### 4. Hosted Customer Management Token Generation
 
 ```typescript
-// app/api/create-manage-customer-token/route.ts
+// app/api/create-customer-session/route.ts
 import { createSolvaPay } from '@solvapay/server'
 import { requireUserId } from '@solvapay/auth'
 
@@ -260,9 +260,9 @@ export async function POST(request: NextRequest) {
   // Ensure customer exists
   const customerRef = await solvaPay.ensureCustomer(userId, userId)
 
-  // Call backend API to create customer management token
+  // Call backend API to create customer session
   const apiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
-  const response = await fetch(`${apiBaseUrl}/api/create-manage-customer-token`, {
+  const response = await fetch(`${apiBaseUrl}/api/create-customer-session`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
 const handleViewPlans = async () => {
   try {
     const accessToken = await getAccessToken()
-    const response = await fetch('/api/create-checkout-token', {
+    const response = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -308,7 +308,7 @@ const handleViewPlans = async () => {
 const handleManagePurchase = async () => {
   try {
     const accessToken = await getAccessToken()
-    const response = await fetch('/api/create-manage-customer-token', {
+    const response = await fetch('/api/create-customer-session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -375,9 +375,9 @@ import { ProductBadge } from '@solvapay/react';
 hosted-checkout-demo/
 ├── app/
 │   ├── api/
-│   │   ├── create-checkout-token/
+│   │   ├── create-checkout-session/
 │   │   │   └── route.ts          # Creates checkout token, returns hosted URL
-│   │   ├── create-manage-customer-token/
+│   │   ├── create-customer-session/
 │   │   │   └── route.ts          # Creates management token, returns hosted URL
 │   │   ├── check-purchase/
 │   │   │   └── route.ts          # Purchase status check
@@ -484,13 +484,13 @@ This demo expects the following backend endpoints to be implemented:
 
 ### Create Checkout Token
 
-- **Endpoint**: `POST /api/create-checkout-token`
+- **Endpoint**: `POST /api/create-checkout-session`
 - **Request**: `{ productRef: string, customerRef: string, planRef?: string }`
 - **Response**: `{ token: string }`
 
 ### Create Manage Customer Token
 
-- **Endpoint**: `POST /api/create-manage-customer-token`
+- **Endpoint**: `POST /api/create-customer-session`
 - **Request**: `{ customerRef: string }`
 - **Response**: `{ token: string }`
 
@@ -585,7 +585,7 @@ const handleManagePurchase = async () => {
 
 1. Check your SolvaPay API key is valid in the dashboard
 2. Verify the backend URL is correct (`SOLVAPAY_API_BASE_URL`)
-3. Ensure backend endpoint `/api/create-checkout-token` is implemented
+3. Ensure backend endpoint `/api/create-checkout-session` is implemented
 4. Check network tab for API errors and status codes
 5. Verify customer reference is properly set
 6. Check server logs for detailed error messages

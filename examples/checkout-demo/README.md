@@ -148,65 +148,25 @@ import { SolvaPayProvider } from '@solvapay/react'
 
 ### 2. Authentication Setup
 
-This demo uses Supabase authentication middleware as the default approach
-(`proxy.ts` in Next.js 16):
+This demo uses Supabase authentication middleware (`proxy.ts`) and SDK helpers from
+`@solvapay/next`.
 
-**Middleware Approach (Default):**
-
-The `proxy.ts` file implements authentication middleware that extracts user IDs from Supabase JWT tokens and sets them as headers for all API routes:
+**Proxy Setup (Default):**
 
 ```tsx
 // proxy.ts
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
+import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
 
-const auth = new SupabaseAuthAdapter({
-  jwtSecret: process.env.SUPABASE_JWT_SECRET!,
+export const proxy = createSupabaseAuthMiddleware({
+  publicRoutes: ['/api/list-plans'],
 })
 
-export async function proxy(request: NextRequest) {
-  const userId = await auth.getUserIdFromRequest(request)
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Set userId header for downstream routes
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-user-id', userId)
-
-  return NextResponse.next({ request: { headers: requestHeaders } })
+export const config = {
+  matcher: ['/api/:path*'],
 }
 ```
 
-**Route-Level Approach (Alternative):**
-
-You can also use SupabaseAuthAdapter directly in individual routes if you prefer:
-
-```tsx
-// app/api/create-payment-intent/route.ts
-import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
-
-const auth = new SupabaseAuthAdapter({
-  jwtSecret: process.env.SUPABASE_JWT_SECRET!,
-})
-
-export async function POST(request: NextRequest) {
-  const userId = await auth.getUserIdFromRequest(request)
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Use userId as cache key and externalRef
-  // The ensureCustomer method returns the SolvaPay backend customer reference
-  const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
-  const ensuredCustomerRef = await solvaPay.ensureCustomer(userId, userId)
-  const customer = await solvaPay.getCustomer({ customerRef: ensuredCustomerRef })
-  // ...
-}
-```
-
-The frontend sends the Supabase access token in the Authorization header:
+The frontend sends the Supabase access token in the Authorization header for protected routes:
 
 ```tsx
 // app/layout.tsx
@@ -284,33 +244,19 @@ import { PlanBadge, UpgradeButton } from '@solvapay/react';
 
 ### 5. Backend API Routes
 
+The API routes are intentionally thin and delegate to `@solvapay/next` helpers.
+Each route returns either a `NextResponse` (on auth/errors) or helper payload JSON.
+
 **Check Purchase:**
 
 ```typescript
 // app/api/check-purchase/route.ts
-import { createSolvaPay } from '@solvapay/server'
-// Authentication middleware in proxy.ts sets x-user-id header
+import { NextRequest, NextResponse } from 'next/server'
+import { checkPurchase } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
-  // Get userId from middleware header
-  const userId = request.headers.get('x-user-id')
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const solvapay = createSolvaPay({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-  })
-
-  const customer = await solvapay.getCustomer({ customerRef: userId })
-
-  return NextResponse.json({
-    customerRef: customer.customerRef,
-    email: customer.email,
-    name: customer.name,
-    purchases: customer.purchases || [],
-  })
+  const result = await checkPurchase(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -318,35 +264,13 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // app/api/create-payment-intent/route.ts
-// Authentication middleware in proxy.ts sets x-user-id header
+import { NextRequest, NextResponse } from 'next/server'
+import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
-  // Get userId from middleware header
-  const userId = request.headers.get('x-user-id')
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   const { planRef, productRef } = await request.json()
-
-  const solvapay = createSolvaPay({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-  })
-
-  await solvapay.ensureCustomer(userId)
-
-  const paymentIntent = await solvapay.createPaymentIntent({
-    productRef,
-    planRef,
-    customerRef: userId,
-  })
-
-  return NextResponse.json({
-    clientSecret: paymentIntent.clientSecret,
-    publishableKey: paymentIntent.publishableKey,
-    accountId: paymentIntent.accountId,
-  })
+  const result = await createPaymentIntent(request, { planRef, productRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
@@ -742,17 +666,17 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 
 ### Getting Started
 
-- [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
-- [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
-- [Quick Start Guide](../../docs/getting-started/quick-start.md) - Quick setup guide
-- [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
+- [Examples Overview](../../docs/examples/overview.mdx) - Overview of all examples
+- [Installation Guide](../../docs/getting-started/installation.mdx) - SDK installation
+- [Quick Start Guide](../../docs/getting-started/quick-start.mdx) - Quick setup guide
+- [Core Concepts](../../docs/getting-started/core-concepts.mdx) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
 
-- [React Integration Guide](../../docs/guides/react.md) - Complete React integration guide
-- [Next.js Integration Guide](../../docs/guides/nextjs.md) - Next.js specific patterns
-- [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
-- [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
+- [React Integration Guide](../../docs/guides/react.mdx) - Complete React integration guide
+- [Next.js Integration Guide](../../docs/guides/nextjs.mdx) - Next.js specific patterns
+- [Custom Authentication Adapters](../../docs/guides/custom-auth.mdx) - Custom auth setup
+- [Error Handling Guide](../../docs/guides/error-handling.mdx) - Error handling patterns
 
 ### API Reference
 
