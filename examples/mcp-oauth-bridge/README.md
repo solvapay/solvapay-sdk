@@ -28,12 +28,11 @@ Server default: `http://localhost:3004`
 
 ## Required environment variables
 
-- `SOLVAPAY_OAUTH_BASE_URL`: backend base URL (for example `http://localhost:3000`)
+- `SOLVAPAY_API_BASE_URL`: backend base URL (for example `http://localhost:3000`) used for OAuth endpoints and SDK metering checks
 - `SOLVAPAY_PRODUCT_REF`: product reference used by `payable.mcp(...)` and OAuth DCR (`product_ref`)
 - `MCP_PUBLIC_BASE_URL`: local MCP origin exposed to clients
 - `OAUTH_REDIRECT_URI`: redirect used in DCR + auth flow
 - `SOLVAPAY_SECRET_KEY`: backend API key for SDK metering checks
-- `SOLVAPAY_API_BASE_URL`: backend API base URL for SDK metering checks
 
 ## Optional bootstrap setup
 

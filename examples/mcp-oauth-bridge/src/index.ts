@@ -4,7 +4,12 @@ import { randomUUID } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { createMCPServer, registerMCPHandlers } from './server'
-import { mcpPublicBaseUrl, oauthBaseUrl, paywallEnabled, solvapayProductRef } from './config'
+import {
+  mcpPublicBaseUrl,
+  paywallEnabled,
+  solvapayApiBaseUrl,
+  solvapayProductRef,
+} from './config'
 
 type JsonRpcId = string | number | null
 
@@ -41,7 +46,7 @@ async function resolveCustomerRef(authHeader?: string): Promise<string | null> {
     return null
   }
 
-  const response = await fetch(`${oauthBaseUrl}/v1/customer/auth/userinfo`, {
+  const response = await fetch(`${solvapayApiBaseUrl}/v1/customer/auth/userinfo`, {
     method: 'GET',
     headers: {
       Authorization: authHeader,
@@ -87,12 +92,12 @@ app.get('/.well-known/oauth-authorization-server', (_req, res) => {
   }
 
   const registrationEndpoint =
-    `${oauthBaseUrl}/v1/customer/auth/register?product_ref=${encodeURIComponent(solvapayProductRef)}`
+    `${solvapayApiBaseUrl}/v1/customer/auth/register?product_ref=${encodeURIComponent(solvapayProductRef)}`
 
   res.json({
-    issuer: oauthBaseUrl,
-    authorization_endpoint: `${oauthBaseUrl}/v1/customer/auth/authorize`,
-    token_endpoint: `${oauthBaseUrl}/v1/customer/auth/token`,
+    issuer: solvapayApiBaseUrl,
+    authorization_endpoint: `${solvapayApiBaseUrl}/v1/customer/auth/authorize`,
+    token_endpoint: `${solvapayApiBaseUrl}/v1/customer/auth/token`,
     registration_endpoint: registrationEndpoint,
     token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
     response_types_supported: ['code'],
