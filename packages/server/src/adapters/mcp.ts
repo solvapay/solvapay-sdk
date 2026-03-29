@@ -44,8 +44,7 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
       ? this.options.transformResponse(result)
       : result
 
-    // Wrap plain object in MCP tool result format
-    return {
+    const response: PaywallToolResult = {
       content: [
         {
           type: 'text',
@@ -53,6 +52,12 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
         },
       ],
     }
+
+    if (transformed && typeof transformed === 'object' && !Array.isArray(transformed)) {
+      response.structuredContent = transformed as Record<string, unknown>
+    }
+
+    return response
   }
 
   formatError(error: Error, _context: McpContext): PaywallToolResult {

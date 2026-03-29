@@ -5,14 +5,19 @@
   "scripts": {
     "build": "cross-env INPUT=mcp-app.html vite build && tsc",
     "serve": "tsx src/index.ts",
-    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"nodemon --watch src --watch dist/mcp-app.html --ext ts,css,html --exec \\\"tsx src/index.ts\\\"\""
+    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"nodemon --watch src --watch dist/mcp-app.html --watch ../../packages/server/dist --watch ../../packages/core/dist --ext ts,css,html --exec \\\"tsx src/index.ts\\\"\""
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.3.1",
     "@modelcontextprotocol/sdk": "^1.28.0",
+    "@solvapay/core": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",

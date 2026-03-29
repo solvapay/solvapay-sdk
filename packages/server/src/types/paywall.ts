@@ -42,5 +42,5 @@ export interface PaywallToolResult {
     mimeType?: string
   }>
   isError?: boolean
-  structuredContent?: PaywallStructuredContent
+  structuredContent?: PaywallStructuredContent | Record<string, unknown>
 }

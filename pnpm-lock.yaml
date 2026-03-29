@@ -333,6 +333,9 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      zod:
+        specifier: ^4.1.11
+        version: 4.3.6
     devDependencies:
       '@types/express':
         specifier: ^5.0.6
@@ -358,10 +361,25 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.28.0
         version: 1.28.0(zod@4.3.6)
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@solvapay/server':
+        specifier: workspace:*
+        version: link:../../packages/server
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
       zod:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
@@ -591,9 +609,15 @@ importers:
 
   packages/server:
     dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.28.0
+        version: 1.28.0(zod@4.3.6)
       '@solvapay/core':
         specifier: workspace:*
         version: link:../core
+      zod:
+        specifier: ^3.25.0 || ^4.0.0
+        version: 4.3.6
     devDependencies:
       '@solvapay/auth':
         specifier: workspace:*
