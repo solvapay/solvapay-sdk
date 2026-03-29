@@ -1,5 +1,6 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { createTask, deleteTask, getTask, listTasks } from '@solvapay/demo-services'
+import type { McpServerLike } from '@solvapay/server'
 import { z } from 'zod'
 import { payable, paywallEnabled, solvaPay, solvapayProductRef } from './config'
 import type { CreateTaskArgs, DeleteTaskArgs, GetTaskArgs, ListTasksArgs } from './types/mcp'
@@ -73,7 +74,9 @@ export function createMCPServer(): McpServer {
   )
 
   if (solvaPay) {
-    void solvaPay.registerVirtualToolsMcp(server, {
+    // MCP SDK 1.28 registerTool typing is broader than the current SolvaPay McpServerLike contract.
+    // Runtime shape is compatible; cast keeps this example type-safe until the SDK types are widened.
+    void solvaPay.registerVirtualToolsMcp(server as unknown as McpServerLike, {
       product: solvapayProductRef,
     })
   }

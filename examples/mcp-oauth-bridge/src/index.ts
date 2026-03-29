@@ -1,15 +1,16 @@
 import 'dotenv/config'
 import express, { Request, Response } from 'express'
 import { randomUUID } from 'node:crypto'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp'
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types'
-import { createMcpOAuthBridge } from '@solvapay/server'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
+import { createMcpOAuthBridge, verifyWebhook } from '@solvapay/server'
 import { createMCPServer } from './server'
 import {
   mcpPublicBaseUrl,
   paywallEnabled,
   solvapayApiBaseUrl,
   solvapayProductRef,
+  solvapayWebhookSecret,
 } from './config'
 
 type JsonRpcId = string | number | null
@@ -21,6 +22,46 @@ type SessionEntry = {
 const sessions: Record<string, SessionEntry> = {}
 
 const app = express()
+// Use raw body for signature verification before JSON middleware transforms it.
+app.post('/webhooks', express.raw({ type: 'application/json' }), (req: Request, res: Response) => {
+  if (!solvapayWebhookSecret) {
+    console.error('SOLVAPAY_WEBHOOK_SECRET is not configured')
+    res.status(500).json({ received: false, error: 'Webhook secret is not configured' })
+    return
+  }
+
+  const signatureHeader = req.headers['sv-signature']
+  const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : (signatureHeader ?? '')
+  const rawBody = Buffer.isBuffer(req.body)
+    ? req.body.toString('utf8')
+    : typeof req.body === 'string'
+      ? req.body
+      : ''
+
+  try {
+    const event = verifyWebhook({
+      body: rawBody,
+      signature,
+      secret: solvapayWebhookSecret,
+    })
+
+    if (event.type === 'customer.created') {
+      console.warn('Received customer.created webhook', event.data.object)
+    }
+
+    if (event.type === 'payment.succeeded') {
+      console.warn('Received payment.succeeded test webhook', event.data.object)
+    }
+
+    console.warn('Received webhook', JSON.stringify(event, null, 2))
+
+    res.status(200).json({ received: true })
+  } catch (error) {
+    console.error('Webhook verification failed', error)
+    res.status(400).json({ received: false, error: 'Invalid webhook signature' })
+  }
+})
+
 app.use(express.json())
 app.use(
   ...createMcpOAuthBridge({
@@ -117,8 +158,19 @@ app.delete('/mcp', async (req: Request, res: Response) => {
 })
 
 const port = parseInt(process.env.MCP_PORT || '3004', 10)
-const host = process.env.MCP_HOST || 'localhost'
+const configuredHost = process.env.MCP_HOST || '0.0.0.0'
+// Use an IPv4-compatible bind by default so webhooks posted to 127.0.0.1 can connect.
+const host = configuredHost === 'localhost' ? '0.0.0.0' : configuredHost
+const displayHost = host === '0.0.0.0' ? 'localhost' : host
 
 app.listen(port, host, () => {
-  console.error(`MCP OAuth bridge listening on http://${host}:${port}`)
+  console.error(`MCP OAuth bridge listening on http://${displayHost}:${port}`)
+  console.error(`  Product:  ${solvapayProductRef || '(none)'}`)
+  console.error(`  API:      ${solvapayApiBaseUrl}`)
+  console.error(`  Paywall:  ${paywallEnabled ? 'enabled' : 'disabled'}`)
+  if (!solvapayWebhookSecret) {
+    console.error(
+      '  Webhooks: SOLVAPAY_WEBHOOK_SECRET is missing, webhook signature verification will fail',
+    )
+  }
 })
