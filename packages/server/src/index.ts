@@ -153,6 +153,9 @@ export type {
   McpBootstrapResponse,
   McpBootstrapFreePlanConfig,
   McpBootstrapPaidPlanInput,
+  ConfigureMcpPlansRequest,
+  ConfigureMcpPlansResponse,
+  McpToolPlanMappingInput,
   ToolPlanMappingInput,
 } from './types/client'
 

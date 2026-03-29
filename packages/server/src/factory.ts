@@ -15,6 +15,8 @@ import type {
   CustomerResponseMapped,
   McpBootstrapRequest,
   McpBootstrapResponse,
+  ConfigureMcpPlansRequest,
+  ConfigureMcpPlansResponse,
 } from './types'
 import { createSolvaPayClient } from './client'
 import { SolvaPayPaywall } from './paywall'
@@ -553,6 +555,17 @@ export interface SolvaPay {
   bootstrapMcpProduct(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
 
   /**
+   * Configure MCP plans and tool mappings for an existing MCP product.
+   *
+   * This helper wraps the backend MCP plans endpoint and supports adding/removing
+   * paid plans as well as remapping tool access.
+   */
+  configureMcpPlans(
+    productRef: string,
+    params: ConfigureMcpPlansRequest,
+  ): Promise<ConfigureMcpPlansResponse>
+
+  /**
    * Get virtual tool definitions with bound handlers for MCP server integration.
    *
    * Returns an array of tool objects (name, description, inputSchema, handler)
@@ -742,6 +755,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('bootstrapMcpProduct is not available on this API client')
       }
       return apiClient.bootstrapMcpProduct(params)
+    },
+
+    configureMcpPlans(productRef, params) {
+      if (!apiClient.configureMcpPlans) {
+        throw new SolvaPayError('configureMcpPlans is not available on this API client')
+      }
+      return apiClient.configureMcpPlans(productRef, params)
     },
 
     getVirtualTools(options: VirtualToolsOptions) {

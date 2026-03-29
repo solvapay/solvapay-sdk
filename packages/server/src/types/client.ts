@@ -87,6 +87,11 @@ export interface ToolPlanMappingInput {
   planKeys?: string[]
 }
 
+export interface McpToolPlanMappingInput {
+  name: string
+  planKeys: string[]
+}
+
 export interface McpBootstrapRequest {
   name?: string
   description?: string
@@ -116,6 +121,24 @@ export interface McpBootstrapResponse {
   planMap: Record<string, { id: string; reference: string; name?: string }>
   toolsAutoMapped?: boolean
   autoMappedTools?: Array<{ name: string; description?: string }>
+}
+
+export interface ConfigureMcpPlansRequest {
+  paidPlans?: McpBootstrapPaidPlanInput[]
+  toolMapping?: McpToolPlanMappingInput[]
+}
+
+export interface ConfigureMcpPlansResponse {
+  product: components['schemas']['SdkProductResponse']
+  mcpServer: {
+    id?: string
+    reference?: string
+    subdomain?: string
+    mcpProxyUrl?: string
+    url: string
+    defaultPlanId?: string
+  }
+  planMap: Record<string, { id: string; reference: string; name?: string }>
 }
 
 /**
@@ -176,6 +199,12 @@ export interface SolvaPayClient {
 
   // POST: /v1/sdk/products/mcp/bootstrap
   bootstrapMcpProduct?(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
+
+  // PUT: /v1/sdk/products/{productRef}/mcp/plans
+  configureMcpPlans?(
+    productRef: string,
+    params: ConfigureMcpPlansRequest,
+  ): Promise<ConfigureMcpPlansResponse>
 
   // PUT: /v1/sdk/products/{productRef}
   updateProduct?(
@@ -266,7 +295,7 @@ export interface SolvaPayClient {
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
     params: operations['CheckoutSessionSdkController_createCheckoutSession']['requestBody']['content']['application/json'],
-  ): Promise<components['schemas']['CheckoutSessionResponse']>
+  ): Promise<components['schemas']['CreateCheckoutSessionResponse']>
 
   // POST: /v1/sdk/customers/customer-sessions
   createCustomerSession(

@@ -197,6 +197,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/products/{productRef}/mcp/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Configure MCP plans on an MCP product
+         * @description Requires freePlan and configures existing default free plan, paid plans, and optional tool-to-plan mappings for an MCP product.
+         */
+        put: operations["ProductSdkController_configureMcpPlans"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/products/{productRef}/clone": {
         parameters: {
             query?: never;
@@ -602,7 +622,7 @@ export interface components {
              */
             productRef: string;
         };
-        CheckoutSessionResponse: {
+        CreateUiCheckoutSessionResponse: {
             /**
              * Checkout session ID
              * @example 507f1f77bcf86cd799439011
@@ -1577,6 +1597,40 @@ export interface components {
                 name?: string;
                 description?: string;
             }[];
+        };
+        McpToolPlanMapping: {
+            /**
+             * Tool name
+             * @example deep_research
+             */
+            name: string;
+            /**
+             * Plan keys this tool should be gated to
+             * @example [
+             *       "pro"
+             *     ]
+             */
+            planKeys: string[];
+        };
+        ConfigureMcpPlansRequest: {
+            /** @description Required free plan configuration for updates. Applies to the existing default free plan only. */
+            freePlan: components["schemas"]["McpBootstrapFreePlanConfig"];
+            /** @description Optional paid plan definitions. [] reverts to free-only, omitted leaves existing paid plans unchanged. */
+            paidPlans?: components["schemas"]["McpBootstrapPaidPlanInput"][];
+            /** @description Optional tool-to-plan remapping. If paidPlans is omitted, only this remapping is applied. */
+            toolMapping?: components["schemas"]["McpToolPlanMapping"][];
+        };
+        ConfigureMcpPlansResult: {
+            /** @description Updated product */
+            product: components["schemas"]["SdkProductResponse"];
+            /** @description Updated MCP server identity */
+            mcpServer: {
+                [key: string]: unknown;
+            };
+            /** @description Resolved plan mapping by key (includes existing free plan) */
+            planMap: {
+                [key: string]: unknown;
+            };
         };
         McpBootstrapPreviewResult: {
             /** @description Discovered tools from the origin MCP server */
@@ -3020,6 +3074,47 @@ export interface operations {
             };
             /** @description Invalid bootstrap request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_configureMcpPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigureMcpPlansRequest"];
+            };
+        };
+        responses: {
+            /** @description MCP plans configured successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigureMcpPlansResult"];
+                };
+            };
+            /** @description Invalid MCP plans request or product is not MCP-enabled */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
