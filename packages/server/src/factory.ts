@@ -11,6 +11,7 @@ import type {
   HttpAdapterOptions,
   NextAdapterOptions,
   McpAdapterOptions,
+  McpToolExtra,
   CustomerResponseMapped,
   McpBootstrapRequest,
   McpBootstrapResponse,
@@ -21,6 +22,11 @@ import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './ad
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
+import {
+  registerVirtualToolsMcpImpl,
+  type McpServerLike,
+  type RegisterVirtualToolsMcpOptions,
+} from './register-virtual-tools-mcp'
 
 /**
  * Configuration for creating a SolvaPay instance.
@@ -162,7 +168,7 @@ export interface PayableFunction {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     businessLogic: (args: any) => Promise<T>,
     options?: McpAdapterOptions,
-  ): (args: Record<string, unknown>) => Promise<unknown>
+  ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<unknown>
 
   /**
    * Pure function adapter for direct function protection.
@@ -565,7 +571,7 @@ export interface SolvaPay {
    * ```typescript
    * const virtualTools = solvaPay.getVirtualTools({
    *   product: 'prd_myapi',
-   *   getCustomerRef: args => args._auth?.customer_ref || 'anonymous',
+   *   getCustomerRef: (_args, extra) => String(extra?.authInfo?.extra?.customer_ref || 'anonymous'),
    * });
    *
    * // Register on your MCP server
@@ -575,6 +581,17 @@ export interface SolvaPay {
    * ```
    */
   getVirtualTools(options: VirtualToolsOptions): VirtualToolDefinition[]
+
+  /**
+   * Register virtual tools directly on an MCP server with one call.
+   *
+   * This helper converts virtual tool JSON schemas to Zod schemas and registers
+   * each tool on an MCP server that supports `registerTool()`.
+   */
+  registerVirtualToolsMcp(
+    server: McpServerLike,
+    options: RegisterVirtualToolsMcpOptions,
+  ): Promise<void>
 
   /**
    * Direct access to the API client for advanced operations.
@@ -731,6 +748,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return createVirtualTools(apiClient, options)
     },
 
+    async registerVirtualToolsMcp(
+      server: McpServerLike,
+      options: RegisterVirtualToolsMcpOptions,
+    ) {
+      await registerVirtualToolsMcpImpl(server, apiClient, options)
+    },
+
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
       // Resolve product name (support both productRef and product)
@@ -793,9 +817,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
           })
           const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
-          return async (args: Record<string, unknown>) => {
+          return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
             const handler = await handlerPromise
-            return handler(args)
+            return handler(args, extra)
           }
         },
 

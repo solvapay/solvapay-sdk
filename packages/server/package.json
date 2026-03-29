@@ -53,7 +53,17 @@
     "@solvapay/core": "workspace:*"
   },
   "peerDependencies": {
-    "@solvapay/auth": "workspace:*"
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "@solvapay/auth": "workspace:*",
+    "zod": "^3.25.0 || ^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@solvapay/auth": "workspace:*",

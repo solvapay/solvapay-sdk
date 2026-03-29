@@ -115,6 +115,17 @@ export { PaywallError } from './paywall'
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
 export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
+export {
+  registerVirtualToolsMcpImpl,
+  jsonSchemaToZodRawShape,
+} from './register-virtual-tools-mcp'
+export type { McpServerLike, RegisterVirtualToolsMcpOptions } from './register-virtual-tools-mcp'
+export { buildAuthInfoFromBearer } from './mcp/auth-bridge'
+export { createMcpOAuthBridge } from './mcp/oauth-bridge'
+export {
+  getOAuthProtectedResourceResponse,
+  getOAuthAuthorizationServerResponse,
+} from './mcp/oauth-bridge'
 
 // Export types
 export type {
@@ -128,6 +139,7 @@ export type {
   PaywallStructuredContent,
   PaywallToolResult,
   RetryOptions,
+  McpToolExtra,
   WebhookEvent,
   WebhookEventType,
 } from './types'

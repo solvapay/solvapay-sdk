@@ -301,10 +301,19 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'mcp-test' })
       const mcpHandler = payable.mcp(handler)
 
-      const result = await mcpHandler({
-        input: 'test',
-        auth: { customer_ref: 'mcp_user' },
-      })
+      const result = await mcpHandler(
+        {
+          input: 'test',
+        },
+        {
+          authInfo: {
+            token: 'test-token',
+            clientId: 'test-client',
+            scopes: ['openid'],
+            extra: { customer_ref: 'mcp_user' },
+          },
+        },
+      )
 
       // MCP adapter wraps response in MCP format
       expect(result).toHaveProperty('content')

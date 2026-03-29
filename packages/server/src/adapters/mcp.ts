@@ -6,7 +6,7 @@
 
 import type { Adapter } from './base'
 import { AdapterUtils } from './base'
-import type { McpAdapterOptions, PaywallToolResult } from '../types'
+import type { McpAdapterOptions, McpToolExtra, PaywallToolResult } from '../types'
 import { PaywallError } from '../paywall'
 
 /**
@@ -25,15 +25,17 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
     return args
   }
 
-  async getCustomerRef(args: McpContext): Promise<string> {
+  async getCustomerRef(args: McpContext, extra?: McpToolExtra): Promise<string> {
     if (this.options.getCustomerRef) {
-      const ref = await this.options.getCustomerRef(args)
+      const ref = await this.options.getCustomerRef(args, extra)
       return AdapterUtils.ensureCustomerRef(ref)
     }
 
-    // Extract from args.auth.customer_ref
-    const auth = args?.auth as { customer_ref?: string } | undefined
-    const customerRef = auth?.customer_ref || 'anonymous'
+    const customerRefFromExtra = extra?.authInfo?.extra?.customer_ref
+    const customerRef =
+      typeof customerRefFromExtra === 'string' && customerRefFromExtra.trim()
+        ? customerRefFromExtra.trim()
+        : 'anonymous'
     return AdapterUtils.ensureCustomerRef(customerRef)
   }
 

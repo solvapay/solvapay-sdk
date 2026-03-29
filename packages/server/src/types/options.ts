@@ -43,6 +43,17 @@ export interface RetryOptions {
   onRetry?: (error: Error, attempt: number) => void
 }
 
+export interface McpToolExtra {
+  authInfo?: {
+    token: string
+    clientId: string
+    scopes: string[]
+    expiresAt?: number
+    extra?: Record<string, unknown>
+  }
+  [key: string]: unknown
+}
+
 /**
  * Options for configuring payable protection
  */
@@ -132,7 +143,7 @@ export interface McpAdapterOptions {
    * Extract customer reference from MCP args
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getCustomerRef?: (args: any) => string | Promise<string>
+  getCustomerRef?: (args: any, extra?: McpToolExtra) => string | Promise<string>
 
   /**
    * Transform the response before wrapping in MCP format

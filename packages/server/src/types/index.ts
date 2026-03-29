@@ -34,6 +34,7 @@ export type {
 // Re-export configuration options
 export type {
   RetryOptions,
+  McpToolExtra,
   PayableOptions,
   HttpAdapterOptions,
   NextAdapterOptions,

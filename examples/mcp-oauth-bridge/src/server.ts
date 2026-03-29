@@ -1,12 +1,69 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { tools, toolHandlers } from './tools'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp'
+import { createTask, deleteTask, getTask, listTasks } from '@solvapay/demo-services'
+import { z } from 'zod'
+import { payable, paywallEnabled, solvaPay, solvapayProductRef } from './config'
+import type { CreateTaskArgs, DeleteTaskArgs, GetTaskArgs, ListTasksArgs } from './types/mcp'
 
-export function createMCPServer(): Server {
-  return new Server(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ToolHandler = (args: any, extra?: unknown) => Promise<any>
+
+function directMcp(fn: (args: Record<string, unknown>) => Promise<unknown>): ToolHandler {
+  return async args => ({
+    content: [{ type: 'text', text: JSON.stringify(await fn(args), null, 2) }],
+  })
+}
+
+const wrapTool =
+  paywallEnabled && payable
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fn: (args: any) => Promise<unknown>): ToolHandler => {
+        const wrapped = payable!.mcp(fn as any)
+        return async (args, extra) => (wrapped as any)(args, extra)
+      }
+    : directMcp
+
+async function createTaskMCP(args: CreateTaskArgs) {
+  const result = await createTask(args)
+  return {
+    success: result.success,
+    message: 'Task created successfully',
+    task: result.task,
+  }
+}
+
+async function getTaskMCP(args: GetTaskArgs) {
+  const result = await getTask(args)
+  return {
+    success: result.success,
+    task: result.task,
+  }
+}
+
+async function listTasksMCP(args: ListTasksArgs) {
+  const result = await listTasks(args)
+  return {
+    success: result.success,
+    tasks: result.tasks,
+    total: result.total,
+    limit: result.limit,
+    offset: result.offset,
+  }
+}
+
+async function deleteTaskMCP(args: DeleteTaskArgs) {
+  const result = await deleteTask(args)
+  return {
+    success: result.success,
+    message: result.message,
+    deletedTask: result.deletedTask,
+  }
+}
+
+export function createMCPServer(): McpServer {
+  const server = new McpServer(
     {
       name: 'solvapay-oauth-bridge-mcp-server',
-      version: '1.0.0',
+      version: '2.0.0',
     },
     {
       capabilities: {
@@ -14,37 +71,62 @@ export function createMCPServer(): Server {
       },
     },
   )
-}
 
-export function registerMCPHandlers(server: Server): void {
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools,
-  }))
-
-  type CallToolRequest = {
-    params: {
-      name: string
-      arguments?: unknown
-    }
+  if (solvaPay) {
+    void solvaPay.registerVirtualToolsMcp(server, {
+      product: solvapayProductRef,
+    })
   }
 
-  const callToolHandler = async (request: unknown): Promise<unknown> => {
-    const { params } = request as CallToolRequest
-    const { name, arguments: args } = params
-    const toolArgs = (args ?? {}) as Record<string, unknown>
+  const createTaskHandler = wrapTool(createTaskMCP)
+  server.registerTool(
+    'create_task',
+    {
+      description: 'Create a new task (OAuth bearer token required)',
+      inputSchema: {
+        title: z.string().describe('Task title'),
+        description: z.string().optional().describe('Task description'),
+      },
+    },
+    async (args, extra) => createTaskHandler(args, extra),
+  )
 
-    const handler = toolHandlers[name]
-    if (!handler) {
-      throw new Error(`Unknown tool: ${name}`)
-    }
+  const getTaskHandler = wrapTool(getTaskMCP)
+  server.registerTool(
+    'get_task',
+    {
+      description: 'Get task by ID (OAuth bearer token required)',
+      inputSchema: {
+        id: z.string().describe('Task id'),
+      },
+    },
+    async (args, extra) => getTaskHandler(args, extra),
+  )
 
-    return handler(toolArgs)
-  }
+  const listTasksHandler = wrapTool(listTasksMCP)
+  server.registerTool(
+    'list_tasks',
+    {
+      description: 'List tasks (OAuth bearer token required)',
+      inputSchema: {
+        limit: z.number().optional(),
+        offset: z.number().optional(),
+      },
+    },
+    async (args, extra) => listTasksHandler(args, extra),
+  )
 
-  const setRequestHandlerTyped = server.setRequestHandler.bind(server) as unknown as (
-    schema: typeof CallToolRequestSchema,
-    handler: (request: unknown) => Promise<unknown>,
-  ) => void
+  const deleteTaskHandler = wrapTool(deleteTaskMCP)
+  server.registerTool(
+    'delete_task',
+    {
+      description: 'Delete task by ID (OAuth bearer token required)',
+      inputSchema: {
+        id: z.string().describe('Task id'),
+      },
+    },
+    async (args, extra) => deleteTaskHandler(args, extra),
+  )
 
-  setRequestHandlerTyped(CallToolRequestSchema, callToolHandler)
+  return server
 }

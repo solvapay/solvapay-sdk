@@ -21,7 +21,7 @@ export interface Adapter<TContext = any, TResult = any> {
   /**
    * Extract customer reference from the context
    */
-  getCustomerRef(context: TContext): Promise<string> | string
+  getCustomerRef(context: TContext, extra?: unknown): Promise<string> | string
 
   /**
    * Format the business logic result for the framework
@@ -95,15 +95,15 @@ export async function createAdapterHandler<TContext, TResult>(
   metadata: PaywallMetadata,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   businessLogic: (args: any) => Promise<any>,
-): Promise<(context: TContext) => Promise<TResult>> {
+): Promise<(context: TContext, extra?: unknown) => Promise<TResult>> {
   const backendRefCache = new Map<string, string>()
   const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
   const protectedHandler = await paywall.protect(businessLogic, metadata, getCustomerRef)
 
-  return async (context: TContext): Promise<TResult> => {
+  return async (context: TContext, extra?: unknown): Promise<TResult> => {
     try {
       const args = await adapter.extractArgs(context)
-      const customerRef = await adapter.getCustomerRef(context)
+      const customerRef = await adapter.getCustomerRef(context, extra)
 
       let backendRef = backendRefCache.get(customerRef)
       if (!backendRef) {

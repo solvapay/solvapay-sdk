@@ -32,8 +32,8 @@ Create a SolvaPay instance in your MCP server:
 
 ```typescript
 import { createSolvaPay } from '@solvapay/server'
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { Server } from '@modelcontextprotocol/sdk/server/index'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio'
 
 // Initialize SolvaPay
 const solvaPay = createSolvaPay({
@@ -56,7 +56,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
-} from '@modelcontextprotocol/sdk/types.js'
+} from '@modelcontextprotocol/sdk/types'
 
 // Create MCP server
 const server = new Server(
@@ -393,13 +393,13 @@ Here's a complete MCP server with SolvaPay integration:
 
 ```typescript
 import 'dotenv/config'
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { Server } from '@modelcontextprotocol/sdk/server/index'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
-} from '@modelcontextprotocol/sdk/types.js'
+} from '@modelcontextprotocol/sdk/types'
 import { createSolvaPay, PaywallError } from '@solvapay/server'
 
 // Initialize SolvaPay
