@@ -10,6 +10,12 @@
       <h1>Current time</h1>
       <p id="time-value">Waiting for tool result...</p>
       <button id="refresh-time-btn" type="button">Update time</button>
+      <div id="paywall" hidden>
+        <p id="paywall-message"></p>
+        <a id="paywall-link" href="#" target="_blank" rel="noopener noreferrer">
+          <button id="upgrade-btn" type="button">Upgrade</button>
+        </a>
+      </div>
     </main>
     <script type="module" src="/src/mcp-app.ts"></script>
   </body>

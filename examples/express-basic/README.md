@@ -24,7 +24,7 @@ A simple Express.js CRUD API demonstrating SolvaPay paywall protection.
 - **SolvaPay Paywall** protection on all endpoints
 - **Demo Mode**: Uses stub client - no backend required
 - **Auto Port Detection**: Finds next available port automatically
-- **Plan-Based Limits**: Different limits for different operations
+- **Plan-Based Limits**: Shared limit across protected routes for one configured plan
 - **Clean Architecture**: Separated business logic and route handlers
 
 ## Quick Start
@@ -61,10 +61,10 @@ pnpm dev
 
 All require `x-customer-ref` header for user identification:
 
-- `POST /tasks` - Create a new task (plan: `create-task`)
-- `GET /tasks` - List all tasks (plan: `list-tasks`)
-- `GET /tasks/:id` - Get a specific task (plan: `get-task`)
-- `DELETE /tasks/:id` - Delete a task (plan: `delete-task`)
+- `POST /tasks` - Create a new task (plan: `pln_MUKDWQZZ`)
+- `GET /tasks` - List all tasks (plan: `pln_MUKDWQZZ`)
+- `GET /tasks/:id` - Get a specific task (plan: `pln_MUKDWQZZ`)
+- `DELETE /tasks/:id` - Delete a task (plan: `pln_MUKDWQZZ`)
 
 ## Usage Examples
 
@@ -141,7 +141,7 @@ curl -X POST http://localhost:3001/tasks \
          ▼
 ┌─────────────────┐
 │ SolvaPay SDK    │
-│ createHttpHandler()
+│ payable.http()  │
 └────────┬────────┘
          │
          ▼

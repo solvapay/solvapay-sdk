@@ -11,9 +11,12 @@ import type {
   HttpAdapterOptions,
   NextAdapterOptions,
   McpAdapterOptions,
+  McpToolExtra,
   CustomerResponseMapped,
   McpBootstrapRequest,
   McpBootstrapResponse,
+  ConfigureMcpPlansRequest,
+  ConfigureMcpPlansResponse,
 } from './types'
 import { createSolvaPayClient } from './client'
 import { SolvaPayPaywall } from './paywall'
@@ -21,6 +24,11 @@ import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './ad
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
+import {
+  registerVirtualToolsMcpImpl,
+  type McpServerLike,
+  type RegisterVirtualToolsMcpOptions,
+} from './register-virtual-tools-mcp'
 
 /**
  * Configuration for creating a SolvaPay instance.
@@ -162,7 +170,7 @@ export interface PayableFunction {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     businessLogic: (args: any) => Promise<T>,
     options?: McpAdapterOptions,
-  ): (args: Record<string, unknown>) => Promise<unknown>
+  ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<unknown>
 
   /**
    * Pure function adapter for direct function protection.
@@ -547,6 +555,17 @@ export interface SolvaPay {
   bootstrapMcpProduct(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
 
   /**
+   * Configure MCP plans and tool mappings for an existing MCP product.
+   *
+   * This helper wraps the backend MCP plans endpoint and supports adding/removing
+   * paid plans as well as remapping tool access.
+   */
+  configureMcpPlans(
+    productRef: string,
+    params: ConfigureMcpPlansRequest,
+  ): Promise<ConfigureMcpPlansResponse>
+
+  /**
    * Get virtual tool definitions with bound handlers for MCP server integration.
    *
    * Returns an array of tool objects (name, description, inputSchema, handler)
@@ -565,7 +584,7 @@ export interface SolvaPay {
    * ```typescript
    * const virtualTools = solvaPay.getVirtualTools({
    *   product: 'prd_myapi',
-   *   getCustomerRef: args => args._auth?.customer_ref || 'anonymous',
+   *   getCustomerRef: (_args, extra) => String(extra?.authInfo?.extra?.customer_ref || 'anonymous'),
    * });
    *
    * // Register on your MCP server
@@ -575,6 +594,17 @@ export interface SolvaPay {
    * ```
    */
   getVirtualTools(options: VirtualToolsOptions): VirtualToolDefinition[]
+
+  /**
+   * Register virtual tools directly on an MCP server with one call.
+   *
+   * This helper converts virtual tool JSON schemas to Zod schemas and registers
+   * each tool on an MCP server that supports `registerTool()`.
+   */
+  registerVirtualToolsMcp(
+    server: McpServerLike,
+    options: RegisterVirtualToolsMcpOptions,
+  ): Promise<void>
 
   /**
    * Direct access to the API client for advanced operations.
@@ -710,7 +740,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     createCheckoutSession(params) {
       return apiClient.createCheckoutSession({
-        customerReference: params.customerRef,
+        customerRef: params.customerRef,
         productRef: params.productRef,
         planRef: params.planRef,
       })
@@ -727,8 +757,22 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.bootstrapMcpProduct(params)
     },
 
+    configureMcpPlans(productRef, params) {
+      if (!apiClient.configureMcpPlans) {
+        throw new SolvaPayError('configureMcpPlans is not available on this API client')
+      }
+      return apiClient.configureMcpPlans(productRef, params)
+    },
+
     getVirtualTools(options: VirtualToolsOptions) {
       return createVirtualTools(apiClient, options)
+    },
+
+    async registerVirtualToolsMcp(
+      server: McpServerLike,
+      options: RegisterVirtualToolsMcpOptions,
+    ) {
+      await registerVirtualToolsMcpImpl(server, apiClient, options)
     },
 
     // Payable API for framework-specific handlers
@@ -793,9 +837,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             getCustomerRef: adapterOptions?.getCustomerRef || options.getCustomerRef,
           })
           const handlerPromise = createAdapterHandler(adapter, paywall, metadata, businessLogic)
-          return async (args: Record<string, unknown>) => {
+          return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
             const handler = await handlerPromise
-            return handler(args)
+            return handler(args, extra)
           }
         },
 

@@ -17,6 +17,9 @@ const apiClient = createStubClient({
 // Initialize SolvaPay with the new unified API
 const solvaPay = createSolvaPay({
   apiClient,
+  // The shared stub client increments usage in checkLimits(),
+  // so disable limits cache to keep demo/test behavior intuitive.
+  limitsCacheTTL: 0,
 })
 
 // Create payable handler with explicit HTTP adapter

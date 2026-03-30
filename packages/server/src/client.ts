@@ -276,6 +276,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return await res.json()
     },
 
+    // PUT: /v1/sdk/products/{productRef}/mcp/plans
+    async configureMcpPlans(productRef, params) {
+      const url = `${base}/v1/sdk/products/${productRef}/mcp/plans`
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Configure MCP plans failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
     // DELETE: /v1/sdk/products/{productRef}
     async deleteProduct(productRef) {
       const url = `${base}/v1/sdk/products/${productRef}`

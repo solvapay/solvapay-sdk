@@ -23,8 +23,7 @@
 #     --paywall true \
 #     --secret-name solvapay-secret-key \
 #     --product-ref "$SOLVAPAY_PRODUCT_REF" \
-#     --api-url https://api.solvapay.com \
-#     --oauth-url https://api.solvapay.com
+#     --api-url https://api.solvapay.com
 
 set -euo pipefail
 
@@ -41,7 +40,6 @@ SECRET_KEY=""
 SECRET_NAME=""
 PRODUCT_REF=""
 API_URL=""
-OAUTH_URL=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -54,7 +52,6 @@ while [[ $# -gt 0 ]]; do
     --secret-name) SECRET_NAME="$2"; shift 2 ;;
     --product-ref) PRODUCT_REF="$2"; shift 2 ;;
     --api-url)     API_URL="$2"; shift 2 ;;
-    --oauth-url)   OAUTH_URL="$2"; shift 2 ;;
     --public-url)  PUBLIC_URL="$2"; shift 2 ;;
     --help)
       echo "Usage: $0 [options]"
@@ -64,7 +61,6 @@ while [[ $# -gt 0 ]]; do
       echo "  --secret-key    SolvaPay API secret key as plain text (alternative to --secret-name)"
       echo "  --product-ref   SolvaPay product reference"
       echo "  --api-url       SolvaPay API base URL"
-      echo "  --oauth-url     SolvaPay OAuth base URL"
       echo ""
       echo "Optional:"
       echo "  --project       GCP project ID (default: gcloud config project)"
@@ -89,7 +85,7 @@ if [[ "$PAYWALL" == "true" ]]; then
     echo "Error: --secret-name or --secret-key is required when --paywall true"
     exit 1
   fi
-  for var in PRODUCT_REF API_URL OAUTH_URL; do
+  for var in PRODUCT_REF API_URL; do
     if [[ -z "${!var}" ]]; then
       echo "Error: --$(echo "$var" | tr '[:upper:]' '[:lower:]' | tr '_' '-') is required when --paywall true"
       exit 1
@@ -125,10 +121,10 @@ ENV_VARS="PAYWALL_ENABLED=${PAYWALL},MCP_HOST=0.0.0.0,MCP_PORT=3004"
 SECRETS_FLAG=""
 
 if [[ -n "$SECRET_NAME" ]]; then
-  ENV_VARS="${ENV_VARS},SOLVAPAY_PRODUCT_REF=${PRODUCT_REF},SOLVAPAY_API_BASE_URL=${API_URL},SOLVAPAY_OAUTH_BASE_URL=${OAUTH_URL}"
+  ENV_VARS="${ENV_VARS},SOLVAPAY_PRODUCT_REF=${PRODUCT_REF},SOLVAPAY_API_BASE_URL=${API_URL}"
   SECRETS_FLAG="--set-secrets=SOLVAPAY_SECRET_KEY=${SECRET_NAME}:latest"
 elif [[ -n "$SECRET_KEY" ]]; then
-  ENV_VARS="${ENV_VARS},SOLVAPAY_SECRET_KEY=${SECRET_KEY},SOLVAPAY_PRODUCT_REF=${PRODUCT_REF},SOLVAPAY_API_BASE_URL=${API_URL},SOLVAPAY_OAUTH_BASE_URL=${OAUTH_URL}"
+  ENV_VARS="${ENV_VARS},SOLVAPAY_SECRET_KEY=${SECRET_KEY},SOLVAPAY_PRODUCT_REF=${PRODUCT_REF},SOLVAPAY_API_BASE_URL=${API_URL}"
 fi
 
 echo "==> Deploying Cloud Run service: ${SERVICE}..."

@@ -8,7 +8,8 @@
     { "path": "packages/demo-services" },
     { "path": "packages/test-utils" },
     { "path": "examples/express-basic" },
-    { "path": "examples/mcp-basic" },
+    { "path": "examples/mcp-oauth-bridge" },
+    { "path": "examples/mcp-time-app" },
     { "path": "examples/checkout-demo" },
     { "path": "examples/hosted-checkout-demo" }
   ]

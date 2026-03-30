@@ -18,6 +18,9 @@ export type {
   McpBootstrapResponse,
   McpBootstrapFreePlanConfig,
   McpBootstrapPaidPlanInput,
+  ConfigureMcpPlansRequest,
+  ConfigureMcpPlansResponse,
+  McpToolPlanMappingInput,
   ToolPlanMappingInput,
 } from './client'
 // Re-export SolvaPayClient interface from types/client.ts
@@ -34,6 +37,7 @@ export type {
 // Re-export configuration options
 export type {
   RetryOptions,
+  McpToolExtra,
   PayableOptions,
   HttpAdapterOptions,
   NextAdapterOptions,

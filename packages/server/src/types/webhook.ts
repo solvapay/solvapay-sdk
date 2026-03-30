@@ -11,6 +11,7 @@ export type WebhookEventType =
   | 'customer.created'
   | 'customer.updated'
   | 'customer.deleted'
+  | 'checkout_session.created'
 
 export interface WebhookEvent {
   id: string

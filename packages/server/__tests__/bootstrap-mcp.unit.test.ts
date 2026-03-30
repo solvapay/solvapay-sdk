@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSolvaPay, createSolvaPayClient } from '../src'
 import type {
+  ConfigureMcpPlansRequest,
+  ConfigureMcpPlansResponse,
   McpBootstrapRequest,
   McpBootstrapResponse,
   ToolPlanMappingInput,
@@ -109,6 +111,89 @@ describe('MCP bootstrap SDK wrapper', () => {
     }
   })
 
+  it('calls configure MCP plans endpoint and returns typed response payload', async () => {
+    const payload: ConfigureMcpPlansResponse = {
+      product: {
+        id: 'prd_1',
+        reference: 'prd_TEST123',
+        name: 'Docs Assistant',
+        status: 'active',
+        balance: 0,
+        totalTransactions: 0,
+        isMcpPay: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      mcpServer: {
+        id: 'mcp_1',
+        reference: 'mcp_TEST123',
+        subdomain: 'docs-assistant',
+        mcpProxyUrl: 'https://docs-assistant.mcp.solvapay.com/mcp',
+        url: 'https://origin.example.com/mcp',
+        defaultPlanId: 'plan_free_1',
+      },
+      planMap: {
+        free: { id: 'plan_free_1', reference: 'pln_FREE123', name: 'Free' },
+        pro: { id: 'plan_pro_1', reference: 'pln_PRO123', name: 'Pro' },
+      },
+    }
+
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+
+    const client = createSolvaPayClient({
+      apiKey: 'sk_sandbox_test',
+      apiBaseUrl: 'https://api.example.com',
+    })
+
+    const result = await client.configureMcpPlans?.('prd_TEST123', {
+      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      toolMapping: [{ name: 'deep_research', planKeys: ['pro'] }],
+    })
+
+    expect(result).toEqual(payload)
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.com/v1/sdk/products/prd_TEST123/mcp/plans',
+      expect.objectContaining({
+        method: 'PUT',
+      }),
+    )
+  })
+
+  it('throws SolvaPayError with status/body details on configure MCP plans failure', async () => {
+    vi.mocked(fetch).mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          code: 'UNKNOWN_PLAN_KEY',
+          message: 'tool "search_docs" references unknown plan key "enterprise"',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+
+    const client = createSolvaPayClient({
+      apiKey: 'sk_sandbox_test',
+      apiBaseUrl: 'https://api.example.com',
+    })
+
+    try {
+      await client.configureMcpPlans?.('prd_TEST123', {
+        toolMapping: [{ name: 'search_docs', planKeys: ['enterprise'] }],
+      })
+      throw new Error('Expected configureMcpPlans to throw')
+    } catch (error) {
+      expect((error as Error).name).toBe('SolvaPayError')
+      expect((error as Error).message).toContain('Configure MCP plans failed (400)')
+      expect((error as Error).message).toContain('UNKNOWN_PLAN_KEY')
+    }
+  })
+
   it('exposes bootstrap helper on createSolvaPay with delegated apiClient call', async () => {
     const bootstrapMcpProduct = vi.fn().mockResolvedValue({
       product: { reference: 'prd_TEST123' },
@@ -133,6 +218,30 @@ describe('MCP bootstrap SDK wrapper', () => {
 
     await sdk.bootstrapMcpProduct(request)
     expect(bootstrapMcpProduct).toHaveBeenCalledWith(request)
+  })
+
+  it('exposes configure MCP plans helper on createSolvaPay with delegated apiClient call', async () => {
+    const configureMcpPlans = vi.fn().mockResolvedValue({
+      product: { reference: 'prd_TEST123' },
+      mcpServer: { mcpProxyUrl: 'https://docs-assistant.mcp.solvapay.com/mcp', url: 'https://origin.example.com/mcp' },
+      planMap: {},
+    })
+
+    const sdk = createSolvaPay({
+      apiClient: {
+        checkLimits: vi.fn(),
+        trackUsage: vi.fn(),
+        configureMcpPlans,
+      } as any,
+    })
+
+    const request: ConfigureMcpPlansRequest = {
+      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      toolMapping: [{ name: 'read_wiki_contents', planKeys: ['pro'] }],
+    }
+
+    await sdk.configureMcpPlans('prd_TEST123', request)
+    expect(configureMcpPlans).toHaveBeenCalledWith('prd_TEST123', request)
   })
 
   it('supports bootstrap request without explicit name when backend derives metadata', async () => {
@@ -203,5 +312,15 @@ describe('MCP bootstrap SDK wrapper', () => {
     expect(request.name).toBeUndefined()
     expect(request.freePlan?.name).toBe('Starter')
     expect(request.paidPlans?.[0].currency).toBe('USD')
+  })
+
+  it('keeps configure MCP plans request types compile-safe', () => {
+    const request: ConfigureMcpPlansRequest = {
+      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
+      toolMapping: [{ name: 'list_docs', planKeys: ['free', 'pro'] }],
+    }
+
+    expect(request.paidPlans?.[0].key).toBe('pro')
+    expect(request.toolMapping?.[0].planKeys).toEqual(['free', 'pro'])
   })
 })

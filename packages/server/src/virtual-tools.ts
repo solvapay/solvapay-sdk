@@ -7,6 +7,7 @@
  */
 
 import type { SolvaPayClient } from './types'
+import type { McpToolExtra } from './types'
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -14,7 +15,7 @@ export interface VirtualToolsOptions {
   /** Product reference (required) */
   product: string
   /** Extract customer reference from MCP tool args */
-  getCustomerRef: (args: Record<string, unknown>) => string
+  getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string
   /** Tool names to exclude from registration (optional) */
   exclude?: string[]
 }
@@ -27,7 +28,7 @@ export interface VirtualToolDefinition {
     properties: Record<string, object>
     required: string[]
   }
-  handler: (args: Record<string, unknown>) => Promise<{
+  handler: (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<{
     content: Array<{ type: string; text: string }>
     isError?: boolean
   }>
@@ -97,10 +98,10 @@ function mcpErrorResult(message: string) {
 function createGetUserInfoHandler(
   apiClient: SolvaPayClient,
   productRef: string,
-  getCustomerRef: (args: Record<string, unknown>) => string,
+  getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string,
 ) {
-  return async (args: Record<string, unknown>) => {
-    const customerRef = getCustomerRef(args)
+  return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
+    const customerRef = getCustomerRef(args, extra)
 
     try {
       if (!apiClient.getUserInfo) {
@@ -120,15 +121,15 @@ function createGetUserInfoHandler(
 function createUpgradeHandler(
   apiClient: SolvaPayClient,
   productRef: string,
-  getCustomerRef: (args: Record<string, unknown>) => string,
+  getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string,
 ) {
-  return async (args: Record<string, unknown>) => {
-    const customerRef = getCustomerRef(args)
+  return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
+    const customerRef = getCustomerRef(args, extra)
     const planRef = typeof args.planRef === 'string' ? args.planRef : undefined
 
     try {
       const result = await apiClient.createCheckoutSession({
-        customerReference: customerRef,
+        customerRef,
         productRef,
         ...(planRef && { planRef }),
       })
@@ -159,10 +160,10 @@ function createUpgradeHandler(
 function createManageAccountHandler(
   apiClient: SolvaPayClient,
   productRef: string,
-  getCustomerRef: (args: Record<string, unknown>) => string,
+  getCustomerRef: (args: Record<string, unknown>, extra?: McpToolExtra) => string,
 ) {
-  return async (args: Record<string, unknown>) => {
-    const customerRef = getCustomerRef(args)
+  return async (args: Record<string, unknown>, extra?: McpToolExtra) => {
+    const customerRef = getCustomerRef(args, extra)
 
     try {
       const session = await apiClient.createCustomerSession({ customerRef, productRef })

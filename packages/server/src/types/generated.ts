@@ -197,6 +197,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/products/{productRef}/mcp/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Configure MCP plans on an MCP product
+         * @description Requires freePlan and configures existing default free plan, paid plans, and optional tool-to-plan mappings for an MCP product.
+         */
+        put: operations["ProductSdkController_configureMcpPlans"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/products/{productRef}/clone": {
         parameters: {
             query?: never;
@@ -585,12 +605,12 @@ export interface components {
         VerifyEmailChange: {
             code: string;
         };
-        CreateCheckoutSessionRequest: {
+        CreateUiCheckoutSessionRequest: {
             /**
              * Customer reference
              * @example cus_3c4d5e6f7g8h
              */
-            customerReference: string;
+            customerRef: string;
             /**
              * Plan reference (optional)
              * @example pln_2b3c4d5e6f7g
@@ -602,7 +622,7 @@ export interface components {
              */
             productRef: string;
         };
-        CheckoutSessionResponse: {
+        CreateUiCheckoutSessionResponse: {
             /**
              * Checkout session ID
              * @example 507f1f77bcf86cd799439011
@@ -695,6 +715,40 @@ export interface components {
             externalAccount?: components["schemas"]["ExternalAccount"];
             /** @description Terms of Service acceptance */
             tosAcceptance?: components["schemas"]["TosAcceptance"];
+        };
+        CreateCheckoutSessionRequest: {
+            /**
+             * Customer reference identifier
+             * @example cus_3c4d5e6f7g8h
+             */
+            customerRef: string;
+            /**
+             * Product reference identifier
+             * @example prd_1A2B3C4D
+             */
+            productRef: string;
+            /**
+             * Plan reference identifier (optional)
+             * @example pln_2b3c4d5e6f7g
+             */
+            planRef?: string;
+            /**
+             * URL to redirect to after successful payment (optional)
+             * @example https://example.com/payment-success
+             */
+            returnUrl?: string;
+        };
+        CreateCheckoutSessionResponse: {
+            /**
+             * Checkout session ID/token
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            sessionId: string;
+            /**
+             * Full checkout URL based on backend configuration (ready to redirect customer)
+             * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutUrl: string;
         };
         Signup: {
             name: string;
@@ -1544,6 +1598,40 @@ export interface components {
                 description?: string;
             }[];
         };
+        McpToolPlanMapping: {
+            /**
+             * Tool name
+             * @example deep_research
+             */
+            name: string;
+            /**
+             * Plan keys this tool should be gated to
+             * @example [
+             *       "pro"
+             *     ]
+             */
+            planKeys: string[];
+        };
+        ConfigureMcpPlansRequest: {
+            /** @description Required free plan configuration for updates. Applies to the existing default free plan only. */
+            freePlan: components["schemas"]["McpBootstrapFreePlanConfig"];
+            /** @description Optional paid plan definitions. [] reverts to free-only, omitted leaves existing paid plans unchanged. */
+            paidPlans?: components["schemas"]["McpBootstrapPaidPlanInput"][];
+            /** @description Optional tool-to-plan remapping. If paidPlans is omitted, only this remapping is applied. */
+            toolMapping?: components["schemas"]["McpToolPlanMapping"][];
+        };
+        ConfigureMcpPlansResult: {
+            /** @description Updated product */
+            product: components["schemas"]["SdkProductResponse"];
+            /** @description Updated MCP server identity */
+            mcpServer: {
+                [key: string]: unknown;
+            };
+            /** @description Resolved plan mapping by key (includes existing free plan) */
+            planMap: {
+                [key: string]: unknown;
+            };
+        };
         McpBootstrapPreviewResult: {
             /** @description Discovered tools from the origin MCP server */
             discoveredTools: {
@@ -2320,6 +2408,101 @@ export interface components {
                 [key: string]: string;
             };
         };
+        RevenueDataDto: {
+            grossRevenue: number;
+            refunds: number;
+            platformFees: number;
+            netRevenue: number;
+            costOfRevenue: number;
+            grossProfit?: Record<string, never> | null;
+            grossMargin?: Record<string, never> | null;
+            recognisedRevenue: number;
+            deferredRevenue: number;
+            hasCostTransactions: boolean;
+        };
+        BalanceDataDto: {
+            openingBalance: number;
+            paymentsReceived: number;
+            refundsIssued: number;
+            platformFees: number;
+            costsPaid: number;
+            closingBalance: number;
+            netChange: number;
+        };
+        MonthlyFinancialsDto: {
+            month: string;
+            revenue: components["schemas"]["RevenueDataDto"];
+            balance: components["schemas"]["BalanceDataDto"];
+        };
+        RevenueResponseDto: {
+            current: components["schemas"]["RevenueDataDto"];
+            prior: components["schemas"]["RevenueDataDto"];
+            monthly: components["schemas"]["MonthlyFinancialsDto"][];
+            periodLabel: string;
+            /**
+             * ISO 4217 currency code
+             * @example SEK
+             */
+            currency: string;
+        };
+        BalanceResponseDto: {
+            current: components["schemas"]["BalanceDataDto"];
+            monthly: components["schemas"]["MonthlyFinancialsDto"][];
+            periodLabel: string;
+            /**
+             * ISO 4217 currency code
+             * @example SEK
+             */
+            currency: string;
+        };
+        ProductRevenueRowDto: {
+            productRef: string;
+            productName: string;
+            productType: string;
+            revenue: number;
+            costs: number;
+            grossProfit?: Record<string, never> | null;
+            share: number;
+            estimatedARR: number;
+            transactionCount: number;
+        };
+        TopProductDto: {
+            name: string;
+            revenue: number;
+        };
+        RevenueByProductResponseDto: {
+            products: components["schemas"]["ProductRevenueRowDto"][];
+            activeProductCount: number;
+            totalMRR: number;
+            topProduct?: components["schemas"]["TopProductDto"] | null;
+            /**
+             * ISO 4217 currency code
+             * @example SEK
+             */
+            currency: string;
+        };
+        LedgerEntryDto: {
+            date: string;
+            reference: string;
+            description: string;
+            type: string;
+            direction: string;
+            account: string;
+            debit: number;
+            credit: number;
+            status: string;
+        };
+        LedgerResponseDto: {
+            entries: components["schemas"]["LedgerEntryDto"][];
+            total: number;
+            totalCredit: number;
+            totalDebit: number;
+            /**
+             * ISO 4217 currency code
+             * @example SEK
+             */
+            currency: string;
+        };
         /** @description Auto-generated fallback schema for unresolved reference: McpBootstrapPreviewValidationError */
         McpBootstrapPreviewValidationError: {
             [key: string]: unknown;
@@ -2522,25 +2705,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /**
-                     * Customer reference
-                     * @example cus_3C4D5E6F
-                     */
-                    customerRef: string;
-                    /**
-                     * Product reference
-                     * @example prd_1A2B3C4D
-                     */
-                    productRef: string;
-                    /**
-                     * Plan reference (optional — shows plan selector if omitted)
-                     * @example pln_2b3c4d5e
-                     */
-                    planRef?: string;
-                    /** @description URL to redirect after checkout */
-                    returnUrl?: string;
-                };
+                "application/json": components["schemas"]["CreateCheckoutSessionRequest"];
             };
         };
         responses: {
@@ -2550,12 +2715,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @description Checkout session ID */
-                        sessionId?: string;
-                        /** @description URL to redirect the customer to */
-                        checkoutUrl?: string;
-                    };
+                    "application/json": components["schemas"]["CreateCheckoutSessionResponse"];
                 };
             };
             /** @description Missing customerRef or productRef */
@@ -2914,6 +3074,47 @@ export interface operations {
             };
             /** @description Invalid bootstrap request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductSdkController_configureMcpPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Product reference or ID */
+                productRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigureMcpPlansRequest"];
+            };
+        };
+        responses: {
+            /** @description MCP plans configured successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigureMcpPlansResult"];
+                };
+            };
+            /** @description Invalid MCP plans request or product is not MCP-enabled */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -75,22 +75,6 @@ pnpm dev
 
 The application will start on `http://localhost:3000`
 
-### MCP Basic (`mcp-basic`)
-
-A Model Context Protocol (MCP) server integration demonstrating:
-
-- Paywall protection for MCP server endpoints
-- Integration with OpenAI and other MCP-compatible tools
-- Payment flow for MCP server usage
-
-**Run the example:**
-
-```bash
-cd examples/mcp-basic
-pnpm install
-pnpm dev
-```
-
 ### MCP OAuth Bridge (`mcp-oauth-bridge`)
 
 A non-hosted MCP server example demonstrating:
@@ -104,6 +88,24 @@ A non-hosted MCP server example demonstrating:
 
 ```bash
 cd examples/mcp-oauth-bridge
+pnpm install
+cp .env.example .env
+pnpm dev
+```
+
+### MCP Time App (`mcp-time-app`)
+
+A Model Context Protocol (MCP) app example demonstrating:
+
+- MCP app UI resources with `@modelcontextprotocol/ext-apps`
+- OAuth-protected MCP endpoint
+- Paywall protection for MCP tools
+- A simple app surface we continue developing
+
+**Run the example:**
+
+```bash
+cd examples/mcp-time-app
 pnpm install
 cp .env.example .env
 pnpm dev
@@ -158,12 +160,12 @@ PORT=3001
    cd examples/checkout-demo
    pnpm dev
 
-   # MCP basic example
-   cd examples/mcp-basic
-   pnpm dev
-
    # MCP OAuth bridge example
    cd examples/mcp-oauth-bridge
+   pnpm dev
+
+   # MCP app example
+   cd examples/mcp-time-app
    pnpm dev
    ```
 
