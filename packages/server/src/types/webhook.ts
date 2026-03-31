@@ -28,20 +28,22 @@ export interface CustomerWebhookObject {
   status?: string
 }
 
+type WebhookPayloadObject = Record<string, unknown>
+
 export type WebhookEventObjectMap = {
-  'payment.succeeded': Record<string, any>
-  'payment.failed': Record<string, any>
-  'payment.refunded': Record<string, any>
-  'payment.refund_failed': Record<string, any>
-  'purchase.created': Record<string, any>
-  'purchase.updated': Record<string, any>
-  'purchase.cancelled': Record<string, any>
-  'purchase.expired': Record<string, any>
-  'purchase.suspended': Record<string, any>
+  'payment.succeeded': WebhookPayloadObject
+  'payment.failed': WebhookPayloadObject
+  'payment.refunded': WebhookPayloadObject
+  'payment.refund_failed': WebhookPayloadObject
+  'purchase.created': WebhookPayloadObject
+  'purchase.updated': WebhookPayloadObject
+  'purchase.cancelled': WebhookPayloadObject
+  'purchase.expired': WebhookPayloadObject
+  'purchase.suspended': WebhookPayloadObject
   'customer.created': CustomerWebhookObject
   'customer.updated': CustomerWebhookObject
   'customer.deleted': CustomerWebhookObject
-  'checkout_session.created': Record<string, any>
+  'checkout_session.created': WebhookPayloadObject
 }
 
 export type WebhookEventForType<TType extends WebhookEventType> = {
@@ -51,7 +53,7 @@ export type WebhookEventForType<TType extends WebhookEventType> = {
   api_version: string
   data: {
     object: WebhookEventObjectMap[TType]
-    previous_attributes: Record<string, any> | null
+    previous_attributes: Record<string, unknown> | null
   }
   livemode: boolean
   request: {

@@ -33,6 +33,10 @@ export type {
   RetryOptions,
   WebhookEvent,
   WebhookEventType,
+  WebhookEventForType,
+  WebhookEventObjectMap,
+  CustomerWebhookObject,
+  WebhookProduct,
 } from './types'
 
 // Export retry utility for general use
