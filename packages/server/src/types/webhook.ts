@@ -13,14 +13,47 @@ export type WebhookEventType =
   | 'customer.deleted'
   | 'checkout_session.created'
 
-export interface WebhookEvent {
+export interface WebhookProduct {
+  reference: string
+}
+
+export interface CustomerWebhookObject {
   id: string
-  type: WebhookEventType
+  created: number
+  product: WebhookProduct | null
+  reference?: string
+  name?: string
+  email?: string
+  telephone?: string
+  status?: string
+}
+
+type WebhookPayloadObject = Record<string, unknown>
+
+export type WebhookEventObjectMap = {
+  'payment.succeeded': WebhookPayloadObject
+  'payment.failed': WebhookPayloadObject
+  'payment.refunded': WebhookPayloadObject
+  'payment.refund_failed': WebhookPayloadObject
+  'purchase.created': WebhookPayloadObject
+  'purchase.updated': WebhookPayloadObject
+  'purchase.cancelled': WebhookPayloadObject
+  'purchase.expired': WebhookPayloadObject
+  'purchase.suspended': WebhookPayloadObject
+  'customer.created': CustomerWebhookObject
+  'customer.updated': CustomerWebhookObject
+  'customer.deleted': CustomerWebhookObject
+  'checkout_session.created': WebhookPayloadObject
+}
+
+export type WebhookEventForType<TType extends WebhookEventType> = {
+  id: string
+  type: TType
   created: number
   api_version: string
   data: {
-    object: Record<string, any>
-    previous_attributes: Record<string, any> | null
+    object: WebhookEventObjectMap[TType]
+    previous_attributes: Record<string, unknown> | null
   }
   livemode: boolean
   request: {
@@ -28,3 +61,7 @@ export interface WebhookEvent {
     idempotency_key: string | null
   }
 }
+
+export type WebhookEvent = {
+  [TType in WebhookEventType]: WebhookEventForType<TType>
+}[WebhookEventType]

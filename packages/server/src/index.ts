@@ -142,6 +142,10 @@ export type {
   McpToolExtra,
   WebhookEvent,
   WebhookEventType,
+  WebhookEventForType,
+  WebhookEventObjectMap,
+  CustomerWebhookObject,
+  WebhookProduct,
 } from './types'
 
 // Export payment processing types
