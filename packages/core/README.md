@@ -82,6 +82,6 @@ Most developers don't need to install `@solvapay/core` directly -- it's automati
 
 ## More Information
 
-- [Architecture Guide](../../docs/guides/architecture.md) - Package design and boundaries
+- [Architecture Guide](../../docs/contributing/architecture.md) - Package design and boundaries
 - [Server SDK](../server/README.md) - Server-side paywall protection
 - [React SDK](../react/README.md) - Client-side payment components

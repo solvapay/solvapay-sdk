@@ -1,0 +1,61 @@
+---
+title: "Usage events"
+description: "Publish usage events from your application for analytics and operational visibility."
+---
+
+## What are usage events?
+
+A usage event represents customer consumption in your app, such as an API call, token spend, or
+document generation.
+
+Usage events are distinct from [meter events](/meters/events):
+
+- Usage events: analytics and operational visibility
+- Meter events: billing and limit enforcement
+
+## Publish a usage event
+
+```typescript
+import { createSolvaPay } from '@solvapay/server'
+
+const solvaPay = createSolvaPay({
+  apiKey: process.env.SOLVAPAY_SECRET_KEY,
+})
+
+await solvaPay.createEvent({
+  type: 'usage.api_call',
+  customerRef: 'cus_3C4D5E6F',
+  units: 1,
+})
+```
+
+## Event fields
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | Dot-notation event type (for example `usage.api_call`) |
+| `customerRef` | `string` | Yes | Customer reference this event belongs to |
+| `productRef` | `string` | No | Product scope for the event |
+| `units` | `number` | Yes | Quantity consumed (non-negative) |
+
+## Common types
+
+- `usage.api_call`
+- `usage.token`
+- `usage.message_sent`
+- `usage.document_generated`
+- `usage.search`
+- `usage.storage`
+
+## Relationship to meters
+
+Use both when needed:
+
+- `createEvent()` for product analytics and operations
+- `trackUsage()` for limits and billing logic
+
+## Next steps
+
+- [Core concepts](../setup/core-concepts)
+- [Meters overview](/meters/overview)
+- [Webhook handling](./webhooks)

@@ -613,8 +613,8 @@ For comprehensive backend integration tests of the SolvaPay SDK itself, see the 
 ### Framework Guides
 
 - [Express.js Integration Guide](../../docs/guides/express.md) - Complete Express integration guide
-- [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
-- [Testing Guide](../../docs/guides/testing.md) - Testing with stub mode
+- [Error Handling Guide](../../docs/contributing/error-handling.md) - Error handling patterns
+- [Testing Guide](../../docs/contributing/testing.md) - Testing with stub mode
 
 ### API Reference
 

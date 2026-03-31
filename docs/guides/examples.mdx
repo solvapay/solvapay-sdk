@@ -1,0 +1,77 @@
+---
+title: "Examples"
+description: "Choose the right SolvaPay SDK example project and run it locally."
+---
+
+## Quick comparison
+
+| Example | Framework | Checkout type | Auth | Best for |
+| --- | --- | --- | --- | --- |
+| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic) | Express.js | Paywall only | Header-based | First integration and API protection |
+| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo) | Next.js | Embedded | Supabase | Full custom checkout flow |
+| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo) | Next.js | Hosted | Supabase | Fast checkout integration |
+| [mcp-time-app](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-time-app) | MCP App | Paywall only | OAuth + Bearer | UI-rich MCP apps |
+| [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-oauth-bridge) | MCP Server | Paywall only | OAuth + Bearer | Non-hosted MCP OAuth bridge |
+
+## Prerequisites
+
+- Node.js 18+
+- pnpm
+- SolvaPay account (for real-backend examples)
+- Supabase project (for Supabase examples)
+
+From workspace root:
+
+```bash
+pnpm install
+pnpm build:packages
+```
+
+## Run any example
+
+```bash
+cd examples/<example-name>
+cp env.example .env.local
+pnpm dev
+```
+
+Use `.env` instead of `.env.local` when the example README says so.
+
+## Example notes
+
+### express-basic
+
+- Good first project for `payable.http()`
+- Uses stub mode and header-based customer identity
+- README: [examples/express-basic/README.md](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/express-basic/README.md)
+
+### checkout-demo
+
+- Embedded checkout with React components
+- Uses Supabase auth and purchase gating
+- README: [examples/checkout-demo/README.md](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/checkout-demo/README.md)
+
+### hosted-checkout-demo
+
+- Hosted checkout and hosted customer portal
+- Lower PCI complexity than embedded checkout
+- README: [examples/hosted-checkout-demo/README.md](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/hosted-checkout-demo/README.md)
+
+### mcp-time-app
+
+- MCP app UI resource + protected tools
+- Demonstrates `payable.mcp()` with OAuth context
+- README: [examples/mcp-time-app/README.md](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-time-app/README.md)
+
+### mcp-oauth-bridge
+
+- Local discovery metadata for non-hosted MCP origin
+- OAuth + dynamic client registration bridge pattern
+- README: [examples/mcp-oauth-bridge/README.md](https://github.com/solvapay/solvapay-sdk/tree/dev/examples/mcp-oauth-bridge/README.md)
+
+## Next steps
+
+- [Quick start](../setup/quick-start)
+- [MCP guide](./mcp)
+- [Next.js guide](./nextjs)
+- [React guide](./react)

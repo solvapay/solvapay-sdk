@@ -670,7 +670,7 @@ const handleManagePurchase = async () => {
 - [React Integration Guide](../../docs/guides/react.md) - Complete React integration guide
 - [Next.js Integration Guide](../../docs/guides/nextjs.md) - Next.js specific patterns
 - [Custom Authentication Adapters](../../docs/guides/custom-auth.md) - Custom auth setup
-- [Error Handling Guide](../../docs/guides/error-handling.md) - Error handling patterns
+- [Error Handling Guide](../../docs/contributing/error-handling.md) - Error handling patterns
 
 ### API Reference
 

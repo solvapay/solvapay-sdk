@@ -1,0 +1,70 @@
+---
+title: "CLI setup"
+description: "Set up SolvaPay SDK in your project with a single command."
+---
+
+## Prerequisites
+
+- Node.js version 18.17 or higher
+- A project directory where you want to add SolvaPay
+
+## Run setup
+
+From your project root:
+
+```bash
+npx solvapay init
+```
+
+## What this command does
+
+When you run `npx solvapay init`, the CLI:
+
+1. Checks for `package.json` and offers to create one if missing
+2. Detects your package manager (`npm`, `yarn`, or `pnpm`)
+3. Opens your browser to sign in to SolvaPay Console
+4. Writes `SOLVAPAY_SECRET_KEY` to `.env`
+5. Ensures `.env` is listed in `.gitignore`
+6. Installs `@solvapay/server`, `@solvapay/core`, and `@solvapay/auth`
+7. Verifies your secret key with SolvaPay
+8. Prints a quick start snippet
+
+## Files the CLI creates or updates
+
+| File | What changes |
+| --- | --- |
+| `package.json` | Created if missing (after confirmation) |
+| `.env` | Adds or updates `SOLVAPAY_SECRET_KEY` |
+| `.gitignore` | Adds `.env` if needed |
+| `node_modules` and lockfile | Installs base SolvaPay SDK packages |
+
+## Add stack-specific packages
+
+`solvapay init` installs base server packages. Add framework packages based on your stack:
+
+- Next.js: `@solvapay/next` and usually `@solvapay/react`
+- React: `@solvapay/react` (and `@solvapay/react-supabase` if using Supabase)
+- MCP Server: `@solvapay/server` is already installed by init
+
+Use [Installation](./installation) for exact package commands.
+
+## Re-run setup safely
+
+You can run `npx solvapay init` again at any time.
+
+If `SOLVAPAY_SECRET_KEY` already exists, the CLI asks whether to overwrite it:
+
+- Choose `y` to replace it with a new key
+- Choose `n` to keep your current key
+
+## Scope
+
+This command is the recommended setup path for SDK integration.
+
+If you are using Hosted MCP Pay (no-code), you do not need this CLI flow.
+
+## Next steps
+
+- [Quick start](./quick-start) to protect your first endpoint
+- [Installation](./installation) for manual setup
+- [Core concepts](./core-concepts) for product, plan, and paywall behavior

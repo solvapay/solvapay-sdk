@@ -676,7 +676,7 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 - [React Integration Guide](../../docs/guides/react.mdx) - Complete React integration guide
 - [Next.js Integration Guide](../../docs/guides/nextjs.mdx) - Next.js specific patterns
 - [Custom Authentication Adapters](../../docs/guides/custom-auth.mdx) - Custom auth setup
-- [Error Handling Guide](../../docs/guides/error-handling.mdx) - Error handling patterns
+- [Error Handling Guide](../../docs/contributing/error-handling.md) - Error handling patterns
 
 ### API Reference
 
