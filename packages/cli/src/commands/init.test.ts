@@ -22,6 +22,7 @@ vi.mock('../lib/install', () => ({
 vi.mock('../lib/project', () => ({
   detectPackageManager: vi.fn(),
   ensureNodeProject: vi.fn(),
+  waitForEnter: vi.fn(),
 }))
 
 import {
@@ -32,7 +33,7 @@ import {
 } from '../lib/browser-auth'
 import { ensureEnvInGitignore, writeSolvaPaySecretToEnv } from '../lib/env'
 import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from '../lib/install'
-import { detectPackageManager, ensureNodeProject } from '../lib/project'
+import { detectPackageManager, ensureNodeProject, waitForEnter } from '../lib/project'
 
 describe('runInitCommand', () => {
   const output: string[] = []
@@ -46,6 +47,7 @@ describe('runInitCommand', () => {
       action: 'existing',
     })
     vi.mocked(detectPackageManager).mockResolvedValue('npm')
+    vi.mocked(waitForEnter).mockResolvedValue()
     vi.mocked(ensureEnvInGitignore).mockResolvedValue({
       filePath: '/tmp/project/.gitignore',
       action: 'unchanged',
@@ -90,9 +92,16 @@ describe('runInitCommand', () => {
 
     expect(output.join('')).toContain('____        _            ____')
     expect(output.join('')).toContain('Detected npm project (package.json found)')
+    expect(output.join('')).toContain('Browser authentication URL:')
     expect(output.join('')).toContain("If it doesn't open, visit:")
     expect(output.join('')).toContain('✅ Secret key verified with SolvaPay')
     expect(output.join('')).toContain("You're all set! Here's how to get started:")
+    expect(waitForEnter).toHaveBeenCalledWith(
+      'Press Enter to open your browser to authenticate and set up your account if you do not already have one. ',
+    )
+    const waitForEnterCallOrder = vi.mocked(waitForEnter).mock.invocationCallOrder[0]
+    const openAuthCallOrder = vi.mocked(openAuthUrl).mock.invocationCallOrder[0]
+    expect(waitForEnterCallOrder).toBeLessThan(openAuthCallOrder)
   })
 
   it('keeps success flow when verify fails', async () => {
@@ -203,5 +212,29 @@ describe('runInitCommand', () => {
     await runInitCommand()
 
     expect(output.join('')).toContain('Detected npm project (package.json created)')
+  })
+
+  it('skips enter confirmation when yes option is enabled', async () => {
+    vi.mocked(createInitSession).mockResolvedValue({
+      sessionId: 's1',
+      authUrl: 'https://app.solvapay.com/auth/cli-init?session_id=s1',
+      pollToken: 'poll',
+    })
+    vi.mocked(openAuthUrl).mockResolvedValue(true)
+    vi.mocked(waitForExchange).mockResolvedValue({
+      status: 'complete',
+      secretKey: 'sk_live_123',
+    })
+    vi.mocked(writeSolvaPaySecretToEnv).mockResolvedValue({
+      filePath: '/tmp/.env',
+      action: 'created',
+    })
+    vi.mocked(verifySecretKey).mockResolvedValue({ ok: true })
+
+    await runInitCommand({ yes: true })
+
+    expect(ensureNodeProject).toHaveBeenCalledWith({ autoCreate: true })
+    expect(waitForEnter).not.toHaveBeenCalled()
+    expect(openAuthUrl).toHaveBeenCalledWith('https://app.solvapay.com/auth/cli-init?session_id=s1')
   })
 })
