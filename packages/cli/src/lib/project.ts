@@ -14,6 +14,7 @@ export type EnsureNodeProjectResult = {
 type EnsureNodeProjectOptions = {
   cwd?: string
   confirmCreate?: () => Promise<boolean>
+  autoCreate?: boolean
 }
 
 const fileExists = async (filePath: string): Promise<boolean> => {
@@ -37,12 +38,32 @@ const toPackageName = (cwd: string): string => {
 }
 
 const askCreatePackageJson = async (): Promise<boolean> => {
+  if (!stdin.isTTY || !stdout.isTTY) {
+    return true
+  }
+
   const rl = readline.createInterface({ input: stdin, output: stdout })
   try {
-    const answer = (await rl.question('No package.json found. Create one now? (y/N) '))
+    const answer = (await rl.question('No package.json found. Create one now? (Y/n) '))
       .trim()
       .toLowerCase()
-    return answer === 'y' || answer === 'yes'
+    if (!answer) {
+      return true
+    }
+    return answer !== 'n' && answer !== 'no'
+  } finally {
+    rl.close()
+  }
+}
+
+export const waitForEnter = async (message: string): Promise<void> => {
+  if (!stdin.isTTY || !stdout.isTTY) {
+    return
+  }
+
+  const rl = readline.createInterface({ input: stdin, output: stdout })
+  try {
+    await rl.question(message)
   } finally {
     rl.close()
   }
@@ -58,9 +79,11 @@ export const ensureNodeProject = async (
     return { filePath: packageJsonPath, action: 'existing' }
   }
 
-  const shouldCreate = options.confirmCreate
-    ? await options.confirmCreate()
-    : await askCreatePackageJson()
+  const shouldCreate = options.autoCreate
+    ? true
+    : options.confirmCreate
+      ? await options.confirmCreate()
+      : await askCreatePackageJson()
   if (!shouldCreate) {
     return { filePath: packageJsonPath, action: 'cancelled' }
   }

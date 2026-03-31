@@ -3,10 +3,13 @@ import { runInitCommand } from './commands/init'
 const HELP_TEXT = `SolvaPay CLI
 
 Usage:
-  solvapay <command>
+  solvapay <command> [flags]
 
 Commands:
   init    Authenticate, configure .env, and install SolvaPay SDK packages
+
+Flags for init:
+  -y, --yes    Auto-create package.json and skip browser confirmation prompt
 `
 
 const main = async () => {
@@ -18,7 +21,9 @@ const main = async () => {
   }
 
   if (command === 'init') {
-    await runInitCommand()
+    const initFlags = new Set(process.argv.slice(3))
+    const yes = initFlags.has('--yes') || initFlags.has('-y')
+    await runInitCommand({ yes })
     return
   }
 

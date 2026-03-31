@@ -7,7 +7,7 @@ import {
 import chalk from 'chalk'
 import { ensureEnvInGitignore, writeSolvaPaySecretToEnv } from '../lib/env'
 import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from '../lib/install'
-import { detectPackageManager, ensureNodeProject } from '../lib/project'
+import { detectPackageManager, ensureNodeProject, waitForEnter } from '../lib/project'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
 
@@ -60,12 +60,16 @@ const finishInstallProgressReporter = (): void => {
   }
 }
 
-export const runInitCommand = async (): Promise<void> => {
+export type InitCommandOptions = {
+  yes?: boolean
+}
+
+export const runInitCommand = async (options: InitCommandOptions = {}): Promise<void> => {
   const apiBaseUrl = resolveApiBaseUrl()
   const cwd = process.cwd()
   printBanner()
 
-  const projectCheck = await ensureNodeProject()
+  const projectCheck = await ensureNodeProject({ autoCreate: options.yes })
   if (projectCheck.action === 'cancelled') {
     process.stdout.write('Initialization cancelled. Run `npm init -y` first, then `solvapay init`.\n')
     return
@@ -78,8 +82,14 @@ export const runInitCommand = async (): Promise<void> => {
     process.stdout.write(`🔍 Detected ${packageManager} project (package.json found)\n`)
   }
 
-  process.stdout.write('🌐 Opening browser for authentication...\n')
   const initSession = await createInitSession(apiBaseUrl)
+  process.stdout.write(`🌐 Browser authentication URL: ${initSession.authUrl}\n`)
+  if (!options.yes) {
+    await waitForEnter(
+      'Press Enter to open your browser to authenticate and set up your account if you do not already have one. ',
+    )
+  }
+  process.stdout.write('🌐 Opening browser for authentication...\n')
 
   const opened = await openAuthUrl(initSession.authUrl)
   if (!opened) {
