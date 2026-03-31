@@ -33,8 +33,8 @@ const customerCreatedBody = JSON.stringify({
     object: {
       id: '69cbd1cea27ee92fbe90413f',
       reference: 'cus_0VXPU8NE',
-      name: 'Tommy Berglind',
-      email: 'tommy.berglind@gmail.com',
+      name: 'Test User',
+      email: 'test.user@example.com',
       status: 'active',
       created: 1774965198,
       product: {
