@@ -605,10 +605,10 @@ For comprehensive backend integration tests of the SolvaPay SDK itself, see the 
 
 ### Getting Started
 
-- [Examples Overview](../../docs/examples/overview.md) - Overview of all examples
-- [Installation Guide](../../docs/getting-started/installation.md) - SDK installation
-- [Quick Start Guide](../../docs/getting-started/quick-start.md) - 5-minute Express setup
-- [Core Concepts](../../docs/getting-started/core-concepts.md) - Understanding agents, plans, and paywalls
+- [Examples Overview](../../docs/guides/examples.mdx) - Overview of all examples
+- [Installation Guide](../../docs/setup/installation.mdx) - SDK installation
+- [Quick Start Guide](../../docs/setup/quick-start.mdx) - 5-minute Express setup
+- [Core Concepts](../../docs/setup/core-concepts.mdx) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
 
