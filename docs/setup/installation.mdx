@@ -1,0 +1,81 @@
+---
+title: "Installation"
+description: "Manual setup for SolvaPay SDK packages and environment variables."
+---
+
+> Recommended: use [CLI setup](./cli) with `npx solvapay init`.  
+> This page covers the manual setup path.
+
+## Prerequisites
+
+- Node.js version 18.17 or higher
+- npm, yarn, or pnpm
+- TypeScript 5.0+ (recommended)
+
+## Install packages by use case
+
+### Server-side protection
+
+```bash
+npm install @solvapay/server
+```
+
+### React checkout components
+
+```bash
+npm install @solvapay/react
+```
+
+### Next.js integration
+
+```bash
+npm install @solvapay/next
+```
+
+### Auth adapters
+
+```bash
+npm install @solvapay/auth
+```
+
+### Supabase adapter for React
+
+```bash
+npm install @solvapay/react-supabase @supabase/supabase-js
+```
+
+### Core types only
+
+```bash
+npm install @solvapay/core
+```
+
+## Environment variables
+
+Required for production:
+
+```bash
+SOLVAPAY_SECRET_KEY=sk_live_...
+```
+
+Optional:
+
+```bash
+SOLVAPAY_API_BASE_URL=https://api.solvapay.com
+```
+
+## Stub mode
+
+If `SOLVAPAY_SECRET_KEY` is not set, SDK calls run in stub mode for local testing.
+
+```typescript
+import { createSolvaPay } from '@solvapay/server'
+
+const solvaPay = createSolvaPay()
+```
+
+## Next steps
+
+- [Quick start](./quick-start)
+- [Core concepts](./core-concepts)
+- [Express guide](../guides/express)

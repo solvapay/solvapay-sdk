@@ -1,0 +1,177 @@
+---
+title: "Core concepts"
+description: "Understand products, plans, customers, paywall checks, and usage tracking."
+---
+
+## Table of contents
+
+- [Products and plans](#products-and-plans)
+- [Plan types](#plan-types)
+- [Meters](#meters)
+- [Customer references](#customer-references)
+- [Paywall protection flow](#paywall-protection-flow)
+- [Purchase lifecycle](#purchase-lifecycle)
+- [Authentication flow](#authentication-flow)
+- [Usage tracking](#usage-tracking)
+- [Next steps](#next-steps)
+
+## Products and plans
+
+### Products
+
+A product represents the API, app, or MCP server you monetize.
+
+- Product reference (`prd_...`)
+- Name and description
+
+Products are created in SolvaPay Console and are available for SDK integration by default.
+
+```typescript
+const payable = solvaPay.payable({
+  product: 'prd_myapi',
+})
+```
+
+### Plans
+
+A plan defines pricing and access for a product.
+
+- Plan reference (`pln_...`)
+- Type: `recurring`, `usage-based`, `one-time`, or `hybrid`
+- Price and currency
+- Features
+- Status: `active`, `inactive`, or `archived`
+
+Plans are configured as part of product setup.
+
+```typescript
+const payable = solvaPay.payable({
+  product: 'prd_myapi',
+  plan: 'pln_premium',
+})
+```
+
+### Product-plan relationship
+
+- One product can have multiple plans
+- Plans are embedded in products
+- One default plan per product
+- Paywall checks verify plan access for a product
+
+## Plan types
+
+| Type | Description | Best for |
+| --- | --- | --- |
+| Recurring | Fixed price billed on a cycle | SaaS subscriptions |
+| Usage-based | Pay-per-use tracked by a meter | APIs and token services |
+| Hybrid | Recurring fee plus usage overage | Enterprise mixed workloads |
+| One-time | Single purchase without recurring billing | Digital goods and lifetime access |
+
+See [Plans overview](/plans/overview) for full plan behavior.
+
+## Meters
+
+Meters define what usage to measure.
+
+- Default meters: `api_requests`, `requests`, `api_calls`, `tokens`
+- MCP tool meters: `tool:{toolName}`
+- Custom meters for business-specific usage
+
+Plans can enforce limits using meter data.
+
+See [Meters overview](/meters/overview) for details.
+
+## Customer references
+
+A customer reference (`customerRef`) maps your user identity to SolvaPay.
+
+```typescript
+const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
+  email: 'user@example.com',
+  name: 'Jane Doe',
+})
+```
+
+For HTTP adapters, pass customer identity in headers or auth context.
+
+```typescript
+app.post('/tasks', payable.http(async req => {
+  const customerRef = req.headers['x-customer-ref']
+  return { ok: true, customerRef }
+}))
+```
+
+## Paywall protection flow
+
+When your handler is wrapped with `payable()`, the SDK:
+
+1. Resolves customer reference
+2. Checks purchase status
+3. Checks usage limits
+4. Executes business logic when allowed
+5. Tracks usage
+6. Returns a paywall response when blocked
+
+### Example blocked response
+
+```typescript
+{
+  error: 'PaywallError',
+  message: 'Purchase required',
+  checkoutUrl: 'https://checkout.solvapay.com/...',
+}
+```
+
+## Purchase lifecycle
+
+Purchase states:
+
+- Active
+- Cancelled
+- Expired
+- Past due
+
+```typescript
+const customer = await solvaPay.getCustomer({ customerRef: 'user_123' })
+const purchases = customer.purchases
+
+await solvaPay.cancelRenewal({
+  customerRef: 'user_123',
+  purchaseRef: 'pur_...',
+})
+```
+
+## Authentication flow
+
+You keep your existing auth and map identities to SolvaPay customers.
+
+Common pattern:
+
+1. Extract user ID from your auth layer
+2. Use ID as `customerRef`
+3. Sync email/name as needed
+4. Run purchase checks
+
+## Usage tracking
+
+Use `payable()` for automatic usage tracking, or record usage directly.
+
+```typescript
+await solvaPay.trackUsage({
+  customerRef: 'user_123',
+  actionType: 'api_call',
+  units: 1,
+  outcome: 'success',
+  productReference: 'prd_P9Q0R1S2',
+})
+```
+
+Usage-based and hybrid plans enforce limits from meter data.
+
+## Next steps
+
+- [Quick start](./quick-start)
+- [CLI setup](./cli)
+- [Installation](./installation)
+- [Plans overview](/plans/overview)
+- [Meters overview](/meters/overview)

@@ -62,7 +62,8 @@ The SDK consists of **7 published packages**:
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
 - **`solvapay`** - CLI for auth bootstrap (`npx solvapay init`)
 
-See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for detailed package design and boundaries.
+See [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for contributor
+architecture notes and package boundaries.
 
 ## Usage
 
@@ -357,7 +358,7 @@ See [`examples/README.md`](./examples/README.md) for detailed setup instructions
 
 This is a **monorepo** with 7 published packages built using Turborepo, tsup, and pnpm workspaces.
 
-See [`docs/guides/architecture.md`](./docs/guides/architecture.md) for:
+See [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for:
 
 - Detailed package design and boundaries
 - Runtime detection strategy (Node vs Edge)
@@ -393,7 +394,7 @@ See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflo
 
 ## Documentation
 
-- **[Architecture](./docs/guides/architecture.md)** - Package design and structure
+- **[Architecture](./docs/contributing/architecture.md)** - Package design and structure
 - **[Contributing](./CONTRIBUTING.md)** - Development guidelines
 - **[Publishing](./docs/publishing.md)** - Publishing and release process
 

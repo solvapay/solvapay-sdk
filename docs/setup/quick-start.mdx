@@ -1,0 +1,66 @@
+---
+title: "Quick start"
+description: "Set up with CLI and protect your first endpoint in minutes."
+---
+
+## 1) Run the CLI setup
+
+From your project root:
+
+```bash
+npx solvapay init
+```
+
+This command authenticates you, writes `SOLVAPAY_SECRET_KEY`, installs core packages, and
+prints a starter snippet.
+
+See [CLI setup](./cli) for full details.
+
+## 2) Protect your first endpoint (Express)
+
+```typescript
+import express from 'express'
+import { createSolvaPay } from '@solvapay/server'
+
+const app = express()
+app.use(express.json())
+
+const solvaPay = createSolvaPay()
+const payable = solvaPay.payable({
+  product: 'prd_YOUR_PRODUCT',
+  plan: 'pln_YOUR_PLAN',
+})
+
+app.post(
+  '/tasks',
+  payable.http(async req => {
+    return {
+      success: true,
+      task: {
+        title: req.body.title,
+      },
+    }
+  }),
+)
+```
+
+Test it:
+
+```bash
+curl -X POST http://localhost:3000/tasks \
+  -H "Content-Type: application/json" \
+  -H "x-customer-ref: user_123" \
+  -d '{"title":"My first task"}'
+```
+
+## 3) Continue by framework
+
+- [Express guide](../guides/express)
+- [Next.js guide](../guides/nextjs)
+- [React guide](../guides/react)
+- [MCP guide](../guides/mcp)
+
+## Next steps
+
+- [Core concepts](./core-concepts)
+- [Installation (manual setup)](./installation)

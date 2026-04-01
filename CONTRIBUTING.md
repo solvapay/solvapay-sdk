@@ -42,6 +42,13 @@ pnpm -F @solvapay/server test
 pnpm -F @solvapay/server dev
 ```
 
+## Contributor docs
+
+- [SDK architecture](./docs/contributing/architecture.md)
+- [SDK testing](./docs/contributing/testing.md)
+- [SDK error handling](./docs/contributing/error-handling.md)
+- [SDK performance](./docs/contributing/performance.md)
+
 ### Running Examples
 
 ```bash

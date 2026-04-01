@@ -321,4 +321,5 @@ import type { PaymentFormProps, PurchaseStatus, PaymentIntentResult } from '@sol
 
 ## More Information
 
-See [`docs/guides/architecture.md`](../../docs/guides/architecture.md) for detailed architecture documentation.
+See [`docs/contributing/architecture.md`](../../docs/contributing/architecture.md) for contributor
+architecture documentation.
