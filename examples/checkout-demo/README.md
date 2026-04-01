@@ -111,11 +111,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 Use these test card numbers in the checkout form:
 
-| Card Number         | Result                |
-| ------------------- | --------------------- |
-| 4242 4242 4242 4242 | Payment succeeds      |
-| 4000 0000 0000 0002 | Payment declined      |
-| 4000 0000 0000 9995 | Insufficient funds    |
+| Card Number         | Result             |
+| ------------------- | ------------------ |
+| 4242 4242 4242 4242 | Payment succeeds   |
+| 4000 0000 0000 0002 | Payment declined   |
+| 4000 0000 0000 9995 | Insufficient funds |
 
 - Use any future expiry date
 - Use any 3-digit CVC
@@ -666,17 +666,17 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 
 ### Getting Started
 
-- [Examples Overview](../../docs/examples/overview.mdx) - Overview of all examples
-- [Installation Guide](../../docs/getting-started/installation.mdx) - SDK installation
-- [Quick Start Guide](../../docs/getting-started/quick-start.mdx) - Quick setup guide
-- [Core Concepts](../../docs/getting-started/core-concepts.mdx) - Understanding agents, plans, and paywalls
+- [Examples Overview](../../docs/guides/examples.mdx) - Overview of all examples
+- [Installation Guide](../../docs/setup/installation.mdx) - SDK installation
+- [Quick Start Guide](../../docs/setup/quick-start.mdx) - Quick setup guide
+- [Core Concepts](../../docs/setup/core-concepts.mdx) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
 
 - [React Integration Guide](../../docs/guides/react.mdx) - Complete React integration guide
 - [Next.js Integration Guide](../../docs/guides/nextjs.mdx) - Next.js specific patterns
 - [Custom Authentication Adapters](../../docs/guides/custom-auth.mdx) - Custom auth setup
-- [Error Handling Guide](../../docs/guides/error-handling.mdx) - Error handling patterns
+- [Error Handling Guide](../../docs/contributing/error-handling.md) - Error handling patterns
 
 ### API Reference
 
