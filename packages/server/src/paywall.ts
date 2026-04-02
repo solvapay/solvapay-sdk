@@ -394,8 +394,9 @@ export class SolvaPayPaywall {
         // Prepare customer creation params
         // Use provided email/name, or fallback to auto-generated values
         // Use a timestamp-based email to avoid conflicts with old orphaned records
-        const createParams: { email: string; name?: string; externalRef?: string } = {
+        const createParams: { email: string; name?: string; externalRef?: string; metadata: Record<string, unknown> } = {
           email: options?.email || `${customerRef}-${Date.now()}@auto-created.local`,
+          metadata: {},
         }
 
         if (options?.name) {
@@ -456,9 +457,10 @@ export class SolvaPayPaywall {
             }
 
             try {
-              const retryParams: { email: string; name?: string; externalRef?: string } = {
+              const retryParams: { email: string; name?: string; externalRef?: string; metadata: Record<string, unknown> } = {
                 email: `${customerRef}-${Date.now()}@auto-created.local`,
                 externalRef,
+                metadata: {},
               }
 
               if (options?.name) {

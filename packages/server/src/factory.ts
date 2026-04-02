@@ -383,14 +383,17 @@ export interface SolvaPay {
     customerRef: string
     productRef: string
     planRef?: string
-    meterName?: 'requests' | 'tokens'
-    usageType?: 'requests' | 'tokens'
+    meterName?: string
+    usageType?: string
   }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
     checkoutUrl?: string
     meterName?: string
+    creditBalance?: number
+    pricePerUnit?: number
+    currency?: string
   }>
 
   /**
@@ -453,7 +456,11 @@ export interface SolvaPay {
    * });
    * ```
    */
-  createCustomer(params: { email: string; name?: string }): Promise<{ customerRef: string }>
+  createCustomer(params: {
+    email: string
+    name?: string
+    metadata?: Record<string, unknown>
+  }): Promise<{ customerRef: string }>
 
   /**
    * Get customer details including purchases and usage.
@@ -731,7 +738,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       if (!apiClient.createCustomer) {
         throw new SolvaPayError('createCustomer is not available on this API client')
       }
-      return apiClient.createCustomer(params)
+      return apiClient.createCustomer({ ...params, metadata: params.metadata ?? {} })
     },
 
     getCustomer(params) {

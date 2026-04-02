@@ -7,15 +7,14 @@
 import type { components, operations } from './generated'
 
 export type UsageMeterType = 'requests' | 'tokens'
-export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
-  meterName?: string
-  usageType?: UsageMeterType
-}
+export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
 
 /**
- * Extended LimitResponse with plan field
+ * Extended LimitResponse with SDK-added plan field
  */
-export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { plan: string; meterName?: string }
+export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
+  plan: string
+}
 
 /**
  * Extended CustomerResponse with proper field mapping

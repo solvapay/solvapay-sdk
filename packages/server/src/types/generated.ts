@@ -545,82 +545,342 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        UpdateProviderDto: {
-            /** @description Legal entity information */
-            legalEntity?: Record<string, never>;
-            /**
-             * Provider description
-             * @example My business
-             */
+        TrackAnalyticsEventDto: {
+            event: string;
+            properties: {
+                [key: string]: unknown;
+            };
+            userId?: string;
+            sessionId?: string;
+        };
+        CreateNotificationZodDto: {
+            userId?: string;
+            title: string;
+            message: string;
+            /** @enum {string} */
+            type?: "info" | "success" | "warning" | "error" | "payment" | "transaction" | "system";
+            /** @enum {string} */
+            priority?: "low" | "medium" | "high" | "urgent";
+            metadata: {
+                [key: string]: unknown;
+            };
+            actionUrl?: string;
+            actionText?: string;
+            expiresAt?: unknown;
+            /** @enum {string} */
+            environment?: "sandbox" | "live";
+        };
+        BulkCreateNotificationDto: {
+            userIds: string[];
+            notification: {
+                title?: string;
+                message?: string;
+                /** @enum {string} */
+                type?: "info" | "success" | "warning" | "error" | "payment" | "transaction" | "system";
+                /** @enum {string} */
+                priority?: "low" | "medium" | "high" | "urgent";
+                metadata?: {
+                    [key: string]: unknown;
+                };
+                actionUrl?: string;
+                actionText?: string;
+                expiresAt?: unknown;
+                /** @enum {string} */
+                environment?: "sandbox" | "live";
+            };
+        };
+        BroadcastNotificationDto: {
+            title: string;
+            message: string;
+            /** @enum {string} */
+            type?: "info" | "success" | "warning" | "error" | "payment" | "transaction" | "system";
+            /** @enum {string} */
+            priority?: "low" | "medium" | "high" | "urgent";
+            metadata: {
+                [key: string]: unknown;
+            };
+            actionUrl?: string;
+            actionText?: string;
+            expiresAt?: unknown;
+            /** @enum {string} */
+            environment?: "sandbox" | "live";
+        };
+        UpdateNotificationDto: {
+            isRead?: boolean;
+            isArchived?: boolean;
+        };
+        BulkUpdateNotificationDto: {
+            notificationIds?: string[];
+            /** @enum {string} */
+            action: "mark-read" | "mark-all-read" | "archive";
+        };
+        UpdateProviderUiDto: {
+            legalEntity: {
+                name?: string;
+                address?: {
+                    line1?: string;
+                    line2?: string;
+                    line3?: string;
+                    city?: string;
+                    stateOrCounty?: string;
+                    postcode?: string;
+                    country?: string;
+                };
+                bankAccount?: {
+                    country?: string;
+                    currency?: string;
+                    accountHolderName?: string;
+                    /** @enum {string} */
+                    accountHolderType?: "individual" | "company";
+                    iban?: string;
+                    bic?: string;
+                    routingNumber?: string;
+                    sortCode?: string;
+                    bankCode?: string;
+                    accountNumber?: string;
+                    bankName?: string;
+                };
+                companyNumber?: string;
+                taxId?: string;
+                vatNumber?: string;
+                mainActivity?: string;
+                additionalActivities?: string[];
+                personIds?: string[];
+                people?: unknown[];
+            };
             description?: string;
-            /**
-             * Business website URL
-             * @example https://example.com
-             */
             website?: string;
-            /**
-             * Business type
-             * @example individual
-             * @enum {string}
-             */
+            /** @enum {string} */
             businessType?: "individual" | "company";
-            /**
-             * Business email address
-             * @example business@example.com
-             */
+            /** Format: email */
             businessEmail?: string;
-            /**
-             * Support email address
-             * @example support@example.com
-             */
+            /** Format: email */
             supportEmail?: string;
-            /**
-             * Business telephone number
-             * @example +1234567890
-             */
             telephone?: string;
-            /**
-             * Support telephone number
-             * @example +1234567890
-             */
             supportTelephone?: string;
-            /**
-             * Default currency code
-             * @example usd
-             */
             defaultCurrency?: string;
-            /** @description Arbitrary metadata */
-            metadata?: Record<string, never>;
-            /** @description Terms of Service acceptance */
-            tosAcceptance?: Record<string, never>;
+            metadata: {
+                [key: string]: unknown;
+            };
+            tosAcceptance: {
+                accepted?: boolean;
+                acceptedAt?: unknown;
+                ipAddress?: string;
+                userAgent?: string;
+            };
+            theme?: unknown;
+        };
+        SwitchEnvironmentDto: {
+            /** @enum {string} */
+            environment: "sandbox" | "live";
+            copyProducts?: boolean;
+            confirmProductCopyDecision?: boolean;
+        };
+        ResetOnboardingDto: {
+            deleteProducts?: boolean;
+        };
+        CreateInvitationsDto: {
+            emails: string[];
+            roles?: string[];
+        };
+        TransferOwnershipDto: {
+            newOwnerId: string;
+        };
+        RemoveUserDto: {
+            userId: string;
+        };
+        UpdateUserRoleDto: {
+            userId: string;
+            /** @enum {string} */
+            role: "owner" | "admin" | "member";
+        };
+        CreateProviderAdminDto: {
+            legalEntity: {
+                name?: string;
+                address?: {
+                    line1?: string;
+                    line2?: string;
+                    line3?: string;
+                    city?: string;
+                    stateOrCounty?: string;
+                    postcode?: string;
+                    country?: string;
+                };
+                bankAccount?: {
+                    country?: string;
+                    currency?: string;
+                    accountHolderName?: string;
+                    /** @enum {string} */
+                    accountHolderType?: "individual" | "company";
+                    iban?: string;
+                    bic?: string;
+                    routingNumber?: string;
+                    sortCode?: string;
+                    bankCode?: string;
+                    accountNumber?: string;
+                    bankName?: string;
+                };
+                companyNumber?: string;
+                mainActivity?: string;
+                additionalActivities?: string[];
+                personIds?: string[];
+                people?: unknown[];
+            };
+            description?: string;
+            website?: string;
+            /** @enum {string} */
+            businessType?: "individual" | "company";
+            /** Format: email */
+            businessEmail?: string;
+            /** Format: email */
+            supportEmail?: string;
+            telephone?: string;
+            supportTelephone?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            reference?: string;
+            defaultCurrency?: string;
+        };
+        UpdateProviderAdminDto: {
+            legalEntity: {
+                name?: string;
+                address?: {
+                    line1?: string;
+                    line2?: string;
+                    line3?: string;
+                    city?: string;
+                    stateOrCounty?: string;
+                    postcode?: string;
+                    country?: string;
+                };
+                bankAccount?: {
+                    country?: string;
+                    currency?: string;
+                    accountHolderName?: string;
+                    /** @enum {string} */
+                    accountHolderType?: "individual" | "company";
+                    iban?: string;
+                    bic?: string;
+                    routingNumber?: string;
+                    sortCode?: string;
+                    bankCode?: string;
+                    accountNumber?: string;
+                    bankName?: string;
+                };
+                companyNumber?: string;
+                mainActivity?: string;
+                additionalActivities?: string[];
+                personIds?: string[];
+                people?: unknown[];
+            };
+            description?: string;
+            website?: string;
+            /** @enum {string} */
+            businessType?: "individual" | "company";
+            /** Format: email */
+            businessEmail?: string;
+            /** Format: email */
+            supportEmail?: string;
+            telephone?: string;
+            supportTelephone?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            defaultCurrency?: string;
+            paymentProcessor: {
+                accountId?: string;
+                /** @enum {string} */
+                accountType?: "standard" | "express" | "custom";
+                status?: string;
+                chargesEnabled?: boolean;
+                payoutsEnabled?: boolean;
+                requirements?: unknown;
+                createdAt?: unknown;
+                updatedAt?: unknown;
+            };
+            tosAcceptance: {
+                accepted?: boolean;
+                acceptedAt?: unknown;
+                ipAddress?: string;
+                userAgent?: string;
+            };
+        };
+        UpdateProviderStatusDto: {
+            status: string;
+            reason?: string;
         };
         CreateSecretKey: Record<string, never>;
-        CreateUser: Record<string, never>;
-        UpdateUser: Record<string, never>;
-        UpdateProfile: Record<string, never>;
-        UpdatePreferences: Record<string, never>;
-        RequestEmailChange: {
+        CreateUserAdminDto: {
+            name: string;
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
+            type: "provider" | "admin" | "super_admin";
+            providerId?: string;
+            /** @enum {string} */
+            providerRole?: "owner" | "admin" | "member";
+        };
+        UpdateUserAdminDto: {
+            name?: string;
+            /** Format: email */
+            email?: string;
+            /** @enum {string} */
+            type?: "provider" | "admin" | "super_admin";
+            providerId?: string;
+            /** @enum {string} */
+            providerRole?: "owner" | "admin" | "member";
+            metadata: {
+                [key: string]: unknown;
+            };
+        };
+        UpdateUserStatusDto: {
+            status: string;
+            reason?: string;
+        };
+        UpdateProfileZodDto: {
+            name?: string;
+            timezone?: string;
+            preferences: {
+                [key: string]: unknown;
+            };
+        };
+        UpdatePreferencesZodDto: {
+            preferences: {
+                [key: string]: unknown;
+            };
+        };
+        RequestEmailChangeZodDto: {
+            /** Format: email */
             newEmail: string;
         };
-        VerifyEmailChange: {
+        VerifyEmailChangeZodDto: {
             code: string;
         };
-        CreateUiCheckoutSessionRequest: {
-            /**
-             * Customer reference
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Plan reference (optional)
-             * @example pln_2b3c4d5e6f7g
-             */
-            planRef?: string;
-            /**
-             * Product reference (required)
-             * @example prd_1a2b3c4d5e6f
-             */
+        CreatePaymentIntentDto: {
             productRef: string;
+            customerReference: string;
+            planRef?: string;
+            pricingTier?: string;
+            /**
+             * @default product
+             * @enum {string}
+             */
+            purpose: "product" | "credit_topup";
+            amount?: number;
+            currency?: string;
+        };
+        UpdateCheckoutSessionPlanDto: {
+            planRef: string;
+        };
+        SelectTopupAmountDto: {
+            amount: number;
+        };
+        CreateCheckoutSessionRequest: {
+            customerRef: string;
+            productRef: string;
+            planRef?: string;
+            returnUrl?: string;
         };
         CreateUiCheckoutSessionResponse: {
             /**
@@ -654,89 +914,70 @@ export interface components {
              */
             checkoutUrl: string;
         };
-        SelectCustomerSessionProductRequest: {
-            /**
-             * Product reference or ID to scope the customer manage session
-             * @example prd_1a2b3c4d5e6f
-             */
+        SelectCustomerSessionProductDto: {
             productRef: string;
         };
-        CancelRenewalRequest: {
-            /** @description Reason for cancelling renewal */
+        CancelPurchaseRequest: {
             reason?: string;
         };
-        ExternalAccount: {
-            /**
-             * Country code
-             * @example US
-             */
-            country: string;
-            /**
-             * Currency code
-             * @example usd
-             */
-            currency: string;
-            /**
-             * Account holder name
-             * @example John Doe
-             */
-            accountHolderName: string;
-            /**
-             * Account holder type
-             * @example individual
-             * @enum {string}
-             */
-            accountHolderType: "individual" | "company";
-            /**
-             * Routing number
-             * @example 110000000
-             */
-            routingNumber: string;
-            /**
-             * Account number
-             * @example 000123456789
-             */
-            accountNumber: string;
-        };
-        TosAcceptance: {
-            /**
-             * IP address of user accepting ToS
-             * @example 192.168.1.1
-             */
-            ip: string;
-        };
-        UpdateConnectedAccount: {
-            /**
-             * Business website URL
-             * @example https://example.com
-             */
-            website?: string;
-            /** @description External bank account */
-            externalAccount?: components["schemas"]["ExternalAccount"];
-            /** @description Terms of Service acceptance */
-            tosAcceptance?: components["schemas"]["TosAcceptance"];
-        };
-        CreateCheckoutSessionRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
-            customerRef: string;
-            /**
-             * Product reference identifier
-             * @example prd_1A2B3C4D
-             */
+        ProcessPaymentIntentDto: {
             productRef: string;
-            /**
-             * Plan reference identifier (optional)
-             * @example pln_2b3c4d5e6f7g
-             */
+            customerRef: string;
             planRef?: string;
-            /**
-             * URL to redirect to after successful payment (optional)
-             * @example https://example.com/payment-success
-             */
-            returnUrl?: string;
+        };
+        UpdatePayoutScheduleDto: {
+            /** @enum {string} */
+            interval: "manual" | "daily" | "weekly" | "monthly";
+            weekly_anchor?: string;
+            monthly_anchor?: number;
+        };
+        UpdateConnectedAccountDto: {
+            website?: string;
+            externalAccount: {
+                country?: string;
+                currency?: string;
+                accountHolderName?: string;
+                /** @enum {string} */
+                accountHolderType?: "individual" | "company";
+                routingNumber?: string;
+                accountNumber?: string;
+            };
+            tosAcceptance: {
+                ip?: string;
+            };
+        };
+        CreateStripePaymentDto: {
+            amount: number;
+            currency: string;
+            connectedAccountId: string;
+            paymentMethodId: string;
+            description?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            customerEmail?: string;
+            customerName?: string;
+        };
+        CreateManualPayoutDto: {
+            amount: number;
+            currency: string;
+            description?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+        };
+        CreateAccountLinkDto: {
+            returnUrl: string;
+            refreshUrl: string;
+        };
+        StripeOAuthAuthorizeDto: {
+            redirectUri: string;
+            source?: string;
+        };
+        StripeOAuthCallbackDto: {
+            code: string;
+            state: string;
+            redirectUri?: string;
         };
         CreateCheckoutSessionResponse: {
             /**
@@ -750,8 +991,9 @@ export interface components {
              */
             checkoutUrl: string;
         };
-        Signup: {
+        SignupDto: {
             name: string;
+            /** Format: email */
             email: string;
             /** @enum {string} */
             type?: "provider" | "admin" | "super_admin";
@@ -778,16 +1020,19 @@ export interface components {
             requiresMfa?: boolean;
             requiresMfaSetup?: boolean;
         };
-        Login: {
-            /** @description Email to send a 6-digit login code to */
+        LoginDto: {
+            /** Format: email */
             email: string;
         };
-        VerifyLoginCode: {
+        VerifyLoginCodeDto: {
+            /** Format: email */
             email: string;
-            /** @description 6-digit login code sent to email */
             code: string;
         };
-        VerifyEmail: {
+        TwoFactorTokenDto: {
+            twoFactorToken: string;
+        };
+        VerifyEmailDto: {
             emailVerificationCode: string;
         };
         DynamicClientRegistrationDto: {
@@ -860,31 +1105,84 @@ export interface components {
             /** @example client_secret_basic */
             token_endpoint_auth_method: string;
         };
-        GoogleLoginDto: {
-            /** @description The authorization code returned by Google */
-            code: string;
-            /** @description The redirect URI used in the initial authorization request */
+        TokenRequestDto: {
+            grant_type: string;
+            code?: string;
+            redirect_uri?: string;
+            client_id?: string;
+            client_secret?: string;
+            code_verifier?: string;
+            refresh_token?: string;
+        };
+        RevokeTokenDto: {
+            token: string;
+            token_type_hint?: string;
+        };
+        CustomerLoginDto: {
+            client_id: string;
             redirect_uri: string;
-            /** @description The state parameter returned by Google (contains client_id) */
+            /** Format: email */
+            email: string;
+            password: string;
+            scope?: string;
+            state?: string;
+            code_challenge?: string;
+            code_challenge_method?: string;
+            mcp_subdomain?: string;
+        };
+        GoogleLoginZodDto: {
+            code: string;
+            redirect_uri: string;
             state: string;
         };
-        GithubLoginDto: {
-            /** @description The authorization code returned by GitHub */
+        GithubLoginZodDto: {
             code: string;
-            /** @description The redirect URI used in the initial authorization request */
             redirect_uri: string;
-            /** @description The state parameter returned by GitHub (contains client_id) */
             state: string;
         };
-        CreateOAuthClientDto: Record<string, never>;
-        UpdateOAuthClientDto: Record<string, never>;
+        ForgotPasswordDto: {
+            client_id: string;
+            /** Format: email */
+            email: string;
+        };
+        ResetPasswordDto: {
+            client_id: string;
+            token: string;
+            new_password: string;
+        };
+        OpsGoogleSessionDto: {
+            /** Format: email */
+            email: string;
+        };
+        OpsMfaVerifyDto: {
+            /** Format: email */
+            email: string;
+            totpCode: string;
+        };
+        CreateOAuthClientDto: {
+            name: string;
+            redirectUris: string[];
+            /** @enum {string} */
+            userManagementMode?: "solvapay_managed" | "webhook_managed";
+            webhookUrl: string | "";
+            customLoginPageUrl: string | "";
+        };
+        UpdateOAuthClientDto: {
+            name?: string;
+            redirectUris?: string[];
+            /** @enum {string} */
+            userManagementMode?: "solvapay_managed" | "webhook_managed";
+            webhookUrl: string | "";
+            customLoginPageUrl: string | "";
+            isActive?: boolean;
+        };
         Plan: {
             /**
              * Plan type exposed in SDK
              * @example recurring
              * @enum {string}
              */
-            type: "recurring" | "one-time";
+            type: "recurring" | "one-time" | "usage-based";
             /**
              * Plan ID
              * @example 507f1f77bcf86cd799439011
@@ -937,8 +1235,8 @@ export interface components {
              */
             billingModel?: "pre-paid" | "post-paid";
             /**
-             * Price per usage unit
-             * @example 0.01
+             * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
+             * @example 0.1
              */
             pricePerUnit?: number;
             /**
@@ -994,175 +1292,75 @@ export interface components {
             updatedAt: string;
         };
         CreatePlanRequest: {
-            /**
-             * Plan type exposed in SDK
-             * @example recurring
-             * @enum {string}
-             */
-            type?: "recurring" | "one-time";
-            /**
-             * Billing cycle (required for recurring/hybrid, optional for post-paid usage-based)
-             * @example monthly
-             * @enum {string}
-             */
+            /** @enum {string} */
+            type?: "recurring" | "usage-based" | "hybrid" | "one-time";
+            /** @enum {string} */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
-            /**
-             * Plan price in cents
-             * @example 2999
-             */
             price?: number;
-            /**
-             * Currency code (ISO 4217)
-             * @example USD
-             * @enum {string}
-             */
-            currency?: "USD" | "EUR" | "GBP" | "SEK" | "NOK" | "DKK" | "CAD" | "AUD" | "JPY" | "CHF" | "PLN" | "CZK" | "HUF" | "RON" | "BGN" | "HRK" | "RSD" | "MKD" | "BAM" | "ALL" | "ISK" | "TRY" | "RUB" | "UAH" | "BYN" | "MDL" | "GEL" | "AMD" | "AZN" | "KZT" | "KGS" | "TJS" | "TMT" | "UZS" | "MNT" | "CNY" | "KRW" | "THB" | "VND" | "IDR" | "MYR" | "SGD" | "PHP" | "INR" | "PKR" | "BDT" | "LKR" | "NPR" | "AFN" | "IRR" | "IQD" | "JOD" | "KWD" | "LBP" | "OMR" | "QAR" | "SAR" | "SYP" | "AED" | "YER" | "ILS" | "EGP" | "MAD" | "TND" | "DZD" | "LYD" | "SDG" | "ETB" | "KES" | "TZS" | "UGX" | "RWF" | "BIF" | "DJF" | "SOS" | "ERN" | "SLL" | "GMD" | "GNF" | "CVE" | "STN" | "AOA" | "ZAR" | "BWP" | "SZL" | "LSL" | "NAD" | "ZMW" | "ZWL" | "MZN" | "MWK" | "MGA" | "MUR" | "SCR" | "KMF" | "MVR";
-            /**
-             * Number of free units included
-             * @example 100
-             */
+            pricePerUnit?: number;
+            currency?: string;
+            /** @enum {string} */
+            billingModel?: "pre-paid" | "post-paid";
             freeUnits?: number;
-            /**
-             * Usage limit for the meter
-             * @example 10000
-             */
             limit?: number;
-            /**
-             * Usage limits (shape varies by plan type)
-             * @example {
-             *       "maxTransactions": 1000
-             *     }
-             */
-            limits?: {
+            limits: {
                 [key: string]: unknown;
             };
-            /**
-             * Plan features (generic key/value, shape is provider-defined)
-             * @example {
-             *       "apiAccess": true,
-             *       "prioritySupport": false
-             *     }
-             */
-            features?: {
+            metadata: {
                 [key: string]: unknown;
             };
-            /**
-             * Whether this is a free tier plan
-             * @example false
-             */
-            isFreeTier?: boolean;
-            /**
-             * Whether payment is required
-             * @example true
-             */
-            requiresPayment?: boolean;
-            /**
-             * Plan status
-             * @example active
-             * @enum {string}
-             */
+            features: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
             status?: "active" | "inactive" | "archived";
-            /**
-             * Maximum number of active users
-             * @example 10
-             */
+            isFreeTier?: boolean;
+            requiresPayment?: boolean;
             maxActiveUsers?: number;
-            /**
-             * Access expiry in days
-             * @example 30
-             */
             accessExpiryDays?: number;
-            /** @description Additional metadata */
-            metadata?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Whether this is the default plan
-             * @example false
-             */
             default?: boolean;
         };
         UpdatePlanRequest: {
-            /**
-             * Billing cycle
-             * @example monthly
-             * @enum {string}
-             */
+            /** @enum {string} */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
-            /**
-             * Plan price in cents
-             * @example 2999
-             */
             price?: number;
-            /**
-             * Currency code (ISO 4217)
-             * @example USD
-             */
+            pricePerUnit?: number;
             currency?: string;
-            /**
-             * Number of free units included
-             * @example 100
-             */
+            /** @enum {string} */
+            billingModel?: "pre-paid" | "post-paid";
             freeUnits?: number;
-            /**
-             * Usage limit for the meter
-             * @example 10000
-             */
             limit?: number;
-            /**
-             * Usage limits (shape varies by plan type)
-             * @example {
-             *       "maxTransactions": 1000
-             *     }
-             */
-            limits?: {
+            limits: {
                 [key: string]: unknown;
             };
-            /**
-             * Plan features (generic key/value, shape is provider-defined)
-             * @example {
-             *       "apiAccess": true,
-             *       "prioritySupport": false
-             *     }
-             */
-            features?: {
+            features: {
                 [key: string]: unknown;
             };
-            /**
-             * Whether this is a free tier plan
-             * @example false
-             */
             isFreeTier?: boolean;
-            /**
-             * Whether payment is required
-             * @example true
-             */
             requiresPayment?: boolean;
-            /**
-             * Plan status
-             * @example active
-             * @enum {string}
-             */
+            /** @enum {string} */
             status?: "active" | "inactive" | "archived";
-            /**
-             * Maximum number of active users
-             * @example 10
-             */
             maxActiveUsers?: number;
-            /**
-             * Access expiry in days
-             * @example 30
-             */
             accessExpiryDays?: number;
-            /** @description Additional metadata */
-            metadata?: {
+            metadata: {
                 [key: string]: unknown;
             };
-            /**
-             * Whether this is the default plan
-             * @example false
-             */
             default?: boolean;
+        };
+        CreateProductRequest: {
+            name: string;
+            description?: string;
+            imageUrl?: string;
+            productType?: string;
+            isMcpPay?: boolean;
+            config: {
+                fulfillmentType?: string;
+                validityPeriod?: number;
+                deliveryMethod?: string;
+            };
+            metadata: {
+                [key: string]: unknown;
+            };
         };
         ProductConfigDto: {
             /**
@@ -1180,36 +1378,6 @@ export interface components {
              * @example api
              */
             deliveryMethod?: string;
-        };
-        CreateProductRequest: {
-            /**
-             * Product name
-             * @example AI Writing Assistant
-             */
-            name: string;
-            /**
-             * Product description
-             * @example AI-powered writing tool
-             */
-            description?: string;
-            /** @description URL to the product image */
-            imageUrl?: string;
-            /**
-             * Free-form product type defined by the provider
-             * @example Coding Assistant
-             */
-            productType?: string;
-            /**
-             * Whether this product uses MCP Pay proxy
-             * @default false
-             */
-            isMcpPay: boolean;
-            /** @description Product-specific configuration */
-            config?: components["schemas"]["ProductConfigDto"];
-            /** @description Arbitrary key-value metadata */
-            metadata?: {
-                [key: string]: unknown;
-            };
         };
         SdkPlanResponse: {
             /**
@@ -1258,8 +1426,8 @@ export interface components {
              */
             billingModel?: string;
             /**
-             * Price per unit in cents
-             * @example 10
+             * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
+             * @example 0.1
              */
             pricePerUnit?: number;
             /**
@@ -1385,175 +1553,60 @@ export interface components {
             };
         };
         UpdateProductRequest: {
-            /** @description Product name */
             name?: string;
-            /** @description Product description */
             description?: string;
-            /** @description URL to the product image */
             imageUrl?: string;
-            /** @description Free-form product type defined by the provider */
             productType?: string;
-            /**
-             * Product status
-             * @enum {string}
-             */
+            /** @enum {string} */
             status?: "active" | "inactive" | "suspended";
-            /** @description Product-specific configuration */
-            config?: components["schemas"]["ProductConfigDto"];
-            /** @description Arbitrary key-value metadata */
-            metadata?: {
+            config: {
+                fulfillmentType?: string;
+                validityPeriod?: number;
+                deliveryMethod?: string;
+            };
+            metadata: {
                 [key: string]: unknown;
             };
         };
-        McpBootstrapFreePlanConfig: {
-            /**
-             * Free plan display name override
-             * @example Starter
-             */
+        McpBootstrapDto: {
             name?: string;
-            /**
-             * Included free units (default 1000)
-             * @example 500
-             */
-            freeUnits?: number;
-        };
-        McpBootstrapPaidPlanInput: {
-            /**
-             * Logical plan key (must not be "free")
-             * @example pro
-             */
-            key: string;
-            /**
-             * Plan display name
-             * @example Pro
-             */
-            name: string;
-            /**
-             * Plan price in cents (must be > 0)
-             * @example 2000
-             */
-            price: number;
-            /**
-             * Currency code (ISO 4217)
-             * @example USD
-             */
-            currency: string;
-            /**
-             * Billing cycle for recurring plans
-             * @example monthly
-             * @enum {string}
-             */
-            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
-            /**
-             * Plan type
-             * @example recurring
-             * @enum {string}
-             */
-            type?: "recurring" | "one-time";
-            /**
-             * Included free units
-             * @example 1000
-             */
-            freeUnits?: number;
-            /**
-             * Meter id for usage tracking
-             * @example 67f90f1f1b1c9c0b8df0f001
-             */
-            meterId?: string;
-            /**
-             * Plan usage limit
-             * @example 10000
-             */
-            limit?: number;
-            /** @description Plan features */
-            features?: {
-                [key: string]: unknown;
-            };
-        };
-        McpBootstrapToolInput: {
-            /**
-             * Tool name
-             * @example search_docs
-             */
-            name: string;
-            /**
-             * Tool description
-             * @example Search indexed documents
-             */
             description?: string;
-            /**
-             * If true, tool is publicly available without a plan
-             * @example false
-             */
-            noPlan?: boolean;
-            /**
-             * Direct plan IDs allowed for this tool
-             * @example [
-             *       "67f90f1f1b1c9c0b8df0f001"
-             *     ]
-             */
-            planIds?: string[];
-            /**
-             * Plan references allowed for this tool
-             * @example [
-             *       "pln_ABC123"
-             *     ]
-             */
-            planRefs?: string[];
-            /**
-             * Bootstrap plan keys allowed for this tool (for example free or starter_paid)
-             * @example [
-             *       "free"
-             *     ]
-             */
-            planKeys?: string[];
-        };
-        McpBootstrapRequest: {
-            /**
-             * Product name (optional when derivable from origin MCP metadata)
-             * @example Acme MCP Toolkit
-             */
-            name?: string;
-            /**
-             * Product description
-             * @example MCP toolkit with tiered access
-             */
-            description?: string;
-            /** @description Product image URL */
             imageUrl?: string;
-            /**
-             * Free-form product type
-             * @example MCP Server
-             */
             productType?: string;
-            /**
-             * Origin MCP server URL (must be https)
-             * @example https://origin.example.com/mcp
-             */
+            /** Format: uri */
             originUrl: string;
-            /**
-             * Optional final MCP subdomain override (for example, value returned by bootstrap-subdomain-checks)
-             * @example acme-docs
-             */
             mcpDomain?: string;
-            /**
-             * Optional auth header name forwarded to origin server
-             * @example X-API-Key
-             */
             authHeaderName?: string;
-            /**
-             * Optional auth API key forwarded to origin server
-             * @example sk-origin-123
-             */
             authApiKey?: string;
-            /** @description Free plan config overrides. A free plan is always created; this just customizes name/freeUnits. */
-            freePlan?: components["schemas"]["McpBootstrapFreePlanConfig"];
-            /** @description Paid plan definitions requiring price + currency */
-            paidPlans?: components["schemas"]["McpBootstrapPaidPlanInput"][];
-            /** @description Tool to plan mapping configuration */
-            tools?: components["schemas"]["McpBootstrapToolInput"][];
-            /** @description Arbitrary product metadata */
-            metadata?: {
+            freePlan: {
+                name?: string;
+                freeUnits?: number;
+            };
+            paidPlans?: {
+                key: string;
+                name: string;
+                price: number;
+                currency: string;
+                /** @enum {string} */
+                billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+                /** @enum {string} */
+                type?: "recurring" | "one-time";
+                freeUnits?: number;
+                meterId?: string;
+                limit?: number;
+                features?: {
+                    [key: string]: unknown;
+                };
+            }[];
+            tools?: {
+                name: string;
+                description?: string;
+                noPlan?: boolean;
+                planIds?: string[];
+                planRefs?: string[];
+                planKeys?: string[];
+            }[];
+            metadata: {
                 [key: string]: unknown;
             };
         };
@@ -1598,27 +1651,31 @@ export interface components {
                 description?: string;
             }[];
         };
-        McpToolPlanMapping: {
-            /**
-             * Tool name
-             * @example deep_research
-             */
-            name: string;
-            /**
-             * Plan keys this tool should be gated to
-             * @example [
-             *       "pro"
-             *     ]
-             */
-            planKeys: string[];
-        };
-        ConfigureMcpPlansRequest: {
-            /** @description Required free plan configuration for updates. Applies to the existing default free plan only. */
-            freePlan: components["schemas"]["McpBootstrapFreePlanConfig"];
-            /** @description Optional paid plan definitions. [] reverts to free-only, omitted leaves existing paid plans unchanged. */
-            paidPlans?: components["schemas"]["McpBootstrapPaidPlanInput"][];
-            /** @description Optional tool-to-plan remapping. If paidPlans is omitted, only this remapping is applied. */
-            toolMapping?: components["schemas"]["McpToolPlanMapping"][];
+        ConfigureMcpPlansDto: {
+            freePlan: {
+                name?: string;
+                freeUnits?: number;
+            };
+            paidPlans?: {
+                key: string;
+                name: string;
+                price: number;
+                currency: string;
+                /** @enum {string} */
+                billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+                /** @enum {string} */
+                type?: "recurring" | "one-time";
+                freeUnits?: number;
+                meterId?: string;
+                limit?: number;
+                features?: {
+                    [key: string]: unknown;
+                };
+            }[];
+            toolMapping?: {
+                name: string;
+                planKeys: string[];
+            }[];
         };
         ConfigureMcpPlansResult: {
             /** @description Updated product */
@@ -1631,6 +1688,21 @@ export interface components {
             planMap: {
                 [key: string]: unknown;
             };
+        };
+        CloneProductDto: {
+            name?: string;
+        };
+        CheckProductNameDto: {
+            name: string;
+            excludeId?: string;
+        };
+        CreateProductUiDto: {
+            name: string;
+            description?: string;
+            productType?: string;
+            isMcpPay?: boolean | string;
+            config?: unknown;
+            metadata?: unknown;
         };
         McpBootstrapPreviewResult: {
             /** @description Discovered tools from the origin MCP server */
@@ -1667,54 +1739,118 @@ export interface components {
                 planKey?: string;
             }[];
         };
-        RecordMeterEventDto: {
-            /**
-             * Meter name to record against
-             * @example requests
-             */
-            meterName: string;
-            /**
-             * Customer reference
-             * @example cus_ABC123
-             */
+        UpdateProductUiDto: {
+            name?: string;
+            description?: string;
+            productType?: string;
+            /** @enum {string} */
+            status?: "active" | "inactive" | "suspended";
+            isMcpPay?: boolean | string;
+        };
+        CreateUsageRequest: {
             customerId: string;
             /**
-             * Numeric value (default 1)
-             * @default 1
-             * @example 1
+             * @default api_call
+             * @enum {string}
              */
-            value: number;
+            actionType: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
+            /** @default 1 */
+            units: number;
             /**
-             * Arbitrary key-value tags
-             * @example {
-             *       "endpoint": "/api/v1/search",
-             *       "region": "us-east-1"
-             *     }
+             * @default success
+             * @enum {string}
              */
-            properties?: {
+            outcome: "success" | "paywall" | "fail";
+            productReference?: string;
+            purchaseReference?: string;
+            description?: string;
+            errorMessage?: string;
+            metadata: {
                 [key: string]: unknown;
             };
-            /** @description Product ID to scope the usage event to */
+            duration?: number;
+            /** Format: date-time */
+            timestamp: string;
+            idempotencyKey?: string;
+        };
+        BulkCreateUsageRequest: {
+            events: {
+                customerId: string;
+                /**
+                 * @default api_call
+                 * @enum {string}
+                 */
+                actionType: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
+                /** @default 1 */
+                units: number;
+                /**
+                 * @default success
+                 * @enum {string}
+                 */
+                outcome: "success" | "paywall" | "fail";
+                productReference?: string;
+                purchaseReference?: string;
+                description?: string;
+                errorMessage?: string;
+                metadata?: {
+                    [key: string]: unknown;
+                };
+                duration?: number;
+                /** Format: date-time */
+                timestamp: string;
+                idempotencyKey?: string;
+            }[];
+        };
+        RecordMeterEventZodDto: {
+            meterName: string;
+            customerId: string;
+            value?: number;
+            properties: {
+                [key: string]: unknown;
+            };
             productId?: string;
-            /** @description Product reference to scope the usage event to */
             productReference?: string;
-            /** @description ISO 8601 timestamp (defaults to now) */
             timestamp?: string;
         };
-        RecordBulkMeterEventsDto: {
-            /** @description Array of events to record */
-            events: components["schemas"]["RecordMeterEventDto"][];
+        RecordBulkMeterEventsZodDto: {
+            events: {
+                meterName: string;
+                customerId: string;
+                value?: number;
+                properties?: {
+                    [key: string]: unknown;
+                };
+                productId?: string;
+                productReference?: string;
+                timestamp?: string;
+            }[];
+        };
+        CreateCustomerRequest: {
+            /** Format: email */
+            email: string;
+            name?: string;
+            telephone?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            externalRef?: string;
+        };
+        UpdateCustomerUiDto: {
+            /** Format: email */
+            email?: string;
+            name?: string;
+            telephone?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            externalRef?: string;
+        };
+        CreatePaymentFromLinkDto: {
+            paymentLinkId: string;
+            paymentMethodId: string;
         };
         CreateCustomerSessionRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3c4d5e6f7g8h
-             */
             customerRef: string;
-            /**
-             * Optional product reference or ID to scope the customer manage page to a single product.
-             * @example prd_1a2b3c4d5e6f
-             */
             productRef?: string;
         };
         CustomerSessionResponse: {
@@ -1738,23 +1874,6 @@ export interface components {
              * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
              */
             customerUrl: string;
-        };
-        CreateCustomerRequest: {
-            /**
-             * Customer email address (required)
-             * @example customer@example.com
-             */
-            email: string;
-            /**
-             * Customer full name (optional)
-             * @example John Doe
-             */
-            name?: string;
-            /**
-             * External reference ID from your auth system to map this customer to an auth user (optional)
-             * @example auth_user_12345
-             */
-            externalRef?: string;
         };
         PurchaseInfo: {
             /**
@@ -1882,15 +2001,7 @@ export interface components {
             updatedAt: string;
         };
         UserInfoRequest: {
-            /**
-             * Customer reference
-             * @example cus_3C4D5E6F
-             */
             customerRef: string;
-            /**
-             * Product reference
-             * @example prd_1A2B3C4D
-             */
             productRef: string;
         };
         UserInfoUserDto: {
@@ -2076,6 +2187,49 @@ export interface components {
              */
             balance?: number;
         };
+        CheckMcpNameDto: {
+            name: string;
+            excludeId?: string;
+        };
+        CheckBootstrapSubdomainDto: {
+            subdomainInput: string;
+        };
+        CreateMcpServerDto: {
+            name: string;
+            url: string;
+            avatarUrl?: string;
+            tools?: {
+                name: string;
+                planIds?: string[];
+                noPlan?: boolean;
+                description?: string;
+                isVirtual?: boolean;
+            }[];
+            productId: string;
+            defaultPlanId?: string;
+            authHeaderName?: string;
+            authApiKey?: string;
+        };
+        UpdateMcpServerDto: {
+            name?: string;
+            url?: string;
+            avatarUrl?: string;
+            tools?: {
+                name: string;
+                planIds?: string[];
+                noPlan?: boolean;
+                description?: string;
+                isVirtual?: boolean;
+            }[];
+            defaultPlanId?: string;
+            authHeaderName?: string;
+            authApiKey?: string;
+        };
+        DiscoverToolsDto: {
+            url: string;
+            authHeaderName?: string;
+            authApiKey?: string;
+        };
         PlanSnapshotDto: {
             /**
              * Plan reference
@@ -2126,8 +2280,8 @@ export interface components {
              */
             freeUnits?: number;
             /**
-             * Price per usage unit in cents
-             * @example 10
+             * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
+             * @example 0.1
              */
             pricePerUnit?: number;
         };
@@ -2242,35 +2396,11 @@ export interface components {
             /** @description Created at */
             createdAt: string;
         };
-        CancelPurchaseRequest: {
-            /** @description Reason for cancellation */
-            reason?: string;
-        };
         CheckLimitRequest: {
-            /**
-             * Customer reference identifier
-             * @example cus_3C4D5E6F
-             */
             customerRef: string;
-            /**
-             * Product reference identifier
-             * @example prd_1A2B3C4D
-             */
             productRef: string;
-            /**
-             * Plan reference to pre-select when creating a checkout session. If provided and the customer needs to purchase, the checkout page skips plan selection and shows the payment form directly.
-             * @example pln_2B3C4D5E
-             */
             planRef?: string;
-            /**
-             * Canonical usage meter name used for limit checks (for example: requests, tokens).
-             * @example requests
-             */
             meterName?: string;
-            /**
-             * Usage type alias for meterName. If both are provided, meterName takes precedence.
-             * @example requests
-             */
             usageType?: string;
         };
         LimitResponse: {
@@ -2299,9 +2429,63 @@ export interface components {
              * @example requests
              */
             meterName?: string;
+            /** @description Credit balance in mils (for pre-paid usage-based plans) */
+            creditBalance?: number;
+            /** @description Price per usage unit in mils (for pre-paid usage-based plans) */
+            pricePerUnit?: number;
+            /** @description ISO 4217 currency code for credit fields */
+            currency?: string;
         };
-        ExecuteAnalyticsQuery: Record<string, never>;
-        ExecuteMultipleQueries: Record<string, never>;
+        RefundTransactionDto: {
+            originalTransactionId: string;
+            refundAmount: number;
+            currency: string;
+            reason: string;
+            providerId?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+        };
+        CancelTransactionDto: {
+            transactionReference: string;
+            reason: string;
+            providerId?: string;
+        };
+        QuerySchemaRequestDto: {
+            queryName: string;
+        };
+        ExecuteAnalyticsQueryDto: {
+            queryName: string;
+            parameters: {
+                [key: string]: unknown;
+            };
+        };
+        ExecuteMultipleQueriesDto: {
+            queries: {
+                name: string;
+                parameters?: {
+                    [key: string]: unknown;
+                };
+            }[];
+        };
+        ValidateParametersDto: {
+            queryName: string;
+            parameters: {
+                [key: string]: unknown;
+            };
+        };
+        CreateWebhookEndpointZodDto: {
+            url: string;
+            description?: string;
+        };
+        UpdateWebhookEndpointZodDto: {
+            url?: string;
+            description?: string;
+        };
+        SetWebhookStatusDto: {
+            /** @enum {string} */
+            status: "active" | "disabled";
+        };
         CreateWebhookEndpointDto: {
             /**
              * Webhook endpoint URL
@@ -2326,85 +2510,39 @@ export interface components {
              */
             description?: string;
         };
-        UpdateThemePreferenceDto: {
-            /**
-             * Selected UI theme mode
-             * @example dark
-             * @enum {string}
-             */
+        UpdateThemePreferenceZodDto: {
+            /** @enum {string} */
             mode: "light" | "dark";
         };
-        ThemeModeColorsDto: {
-            /**
-             * Page background color
-             * @example #f7f7f8
-             */
-            background?: string;
-            /**
-             * Card/surface background color
-             * @example #ffffff
-             */
-            surface?: string;
-            /**
-             * Primary text color
-             * @example #181818
-             */
-            text?: string;
-            /**
-             * Secondary/muted text color
-             * @example #5c5c5c
-             */
-            secondary?: string;
-        };
-        ThemeOverridesDto: {
-            /** @description Light mode color overrides */
-            light?: components["schemas"]["ThemeModeColorsDto"];
-            /** @description Dark mode color overrides */
-            dark?: components["schemas"]["ThemeModeColorsDto"];
-        };
-        UpdateBrandThemeDto: {
-            /**
-             * Logo image URL displayed in hosted page headers
-             * @example /ui/files/download/provider-assets/provider-123/logos/logo.png
-             */
+        UpdateBrandThemeZodDto: {
             logo?: string;
-            /**
-             * Provider's brand name displayed on hosted pages
-             * @example Acme Corp
-             */
             brandName: string;
-            /**
-             * Primary/accent color in hex format
-             * @example #3182ce
-             */
             primaryColor: string;
-            /**
-             * Font family for hosted pages
-             * @default Inter
-             * @example Inter
-             */
-            fontFamily: string;
-            /**
-             * Base font size
-             * @default 16px
-             * @example 16px
-             */
-            fontSize: string;
-            /** @description Per-mode color overrides for light and dark themes */
-            themes?: components["schemas"]["ThemeOverridesDto"];
+            fontFamily?: string;
+            fontSize?: string;
+            themes: {
+                light?: {
+                    background?: string;
+                    surface?: string;
+                    text?: string;
+                    secondary?: string;
+                };
+                dark?: {
+                    background?: string;
+                    surface?: string;
+                    text?: string;
+                    secondary?: string;
+                };
+            };
         };
-        CreatePreregistrationDto: {
-            /** @example jane@company.com */
+        CreatePreregistrationZodDto: {
+            /** Format: email */
             email: string;
-            /** @example Jane Smith */
             fullName: string;
-            /** @example Acme Corp */
             companyName: string;
-            /** @example SaaS */
             businessType?: string;
-            /** @example Purchase billing for our platform */
             useCase?: string;
-            customFields?: {
+            customFields: {
                 [key: string]: string;
             };
         };
@@ -2503,6 +2641,20 @@ export interface components {
              */
             currency: string;
         };
+        UpdateAccountStatusDto: {
+            isActive: boolean;
+            reason?: string;
+        };
+        HardDeleteAccountDto: {
+            confirmationToken: string;
+        };
+        StartImpersonationDto: {
+            targetUserId: string;
+        };
+        UpdatePreregistrationStatusDto: {
+            /** @enum {string} */
+            status: "pending" | "contacted" | "converted" | "disqualified" | "whitelisted";
+        };
         /** @description Auto-generated fallback schema for unresolved reference: McpBootstrapPreviewValidationError */
         McpBootstrapPreviewValidationError: {
             [key: string]: unknown;
@@ -2554,28 +2706,7 @@ export interface operations {
         /** @description Payment intent creation data */
         requestBody: {
             content: {
-                "application/json": {
-                    /**
-                     * Plan reference to purchase
-                     * @example pln_2b3c4d5e6f7g
-                     */
-                    planRef: string;
-                    /**
-                     * Product reference that owns the plan
-                     * @example prd_1A2B3C4D
-                     */
-                    productRef: string;
-                    /**
-                     * Customer reference identifier
-                     * @example cus_3c4d5e6f7g8h
-                     */
-                    customerReference: string;
-                    /**
-                     * Name of the pricing tier to purchase (for plans with pricingTiers). If not specified, uses the plan base price.
-                     * @example Pro
-                     */
-                    pricingTier?: string;
-                };
+                "application/json": components["schemas"]["CreatePaymentIntentDto"];
             };
         };
         responses: {
@@ -2644,23 +2775,7 @@ export interface operations {
         /** @description Payment processing data */
         requestBody: {
             content: {
-                "application/json": {
-                    /**
-                     * Product reference that owns the plan
-                     * @example prd_123
-                     */
-                    productRef: string;
-                    /**
-                     * Customer reference identifier
-                     * @example cus_456
-                     */
-                    customerRef: string;
-                    /**
-                     * Plan reference - helps determine if payment is for purchase
-                     * @example pln_789
-                     */
-                    planRef?: string;
-                };
+                "application/json": components["schemas"]["ProcessPaymentIntentDto"];
             };
         };
         responses: {
@@ -3059,7 +3174,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["McpBootstrapRequest"];
+                "application/json": components["schemas"]["McpBootstrapDto"];
             };
         };
         responses: {
@@ -3093,7 +3208,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ConfigureMcpPlansRequest"];
+                "application/json": components["schemas"]["ConfigureMcpPlansDto"];
             };
         };
         responses: {
@@ -3132,7 +3247,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloneProductDto"];
+            };
+        };
         responses: {
             /** @description Product cloned successfully */
             201: {
@@ -3161,44 +3280,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /**
-                     * Customer identifier
-                     * @example cus_3C4D5E6F
-                     */
-                    customerId: string;
-                    /**
-                     * Action type (default: api_call)
-                     * @example api_call
-                     * @enum {string}
-                     */
-                    actionType?: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
-                    /**
-                     * Number of usage units (default: 1)
-                     * @example 1
-                     */
-                    units?: number;
-                    /** @description Product reference */
-                    productReference?: string;
-                    /** @description Purchase reference */
-                    purchaseReference?: string;
-                    /**
-                     * Outcome (default: success)
-                     * @enum {string}
-                     */
-                    outcome?: "success" | "paywall" | "fail";
-                    /** @description Arbitrary event properties */
-                    metadata?: {
-                        [key: string]: unknown;
-                    };
-                    /**
-                     * Format: date-time
-                     * @description ISO 8601 timestamp (defaults to now)
-                     */
-                    timestamp?: string;
-                    /** @description Unique key to prevent duplicate recording (max 256 chars) */
-                    idempotencyKey?: string;
-                };
+                "application/json": components["schemas"]["CreateUsageRequest"];
             };
         };
         responses: {
@@ -3234,24 +3316,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    events: {
-                        customerId: string;
-                        /** @enum {string} */
-                        actionType?: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
-                        units?: number;
-                        productReference?: string;
-                        purchaseReference?: string;
-                        /** @enum {string} */
-                        outcome?: "success" | "paywall" | "fail";
-                        metadata?: {
-                            [key: string]: unknown;
-                        };
-                        /** Format: date-time */
-                        timestamp?: string;
-                        idempotencyKey?: string;
-                    }[];
-                };
+                "application/json": components["schemas"]["BulkCreateUsageRequest"];
             };
         };
         responses: {
@@ -3280,7 +3345,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RecordMeterEventDto"];
+                "application/json": components["schemas"]["RecordMeterEventZodDto"];
             };
         };
         responses: {
@@ -3314,7 +3379,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RecordBulkMeterEventsDto"];
+                "application/json": components["schemas"]["RecordBulkMeterEventsZodDto"];
             };
         };
         responses: {
