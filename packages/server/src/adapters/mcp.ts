@@ -7,7 +7,7 @@
 import type { Adapter } from './base'
 import { AdapterUtils } from './base'
 import type { McpAdapterOptions, McpToolExtra, PaywallToolResult } from '../types'
-import { PaywallError } from '../paywall'
+import { PaywallError, paywallErrorToClientPayload } from '../paywall'
 
 /**
  * MCP context (plain args object)
@@ -66,17 +66,7 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                success: false,
-                error: 'Payment required',
-                product: error.structuredContent.product,
-                checkoutUrl: error.structuredContent.checkoutUrl,
-                message: error.structuredContent.message,
-              },
-              null,
-              2,
-            ),
+            text: JSON.stringify(paywallErrorToClientPayload(error), null, 2),
           },
         ],
         isError: true,

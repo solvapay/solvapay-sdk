@@ -140,6 +140,45 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
     })
 
+    it('should throw PaywallError with activation_required when checkLimits returns activationRequired', async () => {
+      const plans = [{ reference: 'pln_usage', name: 'Usage' }]
+      const balance = { available: 0, currency: 'USD' }
+      const productCtx = { name: 'API', ref: 'prd_x', provider: 'acme' }
+      mockApiClient.checkLimits = vi.fn().mockResolvedValue({
+        withinLimits: false,
+        remaining: 0,
+        plan: 'usage',
+        activationRequired: true,
+        plans,
+        balance,
+        product: productCtx,
+        confirmationUrl: 'https://pay.example.com/confirm',
+        checkoutUrl: 'https://pay.example.com/checkout',
+      })
+
+      const handler = vi.fn()
+      const payable = solvaPay.payable({ product: 'usage-product' })
+      const protectedHandler = await payable.function(handler)
+
+      await expect(
+        protectedHandler({ auth: { customer_ref: 'needs_activation' } }),
+      ).rejects.toMatchObject({
+        name: 'PaywallError',
+        message: 'Activation required',
+        structuredContent: {
+          kind: 'activation_required',
+          product: 'usage-product',
+          plans,
+          balance,
+          productDetails: productCtx,
+          confirmationUrl: 'https://pay.example.com/confirm',
+          checkoutUrl: 'https://pay.example.com/confirm',
+        },
+      })
+
+      expect(handler).not.toHaveBeenCalled()
+    })
+
     it('should bypass limits for customers on pro/premium plans', async () => {
       mockApiClient.setUserPlan('pro_user', 'pro')
       const handler = vi.fn().mockResolvedValue({ success: true })
@@ -525,14 +564,12 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     })
 
     it('should short-circuit one follow-up request when api returns remaining=1', async () => {
-      const checkLimitsSpy = vi
-        .spyOn(mockApiClient, 'checkLimits')
-        .mockResolvedValue({
-          withinLimits: true,
-          remaining: 1,
-          plan: 'free',
-          checkoutUrl: 'https://checkout.example.com',
-        })
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits').mockResolvedValue({
+        withinLimits: true,
+        remaining: 1,
+        plan: 'free',
+        checkoutUrl: 'https://checkout.example.com',
+      })
 
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({ product: 'cache-last-unit' })
@@ -614,6 +651,20 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         checkoutUrl: 'https://example.com/checkout',
         message: 'Upgrade required',
       })
+    })
+
+    it('should create activation_required PaywallStructuredContent', () => {
+      const error = new PaywallError('Activation required', {
+        kind: 'activation_required',
+        product: 'prd_a',
+        message: 'Activate first',
+        checkoutUrl: 'https://example.com/confirm',
+        plans: [{ reference: 'pln_1' }],
+        productDetails: { name: 'P', ref: 'prd_a', provider: 'pv' },
+      })
+
+      expect(error.structuredContent.kind).toBe('activation_required')
+      expect(error.structuredContent.plans).toHaveLength(1)
     })
 
     it('should propagate API client errors without swallowing them', async () => {
