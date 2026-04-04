@@ -71,8 +71,8 @@ await solvaPay.bootstrapMcpProduct({
 })
 ```
 
-`isFreeTier` and `requiresPayment` are optional overrides. If omitted, SolvaPay infers them from
-`key` and `price`. A free plan can still include `billingCycle` and `freeUnits`.
+`requiresPayment` is derived by the backend from each plan's `price` and `type`.
+A free plan can still include `billingCycle` and `freeUnits`.
 
 ## End-to-end OAuth flow script
 

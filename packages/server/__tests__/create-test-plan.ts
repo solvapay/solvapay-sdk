@@ -48,7 +48,7 @@ async function createTestPlan() {
     console.log('Step 2: Creating plan with 5 free units...')
     const plan = await client.createPlan!({
       productRef: product.reference,
-      isFreeTier: true,
+      price: 0,
       freeUnits: 5,
     })
 
