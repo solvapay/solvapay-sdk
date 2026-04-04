@@ -207,7 +207,7 @@ export interface paths {
     get?: never
     /**
      * Configure MCP plans on an MCP product
-     * @description Requires freePlan and configures existing default free plan, paid plans, and optional tool-to-plan mappings for an MCP product.
+     * @description Configures plans and optional tool-to-plan mappings for an MCP product.
      */
     put: operations['ProductSdkController_configureMcpPlans']
     post?: never
@@ -1182,7 +1182,7 @@ export interface components {
        * @example recurring
        * @enum {string}
        */
-      type: 'recurring' | 'one-time' | 'usage-based'
+      type: 'recurring' | 'one-time' | 'usage-based' | 'free'
       /**
        * Plan ID
        * @example 507f1f77bcf86cd799439011
@@ -1578,11 +1578,7 @@ export interface components {
       mcpDomain?: string
       authHeaderName?: string
       authApiKey?: string
-      freePlan: {
-        name?: string
-        freeUnits?: number
-      }
-      paidPlans?: {
+      plans?: {
         key: string
         name: string
         price: number
@@ -1590,7 +1586,7 @@ export interface components {
         /** @enum {string} */
         billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
         /** @enum {string} */
-        type?: 'recurring' | 'one-time'
+        type?: 'recurring' | 'one-time' | 'usage-based' | 'free'
         freeUnits?: number
         meterId?: string
         limit?: number
@@ -1652,11 +1648,7 @@ export interface components {
       }[]
     }
     ConfigureMcpPlansDto: {
-      freePlan: {
-        name?: string
-        freeUnits?: number
-      }
-      paidPlans?: {
+      plans?: {
         key: string
         name: string
         price: number
@@ -1664,7 +1656,7 @@ export interface components {
         /** @enum {string} */
         billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
         /** @enum {string} */
-        type?: 'recurring' | 'one-time'
+        type?: 'recurring' | 'one-time' | 'usage-based' | 'free'
         freeUnits?: number
         meterId?: string
         limit?: number

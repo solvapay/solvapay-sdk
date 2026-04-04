@@ -64,8 +64,10 @@ describe('MCP bootstrap SDK wrapper', () => {
     const result = await client.bootstrapMcpProduct?.({
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
-      freePlan: { freeUnits: 1000 },
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'free', freeUnits: 1000 },
+        { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
+      ],
       tools: [{ name: 'list_docs', planKeys: ['free'] }],
     })
 
@@ -100,7 +102,7 @@ describe('MCP bootstrap SDK wrapper', () => {
       await client.bootstrapMcpProduct?.({
         name: 'Docs Assistant',
         originUrl: 'https://origin.example.com/mcp',
-        paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+        plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
         tools: [{ name: 'search_docs', planKeys: ['enterprise'] }],
       })
       throw new Error('Expected bootstrapMcpProduct to throw')
@@ -153,7 +155,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     })
 
     const result = await client.configureMcpPlans?.('prd_TEST123', {
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
       toolMapping: [{ name: 'deep_research', planKeys: ['pro'] }],
     })
 
@@ -212,8 +214,10 @@ describe('MCP bootstrap SDK wrapper', () => {
     const request: McpBootstrapRequest = {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
-      freePlan: { freeUnits: 1000 },
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'free', freeUnits: 1000 },
+        { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
+      ],
     }
 
     await sdk.bootstrapMcpProduct(request)
@@ -236,7 +240,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     })
 
     const request: ConfigureMcpPlansRequest = {
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
       toolMapping: [{ name: 'read_wiki_contents', planKeys: ['pro'] }],
     }
 
@@ -302,25 +306,27 @@ describe('MCP bootstrap SDK wrapper', () => {
 
     const request: McpBootstrapRequest = {
       originUrl: 'https://origin.example.com/mcp',
-      freePlan: { name: 'Starter', freeUnits: 500 },
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
+      plans: [
+        { key: 'free', name: 'Starter', price: 0, currency: 'USD', type: 'free', freeUnits: 500 },
+        { key: 'pro', name: 'Pro', price: 2000, currency: 'USD' },
+      ],
       tools: [tool],
       metadata: { stage: 'test' },
     }
 
     expect(request.tools?.[0].name).toBe('list_docs')
     expect(request.name).toBeUndefined()
-    expect(request.freePlan?.name).toBe('Starter')
-    expect(request.paidPlans?.[0].currency).toBe('USD')
+    expect(request.plans?.[0].name).toBe('Starter')
+    expect(request.plans?.[1].currency).toBe('USD')
   })
 
   it('keeps configure MCP plans request types compile-safe', () => {
     const request: ConfigureMcpPlansRequest = {
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
+      plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
       toolMapping: [{ name: 'list_docs', planKeys: ['free', 'pro'] }],
     }
 
-    expect(request.paidPlans?.[0].key).toBe('pro')
+    expect(request.plans?.[0].key).toBe('pro')
     expect(request.toolMapping?.[0].planKeys).toEqual(['free', 'pro'])
   })
 })
