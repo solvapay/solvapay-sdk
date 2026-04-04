@@ -6,9 +6,9 @@
 
 import type { components } from './generated'
 
-export type LimitPlanSummary = components['schemas']['LimitPlanSummary']
-export type LimitActivationBalance = components['schemas']['LimitActivationBalance']
-export type LimitActivationProduct = components['schemas']['LimitActivationProduct']
+export type LimitPlanSummary = components['schemas']['LimitPlanItemDto']
+export type LimitActivationBalance = components['schemas']['LimitBalanceDto']
+export type LimitActivationProduct = components['schemas']['LimitProductBriefDto']
 
 /**
  * Arguments passed to protected handlers
