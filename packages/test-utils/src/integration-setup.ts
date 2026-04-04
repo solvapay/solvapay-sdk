@@ -20,7 +20,6 @@ export interface TestProductSetup {
 export interface TestPlanSetup {
   reference: string
   productRef: string
-  isFreeTier: boolean
   freeUnits: number
 }
 
@@ -106,8 +105,6 @@ export async function createTestPlan(
       currency: 'USD',
       billingModel: 'pre-paid',
       pricePerUnit: 0,
-      isFreeTier: true,
-      requiresPayment: false,
       default: true,
       freeUnits: freeUnits,
       limit: freeUnits,
@@ -131,7 +128,6 @@ export async function createTestPlan(
   return {
     reference: data.data?.reference || data.reference,
     productRef,
-    isFreeTier: true,
     freeUnits,
   }
 }

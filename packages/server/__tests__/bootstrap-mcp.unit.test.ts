@@ -65,7 +65,7 @@ describe('MCP bootstrap SDK wrapper', () => {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
       plans: [
-        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'free', freeUnits: 1000 },
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 1000 },
         { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
       ],
       tools: [{ name: 'list_docs', planKeys: ['free'] }],
@@ -215,7 +215,7 @@ describe('MCP bootstrap SDK wrapper', () => {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
       plans: [
-        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'free', freeUnits: 1000 },
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 1000 },
         { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
       ],
     }
@@ -307,7 +307,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     const request: McpBootstrapRequest = {
       originUrl: 'https://origin.example.com/mcp',
       plans: [
-        { key: 'free', name: 'Starter', price: 0, currency: 'USD', type: 'free', freeUnits: 500 },
+        { key: 'free', name: 'Starter', price: 0, currency: 'USD', type: 'recurring', freeUnits: 500 },
         { key: 'pro', name: 'Pro', price: 2000, currency: 'USD' },
       ],
       tools: [tool],

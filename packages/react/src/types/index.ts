@@ -235,7 +235,7 @@ export interface Plan {
   currency?: string
   interval?: string
   features?: string[]
-  isFreeTier?: boolean
+  requiresPayment?: boolean
   metadata?: Record<string, unknown>
 }
 

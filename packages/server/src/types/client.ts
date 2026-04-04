@@ -65,7 +65,7 @@ export interface McpBootstrapPlanInput {
   price: number
   currency: string
   billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-  type?: 'recurring' | 'one-time' | 'usage-based' | 'free'
+  type?: 'recurring' | 'one-time' | 'usage-based'
   freeUnits?: number
   meterId?: string
   limit?: number
@@ -221,7 +221,6 @@ export interface SolvaPayClient {
       price?: number
       currency?: string
       interval?: string
-      isFreeTier?: boolean
       freeUnits?: number
       measures?: string
       limit?: number
