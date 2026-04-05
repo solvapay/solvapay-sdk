@@ -227,15 +227,39 @@ export interface PaymentError extends Error {
 }
 
 /**
- * Plan interface for plans
+ * Plan returned by the SolvaPay API.
+ *
+ * All fields are optional except `reference` so the type stays compatible
+ * with partial JSON responses from custom fetcher functions.
  */
 export interface Plan {
+  type?: 'recurring' | 'one-time' | 'usage-based'
+  id?: string
   reference: string
+  name?: string
+  description?: string
   price?: number
   currency?: string
-  interval?: string
-  features?: string[]
+  currencySymbol?: string
+  freeUnits?: number
+  setupFee?: number
+  trialDays?: number
+  billingCycle?: string
+  billingModel?: 'pre-paid' | 'post-paid'
+  pricePerUnit?: number
+  measures?: string
+  limit?: number
+  rolloverUnusedUnits?: boolean
+  limits?: Record<string, unknown>
+  features?: Record<string, unknown> | string[]
   requiresPayment?: boolean
+  isActive?: boolean
+  maxActiveUsers?: number
+  accessExpiryDays?: number
+  status?: string
+  createdAt?: string
+  updatedAt?: string
+  interval?: string
   metadata?: Record<string, unknown>
 }
 

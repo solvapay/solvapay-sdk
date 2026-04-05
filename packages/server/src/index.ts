@@ -126,6 +126,7 @@ export {
 
 // Export types
 export type {
+  components,
   LimitActivationBalance,
   LimitActivationProduct,
   LimitPlanSummary,
