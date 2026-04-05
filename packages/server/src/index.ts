@@ -126,6 +126,7 @@ export {
 
 // Export types
 export type {
+  components,
   LimitActivationBalance,
   LimitActivationProduct,
   LimitPlanSummary,
@@ -155,8 +156,7 @@ export type {
   CustomerResponseMapped,
   McpBootstrapRequest,
   McpBootstrapResponse,
-  McpBootstrapFreePlanConfig,
-  McpBootstrapPaidPlanInput,
+  McpBootstrapPlanInput,
   ConfigureMcpPlansRequest,
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,

@@ -71,7 +71,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
   let solvaPay: any
   let testCustomerRef: string
   let defaultProduct: { reference: string; name: string }
-  let defaultPlan: { reference: string; name: string; isFreeTier?: boolean; freeUnits?: number }
+  let defaultPlan: { reference: string; name: string; freeUnits?: number }
 
   beforeAll(async () => {
     if (!SOLVAPAY_SECRET_KEY) {
@@ -119,7 +119,6 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log('✅ Created fixture plan:', {
         reference: defaultPlan.reference,
         name: defaultPlan.name,
-        isFreeTier: defaultPlan.isFreeTier,
         freeUnits: defaultPlan.freeUnits,
       })
       console.log()

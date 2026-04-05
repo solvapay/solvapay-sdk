@@ -80,7 +80,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   let stripeClient: any // Stripe Node.js client
   let testCustomerRef: string
   let defaultProduct: { reference: string; name: string }
-  let defaultPlan: { reference: string; name: string; isFreeTier?: boolean; freeUnits?: number }
+  let defaultPlan: { reference: string; name: string; freeUnits?: number }
   let usageBasedPlan: {
     reference: string
     name: string
@@ -161,7 +161,6 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       console.log('✅ Default plan fetched:', {
         reference: defaultPlan.reference,
         name: defaultPlan.name,
-        isFreeTier: defaultPlan.isFreeTier,
         freeUnits: defaultPlan.freeUnits,
       })
 

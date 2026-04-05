@@ -58,19 +58,14 @@ export interface ProcessPaymentResult {
   status: 'completed'
 }
 
-export interface McpBootstrapFreePlanConfig {
-  name?: string
-  freeUnits?: number
-}
-
-export interface McpBootstrapPaidPlanInput {
+export interface McpBootstrapPlanInput {
   key: string
   name: string
   /** Price in cents (e.g. 2000 = $20.00) */
   price: number
   currency: string
   billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-  type?: 'recurring' | 'one-time'
+  type?: 'recurring' | 'one-time' | 'usage-based'
   freeUnits?: number
   meterId?: string
   limit?: number
@@ -101,8 +96,7 @@ export interface McpBootstrapRequest {
   mcpDomain?: string
   authHeaderName?: string
   authApiKey?: string
-  freePlan?: McpBootstrapFreePlanConfig
-  paidPlans?: McpBootstrapPaidPlanInput[]
+  plans?: McpBootstrapPlanInput[]
   tools?: ToolPlanMappingInput[]
   metadata?: Record<string, unknown>
 }
@@ -123,7 +117,7 @@ export interface McpBootstrapResponse {
 }
 
 export interface ConfigureMcpPlansRequest {
-  paidPlans?: McpBootstrapPaidPlanInput[]
+  plans?: McpBootstrapPlanInput[]
   toolMapping?: McpToolPlanMappingInput[]
 }
 
@@ -221,39 +215,19 @@ export interface SolvaPayClient {
   }>
 
   // GET: /v1/sdk/products/{productRef}/plans
-  listPlans?(productRef: string): Promise<
-    Array<{
-      reference: string
-      price?: number
-      currency?: string
-      interval?: string
-      isFreeTier?: boolean
-      freeUnits?: number
-      measures?: string
-      limit?: number
-      pricePerUnit?: number
-      billingModel?: string
-      metadata?: Record<string, unknown>
-      [key: string]: unknown
-    }>
-  >
+  listPlans?(productRef: string): Promise<components['schemas']['Plan'][]>
 
   // POST: /v1/sdk/products/{productRef}/plans
   createPlan?(
     params: components['schemas']['CreatePlanRequest'] & { productRef: string },
-  ): Promise<{
-    reference: string
-  }>
+  ): Promise<components['schemas']['Plan']>
 
   // PUT: /v1/sdk/products/{productRef}/plans/{planRef}
   updatePlan?(
     productRef: string,
     planRef: string,
-    params: Partial<components['schemas']['CreatePlanRequest']>,
-  ): Promise<{
-    reference: string
-    [key: string]: unknown
-  }>
+    params: components['schemas']['UpdatePlanRequest'],
+  ): Promise<components['schemas']['Plan']>
 
   // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
   deletePlan?(productRef: string, planRef: string): Promise<void>
