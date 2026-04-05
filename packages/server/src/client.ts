@@ -606,6 +606,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return await res.json()
     },
 
+    // GET: /v1/sdk/customers/:customerRef/balance
+    async getCustomerBalance(params) {
+      const qs = params.currency ? `?currency=${encodeURIComponent(params.currency)}` : ''
+      const url = `${base}/v1/sdk/customers/${params.customerRef}/balance${qs}`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get customer balance failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
     // POST: /v1/sdk/checkout-sessions
     async createCheckoutSession(params) {
       const url = `${base}/v1/sdk/checkout-sessions`

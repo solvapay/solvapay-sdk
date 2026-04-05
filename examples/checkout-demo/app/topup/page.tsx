@@ -2,16 +2,21 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useBalance } from '@solvapay/react'
 import { AmountSelector } from './components/AmountSelector'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
+  const { adjustBalance } = useBalance()
   const [amountCents, setAmountCents] = useState<number | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [paymentFailed, setPaymentFailed] = useState(false)
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
+    if (amountCents) {
+      adjustBalance(amountCents)
+    }
   }
 
   const handlePaymentError = (err: Error) => {

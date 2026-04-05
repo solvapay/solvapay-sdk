@@ -120,6 +120,18 @@ export interface PurchaseStatus {
  * SolvaPay Provider Configuration
  * Sensible defaults for minimal code, but fully customizable
  */
+export interface CreditBalance {
+  currency: string
+  balance: number
+}
+
+export interface BalanceStatus {
+  loading: boolean
+  balances: CreditBalance[]
+  refetch: () => Promise<void>
+  adjustBalance: (amount: number, currency?: string) => void
+}
+
 export interface SolvaPayConfig {
   /**
    * API route configuration
@@ -130,6 +142,7 @@ export interface SolvaPayConfig {
     createPayment?: string // Default: '/api/create-payment-intent'
     processPayment?: string // Default: '/api/process-payment'
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
+    customerBalance?: string // Default: '/api/customer-balance'
   }
 
   /**
@@ -206,6 +219,7 @@ export interface SolvaPayContextValue {
   }) => Promise<TopupPaymentResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
+  balance: BalanceStatus
 }
 
 export interface SolvaPayProviderProps {
@@ -453,6 +467,12 @@ export interface PaymentFormProps {
    * Optional className for the submit button
    */
   buttonClassName?: string
+}
+
+export interface BalanceBadgeProps {
+  currency?: string
+  className?: string
+  children?: (props: { balance: number | null; loading: boolean; currency: string }) => React.ReactNode
 }
 
 export type PurchaseStatusValue =

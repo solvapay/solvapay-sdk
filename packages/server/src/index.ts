@@ -177,6 +177,7 @@ export {
 export {
   getAuthenticatedUserCore,
   syncCustomerCore,
+  getCustomerBalanceCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
@@ -187,4 +188,4 @@ export {
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser } from './helpers'
+export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult } from './helpers'

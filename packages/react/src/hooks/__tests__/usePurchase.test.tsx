@@ -39,6 +39,11 @@ const createMockContextValue = (
   createPayment: vi.fn(),
   createTopupPayment: vi.fn(),
   customerRef: 'test_customer_ref',
+  balance: {
+    loading: false,
+    balances: [],
+    refetch: vi.fn(),
+  },
 })
 
 // Mock useSolvaPay

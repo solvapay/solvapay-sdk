@@ -512,6 +512,19 @@ export interface SolvaPay {
   }): Promise<CustomerResponseMapped>
 
   /**
+   * Get credit balance(s) for a customer.
+   *
+   * @param params - Balance query parameters
+   * @param params.customerRef - Customer reference
+   * @param params.currency - Optional ISO 4217 currency filter
+   * @returns Customer reference and array of balances per currency
+   */
+  getCustomerBalance(params: {
+    customerRef: string
+    currency?: string
+  }): Promise<{ customerRef: string; balances: { currency: string; balance: number }[] }>
+
+  /**
    * Create a hosted checkout session for a customer.
    *
    * This creates a Stripe Checkout session that redirects the customer
@@ -770,6 +783,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     getCustomer(params) {
       return apiClient.getCustomer(params)
+    },
+
+    getCustomerBalance(params) {
+      if (!apiClient.getCustomerBalance) {
+        throw new SolvaPayError('getCustomerBalance is not available on this API client')
+      }
+      return apiClient.getCustomerBalance(params)
     },
 
     createCheckoutSession(params) {

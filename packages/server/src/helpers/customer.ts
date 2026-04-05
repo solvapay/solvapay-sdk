@@ -11,6 +11,11 @@ import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { getAuthenticatedUserCore } from './auth'
 
+export type CustomerBalanceResult = {
+  customerRef: string
+  balances: { currency: string; balance: number }[]
+}
+
 /**
  * Sync customer with SolvaPay backend (ensure customer exists).
  *
@@ -87,5 +92,48 @@ export async function syncCustomerCore(
     return customerRef
   } catch (error) {
     return handleRouteError(error, 'Sync customer', 'Failed to sync customer')
+  }
+}
+
+/**
+ * Get credit balance for the authenticated customer.
+ *
+ * Authenticates the request, syncs the customer, then fetches balance.
+ *
+ * @param request - Standard Web API Request object
+ * @param options - Configuration options
+ * @returns Customer balance result or error result
+ */
+export async function getCustomerBalanceCore(
+  request: Request,
+  options: {
+    solvaPay?: SolvaPay
+    currency?: string
+  } = {},
+): Promise<CustomerBalanceResult | ErrorResult> {
+  try {
+    const userResult = await getAuthenticatedUserCore(request)
+
+    if (isErrorResult(userResult)) {
+      return userResult
+    }
+
+    const { userId, email, name } = userResult
+
+    const solvaPay = options.solvaPay || createSolvaPay()
+
+    const customerRef = await solvaPay.ensureCustomer(userId, userId, {
+      email: email || undefined,
+      name: name || undefined,
+    })
+
+    const result = await solvaPay.getCustomerBalance({
+      customerRef,
+      currency: options.currency,
+    })
+
+    return result
+  } catch (error) {
+    return handleRouteError(error, 'Get customer balance', 'Failed to get customer balance')
   }
 }

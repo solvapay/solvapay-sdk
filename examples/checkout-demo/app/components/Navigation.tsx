@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ProductBadge, usePurchase } from '@solvapay/react'
+import { ProductBadge, usePurchase, BalanceBadge } from '@solvapay/react'
 import { Button } from './ui/Button'
 import { signOut } from '../lib/supabase'
 import { useState } from 'react'
@@ -70,8 +70,24 @@ export function Navigation() {
 
             <Link
               href="/topup"
-              className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition-colors"
             >
+              <BalanceBadge>
+                {({ balance, loading, currency }) => {
+                  if (loading) return null
+                  if (balance === null || balance === 0) return null
+                  const formatted = new Intl.NumberFormat(undefined, {
+                    style: 'currency',
+                    currency,
+                    minimumFractionDigits: 2,
+                  }).format(balance / 100)
+                  return (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">
+                      {formatted}
+                    </span>
+                  )
+                }}
+              </BalanceBadge>
               Top Up
             </Link>
 

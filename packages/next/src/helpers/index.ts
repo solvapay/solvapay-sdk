@@ -9,7 +9,7 @@
 export { getAuthenticatedUser } from './auth'
 
 // Export customer helpers
-export { syncCustomer } from './customer'
+export { syncCustomer, getCustomerBalance } from './customer'
 
 // Export payment helpers
 export { createPaymentIntent, createTopupPaymentIntent, processPaymentIntent } from './payment'

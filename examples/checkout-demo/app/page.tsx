@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
-import { usePurchase, usePlans, usePurchaseStatus } from '@solvapay/react'
+import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 import Link from 'next/link'
 
 export default function HomePage() {
@@ -35,6 +35,10 @@ export default function HomePage() {
   // Get advanced purchase status helpers
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
+
+  // Get customer credit balance
+  const { balances, loading: balanceLoading } = useBalance()
+  const primaryBalance = balances[0]
 
   // Combine loading states - only show content when both are loaded
   const isLoading = purchasesLoading || plansLoading
@@ -235,6 +239,19 @@ export default function HomePage() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <div className="text-center py-4">
               <p className="text-slate-900 mb-2 font-medium">Top up credits</p>
+              {balanceLoading ? (
+                <Skeleton className="h-8 w-32 mx-auto mb-4" />
+              ) : primaryBalance ? (
+                <p className="text-2xl font-semibold text-emerald-600 mb-4">
+                  {new Intl.NumberFormat(undefined, {
+                    style: 'currency',
+                    currency: primaryBalance.currency,
+                    minimumFractionDigits: 2,
+                  }).format(primaryBalance.balance / 100)}
+                </p>
+              ) : (
+                <p className="text-slate-600 text-sm mb-4">No credit balance</p>
+              )}
               <p className="text-slate-600 text-sm mb-6">
                 Add credits to your account for usage-based features
               </p>

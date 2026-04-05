@@ -36,6 +36,11 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
       clientSecret: 'pi_topup_secret',
       publishableKey: 'pk_test_123',
     }),
+    balance: {
+      loading: false,
+      balances: [],
+      refetch: vi.fn(),
+    },
     ...overrides,
   }
 }

@@ -17,6 +17,7 @@ export { PurchaseGate } from './components/PurchaseGate'
 export { PricingSelector, PlanSelector } from './components/PricingSelector'
 export { Spinner } from './components/Spinner'
 export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
+export { BalanceBadge } from './components/BalanceBadge'
 
 // Hooks
 export { usePurchase } from './hooks/usePurchase'
@@ -26,6 +27,7 @@ export { useSolvaPay } from './hooks/useSolvaPay'
 export { usePlans } from './hooks/usePlans'
 export { usePurchaseStatus } from './hooks/usePurchaseStatus'
 export { useTopup } from './hooks/useTopup'
+export { useBalance } from './hooks/useBalance'
 
 // Types
 export type {
@@ -52,6 +54,9 @@ export type {
   TopupPaymentResult,
   UseTopupOptions,
   UseTopupReturn,
+  CreditBalance,
+  BalanceStatus,
+  BalanceBadgeProps,
 } from './types'
 export type { CustomerInfo } from './hooks/useCustomer'
 

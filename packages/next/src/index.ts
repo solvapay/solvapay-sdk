@@ -241,6 +241,7 @@ export {
 export {
   getAuthenticatedUser,
   syncCustomer,
+  getCustomerBalance,
   createPaymentIntent,
   createTopupPaymentIntent,
   processPaymentIntent,

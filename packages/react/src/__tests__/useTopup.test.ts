@@ -28,6 +28,11 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
       accountId: 'acct_456',
       customerRef: 'cus_789',
     }),
+    balance: {
+      loading: false,
+      balances: [],
+      refetch: vi.fn(),
+    },
     ...overrides,
   }
 }
