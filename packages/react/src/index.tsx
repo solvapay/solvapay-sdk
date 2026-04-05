@@ -9,6 +9,7 @@ export { SolvaPayProvider } from './SolvaPayProvider'
 
 // Payment Form
 export { PaymentForm } from './PaymentForm'
+export { TopupForm } from './TopupForm'
 
 // Headless Components
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
@@ -24,6 +25,7 @@ export { useCheckout } from './hooks/useCheckout'
 export { useSolvaPay } from './hooks/useSolvaPay'
 export { usePlans } from './hooks/usePlans'
 export { usePurchaseStatus } from './hooks/usePurchaseStatus'
+export { useTopup } from './hooks/useTopup'
 
 // Types
 export type {
@@ -46,6 +48,10 @@ export type {
   UsePlansReturn,
   PurchaseStatusReturn,
   PurchaseStatusValue,
+  TopupFormProps,
+  TopupPaymentResult,
+  UseTopupOptions,
+  UseTopupReturn,
 } from './types'
 export type { CustomerInfo } from './hooks/useCustomer'
 

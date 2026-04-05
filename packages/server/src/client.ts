@@ -453,6 +453,39 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
+    // POST: /v1/sdk/payment-intents (purpose: credit_topup)
+    async createTopupPaymentIntent(params) {
+      const idempotencyKey =
+        params.idempotencyKey ||
+        `topup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+      const url = `${base}/v1/sdk/payment-intents`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          customerReference: params.customerRef,
+          purpose: 'credit_topup',
+          amount: params.amount,
+          currency: params.currency,
+          description: params.description,
+        }),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Create topup payment intent failed (${res.status}): ${error}`)
+      }
+
+      const result = await res.json()
+      return result
+    },
+
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
     async processPaymentIntent(params) {
       const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/process`

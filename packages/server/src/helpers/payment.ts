@@ -113,6 +113,95 @@ export async function createPaymentIntentCore(
 }
 
 /**
+ * Create a Stripe payment intent for a credit top-up.
+ *
+ * Unlike `createPaymentIntentCore`, this does not require a product or plan.
+ * After client-side Stripe confirmation, credits are recorded via webhook —
+ * no `processPaymentIntentCore` call is needed.
+ *
+ * @param request - Standard Web API Request object
+ * @param body - Top-up parameters
+ * @param body.amount - Amount in smallest currency unit (e.g. cents). Must be > 0
+ * @param body.currency - ISO 4217 currency code (e.g. 'usd')
+ * @param body.description - Optional description for the payment intent
+ * @param options - Configuration options
+ * @returns Payment intent response with client secret and customer reference, or error result
+ */
+export async function createTopupPaymentIntentCore(
+  request: Request,
+  body: {
+    amount: number
+    currency: string
+    description?: string
+  },
+  options: {
+    solvaPay?: SolvaPay
+    includeEmail?: boolean
+    includeName?: boolean
+  } = {},
+): Promise<
+  | {
+      id: string
+      clientSecret: string
+      publishableKey: string
+      accountId?: string
+      customerRef: string
+    }
+  | ErrorResult
+> {
+  try {
+    if (!body.amount || body.amount <= 0) {
+      return {
+        error: 'Missing or invalid amount: must be a positive number',
+        status: 400,
+      }
+    }
+
+    if (!body.currency) {
+      return {
+        error: 'Missing required parameter: currency',
+        status: 400,
+      }
+    }
+
+    const customerResult = await syncCustomerCore(request, {
+      solvaPay: options.solvaPay,
+      includeEmail: options.includeEmail,
+      includeName: options.includeName,
+    })
+
+    if (isErrorResult(customerResult)) {
+      return customerResult
+    }
+
+    const customerRef = customerResult
+
+    const solvaPay = options.solvaPay || createSolvaPay()
+
+    const paymentIntent = await solvaPay.createTopupPaymentIntent({
+      customerRef,
+      amount: body.amount,
+      currency: body.currency,
+      description: body.description,
+    })
+
+    return {
+      id: paymentIntent.id,
+      clientSecret: paymentIntent.clientSecret,
+      publishableKey: paymentIntent.publishableKey,
+      accountId: paymentIntent.accountId,
+      customerRef,
+    }
+  } catch (error) {
+    return handleRouteError(
+      error,
+      'Create topup payment intent',
+      'Topup payment intent creation failed',
+    )
+  }
+}
+
+/**
  * Process a payment intent after client-side Stripe confirmation.
  *
  * This helper processes a payment intent that has been confirmed on the client

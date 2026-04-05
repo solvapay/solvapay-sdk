@@ -37,6 +37,7 @@ const createMockContextValue = (
   purchase,
   refetchPurchase,
   createPayment: vi.fn(),
+  createTopupPayment: vi.fn(),
   customerRef: 'test_customer_ref',
 })
 

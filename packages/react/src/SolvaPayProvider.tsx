@@ -6,6 +6,7 @@ import type {
   PurchaseStatus,
   CustomerPurchaseData,
   PaymentIntentResult,
+  TopupPaymentResult,
   SolvaPayConfig,
 } from './types'
 import type { ProcessPaymentResult } from '@solvapay/server'
@@ -199,6 +200,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   createPayment: customCreatePayment,
   checkPurchase: customCheckPurchase,
   processPayment: customProcessPayment,
+  createTopupPayment: customCreateTopupPayment,
   children,
 }) => {
   const [purchaseData, setPurchaseData] = useState<CustomerPurchaseData>({
@@ -217,7 +219,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   // Store functions in refs to avoid dependency issues
   const checkPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(null)
   const createPaymentRef = useRef<
-    ((params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>) | null
+    ((params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>) | null
   >(null)
   const processPaymentRef = useRef<
     | ((params: {
@@ -226,6 +228,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         planRef?: string
       }) => Promise<ProcessPaymentResult>)
     | null
+  >(null)
+  const createTopupPaymentRef = useRef<
+    ((params: { amount: number; currency?: string }) => Promise<TopupPaymentResult>) | null
   >(null)
   const configRef = useRef(config)
   const buildDefaultCheckPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(
@@ -248,6 +253,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   useEffect(() => {
     processPaymentRef.current = customProcessPayment || null
   }, [customProcessPayment])
+
+  useEffect(() => {
+    createTopupPaymentRef.current = customCreateTopupPayment || null
+  }, [customCreateTopupPayment])
 
   // Build default checkPurchase implementation - store in ref to keep it stable
   const buildDefaultCheckPurchase = useCallback(async (): Promise<CustomerPurchaseData> => {
@@ -303,7 +312,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   // Build default createPayment implementation
   const buildDefaultCreatePayment = useCallback(
-    async (params: { planRef: string; productRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: { planRef?: string; productRef?: string }): Promise<PaymentIntentResult> => {
       const currentConfig = configRef.current
       const adapter = getAuthAdapter(currentConfig)
       const token = await adapter.getToken()
@@ -335,8 +344,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         Object.assign(headers, customHeaders)
       }
 
-      // Build request body with planRef and productRef if provided
-      const body: { planRef: string; productRef?: string } = { planRef: params.planRef }
+      const body: { planRef?: string; productRef?: string } = {}
+      if (params.planRef) {
+        body.planRef = params.planRef
+      }
       if (params.productRef) {
         body.productRef = params.productRef
       }
@@ -413,6 +424,58 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     [],
   )
 
+  // Build default createTopupPayment implementation
+  const buildDefaultCreateTopupPayment = useCallback(
+    async (params: { amount: number; currency?: string }): Promise<TopupPaymentResult> => {
+      const currentConfig = configRef.current
+      const adapter = getAuthAdapter(currentConfig)
+      const token = await adapter.getToken()
+      const detectedUserId = await adapter.getUserId()
+      const route = currentConfig?.api?.createTopupPayment || '/api/create-topup-payment-intent'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const cachedRef = getCachedCustomerRef(detectedUserId)
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      if (cachedRef) {
+        headers['x-solvapay-customer-ref'] = cachedRef
+      }
+
+      if (currentConfig?.headers) {
+        const customHeaders =
+          typeof currentConfig.headers === 'function'
+            ? await currentConfig.headers()
+            : currentConfig.headers
+        Object.assign(headers, customHeaders)
+      }
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          amount: params.amount,
+          currency: params.currency,
+        }),
+      })
+
+      if (!res.ok) {
+        const error = new Error(`Failed to create topup payment: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'createTopupPayment')
+        throw error
+      }
+
+      return res.json()
+    },
+    [],
+  )
+
   // Get the actual functions to use (priority: custom > config > defaults)
   // Use refs to avoid dependency issues - this keeps the function stable
   const _checkPurchase = useCallback(async (): Promise<CustomerPurchaseData> => {
@@ -427,7 +490,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [buildDefaultCheckPurchase])
 
   const createPayment = useCallback(
-    async (params: { planRef: string; productRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: { planRef?: string; productRef?: string }): Promise<PaymentIntentResult> => {
       if (createPaymentRef.current) {
         return createPaymentRef.current(params)
       }
@@ -448,6 +511,16 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       return buildDefaultProcessPayment(params)
     },
     [buildDefaultProcessPayment],
+  )
+
+  const createTopupPayment = useCallback(
+    async (params: { amount: number; currency?: string }): Promise<TopupPaymentResult> => {
+      if (createTopupPaymentRef.current) {
+        return createTopupPaymentRef.current(params)
+      }
+      return buildDefaultCreateTopupPayment(params)
+    },
+    [buildDefaultCreateTopupPayment],
   )
 
   // Detect authentication state and user ID
@@ -668,6 +741,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       refetchPurchase,
       createPayment,
       processPayment,
+      createTopupPayment,
       customerRef: purchaseData.customerRef || internalCustomerRef,
       updateCustomerRef,
     }),
@@ -676,6 +750,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       refetchPurchase,
       createPayment,
       processPayment,
+      createTopupPayment,
       purchaseData.customerRef,
       internalCustomerRef,
       updateCustomerRef,

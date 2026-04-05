@@ -20,7 +20,11 @@ export { getAuthenticatedUserCore } from './auth'
 export { syncCustomerCore } from './customer'
 
 // Export payment helpers
-export { createPaymentIntentCore, processPaymentIntentCore } from './payment'
+export {
+  createPaymentIntentCore,
+  createTopupPaymentIntentCore,
+  processPaymentIntentCore,
+} from './payment'
 
 // Export checkout helpers
 export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout'

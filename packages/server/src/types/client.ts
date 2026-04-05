@@ -210,6 +210,20 @@ export interface SolvaPayClient {
     accountId?: string
   }>
 
+  // POST: /v1/sdk/payment-intents (purpose: credit_topup)
+  createTopupPaymentIntent?(params: {
+    customerRef: string
+    amount: number
+    currency: string
+    description?: string
+    idempotencyKey?: string
+  }): Promise<{
+    id: string
+    clientSecret: string
+    publishableKey: string
+    accountId?: string
+  }>
+
   // POST: /v1/sdk/purchases/{purchaseRef}/cancel
   cancelPurchase?(params: {
     purchaseRef: string

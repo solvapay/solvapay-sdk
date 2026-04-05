@@ -320,6 +320,26 @@ export interface SolvaPay {
   }>
 
   /**
+   * Create a payment intent for a credit top-up.
+   *
+   * Unlike `createPaymentIntent`, this does not require a product or plan.
+   * Credits are recorded via webhook after Stripe confirmation — no
+   * `processPaymentIntent` call is needed.
+   */
+  createTopupPaymentIntent(params: {
+    customerRef: string
+    amount: number
+    currency: string
+    description?: string
+    idempotencyKey?: string
+  }): Promise<{
+    id: string
+    clientSecret: string
+    publishableKey: string
+    accountId?: string
+  }>
+
+  /**
    * Process a payment intent after client-side Stripe confirmation.
    *
    * Creates the purchase immediately, eliminating webhook delay.
@@ -717,6 +737,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('createPaymentIntent is not available on this API client')
       }
       return apiClient.createPaymentIntent(params)
+    },
+
+    createTopupPaymentIntent(params) {
+      if (!apiClient.createTopupPaymentIntent) {
+        throw new SolvaPayError('createTopupPaymentIntent is not available on this API client')
+      }
+      return apiClient.createTopupPaymentIntent(params)
     },
 
     processPaymentIntent(params) {

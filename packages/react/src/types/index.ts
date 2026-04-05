@@ -55,6 +55,38 @@ export interface PaymentIntentResult {
   customerRef?: string // Backend customer reference
 }
 
+export interface TopupPaymentResult {
+  clientSecret: string
+  publishableKey: string
+  accountId?: string
+  customerRef?: string
+}
+
+export interface UseTopupOptions {
+  amount: number
+  currency?: string
+}
+
+export interface UseTopupReturn {
+  loading: boolean
+  error: Error | null
+  stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
+  clientSecret: string | null
+  startTopup: () => Promise<void>
+  reset: () => void
+}
+
+export interface TopupFormProps {
+  amount: number
+  currency?: string
+  onSuccess?: (paymentIntent: PaymentIntent) => void
+  onError?: (error: Error) => void
+  returnUrl?: string
+  submitButtonText?: string
+  className?: string
+  buttonClassName?: string
+}
+
 export interface PurchaseStatus {
   loading: boolean
   customerRef?: string
@@ -97,6 +129,7 @@ export interface SolvaPayConfig {
     checkPurchase?: string // Default: '/api/check-purchase'
     createPayment?: string // Default: '/api/create-payment-intent'
     processPayment?: string // Default: '/api/process-payment'
+    createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
   }
 
   /**
@@ -161,12 +194,16 @@ export interface SolvaPayConfig {
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
-  createPayment: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
+  createPayment: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
     paymentIntentId: string
     productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
+  createTopupPayment: (params: {
+    amount: number
+    currency?: string
+  }) => Promise<TopupPaymentResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
 }
@@ -182,13 +219,17 @@ export interface SolvaPayProviderProps {
    * Custom API functions (override config defaults)
    * Use only if you need custom logic beyond standard API routes
    */
-  createPayment?: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
+  createPayment?: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
   checkPurchase?: () => Promise<CustomerPurchaseData>
   processPayment?: (params: {
     paymentIntentId: string
     productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
+  createTopupPayment?: (params: {
+    amount: number
+    currency?: string
+  }) => Promise<TopupPaymentResult>
 
   children: React.ReactNode
 }
@@ -253,6 +294,7 @@ export interface Plan {
   limits?: Record<string, unknown>
   features?: Record<string, unknown> | string[]
   requiresPayment?: boolean
+  default?: boolean
   isActive?: boolean
   maxActiveUsers?: number
   accessExpiryDays?: number
@@ -377,12 +419,14 @@ export interface PurchaseStatusReturn {
  */
 export interface PaymentFormProps {
   /**
-   * Plan reference to checkout. PaymentForm handles the entire checkout flow internally
-   * including Stripe initialization and payment intent creation.
+   * Plan reference to checkout. When omitted, the SDK auto-resolves the plan from
+   * productRef (requires exactly one active plan or a default plan). Pass explicitly
+   * when the product has multiple plans without a default.
    */
-  planRef: string
+  planRef?: string
   /**
-   * Product reference. Required for processing payment after confirmation.
+   * Product reference. Required when planRef is omitted (for plan resolution)
+   * and for processing payment after confirmation.
    */
   productRef?: string
   /**

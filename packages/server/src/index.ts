@@ -178,6 +178,7 @@ export {
   getAuthenticatedUserCore,
   syncCustomerCore,
   createPaymentIntentCore,
+  createTopupPaymentIntentCore,
   processPaymentIntentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
