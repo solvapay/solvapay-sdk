@@ -58,48 +58,16 @@ export interface ProcessPaymentResult {
   status: 'completed'
 }
 
-export interface McpBootstrapPlanInput {
-  key: string
-  name: string
-  /** Price in cents (e.g. 2000 = $20.00) */
-  price: number
-  currency: string
-  billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-  type?: 'recurring' | 'one-time' | 'usage-based'
-  freeUnits?: number
-  meterId?: string
-  limit?: number
-  features?: Record<string, unknown>
-}
+export type McpBootstrapPlanInput =
+  NonNullable<components['schemas']['McpBootstrapDto']['plans']>[number]
 
-export interface ToolPlanMappingInput {
-  name: string
-  description?: string
-  noPlan?: boolean
-  planIds?: string[]
-  planRefs?: string[]
-  planKeys?: string[]
-}
+export type ToolPlanMappingInput =
+  NonNullable<components['schemas']['McpBootstrapDto']['tools']>[number]
 
-export interface McpToolPlanMappingInput {
-  name: string
-  planKeys: string[]
-}
+export type McpBootstrapRequest = components['schemas']['McpBootstrapDto']
 
-export interface McpBootstrapRequest {
-  name?: string
-  description?: string
-  imageUrl?: string
-  productType?: string
-  originUrl: string
-  /** Optional token combined with provider name to derive the final MCP subdomain. */
-  mcpDomain?: string
-  authHeaderName?: string
-  authApiKey?: string
-  plans?: McpBootstrapPlanInput[]
-  tools?: ToolPlanMappingInput[]
-  metadata?: Record<string, unknown>
-}
+export type McpToolPlanMappingInput =
+  NonNullable<components['schemas']['ConfigureMcpPlansDto']['toolMapping']>[number]
 
 export interface McpBootstrapResponse {
   product: components['schemas']['SdkProductResponse']
@@ -116,10 +84,7 @@ export interface McpBootstrapResponse {
   autoMappedTools?: Array<{ name: string; description?: string }>
 }
 
-export interface ConfigureMcpPlansRequest {
-  plans?: McpBootstrapPlanInput[]
-  toolMapping?: McpToolPlanMappingInput[]
-}
+export type ConfigureMcpPlansRequest = components['schemas']['ConfigureMcpPlansDto']
 
 export interface ConfigureMcpPlansResponse {
   product: components['schemas']['SdkProductResponse']
