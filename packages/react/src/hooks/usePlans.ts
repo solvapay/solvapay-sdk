@@ -95,7 +95,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
 
         // Auto-select first paid plan if enabled
         if (autoSelectFirstPaidRef.current && processedPlans.length > 0) {
-          const firstPaidIndex = processedPlans.findIndex(plan => plan.price && plan.price > 0)
+          const firstPaidIndex = processedPlans.findIndex(plan => plan.requiresPayment !== false)
           setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0)
         }
         return
@@ -122,7 +122,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
 
           // Auto-select first paid plan if enabled
           if (autoSelectFirstPaidRef.current && processedPlans.length > 0) {
-            const firstPaidIndex = processedPlans.findIndex(plan => plan.price && plan.price > 0)
+            const firstPaidIndex = processedPlans.findIndex(plan => plan.requiresPayment !== false)
             setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0)
           }
         } catch (err) {
@@ -170,7 +170,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
 
         // Auto-select first paid plan if enabled
         if (autoSelectFirstPaidRef.current && processedPlans.length > 0) {
-          const firstPaidIndex = processedPlans.findIndex(plan => plan.price && plan.price > 0)
+          const firstPaidIndex = processedPlans.findIndex(plan => plan.requiresPayment !== false)
           setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0)
         }
       } catch (err) {
