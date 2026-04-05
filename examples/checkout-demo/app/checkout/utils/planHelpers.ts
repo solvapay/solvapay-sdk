@@ -16,7 +16,7 @@ export function formatPrice(price?: number): string {
  * Check if a plan is free
  */
 export function isFreePlan(plan: Plan): boolean {
-  return !plan.requiresPayment
+  return plan.requiresPayment === false
 }
 
 /**
