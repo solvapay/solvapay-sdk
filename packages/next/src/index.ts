@@ -242,6 +242,7 @@ export {
   getAuthenticatedUser,
   syncCustomer,
   createPaymentIntent,
+  createTopupPaymentIntent,
   processPaymentIntent,
   createCheckoutSession,
   createCustomerSession,

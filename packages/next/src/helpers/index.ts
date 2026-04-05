@@ -12,7 +12,7 @@ export { getAuthenticatedUser } from './auth'
 export { syncCustomer } from './customer'
 
 // Export payment helpers
-export { createPaymentIntent, processPaymentIntent } from './payment'
+export { createPaymentIntent, createTopupPaymentIntent, processPaymentIntent } from './payment'
 
 // Export checkout helpers
 export { createCheckoutSession, createCustomerSession } from './checkout'

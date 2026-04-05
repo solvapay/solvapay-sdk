@@ -171,64 +171,80 @@ export default function HomePage() {
         </div>
 
         {/* CTA Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-          {isLoading ? (
-            <div className="text-center py-4 space-y-4">
-              <Skeleton className="h-5 w-64 mx-auto" />
-              <Skeleton className="h-10 w-48 mx-auto" />
-            </div>
-          ) : hasPaidPurchase ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            {isLoading ? (
+              <div className="text-center py-4 space-y-4">
+                <Skeleton className="h-5 w-64 mx-auto" />
+                <Skeleton className="h-10 w-48 mx-auto" />
+              </div>
+            ) : hasPaidPurchase ? (
+              <div className="text-center py-4">
+                <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
+                <Link href="/checkout">
+                  <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                    Manage Purchase
+                  </button>
+                </Link>
+              </div>
+            ) : shouldShowCancelledNotice && cancelledPurchase ? (
+              <div className="text-center py-4">
+                <p className="text-slate-900 mb-2 font-medium">Your purchase is cancelled</p>
+                {cancelledPurchase.endDate ? (
+                  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm font-semibold text-amber-900 mb-1">
+                      ⏰ Purchase Expires: {formatDate(cancelledPurchase.endDate)}
+                    </p>
+                    {(() => {
+                      const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate)
+                      return daysLeft !== null && daysLeft > 0 ? (
+                        <p className="text-xs text-amber-700 mb-1">
+                          {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
+                        </p>
+                      ) : null
+                    })()}
+                    <p className="text-xs text-amber-700">
+                      You'll continue to have access to {cancelledPurchase.productName} features
+                      until this date
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-slate-600 text-sm mb-6">Your purchase access has ended</p>
+                )}
+                <Link href="/checkout">
+                  <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                    Purchase Again
+                  </button>
+                </Link>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-slate-900 mb-2 font-medium">Upgrade your subscription</p>
+                <p className="text-slate-600 text-sm mb-6">
+                  Get access to advanced features and more
+                </p>
+                <Link href="/checkout">
+                  <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                    Upgrade
+                  </button>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
-              <Link href="/checkout">
-                <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Manage Purchase
-                </button>
-              </Link>
-            </div>
-          ) : shouldShowCancelledNotice && cancelledPurchase ? (
-            <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Your purchase is cancelled</p>
-              {cancelledPurchase.endDate ? (
-                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-sm font-semibold text-amber-900 mb-1">
-                    ⏰ Purchase Expires: {formatDate(cancelledPurchase.endDate)}
-                  </p>
-                  {(() => {
-                    const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate)
-                    return daysLeft !== null && daysLeft > 0 ? (
-                      <p className="text-xs text-amber-700 mb-1">
-                        {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
-                      </p>
-                    ) : null
-                  })()}
-                  <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledPurchase.productName} features
-                    until this date
-                  </p>
-                </div>
-              ) : (
-                <p className="text-slate-600 text-sm mb-6">Your purchase access has ended</p>
-              )}
-              <Link href="/checkout">
-                <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Purchase Again
-                </button>
-              </Link>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Upgrade your subscription</p>
+              <p className="text-slate-900 mb-2 font-medium">Top up credits</p>
               <p className="text-slate-600 text-sm mb-6">
-                Get access to advanced features and more
+                Add credits to your account for usage-based features
               </p>
-              <Link href="/checkout">
-                <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Upgrade
+              <Link href="/topup">
+                <button className="px-6 py-2.5 border border-slate-900 text-slate-900 rounded-lg hover:bg-slate-50 transition-colors">
+                  Top Up
                 </button>
               </Link>
             </div>
-          )}
+          </div>
         </div>
       </main>
     </div>

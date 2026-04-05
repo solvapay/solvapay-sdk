@@ -68,7 +68,13 @@ export function Navigation() {
               }}
             </ProductBadge>
 
-            {/* Upgrade button - hidden until loaded */}
+            <Link
+              href="/topup"
+              className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
+            >
+              Top Up
+            </Link>
+
             {showUpgradeButton && (
               <Link href="/checkout">
                 <Button variant="primary" className="px-4 py-1.5 text-xs">

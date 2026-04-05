@@ -476,6 +476,37 @@ export class StubSolvaPayClient implements SolvaPayClient {
   }
 
   /**
+   * Create a topup payment intent (stub returns mock Stripe data)
+   */
+  async createTopupPaymentIntent(params: {
+    customerRef: string
+    amount: number
+    currency: string
+    description?: string
+    idempotencyKey?: string
+  }): Promise<{
+    id: string
+    clientSecret: string
+    publishableKey: string
+    accountId?: string
+  }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(`📡 Stub Request: POST /v1/sdk/payment-intents (topup)`)
+    this.log(`   Customer: ${params.customerRef}, Amount: ${params.amount}, Currency: ${params.currency}`)
+
+    const id = `pi_topup_${Math.random().toString(36).slice(2, 15)}`
+
+    await this.addCredits(params.customerRef, params.amount)
+
+    return {
+      id,
+      clientSecret: `${id}_secret_${Math.random().toString(36).slice(2, 15)}`,
+      publishableKey: 'pk_test_stub_demo_key',
+    }
+  }
+
+  /**
    * Create a new customer
    */
   async createCustomer(params: {

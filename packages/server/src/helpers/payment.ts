@@ -164,6 +164,13 @@ export async function createTopupPaymentIntentCore(
       }
     }
 
+    if (body.currency !== body.currency.toUpperCase()) {
+      return {
+        error: `Invalid currency "${body.currency}": must be an uppercase ISO 4217 code (e.g. "USD", "EUR")`,
+        status: 400,
+      }
+    }
+
     const customerResult = await syncCustomerCore(request, {
       solvaPay: options.solvaPay,
       includeEmail: options.includeEmail,
