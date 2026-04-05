@@ -215,38 +215,19 @@ export interface SolvaPayClient {
   }>
 
   // GET: /v1/sdk/products/{productRef}/plans
-  listPlans?(productRef: string): Promise<
-    Array<{
-      reference: string
-      price?: number
-      currency?: string
-      interval?: string
-      freeUnits?: number
-      measures?: string
-      limit?: number
-      pricePerUnit?: number
-      billingModel?: string
-      metadata?: Record<string, unknown>
-      [key: string]: unknown
-    }>
-  >
+  listPlans?(productRef: string): Promise<components['schemas']['Plan'][]>
 
   // POST: /v1/sdk/products/{productRef}/plans
   createPlan?(
     params: components['schemas']['CreatePlanRequest'] & { productRef: string },
-  ): Promise<{
-    reference: string
-  }>
+  ): Promise<components['schemas']['Plan']>
 
   // PUT: /v1/sdk/products/{productRef}/plans/{planRef}
   updatePlan?(
     productRef: string,
     planRef: string,
-    params: Partial<components['schemas']['CreatePlanRequest']>,
-  ): Promise<{
-    reference: string
-    [key: string]: unknown
-  }>
+    params: components['schemas']['UpdatePlanRequest'],
+  ): Promise<components['schemas']['Plan']>
 
   // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
   deletePlan?(productRef: string, planRef: string): Promise<void>
