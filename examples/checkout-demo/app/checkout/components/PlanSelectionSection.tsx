@@ -4,7 +4,7 @@ import { formatPrice, formatPerUnitPrice, isFreePlan, isUsageBasedPlan } from '.
 interface PlanSelectionSectionProps {
   plans: Plan[]
   selectedPlanIndex: number
-  activePlanRef: string | null
+  activePlanIndex: number
   onSelectPlan: (index: number) => void
   className?: string
 }
@@ -37,7 +37,7 @@ function PlanPricing({ plan }: { plan: Plan }) {
 export function PlanSelectionSection({
   plans,
   selectedPlanIndex,
-  activePlanRef,
+  activePlanIndex,
   onSelectPlan,
   className = '',
 }: PlanSelectionSectionProps) {
@@ -45,7 +45,7 @@ export function PlanSelectionSection({
     <div className={`grid grid-cols-2 gap-4 ${className}`}>
       {plans.map((plan, index) => {
         const isFree = isFreePlan(plan)
-        const isCurrentPlan = plan.reference === activePlanRef
+        const isCurrentPlan = activePlanIndex === index
         const isSelected = !isFree && selectedPlanIndex === index
 
         return (

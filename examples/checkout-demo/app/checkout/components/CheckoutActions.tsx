@@ -1,6 +1,6 @@
 interface CheckoutActionsProps {
-  activePurchase?: { planSnapshot?: { planType?: string; reference?: string } } | null
-  selectedPlanRef: string | null
+  isOnActivePlan: boolean
+  isUsageBased: boolean
   shouldShowCancelledNotice: boolean
   onContinue: () => void
   onCancel: () => void
@@ -10,8 +10,8 @@ interface CheckoutActionsProps {
 }
 
 export function CheckoutActions({
-  activePurchase,
-  selectedPlanRef,
+  isOnActivePlan,
+  isUsageBased,
   shouldShowCancelledNotice,
   onContinue,
   onCancel,
@@ -19,12 +19,7 @@ export function CheckoutActions({
   isCancelling,
   className = '',
 }: CheckoutActionsProps) {
-  const isUsageBased = activePurchase?.planSnapshot?.planType === 'usage-based'
-  const hasActivePurchase = !!activePurchase
-  const activePlanRef = activePurchase?.planSnapshot?.reference ?? null
-  const isSwitchingPlan = hasActivePurchase && selectedPlanRef !== activePlanRef
-
-  if (isSwitchingPlan) {
+  if (!isOnActivePlan) {
     return (
       <button
         onClick={onContinue}
@@ -43,7 +38,7 @@ export function CheckoutActions({
     )
   }
 
-  const showCancelButton = hasActivePurchase && !shouldShowCancelledNotice
+  const showCancelButton = !shouldShowCancelledNotice
 
   if (showCancelButton) {
     const cancelLabel = isUsageBased ? 'Deactivate Plan' : 'Cancel Plan'

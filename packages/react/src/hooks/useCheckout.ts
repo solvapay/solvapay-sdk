@@ -95,7 +95,7 @@ export function useCheckout(options: {
   productRef?: string
 }): UseCheckoutReturn {
   const { planRef, productRef } = options
-  const { createPayment, customerRef, updateCustomerRef } = useSolvaPay()
+  const { createPayment, customerRef, updateCustomerRef, _config } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
@@ -126,7 +126,7 @@ export function useCheckout(options: {
       let effectivePlanRef = planRef
 
       if (!effectivePlanRef && productRef) {
-        const listPlansRoute = '/api/list-plans'
+        const listPlansRoute = _config?.api?.listPlans || '/api/list-plans'
         effectivePlanRef = await resolvePlanRef(productRef, fetch, {}, listPlansRoute)
         setResolvedPlanRef(effectivePlanRef)
       }
@@ -172,7 +172,7 @@ export function useCheckout(options: {
       setLoading(false)
       isStartingRef.current = false
     }
-  }, [planRef, productRef, createPayment, updateCustomerRef, loading])
+  }, [planRef, productRef, createPayment, updateCustomerRef, loading, _config])
 
   const reset = useCallback(() => {
     isStartingRef.current = false

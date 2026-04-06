@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 import Link from 'next/link'
 
@@ -24,13 +24,7 @@ export default function HomePage() {
   const {
     loading: purchasesLoading,
     activePurchase,
-    refetch,
   } = usePurchase()
-
-  // Refetch purchases on mount so state is fresh after checkout redirect
-  useEffect(() => {
-    refetch()
-  }, [refetch])
 
   // Get advanced purchase status helpers
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =

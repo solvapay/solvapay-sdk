@@ -1,11 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Plan } from '@solvapay/react'
-import { getAccessToken } from '../../lib/supabase'
+import { useActivation } from '@solvapay/react'
 import { formatPerUnitPrice } from '../utils/planHelpers'
-
-type ActivationState = 'confirm' | 'activating' | 'success' | 'topup_required' | 'error'
 
 interface ActivationSectionProps {
   currentPlan: Plan
@@ -20,8 +18,7 @@ export function ActivationSection({
   onSuccess,
   onBack,
 }: ActivationSectionProps) {
-  const [state, setState] = useState<ActivationState>('confirm')
-  const [errorMessage, setErrorMessage] = useState<string>('')
+  const { activate, state, error, reset } = useActivation()
 
   const unitPrice = formatPerUnitPrice(currentPlan.pricePerUnit)
   const unit = currentPlan.measures || 'use'
@@ -30,60 +27,20 @@ export function ActivationSection({
       ? currentPlan.metadata.name
       : currentPlan.reference
 
-  const handleActivate = async () => {
-    setState('activating')
-    try {
-      const accessToken = await getAccessToken()
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-      }
-
-      const res = await fetch('/api/activate-plan', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          productRef,
-          planRef: currentPlan.reference,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Activation failed')
-      }
-
-      const data = await res.json()
-
-      switch (data.status) {
-        case 'activated':
-        case 'already_active':
-          setState('success')
-          onSuccess()
-          break
-        case 'topup_required':
-          setState('topup_required')
-          break
-        case 'payment_required':
-          setErrorMessage('This plan requires payment. Please select a different plan.')
-          setState('error')
-          break
-        case 'invalid':
-          setErrorMessage(data.message || 'Invalid plan configuration.')
-          setState('error')
-          break
-        default:
-          setErrorMessage('Unexpected response from server.')
-          setState('error')
-      }
-    } catch (err) {
-      console.error('Activation failed:', err)
-      setErrorMessage(err instanceof Error ? err.message : 'Activation failed')
-      setState('error')
+  const calledSuccessRef = useRef(false)
+  useEffect(() => {
+    if (state === 'activated' && !calledSuccessRef.current) {
+      calledSuccessRef.current = true
+      onSuccess()
     }
+  }, [state, onSuccess])
+
+  const handleActivate = async () => {
+    if (!productRef) return
+    await activate({ productRef, planRef: currentPlan.reference })
   }
 
-  if (state === 'success') {
+  if (state === 'activated') {
     return (
       <div className="space-y-6">
         <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
@@ -110,7 +67,6 @@ export function ActivationSection({
           </p>
           <button
             onClick={() => {
-              // Could redirect to a top-up page in the future
               window.location.href = '/'
             }}
             className="mt-4 w-full py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
@@ -125,14 +81,14 @@ export function ActivationSection({
     )
   }
 
-  if (state === 'error') {
+  if (state === 'error' || state === 'payment_required') {
     return (
       <div className="space-y-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-sm text-red-700">{errorMessage}</p>
+          <p className="text-sm text-red-700">{error}</p>
         </div>
         <button
-          onClick={() => setState('confirm')}
+          onClick={reset}
           className="w-full py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium"
         >
           Try Again
@@ -148,7 +104,6 @@ export function ActivationSection({
     <div className="space-y-6">
       <h3 className="text-lg font-semibold text-slate-900">Confirm your plan</h3>
 
-      {/* Plan Summary */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3">
         <h4 className="text-sm font-medium text-slate-900">Plan Summary</h4>
         <div className="flex justify-between text-sm">
@@ -177,7 +132,6 @@ export function ActivationSection({
         You&apos;ll be charged based on usage. No upfront payment required.
       </p>
 
-      {/* Activate Button */}
       <button
         onClick={handleActivate}
         disabled={state === 'activating'}
@@ -205,7 +159,6 @@ export function ActivationSection({
         )}
       </button>
 
-      {/* Footer */}
       <div className="pt-4 border-t border-slate-200 space-y-2">
         <p className="text-xs text-slate-400 text-center">Powered by SolvaPay</p>
         <div className="flex justify-center space-x-4 text-xs text-slate-400">
@@ -214,7 +167,6 @@ export function ActivationSection({
         </div>
       </div>
 
-      {/* Back Button */}
       <button onClick={onBack} className="text-sm text-slate-600 hover:text-slate-900 block">
         ← Back to plan selection
       </button>

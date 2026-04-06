@@ -84,8 +84,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
   const handleSuccess = useCallback(
     async (paymentIntent: unknown) => {
-      let processingTimeout = false
-      let processingResult: unknown = null
       const paymentIntentAny = paymentIntent as Record<string, unknown>
 
       if (processPayment && productRef) {
@@ -95,62 +93,33 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             productRef: productRef,
             planRef: effectivePlanRef || undefined,
           })
-          processingResult = result
 
           const isTimeout = (result as unknown as Record<string, unknown>)?.status === 'timeout'
-          processingTimeout = isTimeout
 
           if (isTimeout) {
             for (let attempt = 1; attempt <= 5; attempt++) {
-              const delay = attempt * 1000
-              await new Promise(resolve => setTimeout(resolve, delay))
+              await new Promise(resolve => setTimeout(resolve, attempt * 1000))
               await refetch()
             }
-
-            if (onSuccess) {
-              await onSuccess({
-                ...paymentIntentAny,
-                _processingTimeout: processingTimeout,
-                _processingResult: processingResult,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } as any)
-            }
-
-            throw new Error('Payment processing timed out')
-          } else {
-            await refetch()
+            const err = new Error('Payment processing timed out — webhooks may not be configured')
+            onError?.(err)
+            return
           }
+
+          await refetch()
         } catch (error) {
           console.error('[PaymentForm] Failed to process payment:', error)
-
-          if (onSuccess) {
-            try {
-              await onSuccess({
-                ...paymentIntentAny,
-                _processingError: error,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } as any)
-            } catch {
-              // Ignore callback errors
-            }
-          }
-
-          throw error
+          onError?.(error instanceof Error ? error : new Error(String(error)))
+          return
         }
       } else {
         await refetch()
       }
 
-      if (onSuccess && !processingTimeout) {
-        await onSuccess({
-          ...paymentIntentAny,
-          _processingTimeout: processingTimeout,
-          _processingResult: processingResult,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any)
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onSuccess?.(paymentIntentAny as any)
     },
-    [processPayment, productRef, effectivePlanRef, refetch, onSuccess],
+    [processPayment, productRef, effectivePlanRef, refetch, onSuccess, onError],
   )
 
   const handleError = useCallback(

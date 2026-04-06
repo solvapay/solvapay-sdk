@@ -26,6 +26,8 @@ export { useCheckout } from './hooks/useCheckout'
 export { useSolvaPay } from './hooks/useSolvaPay'
 export { usePlans } from './hooks/usePlans'
 export { usePurchaseStatus } from './hooks/usePurchaseStatus'
+export { usePurchaseActions } from './hooks/usePurchaseActions'
+export { useActivation } from './hooks/useActivation'
 export { useTopup } from './hooks/useTopup'
 export { useBalance } from './hooks/useBalance'
 
@@ -57,7 +59,12 @@ export type {
   CreditBalance,
   BalanceStatus,
   BalanceBadgeProps,
+  CancelResult,
+  ReactivateResult,
+  ActivatePlanResult,
 } from './types'
+export type { PurchaseActions } from './hooks/usePurchaseActions'
+export type { UseActivationReturn, ActivationState } from './hooks/useActivation'
 export type { CustomerInfo } from './hooks/useCustomer'
 
 // Adapters

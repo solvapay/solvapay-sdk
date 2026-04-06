@@ -3,7 +3,7 @@
  */
 
 import type { PaymentIntent } from '@stripe/stripe-js'
-import type { ProcessPaymentResult } from '@solvapay/server'
+import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
 
 export interface PurchaseInfo {
@@ -22,8 +22,10 @@ export interface PurchaseInfo {
   nextBillingDate?: string
   billingCycle?: string
   transactionId?: string
+  planReference?: string
   planSnapshot?: {
     reference?: string
+    price?: number
     meterId?: string
     limit?: number
     freeUnits?: number
@@ -89,6 +91,10 @@ export interface TopupFormProps {
 
 export interface PurchaseStatus {
   loading: boolean
+  /** True when data already exists but a background refetch is in progress */
+  isRefetching: boolean
+  /** Last fetch error, or null if the most recent fetch succeeded */
+  error: Error | null
   customerRef?: string
   email?: string
   name?: string
@@ -143,6 +149,10 @@ export interface SolvaPayConfig {
     processPayment?: string // Default: '/api/process-payment'
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
     customerBalance?: string // Default: '/api/customer-balance'
+    cancelRenewal?: string // Default: '/api/cancel-renewal'
+    reactivateRenewal?: string // Default: '/api/reactivate-renewal'
+    activatePlan?: string // Default: '/api/activate-plan'
+    listPlans?: string // Default: '/api/list-plans'
   }
 
   /**
@@ -204,6 +214,21 @@ export interface SolvaPayConfig {
   onError?: (error: Error, context: string) => void
 }
 
+export interface CancelResult {
+  reference?: string
+  status?: string
+  cancelledAt?: string
+  [key: string]: unknown
+}
+
+export interface ReactivateResult {
+  reference?: string
+  status?: string
+  [key: string]: unknown
+}
+
+export { type ActivatePlanResult }
+
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
@@ -217,9 +242,17 @@ export interface SolvaPayContextValue {
     amount: number
     currency?: string
   }) => Promise<TopupPaymentResult>
+  cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
+  reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
+  activatePlan: (params: {
+    productRef: string
+    planRef: string
+  }) => Promise<ActivatePlanResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
   balance: BalanceStatus
+  /** @internal Provider config — used by SDK hooks, not part of public API */
+  _config?: SolvaPayConfig
 }
 
 export interface SolvaPayProviderProps {

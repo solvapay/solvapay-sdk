@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { usePurchase, usePlans, usePurchaseStatus } from '@solvapay/react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { usePurchase, usePlans, usePurchaseStatus, usePurchaseActions } from '@solvapay/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getAccessToken } from '../lib/supabase'
 import { sortPlansByPrice } from './utils/planHelpers'
 import { PlanSelectionSection } from './components/PlanSelectionSection'
 import { PaymentSummary } from './components/PaymentSummary'
@@ -15,26 +14,18 @@ import { ActivationSection } from './components/ActivationSection'
 import { SuccessMessage } from './components/SuccessMessage'
 import { PaymentFailureMessage } from './components/PaymentFailureMessage'
 
-interface PaymentIntentResult {
-  _processingTimeout?: boolean
-  _processingError?: string
-  [key: string]: unknown
-}
-
 export default function CheckoutPage() {
-  const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false)
-  const [showActivation, setShowActivation] = useState<boolean>(false)
-  const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false)
-  const [paymentFailed, setPaymentFailed] = useState<boolean>(false)
-  const [isCancelling, setIsCancelling] = useState<boolean>(false)
-  const [isReactivating, setIsReactivating] = useState<boolean>(false)
-  const { refetch, activePurchase } = usePurchase()
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [showActivation, setShowActivation] = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
+  const [paymentFailed, setPaymentFailed] = useState(false)
+  const { refetch, activePurchase, loading: purchaseLoading } = usePurchase()
+  const { cancelRenewal, reactivateRenewal, isCancelling, isReactivating } = usePurchaseActions()
   const router = useRouter()
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
 
-  // Stable fetcher function to prevent re-renders
   const plansFetcher = useCallback(async (productRef: string) => {
     const response = await fetch(`/api/list-plans?productRef=${productRef}`)
     if (!response.ok) {
@@ -42,12 +33,9 @@ export default function CheckoutPage() {
       throw new Error(errorData.error || 'Failed to fetch plans')
     }
     const data = await response.json()
-    // Sort and limit to first 2 plans in fetcher
-    const sortedPlans = (data.plans || []).sort(sortPlansByPrice).slice(0, 2)
-    return sortedPlans
+    return (data.plans || []).sort(sortPlansByPrice).slice(0, 2)
   }, [])
 
-  // Fetch plans using the SDK hook
   const {
     plans,
     loading,
@@ -58,51 +46,42 @@ export default function CheckoutPage() {
   } = usePlans({
     productRef: productRef || '',
     fetcher: plansFetcher,
-    autoSelectFirstPaid: true,
   })
 
-  // Get advanced purchase status helpers
   const purchaseStatus = usePurchaseStatus()
 
-  // Pre-select the active plan when both plans and purchase data are loaded
-  const activePlanRef = activePurchase?.planSnapshot?.reference
+  const findActivePlanIndex = useCallback((): number => {
+    if (!activePurchase?.planReference || plans.length === 0) return -1
+    return plans.findIndex(p => p.reference === activePurchase.planReference)
+  }, [activePurchase, plans])
+
   useEffect(() => {
-    if (!activePlanRef || plans.length === 0) return
-    const idx = plans.findIndex(p => p.reference === activePlanRef)
-    if (idx >= 0) setSelectedPlanIndex(idx)
-  }, [activePlanRef, plans, setSelectedPlanIndex])
+    if (plans.length === 0 || purchaseLoading) return
 
-  // Handle payment success
-  const handlePaymentSuccess = async (paymentIntent?: unknown) => {
-    const result = paymentIntent as PaymentIntentResult | undefined
-    // Check if payment processing timed out or had an error
-    const isTimeout = result?._processingTimeout === true
-    const hasError = !!result?._processingError
-
-    // Refetch purchases before showing message
-    await refetch()
-
-    if (isTimeout || hasError) {
-      if (isTimeout) {
-        console.error(
-          '[CheckoutPage] Payment processing timed out - webhooks may not be configured',
-        )
-      } else if (hasError) {
-        console.error('[CheckoutPage] Payment processing failed:', result?._processingError)
-      }
-
-      // Show failure message to user (no technical details)
-      setPaymentFailed(true)
+    const activeIdx = findActivePlanIndex()
+    if (activeIdx >= 0) {
+      setSelectedPlanIndex(activeIdx)
     } else {
-      // Only set success if there was no timeout or error
-      setPaymentSuccess(true)
-      redirectTimeoutRef.current = setTimeout(() => {
-        router.push('/')
-      }, 2000)
+      const firstPaid = plans.findIndex(p => p.requiresPayment !== false)
+      setSelectedPlanIndex(firstPaid >= 0 ? firstPaid : 0)
     }
+  }, [findActivePlanIndex, setSelectedPlanIndex, plans, purchaseLoading])
+
+  const activePlanIdx = useMemo(() => findActivePlanIndex(), [findActivePlanIndex])
+
+  const isOnActivePlan = useMemo(() => {
+    if (!activePurchase || !currentPlan) return false
+    return activePurchase.planReference === currentPlan.reference
+  }, [activePurchase, currentPlan])
+
+  const handlePaymentSuccess = async () => {
+    await refetch()
+    setPaymentSuccess(true)
+    redirectTimeoutRef.current = setTimeout(() => {
+      router.push('/')
+    }, 2000)
   }
 
-  // Clean up timeout on unmount
   useEffect(() => {
     return () => {
       if (redirectTimeoutRef.current) {
@@ -111,16 +90,11 @@ export default function CheckoutPage() {
     }
   }, [])
 
-  // Handle payment error
-  const handlePaymentError = (err: Error) => {
-    console.error('[CheckoutPage] Payment error:', err.message)
-
-    // Show failure message to user (no technical details)
+  const handlePaymentError = (_err: Error) => {
     setShowPaymentForm(false)
     setPaymentFailed(true)
   }
 
-  // Handle continue button click
   const handleActivationSuccess = async () => {
     await refetch()
     setPaymentSuccess(true)
@@ -137,7 +111,6 @@ export default function CheckoutPage() {
     }
   }
 
-  // Handle cancel plan
   const handleCancelPlan = async () => {
     const purchase = activePurchase
     if (!purchase) return
@@ -154,39 +127,11 @@ export default function CheckoutPage() {
       return
     }
 
-    setIsCancelling(true)
-
     try {
-      const accessToken = await getAccessToken()
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-      }
-
-      const res = await fetch('/api/cancel-renewal', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          purchaseRef: purchase.reference,
-          reason: 'User requested cancellation',
-        }),
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        const errorMessage = errorData.error || 'Failed to cancel'
-        console.error('Cancel error:', errorMessage, errorData)
-        throw new Error(errorMessage)
-      }
-
-      await res.json()
-      await new Promise(resolve => setTimeout(resolve, 300))
-      await refetch()
-      window.location.href = '/'
+      await cancelRenewal({ purchaseRef: purchase.reference, reason: 'User requested cancellation' })
+      router.push('/')
     } catch (err) {
       console.error('Cancel failed:', err)
-      setIsCancelling(false)
     }
   }
 
@@ -194,40 +139,13 @@ export default function CheckoutPage() {
     const purchase = purchaseStatus.cancelledPurchase
     if (!purchase) return
 
-    setIsReactivating(true)
-
     try {
-      const accessToken = await getAccessToken()
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-      }
-
-      const res = await fetch('/api/reactivate-renewal', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ purchaseRef: purchase.reference }),
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        const errorMessage = errorData.error || 'Failed to reactivate'
-        console.error('Reactivate error:', errorMessage, errorData)
-        throw new Error(errorMessage)
-      }
-
-      await res.json()
-      await new Promise(resolve => setTimeout(resolve, 300))
-      await refetch()
+      await reactivateRenewal({ purchaseRef: purchase.reference })
     } catch (err) {
       console.error('Reactivate failed:', err)
-    } finally {
-      setIsReactivating(false)
     }
   }
 
-  // Handle back to plan selection
   const handleBackToSelection = () => {
     setShowPaymentForm(false)
     setShowActivation(false)
@@ -248,7 +166,9 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your pricing</h2>
 
-            {loading && <div className="text-center py-8 text-slate-500">Loading pricing...</div>}
+            {(loading || purchaseLoading) && (
+              <div className="text-center py-8 text-slate-500">Loading pricing...</div>
+            )}
 
             {error && !loading && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-center">
@@ -256,14 +176,14 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {!loading && !error && plans.length > 0 && currentPlan && currentPlan.reference && (
+            {!loading && !purchaseLoading && !error && plans.length > 0 && currentPlan && currentPlan.reference && (
               <>
                 {!showPaymentForm && !showActivation && (
                   <>
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
-                      activePlanRef={activePurchase?.planSnapshot?.reference ?? null}
+                      activePlanIndex={activePlanIdx}
                       onSelectPlan={setSelectedPlanIndex}
                       className="mb-8"
                     />
@@ -279,8 +199,8 @@ export default function CheckoutPage() {
                     />
 
                     <CheckoutActions
-                      activePurchase={activePurchase}
-                      selectedPlanRef={currentPlan.reference}
+                      isOnActivePlan={isOnActivePlan}
+                      isUsageBased={activePurchase?.planSnapshot?.planType === 'usage-based'}
                       shouldShowCancelledNotice={purchaseStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}

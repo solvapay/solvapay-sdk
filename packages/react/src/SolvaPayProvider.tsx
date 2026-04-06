@@ -9,8 +9,10 @@ import type {
   TopupPaymentResult,
   CreditBalance,
   BalanceStatus,
+  CancelResult,
+  ReactivateResult,
 } from './types'
-import type { ProcessPaymentResult } from '@solvapay/server'
+import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import {
   filterPurchases,
   isPaidPurchase,
@@ -117,6 +119,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     purchases: [],
   })
   const [loading, setLoading] = useState(false)
+  const [isRefetching, setIsRefetching] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<Error | null>(null)
   const [internalCustomerRef, setInternalCustomerRef] = useState<string | undefined>(undefined)
   const [userId, setUserId] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -130,10 +134,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fetchBalanceRef = useRef<(() => Promise<void>) | null>(null)
 
-  // Track in-flight requests to prevent duplicate calls
   const inFlightRef = useRef<string | null>(null)
-  // Track what we've already fetched to prevent unnecessary refetches
-  const lastFetchedRef = useRef<string | null>(null)
 
   // Store functions in refs to avoid dependency issues
   const checkPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(null)
@@ -438,34 +439,36 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
     detectAuth()
 
-    const interval = setInterval(detectAuth, 5000)
+    const interval = setInterval(detectAuth, 30000)
 
     return () => clearInterval(interval)
   }, [userId])
 
-  // Fetch purchase function - memoized to prevent unnecessary re-renders
   const fetchPurchase = useCallback(
     async (force = false) => {
       if (!isAuthenticated && !internalCustomerRef) {
         setPurchaseData({ purchases: [] })
+        setPurchaseError(null)
         setLoading(false)
+        setIsRefetching(false)
         inFlightRef.current = null
-        lastFetchedRef.current = null
         return
       }
 
       const cacheKey = internalCustomerRef || userId || 'anonymous'
 
-      if (!force && lastFetchedRef.current === cacheKey && inFlightRef.current !== cacheKey) {
-        return
-      }
-
-      if (inFlightRef.current === cacheKey) {
+      if (inFlightRef.current === cacheKey && !force) {
         return
       }
 
       inFlightRef.current = cacheKey
-      setLoading(true)
+
+      const hasExistingData = purchaseData.purchases.length > 0
+      if (hasExistingData) {
+        setIsRefetching(true)
+      } else {
+        setLoading(true)
+      }
 
       try {
         const checkFn = checkPurchaseRef.current || buildDefaultCheckPurchaseRef.current
@@ -488,24 +491,22 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
           }
 
           setPurchaseData(filteredData)
-          lastFetchedRef.current = cacheKey
+          setPurchaseError(null)
         }
-      } catch (error) {
-        console.error('[SolvaPayProvider] Failed to fetch purchase:', error)
+      } catch (err) {
+        console.error('[SolvaPayProvider] Failed to fetch purchase:', err)
         if (inFlightRef.current === cacheKey) {
-          setPurchaseData({
-            purchases: [],
-          })
-          lastFetchedRef.current = cacheKey
+          setPurchaseError(err instanceof Error ? err : new Error(String(err)))
         }
       } finally {
         if (inFlightRef.current === cacheKey) {
           setLoading(false)
+          setIsRefetching(false)
           inFlightRef.current = null
         }
       }
     },
-    [isAuthenticated, internalCustomerRef, userId],
+    [isAuthenticated, internalCustomerRef, userId, purchaseData.purchases.length],
   )
 
   const fetchPurchaseRef = useRef(fetchPurchase)
@@ -514,22 +515,103 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [fetchPurchase])
 
   const refetchPurchase = useCallback(async () => {
-    lastFetchedRef.current = null
     inFlightRef.current = null
-    setPurchaseData({ purchases: [] })
     await fetchPurchaseRef.current(true)
   }, [])
 
-  // Auto-fetch purchases on mount and when auth state changes
+  const cancelRenewal = useCallback(
+    async (params: { purchaseRef: string; reason?: string }): Promise<CancelResult> => {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.cancelRenewal || '/api/cancel-renewal'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const error = new Error(data.error || `Failed to cancel renewal: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'cancelRenewal')
+        throw error
+      }
+
+      const result = await res.json()
+      await refetchPurchase()
+      return result
+    },
+    [refetchPurchase],
+  )
+
+  const reactivateRenewal = useCallback(
+    async (params: { purchaseRef: string }): Promise<ReactivateResult> => {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.reactivateRenewal || '/api/reactivate-renewal'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const error = new Error(data.error || `Failed to reactivate renewal: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'reactivateRenewal')
+        throw error
+      }
+
+      const result = await res.json()
+      await refetchPurchase()
+      return result
+    },
+    [refetchPurchase],
+  )
+
+  const activatePlan = useCallback(
+    async (params: { productRef: string; planRef: string }): Promise<ActivatePlanResult> => {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.activatePlan || '/api/activate-plan'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const error = new Error(data.error || `Failed to activate plan: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'activatePlan')
+        throw error
+      }
+
+      const result: ActivatePlanResult = await res.json()
+      if (result.status === 'activated' || result.status === 'already_active') {
+        await refetchPurchase()
+      }
+      return result
+    },
+    [refetchPurchase],
+  )
+
   useEffect(() => {
-    lastFetchedRef.current = null
     inFlightRef.current = null
 
     if (isAuthenticated || internalCustomerRef) {
       fetchPurchase()
     } else {
       setPurchaseData({ purchases: [] })
+      setPurchaseError(null)
       setLoading(false)
+      setIsRefetching(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, internalCustomerRef, userId])
@@ -557,6 +639,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
     return {
       loading,
+      isRefetching,
+      error: purchaseError,
       customerRef: purchaseData.customerRef || internalCustomerRef,
       email: purchaseData.email,
       name: purchaseData.name,
@@ -575,7 +659,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       hasPaidPurchase: activePaidPurchases.length > 0,
       activePaidPurchase,
     }
-  }, [loading, purchaseData, internalCustomerRef])
+  }, [loading, isRefetching, purchaseError, purchaseData, internalCustomerRef])
 
   const balance: BalanceStatus = useMemo(
     () => ({
@@ -594,9 +678,13 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       createPayment,
       processPayment,
       createTopupPayment,
+      cancelRenewal,
+      reactivateRenewal,
+      activatePlan,
       customerRef: purchaseData.customerRef || internalCustomerRef,
       updateCustomerRef,
       balance,
+      _config: configRef.current,
     }),
     [
       purchase,
@@ -604,6 +692,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       createPayment,
       processPayment,
       createTopupPayment,
+      cancelRenewal,
+      reactivateRenewal,
+      activatePlan,
       purchaseData.customerRef,
       internalCustomerRef,
       updateCustomerRef,

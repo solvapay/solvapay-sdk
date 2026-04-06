@@ -13,6 +13,8 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
   return {
     purchase: {
       loading: false,
+      isRefetching: false,
+      error: null,
       purchases: [],
       hasProduct: () => false,
       hasPlan: () => false,
@@ -28,10 +30,14 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
       accountId: 'acct_456',
       customerRef: 'cus_789',
     }),
+    cancelRenewal: vi.fn(),
+    reactivateRenewal: vi.fn(),
+    activatePlan: vi.fn(),
     balance: {
       loading: false,
       balances: [],
       refetch: vi.fn(),
+      adjustBalance: vi.fn(),
     },
     ...overrides,
   }
