@@ -112,7 +112,7 @@ importers:
         version: link:../../packages/server
       '@stripe/react-stripe-js':
         specifier: ^6.0.0
-        version: 6.0.0(@stripe/stripe-js@9.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 6.0.0(@stripe/stripe-js@9.0.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@supabase/supabase-js':
         specifier: ^2.100.1
         version: 2.100.1
@@ -219,7 +219,7 @@ importers:
         version: link:../../packages/server
       '@stripe/react-stripe-js':
         specifier: ^6.0.0
-        version: 6.0.0(@stripe/stripe-js@9.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 6.0.0(@stripe/stripe-js@9.0.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@supabase/supabase-js':
         specifier: ^2.100.1
         version: 2.100.1
@@ -482,10 +482,10 @@ importers:
     dependencies:
       '@stripe/react-stripe-js':
         specifier: ^6.0.0
-        version: 6.0.0(@stripe/stripe-js@9.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 6.0.0(@stripe/stripe-js@9.0.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@stripe/stripe-js':
-        specifier: ^9.0.0
-        version: 9.0.0
+        specifier: ^9.0.1
+        version: 9.0.1
     devDependencies:
       '@solvapay/server':
         specifier: workspace:*
@@ -1748,8 +1748,8 @@ packages:
       react: '>=16.8.0 <20.0.0'
       react-dom: '>=16.8.0 <20.0.0'
 
-  '@stripe/stripe-js@9.0.0':
-    resolution: {integrity: sha512-UtUK7LFglQSNVIOwcRBaxfzq4wkfU8CT2f2uQVEeu65jTP6wicxFshYdYCke9Tfd0PCxhOe/b8rwJjr5EiDCfQ==}
+  '@stripe/stripe-js@9.0.1':
+    resolution: {integrity: sha512-un0URSosrW7wNr7xZ5iI2mC9mdeXZ3KERoVlA2RdmeLXYxHUPXq0yHzir2n/MtyXXEdSaELtz4WXGS6dzPEeKA==}
     engines: {node: '>=12.16'}
 
   '@supabase/auth-js@2.100.1':
@@ -5744,14 +5744,14 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@stripe/react-stripe-js@6.0.0(@stripe/stripe-js@9.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@stripe/react-stripe-js@6.0.0(@stripe/stripe-js@9.0.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
-      '@stripe/stripe-js': 9.0.0
+      '@stripe/stripe-js': 9.0.1
       prop-types: 15.8.1
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
 
-  '@stripe/stripe-js@9.0.0': {}
+  '@stripe/stripe-js@9.0.1': {}
 
   '@supabase/auth-js@2.100.1':
     dependencies:
