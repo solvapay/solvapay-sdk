@@ -14,6 +14,7 @@ export type {
   CustomerResponseMapped,
   UsageMeterType,
   CheckLimitsRequest,
+  ActivatePlanResult,
   McpBootstrapRequest,
   McpBootstrapResponse,
   McpBootstrapPlanInput,

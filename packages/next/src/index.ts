@@ -247,6 +247,7 @@ export {
   processPaymentIntent,
   createCheckoutSession,
   createCustomerSession,
+  activatePlan,
   cancelRenewal,
   listPlans,
   createAuthMiddleware,

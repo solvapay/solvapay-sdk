@@ -341,6 +341,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/customers/{reference}/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer credit balance
+         * @description Returns the credit balance(s) for a customer identified by reference. Optionally filter by currency using the query parameter.
+         */
+        get: operations["CustomerSdkController_getCustomerBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/customers/{reference}": {
         parameters: {
             query?: never;
@@ -535,6 +555,22 @@ export interface paths {
          * @description Checks whether a customer has an active purchase for a product and is within their usage limits. Returns a checkout URL if payment is required.
          */
         post: operations["LimitsSdkController_checkLimits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ActivateSdkController_activate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1662,6 +1698,22 @@ export interface components {
             /** @description Customer portal confirmation URL when activation is required (fallback when not starting checkout) */
             confirmationUrl?: string;
         };
+        ActivatePlanDto: {
+            customerRef: string;
+            productRef: string;
+            planRef: string;
+        };
+        ActivatePlanResponseDto: {
+            /** @enum {string} */
+            status: "activated" | "already_active" | "topup_required" | "payment_required" | "invalid";
+            purchaseReference?: string;
+            message?: string;
+            creditBalance?: number;
+            pricePerUnit?: number;
+            currency?: string;
+            checkoutUrl?: string;
+            checkoutSessionId?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2488,6 +2540,41 @@ export interface operations {
             };
         };
     };
+    CustomerSdkController_getCustomerBalance: {
+        parameters: {
+            query?: {
+                /** @description Filter by ISO 4217 currency code */
+                currency?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Customer reference identifier */
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer balance retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     CustomerSdkController_getCustomer: {
         parameters: {
             query?: never;
@@ -2828,6 +2915,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    ActivateSdkController_activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivatePlanDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivatePlanResponseDto"];
+                };
             };
         };
     };

@@ -1,5 +1,6 @@
 interface CheckoutActionsProps {
   hasPaidPurchase: boolean
+  activePurchase?: { planSnapshot?: { planType?: string } } | null
   shouldShowCancelledNotice: boolean
   onContinue: () => void
   onCancel: () => void
@@ -8,13 +9,9 @@ interface CheckoutActionsProps {
   className?: string
 }
 
-/**
- * Checkout Actions Component
- *
- * Renders Continue or Cancel Plan buttons based on purchase state
- */
 export function CheckoutActions({
   hasPaidPurchase,
+  activePurchase,
   shouldShowCancelledNotice,
   onContinue,
   onCancel,
@@ -22,16 +19,21 @@ export function CheckoutActions({
   isCancelling,
   className = '',
 }: CheckoutActionsProps) {
-  const showCancelButton = hasPaidPurchase && !shouldShowCancelledNotice
+  const isUsageBased = activePurchase?.planSnapshot?.planType === 'usage-based'
+  const hasActivePurchase = hasPaidPurchase || (activePurchase && isUsageBased)
+  const showCancelButton = hasActivePurchase && !shouldShowCancelledNotice
 
   if (showCancelButton) {
+    const cancelLabel = isUsageBased ? 'Deactivate Plan' : 'Cancel Plan'
+    const cancellingLabel = isUsageBased ? 'Deactivating...' : 'Cancelling...'
+
     return (
       <button
         onClick={onCancel}
         disabled={isCancelling}
         className={`w-full py-3 border-2 border-slate-300 text-slate-900 rounded-lg hover:border-red-500 hover:text-red-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
-        {isCancelling ? 'Cancelling...' : 'Cancel Plan'}
+        {isCancelling ? cancellingLabel : cancelLabel}
       </button>
     )
   }

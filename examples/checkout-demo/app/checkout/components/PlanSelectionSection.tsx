@@ -1,5 +1,5 @@
 import type { Plan } from '@solvapay/react'
-import { formatPrice, isFreePlan } from '../utils/planHelpers'
+import { formatPrice, formatPerUnitPrice, isFreePlan, isUsageBasedPlan } from '../utils/planHelpers'
 
 interface PlanSelectionSectionProps {
   plans: Plan[]
@@ -7,6 +7,31 @@ interface PlanSelectionSectionProps {
   activePlanRef: string | null
   onSelectPlan: (index: number) => void
   className?: string
+}
+
+function PlanPricing({ plan }: { plan: Plan }) {
+  if (isUsageBasedPlan(plan)) {
+    const unitPrice = formatPerUnitPrice(plan.pricePerUnit)
+    const unit = plan.measures || 'use'
+    return (
+      <>
+        <div className="text-2xl font-bold text-slate-900 mb-1">${unitPrice}</div>
+        <div className="text-sm text-slate-600">per {unit}</div>
+        {plan.freeUnits ? (
+          <div className="text-xs text-green-600 mt-2">{plan.freeUnits} free {unit}s included</div>
+        ) : null}
+      </>
+    )
+  }
+
+  const planPrice = formatPrice(plan.price)
+  const cycle = plan.interval || plan.billingCycle
+  return (
+    <>
+      <div className="text-2xl font-bold text-slate-900 mb-1">${planPrice}</div>
+      <div className="text-sm text-slate-600">{cycle ? `/${cycle}` : 'one-time'}</div>
+    </>
+  )
 }
 
 export function PlanSelectionSection({
@@ -22,7 +47,6 @@ export function PlanSelectionSection({
         const isFree = isFreePlan(plan)
         const isCurrentPlan = plan.reference === activePlanRef
         const isSelected = !isFree && selectedPlanIndex === index
-        const planPrice = formatPrice(plan.price)
 
         return (
           <div
@@ -40,7 +64,6 @@ export function PlanSelectionSection({
               }
             }}
           >
-            {/* Selection Checkmark */}
             {isSelected && (
               <div className="absolute top-2 right-2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                 <svg
@@ -59,23 +82,19 @@ export function PlanSelectionSection({
               </div>
             )}
 
-            {/* Current Plan Badge */}
             {isCurrentPlan && (
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-medium px-3 py-1 rounded-full">
                 Current
               </div>
             )}
 
-            {/* Popular Badge (for second non-free plan) */}
             {!isCurrentPlan && index === 1 && !isFree && (
               <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
                 Popular
               </div>
             )}
 
-            {/* Plan Price and Reference */}
-            <div className="text-2xl font-bold text-slate-900 mb-1">${planPrice}</div>
-            <div className="text-sm text-slate-600">{plan.interval ? `/${plan.interval}` : 'one-time'}</div>
+            <PlanPricing plan={plan} />
           </div>
         )
       })}

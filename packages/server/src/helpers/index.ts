@@ -33,5 +33,8 @@ export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout
 // Export purchase cancellation helpers
 export { cancelPurchaseCore } from './renewal'
 
+// Export activation helpers
+export { activatePlanCore } from './activation'
+
 // Export plans helpers
 export { listPlansCore } from './plans'

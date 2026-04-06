@@ -17,6 +17,9 @@ export { createPaymentIntent, createTopupPaymentIntent, processPaymentIntent } f
 // Export checkout helpers
 export { createCheckoutSession, createCustomerSession } from './checkout'
 
+// Export activation helpers
+export { activatePlan } from './activation'
+
 // Export purchase cancellation helpers
 export { cancelRenewal } from './renewal'
 

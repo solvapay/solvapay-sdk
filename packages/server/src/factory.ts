@@ -587,6 +587,18 @@ export interface SolvaPay {
   }>
 
   /**
+   * Activate a plan for a customer (usage-based / free plans that don't require Stripe payment).
+   *
+   * Returns the activation result indicating whether the plan was activated,
+   * is already active, requires a credit top-up, or requires payment.
+   */
+  activatePlan(params: {
+    customerRef: string
+    productRef: string
+    planRef: string
+  }): Promise<import('./types/client').ActivatePlanResult>
+
+  /**
    * Bootstrap an MCP-enabled product with plans and tool mappings.
    *
    * This helper wraps the backend orchestration endpoint and is intended for
@@ -802,6 +814,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     createCustomerSession(params) {
       return apiClient.createCustomerSession(params)
+    },
+
+    activatePlan(params) {
+      if (!apiClient.activatePlan) {
+        throw new SolvaPayError('activatePlan is not available on this API client')
+      }
+      return apiClient.activatePlan(params)
     },
 
     bootstrapMcpProduct(params) {

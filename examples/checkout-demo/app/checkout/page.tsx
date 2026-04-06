@@ -11,6 +11,7 @@ import { PaymentSummary } from './components/PaymentSummary'
 import { PurchaseNotices } from './components/PurchaseNotices'
 import { CheckoutActions } from './components/CheckoutActions'
 import { StyledPaymentForm } from './components/StyledPaymentForm'
+import { ActivationSection } from './components/ActivationSection'
 import { SuccessMessage } from './components/SuccessMessage'
 import { PaymentFailureMessage } from './components/PaymentFailureMessage'
 
@@ -22,6 +23,7 @@ interface PaymentIntentResult {
 
 export default function CheckoutPage() {
   const [showPaymentForm, setShowPaymentForm] = useState<boolean>(false)
+  const [showActivation, setShowActivation] = useState<boolean>(false)
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false)
   const [paymentFailed, setPaymentFailed] = useState<boolean>(false)
   const [isCancelling, setIsCancelling] = useState<boolean>(false)
@@ -114,23 +116,35 @@ export default function CheckoutPage() {
   }
 
   // Handle continue button click
+  const handleActivationSuccess = async () => {
+    await refetch()
+    setPaymentSuccess(true)
+    redirectTimeoutRef.current = setTimeout(() => {
+      router.push('/')
+    }, 2000)
+  }
+
   const handleContinue = () => {
-    if (currentPlan?.price && currentPlan.price > 0) {
+    if (currentPlan?.type === 'usage-based') {
+      setShowActivation(true)
+    } else if (currentPlan?.requiresPayment !== false) {
       setShowPaymentForm(true)
     }
   }
 
   // Handle cancel plan
   const handleCancelPlan = async () => {
-    if (!confirm('Are you sure you want to cancel your plan?')) {
-      return
-    }
+    const purchase = activePaidPurchase || activePurchase
+    if (!purchase) return
 
-    if (!activePaidPurchase) {
-      return
-    }
+    const isUsageBased = activePurchase?.planSnapshot?.planType === 'usage-based'
+    const confirmMsg = isUsageBased
+      ? 'Are you sure you want to deactivate your plan? This will take effect immediately.'
+      : 'Are you sure you want to cancel your plan?'
 
-    if (activePaidPurchase.status !== 'active') {
+    if (!confirm(confirmMsg)) return
+
+    if (purchase.status !== 'active') {
       await refetch()
       return
     }
@@ -149,15 +163,15 @@ export default function CheckoutPage() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          purchaseRef: activePaidPurchase.reference,
+          purchaseRef: purchase.reference,
           reason: 'User requested cancellation',
         }),
       })
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        const errorMessage = errorData.error || 'Failed to cancel renewal'
-        console.error('Cancel renewal error:', errorMessage, errorData)
+        const errorMessage = errorData.error || 'Failed to cancel'
+        console.error('Cancel error:', errorMessage, errorData)
         throw new Error(errorMessage)
       }
 
@@ -166,7 +180,7 @@ export default function CheckoutPage() {
       await refetch()
       window.location.href = '/'
     } catch (err) {
-      console.error('Cancel renewal failed:', err)
+      console.error('Cancel failed:', err)
       setIsCancelling(false)
     }
   }
@@ -174,6 +188,7 @@ export default function CheckoutPage() {
   // Handle back to plan selection
   const handleBackToSelection = () => {
     setShowPaymentForm(false)
+    setShowActivation(false)
   }
 
   return (
@@ -201,9 +216,8 @@ export default function CheckoutPage() {
 
             {!loading && !error && plans.length > 0 && currentPlan && currentPlan.reference && (
               <>
-                {!showPaymentForm && (
+                {!showPaymentForm && !showActivation && (
                   <>
-                    {/* Plan Selection Cards */}
                     <PlanSelectionSection
                       plans={plans}
                       selectedPlanIndex={selectedPlanIndex}
@@ -212,19 +226,17 @@ export default function CheckoutPage() {
                       className="mb-8"
                     />
 
-                    {/* Payment Summary */}
                     <PaymentSummary selectedPlan={currentPlan} className="mb-8" />
 
-                    {/* Cancelled Purchase Notice */}
                     <PurchaseNotices
                       cancelledPurchase={purchaseStatus.cancelledPurchase}
                       shouldShow={purchaseStatus.shouldShowCancelledNotice}
                       className="mb-6"
                     />
 
-                    {/* Action Buttons */}
                     <CheckoutActions
                       hasPaidPurchase={hasPaidPurchase}
+                      activePurchase={activePurchase}
                       shouldShowCancelledNotice={purchaseStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}
@@ -234,7 +246,15 @@ export default function CheckoutPage() {
                   </>
                 )}
 
-                {/* Payment Form - Only mount when needed */}
+                {showActivation && (
+                  <ActivationSection
+                    currentPlan={currentPlan}
+                    productRef={productRef}
+                    onSuccess={handleActivationSuccess}
+                    onBack={handleBackToSelection}
+                  />
+                )}
+
                 {showPaymentForm && (
                   <StyledPaymentForm
                     currentPlan={currentPlan}

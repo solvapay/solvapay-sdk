@@ -58,6 +58,8 @@ export interface ProcessPaymentResult {
   status: 'completed'
 }
 
+export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
+
 export type McpBootstrapPlanInput =
   NonNullable<components['schemas']['McpBootstrapDto']['plans']>[number]
 
@@ -259,4 +261,9 @@ export interface SolvaPayClient {
   createCustomerSession(
     params: components['schemas']['CreateCustomerSessionRequest'],
   ): Promise<components['schemas']['CreateCustomerSessionResponse']>
+
+  // POST: /v1/sdk/activate
+  activatePlan?(
+    params: components['schemas']['ActivatePlanDto'],
+  ): Promise<ActivatePlanResult>
 }

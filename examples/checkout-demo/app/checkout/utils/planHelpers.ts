@@ -5,23 +5,30 @@ import type { Plan } from '@solvapay/react'
  */
 export function formatPrice(price?: number): string {
   if (!price) return '0'
-  // Convert cents to dollars and format with 2 decimal places
   const dollars = price / 100
   const formatted = dollars.toFixed(2)
-  // Remove trailing zeros and decimal point if decimals are .00
   return formatted.replace(/\.00$/, '')
 }
 
 /**
- * Check if a plan is free
+ * Format a per-unit price (cents, possibly fractional like 0.1)
  */
+export function formatPerUnitPrice(pricePerUnit?: number): string {
+  if (!pricePerUnit) return '0'
+  const dollars = pricePerUnit / 100
+  if (dollars >= 1) return dollars.toFixed(2).replace(/\.00$/, '')
+  if (dollars >= 0.01) return dollars.toFixed(2)
+  return dollars.toFixed(4).replace(/0+$/, '')
+}
+
+export function isUsageBasedPlan(plan: Plan): boolean {
+  return plan.type === 'usage-based'
+}
+
 export function isFreePlan(plan: Plan): boolean {
   return plan.requiresPayment === false
 }
 
-/**
- * Sort plans by price (ascending)
- */
 export function sortPlansByPrice(a: Plan, b: Plan): number {
   return (a.price || 0) - (b.price || 0)
 }
