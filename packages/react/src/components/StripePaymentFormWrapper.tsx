@@ -142,18 +142,20 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
 
   const isReady = !!(stripe && elements)
 
-  // Card element options for minimal styling
   const cardElementOptions = {
     style: {
       base: {
-        fontSize: '16px',
-        color: '#424770',
+        fontSize: '17px',
+        lineHeight: '24px',
+        color: '#1e293b',
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         '::placeholder': {
-          color: '#aab7c4',
+          color: '#94a3b8',
         },
       },
       invalid: {
-        color: '#9e2146',
+        color: '#dc2626',
       },
     },
     hidePostalCode: true,
@@ -161,7 +163,6 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
 
   return (
     <>
-      {/* CardElement - render when ready, show loading placeholder while initializing */}
       {isReady ? (
         <CardElement
           options={cardElementOptions}
@@ -176,18 +177,7 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
           }}
         />
       ) : (
-        <div
-          style={{
-            padding: '12px',
-            border: '1px solid #cbd5e1',
-            borderRadius: '0.375rem',
-            backgroundColor: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '40px',
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52px' }}>
           <Spinner size="sm" />
         </div>
       )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { TopupForm, useCustomer } from '@solvapay/react'
+import { actionButtonClassName } from '../../components/ui/Button'
 import '../../checkout/payment-form.css'
 
 interface StyledTopupFormProps {
@@ -62,7 +63,7 @@ export function StyledTopupForm({
           onError={onError}
           submitButtonText={`Pay $${formatDollars(amountCents)}`}
           className="space-y-6 payment-form-wrapper"
-          buttonClassName="w-full py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          buttonClassName={actionButtonClassName}
         />
       </div>
 

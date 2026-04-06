@@ -6,7 +6,7 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
 
 let capturedOnSuccess: ((paymentIntent: unknown) => void | Promise<void>) | undefined
-let capturedOnError: ((error: Error) => void) | undefined
+let _capturedOnError: ((error: Error) => void) | undefined
 
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) =>
@@ -26,7 +26,7 @@ vi.mock('../components/StripePaymentFormWrapper', () => ({
     onError?: (error: Error) => void
   }) => {
     capturedOnSuccess = props.onSuccess
-    capturedOnError = props.onError
+    _capturedOnError = props.onError
     return React.createElement('div', { 'data-testid': 'stripe-wrapper' }, 'MockWrapper')
   },
 }))
@@ -90,7 +90,7 @@ describe('PaymentForm - error/success separation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     capturedOnSuccess = undefined
-    capturedOnError = undefined
+    _capturedOnError = undefined
   })
 
   it('calls onSuccess (not onError) when processPayment succeeds', async () => {

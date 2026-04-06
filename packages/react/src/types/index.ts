@@ -365,9 +365,10 @@ export interface UsePlansOptions {
    */
   productRef?: string
   /**
-   * Optional filter function to filter plans
+   * Optional filter function to filter plans.
+   * Receives plan and its index (after sorting, if sortBy is provided).
    */
-  filter?: (plan: Plan) => boolean
+  filter?: (plan: Plan, index: number) => boolean
   /**
    * Optional sort function to sort plans
    */
@@ -376,6 +377,18 @@ export interface UsePlansOptions {
    * Auto-select first paid plan on load
    */
   autoSelectFirstPaid?: boolean
+  /**
+   * Plan reference to select initially when plans load.
+   * Applied at most once when selectionReady is true.
+   * Takes priority over autoSelectFirstPaid.
+   */
+  initialPlanRef?: string
+  /**
+   * When false, plans still fetch but auto-selection is deferred.
+   * When it transitions to true, one-shot initial selection fires.
+   * Defaults to true.
+   */
+  selectionReady?: boolean
 }
 
 /**
@@ -390,6 +403,8 @@ export interface UsePlansReturn {
   setSelectedPlanIndex: (index: number) => void
   selectPlan: (planRef: string) => void
   refetch: () => Promise<void>
+  /** True after the one-shot initial selection has been applied */
+  isSelectionReady: boolean
 }
 
 /**
@@ -407,7 +422,7 @@ export interface PricingSelectorProps {
   /**
    * Optional filter function
    */
-  filter?: (plan: Plan) => boolean
+  filter?: (plan: Plan, index: number) => boolean
   /**
    * Optional sort function
    */
@@ -506,6 +521,25 @@ export interface BalanceBadgeProps {
   currency?: string
   className?: string
   children?: (props: { balance: number | null; loading: boolean; currency: string }) => React.ReactNode
+}
+
+export interface UseTopupAmountSelectorOptions {
+  currency: string
+  minAmount?: number
+  maxAmount?: number
+}
+
+export interface UseTopupAmountSelectorReturn {
+  quickAmounts: number[]
+  selectedAmount: number | null
+  customAmount: string
+  resolvedAmount: number | null
+  selectQuickAmount: (amount: number) => void
+  setCustomAmount: (value: string) => void
+  error: string | null
+  validate: () => boolean
+  reset: () => void
+  currencySymbol: string
 }
 
 export type PurchaseStatusValue =

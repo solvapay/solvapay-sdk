@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { usePurchase, usePlans, usePurchaseStatus, usePurchaseActions } from '@solvapay/react'
+import { usePurchase, usePlans, usePurchaseStatus, usePurchaseActions, type Plan } from '@solvapay/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { sortPlansByPrice } from './utils/planHelpers'
@@ -33,8 +33,10 @@ export default function CheckoutPage() {
       throw new Error(errorData.error || 'Failed to fetch plans')
     }
     const data = await response.json()
-    return (data.plans || []).sort(sortPlansByPrice).slice(0, 2)
+    return data.plans || []
   }, [])
+
+  const showFirstTwo = useCallback((_plan: Plan, index: number) => index < 2, [])
 
   const {
     plans,
@@ -43,31 +45,23 @@ export default function CheckoutPage() {
     selectedPlanIndex,
     selectedPlan: currentPlan,
     setSelectedPlanIndex,
+    isSelectionReady,
   } = usePlans({
     productRef: productRef || '',
     fetcher: plansFetcher,
+    sortBy: sortPlansByPrice,
+    filter: showFirstTwo,
+    initialPlanRef: activePurchase?.planReference,
+    selectionReady: !purchaseLoading,
+    autoSelectFirstPaid: true,
   })
 
   const purchaseStatus = usePurchaseStatus()
 
-  const findActivePlanIndex = useCallback((): number => {
+  const activePlanIdx = useMemo(() => {
     if (!activePurchase?.planReference || plans.length === 0) return -1
     return plans.findIndex(p => p.reference === activePurchase.planReference)
   }, [activePurchase, plans])
-
-  useEffect(() => {
-    if (plans.length === 0 || purchaseLoading) return
-
-    const activeIdx = findActivePlanIndex()
-    if (activeIdx >= 0) {
-      setSelectedPlanIndex(activeIdx)
-    } else {
-      const firstPaid = plans.findIndex(p => p.requiresPayment !== false)
-      setSelectedPlanIndex(firstPaid >= 0 ? firstPaid : 0)
-    }
-  }, [findActivePlanIndex, setSelectedPlanIndex, plans, purchaseLoading])
-
-  const activePlanIdx = useMemo(() => findActivePlanIndex(), [findActivePlanIndex])
 
   const isOnActivePlan = useMemo(() => {
     if (!activePurchase || !currentPlan) return false
@@ -96,8 +90,8 @@ export default function CheckoutPage() {
   }
 
   const handleActivationSuccess = async () => {
-    await refetch()
     setPaymentSuccess(true)
+    await refetch()
     redirectTimeoutRef.current = setTimeout(() => {
       router.push('/')
     }, 2000)
@@ -166,7 +160,7 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <h2 className="text-xl font-semibold text-slate-900 mb-8">Choose your pricing</h2>
 
-            {(loading || purchaseLoading) && (
+            {(loading || !isSelectionReady) && !error && (
               <div className="text-center py-8 text-slate-500">Loading pricing...</div>
             )}
 
@@ -176,7 +170,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {!loading && !purchaseLoading && !error && plans.length > 0 && currentPlan && currentPlan.reference && (
+            {isSelectionReady && !loading && !error && plans.length > 0 && currentPlan && currentPlan.reference && (
               <>
                 {!showPaymentForm && !showActivation && (
                   <>

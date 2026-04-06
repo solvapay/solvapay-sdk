@@ -30,6 +30,7 @@ export { usePurchaseActions } from './hooks/usePurchaseActions'
 export { useActivation } from './hooks/useActivation'
 export { useTopup } from './hooks/useTopup'
 export { useBalance } from './hooks/useBalance'
+export { useTopupAmountSelector } from './hooks/useTopupAmountSelector'
 
 // Types
 export type {
@@ -62,6 +63,8 @@ export type {
   CancelResult,
   ReactivateResult,
   ActivatePlanResult,
+  UseTopupAmountSelectorOptions,
+  UseTopupAmountSelectorReturn,
 } from './types'
 export type { PurchaseActions } from './hooks/usePurchaseActions'
 export type { UseActivationReturn, ActivationState } from './hooks/useActivation'
