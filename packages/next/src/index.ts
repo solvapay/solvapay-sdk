@@ -249,6 +249,7 @@ export {
   createCustomerSession,
   activatePlan,
   cancelRenewal,
+  reactivateRenewal,
   listPlans,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,

@@ -232,6 +232,11 @@ export interface SolvaPayClient {
     reason?: string
   }): Promise<components['schemas']['PurchaseInfo']>
 
+  // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
+  reactivatePurchase?(params: {
+    purchaseRef: string
+  }): Promise<components['schemas']['PurchaseInfo']>
+
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
   processPaymentIntent?(params: {
     paymentIntentId: string

@@ -20,8 +20,8 @@ export { createCheckoutSession, createCustomerSession } from './checkout'
 // Export activation helpers
 export { activatePlan } from './activation'
 
-// Export purchase cancellation helpers
-export { cancelRenewal } from './renewal'
+// Export purchase cancellation & reactivation helpers
+export { cancelRenewal, reactivateRenewal } from './renewal'
 
 // Export plans helpers
 export { listPlans } from './plans'

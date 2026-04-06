@@ -1,7 +1,7 @@
 /**
- * Purchase Cancellation Helpers (Core)
+ * Purchase Cancellation & Reactivation Helpers (Core)
  *
- * Generic helpers for purchase cancellation operations.
+ * Generic helpers for purchase cancellation and reactivation operations.
  * Works with standard Web API Request (works everywhere).
  */
 
@@ -114,5 +114,111 @@ export async function cancelPurchaseCore(
     }
 
     return handleRouteError(error, 'Cancel purchase', 'Failed to cancel purchase')
+  }
+}
+
+/**
+ * Reactivate purchase - core implementation
+ *
+ * Undoes a pending cancellation, restoring auto-renewal and clearing cancellation fields.
+ * Only works while the purchase is still active and the end date hasn't passed.
+ *
+ * @param request - Standard Web API Request
+ * @param body - Reactivation parameters
+ * @param options - Configuration options
+ * @returns Reactivated purchase response or error result
+ */
+export async function reactivatePurchaseCore(
+  request: Request,
+  body: {
+    purchaseRef: string
+  },
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
+): Promise<Record<string, unknown> | ErrorResult> {
+  try {
+    if (!body.purchaseRef) {
+      return {
+        error: 'Missing required parameter: purchaseRef is required',
+        status: 400,
+      }
+    }
+
+    const solvaPay = options.solvaPay || createSolvaPay()
+
+    if (!solvaPay.apiClient.reactivatePurchase) {
+      return {
+        error: 'Reactivate purchase method not available on SDK client',
+        status: 500,
+      }
+    }
+
+    let reactivatedPurchase = await solvaPay.apiClient.reactivatePurchase({
+      purchaseRef: body.purchaseRef,
+    })
+
+    if (!reactivatedPurchase || typeof reactivatedPurchase !== 'object') {
+      return {
+        error: 'Invalid response from reactivate purchase endpoint',
+        status: 500,
+      }
+    }
+
+    const responseObj = reactivatedPurchase as unknown as Record<string, unknown>
+    if (responseObj.purchase && typeof responseObj.purchase === 'object') {
+      reactivatedPurchase = responseObj.purchase as typeof reactivatedPurchase
+    }
+
+    if (!reactivatedPurchase.reference) {
+      return {
+        error: 'Reactivate purchase response missing required fields',
+        status: 500,
+      }
+    }
+
+    if (reactivatedPurchase.cancelledAt) {
+      return {
+        error: `Purchase reactivation failed: cancelledAt is still set`,
+        status: 500,
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    return reactivatedPurchase
+  } catch (error: unknown) {
+    if (error instanceof SolvaPayError) {
+      const errorMessage = error.message
+
+      if (errorMessage.includes('not found')) {
+        return {
+          error: 'Purchase not found',
+          status: 404,
+          details: errorMessage,
+        }
+      }
+
+      if (
+        errorMessage.includes('cannot be reactivated') ||
+        errorMessage.includes('not pending cancellation') ||
+        errorMessage.includes('already been fully cancelled') ||
+        errorMessage.includes('already ended')
+      ) {
+        return {
+          error: 'Purchase cannot be reactivated',
+          status: 400,
+          details: errorMessage,
+        }
+      }
+
+      return {
+        error: errorMessage,
+        status: 500,
+        details: errorMessage,
+      }
+    }
+
+    return handleRouteError(error, 'Reactivate purchase', 'Failed to reactivate purchase')
   }
 }

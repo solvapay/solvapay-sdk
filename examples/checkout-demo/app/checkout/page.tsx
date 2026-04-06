@@ -27,6 +27,7 @@ export default function CheckoutPage() {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false)
   const [paymentFailed, setPaymentFailed] = useState<boolean>(false)
   const [isCancelling, setIsCancelling] = useState<boolean>(false)
+  const [isReactivating, setIsReactivating] = useState<boolean>(false)
   const { refetch, hasPaidPurchase, activePaidPurchase, activePurchase } =
     usePurchase()
   const router = useRouter()
@@ -185,6 +186,43 @@ export default function CheckoutPage() {
     }
   }
 
+  const handleReactivate = async () => {
+    const purchase = purchaseStatus.cancelledPurchase
+    if (!purchase) return
+
+    setIsReactivating(true)
+
+    try {
+      const accessToken = await getAccessToken()
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+      }
+
+      const res = await fetch('/api/reactivate-renewal', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ purchaseRef: purchase.reference }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        const errorMessage = errorData.error || 'Failed to reactivate'
+        console.error('Reactivate error:', errorMessage, errorData)
+        throw new Error(errorMessage)
+      }
+
+      await res.json()
+      await new Promise(resolve => setTimeout(resolve, 300))
+      await refetch()
+    } catch (err) {
+      console.error('Reactivate failed:', err)
+    } finally {
+      setIsReactivating(false)
+    }
+  }
+
   // Handle back to plan selection
   const handleBackToSelection = () => {
     setShowPaymentForm(false)
@@ -231,12 +269,15 @@ export default function CheckoutPage() {
                     <PurchaseNotices
                       cancelledPurchase={purchaseStatus.cancelledPurchase}
                       shouldShow={purchaseStatus.shouldShowCancelledNotice}
+                      onReactivate={handleReactivate}
+                      isReactivating={isReactivating}
                       className="mb-6"
                     />
 
                     <CheckoutActions
                       hasPaidPurchase={hasPaidPurchase}
                       activePurchase={activePurchase}
+                      selectedPlanRef={currentPlan.reference}
                       shouldShowCancelledNotice={purchaseStatus.shouldShowCancelledNotice}
                       onContinue={handleContinue}
                       onCancel={handleCancelPlan}

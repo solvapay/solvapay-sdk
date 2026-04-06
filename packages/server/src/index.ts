@@ -185,6 +185,7 @@ export {
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,
+  reactivatePurchaseCore,
   activatePlanCore,
   listPlansCore,
   isErrorResult,
