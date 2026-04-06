@@ -8,7 +8,7 @@
     "oauth:flow": "tsx scripts/run-oauth-flow.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.28.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@solvapay/core": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/server": "workspace:*",
