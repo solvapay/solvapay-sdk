@@ -12,11 +12,10 @@ import { useState } from 'react'
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { loading: purchasesLoading, hasPaidPurchase } = usePurchase()
+  const { loading: purchasesLoading, activePurchase } = usePurchase()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
-  // Show upgrade button when purchases are loaded and user doesn't have paid purchase
-  const showUpgradeButton = !purchasesLoading && !hasPaidPurchase
+  const showUpgradeButton = !purchasesLoading && !activePurchase
 
   const handleSignOut = async () => {
     setIsSigningOut(true)

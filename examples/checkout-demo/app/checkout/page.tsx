@@ -28,8 +28,7 @@ export default function CheckoutPage() {
   const [paymentFailed, setPaymentFailed] = useState<boolean>(false)
   const [isCancelling, setIsCancelling] = useState<boolean>(false)
   const [isReactivating, setIsReactivating] = useState<boolean>(false)
-  const { refetch, hasPaidPurchase, activePaidPurchase, activePurchase } =
-    usePurchase()
+  const { refetch, activePurchase } = usePurchase()
   const router = useRouter()
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -65,8 +64,13 @@ export default function CheckoutPage() {
   // Get advanced purchase status helpers
   const purchaseStatus = usePurchaseStatus()
 
-  // Note: Provider auto-fetches purchases on mount, so no manual refetch needed here
-  // Refetch is only called after operations that change purchase state (payment, cancellation)
+  // Pre-select the active plan when both plans and purchase data are loaded
+  const activePlanRef = activePurchase?.planSnapshot?.reference
+  useEffect(() => {
+    if (!activePlanRef || plans.length === 0) return
+    const idx = plans.findIndex(p => p.reference === activePlanRef)
+    if (idx >= 0) setSelectedPlanIndex(idx)
+  }, [activePlanRef, plans, setSelectedPlanIndex])
 
   // Handle payment success
   const handlePaymentSuccess = async (paymentIntent?: unknown) => {
@@ -135,7 +139,7 @@ export default function CheckoutPage() {
 
   // Handle cancel plan
   const handleCancelPlan = async () => {
-    const purchase = activePaidPurchase || activePurchase
+    const purchase = activePurchase
     if (!purchase) return
 
     const isUsageBased = activePurchase?.planSnapshot?.planType === 'usage-based'
@@ -275,7 +279,6 @@ export default function CheckoutPage() {
                     />
 
                     <CheckoutActions
-                      hasPaidPurchase={hasPaidPurchase}
                       activePurchase={activePurchase}
                       selectedPlanRef={currentPlan.reference}
                       shouldShowCancelledNotice={purchaseStatus.shouldShowCancelledNotice}

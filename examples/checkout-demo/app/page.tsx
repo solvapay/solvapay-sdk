@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 import Link from 'next/link'
 
@@ -21,16 +21,16 @@ export default function HomePage() {
     fetcher: fetchPlans,
   })
 
-  // Get purchase helpers from SDK
-  // Note: Plans are handled on the checkout page, so we pass empty array
-  // Purchase status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
-  // Use hasPaidPurchase and activePurchase consistently throughout the component
-  // Note: Provider auto-fetches purchases on mount, so no manual refetch needed here
   const {
     loading: purchasesLoading,
-    hasPaidPurchase,
     activePurchase,
+    refetch,
   } = usePurchase()
+
+  // Refetch purchases on mount so state is fresh after checkout redirect
+  useEffect(() => {
+    refetch()
+  }, [refetch])
 
   // Get advanced purchase status helpers
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
@@ -165,12 +165,12 @@ export default function HomePage() {
           <FeatureCard
             title="Advanced Analytics"
             description="Real-time data analysis with custom dashboards."
-            locked={!isLoading && !hasPaidPurchase}
+            locked={!isLoading && !activePurchase}
           />
           <FeatureCard
             title="Priority Support"
             description="Get help from our team within 24 hours."
-            locked={!isLoading && !hasPaidPurchase}
+            locked={!isLoading && !activePurchase}
           />
         </div>
 
@@ -182,7 +182,7 @@ export default function HomePage() {
                 <Skeleton className="h-5 w-64 mx-auto" />
                 <Skeleton className="h-10 w-48 mx-auto" />
               </div>
-            ) : hasPaidPurchase ? (
+            ) : activePurchase ? (
               <div className="text-center py-4">
                 <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
                 <Link href="/checkout">

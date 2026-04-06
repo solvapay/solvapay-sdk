@@ -1,5 +1,4 @@
 interface CheckoutActionsProps {
-  hasPaidPurchase: boolean
   activePurchase?: { planSnapshot?: { planType?: string; reference?: string } } | null
   selectedPlanRef: string | null
   shouldShowCancelledNotice: boolean
@@ -11,7 +10,6 @@ interface CheckoutActionsProps {
 }
 
 export function CheckoutActions({
-  hasPaidPurchase,
   activePurchase,
   selectedPlanRef,
   shouldShowCancelledNotice,
@@ -22,7 +20,7 @@ export function CheckoutActions({
   className = '',
 }: CheckoutActionsProps) {
   const isUsageBased = activePurchase?.planSnapshot?.planType === 'usage-based'
-  const hasActivePurchase = hasPaidPurchase || (activePurchase && isUsageBased)
+  const hasActivePurchase = !!activePurchase
   const activePlanRef = activePurchase?.planSnapshot?.reference ?? null
   const isSwitchingPlan = hasActivePurchase && selectedPlanRef !== activePlanRef
 
