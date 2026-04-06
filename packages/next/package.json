@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@solvapay/test-utils": "workspace:*",
-    "next": "^16.2.1",
+    "next": "^16.2.2",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.2"
