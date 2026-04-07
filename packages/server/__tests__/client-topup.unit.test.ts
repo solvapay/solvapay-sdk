@@ -39,7 +39,7 @@ describe('createSolvaPayClient - createTopupPaymentIntent', () => {
 
     const body = JSON.parse(options!.body as string)
     expect(body).toEqual({
-      customerReference: 'cus_123',
+      customerRef: 'cus_123',
       purpose: 'credit_topup',
       amount: 5000,
       currency: 'usd',

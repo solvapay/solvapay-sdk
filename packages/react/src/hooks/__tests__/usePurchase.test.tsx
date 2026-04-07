@@ -8,7 +8,7 @@ import type { PurchaseStatus, PurchaseInfo, SolvaPayContextValue } from '../../t
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
   productName: 'Test Product',
-  productReference: 'prd_123',
+  productRef: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
   amount: 1000,

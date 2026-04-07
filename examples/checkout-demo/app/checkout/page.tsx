@@ -51,7 +51,7 @@ export default function CheckoutPage() {
     fetcher: plansFetcher,
     sortBy: sortPlansByPrice,
     filter: showFirstTwo,
-    initialPlanRef: activePurchase?.planReference,
+    initialPlanRef: activePurchase?.planRef,
     selectionReady: !purchaseLoading,
     autoSelectFirstPaid: true,
   })
@@ -59,13 +59,13 @@ export default function CheckoutPage() {
   const purchaseStatus = usePurchaseStatus()
 
   const activePlanIdx = useMemo(() => {
-    if (!activePurchase?.planReference || plans.length === 0) return -1
-    return plans.findIndex(p => p.reference === activePurchase.planReference)
+    if (!activePurchase?.planRef || plans.length === 0) return -1
+    return plans.findIndex(p => p.reference === activePurchase.planRef)
   }, [activePurchase, plans])
 
   const isOnActivePlan = useMemo(() => {
     if (!activePurchase || !currentPlan) return false
-    return activePurchase.planReference === currentPlan.reference
+    return activePurchase.planRef === currentPlan.reference
   }, [activePurchase, currentPlan])
 
   const handlePaymentSuccess = async () => {

@@ -31,11 +31,24 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
       return AdapterUtils.ensureCustomerRef(ref)
     }
 
-    const customerRefFromExtra = extra?.authInfo?.extra?.customer_ref
-    const customerRef =
-      typeof customerRefFromExtra === 'string' && customerRefFromExtra.trim()
-        ? customerRefFromExtra.trim()
-        : 'anonymous'
+    const customerRefFromExtra =
+      typeof extra?.authInfo?.extra?.customer_ref === 'string'
+        ? String(extra.authInfo.extra.customer_ref)
+        : undefined
+    const customerRefFromArgs =
+      typeof args.auth === 'object' &&
+      args.auth !== null &&
+      typeof (args.auth as Record<string, unknown>).customer_ref === 'string'
+        ? String((args.auth as Record<string, unknown>).customer_ref)
+        : undefined
+    const directCustomerRef = typeof args.customer_ref === 'string' ? args.customer_ref : undefined
+
+    const customerRef = (
+      customerRefFromExtra ||
+      customerRefFromArgs ||
+      directCustomerRef ||
+      'anonymous'
+    ).trim()
     return AdapterUtils.ensureCustomerRef(customerRef)
   }
 

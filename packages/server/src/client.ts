@@ -439,7 +439,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         body: JSON.stringify({
           productRef: params.productRef,
           planRef: params.planRef,
-          customerReference: params.customerRef,
+          customerRef: params.customerRef,
         }),
       })
 
@@ -468,7 +468,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({
-          customerReference: params.customerRef,
+          customerRef: params.customerRef,
           purpose: 'credit_topup',
           amount: params.amount,
           currency: params.currency,

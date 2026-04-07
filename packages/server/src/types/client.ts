@@ -118,8 +118,8 @@ export interface SolvaPayClient {
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
-    productReference?: string
-    purchaseReference?: string
+    productRef?: string
+    purchaseRef?: string
     description?: string
     metadata?: Record<string, unknown>
     duration?: number
