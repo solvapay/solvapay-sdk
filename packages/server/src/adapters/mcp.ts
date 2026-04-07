@@ -31,7 +31,10 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
       return AdapterUtils.ensureCustomerRef(ref)
     }
 
-    const customerRefFromExtra = extra?.authInfo?.extra?.customer_ref
+    const customerRefFromExtra =
+      typeof extra?.authInfo?.extra?.customer_ref === 'string'
+        ? String(extra.authInfo.extra.customer_ref)
+        : undefined
     const customerRefFromArgs =
       typeof args.auth === 'object' &&
       args.auth !== null &&
