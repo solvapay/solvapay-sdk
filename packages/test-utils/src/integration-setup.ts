@@ -23,6 +23,8 @@ export interface TestPlanSetup {
   freeUnits: number
   type: string
   price: number
+  pricePerUnit?: number
+  currency: string
 }
 
 /**
@@ -161,6 +163,8 @@ export async function createTestPlan(
     freeUnits,
     type: planType,
     price,
+    pricePerUnit: opts.pricePerUnit,
+    currency,
   }
 }
 

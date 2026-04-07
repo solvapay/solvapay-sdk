@@ -71,7 +71,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
   let solvaPay: any
   let testCustomerRef: string
   let defaultProduct: { reference: string; name: string }
-  let defaultPlan: { reference: string; name: string; freeUnits?: number }
+  let defaultPlan: { reference: string; freeUnits?: number }
+  let creditPlan: { reference: string; freeUnits: number; pricePerUnit?: number; currency: string }
 
   beforeAll(async () => {
     if (!SOLVAPAY_SECRET_KEY) {
@@ -118,8 +119,33 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
       console.log('✅ Created fixture plan:', {
         reference: defaultPlan.reference,
-        name: defaultPlan.name,
         freeUnits: defaultPlan.freeUnits,
+      })
+
+      const rawCreditPlan = await createTestPlan(
+        apiBaseUrl,
+        SOLVAPAY_SECRET_KEY!,
+        defaultProduct.reference,
+        {
+          type: 'usage-based',
+          pricePerUnit: 100,
+          freeUnits: 5,
+          currency: 'USD',
+          isDefault: false,
+        },
+      )
+
+      // Backend zeroes freeUnits for usage-based plans on create, so patch via updatePlan
+      await apiClient.updatePlan(defaultProduct.reference, rawCreditPlan.reference, {
+        freeUnits: 5,
+      })
+      creditPlan = { ...rawCreditPlan, freeUnits: 5 }
+
+      console.log('✅ Created credit plan:', {
+        reference: creditPlan.reference,
+        freeUnits: creditPlan.freeUnits,
+        pricePerUnit: creditPlan.pricePerUnit,
+        currency: creditPlan.currency,
       })
       console.log()
 
@@ -595,7 +621,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
 
       const freeUnits = initialCheck.remaining
-      console.log(`\n📊 Testing free tier exhaustion: ${freeUnits} units on "${defaultPlan.name}"`)
+      console.log(`\n📊 Testing free tier exhaustion: ${freeUnits} units on "${defaultPlan.reference}"`)
 
       if (freeUnits <= 0 || !initialCheck.withinLimits) {
         console.log('⏭️  Skipping free-tier exhaustion assertions: customer starts with no credits')
@@ -1062,23 +1088,20 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
   describe('Error Handling - API Errors & Edge Cases', () => {
     it('should handle invalid customer references gracefully', async () => {
-      // Try with empty customer ref
       const payable = solvaPay.payable({
         productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
 
-      // This might succeed with a default customer or return an error
-      // Either way, it should not crash
       try {
         await protectedHandler({
           title: 'Test Task',
           auth: { customer_ref: '' },
         })
-        expect(true).toBe(true) // Success path
+        expect(true).toBe(true)
       } catch (error) {
-        expect(error).toBeDefined() // Error path is also valid
+        expect(error).toBeDefined()
       }
     })
 
@@ -1097,7 +1120,6 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       const freeUnitsCount = limits.remaining
       const hasFreeTier = limits.withinLimits && freeUnitsCount > 0
 
-      // Create 5 concurrent requests (each with unique customer to avoid conflicts)
       const promises = Array.from({ length: 5 }, (_, i) =>
         protectedHandler({
           title: `Concurrent Task ${i}`,
@@ -1109,7 +1131,6 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(results).toHaveLength(5)
 
       if (hasFreeTier) {
-        // With free units: all should succeed
         results.forEach((result: any, index) => {
           expect(result.success).toBe(true)
           expect(result.task.title).toBe(`Concurrent Task ${index}`)
@@ -1118,13 +1139,257 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           `✅ Concurrent requests handled (${freeUnitsCount} free units): all 5 succeeded`,
         )
       } else {
-        // No free units: all should be blocked
         results.forEach((result: any) => {
           expect(result).toBeDefined()
           expect(result.message).toContain('Payment required')
         })
         console.log(`✅ Concurrent requests handled (no free units): all 5 blocked`)
       }
+    })
+  })
+
+  // ============================================================================
+  // Test 7: Credit Consumption & Topup Paywall
+  // ============================================================================
+
+  describe('Credit Consumption & Topup Paywall', () => {
+    /**
+     * Activate the credit plan for a fresh customer. Must be called BEFORE
+     * checkLimits so the customer gets a usage-based purchase (not the
+     * auto-provisioned default recurring plan).
+     */
+    async function activateCreditPlan(customerRef: string) {
+      const activation = await apiClient.activatePlan({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(['activated', 'already_active']).toContain(activation.status)
+      return activation
+    }
+
+    async function burnCredits(customerRef: string, units: number) {
+      for (let i = 0; i < units; i++) {
+        await apiClient.trackUsage({
+          customerRef,
+          actionType: 'api_call',
+          units: 1,
+          outcome: 'success',
+          productReference: defaultProduct.reference,
+          timestamp: new Date().toISOString(),
+        })
+      }
+    }
+
+    it('should initialize credit balance correctly on usage-based plan activation', async () => {
+      const customer = `test_credit_init_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      const activation = await activateCreditPlan(customerRef)
+      console.log(`📊 Activation response: ${JSON.stringify(activation)}`)
+
+      const result = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+      })
+
+      expect(result.withinLimits).toBe(true)
+      expect(result.remaining).toBe(creditPlan.freeUnits)
+      expect(result.creditBalance).toBeDefined()
+      expect(typeof result.creditBalance).toBe('number')
+      expect(result.pricePerUnit).toBeDefined()
+      expect(typeof result.pricePerUnit).toBe('number')
+      expect(result.currency).toBeDefined()
+      expect(typeof result.currency).toBe('string')
+
+      console.log(`✅ Credit plan activated: remaining=${result.remaining}, creditBalance=${result.creditBalance}, pricePerUnit=${result.pricePerUnit}, currency=${result.currency}`)
+    })
+
+    it('should return correct balance via getCustomerBalance for usage-based plan', async () => {
+      const customer = `test_credit_bal_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const balanceResult = await apiClient.getCustomerBalance({ customerRef })
+
+      expect(balanceResult).toBeDefined()
+      expect(balanceResult.customerRef).toBe(customerRef)
+      expect(balanceResult.balances).toBeDefined()
+      expect(Array.isArray(balanceResult.balances)).toBe(true)
+      expect(balanceResult.balances.length).toBeGreaterThan(0)
+
+      const usdBalance = balanceResult.balances.find((b: any) => b.currency === 'USD')
+      expect(usdBalance).toBeDefined()
+      expect(typeof usdBalance.balance).toBe('number')
+      expect(usdBalance.balance).toBeGreaterThan(0)
+
+      console.log(`✅ getCustomerBalance: ${JSON.stringify(balanceResult.balances)}`)
+    })
+
+    it('should deduct credits and decrement remaining units on usage consumption', async () => {
+      const customer = `test_credit_use_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const initial = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+      })
+      expect(initial.remaining).toBe(5)
+
+      await burnCredits(customerRef, 1)
+      const after1 = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+      })
+      expect(after1.remaining).toBe(4)
+      expect(after1.withinLimits).toBe(true)
+
+      await burnCredits(customerRef, 2)
+      const after3 = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+      })
+      expect(after3.remaining).toBe(2)
+      expect(after3.withinLimits).toBe(true)
+
+      const balanceResult = await apiClient.getCustomerBalance({ customerRef })
+      const usdBalance = balanceResult.balances.find((b: any) => b.currency === 'USD')
+      expect(usdBalance).toBeDefined()
+
+      const initialBalance = initial.creditBalance ?? 0
+      expect(usdBalance.balance).toBeLessThan(initialBalance)
+
+      console.log(`✅ Credit consumption: 5 → 4 → 2, balance decreased from ${initialBalance} to ${usdBalance.balance}`)
+    })
+
+    it('should consume credits when calling protected functions on usage-based plan', async () => {
+      const customer = `test_credit_fn_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      const protectedHandler = await payable.function(createTask)
+
+      const result = await protectedHandler({
+        title: 'Credit-based task',
+        description: 'Should deduct from credit balance',
+        auth: { customer_ref: customer },
+      })
+      expect(result).toHaveProperty('success', true)
+
+      const afterCheck = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+      })
+      expect(afterCheck.remaining).toBe(4)
+
+      console.log(`✅ Protected function consumed 1 credit: remaining=${afterCheck.remaining}`)
+    })
+
+    it('should fire paywall with topup info when credits are exhausted', async () => {
+      const customer = `test_credit_paywall_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const initial = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+      })
+      expect(initial.remaining).toBe(5)
+
+      await burnCredits(customerRef, 5)
+
+      const exhausted = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+      })
+      expect(exhausted.withinLimits).toBe(false)
+      expect(exhausted.remaining).toBeLessThanOrEqual(0)
+
+      const hasPaymentUrl = exhausted.checkoutUrl || exhausted.confirmationUrl
+      expect(hasPaymentUrl).toBeTruthy()
+
+      if (exhausted.creditBalance !== undefined) {
+        expect(exhausted.creditBalance).toBeLessThanOrEqual(0)
+      }
+
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      const protectedHandler = await payable.function(createTask)
+
+      await expect(
+        protectedHandler({
+          title: 'Should be blocked',
+          auth: { customer_ref: customer },
+        }),
+      ).rejects.toThrow('Payment required')
+
+      console.log(`✅ Paywall fired after credit exhaustion: checkoutUrl=${exhausted.checkoutUrl}, confirmationUrl=${exhausted.confirmationUrl}`)
+    })
+
+    it('should return topup information in MCP handler when credits exhausted', async () => {
+      const customer = `test_credit_mcp_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+      await burnCredits(customerRef, 5)
+
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      const mcpHandler = payable.mcp(listTasks)
+
+      const result: any = await mcpHandler({
+        limit: 10,
+        auth: { customer_ref: customer },
+      })
+
+      expect(result).toHaveProperty('content')
+      expect(result.content[0].type).toBe('text')
+      const parsed = JSON.parse(result.content[0].text)
+
+      expect(parsed.success).toBe(false)
+      const errorText = String(parsed.error || parsed.message || '')
+      expect(errorText).toContain('Payment required')
+
+      console.log(`✅ MCP handler returned paywall response: ${errorText.substring(0, 100)}`)
+    })
+
+    it('should return valid payment intent shape from createTopupPaymentIntent', async () => {
+      const customer = `test_credit_topup_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const result = await apiClient.createTopupPaymentIntent({
+        customerRef,
+        amount: 1000,
+        currency: 'USD',
+      })
+
+      expect(result).toBeDefined()
+      expect(result.id).toBeDefined()
+      expect(typeof result.id).toBe('string')
+      expect(result.clientSecret).toBeDefined()
+      expect(typeof result.clientSecret).toBe('string')
+      expect(result.publishableKey).toBeDefined()
+      expect(typeof result.publishableKey).toBe('string')
+
+      console.log(`✅ createTopupPaymentIntent: id=${result.id}, has clientSecret=${!!result.clientSecret}, has publishableKey=${!!result.publishableKey}`)
     })
   })
 })
