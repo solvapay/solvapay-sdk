@@ -840,7 +840,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should record usage and return a reference', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
       })
@@ -857,7 +857,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       for (const actionType of actionTypes) {
         const res = await rawUsagePost({
-          customerId: usageCustomerRef,
+          customerRef: usageCustomerRef,
           actionType,
           units: 1,
         })
@@ -872,7 +872,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       for (const outcome of outcomes) {
         const res = await rawUsagePost({
-          customerId: usageCustomerRef,
+          customerRef: usageCustomerRef,
           actionType: 'api_call',
           outcome,
           units: 1,
@@ -885,7 +885,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should record usage with metadata, description, and duration', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 3,
         outcome: 'success',
@@ -905,7 +905,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       const idempotencyKey = `idem_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
       const first = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         idempotencyKey,
@@ -915,7 +915,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       const firstRef = first.body.reference
 
       const second = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         idempotencyKey,
@@ -926,7 +926,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log(`  idempotency: both calls returned same reference ${firstRef}`)
     })
 
-    it('should reject missing customerId', async () => {
+    it('should reject missing customerRef', async () => {
       const res = await rawUsagePost({
         actionType: 'api_call',
         units: 1,
@@ -937,7 +937,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject invalid actionType', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'invalid_type',
         units: 1,
       })
@@ -947,7 +947,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject invalid outcome', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         outcome: 'unknown',
         units: 1,
@@ -958,7 +958,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject units exceeding 100,000', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 100_001,
       })
@@ -968,7 +968,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject negative units', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: -1,
       })
@@ -979,7 +979,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     it('should reject timestamp too far in the future (>24h)', async () => {
       const futureDate = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString()
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         timestamp: futureDate,
@@ -991,7 +991,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     it('should reject timestamp too far in the past (>30d)', async () => {
       const pastDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString()
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         timestamp: pastDate,
@@ -1003,7 +1003,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     it('should accept a valid past timestamp (within 30d)', async () => {
       const validPast = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         timestamp: validPast,
@@ -1014,9 +1014,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should record bulk usage with new fields', async () => {
       const events = [
-        { customerId: usageCustomerRef, actionType: 'api_call', units: 1, outcome: 'success', metadata: { toolName: 'tool_a' } },
-        { customerId: usageCustomerRef, actionType: 'transaction', units: 2, outcome: 'success', metadata: { toolName: 'tool_b' } },
-        { customerId: usageCustomerRef, actionType: 'email', units: 1, outcome: 'fail', description: 'delivery failed' },
+        { customerRef: usageCustomerRef, actionType: 'api_call', units: 1, outcome: 'success', metadata: { toolName: 'tool_a' } },
+        { customerRef: usageCustomerRef, actionType: 'transaction', units: 2, outcome: 'success', metadata: { toolName: 'tool_b' } },
+        { customerRef: usageCustomerRef, actionType: 'email', units: 1, outcome: 'fail', description: 'delivery failed' },
       ]
 
       const res = await rawBulkUsagePost({ events })
@@ -1032,9 +1032,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(res.body.message).toBe('Validation failed')
     })
 
-    it('should reject bulk when any event is missing customerId', async () => {
+    it('should reject bulk when any event is missing customerRef', async () => {
       const events = [
-        { customerId: usageCustomerRef, actionType: 'api_call', units: 1 },
+        { customerRef: usageCustomerRef, actionType: 'api_call', units: 1 },
         { actionType: 'api_call', units: 1 },
       ]
       const res = await rawBulkUsagePost({ events })

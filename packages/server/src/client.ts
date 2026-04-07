@@ -448,7 +448,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       const result = await res.json()
-      return result
+      return { ...result, id: result.stripePaymentIntentId }
     },
 
     // POST: /v1/sdk/payment-intents (purpose: credit_topup)
@@ -481,7 +481,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       const result = await res.json()
-      return result
+      return { ...result, id: result.stripePaymentIntentId }
     },
 
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
