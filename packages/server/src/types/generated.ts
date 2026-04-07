@@ -169,7 +169,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a product
-         * @description Deletes a product permanently in sandbox or when no purchases exist. In live mode with purchases, the product is deactivated instead.
+         * @description Deletes a product permanently in sandbox. In live mode, soft-deletes (preserves data but hides from listings). If the product has purchases in live mode, deactivates instead.
          */
         delete: operations["ProductSdkController_deleteProduct"];
         options?: never;
@@ -541,6 +541,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/purchases/{purchaseRef}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate a cancelled purchase
+         * @description Reactivates a purchase that was cancelled but has not yet reached its end date. Restores auto-renewal and clears cancellation fields.
+         */
+        post: operations["PurchaseSdkController_reactivatePurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/limits": {
         parameters: {
             query?: never;
@@ -583,7 +603,7 @@ export interface components {
     schemas: {
         CreatePaymentIntentDto: {
             productRef?: string;
-            customerReference: string;
+            customerRef: string;
             planRef?: string;
             pricingTier?: string;
             /**
@@ -988,7 +1008,7 @@ export interface components {
              * MCP linkage details for MCP-enabled products
              * @example {
              *       "mcpServerId": "67f90f1f1b1c9c0b8df0f111",
-             *       "mcpServerReference": "mcp_ABC123",
+             *       "mcpServerRef": "mcp_ABC123",
              *       "mcpSubdomain": "acme-docs",
              *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
              *       "originUrl": "https://origin.example.com/mcp",
@@ -1151,8 +1171,8 @@ export interface components {
              * @enum {string}
              */
             outcome: "success" | "paywall" | "fail";
-            productReference?: string;
-            purchaseReference?: string;
+            productRef?: string;
+            purchaseRef?: string;
             description?: string;
             errorMessage?: string;
             metadata: {
@@ -1178,8 +1198,8 @@ export interface components {
                  * @enum {string}
                  */
                 outcome: "success" | "paywall" | "fail";
-                productReference?: string;
-                purchaseReference?: string;
+                productRef?: string;
+                purchaseRef?: string;
                 description?: string;
                 errorMessage?: string;
                 metadata?: {
@@ -1199,7 +1219,7 @@ export interface components {
                 [key: string]: unknown;
             };
             productId?: string;
-            productReference?: string;
+            productRef?: string;
             timestamp?: string;
         };
         RecordBulkMeterEventsZodDto: {
@@ -1211,7 +1231,7 @@ export interface components {
                     [key: string]: unknown;
                 };
                 productId?: string;
-                productReference?: string;
+                productRef?: string;
                 timestamp?: string;
             }[];
         };
@@ -1244,7 +1264,7 @@ export interface components {
              * Product reference
              * @example prd_abc123
              */
-            productReference?: string;
+            productRef?: string;
             /**
              * Purchase status
              * @example active
@@ -1290,6 +1310,11 @@ export interface components {
              * @example Customer request
              */
             cancellationReason?: string;
+            /**
+             * Plan reference from the plan snapshot, for reliable plan matching
+             * @example pln_abc123
+             */
+            planRef?: string;
             /** @description Snapshot of the plan at time of purchase */
             planSnapshot?: Record<string, never>;
         };
@@ -1706,7 +1731,7 @@ export interface components {
         ActivatePlanResponseDto: {
             /** @enum {string} */
             status: "activated" | "already_active" | "topup_required" | "payment_required" | "invalid";
-            purchaseReference?: string;
+            purchaseRef?: string;
             message?: string;
             creditBalance?: number;
             pricePerUnit?: number;
@@ -2870,6 +2895,46 @@ export interface operations {
                         purchase?: components["schemas"]["PurchaseResponse"];
                     };
                 };
+            };
+            /** @description Purchase not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PurchaseSdkController_reactivatePurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Purchase reference or ID */
+                purchaseRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchase reactivated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success?: boolean;
+                        purchase?: components["schemas"]["PurchaseResponse"];
+                    };
+                };
+            };
+            /** @description Purchase cannot be reactivated */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Purchase not found */
             404: {

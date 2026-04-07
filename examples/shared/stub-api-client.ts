@@ -391,8 +391,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
-    productReference?: string
-    purchaseReference?: string
+    productRef?: string
+    purchaseRef?: string
     description?: string
     metadata?: Record<string, unknown>
     duration?: number
@@ -411,7 +411,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
    * Create a checkout session (for testing)
    */
   async createCheckoutSession(params: {
-    customerReference: string
+    customerRef: string
     productRef: string
     planRef?: string
   }): Promise<{
@@ -428,7 +428,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     const sessionId = `sess_${Math.random().toString(36).slice(2, 15)}`
 
     const queryParams = new URLSearchParams({
-      customer: params.customerReference,
+      customer: params.customerRef,
       product: params.productRef,
       sessionId: sessionId,
     })
@@ -439,7 +439,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     const checkoutUrl = `https://checkout.solvapay.com/demo?${queryParams.toString()}`
 
-    this.log(`💳 Created checkout session for ${params.customerReference}: ${checkoutUrl}`)
+    this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`)
 
     return {
       id,

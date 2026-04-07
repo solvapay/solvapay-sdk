@@ -35,7 +35,7 @@ const PURCHASE_ACTIVE = {
       productName: 'Pro',
       status: 'active',
       startDate: '2026-01-01',
-      planReference: 'pln_pro',
+      planRef: 'pln_pro',
     },
   ],
 }
@@ -48,7 +48,7 @@ const PURCHASE_UPDATED = {
       productName: 'Pro',
       status: 'active',
       startDate: '2026-01-01',
-      planReference: 'pln_pro_v2',
+      planRef: 'pln_pro_v2',
     },
   ],
 }
@@ -113,7 +113,7 @@ describe('SolvaPayProvider - purchase state management', () => {
       })
 
       await waitFor(() => {
-        expect(result.current.purchase.activePurchase?.planReference).toBe('pln_pro_v2')
+        expect(result.current.purchase.activePurchase?.planRef).toBe('pln_pro_v2')
       })
     })
 
@@ -121,7 +121,7 @@ describe('SolvaPayProvider - purchase state management', () => {
       const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
       await waitFor(() => {
-        expect(result.current.purchase.activePurchase?.planReference).toBe('pln_pro')
+        expect(result.current.purchase.activePurchase?.planRef).toBe('pln_pro')
       })
 
       fetchSpy.mockImplementation(() =>
@@ -136,7 +136,7 @@ describe('SolvaPayProvider - purchase state management', () => {
       })
 
       await waitFor(() => {
-        expect(result.current.purchase.activePurchase?.planReference).toBe('pln_pro_v2')
+        expect(result.current.purchase.activePurchase?.planRef).toBe('pln_pro_v2')
       })
     })
   })

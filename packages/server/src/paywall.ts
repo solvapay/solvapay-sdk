@@ -577,7 +577,7 @@ export class SolvaPayPaywall {
           actionType: 'api_call',
           units: 1,
           outcome,
-          productReference: _productRef,
+          productRef: _productRef,
           duration: actionDuration,
           metadata: { action: action || 'api_requests', requestId },
           timestamp: new Date().toISOString(),
