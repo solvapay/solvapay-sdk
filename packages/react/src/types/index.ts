@@ -21,12 +21,11 @@ export interface PurchaseInfo {
   isRecurring?: boolean
   nextBillingDate?: string
   billingCycle?: string
-  transactionId?: string
   planRef?: string
   planSnapshot?: {
     reference?: string
     price?: number
-    meterId?: string
+    meterRef?: string
     limit?: number
     freeUnits?: number
     pricePerUnit?: number
@@ -322,7 +321,6 @@ export interface PaymentError extends Error {
  */
 export interface Plan {
   type?: 'recurring' | 'one-time' | 'usage-based'
-  id?: string
   reference: string
   name?: string
   description?: string

@@ -651,15 +651,15 @@ export interface components {
              */
             type: "recurring" | "one-time" | "usage-based";
             /**
-             * Plan ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
              * Plan reference
              * @example pln_1A2B3C4D
              */
             reference: string;
+            /**
+             * Meter reference for usage-based plans
+             * @example mtr_1A2B3C4D
+             */
+            meterRef?: string;
             /**
              * Plan name
              * @example Starter
@@ -853,11 +853,6 @@ export interface components {
         };
         SdkPlanResponse: {
             /**
-             * Plan ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
              * Plan reference
              * @example pln_1A2B3C4D
              */
@@ -952,11 +947,6 @@ export interface components {
         };
         SdkProductResponse: {
             /**
-             * Product ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
-            /**
              * Product reference
              * @example prd_1A2B3C4D
              */
@@ -1007,12 +997,11 @@ export interface components {
             /**
              * MCP linkage details for MCP-enabled products
              * @example {
-             *       "mcpServerId": "67f90f1f1b1c9c0b8df0f111",
              *       "mcpServerRef": "mcp_ABC123",
              *       "mcpSubdomain": "acme-docs",
              *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
              *       "originUrl": "https://origin.example.com/mcp",
-             *       "defaultPlanId": "67f90f1f1b1c9c0b8df0f001"
+             *       "defaultPlanRef": "pln_FREE123"
              *     }
              */
             mcp?: {
@@ -1082,12 +1071,11 @@ export interface components {
             /**
              * Created or updated MCP server identity
              * @example {
-             *       "id": "67f90f1f1b1c9c0b8df0f111",
              *       "reference": "mcp_ABC123",
              *       "subdomain": "acme-docs",
              *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
              *       "url": "https://origin.example.com/mcp",
-             *       "defaultPlanId": "67f90f1f1b1c9c0b8df0f001"
+             *       "defaultPlanRef": "pln_FREE123"
              *     }
              */
             mcpServer: {
@@ -1097,7 +1085,6 @@ export interface components {
              * Resolved plan mapping by bootstrap key
              * @example {
              *       "free": {
-             *         "id": "67f90f1f1b1c9c0b8df0f001",
              *         "reference": "pln_FREE123",
              *         "name": "Free"
              *       }
@@ -1158,7 +1145,7 @@ export interface components {
             name?: string;
         };
         CreateUsageRequest: {
-            customerId: string;
+            customerRef: string;
             /**
              * @default api_call
              * @enum {string}
@@ -1185,7 +1172,7 @@ export interface components {
         };
         BulkCreateUsageRequest: {
             events: {
-                customerId: string;
+                customerRef: string;
                 /**
                  * @default api_call
                  * @enum {string}
@@ -1213,24 +1200,22 @@ export interface components {
         };
         RecordMeterEventZodDto: {
             meterName: string;
-            customerId: string;
+            customerRef: string;
             value?: number;
             properties: {
                 [key: string]: unknown;
             };
-            productId?: string;
             productRef?: string;
             timestamp?: string;
         };
         RecordBulkMeterEventsZodDto: {
             events: {
                 meterName: string;
-                customerId: string;
+                customerRef: string;
                 value?: number;
                 properties?: {
                     [key: string]: unknown;
                 };
-                productId?: string;
                 productRef?: string;
                 timestamp?: string;
             }[];
@@ -1411,10 +1396,10 @@ export interface components {
             /** @example 750 */
             remaining: number;
             /**
-             * Meter ObjectId reference
-             * @example 507f1f77bcf86cd799439011
+             * Meter reference
+             * @example meter_ABC123
              */
-            meterId?: string;
+            meterRef?: string | null;
             /** @example 25 */
             percentUsed?: number | null;
         };
@@ -1676,7 +1661,6 @@ export interface components {
             remainingUnits?: number;
         };
         LimitProductBriefDto: {
-            id?: string;
             reference: string;
             name?: string;
         };
@@ -2750,10 +2734,10 @@ export interface operations {
             query?: {
                 /** @description Filter by purchase status */
                 status?: "pending" | "active" | "trialing" | "past_due" | "cancelled" | "expired" | "suspended" | "refunded";
-                /** @description Filter by product ID */
-                productId?: string;
-                /** @description Filter by customer ID */
-                customerId?: string;
+                /** @description Filter by product reference */
+                productRef?: string;
+                /** @description Filter by customer reference */
+                customerRef?: string;
             };
             header?: never;
             path?: never;

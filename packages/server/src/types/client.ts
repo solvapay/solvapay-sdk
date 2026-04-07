@@ -74,14 +74,13 @@ export type McpToolPlanMappingInput =
 export interface McpBootstrapResponse {
   product: components['schemas']['SdkProductResponse']
   mcpServer: {
-    id?: string
     reference?: string
     subdomain?: string
     mcpProxyUrl?: string
     url: string
-    defaultPlanId?: string
+    defaultPlanRef?: string
   }
-  planMap: Record<string, { id: string; reference: string; name?: string }>
+  planMap: Record<string, { reference: string; name?: string }>
   toolsAutoMapped?: boolean
   autoMappedTools?: Array<{ name: string; description?: string }>
 }
@@ -91,14 +90,13 @@ export type ConfigureMcpPlansRequest = components['schemas']['ConfigureMcpPlansD
 export interface ConfigureMcpPlansResponse {
   product: components['schemas']['SdkProductResponse']
   mcpServer: {
-    id?: string
     reference?: string
     subdomain?: string
     mcpProxyUrl?: string
     url: string
-    defaultPlanId?: string
+    defaultPlanRef?: string
   }
-  planMap: Record<string, { id: string; reference: string; name?: string }>
+  planMap: Record<string, { reference: string; name?: string }>
 }
 
 /**

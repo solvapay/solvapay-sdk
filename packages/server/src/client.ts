@@ -101,13 +101,11 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // POST: /v1/sdk/usages
     async trackUsage(params) {
       const url = `${base}/v1/sdk/usages`
-      const { customerRef, ...rest } = params
-      const body = { ...rest, customerId: customerRef }
 
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body: JSON.stringify(params),
       })
 
       if (!res.ok) {
