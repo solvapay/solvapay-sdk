@@ -11,7 +11,7 @@ interface PlanSelectionSectionProps {
 
 function PlanPricing({ plan }: { plan: Plan }) {
   if (isUsageBasedPlan(plan)) {
-    const unitPrice = formatPerUnitPrice(plan.pricePerUnit)
+    const unitPrice = formatPerUnitPrice(plan.creditsPerUnit)
     const unit = plan.measures || 'use'
     return (
       <>

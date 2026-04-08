@@ -28,7 +28,7 @@ export interface PurchaseInfo {
     meterRef?: string
     limit?: number
     freeUnits?: number
-    pricePerUnit?: number
+    creditsPerUnit?: number
     planType?: string
     billingCycle?: string | null
     features?: Record<string, unknown> | null
@@ -127,10 +127,10 @@ export interface PurchaseStatus {
  */
 export interface BalanceStatus {
   loading: boolean
-  balance: number | null
-  currency: string | null
+  credits: number | null
+  displayCurrency: string | null
   refetch: () => Promise<void>
-  adjustBalance: (amount: number) => void
+  adjustBalance: (credits: number) => void
 }
 
 export interface SolvaPayConfig {
@@ -328,7 +328,7 @@ export interface Plan {
   trialDays?: number
   billingCycle?: string
   billingModel?: 'pre-paid' | 'post-paid'
-  pricePerUnit?: number
+  creditsPerUnit?: number
   measures?: string
   limit?: number
   rolloverUnusedUnits?: boolean
@@ -513,7 +513,11 @@ export interface PaymentFormProps {
 
 export interface BalanceBadgeProps {
   className?: string
-  children?: (props: { balance: number | null; loading: boolean; currency: string | null }) => React.ReactNode
+  children?: (props: {
+    credits: number | null
+    loading: boolean
+    displayCurrency: string | null
+  }) => React.ReactNode
 }
 
 export interface UseTopupAmountSelectorOptions {

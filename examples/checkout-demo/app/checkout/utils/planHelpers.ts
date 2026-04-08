@@ -13,9 +13,9 @@ export function formatPrice(price?: number): string {
 /**
  * Format a per-unit price (cents, possibly fractional like 0.1)
  */
-export function formatPerUnitPrice(pricePerUnit?: number): string {
-  if (!pricePerUnit) return '0'
-  const dollars = pricePerUnit / 100
+export function formatPerUnitPrice(creditsPerUnit?: number): string {
+  if (!creditsPerUnit) return '0'
+  const dollars = creditsPerUnit / 100
   if (dollars >= 1) return dollars.toFixed(2).replace(/\.00$/, '')
   if (dollars >= 0.01) return dollars.toFixed(2)
   return dollars.toFixed(4).replace(/0+$/, '')

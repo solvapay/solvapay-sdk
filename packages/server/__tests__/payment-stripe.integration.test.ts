@@ -85,7 +85,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   let usageBasedPlan: {
     reference: string
     name: string
-    pricePerUnit?: number
+    creditsPerUnit?: number
     type?: string
     freeUnits?: number
   } | null = null
@@ -149,7 +149,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       usageBasedPlan =
         plans.find(
-          (p: any) => p.type === 'usage-based' && Number(p.pricePerUnit || 0) > 0 && Number(p.freeUnits || 0) > 0,
+          (p: any) => p.type === 'usage-based' && Number(p.creditsPerUnit || 0) > 0 && Number(p.freeUnits || 0) > 0,
         ) || null
 
       if (!usageBasedPlan) {
@@ -160,7 +160,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
           type: 'usage-based',
           billingModel: 'pre-paid',
           billingCycle: 'monthly',
-          pricePerUnit: 100,
+          creditsPerUnit: 100,
           currency: 'USD',
           freeUnits: 5,
           limit: 5,

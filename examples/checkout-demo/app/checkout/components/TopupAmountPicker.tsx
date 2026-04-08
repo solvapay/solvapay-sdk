@@ -4,7 +4,7 @@ import type { UseTopupAmountSelectorReturn } from '@solvapay/react'
 import { Button } from '../../components/ui/Button'
 
 interface TopupAmountPickerProps extends UseTopupAmountSelectorReturn {
-  pricePerUnit?: number
+  creditsPerUnit?: number
   onContinue: () => void
   submitting?: boolean
 }
@@ -18,15 +18,15 @@ export function TopupAmountPicker({
   setCustomAmount,
   error,
   currencySymbol,
-  pricePerUnit,
+  creditsPerUnit,
   onContinue,
   submitting,
 }: TopupAmountPickerProps) {
   const resolvedAmountMinor =
     resolvedAmount != null && resolvedAmount > 0 ? Math.round(resolvedAmount * 100) : null
   const estimatedUnits =
-    pricePerUnit != null && pricePerUnit > 0 && resolvedAmountMinor != null
-      ? Math.floor(resolvedAmountMinor / pricePerUnit)
+    creditsPerUnit != null && creditsPerUnit > 0 && resolvedAmountMinor != null
+      ? Math.floor(resolvedAmountMinor / creditsPerUnit)
       : null
 
   return (

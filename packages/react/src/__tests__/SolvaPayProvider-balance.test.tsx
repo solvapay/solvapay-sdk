@@ -27,7 +27,7 @@ function createWrapper(props?: Record<string, any>) {
   return Wrapper
 }
 
-describe('SolvaPayProvider - balance (single balance)', () => {
+describe('SolvaPayProvider - balance (credits)', () => {
   let fetchSpy: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -41,7 +41,8 @@ describe('SolvaPayProvider - balance (single balance)', () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              balances: [{ currency: 'USD', balance: 5000 }],
+              credits: 500000,
+              displayCurrency: 'USD',
             }),
         })
       }
@@ -81,12 +82,12 @@ describe('SolvaPayProvider - balance (single balance)', () => {
     expect(getBalanceCalls()).toHaveLength(0)
   })
 
-  it('balance context value starts with null balance and currency', async () => {
+  it('balance context value starts with null credits and displayCurrency', async () => {
     const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
     expect(result.current.balance.loading).toBe(false)
-    expect(result.current.balance.balance).toBeNull()
-    expect(result.current.balance.currency).toBeNull()
+    expect(result.current.balance.credits).toBeNull()
+    expect(result.current.balance.displayCurrency).toBeNull()
     expect(typeof result.current.balance.refetch).toBe('function')
   })
 
@@ -107,7 +108,7 @@ describe('SolvaPayProvider - balance (single balance)', () => {
     expect(getBalanceCalls()[0][0]).toBe('/api/customer-balance')
   })
 
-  it('balance.refetch() populates single balance and currency', async () => {
+  it('balance.refetch() populates credits and displayCurrency', async () => {
     const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
     await waitFor(() => {
@@ -118,8 +119,8 @@ describe('SolvaPayProvider - balance (single balance)', () => {
       await result.current.balance.refetch()
     })
 
-    expect(result.current.balance.balance).toBe(5000)
-    expect(result.current.balance.currency).toBe('USD')
+    expect(result.current.balance.credits).toBe(500000)
+    expect(result.current.balance.displayCurrency).toBe('USD')
   })
 
   it('adjustBalance blocks refetch during grace period', async () => {
@@ -132,21 +133,21 @@ describe('SolvaPayProvider - balance (single balance)', () => {
     await act(async () => {
       await result.current.balance.refetch()
     })
-    expect(result.current.balance.balance).toBe(5000)
+    expect(result.current.balance.credits).toBe(500000)
     const callsBefore = getBalanceCalls().length
 
     act(() => {
-      result.current.balance.adjustBalance(1000)
+      result.current.balance.adjustBalance(100000)
     })
 
-    expect(result.current.balance.balance).toBe(6000)
+    expect(result.current.balance.credits).toBe(600000)
 
     await act(async () => {
       await result.current.balance.refetch()
     })
 
     expect(getBalanceCalls()).toHaveLength(callsBefore)
-    expect(result.current.balance.balance).toBe(6000)
+    expect(result.current.balance.credits).toBe(600000)
   })
 
   it('adjustBalance auto-reconciles after grace period', async () => {
@@ -162,9 +163,9 @@ describe('SolvaPayProvider - balance (single balance)', () => {
     const callsBefore = getBalanceCalls().length
 
     act(() => {
-      result.current.balance.adjustBalance(1000)
+      result.current.balance.adjustBalance(100000)
     })
-    expect(result.current.balance.balance).toBe(6000)
+    expect(result.current.balance.credits).toBe(600000)
 
     await act(async () => {
       vi.advanceTimersByTime(8500)
@@ -174,10 +175,10 @@ describe('SolvaPayProvider - balance (single balance)', () => {
       expect(getBalanceCalls().length).toBeGreaterThan(callsBefore)
     })
 
-    expect(result.current.balance.balance).toBe(5000)
+    expect(result.current.balance.credits).toBe(500000)
   })
 
-  it('keeps balance on fetch error instead of wiping', async () => {
+  it('keeps credits on fetch error instead of wiping', async () => {
     const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
     await waitFor(() => {
@@ -187,7 +188,7 @@ describe('SolvaPayProvider - balance (single balance)', () => {
     await act(async () => {
       await result.current.balance.refetch()
     })
-    expect(result.current.balance.balance).toBe(5000)
+    expect(result.current.balance.credits).toBe(500000)
 
     fetchSpy.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('customer-balance')) {
@@ -203,7 +204,7 @@ describe('SolvaPayProvider - balance (single balance)', () => {
       await result.current.balance.refetch()
     })
 
-    expect(result.current.balance.balance).toBe(5000)
-    expect(result.current.balance.currency).toBe('USD')
+    expect(result.current.balance.credits).toBe(500000)
+    expect(result.current.balance.displayCurrency).toBe('USD')
   })
 })

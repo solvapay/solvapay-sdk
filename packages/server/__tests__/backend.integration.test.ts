@@ -72,7 +72,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
   let testCustomerRef: string
   let defaultProduct: { reference: string; name: string }
   let defaultPlan: { reference: string; freeUnits?: number }
-  let creditPlan: { reference: string; freeUnits: number; pricePerUnit?: number; currency: string }
+  let creditPlan: { reference: string; freeUnits: number; creditsPerUnit?: number; currency: string }
 
   beforeAll(async () => {
     if (!SOLVAPAY_SECRET_KEY) {
@@ -128,7 +128,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         defaultProduct.reference,
         {
           type: 'usage-based',
-          pricePerUnit: 100,
+          creditsPerUnit: 100,
           freeUnits: 5,
           currency: 'USD',
           isDefault: false,
@@ -144,7 +144,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log('✅ Created credit plan:', {
         reference: creditPlan.reference,
         freeUnits: creditPlan.freeUnits,
-        pricePerUnit: creditPlan.pricePerUnit,
+        creditsPerUnit: creditPlan.creditsPerUnit,
         currency: creditPlan.currency,
       })
       console.log()
@@ -1199,8 +1199,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       expect(result.withinLimits).toBe(true)
       expect(result.remaining).toBeGreaterThan(0)
-      if (result.pricePerUnit !== undefined) {
-        expect(typeof result.pricePerUnit).toBe('number')
+      if (result.creditsPerUnit !== undefined) {
+        expect(typeof result.creditsPerUnit).toBe('number')
       }
       if (result.creditBalance !== undefined) {
         expect(typeof result.creditBalance).toBe('number')

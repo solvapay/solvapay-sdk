@@ -10,7 +10,7 @@ export function PaymentSummary({ selectedPlan, className = '' }: PaymentSummaryP
   if (!selectedPlan) return null
 
   if (isUsageBasedPlan(selectedPlan)) {
-    const unitPrice = formatPerUnitPrice(selectedPlan.pricePerUnit)
+    const unitPrice = formatPerUnitPrice(selectedPlan.creditsPerUnit)
     const unit = selectedPlan.measures || 'use'
     return (
       <div className={`flex justify-between items-center ${className}`}>

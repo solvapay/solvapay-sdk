@@ -124,8 +124,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const [userId, setUserId] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  const [balanceValue, setBalanceValue] = useState<number | null>(null)
-  const [balanceCurrency, setBalanceCurrency] = useState<string | null>(null)
+  const [creditsValue, setCreditsValue] = useState<number | null>(null)
+  const [displayCurrencyValue, setDisplayCurrencyValue] = useState<string | null>(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
   const balanceInFlightRef = useRef(false)
   const balanceLoadedRef = useRef(false)
@@ -290,8 +290,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     if (optimisticUntilRef.current > Date.now()) return
 
     if (!isAuthenticated && !internalCustomerRef) {
-      setBalanceValue(null)
-      setBalanceCurrency(null)
+      setCreditsValue(null)
+      setDisplayCurrencyValue(null)
       setBalanceLoading(false)
       balanceLoadedRef.current = false
       return
@@ -317,9 +317,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       }
 
       const data = await res.json()
-      const first = data.balances?.[0]
-      setBalanceValue(first?.balance ?? null)
-      setBalanceCurrency(first?.currency ?? null)
+      setCreditsValue(data.credits ?? null)
+      setDisplayCurrencyValue(data.displayCurrency ?? null)
       balanceLoadedRef.current = true
     } catch (error) {
       console.error('[SolvaPayProvider] Failed to fetch balance:', error)
@@ -341,8 +340,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   const OPTIMISTIC_GRACE_MS = 8000
 
-  const adjustBalanceImpl = useCallback((amount: number) => {
-    setBalanceValue(prev => (prev ?? 0) + amount)
+  const adjustBalanceImpl = useCallback((credits: number) => {
+    setCreditsValue(prev => (prev ?? 0) + credits)
 
     optimisticUntilRef.current = Date.now() + OPTIMISTIC_GRACE_MS
 
@@ -657,12 +656,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const balance: BalanceStatus = useMemo(
     () => ({
       loading: balanceLoading,
-      balance: balanceValue,
-      currency: balanceCurrency,
+      credits: creditsValue,
+      displayCurrency: displayCurrencyValue,
       refetch: fetchBalanceImpl,
       adjustBalance: adjustBalanceImpl,
     }),
-    [balanceLoading, balanceValue, balanceCurrency, fetchBalanceImpl, adjustBalanceImpl],
+    [balanceLoading, creditsValue, displayCurrencyValue, fetchBalanceImpl, adjustBalanceImpl],
   )
 
   const contextValue: SolvaPayContextValue = useMemo(

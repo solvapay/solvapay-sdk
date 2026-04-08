@@ -411,7 +411,7 @@ export interface SolvaPay {
     checkoutUrl?: string
     meterName?: string
     creditBalance?: number
-    pricePerUnit?: number
+    creditsPerUnit?: number
     currency?: string
   }>
 

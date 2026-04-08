@@ -715,7 +715,7 @@ export interface components {
              * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
              * @example 0.1
              */
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
             /**
              * What the plan measures for usage tracking
              * @example requests
@@ -771,7 +771,7 @@ export interface components {
             /** @enum {string} */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
             price?: number;
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
             currency?: string;
             /** @enum {string} */
             billingModel?: "pre-paid" | "post-paid";
@@ -798,7 +798,7 @@ export interface components {
             /** @enum {string} */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
             price?: number;
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
             currency?: string;
             /** @enum {string} */
             billingModel?: "pre-paid" | "post-paid";
@@ -896,7 +896,7 @@ export interface components {
              * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
              * @example 0.1
              */
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
             /**
              * What the plan measures for usage tracking
              * @example requests
@@ -1048,7 +1048,7 @@ export interface components {
                 billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
                 /** @enum {string} */
                 type?: "recurring" | "one-time" | "usage-based";
-                pricePerUnit?: number;
+                creditsPerUnit?: number;
                 /** @enum {string} */
                 billingModel?: "pre-paid" | "post-paid";
                 freeUnits?: number;
@@ -1116,7 +1116,7 @@ export interface components {
                 billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
                 /** @enum {string} */
                 type?: "recurring" | "one-time" | "usage-based";
-                pricePerUnit?: number;
+                creditsPerUnit?: number;
                 /** @enum {string} */
                 billingModel?: "pre-paid" | "post-paid";
                 freeUnits?: number;
@@ -1533,7 +1533,7 @@ export interface components {
              * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
              * @example 0.1
              */
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
         };
         SdkPurchaseResponse: {
             /**
@@ -1638,7 +1638,7 @@ export interface components {
             requiresPayment: boolean;
             freeUnits?: number;
             /** @description Price per usage unit in mils (usage-based plans) */
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
             billingModel?: string;
             billingCycle?: string;
         };
@@ -1646,9 +1646,9 @@ export interface components {
             /** @description Credit balance in mils */
             creditBalance: number;
             /** @description Price per usage unit in mils */
-            pricePerUnit: number;
+            creditsPerUnit: number;
             currency: string;
-            /** @description Estimated whole units remaining from prepaid balance at current pricePerUnit */
+            /** @description Estimated whole units remaining from prepaid balance at current creditsPerUnit */
             remainingUnits?: number;
         };
         LimitProductBriefDto: {
@@ -1684,7 +1684,7 @@ export interface components {
             /** @description Credit balance in mils (for pre-paid usage-based plans) */
             creditBalance?: number;
             /** @description Price per usage unit in mils (for pre-paid usage-based plans) */
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
             /** @description ISO 4217 currency code for credit fields */
             currency?: string;
             /** @description True when the customer must activate a priced default plan before usage is allowed */
@@ -1709,7 +1709,7 @@ export interface components {
             purchaseRef?: string;
             message?: string;
             creditBalance?: number;
-            pricePerUnit?: number;
+            creditsPerUnit?: number;
             currency?: string;
             checkoutUrl?: string;
             checkoutSessionId?: string;

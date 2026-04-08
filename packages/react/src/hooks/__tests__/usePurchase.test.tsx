@@ -44,10 +44,10 @@ const createMockContextValue = (
   reactivateRenewal: vi.fn(),
   activatePlan: vi.fn(),
   customerRef: 'test_customer_ref',
-  balance: {
+    balance: {
     loading: false,
-    balance: null,
-    currency: null,
+    credits: null,
+    displayCurrency: null,
     refetch: vi.fn(),
     adjustBalance: vi.fn(),
   },

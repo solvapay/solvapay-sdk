@@ -34,7 +34,7 @@ export function ActivationSection({
   const [step, setStep] = useState<FlowStep>('plan_summary')
   const calledSuccessRef = useRef(false)
 
-  const unitPrice = formatPerUnitPrice(currentPlan.pricePerUnit)
+  const unitPrice = formatPerUnitPrice(currentPlan.creditsPerUnit)
   const unit = currentPlan.measures || 'use'
   const planLabel =
     typeof currentPlan.metadata?.name === 'string'
@@ -180,7 +180,7 @@ export function ActivationSection({
 
         <TopupAmountPicker
           {...amountSelector}
-          pricePerUnit={result?.pricePerUnit ?? currentPlan.pricePerUnit}
+          creditsPerUnit={result?.creditsPerUnit ?? currentPlan.creditsPerUnit}
           onContinue={handleContinueToPayment}
         />
 

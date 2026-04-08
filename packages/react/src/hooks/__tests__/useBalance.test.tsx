@@ -28,8 +28,8 @@ function createMockContext(
     activatePlan: vi.fn(),
     balance: {
       loading: false,
-      balance: 2500,
-      currency: 'USD',
+      credits: 250000,
+      displayCurrency: 'USD',
       refetch: vi.fn(),
       adjustBalance: vi.fn(),
       ...balanceOverrides,
@@ -59,14 +59,14 @@ describe('useBalance', () => {
   it('returns balance state from context', () => {
     const ctx = createMockContext({
       loading: true,
-      balance: 1000,
-      currency: 'GBP',
+      credits: 100000,
+      displayCurrency: 'GBP',
     })
     const { result } = renderHook(() => useBalance(), { wrapper: createWrapper(ctx) })
 
     expect(result.current.loading).toBe(true)
-    expect(result.current.balance).toBe(1000)
-    expect(result.current.currency).toBe('GBP')
+    expect(result.current.credits).toBe(100000)
+    expect(result.current.displayCurrency).toBe('GBP')
     expect(typeof result.current.refetch).toBe('function')
   })
 

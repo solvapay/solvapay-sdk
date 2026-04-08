@@ -3,41 +3,38 @@
 import { useBalance } from '../hooks/useBalance'
 import type { BalanceBadgeProps } from '../types'
 
-/**
- * Headless component that displays a customer's credit balance.
- *
- * With render prop:
- * ```tsx
- * <BalanceBadge>
- *   {({ balance, loading, currency }) => loading ? '...' : `$${(balance ?? 0) / 100}`}
- * </BalanceBadge>
- * ```
- *
- * Without render prop (renders formatted balance in a span):
- * ```tsx
- * <BalanceBadge className="text-sm font-medium" />
- * ```
- */
+const CREDITS_PER_MINOR_UNIT = 100
+
 export function BalanceBadge({ className, children }: BalanceBadgeProps) {
-  const { balance, currency, loading } = useBalance()
+  const { credits, displayCurrency, loading } = useBalance()
 
   if (children) {
-    return <>{children({ balance, loading, currency })}</>
+    return <>{children({ credits, loading, displayCurrency })}</>
   }
 
   if (loading) {
     return <span className={className} aria-busy="true" />
   }
 
-  if (balance === null || !currency) {
+  if (credits == null) {
     return null
   }
 
-  const formatted = new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(balance / 100)
+  const formattedCredits = new Intl.NumberFormat().format(credits)
 
-  return <span className={className}>{formatted}</span>
+  let currencyEquivalent = ''
+  if (displayCurrency) {
+    const minorUnits = credits / CREDITS_PER_MINOR_UNIT
+    currencyEquivalent = ` (~${new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: displayCurrency,
+      minimumFractionDigits: 2,
+    }).format(minorUnits / 100)})`
+  }
+
+  return (
+    <span className={className}>
+      {formattedCredits} credits{currencyEquivalent}
+    </span>
+  )
 }

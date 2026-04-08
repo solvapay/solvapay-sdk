@@ -23,7 +23,7 @@ export interface TestPlanSetup {
   freeUnits: number
   type: string
   price: number
-  pricePerUnit?: number
+  creditsPerUnit?: number
   currency: string
 }
 
@@ -94,7 +94,7 @@ export interface CreateTestPlanOptions {
   billingCycle?: string
   freeUnits?: number
   limit?: number
-  pricePerUnit?: number
+  creditsPerUnit?: number
   isDefault?: boolean
 }
 
@@ -134,11 +134,11 @@ export async function createTestPlan(
 
   if (planType === 'usage-based') {
     body.billingModel = 'pre-paid'
-    body.pricePerUnit = opts.pricePerUnit ?? 0
+    body.creditsPerUnit = opts.creditsPerUnit ?? 0
   }
 
   if (planType === 'hybrid') {
-    body.pricePerUnit = opts.pricePerUnit ?? 0
+    body.creditsPerUnit = opts.creditsPerUnit ?? 0
     body.basePrice = price
   }
 
@@ -163,7 +163,7 @@ export async function createTestPlan(
     freeUnits,
     type: planType,
     price,
-    pricePerUnit: opts.pricePerUnit,
+    creditsPerUnit: opts.creditsPerUnit,
     currency,
   }
 }
