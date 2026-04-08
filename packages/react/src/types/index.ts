@@ -125,16 +125,12 @@ export interface PurchaseStatus {
  * SolvaPay Provider Configuration
  * Sensible defaults for minimal code, but fully customizable
  */
-export interface CreditBalance {
-  currency: string
-  balance: number
-}
-
 export interface BalanceStatus {
   loading: boolean
-  balances: CreditBalance[]
+  balance: number | null
+  currency: string | null
   refetch: () => Promise<void>
-  adjustBalance: (amount: number, currency?: string) => void
+  adjustBalance: (amount: number) => void
 }
 
 export interface SolvaPayConfig {
@@ -516,9 +512,8 @@ export interface PaymentFormProps {
 }
 
 export interface BalanceBadgeProps {
-  currency?: string
   className?: string
-  children?: (props: { balance: number | null; loading: boolean; currency: string }) => React.ReactNode
+  children?: (props: { balance: number | null; loading: boolean; currency: string | null }) => React.ReactNode
 }
 
 export interface UseTopupAmountSelectorOptions {

@@ -57,7 +57,6 @@ export type {
   TopupPaymentResult,
   UseTopupOptions,
   UseTopupReturn,
-  CreditBalance,
   BalanceStatus,
   BalanceBadgeProps,
   CancelResult,

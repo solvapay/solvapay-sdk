@@ -11,6 +11,8 @@ function createMockContext(
   return {
     purchase: {
       loading: false,
+      isRefetching: false,
+      error: null,
       purchases: [],
       hasProduct: () => false,
       hasPlan: () => false,
@@ -21,10 +23,15 @@ function createMockContext(
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
+    cancelRenewal: vi.fn(),
+    reactivateRenewal: vi.fn(),
+    activatePlan: vi.fn(),
     balance: {
       loading: false,
-      balances: [{ currency: 'USD', balance: 2500 }],
+      balance: 2500,
+      currency: 'USD',
       refetch: vi.fn(),
+      adjustBalance: vi.fn(),
       ...balanceOverrides,
     },
   }
@@ -52,12 +59,14 @@ describe('useBalance', () => {
   it('returns balance state from context', () => {
     const ctx = createMockContext({
       loading: true,
-      balances: [{ currency: 'GBP', balance: 1000 }],
+      balance: 1000,
+      currency: 'GBP',
     })
     const { result } = renderHook(() => useBalance(), { wrapper: createWrapper(ctx) })
 
     expect(result.current.loading).toBe(true)
-    expect(result.current.balances).toEqual([{ currency: 'GBP', balance: 1000 }])
+    expect(result.current.balance).toBe(1000)
+    expect(result.current.currency).toBe('GBP')
     expect(typeof result.current.refetch).toBe('function')
   })
 

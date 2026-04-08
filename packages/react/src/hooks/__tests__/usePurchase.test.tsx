@@ -20,6 +20,8 @@ const createMockPurchaseStatus = (
   overrides: Partial<PurchaseStatus> = {},
 ): PurchaseStatus => ({
   loading: false,
+  isRefetching: false,
+  error: null,
   purchases: [],
   hasProduct: vi.fn(() => false),
   hasPlan: vi.fn(() => false),
@@ -38,11 +40,16 @@ const createMockContextValue = (
   refetchPurchase,
   createPayment: vi.fn(),
   createTopupPayment: vi.fn(),
+  cancelRenewal: vi.fn(),
+  reactivateRenewal: vi.fn(),
+  activatePlan: vi.fn(),
   customerRef: 'test_customer_ref',
   balance: {
     loading: false,
-    balances: [],
+    balance: null,
+    currency: null,
     refetch: vi.fn(),
+    adjustBalance: vi.fn(),
   },
 })
 

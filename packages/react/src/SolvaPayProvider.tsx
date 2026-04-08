@@ -7,7 +7,6 @@ import type {
   CustomerPurchaseData,
   PaymentIntentResult,
   TopupPaymentResult,
-  CreditBalance,
   BalanceStatus,
   CancelResult,
   ReactivateResult,
@@ -125,7 +124,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const [userId, setUserId] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  const [balances, setBalances] = useState<CreditBalance[]>([])
+  const [balanceValue, setBalanceValue] = useState<number | null>(null)
+  const [balanceCurrency, setBalanceCurrency] = useState<string | null>(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
   const balanceInFlightRef = useRef(false)
   const balanceLoadedRef = useRef(false)
@@ -286,12 +286,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     [],
   )
 
-  // Balance is fetched on-demand via useBalance(), not eagerly on mount.
   const fetchBalanceImpl = useCallback(async () => {
     if (optimisticUntilRef.current > Date.now()) return
 
     if (!isAuthenticated && !internalCustomerRef) {
-      setBalances([])
+      setBalanceValue(null)
+      setBalanceCurrency(null)
       setBalanceLoading(false)
       balanceLoadedRef.current = false
       return
@@ -317,7 +317,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       }
 
       const data = await res.json()
-      setBalances(data.balances || [])
+      const first = data.balances?.[0]
+      setBalanceValue(first?.balance ?? null)
+      setBalanceCurrency(first?.currency ?? null)
       balanceLoadedRef.current = true
     } catch (error) {
       console.error('[SolvaPayProvider] Failed to fetch balance:', error)
@@ -339,17 +341,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
   const OPTIMISTIC_GRACE_MS = 8000
 
-  const adjustBalanceImpl = useCallback((amount: number, currency = 'USD') => {
-    setBalances(prev => {
-      const upper = currency.toUpperCase()
-      const idx = prev.findIndex(b => b.currency.toUpperCase() === upper)
-      if (idx >= 0) {
-        const updated = [...prev]
-        updated[idx] = { ...updated[idx], balance: updated[idx].balance + amount }
-        return updated
-      }
-      return [...prev, { currency: upper, balance: amount }]
-    })
+  const adjustBalanceImpl = useCallback((amount: number) => {
+    setBalanceValue(prev => (prev ?? 0) + amount)
 
     optimisticUntilRef.current = Date.now() + OPTIMISTIC_GRACE_MS
 
@@ -664,11 +657,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const balance: BalanceStatus = useMemo(
     () => ({
       loading: balanceLoading,
-      balances,
+      balance: balanceValue,
+      currency: balanceCurrency,
       refetch: fetchBalanceImpl,
       adjustBalance: adjustBalanceImpl,
     }),
-    [balanceLoading, balances, fetchBalanceImpl, adjustBalanceImpl],
+    [balanceLoading, balanceValue, balanceCurrency, fetchBalanceImpl, adjustBalanceImpl],
   )
 
   const contextValue: SolvaPayContextValue = useMemo(

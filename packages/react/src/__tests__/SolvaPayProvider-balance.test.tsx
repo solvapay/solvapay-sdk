@@ -27,7 +27,7 @@ function createWrapper(props?: Record<string, any>) {
   return Wrapper
 }
 
-describe('SolvaPayProvider - balance (lazy fetch)', () => {
+describe('SolvaPayProvider - balance (single balance)', () => {
   let fetchSpy: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -81,25 +81,12 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
     expect(getBalanceCalls()).toHaveLength(0)
   })
 
-  it('does NOT call /api/customer-balance after purchase check resolves', async () => {
-    const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
-
-    await waitFor(() => {
-      expect(result.current.purchase.loading).toBe(false)
-    })
-
-    await act(async () => {
-      await new Promise(r => setTimeout(r, 50))
-    })
-
-    expect(getBalanceCalls()).toHaveLength(0)
-  })
-
-  it('balance context value starts with empty state', async () => {
+  it('balance context value starts with null balance and currency', async () => {
     const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
     expect(result.current.balance.loading).toBe(false)
-    expect(result.current.balance.balances).toEqual([])
+    expect(result.current.balance.balance).toBeNull()
+    expect(result.current.balance.currency).toBeNull()
     expect(typeof result.current.balance.refetch).toBe('function')
   })
 
@@ -120,7 +107,7 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
     expect(getBalanceCalls()[0][0]).toBe('/api/customer-balance')
   })
 
-  it('balance.refetch() populates balances on context', async () => {
+  it('balance.refetch() populates single balance and currency', async () => {
     const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
     await waitFor(() => {
@@ -131,9 +118,8 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
       await result.current.balance.refetch()
     })
 
-    expect(result.current.balance.balances).toEqual([
-      { currency: 'USD', balance: 5000 },
-    ])
+    expect(result.current.balance.balance).toBe(5000)
+    expect(result.current.balance.currency).toBe('USD')
   })
 
   it('adjustBalance blocks refetch during grace period', async () => {
@@ -146,21 +132,21 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
     await act(async () => {
       await result.current.balance.refetch()
     })
-    expect(result.current.balance.balances).toEqual([{ currency: 'USD', balance: 5000 }])
+    expect(result.current.balance.balance).toBe(5000)
     const callsBefore = getBalanceCalls().length
 
     act(() => {
-      result.current.balance.adjustBalance(1000, 'USD')
+      result.current.balance.adjustBalance(1000)
     })
 
-    expect(result.current.balance.balances).toEqual([{ currency: 'USD', balance: 6000 }])
+    expect(result.current.balance.balance).toBe(6000)
 
     await act(async () => {
       await result.current.balance.refetch()
     })
 
     expect(getBalanceCalls()).toHaveLength(callsBefore)
-    expect(result.current.balance.balances).toEqual([{ currency: 'USD', balance: 6000 }])
+    expect(result.current.balance.balance).toBe(6000)
   })
 
   it('adjustBalance auto-reconciles after grace period', async () => {
@@ -176,9 +162,9 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
     const callsBefore = getBalanceCalls().length
 
     act(() => {
-      result.current.balance.adjustBalance(1000, 'USD')
+      result.current.balance.adjustBalance(1000)
     })
-    expect(result.current.balance.balances).toEqual([{ currency: 'USD', balance: 6000 }])
+    expect(result.current.balance.balance).toBe(6000)
 
     await act(async () => {
       vi.advanceTimersByTime(8500)
@@ -188,10 +174,10 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
       expect(getBalanceCalls().length).toBeGreaterThan(callsBefore)
     })
 
-    expect(result.current.balance.balances).toEqual([{ currency: 'USD', balance: 5000 }])
+    expect(result.current.balance.balance).toBe(5000)
   })
 
-  it('keeps balances on fetch error instead of wiping', async () => {
+  it('keeps balance on fetch error instead of wiping', async () => {
     const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
     await waitFor(() => {
@@ -201,7 +187,7 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
     await act(async () => {
       await result.current.balance.refetch()
     })
-    expect(result.current.balance.balances).toEqual([{ currency: 'USD', balance: 5000 }])
+    expect(result.current.balance.balance).toBe(5000)
 
     fetchSpy.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('customer-balance')) {
@@ -217,6 +203,7 @@ describe('SolvaPayProvider - balance (lazy fetch)', () => {
       await result.current.balance.refetch()
     })
 
-    expect(result.current.balance.balances).toEqual([{ currency: 'USD', balance: 5000 }])
+    expect(result.current.balance.balance).toBe(5000)
+    expect(result.current.balance.currency).toBe('USD')
   })
 })

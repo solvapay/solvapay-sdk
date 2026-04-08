@@ -11,9 +11,7 @@ import type { BalanceStatus } from '../types'
  *
  * @example
  * ```tsx
- * const { balances, loading, refetch } = useBalance()
- *
- * const usdBalance = balances.find(b => b.currency === 'USD')
+ * const { balance, currency, loading, refetch } = useBalance()
  * ```
  */
 export function useBalance(): BalanceStatus {

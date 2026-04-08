@@ -35,7 +35,8 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     activatePlan: vi.fn(),
     balance: {
       loading: false,
-      balances: [],
+      balance: null,
+      currency: null,
       refetch: vi.fn(),
       adjustBalance: vi.fn(),
     },
