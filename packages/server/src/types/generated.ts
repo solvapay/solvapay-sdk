@@ -501,7 +501,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/purchases/{id}": {
+    "/v1/sdk/purchases/{purchaseRef}": {
         parameters: {
             query?: never;
             header?: never;
@@ -509,7 +509,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a purchase by ID or reference
+         * Get a purchase by reference
          * @description Retrieves a single purchase including plan snapshot, usage, and billing details.
          */
         get: operations["PurchaseSdkController_getPurchase"];
@@ -902,6 +902,11 @@ export interface components {
              * @example requests
              */
             measures?: string;
+            /**
+             * Meter reference for usage-based limits
+             * @example mtr_1A2B3C4D
+             */
+            meterRef?: string;
             /**
              * Usage limit for the meter
              * @example 10000
@@ -1448,7 +1453,34 @@ export interface components {
             user?: components["schemas"]["UserInfoUserDto"];
             purchase?: components["schemas"]["UserInfoPurchaseDto"];
         };
-        PlanSnapshotDto: {
+        UsageBillingDto: {
+            /**
+             * Units consumed in current period
+             * @example 150
+             */
+            used: number;
+            /**
+             * Units exceeding the plan limit
+             * @example 0
+             */
+            overageUnits: number;
+            /**
+             * Overage cost in cents
+             * @example 0
+             */
+            overageCost: number;
+            /**
+             * Period start date
+             * @example 2025-10-01T00:00:00Z
+             */
+            periodStart?: string;
+            /**
+             * Period end date
+             * @example 2025-11-01T00:00:00Z
+             */
+            periodEnd?: string;
+        };
+        SdkPlanSnapshotDto: {
             /**
              * Plan reference
              * @example pln_1A2B3C4D
@@ -1483,10 +1515,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
-             * Meter ObjectId reference
-             * @example 507f1f77bcf86cd799439011
+             * Meter reference
+             * @example mtr_1A2B3C4D
              */
-            meterId?: string;
+            meterRef?: string;
             /**
              * Usage limit for the meter
              * @example 5000
@@ -1503,39 +1535,7 @@ export interface components {
              */
             pricePerUnit?: number;
         };
-        UsageBillingDto: {
-            /**
-             * Units consumed in current period
-             * @example 150
-             */
-            used: number;
-            /**
-             * Units exceeding the plan limit
-             * @example 0
-             */
-            overageUnits: number;
-            /**
-             * Overage cost in cents
-             * @example 0
-             */
-            overageCost: number;
-            /**
-             * Period start date
-             * @example 2025-10-01T00:00:00Z
-             */
-            periodStart?: string;
-            /**
-             * Period end date
-             * @example 2025-11-01T00:00:00Z
-             */
-            periodEnd?: string;
-        };
-        PurchaseResponse: {
-            /**
-             * Purchase ID
-             * @example 507f1f77bcf86cd799439011
-             */
-            id: string;
+        SdkPurchaseResponse: {
             /**
              * Purchase reference
              * @example pur_1A2B3C4D
@@ -1557,17 +1557,12 @@ export interface components {
              */
             productRef: string;
             /**
-             * Product ID
-             * @example 507f1f77bcf86cd799439012
-             */
-            productId?: string;
-            /**
              * Product name
              * @example API Gateway Manager
              */
             productName?: string;
             /** @description Plan snapshot at time of purchase (null for credit topups) */
-            planSnapshot?: components["schemas"]["PlanSnapshotDto"];
+            planSnapshot?: components["schemas"]["SdkPlanSnapshotDto"];
             /**
              * Purchase status
              * @example active
@@ -2748,7 +2743,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        purchases?: components["schemas"]["PurchaseResponse"][];
+                        purchases?: components["schemas"]["SdkPurchaseResponse"][];
                     };
                 };
             };
@@ -2773,7 +2768,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        purchases?: components["schemas"]["PurchaseResponse"][];
+                        purchases?: components["schemas"]["SdkPurchaseResponse"][];
                     };
                 };
             };
@@ -2805,7 +2800,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        purchases?: components["schemas"]["PurchaseResponse"][];
+                        purchases?: components["schemas"]["SdkPurchaseResponse"][];
                     };
                 };
             };
@@ -2823,8 +2818,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Purchase ID or reference */
-                id: string;
+                /** @description Purchase reference or ID */
+                purchaseRef: string;
             };
             cookie?: never;
         };
@@ -2836,7 +2831,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PurchaseResponse"];
+                    "application/json": components["schemas"]["SdkPurchaseResponse"];
                 };
             };
             /** @description Purchase not found */
@@ -2872,7 +2867,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         success?: boolean;
-                        purchase?: components["schemas"]["PurchaseResponse"];
+                        purchase?: components["schemas"]["SdkPurchaseResponse"];
                     };
                 };
             };
@@ -2905,7 +2900,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         success?: boolean;
-                        purchase?: components["schemas"]["PurchaseResponse"];
+                        purchase?: components["schemas"]["SdkPurchaseResponse"];
                     };
                 };
             };

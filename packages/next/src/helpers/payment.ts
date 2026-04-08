@@ -26,7 +26,7 @@ export async function createPaymentIntent(
   } = {},
 ): Promise<
   | {
-      id: string
+      processorPaymentId: string
       clientSecret: string
       publishableKey: string
       accountId?: string
@@ -69,7 +69,7 @@ export async function createTopupPaymentIntent(
   } = {},
 ): Promise<
   | {
-      id: string
+      processorPaymentId: string
       clientSecret: string
       publishableKey: string
       accountId?: string
