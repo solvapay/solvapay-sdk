@@ -12,14 +12,14 @@ import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
 
 /**
- * Create a Stripe payment intent for a customer to purchase a plan.
+ * Create a payment intent for a customer to purchase a plan.
  *
  * This is a framework-agnostic helper that:
  * 1. Extracts authenticated user from the request
  * 2. Syncs customer with SolvaPay backend
  * 3. Creates a payment intent for the specified plan
  *
- * The payment intent can then be confirmed on the client side using Stripe.js.
+ * The payment intent can then be confirmed on the client side.
  * After confirmation, use `processPaymentIntentCore()` to complete the purchase.
  *
  * @param request - Standard Web API Request object
@@ -64,7 +64,7 @@ export async function createPaymentIntentCore(
   } = {},
 ): Promise<
   | {
-      id: string
+      processorPaymentId: string
       clientSecret: string
       publishableKey: string
       accountId?: string
@@ -101,7 +101,7 @@ export async function createPaymentIntentCore(
     })
 
     return {
-      id: paymentIntent.id,
+      processorPaymentId: paymentIntent.processorPaymentId,
       clientSecret: paymentIntent.clientSecret,
       publishableKey: paymentIntent.publishableKey,
       accountId: paymentIntent.accountId,
@@ -113,10 +113,10 @@ export async function createPaymentIntentCore(
 }
 
 /**
- * Create a Stripe payment intent for a credit top-up.
+ * Create a payment intent for a credit top-up.
  *
  * Unlike `createPaymentIntentCore`, this does not require a product or plan.
- * After client-side Stripe confirmation, credits are recorded via webhook —
+ * After client-side payment confirmation, credits are recorded via webhook —
  * no `processPaymentIntentCore` call is needed.
  *
  * @param request - Standard Web API Request object
@@ -141,7 +141,7 @@ export async function createTopupPaymentIntentCore(
   } = {},
 ): Promise<
   | {
-      id: string
+      processorPaymentId: string
       clientSecret: string
       publishableKey: string
       accountId?: string
@@ -193,7 +193,7 @@ export async function createTopupPaymentIntentCore(
     })
 
     return {
-      id: paymentIntent.id,
+      processorPaymentId: paymentIntent.processorPaymentId,
       clientSecret: paymentIntent.clientSecret,
       publishableKey: paymentIntent.publishableKey,
       accountId: paymentIntent.accountId,
@@ -209,17 +209,16 @@ export async function createTopupPaymentIntentCore(
 }
 
 /**
- * Process a payment intent after client-side Stripe confirmation.
+ * Process a payment intent after client-side payment confirmation.
  *
  * This helper processes a payment intent that has been confirmed on the client
- * side using Stripe.js. It creates the purchase immediately,
- * eliminating webhook delay.
+ * side. It creates the purchase immediately, eliminating webhook delay.
  *
- * Call this after the client has confirmed the payment intent with Stripe.js.
+ * Call this after the client has confirmed the payment intent.
  *
  * @param request - Standard Web API Request object
  * @param body - Payment processing parameters
- * @param body.paymentIntentId - Stripe payment intent ID from client confirmation (required)
+ * @param body.paymentIntentId - Processor payment ID from client confirmation (required)
  * @param body.productRef - Product reference (required)
  * @param body.planRef - Optional plan reference (if not in payment intent)
  * @param options - Configuration options

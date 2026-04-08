@@ -28,7 +28,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/payment-intents/{id}": {
+    "/v1/sdk/payment-intents/{reference}": {
         parameters: {
             query?: never;
             header?: never;
@@ -36,7 +36,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a specific payment intent by ID
+         * Get a specific payment intent
          * @description Retrieves detailed information about a specific payment intent including amount, currency, and client secret for Stripe integration.
          */
         get: operations["PaymentIntentSdkController_getPaymentIntent"];
@@ -48,7 +48,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/payment-intents/{id}/process": {
+    "/v1/sdk/payment-intents/{processorPaymentId}/process": {
         parameters: {
             query?: never;
             header?: never;
@@ -59,7 +59,7 @@ export interface paths {
         put?: never;
         /**
          * Process payment intent after client-side confirmation
-         * @description Processes a payment intent that has been confirmed on the client-side using Stripe.js. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
+         * @description Processes a payment intent that has been confirmed on the client side. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
          */
         post: operations["PaymentIntentSdkController_processPaymentIntent"];
         delete?: never;
@@ -1799,8 +1799,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Payment intent MongoDB ID */
-                id: string;
+                /** @description Payment intent reference or Stripe payment intent ID */
+                reference: string;
             };
             cookie?: never;
         };
@@ -1831,8 +1831,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Stripe payment intent ID (format: pi_xxx) */
-                id: string;
+                /** @description Payment processor ID (e.g. Stripe pi_xxx) */
+                processorPaymentId: string;
             };
             cookie?: never;
         };

@@ -365,12 +365,12 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       )
 
       expect(paymentIntent).toBeDefined()
-      expect(paymentIntent).toHaveProperty('id')
+      expect(paymentIntent).toHaveProperty('processorPaymentId')
       expect(paymentIntent).toHaveProperty('clientSecret')
       expect(paymentIntent).toHaveProperty('publishableKey')
 
       console.log(`✅ Payment intent created successfully:`, {
-        id: paymentIntent.id,
+        processorPaymentId: paymentIntent.processorPaymentId,
         hasClientSecret: !!paymentIntent.clientSecret,
         hasPublishableKey: !!paymentIntent.publishableKey,
       })
@@ -444,9 +444,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       expect(confirmed).toBeDefined()
       expect(confirmed.status).toBe('succeeded')
-      // Note: confirmed.id is the Stripe payment intent ID (pi_xxx)
-      // paymentIntent.id is the backend's internal ID (different)
-      expect(confirmed.id).toMatch(/^pi_/) // Verify it's a Stripe payment intent ID
+      expect(confirmed.id).toMatch(/^pi_/) // Stripe's own pi_ ID on the confirmation result
 
       console.log(`✅ Payment confirmed successfully:`, {
         id: confirmed.id,

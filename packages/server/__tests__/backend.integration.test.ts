@@ -1398,14 +1398,14 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
 
       expect(result).toBeDefined()
-      expect(result.id).toBeDefined()
-      expect(typeof result.id).toBe('string')
+      expect(result.processorPaymentId).toBeDefined()
+      expect(typeof result.processorPaymentId).toBe('string')
       expect(result.clientSecret).toBeDefined()
       expect(typeof result.clientSecret).toBe('string')
       expect(result.publishableKey).toBeDefined()
       expect(typeof result.publishableKey).toBe('string')
 
-      console.log(`✅ createTopupPaymentIntent: id=${result.id}, has clientSecret=${!!result.clientSecret}, has publishableKey=${!!result.publishableKey}`)
+      console.log(`✅ createTopupPaymentIntent: processorPaymentId=${result.processorPaymentId}, has clientSecret=${!!result.clientSecret}, has publishableKey=${!!result.publishableKey}`)
     })
   })
 })

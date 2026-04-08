@@ -204,7 +204,7 @@ export interface SolvaPayClient {
     customerRef: string
     idempotencyKey?: string
   }): Promise<{
-    id: string
+    processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
@@ -218,7 +218,7 @@ export interface SolvaPayClient {
     description?: string
     idempotencyKey?: string
   }): Promise<{
-    id: string
+    processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string

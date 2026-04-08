@@ -447,8 +447,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         throw new SolvaPayError(`Create payment intent failed (${res.status}): ${error}`)
       }
 
-      const result = await res.json()
-      return { ...result, id: result.stripePaymentIntentId }
+      return await res.json()
     },
 
     // POST: /v1/sdk/payment-intents (purpose: credit_topup)
@@ -480,8 +479,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         throw new SolvaPayError(`Create topup payment intent failed (${res.status}): ${error}`)
       }
 
-      const result = await res.json()
-      return { ...result, id: result.stripePaymentIntentId }
+      return await res.json()
     },
 
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/process

@@ -282,11 +282,10 @@ export interface SolvaPay {
   ): Promise<string>
 
   /**
-   * Create a Stripe payment intent for a customer to purchase a plan.
+   * Create a payment intent for a customer to purchase a plan.
    *
-   * This creates a payment intent that can be confirmed on the client side
-   * using Stripe.js. After confirmation, call `processPaymentIntent()` to complete
-   * the purchase.
+   * This creates a payment intent that can be confirmed on the client side.
+   * After confirmation, call `processPaymentIntent()` to complete the purchase.
    *
    * @param params - Payment intent parameters
    * @param params.productRef - Product reference
@@ -304,7 +303,7 @@ export interface SolvaPay {
    *   idempotencyKey: 'unique-key-123'
    * });
    *
-   * // Use intent.clientSecret with Stripe.js on client
+   * // Use intent.clientSecret on the client to confirm payment
    * ```
    */
   createPaymentIntent(params: {
@@ -313,7 +312,7 @@ export interface SolvaPay {
     customerRef: string
     idempotencyKey?: string
   }): Promise<{
-    id: string
+    processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
@@ -323,7 +322,7 @@ export interface SolvaPay {
    * Create a payment intent for a credit top-up.
    *
    * Unlike `createPaymentIntent`, this does not require a product or plan.
-   * Credits are recorded via webhook after Stripe confirmation — no
+   * Credits are recorded via webhook after payment confirmation — no
    * `processPaymentIntent` call is needed.
    */
   createTopupPaymentIntent(params: {
@@ -333,20 +332,20 @@ export interface SolvaPay {
     description?: string
     idempotencyKey?: string
   }): Promise<{
-    id: string
+    processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
   }>
 
   /**
-   * Process a payment intent after client-side Stripe confirmation.
+   * Process a payment intent after client-side payment confirmation.
    *
    * Creates the purchase immediately, eliminating webhook delay.
-   * Call this after the client has confirmed the payment intent with Stripe.js.
+   * Call this after the client has confirmed the payment intent.
    *
    * @param params - Payment processing parameters
-   * @param params.paymentIntentId - Stripe payment intent ID from client confirmation
+   * @param params.paymentIntentId - Processor payment ID from client confirmation
    * @param params.productRef - Product reference
    * @param params.customerRef - Customer reference
    * @param params.planRef - Optional plan reference (if not in payment intent)
@@ -354,7 +353,7 @@ export interface SolvaPay {
    *
    * @example
    * ```typescript
-   * // After client confirms payment with Stripe.js
+   * // After client confirms payment
    * const result = await solvaPay.processPaymentIntent({
    *   paymentIntentId: 'pi_1234567890',
    *   productRef: 'prd_myapi',
@@ -527,8 +526,8 @@ export interface SolvaPay {
   /**
    * Create a hosted checkout session for a customer.
    *
-   * This creates a Stripe Checkout session that redirects the customer
-   * to a hosted payment page. After payment, customer is redirected back.
+   * This creates a checkout session that redirects the customer
+   * to a hosted payment page. After payment, the customer is redirected back.
    *
    * @param params - Checkout session parameters
    * @param params.productRef - Product reference
@@ -563,7 +562,7 @@ export interface SolvaPay {
   /**
    * Create a customer portal session for managing purchases.
    *
-   * This creates a Stripe Customer Portal session that allows customers
+   * This creates a customer portal session that allows customers
    * to manage their purchases, update payment methods, and view invoices.
    *
    * @param params - Customer session parameters
@@ -587,7 +586,7 @@ export interface SolvaPay {
   }>
 
   /**
-   * Activate a plan for a customer (usage-based / free plans that don't require Stripe payment).
+   * Activate a plan for a customer (usage-based / free plans that don't require payment).
    *
    * Returns the activation result indicating whether the plan was activated,
    * is already active, requires a credit top-up, or requires payment.
