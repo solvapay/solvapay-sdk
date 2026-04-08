@@ -19,7 +19,7 @@ export interface paths {
         put?: never;
         /**
          * Create a payment intent
-         * @description Creates a new payment intent for a customer to purchase a plan. Payment intents are used with Stripe.js to process payments. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+         * @description Creates a new payment intent for a customer to purchase a plan. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
          */
         post: operations["PaymentIntentSdkController_createPaymentIntent"];
         delete?: never;
@@ -37,7 +37,7 @@ export interface paths {
         };
         /**
          * Get a specific payment intent
-         * @description Retrieves detailed information about a specific payment intent including amount, currency, and client secret for Stripe integration.
+         * @description Retrieves detailed information about a specific payment intent including amount, currency, and client secret.
          */
         get: operations["PaymentIntentSdkController_getPaymentIntent"];
         put?: never;
@@ -1047,7 +1047,6 @@ export interface components {
                 /** @enum {string} */
                 billingModel?: "pre-paid" | "post-paid";
                 freeUnits?: number;
-                meterId?: string;
                 limit?: number;
                 features?: {
                     [key: string]: unknown;
@@ -1057,8 +1056,6 @@ export interface components {
                 name: string;
                 description?: string;
                 noPlan?: boolean;
-                planIds?: string[];
-                planRefs?: string[];
                 planKeys?: string[];
             }[];
             metadata: {
@@ -1118,7 +1115,6 @@ export interface components {
                 /** @enum {string} */
                 billingModel?: "pre-paid" | "post-paid";
                 freeUnits?: number;
-                meterId?: string;
                 limit?: number;
                 features?: {
                     [key: string]: unknown;
@@ -1799,7 +1795,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Payment intent reference or Stripe payment intent ID */
+                /** @description Payment intent reference or processor payment ID */
                 reference: string;
             };
             cookie?: never;
@@ -1831,7 +1827,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Payment processor ID (e.g. Stripe pi_xxx) */
+                /** @description Payment processor ID returned from createPaymentIntent */
                 processorPaymentId: string;
             };
             cookie?: never;
@@ -1858,7 +1854,7 @@ export interface operations {
                         status?: "succeeded" | "timeout" | "failed" | "cancelled";
                         /**
                          * Optional message, only present for timeout status
-                         * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to Stripe webhooks not being configured correctly.
+                         * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to payment webhooks not being configured correctly.
                          */
                         message?: string;
                     };
