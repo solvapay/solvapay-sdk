@@ -1,5 +1,5 @@
 import type { Plan } from '@solvapay/react'
-import { formatPrice, formatPerUnitPrice, isUsageBasedPlan } from '../utils/planHelpers'
+import { formatPrice, formatCreditsPerUnit, isUsageBasedPlan } from '../utils/planHelpers'
 
 interface PaymentSummaryProps {
   selectedPlan: Plan | null
@@ -10,12 +10,12 @@ export function PaymentSummary({ selectedPlan, className = '' }: PaymentSummaryP
   if (!selectedPlan) return null
 
   if (isUsageBasedPlan(selectedPlan)) {
-    const unitPrice = formatPerUnitPrice(selectedPlan.creditsPerUnit)
+    const creditCost = formatCreditsPerUnit(selectedPlan.creditsPerUnit)
     const unit = selectedPlan.measures || 'use'
     return (
       <div className={`flex justify-between items-center ${className}`}>
         <span className="text-sm font-medium text-slate-900">Pricing</span>
-        <span className="text-base font-bold text-slate-900">${unitPrice} / {unit}</span>
+        <span className="text-base font-bold text-slate-900">{creditCost} credits / {unit}</span>
       </div>
     )
   }

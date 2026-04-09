@@ -1,5 +1,5 @@
 import type { Plan } from '@solvapay/react'
-import { formatPrice, formatPerUnitPrice, isFreePlan, isUsageBasedPlan } from '../utils/planHelpers'
+import { formatPrice, formatCreditsPerUnit, isFreePlan, isUsageBasedPlan } from '../utils/planHelpers'
 
 interface PlanSelectionSectionProps {
   plans: Plan[]
@@ -11,11 +11,11 @@ interface PlanSelectionSectionProps {
 
 function PlanPricing({ plan }: { plan: Plan }) {
   if (isUsageBasedPlan(plan)) {
-    const unitPrice = formatPerUnitPrice(plan.creditsPerUnit)
+    const creditCost = formatCreditsPerUnit(plan.creditsPerUnit)
     const unit = plan.measures || 'use'
     return (
       <>
-        <div className="text-2xl font-bold text-slate-900 mb-1">${unitPrice}</div>
+        <div className="text-2xl font-bold text-slate-900 mb-1">{creditCost} credits</div>
         <div className="text-sm text-slate-600">per {unit}</div>
         {plan.freeUnits ? (
           <div className="text-xs text-green-600 mt-2">{plan.freeUnits} free {unit}s included</div>

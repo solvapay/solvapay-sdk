@@ -5,7 +5,7 @@ import { getAuthenticatedUserCore, isErrorResult, createSolvaPay } from '@solvap
 export async function trackUsage(
   request: globalThis.Request,
   body: {
-    actionType?: string
+    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     productRef?: string
     description?: string
@@ -36,7 +36,7 @@ export async function trackUsage(
 
     await solvaPay.trackUsage({
       customerRef,
-      actionType: body.actionType as any,
+      actionType: body.actionType,
       units: body.units,
       productRef: body.productRef,
       description: body.description,

@@ -9,7 +9,7 @@ vi.mock('@solvapay/server', () => ({
   createSolvaPay: vi.fn(),
 }))
 
-import { getAuthenticatedUserCore, isErrorResult, createSolvaPay } from '@solvapay/server'
+import { getAuthenticatedUserCore, createSolvaPay } from '@solvapay/server'
 import { trackUsage } from '../usage'
 
 const mockGetAuth = vi.mocked(getAuthenticatedUserCore)

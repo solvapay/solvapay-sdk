@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Plan } from '@solvapay/react'
 import { useActivation, useTopupAmountSelector, useBalance, TopupForm } from '@solvapay/react'
-import { formatPerUnitPrice } from '../utils/planHelpers'
+import { formatCreditsPerUnit } from '../utils/planHelpers'
 import { TopupAmountPicker } from './TopupAmountPicker'
 import { Button, actionButtonClassName } from '../../components/ui/Button'
 import '../payment-form.css'
@@ -26,7 +26,7 @@ export function ActivationSection({
   onSuccess,
   onBack,
 }: ActivationSectionProps) {
-  const { activate, state, error, result, reset } = useActivation()
+  const { activate, state, error, reset } = useActivation()
   const currency = currentPlan.currency || 'USD'
   const amountSelector = useTopupAmountSelector({ currency })
   const { adjustBalance, creditsPerMinorUnit } = useBalance()
@@ -34,7 +34,7 @@ export function ActivationSection({
   const [step, setStep] = useState<FlowStep>('plan_summary')
   const calledSuccessRef = useRef(false)
 
-  const unitPrice = formatPerUnitPrice(currentPlan.creditsPerUnit)
+  const creditCost = formatCreditsPerUnit(currentPlan.creditsPerUnit)
   const unit = currentPlan.measures || 'use'
   const planLabel =
     typeof currentPlan.metadata?.name === 'string'
@@ -219,7 +219,7 @@ export function ActivationSection({
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-slate-600">Pricing</span>
-          <span className="font-medium text-slate-900">${unitPrice} / {unit}</span>
+          <span className="font-medium text-slate-900">{creditCost} credits / {unit}</span>
         </div>
         {currentPlan.freeUnits ? (
           <div className="flex justify-between text-sm">

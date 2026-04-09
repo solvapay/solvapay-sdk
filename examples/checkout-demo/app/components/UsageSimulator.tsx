@@ -13,7 +13,7 @@ const EXAMPLE_QUERIES = [
 ]
 
 export function UsageSimulator() {
-  const { credits, adjustBalance, creditsPerMinorUnit } = useBalance()
+  const { credits, adjustBalance } = useBalance()
   const { activePurchase } = usePurchase()
 
   const productRef = activePurchase?.productRef

@@ -11,14 +11,11 @@ export function formatPrice(price?: number): string {
 }
 
 /**
- * Format credits per unit as a display price.
+ * Format credits per unit for display (abstract integer, not currency).
  */
-export function formatPerUnitPrice(creditsPerUnit?: number): string {
+export function formatCreditsPerUnit(creditsPerUnit?: number): string {
   if (!creditsPerUnit) return '0'
-  const displayAmount = creditsPerUnit / 100
-  if (displayAmount >= 1) return displayAmount.toFixed(2).replace(/\.00$/, '')
-  if (displayAmount >= 0.01) return displayAmount.toFixed(2)
-  return displayAmount.toFixed(4).replace(/0+$/, '')
+  return creditsPerUnit.toLocaleString()
 }
 
 export function isUsageBasedPlan(plan: Plan): boolean {
