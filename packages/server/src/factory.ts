@@ -511,17 +511,15 @@ export interface SolvaPay {
   }): Promise<CustomerResponseMapped>
 
   /**
-   * Get credit balance(s) for a customer.
+   * Get credits for a customer.
    *
-   * @param params - Balance query parameters
+   * @param params - Credits query parameters
    * @param params.customerRef - Customer reference
-   * @param params.currency - Optional ISO 4217 currency filter
-   * @returns Customer reference and array of balances per currency
+   * @returns Customer reference, credits, and display currency
    */
   getCustomerBalance(params: {
     customerRef: string
-    currency?: string
-  }): Promise<{ customerRef: string; balances: { currency: string; balance: number }[] }>
+  }): Promise<{ customerRef: string; credits: number; displayCurrency: string }>
 
   /**
    * Create a hosted checkout session for a customer.

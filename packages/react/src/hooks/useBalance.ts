@@ -3,15 +3,15 @@ import { useSolvaPay } from './useSolvaPay'
 import type { BalanceStatus } from '../types'
 
 /**
- * Hook to get the current customer's credit balance.
+ * Hook to get the current customer's credits.
  *
  * Automatically fetches on mount and re-fetches when
- * authentication state changes (ensures balance loads
+ * authentication state changes (ensures credits load
  * even when auth resolves after initial render).
  *
  * @example
  * ```tsx
- * const { balance, currency, loading, refetch } = useBalance()
+ * const { credits, displayCurrency, loading, refetch } = useBalance()
  * ```
  */
 export function useBalance(): BalanceStatus {

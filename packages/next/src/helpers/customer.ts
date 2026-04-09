@@ -36,11 +36,11 @@ export async function syncCustomer(
 }
 
 /**
- * Get customer credit balance - Next.js wrapper
+ * Get customer credits - Next.js wrapper
  *
  * @param request - Next.js request object
  * @param options - Configuration options
- * @returns Customer balance result or NextResponse error
+ * @returns Customer credits result or NextResponse error
  */
 export async function getCustomerBalance(
   request: globalThis.Request,

@@ -72,17 +72,12 @@ export function Navigation() {
               className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition-colors"
             >
               <BalanceBadge>
-                {({ balance, loading, currency }) => {
+                {({ credits, loading }) => {
                   if (loading) return null
-                  if (balance === null || balance === 0) return null
-                  const formatted = new Intl.NumberFormat(undefined, {
-                    style: 'currency',
-                    currency,
-                    minimumFractionDigits: 2,
-                  }).format(balance / 100)
+                  if (credits === null || credits === 0) return null
                   return (
                     <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">
-                      {formatted}
+                      {new Intl.NumberFormat().format(credits)} cr
                     </span>
                   )
                 }}

@@ -30,9 +30,7 @@ export default function HomePage() {
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
 
-  // Get customer credit balance
-  const { balances, loading: balanceLoading } = useBalance()
-  const primaryBalance = balances[0]
+  const { credits, displayCurrency, loading: balanceLoading } = useBalance()
 
   // Combine loading states - only show content when both are loaded
   const isLoading = purchasesLoading || plansLoading
@@ -235,16 +233,12 @@ export default function HomePage() {
               <p className="text-slate-900 mb-2 font-medium">Top up credits</p>
               {balanceLoading ? (
                 <Skeleton className="h-8 w-32 mx-auto mb-4" />
-              ) : primaryBalance ? (
+              ) : credits != null && credits > 0 ? (
                 <p className="text-2xl font-semibold text-emerald-600 mb-4">
-                  {new Intl.NumberFormat(undefined, {
-                    style: 'currency',
-                    currency: primaryBalance.currency,
-                    minimumFractionDigits: 2,
-                  }).format(primaryBalance.balance / 100)}
+                  {new Intl.NumberFormat().format(credits)} credits
                 </p>
               ) : (
-                <p className="text-slate-600 text-sm mb-4">No credit balance</p>
+                <p className="text-slate-600 text-sm mb-4">No credits</p>
               )}
               <p className="text-slate-600 text-sm mb-6">
                 Add credits to your account for usage-based features

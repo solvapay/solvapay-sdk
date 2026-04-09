@@ -70,11 +70,11 @@ export function ActivationSection({
     setStep('retrying_activation')
 
     const amountCents = Math.round((amountSelector.resolvedAmount || 0) * 100)
-    adjustBalance(amountCents, currency)
+    adjustBalance(amountCents)
 
     await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
     await activate({ productRef, planRef: currentPlan.reference })
-  }, [productRef, activate, currentPlan.reference, amountSelector.resolvedAmount, adjustBalance, currency])
+  }, [productRef, activate, currentPlan.reference, amountSelector.resolvedAmount, adjustBalance])
 
   const handleTopupSuccess = useCallback(async () => {
     await retryActivation()
@@ -175,7 +175,7 @@ export function ActivationSection({
       <div className="space-y-6">
         <h3 className="text-lg font-semibold text-slate-900">Add credits</h3>
         <p className="text-sm text-slate-500">
-          Top up your credit balance to activate this plan. Credits are consumed as you use the product.
+          Top up your credits to activate this plan. Credits are consumed as you use the product.
         </p>
 
         <TopupAmountPicker

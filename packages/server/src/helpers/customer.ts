@@ -13,7 +13,8 @@ import { getAuthenticatedUserCore } from './auth'
 
 export type CustomerBalanceResult = {
   customerRef: string
-  balances: { currency: string; balance: number }[]
+  credits: number
+  displayCurrency: string
 }
 
 /**
@@ -96,13 +97,13 @@ export async function syncCustomerCore(
 }
 
 /**
- * Get credit balance for the authenticated customer.
+ * Get credits for the authenticated customer.
  *
- * Authenticates the request, syncs the customer, then fetches balance.
+ * Authenticates the request, syncs the customer, then fetches credits.
  *
  * @param request - Standard Web API Request object
  * @param options - Configuration options
- * @returns Customer balance result or error result
+ * @returns Customer credits result or error result
  */
 export async function getCustomerBalanceCore(
   request: Request,
@@ -134,6 +135,6 @@ export async function getCustomerBalanceCore(
 
     return result
   } catch (error) {
-    return handleRouteError(error, 'Get customer balance', 'Failed to get customer balance')
+    return handleRouteError(error, 'Get customer credits', 'Failed to get customer credits')
   }
 }

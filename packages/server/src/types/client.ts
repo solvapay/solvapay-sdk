@@ -249,11 +249,10 @@ export interface SolvaPayClient {
     productRef: string
   }): Promise<components['schemas']['UserInfoResponse']>
 
-  // GET: /v1/sdk/customers/:customerRef/balance
+  // GET: /v1/sdk/customers/:customerRef/credits
   getCustomerBalance?(params: {
     customerRef: string
-    currency?: string
-  }): Promise<{ customerRef: string; balances: { currency: string; balance: number }[] }>
+  }): Promise<{ customerRef: string; credits: number; displayCurrency: string }>
 
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
