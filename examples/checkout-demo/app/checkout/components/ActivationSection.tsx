@@ -29,7 +29,7 @@ export function ActivationSection({
   const { activate, state, error, reset } = useActivation()
   const currency = currentPlan.currency || 'USD'
   const amountSelector = useTopupAmountSelector({ currency })
-  const { adjustBalance, creditsPerMinorUnit } = useBalance()
+  const { adjustBalance, creditsPerMinorUnit, displayExchangeRate } = useBalance()
 
   const [step, setStep] = useState<FlowStep>('plan_summary')
   const calledSuccessRef = useRef(false)
@@ -69,12 +69,13 @@ export function ActivationSection({
     if (!productRef) return
     setStep('retrying_activation')
 
-    const amountCents = Math.round((amountSelector.resolvedAmount || 0) * 100)
-    adjustBalance(amountCents * (creditsPerMinorUnit ?? 100))
+    const amountMinor = Math.round((amountSelector.resolvedAmount || 0) * 100)
+    const rate = displayExchangeRate ?? 1
+    adjustBalance(Math.floor((amountMinor / rate) * (creditsPerMinorUnit ?? 100)))
 
     await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
     await activate({ productRef, planRef: currentPlan.reference })
-  }, [productRef, activate, currentPlan.reference, amountSelector.resolvedAmount, adjustBalance, creditsPerMinorUnit])
+  }, [productRef, activate, currentPlan.reference, amountSelector.resolvedAmount, adjustBalance, creditsPerMinorUnit, displayExchangeRate])
 
   const handleTopupSuccess = useCallback(async () => {
     await retryActivation()
@@ -181,6 +182,7 @@ export function ActivationSection({
         <TopupAmountPicker
           {...amountSelector}
           creditsPerMinorUnit={creditsPerMinorUnit}
+          displayExchangeRate={displayExchangeRate}
           onContinue={handleContinueToPayment}
         />
 

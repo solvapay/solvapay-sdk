@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 
 interface TopupAmountPickerProps extends UseTopupAmountSelectorReturn {
   creditsPerMinorUnit?: number | null
+  displayExchangeRate?: number | null
   onContinue: () => void
   submitting?: boolean
 }
@@ -19,15 +20,18 @@ export function TopupAmountPicker({
   error,
   currencySymbol,
   creditsPerMinorUnit,
+  displayExchangeRate,
   onContinue,
   submitting,
 }: TopupAmountPickerProps) {
   const resolvedAmountMinor =
     resolvedAmount != null && resolvedAmount > 0 ? Math.round(resolvedAmount * 100) : null
+  const rate = displayExchangeRate ?? 1
   const estimatedCredits =
     creditsPerMinorUnit != null && creditsPerMinorUnit > 0 && resolvedAmountMinor != null
-      ? Math.floor(resolvedAmountMinor * creditsPerMinorUnit)
+      ? Math.floor((resolvedAmountMinor / rate) * creditsPerMinorUnit)
       : null
+  const isApproximate = rate !== 1
 
   return (
     <div className="space-y-5">
@@ -78,7 +82,7 @@ export function TopupAmountPicker({
 
       {estimatedCredits != null && (
         <p className="text-sm text-slate-500">
-          = {new Intl.NumberFormat().format(estimatedCredits)} credits
+          {isApproximate ? '~' : '='} {new Intl.NumberFormat().format(estimatedCredits)} credits
         </p>
       )}
 
