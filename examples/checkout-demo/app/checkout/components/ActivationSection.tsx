@@ -29,7 +29,7 @@ export function ActivationSection({
   const { activate, state, error, result, reset } = useActivation()
   const currency = currentPlan.currency || 'USD'
   const amountSelector = useTopupAmountSelector({ currency })
-  const { adjustBalance } = useBalance()
+  const { adjustBalance, creditsPerMinorUnit } = useBalance()
 
   const [step, setStep] = useState<FlowStep>('plan_summary')
   const calledSuccessRef = useRef(false)
@@ -180,7 +180,7 @@ export function ActivationSection({
 
         <TopupAmountPicker
           {...amountSelector}
-          creditsPerUnit={result?.creditsPerUnit ?? currentPlan.creditsPerUnit}
+          creditsPerMinorUnit={creditsPerMinorUnit}
           onContinue={handleContinueToPayment}
         />
 

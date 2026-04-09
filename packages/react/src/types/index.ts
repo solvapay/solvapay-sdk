@@ -129,6 +129,7 @@ export interface BalanceStatus {
   loading: boolean
   credits: number | null
   displayCurrency: string | null
+  creditsPerMinorUnit: number | null
   refetch: () => Promise<void>
   adjustBalance: (credits: number) => void
 }
@@ -513,10 +514,12 @@ export interface PaymentFormProps {
 
 export interface BalanceBadgeProps {
   className?: string
+  numberOnly?: boolean
   children?: (props: {
     credits: number | null
     loading: boolean
     displayCurrency: string | null
+    creditsPerMinorUnit: number | null
   }) => React.ReactNode
 }
 

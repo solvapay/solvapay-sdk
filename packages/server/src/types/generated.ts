@@ -317,130 +317,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/customers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer by reference, externalRef, or email
-         * @description Retrieves a customer's details using their unique reference ID, externalRef, or email. Use query parameter 'reference' to look up by customer reference, 'externalRef' for external auth ID, or 'email' for customer email. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
-         */
-        get: operations["CustomerSdkController_getCustomerByQuery"];
-        put?: never;
-        /**
-         * Create a new customer
-         * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will purchase your products. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
-         */
-        post: operations["CustomerSdkController_createCustomer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/{reference}/balance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer credit balance
-         * @description Returns the credit balance(s) for a customer identified by reference. Optionally filter by currency using the query parameter.
-         */
-        get: operations["CustomerSdkController_getCustomerBalance"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/{reference}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer by reference
-         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
-         */
-        get: operations["CustomerSdkController_getCustomer"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/customer-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a customer session
-         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
-         */
-        post: operations["CustomerSdkController_createCustomerSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/customers/customer-sessions/{sessionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer session by sessionId
-         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and purchases. The session must belong to the authenticated provider.
-         */
-        get: operations["CustomerSdkController_getCustomerSession"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/sdk/user-info": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Get user info and purchase status
-         * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
-         */
-        post: operations["UserInfoSdkController_getUserInfo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/sdk/purchases": {
         parameters: {
             query?: never;
@@ -597,6 +473,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer by reference, externalRef, or email
+         * @description Retrieves a customer's details using their unique reference ID, externalRef, or email. Use query parameter 'reference' to look up by customer reference, 'externalRef' for external auth ID, or 'email' for customer email. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomerByQuery"];
+        put?: never;
+        /**
+         * Create a new customer
+         * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will purchase your products. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
+         */
+        post: operations["CustomerSdkController_createCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/{reference}/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer credit balance
+         * @description Returns the credit balance for a customer identified by reference.
+         */
+        get: operations["CustomerSdkController_getCustomerBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/{reference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer by reference
+         * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
+         */
+        get: operations["CustomerSdkController_getCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a customer session
+         * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
+         */
+        post: operations["CustomerSdkController_createCustomerSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/customers/customer-sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer session by sessionId
+         * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and purchases. The session must belong to the authenticated provider.
+         */
+        get: operations["CustomerSdkController_getCustomerSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/user-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get user info and purchase status
+         * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
+         */
+        post: operations["UserInfoSdkController_getUserInfo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -712,8 +712,8 @@ export interface components {
              */
             billingModel?: "pre-paid" | "post-paid";
             /**
-             * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
-             * @example 0.1
+             * Credits per usage unit (integer, >= 1)
+             * @example 1
              */
             creditsPerUnit?: number;
             /**
@@ -767,7 +767,7 @@ export interface components {
             name?: string;
             description?: string;
             /** @enum {string} */
-            type?: "recurring" | "usage-based" | "hybrid" | "one-time";
+            type?: "recurring" | "usage-based" | "one-time";
             /** @enum {string} */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
             price?: number;
@@ -893,8 +893,8 @@ export interface components {
              */
             billingModel?: string;
             /**
-             * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
-             * @example 0.1
+             * Credits per usage unit (integer, >= 1)
+             * @example 1
              */
             creditsPerUnit?: number;
             /**
@@ -1221,6 +1221,267 @@ export interface components {
                 timestamp?: string;
             }[];
         };
+        UsageBillingDto: {
+            /**
+             * Units consumed in current period
+             * @example 150
+             */
+            used: number;
+            /**
+             * Units exceeding the plan limit
+             * @example 0
+             */
+            overageUnits: number;
+            /**
+             * Overage cost in cents
+             * @example 0
+             */
+            overageCost: number;
+            /**
+             * Period start date
+             * @example 2025-10-01T00:00:00Z
+             */
+            periodStart?: string;
+            /**
+             * Period end date
+             * @example 2025-11-01T00:00:00Z
+             */
+            periodEnd?: string;
+        };
+        SdkPlanSnapshotDto: {
+            /**
+             * Plan reference
+             * @example pln_1A2B3C4D
+             */
+            reference?: string;
+            /**
+             * Plan price in cents
+             * @example 2999
+             */
+            price: number;
+            /**
+             * Currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * Plan type
+             * @example recurring
+             */
+            planType: string;
+            /**
+             * Billing cycle
+             * @example monthly
+             */
+            billingCycle?: string | null;
+            /** @description Plan features */
+            features?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Usage limits */
+            limits?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Meter reference
+             * @example mtr_1A2B3C4D
+             */
+            meterRef?: string;
+            /**
+             * Usage limit for the meter
+             * @example 5000
+             */
+            limit?: number;
+            /**
+             * Number of free units included
+             * @example 100
+             */
+            freeUnits?: number;
+            /**
+             * Credits per usage unit (integer, >= 1)
+             * @example 1
+             */
+            creditsPerUnit?: number;
+        };
+        SdkPurchaseResponse: {
+            /**
+             * Purchase reference
+             * @example pur_1A2B3C4D
+             */
+            reference: string;
+            /**
+             * Customer reference
+             * @example cus_3C4D5E6F
+             */
+            customerRef: string;
+            /**
+             * Customer email
+             * @example customer@example.com
+             */
+            customerEmail: string;
+            /**
+             * Product reference
+             * @example prd_1A2B3C4D
+             */
+            productRef: string;
+            /**
+             * Product name
+             * @example API Gateway Manager
+             */
+            productName?: string;
+            /** @description Plan snapshot at time of purchase (null for credit topups) */
+            planSnapshot?: components["schemas"]["SdkPlanSnapshotDto"];
+            /**
+             * Purchase status
+             * @example active
+             */
+            status: string;
+            /**
+             * Amount in USD cents (normalised for aggregation)
+             * @example 9900
+             */
+            amount: number;
+            /**
+             * Original amount in the payment currency (cents/pence)
+             * @example 10000
+             */
+            originalAmount?: number;
+            /**
+             * Original payment currency code
+             * @example GBP
+             */
+            currency: string;
+            /**
+             * Exchange rate from original currency to USD
+             * @example 1.3082
+             */
+            exchangeRate?: number;
+            /** @description Start date */
+            startDate: string;
+            /** @description End date */
+            endDate?: string;
+            /** @description Paid at timestamp */
+            paidAt?: string;
+            /** @description Usage billing state for usage-based plans */
+            usage?: components["schemas"]["UsageBillingDto"];
+            /**
+             * Is recurring
+             * @example true
+             */
+            isRecurring: boolean;
+            /**
+             * Billing cycle
+             * @enum {string}
+             */
+            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly";
+            /** @description Next billing date */
+            nextBillingDate?: string;
+            /** @description Auto-renew enabled */
+            autoRenew?: boolean;
+            /** @description Cancelled at */
+            cancelledAt?: string;
+            /** @description Cancellation reason */
+            cancellationReason?: string;
+            /** @description Arbitrary metadata attached to the purchase */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** @description Created at */
+            createdAt: string;
+        };
+        CheckLimitRequest: {
+            customerRef: string;
+            productRef: string;
+            planRef?: string;
+            meterName?: string;
+            usageType?: string;
+        };
+        LimitPlanItemDto: {
+            reference: string;
+            name?: string;
+            type: string;
+            /** @description Price in smallest currency unit (e.g. cents) */
+            price: number;
+            currency: string;
+            requiresPayment: boolean;
+            freeUnits?: number;
+            /** @description Credits per usage unit (usage-based plans) */
+            creditsPerUnit?: number;
+            billingModel?: string;
+            billingCycle?: string;
+        };
+        LimitBalanceDto: {
+            /** @description Credit balance in mils */
+            creditBalance: number;
+            /** @description Credits per usage unit */
+            creditsPerUnit: number;
+            currency: string;
+            /** @description Estimated whole units remaining from prepaid credit balance */
+            remainingUnits?: number;
+        };
+        LimitProductBriefDto: {
+            reference: string;
+            name?: string;
+        };
+        LimitResponse: {
+            /**
+             * Whether the customer is within their usage limits
+             * @example true
+             */
+            withinLimits: boolean;
+            /**
+             * Remaining usage units before hitting the limit
+             * @example 997
+             */
+            remaining: number;
+            /**
+             * Checkout session ID if payment is required
+             * @example e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutSessionId?: string;
+            /**
+             * Checkout URL if payment is required
+             * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+             */
+            checkoutUrl?: string;
+            /**
+             * The meter name to use when tracking usage events
+             * @example requests
+             */
+            meterName?: string;
+            /** @description Credit balance in mils (for pre-paid usage-based plans) */
+            creditBalance?: number;
+            /** @description Credits per usage unit (for pre-paid usage-based plans) */
+            creditsPerUnit?: number;
+            /** @description ISO 4217 currency code for credit fields */
+            currency?: string;
+            /** @description True when the customer must activate a priced default plan before usage is allowed */
+            activationRequired?: boolean;
+            /** @description Active plans on the product available for activation or checkout */
+            plans?: components["schemas"]["LimitPlanItemDto"][];
+            /** @description Prepaid usage balance context when the default plan is usage-based */
+            balance?: components["schemas"]["LimitBalanceDto"];
+            /** @description Product the limit check applies to */
+            product?: components["schemas"]["LimitProductBriefDto"];
+            /** @description Customer portal confirmation URL when activation is required (fallback when not starting checkout) */
+            confirmationUrl?: string;
+        };
+        ActivatePlanDto: {
+            customerRef: string;
+            productRef: string;
+            planRef: string;
+        };
+        ActivatePlanResponseDto: {
+            /** @enum {string} */
+            status: "activated" | "already_active" | "topup_required" | "payment_required" | "invalid";
+            purchaseRef?: string;
+            message?: string;
+            creditBalance?: number;
+            creditsPerUnit?: number;
+            currency?: string;
+            checkoutUrl?: string;
+            checkoutSessionId?: string;
+        };
         CreateCustomerRequest: {
             /** Format: email */
             email: string;
@@ -1452,267 +1713,6 @@ export interface components {
             verifyUrl?: string | null;
             user?: components["schemas"]["UserInfoUserDto"];
             purchase?: components["schemas"]["UserInfoPurchaseDto"];
-        };
-        UsageBillingDto: {
-            /**
-             * Units consumed in current period
-             * @example 150
-             */
-            used: number;
-            /**
-             * Units exceeding the plan limit
-             * @example 0
-             */
-            overageUnits: number;
-            /**
-             * Overage cost in cents
-             * @example 0
-             */
-            overageCost: number;
-            /**
-             * Period start date
-             * @example 2025-10-01T00:00:00Z
-             */
-            periodStart?: string;
-            /**
-             * Period end date
-             * @example 2025-11-01T00:00:00Z
-             */
-            periodEnd?: string;
-        };
-        SdkPlanSnapshotDto: {
-            /**
-             * Plan reference
-             * @example pln_1A2B3C4D
-             */
-            reference?: string;
-            /**
-             * Plan price in cents
-             * @example 2999
-             */
-            price: number;
-            /**
-             * Currency code
-             * @example USD
-             */
-            currency: string;
-            /**
-             * Plan type
-             * @example recurring
-             */
-            planType: string;
-            /**
-             * Billing cycle
-             * @example monthly
-             */
-            billingCycle?: string | null;
-            /** @description Plan features */
-            features?: {
-                [key: string]: unknown;
-            } | null;
-            /** @description Usage limits */
-            limits?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Meter reference
-             * @example mtr_1A2B3C4D
-             */
-            meterRef?: string;
-            /**
-             * Usage limit for the meter
-             * @example 5000
-             */
-            limit?: number;
-            /**
-             * Number of free units included
-             * @example 100
-             */
-            freeUnits?: number;
-            /**
-             * Price per usage unit in cents (supports decimals, e.g. 0.1 = 1/10 cent)
-             * @example 0.1
-             */
-            creditsPerUnit?: number;
-        };
-        SdkPurchaseResponse: {
-            /**
-             * Purchase reference
-             * @example pur_1A2B3C4D
-             */
-            reference: string;
-            /**
-             * Customer reference
-             * @example cus_3C4D5E6F
-             */
-            customerRef: string;
-            /**
-             * Customer email
-             * @example customer@example.com
-             */
-            customerEmail: string;
-            /**
-             * Product reference
-             * @example prd_1A2B3C4D
-             */
-            productRef: string;
-            /**
-             * Product name
-             * @example API Gateway Manager
-             */
-            productName?: string;
-            /** @description Plan snapshot at time of purchase (null for credit topups) */
-            planSnapshot?: components["schemas"]["SdkPlanSnapshotDto"];
-            /**
-             * Purchase status
-             * @example active
-             */
-            status: string;
-            /**
-             * Amount in USD cents (normalised for aggregation)
-             * @example 9900
-             */
-            amount: number;
-            /**
-             * Original amount in the payment currency (cents/pence)
-             * @example 10000
-             */
-            originalAmount?: number;
-            /**
-             * Original payment currency code
-             * @example GBP
-             */
-            currency: string;
-            /**
-             * Exchange rate from original currency to USD
-             * @example 1.3082
-             */
-            exchangeRate?: number;
-            /** @description Start date */
-            startDate: string;
-            /** @description End date */
-            endDate?: string;
-            /** @description Paid at timestamp */
-            paidAt?: string;
-            /** @description Usage billing state for usage-based plans */
-            usage?: components["schemas"]["UsageBillingDto"];
-            /**
-             * Is recurring
-             * @example true
-             */
-            isRecurring: boolean;
-            /**
-             * Billing cycle
-             * @enum {string}
-             */
-            billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly";
-            /** @description Next billing date */
-            nextBillingDate?: string;
-            /** @description Auto-renew enabled */
-            autoRenew?: boolean;
-            /** @description Cancelled at */
-            cancelledAt?: string;
-            /** @description Cancellation reason */
-            cancellationReason?: string;
-            /** @description Arbitrary metadata attached to the purchase */
-            metadata?: {
-                [key: string]: unknown;
-            };
-            /** @description Created at */
-            createdAt: string;
-        };
-        CheckLimitRequest: {
-            customerRef: string;
-            productRef: string;
-            planRef?: string;
-            meterName?: string;
-            usageType?: string;
-        };
-        LimitPlanItemDto: {
-            reference: string;
-            name?: string;
-            type: string;
-            /** @description Price in smallest currency unit (e.g. cents) */
-            price: number;
-            currency: string;
-            requiresPayment: boolean;
-            freeUnits?: number;
-            /** @description Price per usage unit in mils (usage-based plans) */
-            creditsPerUnit?: number;
-            billingModel?: string;
-            billingCycle?: string;
-        };
-        LimitBalanceDto: {
-            /** @description Credit balance in mils */
-            creditBalance: number;
-            /** @description Price per usage unit in mils */
-            creditsPerUnit: number;
-            currency: string;
-            /** @description Estimated whole units remaining from prepaid balance at current creditsPerUnit */
-            remainingUnits?: number;
-        };
-        LimitProductBriefDto: {
-            reference: string;
-            name?: string;
-        };
-        LimitResponse: {
-            /**
-             * Whether the customer is within their usage limits
-             * @example true
-             */
-            withinLimits: boolean;
-            /**
-             * Remaining usage units before hitting the limit
-             * @example 997
-             */
-            remaining: number;
-            /**
-             * Checkout session ID if payment is required
-             * @example e3f1c2d4b6a89f001122334455667788
-             */
-            checkoutSessionId?: string;
-            /**
-             * Checkout URL if payment is required
-             * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
-             */
-            checkoutUrl?: string;
-            /**
-             * The meter name to use when tracking usage events
-             * @example requests
-             */
-            meterName?: string;
-            /** @description Credit balance in mils (for pre-paid usage-based plans) */
-            creditBalance?: number;
-            /** @description Price per usage unit in mils (for pre-paid usage-based plans) */
-            creditsPerUnit?: number;
-            /** @description ISO 4217 currency code for credit fields */
-            currency?: string;
-            /** @description True when the customer must activate a priced default plan before usage is allowed */
-            activationRequired?: boolean;
-            /** @description Active plans on the product available for activation or checkout */
-            plans?: components["schemas"]["LimitPlanItemDto"][];
-            /** @description Prepaid usage balance context when the default plan is usage-based */
-            balance?: components["schemas"]["LimitBalanceDto"];
-            /** @description Product the limit check applies to */
-            product?: components["schemas"]["LimitProductBriefDto"];
-            /** @description Customer portal confirmation URL when activation is required (fallback when not starting checkout) */
-            confirmationUrl?: string;
-        };
-        ActivatePlanDto: {
-            customerRef: string;
-            productRef: string;
-            planRef: string;
-        };
-        ActivatePlanResponseDto: {
-            /** @enum {string} */
-            status: "activated" | "already_active" | "topup_required" | "payment_required" | "invalid";
-            purchaseRef?: string;
-            message?: string;
-            creditBalance?: number;
-            creditsPerUnit?: number;
-            currency?: string;
-            checkoutUrl?: string;
-            checkoutSessionId?: string;
         };
     };
     responses: never;
@@ -2461,265 +2461,6 @@ export interface operations {
             };
         };
     };
-    CustomerSdkController_getCustomerByQuery: {
-        parameters: {
-            query?: {
-                /** @description Customer reference identifier (use exactly one query parameter) */
-                reference?: string;
-                /** @description External reference ID from your auth system (use exactly one query parameter) */
-                externalRef?: string;
-                /** @description Customer email address (use exactly one query parameter) */
-                email?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Customer retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomerResponse"];
-                };
-            };
-            /** @description Invalid request - must provide exactly one of reference, externalRef, or email */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_createCustomer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Customer creation data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCustomerRequest"];
-            };
-        };
-        responses: {
-            /** @description Customer created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomerResponse"];
-                };
-            };
-            /** @description Invalid email or missing required fields */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_getCustomerBalance: {
-        parameters: {
-            query?: {
-                /** @description Filter by ISO 4217 currency code */
-                currency?: string;
-            };
-            header?: never;
-            path: {
-                /** @description Customer reference identifier */
-                reference: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Customer balance retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_getCustomer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Customer reference identifier */
-                reference: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Customer retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomerResponse"];
-                };
-            };
-            /** @description Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_createCustomerSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Customer session creation request data */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCustomerSessionRequest"];
-            };
-        };
-        responses: {
-            /** @description Customer session created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateCustomerSessionResponse"];
-                };
-            };
-            /** @description Invalid request data or customer not found */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    CustomerSdkController_getCustomerSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Customer session ID/token */
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Customer session retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GetCustomerSessionResponse"];
-                };
-            };
-            /** @description Customer session not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    UserInfoSdkController_getUserInfo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserInfoRequest"];
-            };
-        };
-        responses: {
-            /** @description User info with purchase status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserInfoResponse"];
-                };
-            };
-            /** @description Missing customerRef or productRef */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Customer or product not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     PurchaseSdkController_listPurchases: {
         parameters: {
             query?: {
@@ -2978,6 +2719,262 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ActivatePlanResponseDto"];
                 };
+            };
+        };
+    };
+    CustomerSdkController_getCustomerByQuery: {
+        parameters: {
+            query?: {
+                /** @description Customer reference identifier (use exactly one query parameter) */
+                reference?: string;
+                /** @description External reference ID from your auth system (use exactly one query parameter) */
+                externalRef?: string;
+                /** @description Customer email address (use exactly one query parameter) */
+                email?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Invalid request - must provide exactly one of reference, externalRef, or email */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_createCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Customer creation data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCustomerRequest"];
+            };
+        };
+        responses: {
+            /** @description Customer created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Invalid email or missing required fields */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_getCustomerBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer reference identifier */
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer balance retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_getCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer reference identifier */
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_createCustomerSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Customer session creation request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCustomerSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Customer session created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateCustomerSessionResponse"];
+                };
+            };
+            /** @description Invalid request data or customer not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_getCustomerSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer session ID/token */
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer session retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetCustomerSessionResponse"];
+                };
+            };
+            /** @description Customer session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    UserInfoSdkController_getUserInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInfoRequest"];
+            };
+        };
+        responses: {
+            /** @description User info with purchase status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserInfoResponse"];
+                };
+            };
+            /** @description Missing customerRef or productRef */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer or product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

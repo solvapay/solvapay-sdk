@@ -46,7 +46,6 @@ export async function getCustomerBalance(
   request: globalThis.Request,
   options: {
     solvaPay?: SolvaPay
-    currency?: string
   } = {},
 ): Promise<CustomerBalanceResult | NextResponse> {
   const result = await getCustomerBalanceCore(request, options)

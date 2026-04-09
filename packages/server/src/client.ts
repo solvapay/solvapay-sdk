@@ -664,8 +664,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
     // GET: /v1/sdk/customers/:customerRef/balance
     async getCustomerBalance(params) {
-      const qs = params.currency ? `?currency=${encodeURIComponent(params.currency)}` : ''
-      const url = `${base}/v1/sdk/customers/${params.customerRef}/balance${qs}`
+      const url = `${base}/v1/sdk/customers/${params.customerRef}/balance`
 
       const res = await fetch(url, {
         method: 'GET',

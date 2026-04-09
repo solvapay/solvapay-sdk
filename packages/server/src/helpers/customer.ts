@@ -15,6 +15,7 @@ export type CustomerBalanceResult = {
   customerRef: string
   credits: number
   displayCurrency: string
+  creditsPerMinorUnit: number
 }
 
 /**
@@ -109,7 +110,6 @@ export async function getCustomerBalanceCore(
   request: Request,
   options: {
     solvaPay?: SolvaPay
-    currency?: string
   } = {},
 ): Promise<CustomerBalanceResult | ErrorResult> {
   try {
@@ -128,10 +128,7 @@ export async function getCustomerBalanceCore(
       name: name || undefined,
     })
 
-    const result = await solvaPay.getCustomerBalance({
-      customerRef,
-      currency: options.currency,
-    })
+    const result = await solvaPay.getCustomerBalance({ customerRef })
 
     return result
   } catch (error) {

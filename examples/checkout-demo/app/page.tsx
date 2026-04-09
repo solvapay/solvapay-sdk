@@ -30,7 +30,7 @@ export default function HomePage() {
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
 
-  const { credits, displayCurrency, loading: balanceLoading } = useBalance()
+  const { credits, displayCurrency, creditsPerMinorUnit, loading: balanceLoading } = useBalance()
 
   // Combine loading states - only show content when both are loaded
   const isLoading = purchasesLoading || plansLoading
@@ -230,19 +230,27 @@ export default function HomePage() {
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Top up credits</p>
+              <p className="text-slate-900 mb-2 font-medium">Credit balance</p>
               {balanceLoading ? (
-                <Skeleton className="h-8 w-32 mx-auto mb-4" />
-              ) : credits != null && credits > 0 ? (
-                <p className="text-2xl font-semibold text-emerald-600 mb-4">
-                  {new Intl.NumberFormat().format(credits)} credits
-                </p>
+                <Skeleton className="h-8 w-32 mx-auto mb-6" />
+              ) : credits != null && Number.isFinite(credits) && credits > 0 ? (
+                <div className="mb-6">
+                  <p className="text-2xl font-semibold text-emerald-600">
+                    {new Intl.NumberFormat().format(credits)} credits
+                  </p>
+                  {displayCurrency && creditsPerMinorUnit ? (
+                    <p className="text-sm text-slate-500 mt-1">
+                      ~{new Intl.NumberFormat(undefined, {
+                        style: 'currency',
+                        currency: displayCurrency,
+                        minimumFractionDigits: 2,
+                      }).format(credits / creditsPerMinorUnit / 100)}
+                    </p>
+                  ) : null}
+                </div>
               ) : (
-                <p className="text-slate-600 text-sm mb-4">No credits</p>
+                <p className="text-slate-600 text-sm mb-6">No credits yet</p>
               )}
-              <p className="text-slate-600 text-sm mb-6">
-                Add credits to your account for usage-based features
-              </p>
               <Link href="/topup">
                 <button className="px-6 py-2.5 border border-slate-900 text-slate-900 rounded-lg hover:bg-slate-50 transition-colors">
                   Top Up

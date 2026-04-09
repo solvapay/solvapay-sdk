@@ -6,6 +6,7 @@ import '../../checkout/payment-form.css'
 
 interface StyledTopupFormProps {
   amountCents: number
+  creditsPerMinorUnit?: number | null
   onSuccess: () => void
   onError: (error: Error) => void
   onBack: () => void
@@ -17,6 +18,7 @@ function formatDollars(cents: number): string {
 
 export function StyledTopupForm({
   amountCents,
+  creditsPerMinorUnit,
   onSuccess,
   onError,
   onBack,
@@ -33,7 +35,14 @@ export function StyledTopupForm({
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-600">Amount:</span>
-          <span className="text-lg font-bold text-slate-900">${formatDollars(amountCents)}</span>
+          <div className="text-right">
+            <span className="text-lg font-bold text-slate-900">${formatDollars(amountCents)}</span>
+            {creditsPerMinorUnit != null && creditsPerMinorUnit > 0 && (
+              <p className="text-sm text-slate-500">
+                = {new Intl.NumberFormat().format(Math.floor(amountCents * creditsPerMinorUnit))} credits
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

@@ -11,10 +11,11 @@ const PRESET_AMOUNTS = [
 
 interface AmountSelectorProps {
   onSelect: (amountCents: number) => void
+  creditsPerMinorUnit?: number | null
   className?: string
 }
 
-export function AmountSelector({ onSelect, className }: AmountSelectorProps) {
+export function AmountSelector({ onSelect, creditsPerMinorUnit, className }: AmountSelectorProps) {
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
   const [customAmount, setCustomAmount] = useState('')
   const [isCustom, setIsCustom] = useState(false)
@@ -40,6 +41,10 @@ export function AmountSelector({ onSelect, className }: AmountSelectorProps) {
     : selectedPreset
 
   const isValid = activeAmount !== null && activeAmount > 0
+  const estimatedCredits =
+    creditsPerMinorUnit != null && creditsPerMinorUnit > 0 && activeAmount != null && activeAmount > 0
+      ? Math.floor(activeAmount * creditsPerMinorUnit)
+      : null
 
   return (
     <div className={className}>
@@ -83,6 +88,11 @@ export function AmountSelector({ onSelect, className }: AmountSelectorProps) {
             } focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900`}
           />
         </div>
+        {estimatedCredits != null && (
+          <p className="text-xs text-slate-500 text-right mt-1.5">
+            = {new Intl.NumberFormat().format(estimatedCredits)} credits
+          </p>
+        )}
       </div>
 
       <button
