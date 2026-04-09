@@ -6,24 +6,34 @@ import '../../checkout/payment-form.css'
 
 interface StyledTopupFormProps {
   amountCents: number
+  currency: string
   creditsPerMinorUnit?: number | null
+  displayExchangeRate?: number | null
   onSuccess: () => void
   onError: (error: Error) => void
   onBack: () => void
 }
 
-function formatDollars(cents: number): string {
-  return (cents / 100).toFixed(2)
+function formatAmount(cents: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100)
 }
 
 export function StyledTopupForm({
   amountCents,
+  currency,
   creditsPerMinorUnit,
+  displayExchangeRate,
   onSuccess,
   onError,
   onBack,
 }: StyledTopupFormProps) {
   const customer = useCustomer()
+  const exchangeRate = displayExchangeRate ?? 1
 
   return (
     <div className="space-y-6">
@@ -36,10 +46,14 @@ export function StyledTopupForm({
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-600">Amount:</span>
           <div className="text-right">
-            <span className="text-lg font-bold text-slate-900">${formatDollars(amountCents)}</span>
+            <span className="text-lg font-bold text-slate-900">{formatAmount(amountCents, currency)}</span>
             {creditsPerMinorUnit != null && creditsPerMinorUnit > 0 && (
               <p className="text-sm text-slate-500">
-                = {new Intl.NumberFormat().format(Math.floor(amountCents * creditsPerMinorUnit))} credits
+                {exchangeRate !== 1 ? '~' : '='}{' '}
+                {new Intl.NumberFormat().format(
+                  Math.floor((amountCents / exchangeRate) * creditsPerMinorUnit),
+                )}{' '}
+                credits
               </p>
             )}
           </div>
@@ -67,10 +81,10 @@ export function StyledTopupForm({
 
         <TopupForm
           amount={amountCents}
-          currency="USD"
+          currency={currency}
           onSuccess={onSuccess}
           onError={onError}
-          submitButtonText={`Pay $${formatDollars(amountCents)}`}
+          submitButtonText={`Pay ${formatAmount(amountCents, currency)}`}
           className="space-y-6 payment-form-wrapper"
           buttonClassName={actionButtonClassName}
         />

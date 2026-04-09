@@ -7,7 +7,8 @@ import { AmountSelector } from './components/AmountSelector'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
-  const { adjustBalance, creditsPerMinorUnit } = useBalance()
+  const { adjustBalance, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
+  const currency = displayCurrency || 'USD'
   const [amountCents, setAmountCents] = useState<number | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [paymentFailed, setPaymentFailed] = useState(false)
@@ -79,11 +80,18 @@ export default function TopupPage() {
             <h2 className="text-xl font-semibold text-slate-900 mb-8">Top up credits</h2>
 
             {amountCents === null ? (
-              <AmountSelector onSelect={setAmountCents} creditsPerMinorUnit={creditsPerMinorUnit} />
+              <AmountSelector
+                onSelect={setAmountCents}
+                currency={currency}
+                creditsPerMinorUnit={creditsPerMinorUnit}
+                displayExchangeRate={displayExchangeRate}
+              />
             ) : (
               <StyledTopupForm
                 amountCents={amountCents}
+                currency={currency}
                 creditsPerMinorUnit={creditsPerMinorUnit}
+                displayExchangeRate={displayExchangeRate}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
                 onBack={handleBack}
