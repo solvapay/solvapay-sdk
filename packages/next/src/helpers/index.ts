@@ -26,6 +26,9 @@ export { cancelRenewal, reactivateRenewal } from './renewal'
 // Export plans helpers
 export { listPlans } from './plans'
 
+// Export usage helpers
+export { trackUsage } from './usage'
+
 // Export middleware helpers
 export { createAuthMiddleware, createSupabaseAuthMiddleware } from './middleware'
 export type { AuthMiddlewareOptions, SupabaseAuthMiddlewareOptions } from './middleware'

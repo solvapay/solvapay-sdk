@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 import Link from 'next/link'
+import { UsageSimulator } from './components/UsageSimulator'
 
 export default function HomePage() {
   const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
@@ -259,6 +260,9 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
+        {/* Usage Simulator - only shown when user has an active purchase */}
+        {!isLoading && activePurchase && <UsageSimulator />}
       </main>
     </div>
   )

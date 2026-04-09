@@ -251,6 +251,7 @@ export {
   cancelRenewal,
   reactivateRenewal,
   listPlans,
+  trackUsage,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,
 } from './helpers'
