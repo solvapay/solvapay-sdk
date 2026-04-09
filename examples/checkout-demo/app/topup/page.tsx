@@ -15,7 +15,7 @@ export default function TopupPage() {
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
     if (amountCents) {
-      adjustBalance(amountCents)
+      adjustBalance(amountCents * (creditsPerMinorUnit ?? 100))
     }
   }
 

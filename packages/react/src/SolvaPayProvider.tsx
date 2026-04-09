@@ -127,6 +127,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   const [creditsValue, setCreditsValue] = useState<number | null>(null)
   const [displayCurrencyValue, setDisplayCurrencyValue] = useState<string | null>(null)
   const [creditsPerMinorUnitValue, setCreditsPerMinorUnitValue] = useState<number | null>(null)
+  const [displayExchangeRateValue, setDisplayExchangeRateValue] = useState<number | null>(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
   const balanceInFlightRef = useRef(false)
   const balanceLoadedRef = useRef(false)
@@ -294,6 +295,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       setCreditsValue(null)
       setDisplayCurrencyValue(null)
       setCreditsPerMinorUnitValue(null)
+      setDisplayExchangeRateValue(null)
       setBalanceLoading(false)
       balanceLoadedRef.current = false
       return
@@ -322,6 +324,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       setCreditsValue(data.credits ?? null)
       setDisplayCurrencyValue(data.displayCurrency ?? null)
       setCreditsPerMinorUnitValue(data.creditsPerMinorUnit ?? null)
+      setDisplayExchangeRateValue(data.displayExchangeRate ?? null)
       balanceLoadedRef.current = true
     } catch (error) {
       console.error('[SolvaPayProvider] Failed to fetch balance:', error)
@@ -662,10 +665,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       credits: creditsValue,
       displayCurrency: displayCurrencyValue,
       creditsPerMinorUnit: creditsPerMinorUnitValue,
+      displayExchangeRate: displayExchangeRateValue,
       refetch: fetchBalanceImpl,
       adjustBalance: adjustBalanceImpl,
     }),
-    [balanceLoading, creditsValue, displayCurrencyValue, creditsPerMinorUnitValue, fetchBalanceImpl, adjustBalanceImpl],
+    [balanceLoading, creditsValue, displayCurrencyValue, creditsPerMinorUnitValue, displayExchangeRateValue, fetchBalanceImpl, adjustBalanceImpl],
   )
 
   const contextValue: SolvaPayContextValue = useMemo(

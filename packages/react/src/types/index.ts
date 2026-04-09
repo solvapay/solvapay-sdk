@@ -130,6 +130,7 @@ export interface BalanceStatus {
   credits: number | null
   displayCurrency: string | null
   creditsPerMinorUnit: number | null
+  displayExchangeRate: number | null
   refetch: () => Promise<void>
   adjustBalance: (credits: number) => void
 }

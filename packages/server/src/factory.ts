@@ -519,7 +519,7 @@ export interface SolvaPay {
    */
   getCustomerBalance(params: {
     customerRef: string
-  }): Promise<{ customerRef: string; credits: number; displayCurrency: string; creditsPerMinorUnit: number }>
+  }): Promise<{ customerRef: string; credits: number; displayCurrency: string; creditsPerMinorUnit: number; displayExchangeRate: number }>
 
   /**
    * Create a hosted checkout session for a customer.

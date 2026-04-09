@@ -16,6 +16,7 @@ export type CustomerBalanceResult = {
   credits: number
   displayCurrency: string
   creditsPerMinorUnit: number
+  displayExchangeRate: number
 }
 
 /**

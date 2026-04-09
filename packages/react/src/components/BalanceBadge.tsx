@@ -4,7 +4,7 @@ import { useBalance } from '../hooks/useBalance'
 import type { BalanceBadgeProps } from '../types'
 
 export function BalanceBadge({ className, numberOnly, children }: BalanceBadgeProps) {
-  const { credits, displayCurrency, creditsPerMinorUnit, loading } = useBalance()
+  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate, loading } = useBalance()
 
   if (children) {
     return <>{children({ credits, loading, displayCurrency, creditsPerMinorUnit })}</>
@@ -26,12 +26,13 @@ export function BalanceBadge({ className, numberOnly, children }: BalanceBadgePr
 
   let currencyEquivalent = ''
   if (displayCurrency && creditsPerMinorUnit) {
-    const minorUnits = credits / creditsPerMinorUnit
+    const usdCents = credits / creditsPerMinorUnit
+    const displayMajorUnits = (usdCents * (displayExchangeRate ?? 1)) / 100
     currencyEquivalent = ` (~${new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency: displayCurrency,
       minimumFractionDigits: 2,
-    }).format(minorUnits / 100)})`
+    }).format(displayMajorUnits)})`
   }
 
   return (

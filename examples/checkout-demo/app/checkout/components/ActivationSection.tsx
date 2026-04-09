@@ -70,11 +70,11 @@ export function ActivationSection({
     setStep('retrying_activation')
 
     const amountCents = Math.round((amountSelector.resolvedAmount || 0) * 100)
-    adjustBalance(amountCents)
+    adjustBalance(amountCents * (creditsPerMinorUnit ?? 100))
 
     await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
     await activate({ productRef, planRef: currentPlan.reference })
-  }, [productRef, activate, currentPlan.reference, amountSelector.resolvedAmount, adjustBalance])
+  }, [productRef, activate, currentPlan.reference, amountSelector.resolvedAmount, adjustBalance, creditsPerMinorUnit])
 
   const handleTopupSuccess = useCallback(async () => {
     await retryActivation()
