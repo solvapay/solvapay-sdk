@@ -7,7 +7,7 @@
 import type { Adapter } from './base'
 import { AdapterUtils } from './base'
 import type { McpAdapterOptions, McpToolExtra, PaywallToolResult } from '../types'
-import { PaywallError } from '../paywall'
+import { PaywallError, paywallErrorToClientPayload } from '../paywall'
 
 /**
  * MCP context (plain args object)
@@ -31,11 +31,24 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
       return AdapterUtils.ensureCustomerRef(ref)
     }
 
-    const customerRefFromExtra = extra?.authInfo?.extra?.customer_ref
-    const customerRef =
-      typeof customerRefFromExtra === 'string' && customerRefFromExtra.trim()
-        ? customerRefFromExtra.trim()
-        : 'anonymous'
+    const customerRefFromExtra =
+      typeof extra?.authInfo?.extra?.customer_ref === 'string'
+        ? String(extra.authInfo.extra.customer_ref)
+        : undefined
+    const customerRefFromArgs =
+      typeof args.auth === 'object' &&
+      args.auth !== null &&
+      typeof (args.auth as Record<string, unknown>).customer_ref === 'string'
+        ? String((args.auth as Record<string, unknown>).customer_ref)
+        : undefined
+    const directCustomerRef = typeof args.customer_ref === 'string' ? args.customer_ref : undefined
+
+    const customerRef = (
+      customerRefFromExtra ||
+      customerRefFromArgs ||
+      directCustomerRef ||
+      'anonymous'
+    ).trim()
     return AdapterUtils.ensureCustomerRef(customerRef)
   }
 
@@ -66,17 +79,7 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                success: false,
-                error: 'Payment required',
-                product: error.structuredContent.product,
-                checkoutUrl: error.structuredContent.checkoutUrl,
-                message: error.structuredContent.message,
-              },
-              null,
-              2,
-            ),
+            text: JSON.stringify(paywallErrorToClientPayload(error), null, 2),
           },
         ],
         isError: true,

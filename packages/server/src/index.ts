@@ -110,15 +110,12 @@ export function verifyWebhook({
 }
 
 // Export PaywallError for error handling
-export { PaywallError } from './paywall'
+export { PaywallError, paywallErrorToClientPayload } from './paywall'
 
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
 export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
-export {
-  registerVirtualToolsMcpImpl,
-  jsonSchemaToZodRawShape,
-} from './register-virtual-tools-mcp'
+export { registerVirtualToolsMcpImpl, jsonSchemaToZodRawShape } from './register-virtual-tools-mcp'
 export type { McpServerLike, RegisterVirtualToolsMcpOptions } from './register-virtual-tools-mcp'
 export { buildAuthInfoFromBearer } from './mcp/auth-bridge'
 export { createMcpOAuthBridge } from './mcp/oauth-bridge'
@@ -129,6 +126,10 @@ export {
 
 // Export types
 export type {
+  components,
+  LimitActivationBalance,
+  LimitActivationProduct,
+  LimitPlanSummary,
   SolvaPayClient,
   PayableOptions,
   HttpAdapterOptions,
@@ -153,10 +154,10 @@ export type {
   OneTimePurchaseInfo,
   ProcessPaymentResult,
   CustomerResponseMapped,
+  ActivatePlanResult,
   McpBootstrapRequest,
   McpBootstrapResponse,
-  McpBootstrapFreePlanConfig,
-  McpBootstrapPaidPlanInput,
+  McpBootstrapPlanInput,
   ConfigureMcpPlansRequest,
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,
@@ -177,13 +178,17 @@ export {
 export {
   getAuthenticatedUserCore,
   syncCustomerCore,
+  getCustomerBalanceCore,
   createPaymentIntentCore,
+  createTopupPaymentIntentCore,
   processPaymentIntentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,
+  reactivatePurchaseCore,
+  activatePlanCore,
   listPlansCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser } from './helpers'
+export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult } from './helpers'

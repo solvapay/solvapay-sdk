@@ -3,13 +3,13 @@
  */
 
 import type { PaymentIntent } from '@stripe/stripe-js'
-import type { ProcessPaymentResult } from '@solvapay/server'
+import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
 
 export interface PurchaseInfo {
   reference: string
   productName: string
-  productReference?: string
+  productRef?: string
   status: string
   startDate: string
   endDate?: string
@@ -21,13 +21,14 @@ export interface PurchaseInfo {
   isRecurring?: boolean
   nextBillingDate?: string
   billingCycle?: string
-  transactionId?: string
+  planRef?: string
   planSnapshot?: {
     reference?: string
-    meterId?: string
+    price?: number
+    meterRef?: string
     limit?: number
     freeUnits?: number
-    pricePerUnit?: number
+    creditsPerUnit?: number
     planType?: string
     billingCycle?: string | null
     features?: Record<string, unknown> | null
@@ -55,8 +56,44 @@ export interface PaymentIntentResult {
   customerRef?: string // Backend customer reference
 }
 
+export interface TopupPaymentResult {
+  clientSecret: string
+  publishableKey: string
+  accountId?: string
+  customerRef?: string
+}
+
+export interface UseTopupOptions {
+  amount: number
+  currency?: string
+}
+
+export interface UseTopupReturn {
+  loading: boolean
+  error: Error | null
+  stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
+  clientSecret: string | null
+  startTopup: () => Promise<void>
+  reset: () => void
+}
+
+export interface TopupFormProps {
+  amount: number
+  currency?: string
+  onSuccess?: (paymentIntent: PaymentIntent) => void
+  onError?: (error: Error) => void
+  returnUrl?: string
+  submitButtonText?: string
+  className?: string
+  buttonClassName?: string
+}
+
 export interface PurchaseStatus {
   loading: boolean
+  /** True when data already exists but a background refetch is in progress */
+  isRefetching: boolean
+  /** Last fetch error, or null if the most recent fetch succeeded */
+  error: Error | null
   customerRef?: string
   email?: string
   name?: string
@@ -88,6 +125,16 @@ export interface PurchaseStatus {
  * SolvaPay Provider Configuration
  * Sensible defaults for minimal code, but fully customizable
  */
+export interface BalanceStatus {
+  loading: boolean
+  credits: number | null
+  displayCurrency: string | null
+  creditsPerMinorUnit: number | null
+  displayExchangeRate: number | null
+  refetch: () => Promise<void>
+  adjustBalance: (credits: number) => void
+}
+
 export interface SolvaPayConfig {
   /**
    * API route configuration
@@ -97,6 +144,12 @@ export interface SolvaPayConfig {
     checkPurchase?: string // Default: '/api/check-purchase'
     createPayment?: string // Default: '/api/create-payment-intent'
     processPayment?: string // Default: '/api/process-payment'
+    createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
+    customerBalance?: string // Default: '/api/customer-balance'
+    cancelRenewal?: string // Default: '/api/cancel-renewal'
+    reactivateRenewal?: string // Default: '/api/reactivate-renewal'
+    activatePlan?: string // Default: '/api/activate-plan'
+    listPlans?: string // Default: '/api/list-plans'
   }
 
   /**
@@ -158,17 +211,45 @@ export interface SolvaPayConfig {
   onError?: (error: Error, context: string) => void
 }
 
+export interface CancelResult {
+  reference?: string
+  status?: string
+  cancelledAt?: string
+  [key: string]: unknown
+}
+
+export interface ReactivateResult {
+  reference?: string
+  status?: string
+  [key: string]: unknown
+}
+
+export { type ActivatePlanResult }
+
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
-  createPayment: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
+  createPayment: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
     paymentIntentId: string
     productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
+  createTopupPayment: (params: {
+    amount: number
+    currency?: string
+  }) => Promise<TopupPaymentResult>
+  cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
+  reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
+  activatePlan: (params: {
+    productRef: string
+    planRef: string
+  }) => Promise<ActivatePlanResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
+  balance: BalanceStatus
+  /** @internal Provider config — used by SDK hooks, not part of public API */
+  _config?: SolvaPayConfig
 }
 
 export interface SolvaPayProviderProps {
@@ -182,13 +263,17 @@ export interface SolvaPayProviderProps {
    * Custom API functions (override config defaults)
    * Use only if you need custom logic beyond standard API routes
    */
-  createPayment?: (params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>
+  createPayment?: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
   checkPurchase?: () => Promise<CustomerPurchaseData>
   processPayment?: (params: {
     paymentIntentId: string
     productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
+  createTopupPayment?: (params: {
+    amount: number
+    currency?: string
+  }) => Promise<TopupPaymentResult>
 
   children: React.ReactNode
 }
@@ -227,15 +312,39 @@ export interface PaymentError extends Error {
 }
 
 /**
- * Plan interface for plans
+ * Plan returned by the SolvaPay API.
+ *
+ * All fields are optional except `reference` so the type stays compatible
+ * with partial JSON responses from custom fetcher functions.
  */
 export interface Plan {
+  type?: 'recurring' | 'one-time' | 'usage-based'
   reference: string
+  name?: string
+  description?: string
   price?: number
   currency?: string
+  currencySymbol?: string
+  freeUnits?: number
+  setupFee?: number
+  trialDays?: number
+  billingCycle?: string
+  billingModel?: 'pre-paid' | 'post-paid'
+  creditsPerUnit?: number
+  measures?: string
+  limit?: number
+  rolloverUnusedUnits?: boolean
+  limits?: Record<string, unknown>
+  features?: Record<string, unknown> | string[]
+  requiresPayment?: boolean
+  default?: boolean
+  isActive?: boolean
+  maxActiveUsers?: number
+  accessExpiryDays?: number
+  status?: string
+  createdAt?: string
+  updatedAt?: string
   interval?: string
-  features?: string[]
-  isFreeTier?: boolean
   metadata?: Record<string, unknown>
 }
 
@@ -252,9 +361,10 @@ export interface UsePlansOptions {
    */
   productRef?: string
   /**
-   * Optional filter function to filter plans
+   * Optional filter function to filter plans.
+   * Receives plan and its index (after sorting, if sortBy is provided).
    */
-  filter?: (plan: Plan) => boolean
+  filter?: (plan: Plan, index: number) => boolean
   /**
    * Optional sort function to sort plans
    */
@@ -263,6 +373,18 @@ export interface UsePlansOptions {
    * Auto-select first paid plan on load
    */
   autoSelectFirstPaid?: boolean
+  /**
+   * Plan reference to select initially when plans load.
+   * Applied at most once when selectionReady is true.
+   * Takes priority over autoSelectFirstPaid.
+   */
+  initialPlanRef?: string
+  /**
+   * When false, plans still fetch but auto-selection is deferred.
+   * When it transitions to true, one-shot initial selection fires.
+   * Defaults to true.
+   */
+  selectionReady?: boolean
 }
 
 /**
@@ -277,6 +399,8 @@ export interface UsePlansReturn {
   setSelectedPlanIndex: (index: number) => void
   selectPlan: (planRef: string) => void
   refetch: () => Promise<void>
+  /** True after the one-shot initial selection has been applied */
+  isSelectionReady: boolean
 }
 
 /**
@@ -294,7 +418,7 @@ export interface PricingSelectorProps {
   /**
    * Optional filter function
    */
-  filter?: (plan: Plan) => boolean
+  filter?: (plan: Plan, index: number) => boolean
   /**
    * Optional sort function
    */
@@ -353,12 +477,14 @@ export interface PurchaseStatusReturn {
  */
 export interface PaymentFormProps {
   /**
-   * Plan reference to checkout. PaymentForm handles the entire checkout flow internally
-   * including Stripe initialization and payment intent creation.
+   * Plan reference to checkout. When omitted, the SDK auto-resolves the plan from
+   * productRef (requires exactly one active plan or a default plan). Pass explicitly
+   * when the product has multiple plans without a default.
    */
-  planRef: string
+  planRef?: string
   /**
-   * Product reference. Required for processing payment after confirmation.
+   * Product reference. Required when planRef is omitted (for plan resolution)
+   * and for processing payment after confirmation.
    */
   productRef?: string
   /**
@@ -385,6 +511,36 @@ export interface PaymentFormProps {
    * Optional className for the submit button
    */
   buttonClassName?: string
+}
+
+export interface BalanceBadgeProps {
+  className?: string
+  numberOnly?: boolean
+  children?: (props: {
+    credits: number | null
+    loading: boolean
+    displayCurrency: string | null
+    creditsPerMinorUnit: number | null
+  }) => React.ReactNode
+}
+
+export interface UseTopupAmountSelectorOptions {
+  currency: string
+  minAmount?: number
+  maxAmount?: number
+}
+
+export interface UseTopupAmountSelectorReturn {
+  quickAmounts: number[]
+  selectedAmount: number | null
+  customAmount: string
+  resolvedAmount: number | null
+  selectQuickAmount: (amount: number) => void
+  setCustomAmount: (value: string) => void
+  error: string | null
+  validate: () => boolean
+  reset: () => void
+  currencySymbol: string
 }
 
 export type PurchaseStatusValue =

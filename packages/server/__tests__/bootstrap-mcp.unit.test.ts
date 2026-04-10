@@ -64,8 +64,10 @@ describe('MCP bootstrap SDK wrapper', () => {
     const result = await client.bootstrapMcpProduct?.({
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
-      freePlan: { freeUnits: 1000 },
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 1000 },
+        { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
+      ],
       tools: [{ name: 'list_docs', planKeys: ['free'] }],
     })
 
@@ -100,7 +102,7 @@ describe('MCP bootstrap SDK wrapper', () => {
       await client.bootstrapMcpProduct?.({
         name: 'Docs Assistant',
         originUrl: 'https://origin.example.com/mcp',
-        paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+        plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
         tools: [{ name: 'search_docs', planKeys: ['enterprise'] }],
       })
       throw new Error('Expected bootstrapMcpProduct to throw')
@@ -153,7 +155,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     })
 
     const result = await client.configureMcpPlans?.('prd_TEST123', {
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
       toolMapping: [{ name: 'deep_research', planKeys: ['pro'] }],
     })
 
@@ -212,8 +214,10 @@ describe('MCP bootstrap SDK wrapper', () => {
     const request: McpBootstrapRequest = {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
-      freePlan: { freeUnits: 1000 },
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 1000 },
+        { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
+      ],
     }
 
     await sdk.bootstrapMcpProduct(request)
@@ -236,7 +240,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     })
 
     const request: ConfigureMcpPlansRequest = {
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
+      plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' }],
       toolMapping: [{ name: 'read_wiki_contents', planKeys: ['pro'] }],
     }
 
@@ -302,25 +306,146 @@ describe('MCP bootstrap SDK wrapper', () => {
 
     const request: McpBootstrapRequest = {
       originUrl: 'https://origin.example.com/mcp',
-      freePlan: { name: 'Starter', freeUnits: 500 },
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
+      plans: [
+        { key: 'free', name: 'Starter', price: 0, currency: 'USD', type: 'recurring', freeUnits: 500 },
+        { key: 'pro', name: 'Pro', price: 2000, currency: 'USD' },
+      ],
       tools: [tool],
       metadata: { stage: 'test' },
     }
 
     expect(request.tools?.[0].name).toBe('list_docs')
     expect(request.name).toBeUndefined()
-    expect(request.freePlan?.name).toBe('Starter')
-    expect(request.paidPlans?.[0].currency).toBe('USD')
+    expect(request.plans?.[0].name).toBe('Starter')
+    expect(request.plans?.[1].currency).toBe('USD')
   })
 
   it('keeps configure MCP plans request types compile-safe', () => {
     const request: ConfigureMcpPlansRequest = {
-      paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
+      plans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
       toolMapping: [{ name: 'list_docs', planKeys: ['free', 'pro'] }],
     }
 
-    expect(request.paidPlans?.[0].key).toBe('pro')
+    expect(request.plans?.[0].key).toBe('pro')
     expect(request.toolMapping?.[0].planKeys).toEqual(['free', 'pro'])
+  })
+
+  it('bootstraps with a single free plan in the unified plans array', async () => {
+    const payload: McpBootstrapResponse = {
+      product: {
+        id: 'prd_3',
+        reference: 'prd_FREEONLY',
+        name: 'Free Only Tool',
+        status: 'active',
+        balance: 0,
+        totalTransactions: 0,
+        isMcpPay: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      mcpServer: {
+        id: 'mcp_3',
+        reference: 'mcp_FREEONLY',
+        subdomain: 'free-only-tool',
+        mcpProxyUrl: 'https://free-only-tool.mcp.solvapay.com/mcp',
+        url: 'https://origin.example.com/mcp',
+        defaultPlanId: 'plan_free_3',
+      },
+      planMap: {
+        free: { id: 'plan_free_3', reference: 'pln_FREEONLY', name: 'Free' },
+      },
+    }
+
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createSolvaPayClient({
+      apiKey: 'sk_sandbox_test',
+      apiBaseUrl: 'https://api.example.com',
+    })
+
+    const result = await client.bootstrapMcpProduct?.({
+      name: 'Free Only Tool',
+      originUrl: 'https://origin.example.com/mcp',
+      plans: [
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 500 },
+      ],
+    })
+
+    expect(result?.planMap.free).toBeDefined()
+    expect(result?.planMap.free.name).toBe('Free')
+    expect(Object.keys(result?.planMap || {})).toHaveLength(1)
+
+    const sentBody = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as any).body,
+    )
+    expect(sentBody.plans).toHaveLength(1)
+    expect(sentBody.plans[0].price).toBe(0)
+  })
+
+  it('configures MCP plans with mixed free + paid plans in unified array', async () => {
+    const payload: ConfigureMcpPlansResponse = {
+      product: {
+        id: 'prd_1',
+        reference: 'prd_MIXED',
+        name: 'Mixed Plans Tool',
+        status: 'active',
+        balance: 0,
+        totalTransactions: 0,
+        isMcpPay: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      mcpServer: {
+        id: 'mcp_1',
+        reference: 'mcp_MIXED',
+        subdomain: 'mixed-plans',
+        mcpProxyUrl: 'https://mixed-plans.mcp.solvapay.com/mcp',
+        url: 'https://origin.example.com/mcp',
+        defaultPlanId: 'plan_free_mixed',
+      },
+      planMap: {
+        free: { id: 'plan_free_mixed', reference: 'pln_FREE_M', name: 'Free' },
+        pro: { id: 'plan_pro_mixed', reference: 'pln_PRO_M', name: 'Pro' },
+      },
+    }
+
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createSolvaPayClient({
+      apiKey: 'sk_sandbox_test',
+      apiBaseUrl: 'https://api.example.com',
+    })
+
+    const result = await client.configureMcpPlans?.('prd_MIXED', {
+      plans: [
+        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 100 },
+        { key: 'pro', name: 'Pro', price: 4900, currency: 'USD', billingCycle: 'monthly' },
+      ],
+      toolMapping: [
+        { name: 'basic_search', planKeys: ['free', 'pro'] },
+        { name: 'deep_research', planKeys: ['pro'] },
+      ],
+    })
+
+    expect(result?.planMap.free).toBeDefined()
+    expect(result?.planMap.pro).toBeDefined()
+
+    const sentBody = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as any).body,
+    )
+    expect(sentBody.plans).toHaveLength(2)
+    expect(sentBody.plans[0].price).toBe(0)
+    expect(sentBody.plans[1].price).toBe(4900)
+    expect(sentBody.toolMapping).toHaveLength(2)
   })
 })

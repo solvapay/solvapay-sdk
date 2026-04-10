@@ -1,6 +1,7 @@
 'use client'
 import { PaymentForm, type Plan } from '@solvapay/react'
 import { formatPrice } from '../utils/planHelpers'
+import { actionButtonClassName } from '../../components/ui/Button'
 
 interface PaymentFormSectionProps {
   currentPlan: Plan
@@ -50,7 +51,7 @@ export function PaymentFormSection({
         onError={onError}
         submitButtonText="Complete Purchase"
         className="space-y-6"
-        buttonClassName="w-full py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+        buttonClassName={actionButtonClassName}
       />
 
       {/* Back Button */}

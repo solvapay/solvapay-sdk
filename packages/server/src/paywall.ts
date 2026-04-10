@@ -8,6 +8,7 @@
  */
 
 import type {
+  LimitResponseWithPlan,
   PaywallArgs,
   PaywallMetadata,
   PaywallStructuredContent,
@@ -73,6 +74,26 @@ export class PaywallError extends Error {
     super(message)
     this.name = 'PaywallError'
   }
+}
+
+/** JSON body shape for HTTP adapters and MCP text content (stable fields for clients). */
+export function paywallErrorToClientPayload(error: PaywallError): Record<string, unknown> {
+  const sc = error.structuredContent
+  const base: Record<string, unknown> = {
+    success: false,
+    error: sc.kind === 'activation_required' ? 'Activation required' : 'Payment required',
+    product: sc.product,
+    checkoutUrl: sc.checkoutUrl,
+    message: sc.message,
+  }
+  if (sc.kind === 'activation_required') {
+    base.kind = 'activation_required'
+    if (sc.plans !== undefined) base.plans = sc.plans
+    if (sc.balance !== undefined) base.balance = sc.balance
+    if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
+    if (sc.confirmationUrl !== undefined) base.confirmationUrl = sc.confirmationUrl
+  }
+  return base
 }
 
 /**
@@ -160,7 +181,7 @@ export class SolvaPayPaywall {
       // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
       let backendCustomerRef: string
 
-      // If the input ref is already a SolvaPay customer ID (starts with 'cus_'), 
+      // If the input ref is already a SolvaPay customer ID (starts with 'cus_'),
       // use it directly without attempting lookup/creation by externalRef.
       if (inputCustomerRef.startsWith('cus_')) {
         backendCustomerRef = inputCustomerRef
@@ -180,6 +201,7 @@ export class SolvaPayPaywall {
         let withinLimits: boolean
         let remaining: number
         let checkoutUrl: string | undefined
+        let lastLimitsCheck: LimitResponseWithPlan | undefined
 
         const hasFreshCachedLimits =
           cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
@@ -213,6 +235,7 @@ export class SolvaPayPaywall {
             meterName: usageType,
           })
 
+          lastLimitsCheck = limitsCheck
           withinLimits = limitsCheck.withinLimits
           remaining = limitsCheck.remaining
           checkoutUrl = limitsCheck.checkoutUrl
@@ -246,6 +269,22 @@ export class SolvaPayPaywall {
             requestId,
             latencyMs,
           )
+
+          if (lastLimitsCheck?.activationRequired) {
+            const confirmationUrl = lastLimitsCheck.confirmationUrl
+            const payCheckoutUrl =
+              confirmationUrl || lastLimitsCheck.checkoutUrl || checkoutUrl || ''
+            throw new PaywallError('Activation required', {
+              kind: 'activation_required',
+              product,
+              message: 'Product activation is required before this tool can be used.',
+              checkoutUrl: payCheckoutUrl,
+              confirmationUrl,
+              plans: lastLimitsCheck.plans,
+              balance: lastLimitsCheck.balance,
+              productDetails: lastLimitsCheck.product,
+            })
+          }
 
           throw new PaywallError('Payment required', {
             kind: 'payment_required',
@@ -381,7 +420,6 @@ export class SolvaPayPaywall {
 
       // Skip if createCustomer is not available
       if (!this.apiClient.createCustomer) {
-         
         console.warn(
           `⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`,
         )
@@ -394,8 +432,14 @@ export class SolvaPayPaywall {
         // Prepare customer creation params
         // Use provided email/name, or fallback to auto-generated values
         // Use a timestamp-based email to avoid conflicts with old orphaned records
-        const createParams: { email: string; name?: string; externalRef?: string } = {
+        const createParams: {
+          email: string
+          name?: string
+          externalRef?: string
+          metadata: Record<string, unknown>
+        } = {
           email: options?.email || `${customerRef}-${Date.now()}@auto-created.local`,
+          metadata: {},
         }
 
         if (options?.name) {
@@ -419,18 +463,21 @@ export class SolvaPayPaywall {
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         if (errorMessage.includes('409') || errorMessage.includes('already exists')) {
-           // Try to lookup by externalRef first if available
-           if (externalRef) {
-             try {
-               const searchResult = await this.apiClient.getCustomer({ externalRef })
-               if (searchResult && searchResult.customerRef) {
-                 this.customerRefMapping.set(customerRef, searchResult.customerRef)
-                 return searchResult.customerRef
-               }
-             } catch (lookupError: unknown) {
-               this.log(`⚠️ Failed to lookup existing customer by externalRef after 409:`, lookupError instanceof Error ? lookupError.message : lookupError)
-             }
-           }
+          // Try to lookup by externalRef first if available
+          if (externalRef) {
+            try {
+              const searchResult = await this.apiClient.getCustomer({ externalRef })
+              if (searchResult && searchResult.customerRef) {
+                this.customerRefMapping.set(customerRef, searchResult.customerRef)
+                return searchResult.customerRef
+              }
+            } catch (lookupError: unknown) {
+              this.log(
+                `⚠️ Failed to lookup existing customer by externalRef after 409:`,
+                lookupError instanceof Error ? lookupError.message : lookupError,
+              )
+            }
+          }
 
           // If conflict is due to email uniqueness but externalRef lookup failed,
           // retry creation with a generated email while preserving externalRef.
@@ -456,9 +503,15 @@ export class SolvaPayPaywall {
             }
 
             try {
-              const retryParams: { email: string; name?: string; externalRef?: string } = {
+              const retryParams: {
+                email: string
+                name?: string
+                externalRef?: string
+                metadata: Record<string, unknown>
+              } = {
                 email: `${customerRef}-${Date.now()}@auto-created.local`,
                 externalRef,
+                metadata: {},
               }
 
               if (options?.name) {
@@ -484,7 +537,8 @@ export class SolvaPayPaywall {
 
           // We have a known conflict but could not resolve the existing customer reference.
           // Returning the original app user ID here causes downstream 404s in payment APIs.
-          const unresolvedMessage = errorMessage || 'Customer already exists but could not be resolved'
+          const unresolvedMessage =
+            errorMessage || 'Customer already exists but could not be resolved'
           throw new Error(
             `Failed to resolve existing customer for ${customerRef} after conflict: ${unresolvedMessage}. ` +
               'Ensure the existing customer is linked to this externalRef.',
@@ -523,7 +577,7 @@ export class SolvaPayPaywall {
           actionType: 'api_call',
           units: 1,
           outcome,
-          productReference: _productRef,
+          productRef: _productRef,
           duration: actionDuration,
           metadata: { action: action || 'api_requests', requestId },
           timestamp: new Date().toISOString(),
@@ -558,7 +612,11 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
 
   // Class-based decorator
   function Paywall(metadata: PaywallMetadata = {}) {
-    return function (target: Record<string, unknown>, propertyKey: string, descriptor?: PropertyDescriptor) {
+    return function (
+      target: Record<string, unknown>,
+      propertyKey: string,
+      descriptor?: PropertyDescriptor,
+    ) {
       // Handle both descriptor and direct property assignment
       const method = descriptor?.value || target[propertyKey]
 
@@ -596,7 +654,8 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
   ) {
     if (typeof methodOrMetadata === 'function') {
       const method = methodOrMetadata
-      const metadata = (method as unknown as Record<string, unknown>)._paywallMetadata as PaywallMetadata
+      const metadata = (method as unknown as Record<string, unknown>)
+        ._paywallMetadata as PaywallMetadata
       const options = handlerOrOptions as Record<string, unknown>
 
       if (!metadata) {
@@ -607,16 +666,25 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
       return async (req: any, reply: any) => {
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const extractArgs = (options?.extractArgs as (req: any) => PaywallArgs) || defaultExtractArgs
+          const extractArgs =
+            (options?.extractArgs as (req: any) => PaywallArgs) || defaultExtractArgs
           const getCustomerRef =
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (options?.getCustomerRef as (req: any) => string) || ((req: Record<string, unknown>) => (req.auth as Record<string, string>)?.customer_ref || 'anonymous')
+            (options?.getCustomerRef as (req: any) => string) ||
+            ((req: Record<string, unknown>) =>
+              (req.auth as Record<string, string>)?.customer_ref || 'anonymous')
 
           const args = extractArgs(req)
-          const protectedMethod = await paywall.protect(method as unknown as (args: PaywallArgs) => Promise<unknown>, metadata, getCustomerRef)
+          const protectedMethod = await paywall.protect(
+            method as unknown as (args: PaywallArgs) => Promise<unknown>,
+            metadata,
+            getCustomerRef,
+          )
           const result = await protectedMethod(args)
 
-          const transformResponse = (options?.transformResponse as (result: unknown, reply: unknown) => unknown) || ((result: unknown) => result)
+          const transformResponse =
+            (options?.transformResponse as (result: unknown, reply: unknown) => unknown) ||
+            ((result: unknown) => result)
           return transformResponse(result, reply)
         } catch (error) {
           return handleHttpError(error, reply)
@@ -657,14 +725,19 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
   ) {
     if (typeof methodOrMetadata === 'function') {
       const method = methodOrMetadata
-      const metadata = (method as unknown as Record<string, unknown>)._paywallMetadata as PaywallMetadata
+      const metadata = (method as unknown as Record<string, unknown>)
+        ._paywallMetadata as PaywallMetadata
 
       if (!metadata) {
         throw new Error('Method must be decorated with @Paywall')
       }
 
       const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
-      return paywall.protect(method as unknown as (args: PaywallArgs) => Promise<unknown>, metadata, getCustomerRef)
+      return paywall.protect(
+        method as unknown as (args: PaywallArgs) => Promise<unknown>,
+        metadata,
+        getCustomerRef,
+      )
     }
 
     const metadata = methodOrMetadata
@@ -677,7 +750,10 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     handler: (args: PaywallArgs) => Promise<unknown>,
     options?: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      extractArgs?: (request: Request, context?: any) => Promise<Record<string, unknown>> | Record<string, unknown>
+      extractArgs?: (
+        request: Request,
+        context?: any,
+      ) => Promise<Record<string, unknown>> | Record<string, unknown>
       getCustomerRef?: (request: Request) => Promise<string> | string
       transformResponse?: (result: unknown) => unknown
     },
@@ -735,13 +811,7 @@ function defaultExtractArgs(req: any): PaywallArgs {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handleHttpError(error: unknown, reply: any) {
   if (error instanceof PaywallError) {
-    const errorResponse = {
-      success: false,
-      error: 'Payment required',
-      product: error.structuredContent.product,
-      checkoutUrl: error.structuredContent.checkoutUrl,
-      message: error.structuredContent.message,
-    }
+    const errorResponse = paywallErrorToClientPayload(error)
 
     // Express (has reply.status)
     if (reply && reply.status && typeof reply.json === 'function') {
@@ -775,7 +845,10 @@ function handleHttpError(error: unknown, reply: any) {
 }
 
 // Next.js helper functions
-async function defaultExtractNextArgs(request: Request, context?: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function defaultExtractNextArgs(
+  request: Request,
+  context?: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const url = new URL(request.url)
   const query = Object.fromEntries(url.searchParams.entries())
 
@@ -847,19 +920,10 @@ export function ensureCustomerRef(customerRef: string): string {
 
 function handleNextError(error: unknown): Response {
   if (error instanceof PaywallError) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Payment required',
-        product: error.structuredContent.product,
-        checkoutUrl: error.structuredContent.checkoutUrl,
-        message: error.structuredContent.message,
-      }),
-      {
-        status: 402,
-        headers: { 'Content-Type': 'application/json' },
-      },
-    )
+    return new Response(JSON.stringify(paywallErrorToClientPayload(error)), {
+      status: 402,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   return new Response(

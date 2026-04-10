@@ -9,6 +9,7 @@ export { SolvaPayProvider } from './SolvaPayProvider'
 
 // Payment Form
 export { PaymentForm } from './PaymentForm'
+export { TopupForm } from './TopupForm'
 
 // Headless Components
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
@@ -16,6 +17,7 @@ export { PurchaseGate } from './components/PurchaseGate'
 export { PricingSelector, PlanSelector } from './components/PricingSelector'
 export { Spinner } from './components/Spinner'
 export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
+export { BalanceBadge } from './components/BalanceBadge'
 
 // Hooks
 export { usePurchase } from './hooks/usePurchase'
@@ -24,6 +26,11 @@ export { useCheckout } from './hooks/useCheckout'
 export { useSolvaPay } from './hooks/useSolvaPay'
 export { usePlans } from './hooks/usePlans'
 export { usePurchaseStatus } from './hooks/usePurchaseStatus'
+export { usePurchaseActions } from './hooks/usePurchaseActions'
+export { useActivation } from './hooks/useActivation'
+export { useTopup } from './hooks/useTopup'
+export { useBalance } from './hooks/useBalance'
+export { useTopupAmountSelector } from './hooks/useTopupAmountSelector'
 
 // Types
 export type {
@@ -46,7 +53,20 @@ export type {
   UsePlansReturn,
   PurchaseStatusReturn,
   PurchaseStatusValue,
+  TopupFormProps,
+  TopupPaymentResult,
+  UseTopupOptions,
+  UseTopupReturn,
+  BalanceStatus,
+  BalanceBadgeProps,
+  CancelResult,
+  ReactivateResult,
+  ActivatePlanResult,
+  UseTopupAmountSelectorOptions,
+  UseTopupAmountSelectorReturn,
 } from './types'
+export type { PurchaseActions } from './hooks/usePurchaseActions'
+export type { UseActivationReturn, ActivationState } from './hooks/useActivation'
 export type { CustomerInfo } from './hooks/useCustomer'
 
 // Adapters

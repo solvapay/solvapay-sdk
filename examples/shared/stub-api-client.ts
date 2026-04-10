@@ -391,8 +391,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
-    productReference?: string
-    purchaseReference?: string
+    productRef?: string
+    purchaseRef?: string
     description?: string
     metadata?: Record<string, unknown>
     duration?: number
@@ -411,7 +411,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
    * Create a checkout session (for testing)
    */
   async createCheckoutSession(params: {
-    customerReference: string
+    customerRef: string
     productRef: string
     planRef?: string
   }): Promise<{
@@ -428,7 +428,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     const sessionId = `sess_${Math.random().toString(36).slice(2, 15)}`
 
     const queryParams = new URLSearchParams({
-      customer: params.customerReference,
+      customer: params.customerRef,
       product: params.productRef,
       sessionId: sessionId,
     })
@@ -439,7 +439,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     const checkoutUrl = `https://checkout.solvapay.com/demo?${queryParams.toString()}`
 
-    this.log(`💳 Created checkout session for ${params.customerReference}: ${checkoutUrl}`)
+    this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`)
 
     return {
       id,
@@ -472,6 +472,37 @@ export class StubSolvaPayClient implements SolvaPayClient {
     return {
       sessionId,
       customerUrl,
+    }
+  }
+
+  /**
+   * Create a topup payment intent (stub returns mock Stripe data)
+   */
+  async createTopupPaymentIntent(params: {
+    customerRef: string
+    amount: number
+    currency: string
+    description?: string
+    idempotencyKey?: string
+  }): Promise<{
+    id: string
+    clientSecret: string
+    publishableKey: string
+    accountId?: string
+  }> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(`📡 Stub Request: POST /v1/sdk/payment-intents (topup)`)
+    this.log(`   Customer: ${params.customerRef}, Amount: ${params.amount}, Currency: ${params.currency}`)
+
+    const id = `pi_topup_${Math.random().toString(36).slice(2, 15)}`
+
+    await this.addCredits(params.customerRef, params.amount)
+
+    return {
+      id,
+      clientSecret: `${id}_secret_${Math.random().toString(36).slice(2, 15)}`,
+      publishableKey: 'pk_test_stub_demo_key',
     }
   }
 
@@ -704,7 +735,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
         currency: 'USD',
         currencySymbol: '$',
         billingCycle: 'monthly',
-        isFreeTier: true,
         requiresPayment: false,
         isActive: true,
         status: 'active',
@@ -721,7 +751,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
         currency: 'USD',
         currencySymbol: '$',
         billingCycle: 'monthly',
-        isFreeTier: false,
         requiresPayment: true,
         isActive: true,
         status: 'active',

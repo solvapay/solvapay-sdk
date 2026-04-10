@@ -72,7 +72,7 @@ export const PricingSelector: React.FC<PricingSelectorProps> = ({
   const isPaidPlan = useCallback(
     (planRef: string): boolean => {
       const plan = plans.find(p => p.reference === planRef)
-      return plan ? (plan.price ?? 0) > 0 && !plan.isFreeTier : true
+      return plan ? plan.requiresPayment !== false : true
     },
     [plans],
   )

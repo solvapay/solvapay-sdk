@@ -17,10 +17,13 @@ export { createSolvaPay } from './factory'
 export type { CreateSolvaPayConfig, SolvaPay, PayableFunction } from './factory'
 
 // Export PaywallError for error handling
-export { PaywallError } from './paywall'
+export { PaywallError, paywallErrorToClientPayload } from './paywall'
 
 // Export types
 export type {
+  LimitActivationBalance,
+  LimitActivationProduct,
+  LimitPlanSummary,
   SolvaPayClient,
   PayableOptions,
   HttpAdapterOptions,
@@ -48,6 +51,7 @@ export {
   getAuthenticatedUserCore,
   syncCustomerCore,
   createPaymentIntentCore,
+  createTopupPaymentIntentCore,
   processPaymentIntentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,

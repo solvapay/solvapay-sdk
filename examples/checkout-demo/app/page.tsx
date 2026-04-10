@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback } from 'react'
-import { usePurchase, usePlans, usePurchaseStatus } from '@solvapay/react'
+import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 import Link from 'next/link'
+import { UsageSimulator } from './components/UsageSimulator'
 
 export default function HomePage() {
   const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
@@ -21,20 +22,16 @@ export default function HomePage() {
     fetcher: fetchPlans,
   })
 
-  // Get purchase helpers from SDK
-  // Note: Plans are handled on the checkout page, so we pass empty array
-  // Purchase status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
-  // Use hasPaidPurchase and activePurchase consistently throughout the component
-  // Note: Provider auto-fetches purchases on mount, so no manual refetch needed here
   const {
     loading: purchasesLoading,
-    hasPaidPurchase,
     activePurchase,
   } = usePurchase()
 
   // Get advanced purchase status helpers
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
+
+  const { credits, displayCurrency, creditsPerMinorUnit, loading: balanceLoading } = useBalance()
 
   // Combine loading states - only show content when both are loaded
   const isLoading = purchasesLoading || plansLoading
@@ -161,75 +158,111 @@ export default function HomePage() {
           <FeatureCard
             title="Advanced Analytics"
             description="Real-time data analysis with custom dashboards."
-            locked={!isLoading && !hasPaidPurchase}
+            locked={!isLoading && !activePurchase}
           />
           <FeatureCard
             title="Priority Support"
             description="Get help from our team within 24 hours."
-            locked={!isLoading && !hasPaidPurchase}
+            locked={!isLoading && !activePurchase}
           />
         </div>
 
         {/* CTA Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-          {isLoading ? (
-            <div className="text-center py-4 space-y-4">
-              <Skeleton className="h-5 w-64 mx-auto" />
-              <Skeleton className="h-10 w-48 mx-auto" />
-            </div>
-          ) : hasPaidPurchase ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            {isLoading ? (
+              <div className="text-center py-4 space-y-4">
+                <Skeleton className="h-5 w-64 mx-auto" />
+                <Skeleton className="h-10 w-48 mx-auto" />
+              </div>
+            ) : activePurchase ? (
+              <div className="text-center py-4">
+                <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
+                <Link href="/checkout">
+                  <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                    Manage Purchase
+                  </button>
+                </Link>
+              </div>
+            ) : shouldShowCancelledNotice && cancelledPurchase ? (
+              <div className="text-center py-4">
+                <p className="text-slate-900 mb-2 font-medium">Your purchase is cancelled</p>
+                {cancelledPurchase.endDate ? (
+                  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm font-semibold text-amber-900 mb-1">
+                      ⏰ Purchase Expires: {formatDate(cancelledPurchase.endDate)}
+                    </p>
+                    {(() => {
+                      const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate)
+                      return daysLeft !== null && daysLeft > 0 ? (
+                        <p className="text-xs text-amber-700 mb-1">
+                          {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
+                        </p>
+                      ) : null
+                    })()}
+                    <p className="text-xs text-amber-700">
+                      You'll continue to have access to {cancelledPurchase.productName} features
+                      until this date
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-slate-600 text-sm mb-6">Your purchase access has ended</p>
+                )}
+                <Link href="/checkout">
+                  <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                    Purchase Again
+                  </button>
+                </Link>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-slate-900 mb-2 font-medium">Upgrade your subscription</p>
+                <p className="text-slate-600 text-sm mb-6">
+                  Get access to advanced features and more
+                </p>
+                <Link href="/checkout">
+                  <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
+                    Upgrade
+                  </button>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <div className="text-center py-4">
-              <p className="text-slate-900 mb-4">Manage your purchase and billing</p>
-              <Link href="/checkout">
-                <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Manage Purchase
-                </button>
-              </Link>
-            </div>
-          ) : shouldShowCancelledNotice && cancelledPurchase ? (
-            <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Your purchase is cancelled</p>
-              {cancelledPurchase.endDate ? (
-                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-sm font-semibold text-amber-900 mb-1">
-                    ⏰ Purchase Expires: {formatDate(cancelledPurchase.endDate)}
+              <p className="text-slate-900 mb-2 font-medium">Credit balance</p>
+              {balanceLoading ? (
+                <Skeleton className="h-8 w-32 mx-auto mb-6" />
+              ) : credits != null && Number.isFinite(credits) && credits > 0 ? (
+                <div className="mb-6">
+                  <p className="text-2xl font-semibold text-emerald-600">
+                    {new Intl.NumberFormat().format(credits)} credits
                   </p>
-                  {(() => {
-                    const daysLeft = getDaysUntilExpiration(cancelledPurchase.endDate)
-                    return daysLeft !== null && daysLeft > 0 ? (
-                      <p className="text-xs text-amber-700 mb-1">
-                        {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
-                      </p>
-                    ) : null
-                  })()}
-                  <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledPurchase.productName} features
-                    until this date
-                  </p>
+                  {displayCurrency && creditsPerMinorUnit ? (
+                    <p className="text-sm text-slate-500 mt-1">
+                      ~{new Intl.NumberFormat(undefined, {
+                        style: 'currency',
+                        currency: displayCurrency,
+                        minimumFractionDigits: 2,
+                      }).format(credits / creditsPerMinorUnit / 100)}
+                    </p>
+                  ) : null}
                 </div>
               ) : (
-                <p className="text-slate-600 text-sm mb-6">Your purchase access has ended</p>
+                <p className="text-slate-600 text-sm mb-6">No credits yet</p>
               )}
-              <Link href="/checkout">
-                <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Purchase Again
+              <Link href="/topup">
+                <button className="px-6 py-2.5 border border-slate-900 text-slate-900 rounded-lg hover:bg-slate-50 transition-colors">
+                  Top Up
                 </button>
               </Link>
             </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-slate-900 mb-2 font-medium">Upgrade your subscription</p>
-              <p className="text-slate-600 text-sm mb-6">
-                Get access to advanced features and more
-              </p>
-              <Link href="/checkout">
-                <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
-                  Upgrade
-                </button>
-              </Link>
-            </div>
-          )}
+          </div>
         </div>
+
+        {/* Usage Simulator - only shown when user has an active purchase */}
+        {!isLoading && activePurchase && <UsageSimulator />}
       </main>
     </div>
   )

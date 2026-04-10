@@ -20,8 +20,11 @@ export interface TestProductSetup {
 export interface TestPlanSetup {
   reference: string
   productRef: string
-  isFreeTier: boolean
   freeUnits: number
+  type: string
+  price: number
+  creditsPerUnit?: number
+  currency: string
 }
 
 /**
@@ -84,42 +87,68 @@ export async function createTestProduct(
   }
 }
 
+export interface CreateTestPlanOptions {
+  type?: 'recurring' | 'usage-based' | 'one-time' | 'hybrid'
+  price?: number
+  currency?: string
+  billingCycle?: string
+  freeUnits?: number
+  limit?: number
+  creditsPerUnit?: number
+  isDefault?: boolean
+}
+
 /**
- * Create a test plan via SDK API
+ * Create a test plan via SDK API.
+ * Defaults to a free recurring plan if no options are provided.
  */
 export async function createTestPlan(
   apiBaseUrl: string,
   secretKey: string,
   productRef: string,
-  freeUnits: number = 5,
+  freeUnitsOrOptions: number | CreateTestPlanOptions = 5,
 ): Promise<TestPlanSetup> {
+  const opts: CreateTestPlanOptions =
+    typeof freeUnitsOrOptions === 'number'
+      ? { freeUnits: freeUnitsOrOptions }
+      : freeUnitsOrOptions
+
+  const planType = opts.type ?? 'recurring'
+  const price = opts.price ?? 0
+  const freeUnits = opts.freeUnits ?? 5
+  const currency = opts.currency ?? 'USD'
+
+  const body: Record<string, unknown> = {
+    type: planType,
+    price,
+    currency,
+    default: opts.isDefault ?? true,
+    freeUnits,
+    limit: opts.limit ?? freeUnits,
+    metadata: { tier: 'test' },
+  }
+
+  if (planType === 'recurring' || planType === 'hybrid') {
+    body.billingCycle = opts.billingCycle ?? 'monthly'
+  }
+
+  if (planType === 'usage-based') {
+    body.billingModel = 'pre-paid'
+    body.creditsPerUnit = opts.creditsPerUnit ?? 0
+  }
+
+  if (planType === 'hybrid') {
+    body.creditsPerUnit = opts.creditsPerUnit ?? 0
+    body.basePrice = price
+  }
+
   const response = await fetch(`${apiBaseUrl}/v1/sdk/products/${productRef}/plans`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${secretKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      billingCycle: 'monthly',
-      type: 'recurring',
-      price: 0,
-      currency: 'USD',
-      billingModel: 'pre-paid',
-      pricePerUnit: 0,
-      isFreeTier: true,
-      requiresPayment: false,
-      default: true,
-      freeUnits: freeUnits,
-      limit: freeUnits,
-      measures: 'requests',
-      features: [`${freeUnits} free requests`],
-      limits: {
-        monthlyRequests: freeUnits,
-      },
-      metadata: {
-        tier: 'test',
-      },
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
@@ -131,9 +160,30 @@ export async function createTestPlan(
   return {
     reference: data.data?.reference || data.reference,
     productRef,
-    isFreeTier: true,
     freeUnits,
+    type: planType,
+    price,
+    creditsPerUnit: opts.creditsPerUnit,
+    currency,
   }
+}
+
+/**
+ * Create a paid recurring test plan.
+ */
+export async function createPaidTestPlan(
+  apiBaseUrl: string,
+  secretKey: string,
+  productRef: string,
+  price: number = 1999,
+): Promise<TestPlanSetup> {
+  return createTestPlan(apiBaseUrl, secretKey, productRef, {
+    type: 'recurring',
+    price,
+    billingCycle: 'monthly',
+    freeUnits: 0,
+    isDefault: false,
+  })
 }
 
 /**

@@ -38,7 +38,7 @@ export interface PurchaseCheckResult {
   purchases: Array<{
     reference: string
     productName?: string
-    productReference?: string
+    productRef?: string
     status?: string
     startDate?: string
     planSnapshot?: {

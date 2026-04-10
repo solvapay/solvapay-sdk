@@ -4,6 +4,12 @@
  * Types related to paywall protection, limits, and gating functionality.
  */
 
+import type { components } from './generated'
+
+export type LimitPlanSummary = components['schemas']['LimitPlanItemDto']
+export type LimitActivationBalance = components['schemas']['LimitBalanceDto']
+export type LimitActivationProduct = components['schemas']['LimitProductBriefDto']
+
 /**
  * Arguments passed to protected handlers
  */
@@ -22,14 +28,31 @@ export interface PaywallMetadata {
 }
 
 /**
- * Structured content for paywall errors
+ * Structured content for paywall errors (MCP structuredContent and manual handling).
  */
-export interface PaywallStructuredContent {
-  kind: 'payment_required'
-  product: string
-  checkoutUrl: string
-  message: string
-}
+export type PaywallStructuredContent =
+  | {
+      kind: 'payment_required'
+      /** Product ref from paywall metadata (or env default) */
+      product: string
+      checkoutUrl: string
+      message: string
+    }
+  | {
+      kind: 'activation_required'
+      /** Product ref from paywall metadata (or env default) */
+      product: string
+      message: string
+      /**
+       * Best URL for completing purchase or confirmation; mirrors confirmationUrl when present.
+       */
+      checkoutUrl: string
+      confirmationUrl?: string
+      plans?: LimitPlanSummary[]
+      balance?: LimitActivationBalance
+      /** Rich product context from checkLimits (name, ref, provider slug/id) */
+      productDetails?: LimitActivationProduct
+    }
 
 /**
  * MCP tool result with optional paywall information

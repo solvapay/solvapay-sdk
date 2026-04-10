@@ -7,16 +7,19 @@
  */
 
 import type { ErrorResult } from './types'
+import type { components } from '../types/generated'
 import { createSolvaPayClient } from '../client'
 import { handleRouteError } from './error'
 import { getSolvaPayConfig } from '@solvapay/core'
+
+type Plan = components['schemas']['Plan']
 
 /**
  * List plans - core implementation
  */
 export async function listPlansCore(request: Request): Promise<
   | {
-      plans: Record<string, unknown>[]
+      plans: Plan[]
       productRef: string
     }
   | ErrorResult

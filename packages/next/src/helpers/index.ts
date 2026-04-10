@@ -9,19 +9,25 @@
 export { getAuthenticatedUser } from './auth'
 
 // Export customer helpers
-export { syncCustomer } from './customer'
+export { syncCustomer, getCustomerBalance } from './customer'
 
 // Export payment helpers
-export { createPaymentIntent, processPaymentIntent } from './payment'
+export { createPaymentIntent, createTopupPaymentIntent, processPaymentIntent } from './payment'
 
 // Export checkout helpers
 export { createCheckoutSession, createCustomerSession } from './checkout'
 
-// Export purchase cancellation helpers
-export { cancelRenewal } from './renewal'
+// Export activation helpers
+export { activatePlan } from './activation'
+
+// Export purchase cancellation & reactivation helpers
+export { cancelRenewal, reactivateRenewal } from './renewal'
 
 // Export plans helpers
 export { listPlans } from './plans'
+
+// Export usage helpers
+export { trackUsage } from './usage'
 
 // Export middleware helpers
 export { createAuthMiddleware, createSupabaseAuthMiddleware } from './middleware'

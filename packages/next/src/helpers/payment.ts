@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
 import {
   createPaymentIntentCore,
+  createTopupPaymentIntentCore,
   processPaymentIntentCore,
   isErrorResult,
 } from '@solvapay/server'
@@ -25,7 +26,7 @@ export async function createPaymentIntent(
   } = {},
 ): Promise<
   | {
-      id: string
+      processorPaymentId: string
       clientSecret: string
       publishableKey: string
       accountId?: string
@@ -34,6 +35,49 @@ export async function createPaymentIntent(
   | NextResponse
 > {
   const result = await createPaymentIntentCore(request, body, options)
+
+  if (isErrorResult(result)) {
+    return NextResponse.json(
+      { error: result.error, details: result.details },
+      { status: result.status },
+    )
+  }
+
+  try {
+    const userResult = await getAuthenticatedUserCore(request)
+    if (!isErrorResult(userResult)) {
+      clearPurchaseCache(userResult.userId)
+    }
+  } catch {
+    // Ignore errors in cache clearing
+  }
+
+  return result
+}
+
+export async function createTopupPaymentIntent(
+  request: globalThis.Request,
+  body: {
+    amount: number
+    currency: string
+    description?: string
+  },
+  options: {
+    solvaPay?: SolvaPay
+    includeEmail?: boolean
+    includeName?: boolean
+  } = {},
+): Promise<
+  | {
+      processorPaymentId: string
+      clientSecret: string
+      publishableKey: string
+      accountId?: string
+      customerRef: string
+    }
+  | NextResponse
+> {
+  const result = await createTopupPaymentIntentCore(request, body, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(
