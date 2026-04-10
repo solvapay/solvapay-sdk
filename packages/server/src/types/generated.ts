@@ -268,7 +268,7 @@ export interface paths {
         put?: never;
         /**
          * Record bulk usage events
-         * @description Records multiple usage events in a single request.
+         * @description Same persistence rules as POST /sdk/usages for each item: validate batch first, then one insert per event.
          */
         post: operations["UsageSdkController_recordBulkUsage"];
         delete?: never;
@@ -308,7 +308,7 @@ export interface paths {
         put?: never;
         /**
          * Record meter events in bulk
-         * @description Records multiple usage events in a single request for high throughput.
+         * @description Persists each event with recordUsage (same shape as single POST), after shared meter/customer checks.
          */
         post: operations["MeterEventsSdkController_recordBulkEvents"];
         delete?: never;
@@ -649,7 +649,7 @@ export interface components {
              * @example recurring
              * @enum {string}
              */
-            type: "recurring" | "one-time" | "usage-based";
+            type: "recurring" | "one-time" | "usage-based" | "hybrid";
             /**
              * Plan reference
              * @example pln_1A2B3C4D
@@ -767,7 +767,7 @@ export interface components {
             name?: string;
             description?: string;
             /** @enum {string} */
-            type?: "recurring" | "usage-based" | "one-time";
+            type?: "recurring" | "usage-based" | "one-time" | "hybrid";
             /** @enum {string} */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
             price?: number;
@@ -777,6 +777,17 @@ export interface components {
             billingModel?: "pre-paid" | "post-paid";
             freeUnits?: number;
             limit?: number;
+            basePrice?: number;
+            setupFee?: number;
+            trialDays?: number;
+            rolloverUnusedUnits?: boolean;
+            autoRenew?: boolean;
+            usageTracking: {
+                /** @enum {string} */
+                method?: "automatic" | "manual" | "hybrid";
+                /** @enum {string} */
+                granularity?: "hourly" | "daily" | "weekly" | "monthly";
+            };
             limits: {
                 [key: string]: unknown;
             };
