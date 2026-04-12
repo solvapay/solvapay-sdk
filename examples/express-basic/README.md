@@ -24,7 +24,7 @@ A simple Express.js CRUD API demonstrating SolvaPay paywall protection.
 - **SolvaPay Paywall** protection on all endpoints
 - **Demo Mode**: Uses stub client - no backend required
 - **Auto Port Detection**: Finds next available port automatically
-- **Plan-Based Limits**: Shared limit across protected routes for one configured plan
+- **Usage Limits**: Shared limit across protected routes for the configured product
 - **Clean Architecture**: Separated business logic and route handlers
 
 ## Quick Start
@@ -47,7 +47,7 @@ pnpm dev
 **Demo Mode:**
 
 - No backend required
-- 5 free calls per day per plan
+- 5 free calls per day
 - Local usage tracking (resets daily)
 
 ## API Endpoints
@@ -61,10 +61,10 @@ pnpm dev
 
 All require `x-customer-ref` header for user identification:
 
-- `POST /tasks` - Create a new task (plan: `pln_MUKDWQZZ`)
-- `GET /tasks` - List all tasks (plan: `pln_MUKDWQZZ`)
-- `GET /tasks/:id` - Get a specific task (plan: `pln_MUKDWQZZ`)
-- `DELETE /tasks/:id` - Delete a task (plan: `pln_MUKDWQZZ`)
+- `POST /tasks` - Create a new task
+- `GET /tasks` - List all tasks
+- `GET /tasks/:id` - Get a specific task
+- `DELETE /tasks/:id` - Delete a task
 
 ## Usage Examples
 
@@ -203,14 +203,13 @@ const solvaPay = createSolvaPay({ apiClient })
 Create a payable handler that will protect your endpoints:
 
 ```typescript
-// Create payable handler with product and plan configuration
+// Create payable handler with product configuration
 const payable = solvaPay.payable({
   product: 'prd_NO8WYSX5', // Your product reference
-  plan: 'pln_MUKDWQZZ', // Your plan reference
 })
 ```
 
-**Note**: The product and plan references should match what you've configured in your SolvaPay dashboard.
+**Note**: The product reference should match what you've configured in your SolvaPay Console.
 
 ### Step 3: Protect Endpoints
 
@@ -286,7 +285,7 @@ The adapter automatically handles errors:
   "error": "Payment required",
   "product": "prd_NO8WYSX5",
   "checkoutUrl": "https://checkout.solvapay.com/...",
-  "message": "Plan purchase required. Remaining: 0"
+  "message": "Purchase required. Remaining: 0"
 }
 
 // Other errors are returned as 500 with error message
@@ -319,20 +318,15 @@ curl -H "x-customer-ref: user_123" http://localhost:3001/tasks
 - Session data
 - Authentication middleware
 
-### Plan Configuration
+### Product Configuration
 
-Each endpoint can use the same plan or different plans:
+Create a payable handler for your product and apply it to endpoints:
 
 ```typescript
-// Same plan for all endpoints
-const payable = solvaPay.payable({ product: 'my-product', plan: 'my-plan' })
+const payable = solvaPay.payable({ product: 'my-product' })
 
-// Different plans per endpoint
-const createPayable = solvaPay.payable({ product: 'my-product', plan: 'create-plan' })
-const readPayable = solvaPay.payable({ product: 'my-product', plan: 'read-plan' })
-
-app.post('/tasks', createPayable.http(createTask))
-app.get('/tasks', readPayable.http(listTasks))
+app.post('/tasks', payable.http(createTask))
+app.get('/tasks', payable.http(listTasks))
 ```
 
 ### Business Logic Functions
@@ -348,7 +342,7 @@ Your functions should:
 
 ### 402 Payment Required
 
-Returned when user exceeds their plan limits:
+Returned when user exceeds their usage limits:
 
 ```json
 {
@@ -356,7 +350,7 @@ Returned when user exceeds their plan limits:
   "error": "Payment required",
   "product": "express-tasks-api",
   "checkoutUrl": "https://checkout.solvapay.com/...",
-  "message": "Plan purchase required. Remaining: 0"
+  "message": "Purchase required. Remaining: 0"
 }
 ```
 
@@ -517,7 +511,7 @@ Then restart the example server.
 
 **Solution**:
 
-1. Check that product and plan references are correct
+1. Check that product references are correct
 2. Verify stub client configuration
 3. In production, ensure API key is valid
 4. Check network tab for API errors

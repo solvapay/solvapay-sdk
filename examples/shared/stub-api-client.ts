@@ -285,7 +285,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
   async checkLimits(params: {
     customerRef: string
     productRef: string
-    planRef?: string
   }): Promise<{
     withinLimits: boolean
     remaining: number
@@ -485,7 +484,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     description?: string
     idempotencyKey?: string
   }): Promise<{
-    id: string
+    processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
@@ -495,13 +494,13 @@ export class StubSolvaPayClient implements SolvaPayClient {
     this.log(`📡 Stub Request: POST /v1/sdk/payment-intents (topup)`)
     this.log(`   Customer: ${params.customerRef}, Amount: ${params.amount}, Currency: ${params.currency}`)
 
-    const id = `pi_topup_${Math.random().toString(36).slice(2, 15)}`
+    const processorPaymentId = `pi_topup_${Math.random().toString(36).slice(2, 15)}`
 
     await this.addCredits(params.customerRef, params.amount)
 
     return {
-      id,
-      clientSecret: `${id}_secret_${Math.random().toString(36).slice(2, 15)}`,
+      processorPaymentId,
+      clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
       publishableKey: 'pk_test_stub_demo_key',
     }
   }
@@ -729,7 +728,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
     return [
       {
         type: 'recurring',
-        id: 'plan_free_stub',
         reference: 'plan_free',
         price: 0,
         currency: 'USD',
@@ -745,7 +743,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
       },
       {
         type: 'recurring',
-        id: 'plan_pro_stub',
         reference: 'plan_pro',
         price: 29,
         currency: 'USD',
@@ -769,12 +766,23 @@ export class StubSolvaPayClient implements SolvaPayClient {
     type?: string
     price?: number
     [key: string]: unknown
-  }): Promise<{ reference: string }> {
+  }): Promise<ListPlansResponse[number]> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
     this.log(`📡 Stub Request: POST /v1/sdk/products/${params.productRef}/plans`)
 
+    const now = new Date().toISOString()
     const reference = `plan_${Math.random().toString(36).slice(2, 10)}`
-    return { reference }
+    return {
+      type: (params.type as ListPlansResponse[number]['type']) || 'recurring',
+      reference,
+      price: params.price ?? 0,
+      currency: (params.currency as string) || 'USD',
+      requiresPayment: (params.price ?? 0) > 0,
+      isActive: true,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    }
   }
 
   /**
@@ -783,12 +791,21 @@ export class StubSolvaPayClient implements SolvaPayClient {
   async updatePlan(
     productRef: string,
     planRef: string,
-    _params: Record<string, unknown>,
-  ): Promise<{ reference: string; [key: string]: unknown }> {
+    params: Record<string, unknown>,
+  ): Promise<ListPlansResponse[number]> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
     this.log(`📡 Stub Request: PUT /v1/sdk/products/${productRef}/plans/${planRef}`)
+    const now = new Date().toISOString()
     return {
+      type: (params.type as ListPlansResponse[number]['type']) || 'recurring',
       reference: planRef,
+      price: (params.price as number) ?? 0,
+      currency: (params.currency as string) || 'USD',
+      requiresPayment: ((params.price as number) ?? 0) > 0,
+      isActive: true,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
     }
   }
 

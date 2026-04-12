@@ -23,7 +23,6 @@ export interface PaywallArgs {
  */
 export interface PaywallMetadata {
   product?: string
-  plan?: string
   usageType?: 'requests' | 'tokens'
 }
 

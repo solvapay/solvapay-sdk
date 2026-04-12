@@ -43,7 +43,6 @@ const solvaPay = createSolvaPay({
 // Create payable handler for your product
 const payable = solvaPay.payable({
   product: 'prd_YOUR_PRODUCT_ID',
-  plan: 'pln_YOUR_PLAN_ID', // Optional: can be set per tool
 })
 ```
 
@@ -146,12 +145,11 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
 
 ### Multiple Tools with Same Plan
 
-If all tools use the same plan, create one `payable` handler:
+Create one `payable` handler and apply it to all protected tools:
 
 ```typescript
 const payable = solvaPay.payable({
   product: 'prd_myapi',
-  plan: 'pln_premium',
 })
 
 server.setRequestHandler(CallToolRequestSchema, async request => {
@@ -179,42 +177,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
 })
 ```
 
-### Different Plans per Tool
-
-Create multiple `payable` handlers for different plans:
-
-```typescript
-const freeTier = solvaPay.payable({
-  product: 'prd_myapi',
-  plan: 'pln_free',
-})
-
-const premiumTier = solvaPay.payable({
-  product: 'prd_myapi',
-  plan: 'pln_premium',
-})
-
-server.setRequestHandler(CallToolRequestSchema, async request => {
-  const { name, arguments: args } = request.params
-
-  switch (name) {
-    case 'list_tasks': {
-      // Free tier tool
-      const handler = freeTier.mcp(listTasks)
-      return await handler(args)
-    }
-
-    case 'create_task': {
-      // Premium tier tool
-      const handler = premiumTier.mcp(createTask)
-      return await handler(args)
-    }
-
-    default:
-      throw new Error(`Unknown tool: ${name}`)
-  }
-})
-```
+Plans are managed on the product in SolvaPay Console. Customers select a plan during activation and the SDK resolves the correct plan from their purchase automatically.
 
 ## Authentication
 
@@ -410,7 +373,6 @@ const solvaPay = createSolvaPay({
 // Create payable handler
 const payable = solvaPay.payable({
   product: 'prd_myapi',
-  plan: 'pln_premium',
 })
 
 // Define tools

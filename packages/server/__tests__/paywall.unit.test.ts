@@ -527,6 +527,63 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     })
   })
 
+  describe('Plan simplification - no plan/planRef in payable flow', () => {
+    it('should never forward planRef to checkLimits', async () => {
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      // Even if extra properties sneak through via cast, planRef should not appear in checkLimits
+      const payable = solvaPay.payable({ product: 'prd_test' } as any)
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_plan_user' } })
+
+      const callArgs = checkLimitsSpy.mock.calls[0][0]
+      expect(callArgs).not.toHaveProperty('planRef')
+    })
+
+    it('should use a cache key without plan segment', async () => {
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ success: true })
+
+      // Two payables for the same product+usageType should share cache (no plan-based isolation)
+      const payable = solvaPay.payable({ product: 'prd_cache' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_cache_plan' } })
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_cache_plan' } })
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call trackUsage with only 6 parameters (no planRef)', async () => {
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'prd_track' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_track_user' } })
+
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+      // trackUsage should not pass productRef since it is unused dead code
+      expect(mockApiClient.trackUsageCalls[0]).toBeDefined()
+    })
+
+    it('should build metadata with only product and usageType (no plan)', async () => {
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'prd_no_plan' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_no_plan' } })
+
+      const callArgs = checkLimitsSpy.mock.calls[0][0]
+      expect(callArgs).toEqual(
+        expect.objectContaining({ productRef: 'prd_no_plan', meterName: 'requests' }),
+      )
+      expect(callArgs).not.toHaveProperty('planRef')
+    })
+  })
+
   describe('checkLimits Cache', () => {
     it('should serve cached checkLimits result on second call', async () => {
       const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')

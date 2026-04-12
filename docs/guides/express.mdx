@@ -46,7 +46,6 @@ const solvaPay = createSolvaPay({
 // Create payable handler for your product
 const payable = solvaPay.payable({
   product: 'prd_YOUR_PRODUCT_ID',
-  plan: 'pln_YOUR_PLAN_ID', // Optional: can be set per endpoint
 })
 ```
 
@@ -82,14 +81,13 @@ That's it! The endpoint is now protected. The paywall will:
 
 ## Protecting Endpoints
 
-### Multiple Endpoints with Same Plan
+### Multiple Endpoints
 
-If all your endpoints use the same plan, create one `payable` handler:
+Create one `payable` handler and apply it to all protected endpoints:
 
 ```typescript
 const payable = solvaPay.payable({
   product: 'prd_myapi',
-  plan: 'pln_premium',
 })
 
 app.post('/api/tasks', payable.http(createTask))
@@ -97,27 +95,7 @@ app.get('/api/tasks/:id', payable.http(getTask))
 app.delete('/api/tasks/:id', payable.http(deleteTask))
 ```
 
-### Different Plans per Endpoint
-
-Create multiple `payable` handlers for different plans:
-
-```typescript
-const freeTier = solvaPay.payable({
-  product: 'prd_myapi',
-  plan: 'pln_free',
-})
-
-const premiumTier = solvaPay.payable({
-  product: 'prd_myapi',
-  plan: 'pln_premium',
-})
-
-// Free tier endpoint
-app.get('/api/tasks', freeTier.http(listTasks))
-
-// Premium tier endpoint
-app.post('/api/tasks', premiumTier.http(createTask))
-```
+Plans are managed on the product in SolvaPay Console. Customers select a plan during activation and the SDK resolves the correct plan from their purchase automatically.
 
 ### Accessing Request Data
 
@@ -378,7 +356,6 @@ const solvaPay = createSolvaPay({
 // Create payable handlers
 const payable = solvaPay.payable({
   product: 'prd_myapi',
-  plan: 'pln_premium',
 })
 
 // Authentication middleware

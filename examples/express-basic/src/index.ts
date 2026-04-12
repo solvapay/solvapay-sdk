@@ -23,7 +23,7 @@ const solvaPay = createSolvaPay({
 })
 
 // Create payable handler with explicit HTTP adapter
-const payable = solvaPay.payable({ product: 'prd_NO8WYSX5', plan: 'pln_MUKDWQZZ' })
+const payable = solvaPay.payable({ product: 'prd_NO8WYSX5' })
 
 app.use(express.json())
 
@@ -48,7 +48,7 @@ app.get('/', (req, res) => {
     },
     paywall: {
       enabled: true,
-      freeTier: '5 calls per day per plan',
+      freeTier: '5 calls per day',
       note: 'Using stub client for demonstration',
     },
     usage: {
