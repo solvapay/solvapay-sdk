@@ -88,7 +88,7 @@ export interface CreateSolvaPayConfig {
  *
  * @example
  * ```typescript
- * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
+ * const payable = solvaPay.payable({ product: 'prd_myapi' });
  *
  * // Express.js
  * app.post('/tasks', payable.http(createTask));
@@ -212,18 +212,11 @@ export interface PayableFunction {
  * const solvaPay = createSolvaPay();
  *
  * // Create payable handlers
-   * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
+   * const payable = solvaPay.payable({ product: 'prd_myapi' });
    *
    * // Manage customers
    * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
    *   email: 'user@example.com'
-   * });
-   *
-   * // Create payment intents
-   * const intent = await solvaPay.createPaymentIntent({
-   *   productRef: 'prd_myapi',
-   *   planRef: 'pln_premium',
-   *   customerRef: 'user_123'
    * });
  * ```
  */
@@ -231,15 +224,12 @@ export interface SolvaPay {
   /**
    * Create a payable handler with explicit adapters for different frameworks.
    *
-   * @param options - Payable options including product and plan references
+   * @param options - Payable options including product reference and usage type
    * @returns PayableFunction with framework-specific adapters
    *
    * @example
    * ```typescript
-   * const payable = solvaPay.payable({
-   *   product: 'prd_myapi',
-   *   plan: 'pln_premium'
-   * });
+   * const payable = solvaPay.payable({ product: 'prd_myapi' });
    *
    * app.post('/tasks', payable.http(createTask));
    * ```
@@ -389,7 +379,6 @@ export interface SolvaPay {
    * const limits = await solvaPay.checkLimits({
    *   customerRef: 'user_123',
    *   productRef: 'prd_myapi',
-   *   planRef: 'pln_premium'
    * });
    *
    * if (!limits.withinLimits) {
@@ -423,12 +412,12 @@ export interface SolvaPay {
    *
    * @param params - Usage tracking parameters
    * @param params.customerRef - Customer reference
-   * @param params.productRef - Product reference
-   * @param params.planRef - Plan reference
+   * @param params.actionType - Action type category
+   * @param params.units - Number of units consumed (default 1)
    * @param params.outcome - Action outcome ('success', 'paywall', or 'fail')
-   * @param params.action - Optional action name for analytics
-   * @param params.requestId - Unique request ID
-   * @param params.actionDuration - Action duration in milliseconds
+   * @param params.productRef - Product reference
+   * @param params.metadata - Additional metadata (e.g. tool name, endpoint)
+   * @param params.duration - Action duration in milliseconds
    * @param params.timestamp - ISO timestamp of the action
    *
    * @example
@@ -699,10 +688,7 @@ export interface SolvaPay {
  * });
  *
  * // Create payable handlers for your product
- * const payable = solvaPay.payable({
- *   product: 'prd_myapi',
- *   plan: 'pln_premium'
- * });
+ * const payable = solvaPay.payable({ product: 'prd_myapi' });
  *
  * // Protect endpoints with framework-specific adapters
  * app.post('/tasks', payable.http(createTask));      // Express/Fastify
@@ -847,17 +833,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
-      // Resolve product name (support both productRef and product)
       const product =
         options.productRef ||
         options.product ||
         process.env.SOLVAPAY_PRODUCT ||
         'default-product'
-      // Resolve plan (support both planRef and plan)
-      const plan = options.planRef || options.plan
 
       const usageType = options.usageType || 'requests'
-      const metadata = { product, plan, usageType }
+      const metadata = { product, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

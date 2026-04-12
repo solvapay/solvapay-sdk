@@ -61,7 +61,6 @@ import { solvaPay } from '@/lib/solvapay'
 
 const payable = solvaPay.payable({
   product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!,
-  plan: 'pln_premium',
 })
 
 // Your business logic
@@ -505,7 +504,6 @@ import { solvaPay } from '@/lib/solvapay'
 
 const payable = solvaPay.payable({
   product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!,
-  plan: 'pln_premium',
 })
 
 async function createTask(req: NextRequest) {

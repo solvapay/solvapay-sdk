@@ -166,8 +166,6 @@ export class SolvaPayPaywall {
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
     const product = this.resolveProduct(metadata)
-    const configuredPlanRef = metadata.plan?.trim()
-    const usagePlanRef = configuredPlanRef || 'unspecified'
     const usageType = metadata.usageType || 'requests'
 
     return async (args: TArgs): Promise<TResult> => {
@@ -194,7 +192,7 @@ export class SolvaPayPaywall {
       let resolvedMeterName: string | undefined
 
       try {
-        const limitsCacheKey = `${backendCustomerRef}:${product}:${configuredPlanRef || ''}:${usageType}`
+        const limitsCacheKey = `${backendCustomerRef}:${product}:${usageType}`
         const cachedLimits = this.limitsCache.get(limitsCacheKey)
         const now = Date.now()
 
@@ -231,7 +229,6 @@ export class SolvaPayPaywall {
           const limitsCheck = await this.apiClient.checkLimits({
             customerRef: backendCustomerRef,
             productRef: product,
-            ...(configuredPlanRef ? { planRef: configuredPlanRef } : {}),
             meterName: usageType,
           })
 
@@ -263,7 +260,6 @@ export class SolvaPayPaywall {
           this.trackUsage(
             backendCustomerRef,
             product,
-            usagePlanRef,
             resolvedMeterName || usageType,
             'paywall',
             requestId,
@@ -300,7 +296,6 @@ export class SolvaPayPaywall {
         this.trackUsage(
           backendCustomerRef,
           product,
-          usagePlanRef,
           resolvedMeterName || usageType,
           'success',
           requestId,
@@ -320,7 +315,6 @@ export class SolvaPayPaywall {
           this.trackUsage(
             backendCustomerRef,
             product,
-            usagePlanRef,
             resolvedMeterName || usageType,
             'fail',
             requestId,
@@ -563,8 +557,7 @@ export class SolvaPayPaywall {
 
   async trackUsage(
     customerRef: string,
-    _productRef: string,
-    _planRef: string,
+    productRef: string,
     action: string,
     outcome: 'success' | 'paywall' | 'fail',
     requestId: string,
@@ -577,7 +570,7 @@ export class SolvaPayPaywall {
           actionType: 'api_call',
           units: 1,
           outcome,
-          productRef: _productRef,
+          productRef,
           duration: actionDuration,
           metadata: { action: action || 'api_requests', requestId },
           timestamp: new Date().toISOString(),

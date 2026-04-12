@@ -1224,17 +1224,11 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       expect(balanceResult).toBeDefined()
       expect(balanceResult.customerRef).toBe(customerRef)
-      expect(balanceResult.balances).toBeDefined()
-      expect(Array.isArray(balanceResult.balances)).toBe(true)
-      if (balanceResult.balances.length > 0) {
-        const usdBalance = balanceResult.balances.find((b: any) => b.currency === 'USD')
-        if (usdBalance) {
-          expect(typeof usdBalance.balance).toBe('number')
-          expect(usdBalance.balance).toBeGreaterThanOrEqual(0)
-        }
-      }
+      expect(typeof balanceResult.credits).toBe('number')
+      expect(balanceResult.credits).toBeGreaterThanOrEqual(0)
+      expect(balanceResult.displayCurrency).toBeDefined()
 
-      console.log(`✅ getCustomerBalance: ${JSON.stringify(balanceResult.balances)}`)
+      console.log(`✅ getCustomerBalance: credits=${balanceResult.credits}, currency=${balanceResult.displayCurrency}`)
     })
 
     it('should deduct credits and decrement remaining units on usage consumption', async () => {

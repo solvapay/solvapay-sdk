@@ -1403,7 +1403,6 @@ export interface components {
         CheckLimitRequest: {
             customerRef: string;
             productRef: string;
-            planRef?: string;
             meterName?: string;
             usageType?: string;
         };

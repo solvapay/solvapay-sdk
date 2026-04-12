@@ -82,7 +82,6 @@ const solvaPay = createSolvaPay({
 // Create payable handlers for your product
 const payable = solvaPay.payable({
   product: 'prd_YOUR_PRODUCT',
-  plan: 'pln_YOUR_PLAN',
 })
 
 // Protect endpoints with framework-specific adapters:

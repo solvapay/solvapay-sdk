@@ -69,16 +69,6 @@ export interface PayableOptions {
   productRef?: string
 
   /**
-   * Plan identifier (defaults to product name if not provided)
-   */
-  plan?: string
-
-  /**
-   * Plan reference (alias for plan, preferred for consistency with backend API)
-   */
-  planRef?: string
-
-  /**
    * Usage meter type to charge against (defaults to 'requests')
    */
   usageType?: 'requests' | 'tokens'
