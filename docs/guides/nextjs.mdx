@@ -177,6 +177,65 @@ export async function POST(request: NextRequest) {
 }
 ```
 
+#### Cancel Renewal
+
+```typescript
+// app/api/cancel-renewal/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { cancelRenewal } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { purchaseRef, reason } = await request.json()
+  const result = await cancelRenewal(request, { purchaseRef, reason })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+#### Reactivate Renewal
+
+```typescript
+// app/api/reactivate-renewal/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { reactivateRenewal } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { purchaseRef } = await request.json()
+  const result = await reactivateRenewal(request, { purchaseRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+#### Activate Plan
+
+```typescript
+// app/api/activate-plan/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { activatePlan } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { productRef, planRef } = await request.json()
+  const result = await activatePlan(request, { productRef, planRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+Returns `{ status, purchaseRef?, checkoutUrl?, creditBalance?, ... }`. See [Purchase lifecycle management](./purchase-management) for all status values.
+
+#### List Plans
+
+```typescript
+// app/api/list-plans/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { listPlans } from '@solvapay/next'
+
+export async function GET(request: NextRequest) {
+  const result = await listPlans(request)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+Returns `{ plans, productRef }`. Pass `?productRef=prd_...` as a query parameter.
+
 ## Server Components
 
 Use SolvaPay in Server Components to check purchase status:
@@ -463,7 +522,15 @@ app/
     │   └── route.ts
     ├── create-payment-intent/
     │   └── route.ts
-    └── process-payment/
+    ├── process-payment/
+    │   └── route.ts
+    ├── cancel-renewal/
+    │   └── route.ts
+    ├── reactivate-renewal/
+    │   └── route.ts
+    ├── activate-plan/
+    │   └── route.ts
+    └── list-plans/
         └── route.ts
 lib/
 └── solvapay.ts

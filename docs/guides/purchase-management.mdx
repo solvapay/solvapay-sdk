@@ -1,0 +1,221 @@
+---
+title: "Purchase lifecycle management"
+description: "Cancel, reactivate, activate plans, and switch between plans using the TypeScript SDK."
+---
+
+## Overview
+
+After a customer completes checkout, the SDK provides helpers to manage the full purchase lifecycle:
+
+- **Cancel renewal** — stop auto-renewal; access continues until the period ends
+- **Reactivate renewal** — undo a pending cancellation while still in the active period
+- **Activate plan** — activate a product for a customer on a specific plan without checkout (free units or credit balance)
+- **Plan switching** — activating a different plan automatically expires the current purchase and creates a new one
+
+All helpers follow the same pattern: pass the incoming `Request` object and a body, get back either a data object or a `NextResponse` error.
+
+## Cancel renewal
+
+Cancels auto-renewal on a purchase. The customer keeps access until the current billing period ends.
+
+<CodeGroup>
+
+```typescript Next.js helper
+import { cancelRenewal } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { purchaseRef, reason } = await request.json()
+  const result = await cancelRenewal(request, { purchaseRef, reason })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+```typescript Server SDK
+import { cancelPurchaseCore } from '@solvapay/server'
+
+const result = await cancelPurchaseCore(request, {
+  purchaseRef: 'pur_...',
+  reason: 'Too expensive',
+})
+```
+
+</CodeGroup>
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `purchaseRef` | `string` | Yes | The purchase reference to cancel |
+| `reason` | `string` | No | Optional cancellation reason |
+
+The purchase remains `active` with `cancelledAt` set. When the billing period ends, the purchase transitions to `expired`.
+
+## Reactivate renewal
+
+Undoes a pending cancellation, restoring auto-renewal. Only works while the purchase is still active (before the period ends).
+
+<CodeGroup>
+
+```typescript Next.js helper
+import { reactivateRenewal } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { purchaseRef } = await request.json()
+  const result = await reactivateRenewal(request, { purchaseRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+```typescript Server SDK
+import { reactivatePurchaseCore } from '@solvapay/server'
+
+const result = await reactivatePurchaseCore(request, {
+  purchaseRef: 'pur_...',
+})
+```
+
+</CodeGroup>
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `purchaseRef` | `string` | Yes | The purchase reference to reactivate |
+
+**Preconditions:**
+
+- Purchase status must be `active`
+- `cancelledAt` must be set (cancellation is pending)
+- `endDate` must not have passed
+
+On success, `cancelledAt` is cleared and `autoRenew` is restored. A `purchase.updated` webhook fires.
+
+## Activate plan
+
+Activates a product for a customer on a specific plan without going through checkout. Useful for free plans, credit-based activation, or programmatic plan assignment.
+
+<CodeGroup>
+
+```typescript Next.js helper
+import { activatePlan } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { productRef, planRef } = await request.json()
+  const result = await activatePlan(request, { productRef, planRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+```typescript Server SDK
+import { activatePlanCore } from '@solvapay/server'
+
+const result = await activatePlanCore(request, {
+  productRef: 'prd_...',
+  planRef: 'pln_...',
+})
+```
+
+</CodeGroup>
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `productRef` | `string` | Yes | The product to activate |
+| `planRef` | `string` | Yes | The plan to activate on |
+
+### Response statuses
+
+| Status | Meaning |
+|---|---|
+| `activated` | Purchase created successfully |
+| `already_active` | Customer already has an active purchase on this plan |
+| `topup_required` | Customer needs more credits — response includes `creditBalance` and `creditsPerUnit` |
+| `payment_required` | Plan requires payment — response includes `checkoutUrl` and `checkoutSessionId` |
+| `invalid` | Invalid product or plan reference |
+
+```typescript
+const result = await activatePlan(request, { productRef, planRef })
+
+if (!(result instanceof NextResponse)) {
+  switch (result.status) {
+    case 'activated':
+      // Purchase created — result.purchaseRef is available
+      break
+    case 'topup_required':
+      // Show top-up UI with result.creditBalance and result.creditsPerUnit
+      break
+    case 'payment_required':
+      // Redirect to result.checkoutUrl
+      break
+  }
+}
+```
+
+## Plan switching
+
+When a customer already has an active purchase on a product and you call `activatePlan` with a **different** `planRef`, the SDK automatically:
+
+1. Expires the existing purchase (fires `purchase.expired` webhook)
+2. Creates a new purchase on the requested plan (fires `purchase.created` webhook)
+
+No special API call is needed — `activatePlan` handles the switch.
+
+```typescript
+// Customer is on pln_basic, switch to pln_pro
+const result = await activatePlan(request, {
+  productRef: 'prd_myapi',
+  planRef: 'pln_pro',
+})
+// result.status === 'activated' if the switch succeeded
+```
+
+<Warning>
+Plan switching immediately expires the old purchase. If the old plan was a paid recurring plan, consider whether you need to handle proration or credits on your side.
+</Warning>
+
+## Complete Next.js example
+
+```
+app/api/
+├── cancel-renewal/route.ts
+├── reactivate-renewal/route.ts
+├── activate-plan/route.ts
+└── ...
+```
+
+```typescript
+// app/api/cancel-renewal/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { cancelRenewal } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { purchaseRef, reason } = await request.json()
+  const result = await cancelRenewal(request, { purchaseRef, reason })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+```typescript
+// app/api/reactivate-renewal/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { reactivateRenewal } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { purchaseRef } = await request.json()
+  const result = await reactivateRenewal(request, { purchaseRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+```typescript
+// app/api/activate-plan/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { activatePlan } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { productRef, planRef } = await request.json()
+  const result = await activatePlan(request, { productRef, planRef })
+  return result instanceof NextResponse ? result : NextResponse.json(result)
+}
+```
+
+## Next steps
+
+- [Webhooks](/webhooks) — handle `purchase.updated`, `purchase.expired`, and `purchase.created` events from lifecycle changes
+- [Billing](/plans/billing) — understand billing cycles, renewal processing, and purchase states
+- [Next.js guide](/sdks/typescript/guides/nextjs) — full Next.js integration walkthrough
