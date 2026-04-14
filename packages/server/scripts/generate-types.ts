@@ -42,6 +42,39 @@ function collectSchemaRefs(node: unknown, refs: Set<string>): void {
   }
 }
 
+function pruneUnreferencedSchemas(spec: OpenAPISpec): number {
+  const reachable = new Set<string>()
+  const queue: string[] = []
+
+  collectSchemaRefs(spec.paths, reachable)
+  queue.push(...reachable)
+
+  while (queue.length > 0) {
+    const name = queue.pop()!
+    const schema = spec.components?.schemas?.[name]
+    if (!schema) continue
+    const nested = new Set<string>()
+    collectSchemaRefs(schema, nested)
+    for (const ref of nested) {
+      if (!reachable.has(ref)) {
+        reachable.add(ref)
+        queue.push(ref)
+      }
+    }
+  }
+
+  let pruned = 0
+  if (spec.components?.schemas) {
+    for (const name of Object.keys(spec.components.schemas)) {
+      if (!reachable.has(name)) {
+        delete spec.components.schemas[name]
+        pruned++
+      }
+    }
+  }
+  return pruned
+}
+
 function addMissingSchemaPlaceholders(spec: OpenAPISpec): number {
   const refs = new Set<string>()
   collectSchemaRefs(spec, refs)
@@ -122,6 +155,9 @@ async function main(): Promise<void> {
       ...spec,
       paths: filteredPaths,
     }
+
+    const prunedSchemas = pruneUnreferencedSchemas(filteredSpec)
+    console.log(`Pruned ${prunedSchemas} unreachable schemas`)
 
     const missingSchemasAdded = addMissingSchemaPlaceholders(filteredSpec)
     if (missingSchemasAdded > 0) {

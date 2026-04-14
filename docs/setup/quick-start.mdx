@@ -28,7 +28,6 @@ app.use(express.json())
 const solvaPay = createSolvaPay()
 const payable = solvaPay.payable({
   product: 'prd_YOUR_PRODUCT',
-  plan: 'pln_YOUR_PLAN',
 })
 
 app.post(

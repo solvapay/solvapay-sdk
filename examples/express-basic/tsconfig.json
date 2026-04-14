@@ -4,6 +4,11 @@
   "compilerOptions": {
     "outDir": "dist",
     "composite": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@solvapay/core": ["../../packages/core/dist/index.d.ts"],
+      "@solvapay/demo-services": ["../../packages/demo-services/dist/index.d.ts"],
+      "@solvapay/server": ["../../packages/server/dist/index.d.ts"]
+    }
   }
 }

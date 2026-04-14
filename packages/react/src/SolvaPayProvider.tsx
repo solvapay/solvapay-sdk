@@ -6,114 +6,26 @@ import type {
   PurchaseStatus,
   CustomerPurchaseData,
   PaymentIntentResult,
-  SolvaPayConfig,
+  TopupPaymentResult,
+  BalanceStatus,
+  CancelResult,
+  ReactivateResult,
 } from './types'
-import type { ProcessPaymentResult } from '@solvapay/server'
+import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import {
   filterPurchases,
   isPaidPurchase,
   getPrimaryPurchase,
 } from './utils/purchases'
-import { defaultAuthAdapter, type AuthAdapter } from './adapters/auth'
+import {
+  getAuthAdapter,
+  getCachedCustomerRef,
+  setCachedCustomerRef,
+  clearCachedCustomerRef,
+  buildRequestHeaders,
+} from './utils/headers'
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null)
-
-// localStorage cache keys
-const CUSTOMER_REF_KEY = 'solvapay_customerRef'
-const CUSTOMER_REF_EXPIRY = 'solvapay_customerRef_expiry'
-const CUSTOMER_REF_USER_ID_KEY = 'solvapay_customerRef_userId' // Track which userId this customerRef belongs to
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
-
-/**
- * Get cached customer reference from localStorage
- * Only returns it if it belongs to the current userId (if provided)
- */
-function getCachedCustomerRef(userId?: string | null): string | null {
-  if (typeof window === 'undefined') return null
-
-  const cached = localStorage.getItem(CUSTOMER_REF_KEY)
-  const expiry = localStorage.getItem(CUSTOMER_REF_EXPIRY)
-  const cachedUserId = localStorage.getItem(CUSTOMER_REF_USER_ID_KEY)
-
-  if (!cached || !expiry) return null
-
-  if (Date.now() > parseInt(expiry)) {
-    localStorage.removeItem(CUSTOMER_REF_KEY)
-    localStorage.removeItem(CUSTOMER_REF_EXPIRY)
-    localStorage.removeItem(CUSTOMER_REF_USER_ID_KEY)
-    return null
-  }
-
-  // CRITICAL: If userId is provided, only return cached customerRef if it belongs to this userId
-  // This prevents using a customerRef from a different user after sign out/sign in
-  if (userId !== undefined && userId !== null) {
-    if (cachedUserId !== userId) {
-      // CustomerRef belongs to a different user - clear it
-      clearCachedCustomerRef()
-      return null
-    }
-  }
-
-  return cached
-}
-
-/**
- * Set cached customer reference in localStorage
- * Also stores the userId to prevent cross-user contamination
- *
- * SECURITY: If userId is not provided, we don't cache the customerRef
- * This prevents caching customerRef for unauthenticated users or during auth transitions
- */
-function setCachedCustomerRef(customerRef: string, userId?: string | null): void {
-  if (typeof window === 'undefined') return
-
-  // SECURITY: Only cache customerRef if we have a userId to associate it with
-  // This prevents cross-user contamination and ensures we can validate ownership
-  if (userId === undefined || userId === null) {
-    // Don't cache if no userId - this prevents security issues
-    return
-  }
-
-  localStorage.setItem(CUSTOMER_REF_KEY, customerRef)
-  localStorage.setItem(CUSTOMER_REF_EXPIRY, String(Date.now() + CACHE_DURATION))
-  localStorage.setItem(CUSTOMER_REF_USER_ID_KEY, userId)
-}
-
-/**
- * Clear cached customer reference from localStorage
- */
-function clearCachedCustomerRef(): void {
-  if (typeof window === 'undefined') return
-
-  localStorage.removeItem(CUSTOMER_REF_KEY)
-  localStorage.removeItem(CUSTOMER_REF_EXPIRY)
-  localStorage.removeItem(CUSTOMER_REF_USER_ID_KEY)
-}
-
-/**
- * Get the auth adapter to use (adapter > deprecated functions > default)
- */
-function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter {
-  // Use adapter if provided (preferred)
-  if (config?.auth?.adapter) {
-    return config.auth.adapter
-  }
-
-  // Support deprecated getToken/getUserId functions for backward compatibility
-  if (config?.auth?.getToken || config?.auth?.getUserId) {
-    return {
-      async getToken() {
-        return config?.auth?.getToken?.() || null
-      },
-      async getUserId() {
-        return config?.auth?.getUserId?.() || null
-      },
-    }
-  }
-
-  // Default adapter (localStorage only)
-  return defaultAuthAdapter
-}
 
 /**
  * SolvaPay Provider - Headless Context Provider for React.
@@ -199,25 +111,37 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   createPayment: customCreatePayment,
   checkPurchase: customCheckPurchase,
   processPayment: customProcessPayment,
+  createTopupPayment: customCreateTopupPayment,
   children,
 }) => {
   const [purchaseData, setPurchaseData] = useState<CustomerPurchaseData>({
     purchases: [],
   })
   const [loading, setLoading] = useState(false)
+  const [isRefetching, setIsRefetching] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<Error | null>(null)
   const [internalCustomerRef, setInternalCustomerRef] = useState<string | undefined>(undefined)
   const [userId, setUserId] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  // Track in-flight requests to prevent duplicate calls
+  const [creditsValue, setCreditsValue] = useState<number | null>(null)
+  const [displayCurrencyValue, setDisplayCurrencyValue] = useState<string | null>(null)
+  const [creditsPerMinorUnitValue, setCreditsPerMinorUnitValue] = useState<number | null>(null)
+  const [displayExchangeRateValue, setDisplayExchangeRateValue] = useState<number | null>(null)
+  const [balanceLoading, setBalanceLoading] = useState(false)
+  const balanceInFlightRef = useRef(false)
+  const balanceLoadedRef = useRef(false)
+
+  const optimisticUntilRef = useRef(0)
+  const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fetchBalanceRef = useRef<(() => Promise<void>) | null>(null)
+
   const inFlightRef = useRef<string | null>(null)
-  // Track what we've already fetched to prevent unnecessary refetches
-  const lastFetchedRef = useRef<string | null>(null)
 
   // Store functions in refs to avoid dependency issues
   const checkPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(null)
   const createPaymentRef = useRef<
-    ((params: { planRef: string; productRef?: string }) => Promise<PaymentIntentResult>) | null
+    ((params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>) | null
   >(null)
   const processPaymentRef = useRef<
     | ((params: {
@@ -226,6 +150,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
         planRef?: string
       }) => Promise<ProcessPaymentResult>)
     | null
+  >(null)
+  const createTopupPaymentRef = useRef<
+    ((params: { amount: number; currency?: string }) => Promise<TopupPaymentResult>) | null
   >(null)
   const configRef = useRef(config)
   const buildDefaultCheckPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(
@@ -249,43 +176,17 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     processPaymentRef.current = customProcessPayment || null
   }, [customProcessPayment])
 
-  // Build default checkPurchase implementation - store in ref to keep it stable
+  useEffect(() => {
+    createTopupPaymentRef.current = customCreateTopupPayment || null
+  }, [customCreateTopupPayment])
+
   const buildDefaultCheckPurchase = useCallback(async (): Promise<CustomerPurchaseData> => {
     const currentConfig = configRef.current
-    const adapter = getAuthAdapter(currentConfig)
-    const token = await adapter.getToken()
-    const detectedUserId = await adapter.getUserId()
+    const { headers } = await buildRequestHeaders(currentConfig)
     const route = currentConfig?.api?.checkPurchase || '/api/check-purchase'
     const fetchFn = currentConfig?.fetch || fetch
 
-    // Get cached customerRef from localStorage, validated against current userId
-    const cachedRef = getCachedCustomerRef(detectedUserId)
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    }
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    if (cachedRef) {
-      headers['x-solvapay-customer-ref'] = cachedRef
-    }
-
-    // Add custom headers
-    if (currentConfig?.headers) {
-      const customHeaders =
-        typeof currentConfig.headers === 'function'
-          ? await currentConfig.headers()
-          : currentConfig.headers
-      Object.assign(headers, customHeaders)
-    }
-
-    const res = await fetchFn(route, {
-      method: 'GET',
-      headers,
-    })
+    const res = await fetchFn(route, { method: 'GET', headers })
 
     if (!res.ok) {
       const error = new Error(`Failed to check purchase: ${res.statusText}`)
@@ -296,47 +197,21 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     return res.json()
   }, [])
 
-  // Store in ref so it doesn't need to be in dependency arrays
   useEffect(() => {
     buildDefaultCheckPurchaseRef.current = buildDefaultCheckPurchase
   }, [buildDefaultCheckPurchase])
 
-  // Build default createPayment implementation
   const buildDefaultCreatePayment = useCallback(
-    async (params: { planRef: string; productRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: { planRef?: string; productRef?: string }): Promise<PaymentIntentResult> => {
       const currentConfig = configRef.current
-      const adapter = getAuthAdapter(currentConfig)
-      const token = await adapter.getToken()
-      const detectedUserId = await adapter.getUserId()
+      const { headers } = await buildRequestHeaders(currentConfig)
       const route = currentConfig?.api?.createPayment || '/api/create-payment-intent'
       const fetchFn = currentConfig?.fetch || fetch
 
-      // Get cached customerRef from localStorage, validated against current userId
-      const cachedRef = getCachedCustomerRef(detectedUserId)
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
+      const body: { planRef?: string; productRef?: string } = {}
+      if (params.planRef) {
+        body.planRef = params.planRef
       }
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-
-      if (cachedRef) {
-        headers['x-solvapay-customer-ref'] = cachedRef
-      }
-
-      // Add custom headers
-      if (currentConfig?.headers) {
-        const customHeaders =
-          typeof currentConfig.headers === 'function'
-            ? await currentConfig.headers()
-            : currentConfig.headers
-        Object.assign(headers, customHeaders)
-      }
-
-      // Build request body with planRef and productRef if provided
-      const body: { planRef: string; productRef?: string } = { planRef: params.planRef }
       if (params.productRef) {
         body.productRef = params.productRef
       }
@@ -358,7 +233,6 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     [],
   )
 
-  // Build default processPayment implementation
   const buildDefaultProcessPayment = useCallback(
     async (params: {
       paymentIntentId: string
@@ -366,35 +240,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       planRef?: string
     }): Promise<ProcessPaymentResult> => {
       const currentConfig = configRef.current
-      const adapter = getAuthAdapter(currentConfig)
-      const token = await adapter.getToken()
-      const detectedUserId = await adapter.getUserId()
+      const { headers } = await buildRequestHeaders(currentConfig)
       const route = currentConfig?.api?.processPayment || '/api/process-payment'
       const fetchFn = currentConfig?.fetch || fetch
-
-      // Get cached customerRef from localStorage, validated against current userId
-      const cachedRef = getCachedCustomerRef(detectedUserId)
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      }
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-
-      if (cachedRef) {
-        headers['x-solvapay-customer-ref'] = cachedRef
-      }
-
-      // Add custom headers
-      if (currentConfig?.headers) {
-        const customHeaders =
-          typeof currentConfig.headers === 'function'
-            ? await currentConfig.headers()
-            : currentConfig.headers
-        Object.assign(headers, customHeaders)
-      }
 
       const res = await fetchFn(route, {
         method: 'POST',
@@ -413,6 +261,103 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     [],
   )
 
+  const buildDefaultCreateTopupPayment = useCallback(
+    async (params: { amount: number; currency?: string }): Promise<TopupPaymentResult> => {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.createTopupPayment || '/api/create-topup-payment-intent'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          amount: params.amount,
+          currency: params.currency,
+        }),
+      })
+
+      if (!res.ok) {
+        const error = new Error(`Failed to create topup payment: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'createTopupPayment')
+        throw error
+      }
+
+      return res.json()
+    },
+    [],
+  )
+
+  const fetchBalanceImpl = useCallback(async () => {
+    if (optimisticUntilRef.current > Date.now()) return
+
+    if (!isAuthenticated && !internalCustomerRef) {
+      setCreditsValue(null)
+      setDisplayCurrencyValue(null)
+      setCreditsPerMinorUnitValue(null)
+      setDisplayExchangeRateValue(null)
+      setBalanceLoading(false)
+      balanceLoadedRef.current = false
+      return
+    }
+
+    if (balanceInFlightRef.current) return
+    balanceInFlightRef.current = true
+    if (!balanceLoadedRef.current) {
+      setBalanceLoading(true)
+    }
+
+    try {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.customerBalance || '/api/customer-balance'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, { method: 'GET', headers })
+
+      if (!res.ok) {
+        console.error('[SolvaPayProvider] Failed to fetch balance:', res.statusText)
+        return
+      }
+
+      const data = await res.json()
+      setCreditsValue(data.credits ?? null)
+      setDisplayCurrencyValue(data.displayCurrency ?? null)
+      setCreditsPerMinorUnitValue(data.creditsPerMinorUnit ?? null)
+      setDisplayExchangeRateValue(data.displayExchangeRate ?? null)
+      balanceLoadedRef.current = true
+    } catch (error) {
+      console.error('[SolvaPayProvider] Failed to fetch balance:', error)
+    } finally {
+      setBalanceLoading(false)
+      balanceInFlightRef.current = false
+    }
+  }, [isAuthenticated, internalCustomerRef])
+
+  useEffect(() => {
+    fetchBalanceRef.current = fetchBalanceImpl
+  }, [fetchBalanceImpl])
+
+  useEffect(() => {
+    return () => {
+      if (optimisticTimerRef.current) clearTimeout(optimisticTimerRef.current)
+    }
+  }, [])
+
+  const OPTIMISTIC_GRACE_MS = 8000
+
+  const adjustBalanceImpl = useCallback((credits: number) => {
+    setCreditsValue(prev => (prev ?? 0) + credits)
+
+    optimisticUntilRef.current = Date.now() + OPTIMISTIC_GRACE_MS
+
+    if (optimisticTimerRef.current) clearTimeout(optimisticTimerRef.current)
+    optimisticTimerRef.current = setTimeout(() => {
+      optimisticUntilRef.current = 0
+      fetchBalanceRef.current?.()
+    }, OPTIMISTIC_GRACE_MS)
+  }, [])
+
   // Get the actual functions to use (priority: custom > config > defaults)
   // Use refs to avoid dependency issues - this keeps the function stable
   const _checkPurchase = useCallback(async (): Promise<CustomerPurchaseData> => {
@@ -422,12 +367,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     if (buildDefaultCheckPurchaseRef.current) {
       return buildDefaultCheckPurchaseRef.current()
     }
-    // Fallback (shouldn't happen, but TypeScript needs it)
     return buildDefaultCheckPurchase()
   }, [buildDefaultCheckPurchase])
 
   const createPayment = useCallback(
-    async (params: { planRef: string; productRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: { planRef?: string; productRef?: string }): Promise<PaymentIntentResult> => {
       if (createPaymentRef.current) {
         return createPaymentRef.current(params)
       }
@@ -450,6 +394,16 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     [buildDefaultProcessPayment],
   )
 
+  const createTopupPayment = useCallback(
+    async (params: { amount: number; currency?: string }): Promise<TopupPaymentResult> => {
+      if (createTopupPaymentRef.current) {
+        return createTopupPaymentRef.current(params)
+      }
+      return buildDefaultCreateTopupPayment(params)
+    },
+    [buildDefaultCreateTopupPayment],
+  )
+
   // Detect authentication state and user ID
   useEffect(() => {
     const detectAuth = async () => {
@@ -459,181 +413,223 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       const token = await adapter.getToken()
       const detectedUserId = await adapter.getUserId()
 
-      // Track previous userId to detect user changes
       const prevUserId = userId
 
       setIsAuthenticated(!!token)
       setUserId(detectedUserId)
 
-      // CRITICAL: Clear customerRef cache if userId changes (user switched accounts)
-      // This prevents purchasing for the wrong user
       if (prevUserId !== null && detectedUserId !== prevUserId) {
         clearCachedCustomerRef()
         setInternalCustomerRef(undefined)
         return
       }
 
-      // If we have a cached customerRef and are authenticated, validate it belongs to current user
       const cachedRef = getCachedCustomerRef(detectedUserId)
       if (cachedRef && token) {
         setInternalCustomerRef(cachedRef)
       } else if (!token) {
-        // Clear cache on sign-out
         clearCachedCustomerRef()
         setInternalCustomerRef(undefined)
       } else if (token && !cachedRef) {
-        // Authenticated but no valid cached customerRef - clear internal ref
         setInternalCustomerRef(undefined)
       }
     }
 
     detectAuth()
 
-    // Set up polling to detect auth changes (e.g., token refresh)
-    const interval = setInterval(detectAuth, 5000) // Check every 5 seconds
+    const interval = setInterval(detectAuth, 30000)
 
     return () => clearInterval(interval)
-  }, [userId]) // Include userId in deps to detect changes
+  }, [userId])
 
-  // Fetch purchase function - memoized to prevent unnecessary re-renders
-  // Use refs for checkPurchase to avoid dependency issues
   const fetchPurchase = useCallback(
     async (force = false) => {
-      // Only fetch if authenticated or if we have a customerRef
       if (!isAuthenticated && !internalCustomerRef) {
         setPurchaseData({ purchases: [] })
+        setPurchaseError(null)
         setLoading(false)
+        setIsRefetching(false)
         inFlightRef.current = null
-        lastFetchedRef.current = null
         return
       }
 
       const cacheKey = internalCustomerRef || userId || 'anonymous'
 
-      // Skip if we've already fetched this cacheKey (unless it's in-flight or forced)
-      if (!force && lastFetchedRef.current === cacheKey && inFlightRef.current !== cacheKey) {
-        return
-      }
-
-      // Prevent duplicate concurrent requests for the same cacheKey
-      if (inFlightRef.current === cacheKey) {
+      if (inFlightRef.current === cacheKey && !force) {
         return
       }
 
       inFlightRef.current = cacheKey
-      setLoading(true)
+
+      const hasExistingData = purchaseData.purchases.length > 0
+      if (hasExistingData) {
+        setIsRefetching(true)
+      } else {
+        setLoading(true)
+      }
 
       try {
-        // Use ref to get the current checkPurchase function
         const checkFn = checkPurchaseRef.current || buildDefaultCheckPurchaseRef.current
         if (!checkFn) {
           throw new Error('checkPurchase function not available')
         }
         const data = await checkFn()
 
-        // Store customerRef from response if available
-        // Only cache if we have a userId to prevent cross-user contamination
         if (data.customerRef) {
           setInternalCustomerRef(data.customerRef)
-          // Get current userId to associate with customerRef
           const currentAdapter = getAuthAdapter(configRef.current)
           const currentUserId = await currentAdapter.getUserId()
           setCachedCustomerRef(data.customerRef, currentUserId)
         }
 
-        // Only update if this is still the current cacheKey (might have changed during fetch)
         if (inFlightRef.current === cacheKey) {
-          // Filter purchases using shared utility
           const filteredData: CustomerPurchaseData = {
             ...data,
             purchases: filterPurchases(data.purchases || []),
           }
 
           setPurchaseData(filteredData)
-          lastFetchedRef.current = cacheKey
+          setPurchaseError(null)
         }
-      } catch (error) {
-        console.error('[SolvaPayProvider] Failed to fetch purchase:', error)
-        // On error, set empty purchases
+      } catch (err) {
+        console.error('[SolvaPayProvider] Failed to fetch purchase:', err)
         if (inFlightRef.current === cacheKey) {
-          setPurchaseData({
-            purchases: [],
-          })
-          lastFetchedRef.current = cacheKey
+          setPurchaseError(err instanceof Error ? err : new Error(String(err)))
         }
       } finally {
         if (inFlightRef.current === cacheKey) {
           setLoading(false)
+          setIsRefetching(false)
           inFlightRef.current = null
         }
       }
     },
-    [isAuthenticated, internalCustomerRef, userId],
+    [isAuthenticated, internalCustomerRef, userId, purchaseData.purchases.length],
   )
 
-  // Refetch purchase function - forces a fresh fetch by clearing cache
-  // Use ref to get fetchPurchase to avoid dependency issues
   const fetchPurchaseRef = useRef(fetchPurchase)
   useEffect(() => {
     fetchPurchaseRef.current = fetchPurchase
   }, [fetchPurchase])
 
   const refetchPurchase = useCallback(async () => {
-    // Always clear cache state before refetching to ensure fresh data
-    // Clear both the cache key tracking and in-flight requests
-    lastFetchedRef.current = null
     inFlightRef.current = null
-
-    // Also clear purchase data temporarily to ensure UI reflects loading state
-    // This prevents showing stale data while fetching
-    setPurchaseData({ purchases: [] })
-
-    // Force a fresh fetch by passing force=true
-    // This bypasses the cache check and ensures we get the latest data from the server
     await fetchPurchaseRef.current(true)
   }, [])
 
-  // Auto-fetch purchases on mount and when auth state changes
-  // Only depend on actual values, not the function itself
+  const cancelRenewal = useCallback(
+    async (params: { purchaseRef: string; reason?: string }): Promise<CancelResult> => {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.cancelRenewal || '/api/cancel-renewal'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const error = new Error(data.error || `Failed to cancel renewal: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'cancelRenewal')
+        throw error
+      }
+
+      const result = await res.json()
+      await refetchPurchase()
+      return result
+    },
+    [refetchPurchase],
+  )
+
+  const reactivateRenewal = useCallback(
+    async (params: { purchaseRef: string }): Promise<ReactivateResult> => {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.reactivateRenewal || '/api/reactivate-renewal'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const error = new Error(data.error || `Failed to reactivate renewal: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'reactivateRenewal')
+        throw error
+      }
+
+      const result = await res.json()
+      await refetchPurchase()
+      return result
+    },
+    [refetchPurchase],
+  )
+
+  const activatePlan = useCallback(
+    async (params: { productRef: string; planRef: string }): Promise<ActivatePlanResult> => {
+      const currentConfig = configRef.current
+      const { headers } = await buildRequestHeaders(currentConfig)
+      const route = currentConfig?.api?.activatePlan || '/api/activate-plan'
+      const fetchFn = currentConfig?.fetch || fetch
+
+      const res = await fetchFn(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const error = new Error(data.error || `Failed to activate plan: ${res.statusText}`)
+        currentConfig?.onError?.(error, 'activatePlan')
+        throw error
+      }
+
+      const result: ActivatePlanResult = await res.json()
+      if (result.status === 'activated' || result.status === 'already_active') {
+        await refetchPurchase()
+      }
+      return result
+    },
+    [refetchPurchase],
+  )
+
   useEffect(() => {
-    // Clear cache when userId or customerRef changes to prevent stale data
-    // This is important when switching accounts or when customerRef is updated
-    lastFetchedRef.current = null
     inFlightRef.current = null
 
     if (isAuthenticated || internalCustomerRef) {
       fetchPurchase()
     } else {
       setPurchaseData({ purchases: [] })
+      setPurchaseError(null)
       setLoading(false)
+      setIsRefetching(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, internalCustomerRef, userId])
 
-  // Update customer ref method
   const updateCustomerRef = useCallback(
     (newCustomerRef: string) => {
       setInternalCustomerRef(newCustomerRef)
-      // Store with current userId to prevent cross-user contamination
       setCachedCustomerRef(newCustomerRef, userId)
-      // Trigger refetch
       fetchPurchase(true)
     },
     [fetchPurchase, userId],
   )
 
-  // Build purchase status with helper methods - memoized to prevent unnecessary re-renders
   const purchase: PurchaseStatus = useMemo(() => {
-    // Get primary active purchase (paid or free) - most recent active purchase
     const activePurchase = getPrimaryPurchase(purchaseData.purchases)
 
-    // Compute active paid purchases
-    // Backend keeps purchases as 'active' until expiration, even when cancelled
     const activePaidPurchases = purchaseData.purchases.filter(
       p => p.status === 'active' && isPaidPurchase(p),
     )
 
-    // Get most recent active paid purchase (sorted by startDate)
     const activePaidPurchase =
       activePaidPurchases.sort(
         (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
@@ -641,6 +637,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
     return {
       loading,
+      isRefetching,
+      error: purchaseError,
       customerRef: purchaseData.customerRef || internalCustomerRef,
       email: purchaseData.email,
       name: purchaseData.name,
@@ -659,26 +657,49 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       hasPaidPurchase: activePaidPurchases.length > 0,
       activePaidPurchase,
     }
-  }, [loading, purchaseData, internalCustomerRef])
+  }, [loading, isRefetching, purchaseError, purchaseData, internalCustomerRef])
 
-  // Memoize context value to prevent unnecessary re-renders of consumers
+  const balance: BalanceStatus = useMemo(
+    () => ({
+      loading: balanceLoading,
+      credits: creditsValue,
+      displayCurrency: displayCurrencyValue,
+      creditsPerMinorUnit: creditsPerMinorUnitValue,
+      displayExchangeRate: displayExchangeRateValue,
+      refetch: fetchBalanceImpl,
+      adjustBalance: adjustBalanceImpl,
+    }),
+    [balanceLoading, creditsValue, displayCurrencyValue, creditsPerMinorUnitValue, displayExchangeRateValue, fetchBalanceImpl, adjustBalanceImpl],
+  )
+
   const contextValue: SolvaPayContextValue = useMemo(
     () => ({
       purchase,
       refetchPurchase,
       createPayment,
       processPayment,
+      createTopupPayment,
+      cancelRenewal,
+      reactivateRenewal,
+      activatePlan,
       customerRef: purchaseData.customerRef || internalCustomerRef,
       updateCustomerRef,
+      balance,
+      _config: configRef.current,
     }),
     [
       purchase,
       refetchPurchase,
       createPayment,
       processPayment,
+      createTopupPayment,
+      cancelRenewal,
+      reactivateRenewal,
+      activatePlan,
       purchaseData.customerRef,
       internalCustomerRef,
       updateCustomerRef,
+      balance,
     ],
   )
 

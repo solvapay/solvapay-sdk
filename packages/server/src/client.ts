@@ -101,13 +101,11 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // POST: /v1/sdk/usages
     async trackUsage(params) {
       const url = `${base}/v1/sdk/usages`
-      const { customerRef, ...rest } = params
-      const body = { ...rest, customerId: customerRef }
 
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body: JSON.stringify(params),
       })
 
       if (!res.ok) {
@@ -439,7 +437,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         body: JSON.stringify({
           productRef: params.productRef,
           planRef: params.planRef,
-          customerReference: params.customerRef,
+          customerRef: params.customerRef,
         }),
       })
 
@@ -449,8 +447,39 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         throw new SolvaPayError(`Create payment intent failed (${res.status}): ${error}`)
       }
 
-      const result = await res.json()
-      return result
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/payment-intents (purpose: credit_topup)
+    async createTopupPaymentIntent(params) {
+      const idempotencyKey =
+        params.idempotencyKey ||
+        `topup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+      const url = `${base}/v1/sdk/payment-intents`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          customerRef: params.customerRef,
+          purpose: 'credit_topup',
+          amount: params.amount,
+          currency: params.currency,
+          description: params.description,
+        }),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Create topup payment intent failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
     },
 
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
@@ -554,6 +583,66 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
+    // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
+    async reactivatePurchase(params) {
+      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/reactivate`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+
+        if (res.status === 404) {
+          throw new SolvaPayError(`Purchase not found: ${error}`)
+        }
+
+        if (res.status === 400) {
+          throw new SolvaPayError(
+            `Purchase cannot be reactivated: ${error}`,
+          )
+        }
+
+        throw new SolvaPayError(`Reactivate purchase failed (${res.status}): ${error}`)
+      }
+
+      const responseText = await res.text()
+
+      let responseData
+      try {
+        responseData = JSON.parse(responseText)
+      } catch (parseError) {
+        log(`❌ Failed to parse response as JSON: ${parseError}`)
+        throw new SolvaPayError(
+          `Invalid JSON response from reactivate purchase endpoint: ${responseText.substring(0, 200)}`,
+        )
+      }
+
+      if (!responseData || typeof responseData !== 'object') {
+        log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
+        throw new SolvaPayError(`Invalid response structure from reactivate purchase endpoint`)
+      }
+
+      let result
+      if (responseData.purchase && typeof responseData.purchase === 'object') {
+        result = responseData.purchase
+      } else if (responseData.reference) {
+        result = responseData
+      } else {
+        result = responseData.purchase || responseData
+      }
+
+      if (!result || typeof result !== 'object') {
+        log(`❌ Invalid purchase data in response. Full response:`, responseData)
+        throw new SolvaPayError(`Invalid purchase data in reactivate purchase response`)
+      }
+
+      return result
+    },
+
     // POST: /v1/sdk/user-info
     async getUserInfo(params) {
       const url = `${base}/v1/sdk/user-info`
@@ -568,6 +657,24 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
         throw new SolvaPayError(`Get user info failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    // GET: /v1/sdk/customers/:customerRef/balance
+    async getCustomerBalance(params) {
+      const url = `${base}/v1/sdk/customers/${params.customerRef}/balance`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get customer balance failed (${res.status}): ${error}`)
       }
 
       return await res.json()
@@ -611,6 +718,25 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       const result = await res.json()
       return result
+    },
+
+    // POST: /v1/sdk/activate
+    async activatePlan(params) {
+      const url = `${base}/v1/sdk/activate`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Activate plan failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
     },
   }
 }

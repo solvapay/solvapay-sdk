@@ -17,16 +17,24 @@ export { isErrorResult, handleRouteError } from './error'
 export { getAuthenticatedUserCore } from './auth'
 
 // Export customer helpers
-export { syncCustomerCore } from './customer'
+export { syncCustomerCore, getCustomerBalanceCore } from './customer'
+export type { CustomerBalanceResult } from './customer'
 
 // Export payment helpers
-export { createPaymentIntentCore, processPaymentIntentCore } from './payment'
+export {
+  createPaymentIntentCore,
+  createTopupPaymentIntentCore,
+  processPaymentIntentCore,
+} from './payment'
 
 // Export checkout helpers
 export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout'
 
-// Export purchase cancellation helpers
-export { cancelPurchaseCore } from './renewal'
+// Export purchase cancellation & reactivation helpers
+export { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
+
+// Export activation helpers
+export { activatePlanCore } from './activation'
 
 // Export plans helpers
 export { listPlansCore } from './plans'

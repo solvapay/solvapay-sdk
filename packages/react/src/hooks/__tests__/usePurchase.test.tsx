@@ -8,7 +8,7 @@ import type { PurchaseStatus, PurchaseInfo, SolvaPayContextValue } from '../../t
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
   productName: 'Test Product',
-  productReference: 'prd_123',
+  productRef: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
   amount: 1000,
@@ -20,6 +20,8 @@ const createMockPurchaseStatus = (
   overrides: Partial<PurchaseStatus> = {},
 ): PurchaseStatus => ({
   loading: false,
+  isRefetching: false,
+  error: null,
   purchases: [],
   hasProduct: vi.fn(() => false),
   hasPlan: vi.fn(() => false),
@@ -37,7 +39,18 @@ const createMockContextValue = (
   purchase,
   refetchPurchase,
   createPayment: vi.fn(),
+  createTopupPayment: vi.fn(),
+  cancelRenewal: vi.fn(),
+  reactivateRenewal: vi.fn(),
+  activatePlan: vi.fn(),
   customerRef: 'test_customer_ref',
+    balance: {
+    loading: false,
+    credits: null,
+    displayCurrency: null,
+    refetch: vi.fn(),
+    adjustBalance: vi.fn(),
+  },
 })
 
 // Mock useSolvaPay

@@ -9,60 +9,123 @@ const plansCache = new Map<
 >()
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
+/** @internal Exported only for tests — do not use in application code */
+export { plansCache, CACHE_DURATION }
+
+function processPlans(
+  raw: Plan[],
+  filter?: (plan: Plan, index: number) => boolean,
+  sortBy?: (a: Plan, b: Plan) => number,
+): Plan[] {
+  let result = sortBy ? [...raw].sort(sortBy) : raw
+  if (filter) result = result.filter(filter)
+  return result
+}
+
+function computeInitialIndex(
+  plans: Plan[],
+  initialPlanRef?: string,
+  autoSelectFirstPaid?: boolean,
+): number {
+  if (plans.length === 0) return 0
+
+  if (initialPlanRef) {
+    const idx = plans.findIndex(p => p.reference === initialPlanRef)
+    if (idx >= 0) return idx
+  }
+
+  if (autoSelectFirstPaid) {
+    const idx = plans.findIndex(p => p.requiresPayment !== false)
+    return idx >= 0 ? idx : 0
+  }
+
+  return 0
+}
+
 /**
- * Hook to manage plan fetching and selection
+ * Hook to manage plan fetching and selection.
  *
- * Provides a reusable way to fetch, filter, sort and select plans.
- * Handles loading and error states automatically.
- * Uses a global cache to prevent duplicate fetches when multiple components use the same productRef.
- *
- * @example
- * ```tsx
- * const plans = usePlans({
- *   productRef: 'prd_123',
- *   fetcher: async (productRef) => {
- *     const res = await fetch(`/api/list-plans?productRef=${productRef}`);
- *     const data = await res.json();
- *     return data.plans;
- *   },
- *   sortBy: (a, b) => (a.price || 0) - (b.price || 0),
- *   autoSelectFirstPaid: true,
- * });
- *
- * // Use in component
- * if (plans.loading) return <div>Loading...</div>;
- * if (plans.error) return <div>Error: {plans.error.message}</div>;
- * ```
+ * Selection lifecycle:
+ * 1. While `selectionReady` is false, plans fetch but no auto-selection fires.
+ * 2. When `selectionReady` becomes true AND plans are loaded, one-shot initial
+ *    selection is applied (initialPlanRef > autoSelectFirstPaid > index 0).
+ * 3. After initial selection, user picks always win — the hook never overrides.
  */
 export function usePlans(options: UsePlansOptions): UsePlansReturn {
-  const { fetcher, productRef, filter, sortBy, autoSelectFirstPaid = false } = options
+  const {
+    fetcher,
+    productRef,
+    filter,
+    sortBy,
+    autoSelectFirstPaid = false,
+    initialPlanRef,
+    selectionReady = true,
+  } = options
 
-  const [plans, setPlans] = useState<Plan[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-  const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(0)
-
-  // Store fetcher, filter, and sortBy in refs to prevent unnecessary refetches
   const fetcherRef = useRef(fetcher)
   const filterRef = useRef(filter)
   const sortByRef = useRef(sortBy)
   const autoSelectFirstPaidRef = useRef(autoSelectFirstPaid)
+  const initialPlanRefRef = useRef(initialPlanRef)
+  const selectionReadyRef = useRef(selectionReady)
 
-  useEffect(() => {
-    fetcherRef.current = fetcher
-  }, [fetcher])
+  const hasAppliedInitialRef = useRef(false)
+  const userHasSelectedRef = useRef(false)
 
-  useEffect(() => {
-    filterRef.current = filter
-  }, [filter])
+  // Synchronous cache init: if cache is valid and selectionReady on mount,
+  // compute the correct index immediately to avoid a flash.
+  const [selectedPlanIndex, setSelectedPlanIndexState] = useState(() => {
+    if (!selectionReady || !productRef) return 0
+    const cached = plansCache.get(productRef)
+    if (!cached || Date.now() - cached.timestamp >= CACHE_DURATION || cached.plans.length === 0) {
+      return 0
+    }
+    const processed = processPlans(cached.plans, filter, sortBy)
+    if (processed.length === 0) return 0
+    const idx = computeInitialIndex(processed, initialPlanRef, autoSelectFirstPaid)
+    hasAppliedInitialRef.current = true
+    return idx
+  })
 
-  useEffect(() => {
-    sortByRef.current = sortBy
-  }, [sortBy])
+  const [plans, setPlans] = useState<Plan[]>(() => {
+    if (!productRef) return []
+    const cached = plansCache.get(productRef)
+    if (!cached || Date.now() - cached.timestamp >= CACHE_DURATION || cached.plans.length === 0) {
+      return []
+    }
+    return processPlans(cached.plans, filter, sortBy)
+  })
 
-  useEffect(() => {
-    autoSelectFirstPaidRef.current = autoSelectFirstPaid
-  }, [autoSelectFirstPaid])
+  const [loading, setLoading] = useState(() => plans.length === 0)
+  const [error, setError] = useState<Error | null>(null)
+
+  // Keep refs in sync
+  useEffect(() => { fetcherRef.current = fetcher }, [fetcher])
+  useEffect(() => { filterRef.current = filter }, [filter])
+  useEffect(() => { sortByRef.current = sortBy }, [sortBy])
+  useEffect(() => { autoSelectFirstPaidRef.current = autoSelectFirstPaid }, [autoSelectFirstPaid])
+  useEffect(() => { initialPlanRefRef.current = initialPlanRef }, [initialPlanRef])
+  useEffect(() => { selectionReadyRef.current = selectionReady }, [selectionReady])
+
+  // Wrapped setter that tracks user-initiated selection
+  const setSelectedPlanIndex = useCallback((index: number) => {
+    userHasSelectedRef.current = true
+    setSelectedPlanIndexState(index)
+  }, [])
+
+  const applyInitialSelection = useCallback((processedPlans: Plan[]) => {
+    if (hasAppliedInitialRef.current || userHasSelectedRef.current) return
+    if (!selectionReadyRef.current || processedPlans.length === 0) return
+
+    hasAppliedInitialRef.current = true
+
+    const idx = computeInitialIndex(
+      processedPlans,
+      initialPlanRefRef.current,
+      autoSelectFirstPaidRef.current,
+    )
+    setSelectedPlanIndexState(idx)
+  }, [])
 
   // Fetch plans with caching
   const fetchPlans = useCallback(
@@ -73,58 +136,34 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         return
       }
 
-      // Check cache first
       const cached = plansCache.get(productRef)
       const now = Date.now()
 
       if (!force && cached && now - cached.timestamp < CACHE_DURATION) {
-        // Use cached data
-        const cachedPlans = cached.plans
-
-        // Apply filter if provided
-        let processedPlans = filterRef.current ? cachedPlans.filter(filterRef.current) : cachedPlans
-
-        // Apply sort if provided
-        if (sortByRef.current) {
-          processedPlans = [...processedPlans].sort(sortByRef.current)
-        }
-
+        const processedPlans = processPlans(
+          cached.plans,
+          filterRef.current,
+          sortByRef.current,
+        )
         setPlans(processedPlans)
         setLoading(false)
         setError(null)
-
-        // Auto-select first paid plan if enabled
-        if (autoSelectFirstPaidRef.current && processedPlans.length > 0) {
-          const firstPaidIndex = processedPlans.findIndex(plan => plan.price && plan.price > 0)
-          setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0)
-        }
+        applyInitialSelection(processedPlans)
         return
       }
 
-      // If there's an in-flight request, wait for it
       if (cached?.promise) {
         try {
           setLoading(true)
           const fetchedPlans = await cached.promise
-
-          // Apply filter if provided
-          let processedPlans = filterRef.current
-            ? fetchedPlans.filter(filterRef.current)
-            : fetchedPlans
-
-          // Apply sort if provided
-          if (sortByRef.current) {
-            processedPlans = [...processedPlans].sort(sortByRef.current)
-          }
-
+          const processedPlans = processPlans(
+            fetchedPlans,
+            filterRef.current,
+            sortByRef.current,
+          )
           setPlans(processedPlans)
           setError(null)
-
-          // Auto-select first paid plan if enabled
-          if (autoSelectFirstPaidRef.current && processedPlans.length > 0) {
-            const firstPaidIndex = processedPlans.findIndex(plan => plan.price && plan.price > 0)
-            setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0)
-          }
+          applyInitialSelection(processedPlans)
         } catch (err) {
           setError(err instanceof Error ? err : new Error('Failed to load plans'))
         } finally {
@@ -133,68 +172,48 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         return
       }
 
-      // Start new fetch
       try {
         setLoading(true)
         setError(null)
 
-        // Create promise and store it in cache
         const fetchPromise = fetcherRef.current(productRef)
-        plansCache.set(productRef, {
-          plans: [],
-          timestamp: now,
-          promise: fetchPromise,
-        })
+        plansCache.set(productRef, { plans: [], timestamp: now, promise: fetchPromise })
 
-        // Use refs to get current values
         const fetchedPlans = await fetchPromise
 
-        // Update cache with fetched data
-        plansCache.set(productRef, {
-          plans: fetchedPlans,
-          timestamp: now,
-          promise: null,
-        })
+        plansCache.set(productRef, { plans: fetchedPlans, timestamp: now, promise: null })
 
-        // Apply filter if provided
-        let processedPlans = filterRef.current
-          ? fetchedPlans.filter(filterRef.current)
-          : fetchedPlans
-
-        // Apply sort if provided
-        if (sortByRef.current) {
-          processedPlans = [...processedPlans].sort(sortByRef.current)
-        }
-
+        const processedPlans = processPlans(
+          fetchedPlans,
+          filterRef.current,
+          sortByRef.current,
+        )
         setPlans(processedPlans)
-
-        // Auto-select first paid plan if enabled
-        if (autoSelectFirstPaidRef.current && processedPlans.length > 0) {
-          const firstPaidIndex = processedPlans.findIndex(plan => plan.price && plan.price > 0)
-          setSelectedPlanIndex(firstPaidIndex >= 0 ? firstPaidIndex : 0)
-        }
+        applyInitialSelection(processedPlans)
       } catch (err) {
-        // Remove failed promise from cache
         plansCache.delete(productRef)
         setError(err instanceof Error ? err : new Error('Failed to load plans'))
       } finally {
         setLoading(false)
       }
     },
-    [productRef],
-  ) // Only depend on productRef, use refs for everything else
+    [productRef, applyInitialSelection],
+  )
 
   // Fetch plans on mount and when productRef changes
   useEffect(() => {
     fetchPlans()
   }, [fetchPlans])
 
-  // Get selected plan
-  const selectedPlan = useMemo(() => {
-    return plans[selectedPlanIndex] || null
-  }, [plans, selectedPlanIndex])
+  // Deferred selection: when selectionReady transitions to true after plans are loaded
+  useEffect(() => {
+    if (hasAppliedInitialRef.current || userHasSelectedRef.current) return
+    if (!selectionReady || plans.length === 0) return
+    applyInitialSelection(plans)
+  }, [selectionReady, plans, applyInitialSelection])
 
-  // Select plan by reference
+  const selectedPlan = useMemo(() => plans[selectedPlanIndex] || null, [plans, selectedPlanIndex])
+
   const selectPlan = useCallback(
     (planRef: string) => {
       const index = plans.findIndex(p => p.reference === planRef)
@@ -202,7 +221,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         setSelectedPlanIndex(index)
       }
     },
-    [plans],
+    [plans, setSelectedPlanIndex],
   )
 
   return {
@@ -213,6 +232,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
     selectedPlan,
     setSelectedPlanIndex,
     selectPlan,
-    refetch: () => fetchPlans(true), // Force refetch
+    refetch: () => fetchPlans(true),
+    isSelectionReady: hasAppliedInitialRef.current,
   }
 }

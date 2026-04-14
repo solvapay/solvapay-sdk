@@ -7,15 +7,14 @@
 import type { components, operations } from './generated'
 
 export type UsageMeterType = 'requests' | 'tokens'
-export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
-  meterName?: string
-  usageType?: UsageMeterType
-}
+export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
 
 /**
- * Extended LimitResponse with plan field
+ * Extended LimitResponse with SDK-added plan field
  */
-export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & { plan: string; meterName?: string }
+export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
+  plan: string
+}
 
 /**
  * Extended CustomerResponse with proper field mapping
@@ -59,86 +58,45 @@ export interface ProcessPaymentResult {
   status: 'completed'
 }
 
-export interface McpBootstrapFreePlanConfig {
-  name?: string
-  freeUnits?: number
-}
+export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 
-export interface McpBootstrapPaidPlanInput {
-  key: string
-  name: string
-  /** Price in cents (e.g. 2000 = $20.00) */
-  price: number
-  currency: string
-  billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-  type?: 'recurring' | 'one-time'
-  freeUnits?: number
-  meterId?: string
-  limit?: number
-  features?: Record<string, unknown>
-}
+export type McpBootstrapPlanInput =
+  NonNullable<components['schemas']['McpBootstrapDto']['plans']>[number]
 
-export interface ToolPlanMappingInput {
-  name: string
-  description?: string
-  noPlan?: boolean
-  planIds?: string[]
-  planRefs?: string[]
-  planKeys?: string[]
-}
+export type ToolPlanMappingInput =
+  NonNullable<components['schemas']['McpBootstrapDto']['tools']>[number]
 
-export interface McpToolPlanMappingInput {
-  name: string
-  planKeys: string[]
-}
+export type McpBootstrapRequest = components['schemas']['McpBootstrapDto']
 
-export interface McpBootstrapRequest {
-  name?: string
-  description?: string
-  imageUrl?: string
-  productType?: string
-  originUrl: string
-  /** Optional token combined with provider name to derive the final MCP subdomain. */
-  mcpDomain?: string
-  authHeaderName?: string
-  authApiKey?: string
-  freePlan?: McpBootstrapFreePlanConfig
-  paidPlans?: McpBootstrapPaidPlanInput[]
-  tools?: ToolPlanMappingInput[]
-  metadata?: Record<string, unknown>
-}
+export type McpToolPlanMappingInput =
+  NonNullable<components['schemas']['ConfigureMcpPlansDto']['toolMapping']>[number]
 
 export interface McpBootstrapResponse {
   product: components['schemas']['SdkProductResponse']
   mcpServer: {
-    id?: string
     reference?: string
     subdomain?: string
     mcpProxyUrl?: string
     url: string
-    defaultPlanId?: string
+    defaultPlanRef?: string
   }
-  planMap: Record<string, { id: string; reference: string; name?: string }>
+  planMap: Record<string, { reference: string; name?: string }>
   toolsAutoMapped?: boolean
   autoMappedTools?: Array<{ name: string; description?: string }>
 }
 
-export interface ConfigureMcpPlansRequest {
-  paidPlans?: McpBootstrapPaidPlanInput[]
-  toolMapping?: McpToolPlanMappingInput[]
-}
+export type ConfigureMcpPlansRequest = components['schemas']['ConfigureMcpPlansDto']
 
 export interface ConfigureMcpPlansResponse {
   product: components['schemas']['SdkProductResponse']
   mcpServer: {
-    id?: string
     reference?: string
     subdomain?: string
     mcpProxyUrl?: string
     url: string
-    defaultPlanId?: string
+    defaultPlanRef?: string
   }
-  planMap: Record<string, { id: string; reference: string; name?: string }>
+  planMap: Record<string, { reference: string; name?: string }>
 }
 
 /**
@@ -158,8 +116,8 @@ export interface SolvaPayClient {
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
-    productReference?: string
-    purchaseReference?: string
+    productRef?: string
+    purchaseRef?: string
     description?: string
     metadata?: Record<string, unknown>
     duration?: number
@@ -222,39 +180,19 @@ export interface SolvaPayClient {
   }>
 
   // GET: /v1/sdk/products/{productRef}/plans
-  listPlans?(productRef: string): Promise<
-    Array<{
-      reference: string
-      price?: number
-      currency?: string
-      interval?: string
-      isFreeTier?: boolean
-      freeUnits?: number
-      measures?: string
-      limit?: number
-      pricePerUnit?: number
-      billingModel?: string
-      metadata?: Record<string, unknown>
-      [key: string]: unknown
-    }>
-  >
+  listPlans?(productRef: string): Promise<components['schemas']['Plan'][]>
 
   // POST: /v1/sdk/products/{productRef}/plans
   createPlan?(
     params: components['schemas']['CreatePlanRequest'] & { productRef: string },
-  ): Promise<{
-    reference: string
-  }>
+  ): Promise<components['schemas']['Plan']>
 
   // PUT: /v1/sdk/products/{productRef}/plans/{planRef}
   updatePlan?(
     productRef: string,
     planRef: string,
-    params: Partial<components['schemas']['CreatePlanRequest']>,
-  ): Promise<{
-    reference: string
-    [key: string]: unknown
-  }>
+    params: components['schemas']['UpdatePlanRequest'],
+  ): Promise<components['schemas']['Plan']>
 
   // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
   deletePlan?(productRef: string, planRef: string): Promise<void>
@@ -266,7 +204,21 @@ export interface SolvaPayClient {
     customerRef: string
     idempotencyKey?: string
   }): Promise<{
-    id: string
+    processorPaymentId: string
+    clientSecret: string
+    publishableKey: string
+    accountId?: string
+  }>
+
+  // POST: /v1/sdk/payment-intents (purpose: credit_topup)
+  createTopupPaymentIntent?(params: {
+    customerRef: string
+    amount: number
+    currency: string
+    description?: string
+    idempotencyKey?: string
+  }): Promise<{
+    processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
@@ -276,6 +228,11 @@ export interface SolvaPayClient {
   cancelPurchase?(params: {
     purchaseRef: string
     reason?: string
+  }): Promise<components['schemas']['PurchaseInfo']>
+
+  // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
+  reactivatePurchase?(params: {
+    purchaseRef: string
   }): Promise<components['schemas']['PurchaseInfo']>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
@@ -292,6 +249,11 @@ export interface SolvaPayClient {
     productRef: string
   }): Promise<components['schemas']['UserInfoResponse']>
 
+  // GET: /v1/sdk/customers/:customerRef/credits
+  getCustomerBalance?(params: {
+    customerRef: string
+  }): Promise<{ customerRef: string; credits: number; displayCurrency: string; creditsPerMinorUnit: number; displayExchangeRate: number }>
+
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
     params: operations['CheckoutSessionSdkController_createCheckoutSession']['requestBody']['content']['application/json'],
@@ -301,4 +263,9 @@ export interface SolvaPayClient {
   createCustomerSession(
     params: components['schemas']['CreateCustomerSessionRequest'],
   ): Promise<components['schemas']['CreateCustomerSessionResponse']>
+
+  // POST: /v1/sdk/activate
+  activatePlan?(
+    params: components['schemas']['ActivatePlanDto'],
+  ): Promise<ActivatePlanResult>
 }

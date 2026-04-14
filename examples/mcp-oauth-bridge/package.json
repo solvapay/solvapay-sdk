@@ -4,21 +4,21 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch src --watch scripts --watch ../../packages/server/dist --watch ../../packages/core/dist --ext ts,js,mjs --exec \"tsx src/index.ts\"",
-    "build": "tsup src/index.ts --format esm",
+    "build": "tsup src/index.ts --format esm && tsc --noEmit",
     "oauth:flow": "tsx scripts/run-oauth-flow.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.28.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@solvapay/core": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/server": "workspace:*",
-    "dotenv": "^17.3.1",
+    "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "zod": "^4.1.11"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.5.2",
     "nodemon": "^3.1.14",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

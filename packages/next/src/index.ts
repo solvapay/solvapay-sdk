@@ -241,12 +241,17 @@ export {
 export {
   getAuthenticatedUser,
   syncCustomer,
+  getCustomerBalance,
   createPaymentIntent,
+  createTopupPaymentIntent,
   processPaymentIntent,
   createCheckoutSession,
   createCustomerSession,
+  activatePlan,
   cancelRenewal,
+  reactivateRenewal,
   listPlans,
+  trackUsage,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,
 } from './helpers'

@@ -4,17 +4,16 @@ import { formatDate, getDaysUntilExpiration } from '../utils/dateHelpers'
 interface PurchaseNoticesProps {
   cancelledPurchase: PurchaseInfo | null
   shouldShow: boolean
+  onReactivate?: () => void
+  isReactivating?: boolean
   className?: string
 }
 
-/**
- * Purchase Notices Component
- *
- * Displays cancellation notices and expiration warnings
- */
 export function PurchaseNotices({
   cancelledPurchase,
   shouldShow,
+  onReactivate,
+  isReactivating = false,
   className = '',
 }: PurchaseNoticesProps) {
   if (!shouldShow || !cancelledPurchase) return null
@@ -65,6 +64,15 @@ export function PurchaseNotices({
               {cancelledPurchase.cancellationReason &&
                 ` - ${cancelledPurchase.cancellationReason}`}
             </p>
+          )}
+          {onReactivate && (
+            <button
+              onClick={onReactivate}
+              disabled={isReactivating}
+              className="mt-3 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isReactivating ? 'Reactivating...' : 'Undo Cancellation'}
+            </button>
           )}
         </div>
       </div>

@@ -71,7 +71,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
   let solvaPay: any
   let testCustomerRef: string
   let defaultProduct: { reference: string; name: string }
-  let defaultPlan: { reference: string; name: string; isFreeTier?: boolean; freeUnits?: number }
+  let defaultPlan: { reference: string; freeUnits?: number }
+  let creditPlan: { reference: string; freeUnits: number; creditsPerUnit?: number; currency: string }
 
   beforeAll(async () => {
     if (!SOLVAPAY_SECRET_KEY) {
@@ -118,9 +119,33 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
       console.log('✅ Created fixture plan:', {
         reference: defaultPlan.reference,
-        name: defaultPlan.name,
-        isFreeTier: defaultPlan.isFreeTier,
         freeUnits: defaultPlan.freeUnits,
+      })
+
+      const rawCreditPlan = await createTestPlan(
+        apiBaseUrl,
+        SOLVAPAY_SECRET_KEY!,
+        defaultProduct.reference,
+        {
+          type: 'usage-based',
+          creditsPerUnit: 100,
+          freeUnits: 5,
+          currency: 'USD',
+          isDefault: false,
+        },
+      )
+
+      // Backend zeroes freeUnits for usage-based plans on create, so patch via updatePlan
+      await apiClient.updatePlan(defaultProduct.reference, rawCreditPlan.reference, {
+        freeUnits: 5,
+      })
+      creditPlan = { ...rawCreditPlan, freeUnits: 5 }
+
+      console.log('✅ Created credit plan:', {
+        reference: creditPlan.reference,
+        freeUnits: creditPlan.freeUnits,
+        creditsPerUnit: creditPlan.creditsPerUnit,
+        currency: creditPlan.currency,
       })
       console.log()
 
@@ -216,7 +241,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           actionType: 'api_call',
           units: 1,
           outcome: 'success',
-          productReference: defaultProduct.reference,
+          productRef: defaultProduct.reference,
           timestamp: new Date().toISOString(),
         }),
       ).resolves.toBeUndefined()
@@ -253,7 +278,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
             actionType: 'api_call',
             units: 1,
             outcome: 'paywall',
-            productReference: defaultProduct.reference,
+            productRef: defaultProduct.reference,
             timestamp: new Date().toISOString(),
           })
         }
@@ -285,7 +310,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
             actionType: 'api_call',
             units: 1,
             outcome: 'success',
-            productReference: defaultProduct.reference,
+            productRef: defaultProduct.reference,
             timestamp: new Date().toISOString(),
           }),
         )
@@ -577,7 +602,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
               actionType: 'api_call',
               units: 1,
               outcome: 'success',
-              productReference: defaultProduct.reference,
+              productRef: defaultProduct.reference,
               timestamp: new Date().toISOString(),
             }),
           ),
@@ -596,7 +621,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
 
       const freeUnits = initialCheck.remaining
-      console.log(`\n📊 Testing free tier exhaustion: ${freeUnits} units on "${defaultPlan.name}"`)
+      console.log(`\n📊 Testing free tier exhaustion: ${freeUnits} units on "${defaultPlan.reference}"`)
 
       if (freeUnits <= 0 || !initialCheck.withinLimits) {
         console.log('⏭️  Skipping free-tier exhaustion assertions: customer starts with no credits')
@@ -614,7 +639,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           actionType: 'api_call',
           units: 1,
           outcome: 'success',
-          productReference: defaultProduct.reference,
+          productRef: defaultProduct.reference,
           timestamp: new Date().toISOString(),
         })
       }
@@ -635,7 +660,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         actionType: 'api_call',
         units: 1,
         outcome: 'paywall',
-        productReference: defaultProduct.reference,
+        productRef: defaultProduct.reference,
         timestamp: new Date().toISOString(),
       })
 
@@ -746,7 +771,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           actionType: 'api_call',
           units: 1,
           outcome: 'success',
-          productReference: defaultProduct.reference,
+          productRef: defaultProduct.reference,
           timestamp: new Date().toISOString(),
         })
       }
@@ -815,7 +840,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should record usage and return a reference', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
       })
@@ -832,7 +857,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       for (const actionType of actionTypes) {
         const res = await rawUsagePost({
-          customerId: usageCustomerRef,
+          customerRef: usageCustomerRef,
           actionType,
           units: 1,
         })
@@ -847,7 +872,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       for (const outcome of outcomes) {
         const res = await rawUsagePost({
-          customerId: usageCustomerRef,
+          customerRef: usageCustomerRef,
           actionType: 'api_call',
           outcome,
           units: 1,
@@ -860,7 +885,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should record usage with metadata, description, and duration', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 3,
         outcome: 'success',
@@ -880,7 +905,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       const idempotencyKey = `idem_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
       const first = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         idempotencyKey,
@@ -890,7 +915,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       const firstRef = first.body.reference
 
       const second = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         idempotencyKey,
@@ -901,7 +926,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log(`  idempotency: both calls returned same reference ${firstRef}`)
     })
 
-    it('should reject missing customerId', async () => {
+    it('should reject missing customerRef', async () => {
       const res = await rawUsagePost({
         actionType: 'api_call',
         units: 1,
@@ -912,7 +937,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject invalid actionType', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'invalid_type',
         units: 1,
       })
@@ -922,7 +947,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject invalid outcome', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         outcome: 'unknown',
         units: 1,
@@ -933,7 +958,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject units exceeding 100,000', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 100_001,
       })
@@ -943,7 +968,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should reject negative units', async () => {
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: -1,
       })
@@ -954,7 +979,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     it('should reject timestamp too far in the future (>24h)', async () => {
       const futureDate = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString()
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         timestamp: futureDate,
@@ -966,7 +991,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     it('should reject timestamp too far in the past (>30d)', async () => {
       const pastDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString()
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         timestamp: pastDate,
@@ -978,7 +1003,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     it('should accept a valid past timestamp (within 30d)', async () => {
       const validPast = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
       const res = await rawUsagePost({
-        customerId: usageCustomerRef,
+        customerRef: usageCustomerRef,
         actionType: 'api_call',
         units: 1,
         timestamp: validPast,
@@ -989,9 +1014,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should record bulk usage with new fields', async () => {
       const events = [
-        { customerId: usageCustomerRef, actionType: 'api_call', units: 1, outcome: 'success', metadata: { toolName: 'tool_a' } },
-        { customerId: usageCustomerRef, actionType: 'transaction', units: 2, outcome: 'success', metadata: { toolName: 'tool_b' } },
-        { customerId: usageCustomerRef, actionType: 'email', units: 1, outcome: 'fail', description: 'delivery failed' },
+        { customerRef: usageCustomerRef, actionType: 'api_call', units: 1, outcome: 'success', metadata: { toolName: 'tool_a' } },
+        { customerRef: usageCustomerRef, actionType: 'transaction', units: 2, outcome: 'success', metadata: { toolName: 'tool_b' } },
+        { customerRef: usageCustomerRef, actionType: 'email', units: 1, outcome: 'fail', description: 'delivery failed' },
       ]
 
       const res = await rawBulkUsagePost({ events })
@@ -1007,9 +1032,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(res.body.message).toBe('Validation failed')
     })
 
-    it('should reject bulk when any event is missing customerId', async () => {
+    it('should reject bulk when any event is missing customerRef', async () => {
       const events = [
-        { customerId: usageCustomerRef, actionType: 'api_call', units: 1 },
+        { customerRef: usageCustomerRef, actionType: 'api_call', units: 1 },
         { actionType: 'api_call', units: 1 },
       ]
       const res = await rawBulkUsagePost({ events })
@@ -1041,7 +1066,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           actionType: 'api_call',
           units: 1,
           outcome: 'success',
-          productReference: defaultProduct.reference,
+          productRef: defaultProduct.reference,
         })
       }
 
@@ -1063,23 +1088,20 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
   describe('Error Handling - API Errors & Edge Cases', () => {
     it('should handle invalid customer references gracefully', async () => {
-      // Try with empty customer ref
       const payable = solvaPay.payable({
         productRef: defaultProduct.reference,
         planRef: defaultPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
 
-      // This might succeed with a default customer or return an error
-      // Either way, it should not crash
       try {
         await protectedHandler({
           title: 'Test Task',
           auth: { customer_ref: '' },
         })
-        expect(true).toBe(true) // Success path
+        expect(true).toBe(true)
       } catch (error) {
-        expect(error).toBeDefined() // Error path is also valid
+        expect(error).toBeDefined()
       }
     })
 
@@ -1098,7 +1120,6 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       const freeUnitsCount = limits.remaining
       const hasFreeTier = limits.withinLimits && freeUnitsCount > 0
 
-      // Create 5 concurrent requests (each with unique customer to avoid conflicts)
       const promises = Array.from({ length: 5 }, (_, i) =>
         protectedHandler({
           title: `Concurrent Task ${i}`,
@@ -1110,7 +1131,6 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(results).toHaveLength(5)
 
       if (hasFreeTier) {
-        // With free units: all should succeed
         results.forEach((result: any, index) => {
           expect(result.success).toBe(true)
           expect(result.task.title).toBe(`Concurrent Task ${index}`)
@@ -1119,13 +1139,267 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           `✅ Concurrent requests handled (${freeUnitsCount} free units): all 5 succeeded`,
         )
       } else {
-        // No free units: all should be blocked
         results.forEach((result: any) => {
           expect(result).toBeDefined()
           expect(result.message).toContain('Payment required')
         })
         console.log(`✅ Concurrent requests handled (no free units): all 5 blocked`)
       }
+    })
+  })
+
+  // ============================================================================
+  // Test 7: Credit Consumption & Topup Paywall
+  // ============================================================================
+
+  describe('Credit Consumption & Topup Paywall', () => {
+    /**
+     * Activate the credit plan for a fresh customer. Must be called BEFORE
+     * checkLimits so the customer gets a usage-based purchase (not the
+     * auto-provisioned default recurring plan).
+     */
+    async function activateCreditPlan(customerRef: string) {
+      const activation = await apiClient.activatePlan({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      // Usage-based plans no longer auto-grant credits on activation.
+      // Topups are required to add balance, so `topup_required` is valid.
+      expect(['activated', 'already_active', 'topup_required']).toContain(activation.status)
+      return activation
+    }
+
+    async function burnCredits(customerRef: string, units: number) {
+      for (let i = 0; i < units; i++) {
+        await apiClient.trackUsage({
+          customerRef,
+          actionType: 'api_call',
+          units: 1,
+          outcome: 'success',
+          productRef: defaultProduct.reference,
+          planRef: creditPlan.reference,
+          timestamp: new Date().toISOString(),
+        })
+      }
+    }
+
+    it('should initialize credit balance correctly on usage-based plan activation', async () => {
+      const customer = `test_credit_init_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      const activation = await activateCreditPlan(customerRef)
+      console.log(`📊 Activation response: ${JSON.stringify(activation)}`)
+
+      const result = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+
+      expect(result.withinLimits).toBe(true)
+      expect(result.remaining).toBeGreaterThan(0)
+      if (result.creditsPerUnit !== undefined) {
+        expect(typeof result.creditsPerUnit).toBe('number')
+      }
+      if (result.creditBalance !== undefined) {
+        expect(typeof result.creditBalance).toBe('number')
+      }
+      if (result.currency !== undefined) {
+        expect(typeof result.currency).toBe('string')
+      }
+
+      console.log(
+        `✅ Credit plan activated: remaining=${result.remaining}, creditBalance=${result.creditBalance}, status=${activation.status}`,
+      )
+    })
+
+    it('should return correct balance via getCustomerBalance for usage-based plan', async () => {
+      const customer = `test_credit_bal_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const balanceResult = await apiClient.getCustomerBalance({ customerRef })
+
+      expect(balanceResult).toBeDefined()
+      expect(balanceResult.customerRef).toBe(customerRef)
+      expect(typeof balanceResult.credits).toBe('number')
+      expect(balanceResult.credits).toBeGreaterThanOrEqual(0)
+      expect(balanceResult.displayCurrency).toBeDefined()
+
+      console.log(`✅ getCustomerBalance: credits=${balanceResult.credits}, currency=${balanceResult.displayCurrency}`)
+    })
+
+    it('should deduct credits and decrement remaining units on usage consumption', async () => {
+      const customer = `test_credit_use_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const initial = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(initial.withinLimits).toBe(true)
+      expect(initial.remaining).toBeGreaterThan(0)
+
+      await burnCredits(customerRef, 1)
+
+      const after = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(after.remaining).toBe(initial.remaining - 1)
+      expect(after.withinLimits).toBe(true)
+
+      console.log(`✅ Usage consumed one unit: ${initial.remaining} → ${after.remaining}`)
+    })
+
+    it('should consume credits when calling protected functions on usage-based plan', async () => {
+      const customer = `test_credit_fn_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const before = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(before.withinLimits).toBe(true)
+      expect(before.remaining).toBeGreaterThan(0)
+
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      const protectedHandler = await payable.function(createTask)
+
+      const result = await protectedHandler({
+        title: 'Credit-based task',
+        description: 'Should deduct from credit balance',
+        auth: { customer_ref: customer },
+      })
+      expect(result).toHaveProperty('success', true)
+
+      const afterCheck = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(afterCheck.remaining).toBe(before.remaining - 1)
+
+      console.log(`✅ Protected function consumed one unit: ${before.remaining} → ${afterCheck.remaining}`)
+    })
+
+    it('should fire paywall with topup info when credits are exhausted', async () => {
+      const customer = `test_credit_paywall_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const before = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(before.withinLimits).toBe(true)
+      expect(before.remaining).toBeGreaterThan(0)
+      await burnCredits(customerRef, before.remaining)
+
+      const exhausted = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(exhausted.withinLimits).toBe(false)
+      expect(exhausted.remaining).toBeLessThanOrEqual(0)
+
+      const hasPaymentUrl = exhausted.checkoutUrl || exhausted.confirmationUrl
+      expect(hasPaymentUrl).toBeTruthy()
+
+      if (exhausted.creditBalance !== undefined) {
+        expect(exhausted.creditBalance).toBeLessThanOrEqual(0)
+      }
+
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      const protectedHandler = await payable.function(createTask)
+
+      await expect(
+        protectedHandler({
+          title: 'Should be blocked',
+          auth: { customer_ref: customer },
+        }),
+      ).rejects.toThrow('Payment required')
+
+      console.log(`✅ Paywall fired after credit exhaustion: checkoutUrl=${exhausted.checkoutUrl}, confirmationUrl=${exhausted.confirmationUrl}`)
+    })
+
+    it('should return topup information in MCP handler when credits exhausted', async () => {
+      const customer = `test_credit_mcp_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+      const before = await apiClient.checkLimits({
+        customerRef,
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      expect(before.remaining).toBeGreaterThan(0)
+      await burnCredits(customerRef, before.remaining)
+
+      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
+      const payable = freshSolvaPay.payable({
+        productRef: defaultProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      const mcpHandler = payable.mcp(listTasks)
+
+      const result: any = await mcpHandler({
+        limit: 10,
+        auth: { customer_ref: customer },
+      })
+
+      expect(result).toHaveProperty('content')
+      expect(result.content[0].type).toBe('text')
+      const parsed = JSON.parse(result.content[0].text)
+
+      expect(parsed.success).toBe(false)
+      const errorText = String(parsed.error || parsed.message || '')
+      expect(errorText).toContain('Payment required')
+
+      console.log(`✅ MCP handler returned paywall response: ${errorText.substring(0, 100)}`)
+    })
+
+    it('should return valid payment intent shape from createTopupPaymentIntent', async () => {
+      const customer = `test_credit_topup_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+
+      await activateCreditPlan(customerRef)
+
+      const result = await apiClient.createTopupPaymentIntent({
+        customerRef,
+        amount: 1000,
+        currency: 'USD',
+      })
+
+      expect(result).toBeDefined()
+      expect(result.processorPaymentId).toBeDefined()
+      expect(typeof result.processorPaymentId).toBe('string')
+      expect(result.clientSecret).toBeDefined()
+      expect(typeof result.clientSecret).toBe('string')
+      expect(result.publishableKey).toBeDefined()
+      expect(typeof result.publishableKey).toBe('string')
+
+      console.log(`✅ createTopupPaymentIntent: processorPaymentId=${result.processorPaymentId}, has clientSecret=${!!result.clientSecret}, has publishableKey=${!!result.publishableKey}`)
     })
   })
 })

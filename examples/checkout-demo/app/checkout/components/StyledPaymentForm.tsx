@@ -1,6 +1,7 @@
 'use client'
 import { PaymentForm, useCustomer, type Plan } from '@solvapay/react'
 import { formatPrice } from '../utils/planHelpers'
+import { actionButtonClassName } from '../../components/ui/Button'
 import '../payment-form.css'
 
 interface StyledPaymentFormProps {
@@ -70,7 +71,7 @@ export function StyledPaymentForm({
           onError={onError}
           submitButtonText="Complete Purchase"
           className="space-y-6 payment-form-wrapper"
-          buttonClassName="w-full py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          buttonClassName={actionButtonClassName}
         />
       </div>
 

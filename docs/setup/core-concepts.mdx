@@ -42,14 +42,7 @@ A plan defines pricing and access for a product.
 - Features
 - Status: `active`, `inactive`, or `archived`
 
-Plans are configured as part of product setup.
-
-```typescript
-const payable = solvaPay.payable({
-  product: 'prd_myapi',
-  plan: 'pln_premium',
-})
-```
+Plans are configured as part of product setup. Customers select a plan during activation; the SDK resolves the correct plan from the customer's purchase automatically.
 
 ### Product-plan relationship
 
@@ -162,7 +155,7 @@ await solvaPay.trackUsage({
   actionType: 'api_call',
   units: 1,
   outcome: 'success',
-  productReference: 'prd_P9Q0R1S2',
+  productRef: 'prd_P9Q0R1S2',
 })
 ```
 

@@ -14,10 +14,10 @@ export type {
   CustomerResponseMapped,
   UsageMeterType,
   CheckLimitsRequest,
+  ActivatePlanResult,
   McpBootstrapRequest,
   McpBootstrapResponse,
-  McpBootstrapFreePlanConfig,
-  McpBootstrapPaidPlanInput,
+  McpBootstrapPlanInput,
   ConfigureMcpPlansRequest,
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,
@@ -28,6 +28,9 @@ export type { SolvaPayClient } from './client'
 
 // Re-export paywall types
 export type {
+  LimitActivationBalance,
+  LimitActivationProduct,
+  LimitPlanSummary,
   PaywallArgs,
   PaywallMetadata,
   PaywallStructuredContent,

@@ -88,7 +88,7 @@ export interface CreateSolvaPayConfig {
  *
  * @example
  * ```typescript
- * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
+ * const payable = solvaPay.payable({ product: 'prd_myapi' });
  *
  * // Express.js
  * app.post('/tasks', payable.http(createTask));
@@ -212,18 +212,11 @@ export interface PayableFunction {
  * const solvaPay = createSolvaPay();
  *
  * // Create payable handlers
-   * const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' });
+   * const payable = solvaPay.payable({ product: 'prd_myapi' });
    *
    * // Manage customers
    * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
    *   email: 'user@example.com'
-   * });
-   *
-   * // Create payment intents
-   * const intent = await solvaPay.createPaymentIntent({
-   *   productRef: 'prd_myapi',
-   *   planRef: 'pln_premium',
-   *   customerRef: 'user_123'
    * });
  * ```
  */
@@ -231,15 +224,12 @@ export interface SolvaPay {
   /**
    * Create a payable handler with explicit adapters for different frameworks.
    *
-   * @param options - Payable options including product and plan references
+   * @param options - Payable options including product reference and usage type
    * @returns PayableFunction with framework-specific adapters
    *
    * @example
    * ```typescript
-   * const payable = solvaPay.payable({
-   *   product: 'prd_myapi',
-   *   plan: 'pln_premium'
-   * });
+   * const payable = solvaPay.payable({ product: 'prd_myapi' });
    *
    * app.post('/tasks', payable.http(createTask));
    * ```
@@ -282,11 +272,10 @@ export interface SolvaPay {
   ): Promise<string>
 
   /**
-   * Create a Stripe payment intent for a customer to purchase a plan.
+   * Create a payment intent for a customer to purchase a plan.
    *
-   * This creates a payment intent that can be confirmed on the client side
-   * using Stripe.js. After confirmation, call `processPaymentIntent()` to complete
-   * the purchase.
+   * This creates a payment intent that can be confirmed on the client side.
+   * After confirmation, call `processPaymentIntent()` to complete the purchase.
    *
    * @param params - Payment intent parameters
    * @param params.productRef - Product reference
@@ -304,7 +293,7 @@ export interface SolvaPay {
    *   idempotencyKey: 'unique-key-123'
    * });
    *
-   * // Use intent.clientSecret with Stripe.js on client
+   * // Use intent.clientSecret on the client to confirm payment
    * ```
    */
   createPaymentIntent(params: {
@@ -313,20 +302,40 @@ export interface SolvaPay {
     customerRef: string
     idempotencyKey?: string
   }): Promise<{
-    id: string
+    processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
   }>
 
   /**
-   * Process a payment intent after client-side Stripe confirmation.
+   * Create a payment intent for a credit top-up.
+   *
+   * Unlike `createPaymentIntent`, this does not require a product or plan.
+   * Credits are recorded via webhook after payment confirmation — no
+   * `processPaymentIntent` call is needed.
+   */
+  createTopupPaymentIntent(params: {
+    customerRef: string
+    amount: number
+    currency: string
+    description?: string
+    idempotencyKey?: string
+  }): Promise<{
+    processorPaymentId: string
+    clientSecret: string
+    publishableKey: string
+    accountId?: string
+  }>
+
+  /**
+   * Process a payment intent after client-side payment confirmation.
    *
    * Creates the purchase immediately, eliminating webhook delay.
-   * Call this after the client has confirmed the payment intent with Stripe.js.
+   * Call this after the client has confirmed the payment intent.
    *
    * @param params - Payment processing parameters
-   * @param params.paymentIntentId - Stripe payment intent ID from client confirmation
+   * @param params.paymentIntentId - Processor payment ID from client confirmation
    * @param params.productRef - Product reference
    * @param params.customerRef - Customer reference
    * @param params.planRef - Optional plan reference (if not in payment intent)
@@ -334,7 +343,7 @@ export interface SolvaPay {
    *
    * @example
    * ```typescript
-   * // After client confirms payment with Stripe.js
+   * // After client confirms payment
    * const result = await solvaPay.processPaymentIntent({
    *   paymentIntentId: 'pi_1234567890',
    *   productRef: 'prd_myapi',
@@ -370,7 +379,6 @@ export interface SolvaPay {
    * const limits = await solvaPay.checkLimits({
    *   customerRef: 'user_123',
    *   productRef: 'prd_myapi',
-   *   planRef: 'pln_premium'
    * });
    *
    * if (!limits.withinLimits) {
@@ -383,14 +391,17 @@ export interface SolvaPay {
     customerRef: string
     productRef: string
     planRef?: string
-    meterName?: 'requests' | 'tokens'
-    usageType?: 'requests' | 'tokens'
+    meterName?: string
+    usageType?: string
   }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
     checkoutUrl?: string
     meterName?: string
+    creditBalance?: number
+    creditsPerUnit?: number
+    currency?: string
   }>
 
   /**
@@ -401,12 +412,12 @@ export interface SolvaPay {
    *
    * @param params - Usage tracking parameters
    * @param params.customerRef - Customer reference
-   * @param params.productRef - Product reference
-   * @param params.planRef - Plan reference
+   * @param params.actionType - Action type category
+   * @param params.units - Number of units consumed (default 1)
    * @param params.outcome - Action outcome ('success', 'paywall', or 'fail')
-   * @param params.action - Optional action name for analytics
-   * @param params.requestId - Unique request ID
-   * @param params.actionDuration - Action duration in milliseconds
+   * @param params.productRef - Product reference
+   * @param params.metadata - Additional metadata (e.g. tool name, endpoint)
+   * @param params.duration - Action duration in milliseconds
    * @param params.timestamp - ISO timestamp of the action
    *
    * @example
@@ -425,8 +436,8 @@ export interface SolvaPay {
     actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
     units?: number
     outcome?: 'success' | 'paywall' | 'fail'
-    productReference?: string
-    purchaseReference?: string
+    productRef?: string
+    purchaseRef?: string
     description?: string
     metadata?: Record<string, unknown>
     duration?: number
@@ -453,7 +464,11 @@ export interface SolvaPay {
    * });
    * ```
    */
-  createCustomer(params: { email: string; name?: string }): Promise<{ customerRef: string }>
+  createCustomer(params: {
+    email: string
+    name?: string
+    metadata?: Record<string, unknown>
+  }): Promise<{ customerRef: string }>
 
   /**
    * Get customer details including purchases and usage.
@@ -485,10 +500,21 @@ export interface SolvaPay {
   }): Promise<CustomerResponseMapped>
 
   /**
+   * Get credits for a customer.
+   *
+   * @param params - Credits query parameters
+   * @param params.customerRef - Customer reference
+   * @returns Customer reference, credits, and display currency
+   */
+  getCustomerBalance(params: {
+    customerRef: string
+  }): Promise<{ customerRef: string; credits: number; displayCurrency: string; creditsPerMinorUnit: number; displayExchangeRate: number }>
+
+  /**
    * Create a hosted checkout session for a customer.
    *
-   * This creates a Stripe Checkout session that redirects the customer
-   * to a hosted payment page. After payment, customer is redirected back.
+   * This creates a checkout session that redirects the customer
+   * to a hosted payment page. After payment, the customer is redirected back.
    *
    * @param params - Checkout session parameters
    * @param params.productRef - Product reference
@@ -523,7 +549,7 @@ export interface SolvaPay {
   /**
    * Create a customer portal session for managing purchases.
    *
-   * This creates a Stripe Customer Portal session that allows customers
+   * This creates a customer portal session that allows customers
    * to manage their purchases, update payment methods, and view invoices.
    *
    * @param params - Customer session parameters
@@ -545,6 +571,18 @@ export interface SolvaPay {
     sessionId: string
     customerUrl: string
   }>
+
+  /**
+   * Activate a plan for a customer (usage-based / free plans that don't require payment).
+   *
+   * Returns the activation result indicating whether the plan was activated,
+   * is already active, requires a credit top-up, or requires payment.
+   */
+  activatePlan(params: {
+    customerRef: string
+    productRef: string
+    planRef: string
+  }): Promise<import('./types/client').ActivatePlanResult>
 
   /**
    * Bootstrap an MCP-enabled product with plans and tool mappings.
@@ -650,10 +688,7 @@ export interface SolvaPay {
  * });
  *
  * // Create payable handlers for your product
- * const payable = solvaPay.payable({
- *   product: 'prd_myapi',
- *   plan: 'pln_premium'
- * });
+ * const payable = solvaPay.payable({ product: 'prd_myapi' });
  *
  * // Protect endpoints with framework-specific adapters
  * app.post('/tasks', payable.http(createTask));      // Express/Fastify
@@ -712,6 +747,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.createPaymentIntent(params)
     },
 
+    createTopupPaymentIntent(params) {
+      if (!apiClient.createTopupPaymentIntent) {
+        throw new SolvaPayError('createTopupPaymentIntent is not available on this API client')
+      }
+      return apiClient.createTopupPaymentIntent(params)
+    },
+
     processPaymentIntent(params) {
       if (!apiClient.processPaymentIntent) {
         throw new SolvaPayError('processPaymentIntent is not available on this API client')
@@ -731,11 +773,18 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       if (!apiClient.createCustomer) {
         throw new SolvaPayError('createCustomer is not available on this API client')
       }
-      return apiClient.createCustomer(params)
+      return apiClient.createCustomer({ ...params, metadata: params.metadata ?? {} })
     },
 
     getCustomer(params) {
       return apiClient.getCustomer(params)
+    },
+
+    getCustomerBalance(params) {
+      if (!apiClient.getCustomerBalance) {
+        throw new SolvaPayError('getCustomerBalance is not available on this API client')
+      }
+      return apiClient.getCustomerBalance(params)
     },
 
     createCheckoutSession(params) {
@@ -748,6 +797,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     createCustomerSession(params) {
       return apiClient.createCustomerSession(params)
+    },
+
+    activatePlan(params) {
+      if (!apiClient.activatePlan) {
+        throw new SolvaPayError('activatePlan is not available on this API client')
+      }
+      return apiClient.activatePlan(params)
     },
 
     bootstrapMcpProduct(params) {
@@ -777,17 +833,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
-      // Resolve product name (support both productRef and product)
       const product =
         options.productRef ||
         options.product ||
         process.env.SOLVAPAY_PRODUCT ||
         'default-product'
-      // Resolve plan (support both planRef and plan)
-      const plan = options.planRef || options.plan
 
       const usageType = options.usageType || 'requests'
-      const metadata = { product, plan, usageType }
+      const metadata = { product, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

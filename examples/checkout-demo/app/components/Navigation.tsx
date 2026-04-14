@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ProductBadge, usePurchase } from '@solvapay/react'
+import { ProductBadge, usePurchase, BalanceBadge } from '@solvapay/react'
 import { Button } from './ui/Button'
 import { signOut } from '../lib/supabase'
 import { useState } from 'react'
@@ -12,11 +12,10 @@ import { useState } from 'react'
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { loading: purchasesLoading, hasPaidPurchase } = usePurchase()
+  const { loading: purchasesLoading, activePurchase } = usePurchase()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
-  // Show upgrade button when purchases are loaded and user doesn't have paid purchase
-  const showUpgradeButton = !purchasesLoading && !hasPaidPurchase
+  const showUpgradeButton = !purchasesLoading && !activePurchase
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -45,7 +44,7 @@ export function Navigation() {
   return (
     <nav className="bg-white border-b border-slate-100 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14">
+        <div className="flex justify-between items-center py-3">
           <Link
             href="/"
             className="text-lg font-medium text-slate-900 no-underline hover:text-slate-700 transition-colors"
@@ -68,7 +67,17 @@ export function Navigation() {
               }}
             </ProductBadge>
 
-            {/* Upgrade button - hidden until loaded */}
+            <Link
+              href="/topup"
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition-colors"
+            >
+              <BalanceBadge
+                numberOnly
+                className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 font-medium leading-normal"
+              />
+              Top Up
+            </Link>
+
             {showUpgradeButton && (
               <Link href="/checkout">
                 <Button variant="primary" className="px-4 py-1.5 text-xs">
