@@ -1,0 +1,245 @@
+---
+title: "SDK Upgrade Guide"
+description: "Breaking changes and migration steps when upgrading @solvapay/server to the latest version."
+---
+
+## Unified plans array
+
+`bootstrapMcpProduct()` and `configureMcpPlans()` no longer accept separate `freePlan` and `paidPlans` fields. All plans are now passed in a single `plans` array where free plans simply have `price: 0`.
+
+### Before
+
+```ts
+const result = await solvaPay.bootstrapMcpProduct({
+  name: 'My MCP Product',
+  originUrl: 'https://my-server.example.com/mcp',
+  freePlan: { name: 'Free', freeUnits: 1000 },
+  paidPlans: [
+    { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
+  ],
+  tools: [{ name: 'my_tool', planKeys: ['pro'] }],
+})
+```
+
+### After
+
+```ts
+const result = await solvaPay.bootstrapMcpProduct({
+  name: 'My MCP Product',
+  originUrl: 'https://my-server.example.com/mcp',
+  plans: [
+    { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 1000 },
+    { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
+  ],
+  tools: [{ name: 'my_tool', planKeys: ['pro'] }],
+})
+```
+
+The same change applies to `configureMcpPlans()`:
+
+```ts
+// Before
+await solvaPay.configureMcpPlans(productRef, {
+  freePlan: { name: 'Free', freeUnits: 500 },
+  paidPlans: [{ key: 'pro', name: 'Pro', price: 2000, currency: 'USD' }],
+  toolMapping: [{ name: 'my_tool', planKeys: ['pro'] }],
+})
+
+// After
+await solvaPay.configureMcpPlans(productRef, {
+  plans: [
+    { key: 'free', name: 'Free', price: 0, currency: 'USD', freeUnits: 500 },
+    { key: 'pro', name: 'Pro', price: 2000, currency: 'USD' },
+  ],
+  toolMapping: [{ name: 'my_tool', planKeys: ['pro'] }],
+})
+```
+
+### Removed types
+
+| Old type | Replacement |
+|---|---|
+| `McpBootstrapFreePlanConfig` | Entry in the `plans` array with `price: 0` |
+| `McpBootstrapPaidPlanInput` | `McpBootstrapPlanInput` |
+
+## Response shape changes
+
+Fields returned from `bootstrapMcpProduct()` and `configureMcpPlans()` have changed:
+
+| Old field | New field |
+|---|---|
+| `mcpServer.id` | `mcpServer.reference` |
+| `mcpServer.defaultPlanId` | `mcpServer.defaultPlanRef` |
+| `planMap[key].id` | Removed (use `planMap[key].reference`) |
+
+```ts
+// Before
+const planId = result.planMap['pro'].id
+const serverId = result.mcpServer.id
+const defaultPlan = result.mcpServer.defaultPlanId
+
+// After
+const planRef = result.planMap['pro'].reference
+const serverRef = result.mcpServer.reference
+const defaultPlan = result.mcpServer.defaultPlanRef
+```
+
+## Tool mapping simplified
+
+The `tools` array on `bootstrapMcpProduct()` only accepts `planKeys` now. The `planIds` and `planRefs` fields have been removed.
+
+```ts
+// Before
+tools: [{ name: 'my_tool', planIds: ['abc123'], planRefs: ['pln_xyz'] }]
+
+// After
+tools: [{ name: 'my_tool', planKeys: ['pro'] }]
+```
+
+## Field renames in trackUsage
+
+The `trackUsage()` method has renamed two parameters:
+
+| Old name | New name |
+|---|---|
+| `productReference` | `productRef` |
+| `purchaseReference` | `purchaseRef` |
+
+## payable() no longer accepts plan
+
+The `plan` and `planRef` options have been removed from `payable()`. Plans are now resolved automatically on the server.
+
+```ts
+// Before
+const payable = solvaPay.payable({ product: 'prd_myapi', plan: 'pln_premium' })
+
+// After
+const payable = solvaPay.payable({ product: 'prd_myapi' })
+```
+
+## Payment intent response
+
+`createPaymentIntent()` now returns `processorPaymentId` instead of `id`:
+
+```ts
+// Before
+const { id, clientSecret } = await solvaPay.createPaymentIntent({ ... })
+
+// After
+const { processorPaymentId, clientSecret } = await solvaPay.createPaymentIntent({ ... })
+```
+
+## REST API (direct integration without SDK)
+
+If you call the SolvaPay API directly instead of using `@solvapay/server`, the same breaking changes apply to the HTTP endpoints.
+
+### POST /v1/sdk/products/mcp/bootstrap
+
+The request body has replaced `freePlan` + `paidPlans` with a single `plans` array.
+
+**Before:**
+
+```json
+{
+  "name": "My MCP Product",
+  "originUrl": "https://my-server.example.com/mcp",
+  "freePlan": { "name": "Free", "freeUnits": 1000 },
+  "paidPlans": [
+    { "key": "pro", "name": "Pro", "price": 2000, "currency": "USD", "billingCycle": "monthly" }
+  ],
+  "tools": [{ "name": "my_tool", "planKeys": ["pro"] }]
+}
+```
+
+**After:**
+
+```json
+{
+  "name": "My MCP Product",
+  "originUrl": "https://my-server.example.com/mcp",
+  "plans": [
+    { "key": "free", "name": "Free", "price": 0, "currency": "USD", "type": "recurring", "freeUnits": 1000 },
+    { "key": "pro", "name": "Pro", "price": 2000, "currency": "USD", "billingCycle": "monthly" }
+  ],
+  "tools": [{ "name": "my_tool", "planKeys": ["pro"] }]
+}
+```
+
+Each plan entry accepts:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `key` | string | Yes | Unique identifier used in `planKeys` tool mapping |
+| `name` | string | Yes | Display name |
+| `price` | number | Yes | Price in minor units (cents). Use `0` for free plans |
+| `currency` | string | Yes | ISO currency code (e.g. `USD`) |
+| `type` | string | No | `recurring`, `one-time`, or `usage-based` |
+| `billingCycle` | string | No | `weekly`, `monthly`, `quarterly`, `yearly`, or `custom` |
+| `creditsPerUnit` | number | No | Credits granted per billing unit |
+| `billingModel` | string | No | `pre-paid` or `post-paid` |
+| `freeUnits` | number | No | Free usage units included |
+| `limit` | number | No | Hard usage cap |
+| `features` | object | No | Arbitrary feature flags |
+
+### PUT /v1/sdk/products/{productRef}/mcp/plans
+
+Same unified `plans` array. The `freePlan` field is removed.
+
+**Before:**
+
+```json
+{
+  "freePlan": { "name": "Free", "freeUnits": 500 },
+  "paidPlans": [{ "key": "pro", "name": "Pro", "price": 2000, "currency": "USD" }],
+  "toolMapping": [{ "name": "my_tool", "planKeys": ["pro"] }]
+}
+```
+
+**After:**
+
+```json
+{
+  "plans": [
+    { "key": "free", "name": "Free", "price": 0, "currency": "USD", "freeUnits": 500 },
+    { "key": "pro", "name": "Pro", "price": 2000, "currency": "USD" }
+  ],
+  "toolMapping": [{ "name": "my_tool", "planKeys": ["pro"] }]
+}
+```
+
+### Response changes
+
+Both endpoints now return `mcpServer.defaultPlanRef` instead of `mcpServer.defaultPlanId`, and `planMap` values no longer include an `id` field:
+
+```json
+{
+  "product": { "reference": "prd_ABC123", "name": "My MCP Product" },
+  "mcpServer": {
+    "reference": "mcp_ABC123",
+    "subdomain": "acme-docs",
+    "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
+    "url": "https://my-server.example.com/mcp",
+    "defaultPlanRef": "pln_FREE123"
+  },
+  "planMap": {
+    "free": { "reference": "pln_FREE123", "name": "Free" },
+    "pro": { "reference": "pln_PRO456", "name": "Pro" }
+  }
+}
+```
+
+### Authentication
+
+All SDK endpoints require a Bearer token (your secret key):
+
+```
+Authorization: Bearer sk_sandbox_...
+```
+
+## Verifying the upgrade
+
+After making all changes, run TypeScript compilation to confirm there are no remaining type errors:
+
+```bash
+npx tsc --noEmit
+```
