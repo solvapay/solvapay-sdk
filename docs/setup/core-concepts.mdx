@@ -119,20 +119,41 @@ When your handler is wrapped with `payable()`, the SDK:
 
 Purchase states:
 
-- Active
-- Cancelled
-- Expired
-- Past due
+- **Active** — customer has access
+- **Pending cancellation** — active with `cancelledAt` set; access continues until period end, can be reactivated
+- **Cancelled** — cancel confirmed at period end
+- **Expired** — purchase ended (period elapsed or plan switch)
+- **Past due** — payment failed; may be suspended
+
+### Cancel and reactivate renewal
 
 ```typescript
-const customer = await solvaPay.getCustomer({ customerRef: 'user_123' })
-const purchases = customer.purchases
+import { cancelRenewal, reactivateRenewal } from '@solvapay/next'
 
-await solvaPay.cancelRenewal({
-  customerRef: 'user_123',
-  purchaseRef: 'pur_...',
-})
+// Cancel auto-renewal (access continues until period end)
+await cancelRenewal(request, { purchaseRef: 'pur_...', reason: 'Too expensive' })
+
+// Undo cancellation while still in active period
+await reactivateRenewal(request, { purchaseRef: 'pur_...' })
 ```
+
+### Activate a plan directly
+
+Activate a product for a customer on a specific plan without checkout. Handles free plans, credit-based activation, and plan switching.
+
+```typescript
+import { activatePlan } from '@solvapay/next'
+
+const result = await activatePlan(request, {
+  productRef: 'prd_...',
+  planRef: 'pln_...',
+})
+// result.status: 'activated' | 'already_active' | 'topup_required' | 'payment_required' | 'invalid'
+```
+
+When the customer already has an active purchase on a different plan, `activatePlan` automatically expires the old purchase and creates a new one.
+
+See [Purchase lifecycle management](/sdks/typescript/guides/purchase-management) for the full guide.
 
 ## Authentication flow
 
