@@ -59,6 +59,35 @@ Deno.serve(createPaymentIntent)
 | `activatePlan`             | POST   | Activate a free/usage plan        |
 | `listPlans`                | GET    | List available plans              |
 | `trackUsage`               | POST   | Track usage for metered billing   |
+| `syncCustomer`             | POST   | Sync/create customer in SolvaPay  |
+| `createCheckoutSession`    | POST   | Create hosted checkout session    |
+| `createCustomerSession`    | POST   | Create customer portal session    |
+
+## Webhooks
+
+Use the `solvapayWebhook` factory to verify and handle webhook events:
+
+```typescript
+// supabase/functions/solvapay-webhook/index.ts
+import { solvapayWebhook } from '@solvapay/supabase'
+
+Deno.serve(solvapayWebhook({
+  secret: Deno.env.get('SOLVAPAY_WEBHOOK_SECRET')!,
+  onEvent: async (event) => {
+    if (event.type === 'purchase.created') {
+      // handle new purchase
+    }
+  },
+}))
+```
+
+The factory reads the raw body, verifies the `SV-Signature` header, and calls your `onEvent` handler with the parsed event. Returns 401 on invalid signatures.
+
+Set the webhook secret alongside your API key:
+
+```bash
+supabase secrets set SOLVAPAY_WEBHOOK_SECRET=whsec_...
+```
 
 ## CORS configuration
 
