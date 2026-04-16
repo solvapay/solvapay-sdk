@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import type { SolvaPay } from '@solvapay/server'
+import type { SolvaPay, ErrorResult } from '@solvapay/server'
 import { checkPurchaseCore, isErrorResult } from '@solvapay/server'
 import {
   getSharedDeduplicator,
@@ -84,22 +84,23 @@ export async function checkPurchase(
 
     const userId = userIdOrError
 
-    const response = await deduplicator.deduplicate(userId, async () => {
-      const result = await checkPurchaseCore(request, {
-        solvaPay: options.solvaPay,
-        includeEmail: options.includeEmail,
-        includeName: options.includeName,
-      })
+    const response: PurchaseCheckResult | ErrorResult = await deduplicator.deduplicate(
+      userId,
+      async () => {
+        return (await checkPurchaseCore(request, {
+          solvaPay: options.solvaPay,
+          includeEmail: options.includeEmail,
+          includeName: options.includeName,
+        })) as PurchaseCheckResult
+      },
+    )
 
-      if (isErrorResult(result)) {
-        return {
-          customerRef: userId,
-          purchases: [],
-        } as PurchaseCheckResult
-      }
-
-      return result as PurchaseCheckResult
-    })
+    if (isErrorResult(response)) {
+      return NextResponse.json(
+        { error: response.error, details: response.details },
+        { status: response.status },
+      )
+    }
 
     return response
   } catch (error) {

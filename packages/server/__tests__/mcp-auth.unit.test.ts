@@ -51,4 +51,10 @@ describe('mcp-auth helpers', () => {
       McpBearerAuthError,
     )
   })
+
+  it('decodeJwtPayload handles non-ASCII UTF-8 characters', () => {
+    const token = createUnsignedJwt({ sub: 'cust_123', name: 'José García 🎉' })
+    const payload = decodeJwtPayload(token)
+    expect(payload.name).toBe('José García 🎉')
+  })
 })
