@@ -8,7 +8,10 @@ dist
 .npmrc
 .pnpm-store
 .turbo
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/plans/
+!.cursor/skills/
 .DS_Store
 *.tsbuildinfo
 **/.demo-data/*
