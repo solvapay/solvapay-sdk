@@ -4,7 +4,7 @@ A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with pay
 
 **Key Features:**
 
-- **One-line paywall protection** for Express, Next.js, and MCP servers
+- **One-line paywall protection** for Express, Next.js, Supabase Edge Functions, and MCP servers
 - **Headless React components** for purchase checkout flows
 - **Works out of the box** with stub mode (no API key needed for testing)
 - **Secure by default** - API keys never exposed to the browser
@@ -46,13 +46,16 @@ npm install @solvapay/react-supabase @supabase/supabase-js
 # For Next.js integration
 npm install @solvapay/next
 
+# For Supabase Edge Functions
+npm install @solvapay/supabase
+
 # For authentication adapters
 npm install @solvapay/auth
 ```
 
 ## Packages
 
-The SDK consists of **7 published packages**:
+The SDK consists of **8 published packages**:
 
 - **`@solvapay/core`** - Types, schemas, and shared utilities
 - **`@solvapay/server`** - Universal server SDK (Node + Edge runtime)
@@ -60,6 +63,7 @@ The SDK consists of **7 published packages**:
 - **`@solvapay/react-supabase`** - Supabase auth adapter for React Provider
 - **`@solvapay/auth`** - Authentication adapters and utilities for extracting user IDs from requests
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
+- **`@solvapay/supabase`** - Supabase Edge Functions adapter (one-liner handlers)
 - **`solvapay`** - CLI for auth bootstrap (`npx solvapay init`)
 
 See [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for contributor
@@ -197,6 +201,17 @@ export async function POST(request: NextRequest) {
 }
 ```
 
+**Supabase Edge Functions** using `@solvapay/supabase` (one-liner per endpoint):
+
+```typescript
+// supabase/functions/check-purchase/index.ts
+import { checkPurchase } from '@solvapay/supabase'
+
+Deno.serve(checkPurchase)
+```
+
+All 10 endpoints follow the same pattern. See the [supabase-edge example](./examples/supabase-edge) for the complete setup.
+
 **Alternative: Using server SDK directly** (if you need more control):
 
 ```typescript
@@ -325,6 +340,17 @@ Hosted checkout flow using redirect-based payments:
 cd examples/hosted-checkout-demo && pnpm dev
 ```
 
+### [supabase-edge](./examples/supabase-edge)
+
+Supabase Edge Functions with `@solvapay/supabase` adapter:
+
+- One-liner per Edge Function (10 endpoints)
+- CORS utility with configurable origins
+- Deno import map for npm packages
+- Reference project for React + Supabase architectures
+
+See the [supabase-edge README](./examples/supabase-edge/README.md) for setup and a side-by-side comparison with Next.js API routes.
+
 ### [mcp-oauth-bridge](./examples/mcp-oauth-bridge)
 
 Model Context Protocol server with OAuth bridge and paywall:
@@ -355,7 +381,7 @@ See [`examples/README.md`](./examples/README.md) for detailed setup instructions
 
 ## Architecture
 
-This is a **monorepo** with 7 published packages built using Turborepo, tsup, and pnpm workspaces.
+This is a **monorepo** with 8 published packages built using Turborepo, tsup, and pnpm workspaces.
 
 See [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for:
 
