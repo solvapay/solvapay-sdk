@@ -10,6 +10,8 @@ dist
 .turbo
 .cursor/*
 !.cursor/rules/
+!.cursor/plans/
+!.cursor/skills/
 .DS_Store
 *.tsbuildinfo
 **/.demo-data/*
