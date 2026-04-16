@@ -37,10 +37,11 @@ The adapter handles CORS, JSON serialization, and error formatting internally.
 
 ## Setup
 
-### 1. Set your secret key
+### 1. Set your secrets
 
 ```bash
 supabase secrets set SOLVAPAY_SECRET_KEY=sk_sandbox_...
+supabase secrets set SOLVAPAY_WEBHOOK_SECRET=whsec_...
 ```
 
 ### 2. Import map
@@ -60,11 +61,23 @@ The `supabase/functions/deno.json` maps npm packages for Deno:
 
 ### 3. Deploy
 
+Deploy individually:
+
 ```bash
 supabase functions deploy check-purchase
 supabase functions deploy create-payment-intent
 supabase functions deploy process-payment
-# ... deploy each function
+supabase functions deploy create-topup-payment-intent
+supabase functions deploy customer-balance
+supabase functions deploy cancel-renewal
+supabase functions deploy reactivate-renewal
+supabase functions deploy activate-plan
+supabase functions deploy list-plans
+supabase functions deploy track-usage
+supabase functions deploy sync-customer
+supabase functions deploy create-checkout-session
+supabase functions deploy create-customer-session
+supabase functions deploy solvapay-webhook
 ```
 
 Or deploy all at once:
@@ -75,18 +88,22 @@ supabase functions deploy
 
 ## Edge Functions
 
-| Function                       | Method | Handler                  | Description                       |
-| ------------------------------ | ------ | ------------------------ | --------------------------------- |
-| `check-purchase`               | GET    | `checkPurchase`          | Check user's purchase status      |
-| `create-payment-intent`        | POST   | `createPaymentIntent`    | Create payment intent for a plan  |
-| `process-payment`              | POST   | `processPayment`         | Process confirmed payment         |
-| `create-topup-payment-intent`  | POST   | `createTopupPaymentIntent` | Create credit top-up intent     |
-| `customer-balance`             | GET    | `customerBalance`        | Get customer credit balance       |
-| `cancel-renewal`               | POST   | `cancelRenewal`          | Cancel subscription renewal       |
-| `reactivate-renewal`           | POST   | `reactivateRenewal`      | Reactivate cancelled subscription |
-| `activate-plan`                | POST   | `activatePlan`           | Activate a free/usage plan        |
-| `list-plans`                   | GET    | `listPlans`              | List available plans              |
-| `track-usage`                  | POST   | `trackUsage`             | Track usage for metered billing   |
+| Function                       | Method | Handler                    | Description                       |
+| ------------------------------ | ------ | -------------------------- | --------------------------------- |
+| `check-purchase`               | GET    | `checkPurchase`            | Check user's purchase status      |
+| `create-payment-intent`        | POST   | `createPaymentIntent`      | Create payment intent for a plan  |
+| `process-payment`              | POST   | `processPayment`           | Process confirmed payment         |
+| `create-topup-payment-intent`  | POST   | `createTopupPaymentIntent` | Create credit top-up intent       |
+| `customer-balance`             | GET    | `customerBalance`          | Get customer credit balance       |
+| `cancel-renewal`               | POST   | `cancelRenewal`            | Cancel subscription renewal       |
+| `reactivate-renewal`           | POST   | `reactivateRenewal`        | Reactivate cancelled subscription |
+| `activate-plan`                | POST   | `activatePlan`             | Activate a free/usage plan        |
+| `list-plans`                   | GET    | `listPlans`                | List available plans              |
+| `track-usage`                  | POST   | `trackUsage`               | Track usage for metered billing   |
+| `sync-customer`                | POST   | `syncCustomer`             | Sync/create customer in SolvaPay  |
+| `create-checkout-session`      | POST   | `createCheckoutSession`    | Create hosted checkout session    |
+| `create-customer-session`      | POST   | `createCustomerSession`    | Create customer portal session    |
+| `solvapay-webhook`             | POST   | `solvapayWebhook(options)` | Receive and verify webhook events |
 
 ## CORS configuration
 
@@ -114,21 +131,28 @@ import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 const SUPABASE_URL = 'https://<project-ref>.supabase.co/functions/v1'
 
 <SolvaPayProvider
-  authAdapter={createSupabaseAuthAdapter(supabase)}
-  apiRoutes={{
-    checkPurchase: `${SUPABASE_URL}/check-purchase`,
-    createPaymentIntent: `${SUPABASE_URL}/create-payment-intent`,
-    processPayment: `${SUPABASE_URL}/process-payment`,
-    listPlans: `${SUPABASE_URL}/list-plans`,
-    syncCustomer: `${SUPABASE_URL}/sync-customer`,
-    activatePlan: `${SUPABASE_URL}/activate-plan`,
-    trackUsage: `${SUPABASE_URL}/track-usage`,
-    customerBalance: `${SUPABASE_URL}/customer-balance`,
+  config={{
+    auth: {
+      adapter: createSupabaseAuthAdapter(supabase),
+    },
+    api: {
+      checkPurchase: `${SUPABASE_URL}/check-purchase`,
+      createPayment: `${SUPABASE_URL}/create-payment-intent`,
+      processPayment: `${SUPABASE_URL}/process-payment`,
+      createTopupPayment: `${SUPABASE_URL}/create-topup-payment-intent`,
+      customerBalance: `${SUPABASE_URL}/customer-balance`,
+      cancelRenewal: `${SUPABASE_URL}/cancel-renewal`,
+      reactivateRenewal: `${SUPABASE_URL}/reactivate-renewal`,
+      activatePlan: `${SUPABASE_URL}/activate-plan`,
+      listPlans: `${SUPABASE_URL}/list-plans`,
+    },
   }}
 >
   {children}
 </SolvaPayProvider>
 ```
+
+The `sync-customer`, `create-checkout-session`, `create-customer-session`, and `solvapay-webhook` functions are called server-side (not through the React provider) and should be invoked directly from your application code.
 
 ## Local testing
 
@@ -144,16 +168,20 @@ Functions are available at `http://localhost:54321/functions/v1/<function-name>`
 ```
 supabase/functions/
 ├── deno.json                          # npm import map
-├── check-purchase/index.ts            # 2 lines
-├── create-payment-intent/index.ts     # 2 lines
-├── process-payment/index.ts           # 2 lines
+├── check-purchase/index.ts
+├── create-payment-intent/index.ts
+├── process-payment/index.ts
 ├── create-topup-payment-intent/index.ts
 ├── customer-balance/index.ts
 ├── cancel-renewal/index.ts
 ├── reactivate-renewal/index.ts
 ├── activate-plan/index.ts
 ├── list-plans/index.ts
-└── track-usage/index.ts
+├── track-usage/index.ts
+├── sync-customer/index.ts
+├── create-checkout-session/index.ts
+├── create-customer-session/index.ts
+└── solvapay-webhook/index.ts
 ```
 
-Total backend code: ~30 lines across 10 files.
+Total backend code: ~40 lines across 14 files.

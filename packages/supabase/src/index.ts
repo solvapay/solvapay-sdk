@@ -9,6 +9,11 @@ export {
   reactivateRenewal,
   activatePlan,
   listPlans,
+  syncCustomer,
+  createCheckoutSession,
+  createCustomerSession,
+  solvapayWebhook,
 } from './handlers'
+export type { SolvapayWebhookOptions } from './handlers'
 
 export { configureCors } from './cors'

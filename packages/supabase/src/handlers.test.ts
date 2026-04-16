@@ -11,6 +11,10 @@ vi.mock('@solvapay/server', () => ({
   reactivatePurchaseCore: vi.fn(),
   activatePlanCore: vi.fn(),
   listPlansCore: vi.fn(),
+  syncCustomerCore: vi.fn(),
+  createCheckoutSessionCore: vi.fn(),
+  createCustomerSessionCore: vi.fn(),
+  verifyWebhook: vi.fn(),
   isErrorResult: vi.fn(
     (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
@@ -27,6 +31,10 @@ import {
   reactivatePurchaseCore,
   activatePlanCore,
   listPlansCore,
+  syncCustomerCore,
+  createCheckoutSessionCore,
+  createCustomerSessionCore,
+  verifyWebhook,
 } from '@solvapay/server'
 import {
   checkPurchase,
@@ -39,6 +47,10 @@ import {
   reactivateRenewal,
   activatePlan,
   listPlans,
+  syncCustomer,
+  createCheckoutSession,
+  createCustomerSession,
+  solvapayWebhook,
 } from './handlers'
 import { configureCors } from './cors'
 
@@ -52,6 +64,10 @@ const mockCancelPurchaseCore = vi.mocked(cancelPurchaseCore)
 const mockReactivatePurchaseCore = vi.mocked(reactivatePurchaseCore)
 const mockActivatePlanCore = vi.mocked(activatePlanCore)
 const mockListPlansCore = vi.mocked(listPlansCore)
+const mockSyncCustomerCore = vi.mocked(syncCustomerCore)
+const mockCreateCheckoutSessionCore = vi.mocked(createCheckoutSessionCore)
+const mockCreateCustomerSessionCore = vi.mocked(createCustomerSessionCore)
+const mockVerifyWebhook = vi.mocked(verifyWebhook)
 
 function fakeGet(url = 'http://localhost/api/test') {
   return new Request(url, { method: 'GET' })
@@ -247,5 +263,169 @@ describe('listPlans', () => {
     const res = await listPlans(fakeGet('http://localhost/api/plans?productRef=prd_1'))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ plans: [{ reference: 'pln_1' }] })
+  })
+})
+
+describe('syncCustomer', () => {
+  it('returns CORS preflight for OPTIONS', async () => {
+    const res = await syncCustomer(fakeOptions())
+    expect(res.status).toBe(204)
+  })
+
+  it('returns customerRef on success', async () => {
+    mockSyncCustomerCore.mockResolvedValue('cus_123')
+
+    const res = await syncCustomer(fakePost())
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(await res.json()).toEqual({ customerRef: 'cus_123' })
+  })
+
+  it('returns error response when core returns error', async () => {
+    mockSyncCustomerCore.mockResolvedValue({
+      error: 'Unauthorized',
+      status: 401,
+    })
+
+    const res = await syncCustomer(fakePost())
+    expect(res.status).toBe(401)
+    expect(await res.json()).toMatchObject({ error: 'Unauthorized' })
+  })
+})
+
+describe('createCheckoutSession', () => {
+  it('returns CORS preflight for OPTIONS', async () => {
+    const res = await createCheckoutSession(fakeOptions())
+    expect(res.status).toBe(204)
+  })
+
+  it('parses body and returns checkout session', async () => {
+    mockCreateCheckoutSessionCore.mockResolvedValue({
+      sessionId: 'ses_1',
+      checkoutUrl: 'https://checkout.solvapay.com/ses_1',
+    })
+
+    const res = await createCheckoutSession(
+      fakePost({ productRef: 'prd_1', returnUrl: 'https://myapp.com' }),
+    )
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      sessionId: 'ses_1',
+      checkoutUrl: 'https://checkout.solvapay.com/ses_1',
+    })
+  })
+
+  it('returns error response when core returns error', async () => {
+    mockCreateCheckoutSessionCore.mockResolvedValue({
+      error: 'Missing required parameter: productRef is required',
+      status: 400,
+    })
+
+    const res = await createCheckoutSession(fakePost({}))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'Missing required parameter: productRef is required' })
+  })
+})
+
+describe('createCustomerSession', () => {
+  it('returns CORS preflight for OPTIONS', async () => {
+    const res = await createCustomerSession(fakeOptions())
+    expect(res.status).toBe(204)
+  })
+
+  it('returns customer session on success', async () => {
+    mockCreateCustomerSessionCore.mockResolvedValue({
+      sessionId: 'ses_2',
+      customerUrl: 'https://billing.solvapay.com/ses_2',
+    })
+
+    const res = await createCustomerSession(fakePost())
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      sessionId: 'ses_2',
+      customerUrl: 'https://billing.solvapay.com/ses_2',
+    })
+  })
+
+  it('returns error response when core returns error', async () => {
+    mockCreateCustomerSessionCore.mockResolvedValue({
+      error: 'Unauthorized',
+      status: 401,
+    })
+
+    const res = await createCustomerSession(fakePost())
+    expect(res.status).toBe(401)
+    expect(await res.json()).toMatchObject({ error: 'Unauthorized' })
+  })
+})
+
+describe('solvapayWebhook', () => {
+  const validEvent = { type: 'purchase.created', data: { id: 'pur_1' } }
+
+  function fakeWebhookPost(body: string, signature = 't=123,v1=abc') {
+    return new Request('http://localhost/webhooks/solvapay', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'sv-signature': signature,
+      },
+      body,
+    })
+  }
+
+  it('returns 200 and calls onEvent when signature is valid', async () => {
+    mockVerifyWebhook.mockReturnValue(validEvent as never)
+    const onEvent = vi.fn()
+
+    const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
+    const res = await handler(fakeWebhookPost(JSON.stringify(validEvent)))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ received: true })
+    expect(onEvent).toHaveBeenCalledWith(validEvent)
+  })
+
+  it('returns 401 when signature verification fails', async () => {
+    mockVerifyWebhook.mockImplementation(() => {
+      throw new Error('Invalid webhook signature')
+    })
+    const onEvent = vi.fn()
+
+    const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
+    const res = await handler(fakeWebhookPost('{}', 'bad'))
+
+    expect(res.status).toBe(401)
+    expect(await res.json()).toMatchObject({ error: 'Invalid webhook signature' })
+    expect(onEvent).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when onEvent throws', async () => {
+    mockVerifyWebhook.mockReturnValue(validEvent as never)
+    const onEvent = vi.fn().mockRejectedValue(new Error('handler boom'))
+
+    const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
+    const res = await handler(fakeWebhookPost(JSON.stringify(validEvent)))
+
+    expect(res.status).toBe(500)
+    expect(await res.json()).toMatchObject({ error: 'Webhook handler failed' })
+  })
+
+  it('does not include CORS headers on responses', async () => {
+    mockVerifyWebhook.mockReturnValue(validEvent as never)
+    const onEvent = vi.fn()
+
+    const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
+    const res = await handler(fakeWebhookPost(JSON.stringify(validEvent)))
+
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
+  })
+
+  it('returns 500 when secret is not configured', async () => {
+    const onEvent = vi.fn()
+    const handler = solvapayWebhook({ onEvent })
+    const res = await handler(fakeWebhookPost('{}'))
+
+    expect(res.status).toBe(500)
+    expect(await res.json()).toMatchObject({ error: 'Webhook secret not configured' })
   })
 })
