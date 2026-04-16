@@ -38,3 +38,10 @@ export { activatePlanCore } from './activation'
 
 // Export plans helpers
 export { listPlansCore } from './plans'
+
+// Export purchase check helpers
+export { checkPurchaseCore } from './purchase'
+export type { PurchaseCheckResult } from './purchase'
+
+// Export usage tracking helpers
+export { trackUsageCore } from './usage'

@@ -187,8 +187,10 @@ export {
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,
+  checkPurchaseCore,
+  trackUsageCore,
   listPlansCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult } from './helpers'
+export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult, PurchaseCheckResult } from './helpers'

@@ -19,7 +19,7 @@ export type McpBearerCustomerRefOptions = {
 function base64UrlDecode(input: string): string {
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
   const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=')
-  return Buffer.from(padded, 'base64').toString('utf8')
+  return atob(padded)
 }
 
 export function extractBearerToken(authorization?: string | null): string | null {

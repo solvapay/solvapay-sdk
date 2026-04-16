@@ -50,17 +50,22 @@ export { withRetry } from './utils'
 export {
   getAuthenticatedUserCore,
   syncCustomerCore,
+  getCustomerBalanceCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,
+  reactivatePurchaseCore,
+  activatePlanCore,
+  checkPurchaseCore,
+  trackUsageCore,
   listPlansCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser } from './helpers'
+export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult, PurchaseCheckResult } from './helpers'
 
 /**
  * Verify webhook signature using edge-compatible Web Crypto API.
