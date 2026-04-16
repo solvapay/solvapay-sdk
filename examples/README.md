@@ -75,6 +75,24 @@ pnpm dev
 
 The application will start on `http://localhost:3000`
 
+### Supabase Edge Functions (`supabase-edge`)
+
+A reference project demonstrating:
+
+- One-liner Supabase Edge Functions using `@solvapay/supabase`
+- All 10 payment/purchase endpoints as 2-line files
+- Deno import map for npm packages
+- CORS configuration for production
+
+This is a **Deno reference project**, not a Node.js workspace member. It runs via the Supabase CLI, not `pnpm dev`.
+
+**Setup:**
+
+```bash
+cd examples/supabase-edge
+# See README.md for Supabase CLI setup, secrets, and deploy instructions
+```
+
 ### MCP OAuth Bridge (`mcp-oauth-bridge`)
 
 A non-hosted MCP server example demonstrating:
@@ -169,8 +187,17 @@ PORT=3001
    pnpm dev
    ```
 
-3. **Watch for changes:**
-   The examples are configured to automatically restart when you make changes to the SDK packages.
+3. **Supabase Edge Functions example:**
+   The `supabase-edge` example uses Deno and runs via the Supabase CLI instead of `pnpm dev`:
+
+   ```bash
+   cd examples/supabase-edge
+   supabase start
+   supabase functions serve
+   ```
+
+4. **Watch for changes:**
+   The Node.js examples are configured to automatically restart when you make changes to the SDK packages.
 
 ## Key Features Demonstrated
 
