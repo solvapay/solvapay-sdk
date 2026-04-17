@@ -1,6 +1,8 @@
 'use client'
 import React from 'react'
 import { usePurchase } from '../hooks/usePurchase'
+import { useCopy } from '../hooks/useCopy'
+import { interpolate } from '../i18n/interpolate'
 import type { ProductBadgeProps } from '../types'
 
 /**
@@ -33,6 +35,7 @@ export const ProductBadge: React.FC<ProductBadgeProps> = ({
   className,
 }) => {
   const { purchases, loading, hasPaidPurchase, activePurchase } = usePurchase()
+  const copy = useCopy()
   const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false)
 
   React.useEffect(() => {
@@ -64,7 +67,9 @@ export const ProductBadge: React.FC<ProductBadgeProps> = ({
       role="status"
       aria-live="polite"
       aria-busy={loading}
-      aria-label={`Current product: ${planToDisplay}`}
+      aria-label={interpolate(copy.product.currentProductLabel, {
+        name: planToDisplay,
+      })}
     >
       {planToDisplay}
     </Component>

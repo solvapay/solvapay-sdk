@@ -1,53 +1,281 @@
 'use client'
-import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react'
-import { Elements } from '@stripe/react-stripe-js'
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { Elements, useStripe, useElements } from '@stripe/react-stripe-js'
+import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
 import { useCheckout } from './hooks/useCheckout'
 import { usePurchase } from './hooks/usePurchase'
 import { useSolvaPay } from './hooks/useSolvaPay'
+import { useCustomer } from './hooks/useCustomer'
+import { useCopy, useLocale } from './hooks/useCopy'
 import { Spinner } from './components/Spinner'
-import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
-import type { PaymentFormProps } from './types'
+import {
+  PaymentFormProvider,
+  type PaymentElementKind,
+  type PaymentFormContextValue,
+} from './components/PaymentFormContext'
+import {
+  PaymentFormSummary,
+  PaymentFormCustomerFields,
+  PaymentFormPaymentElement,
+  PaymentFormCardElement,
+  PaymentFormMandateText,
+  PaymentFormTermsCheckbox,
+  PaymentFormSubmitButton,
+  PaymentFormError,
+} from './components/PaymentFormSlots'
+import { confirmPayment } from './utils/confirmPayment'
+import { reconcilePayment } from './utils/processPaymentResult'
+import type { PaymentFormProps, PrefillCustomer } from './types'
+
+type PaymentFormRootProps = PaymentFormProps & {
+  /**
+   * Customer name/email forwarded to backend PaymentIntent creation so the
+   * server-side customer record is authoritative. Echoed back via
+   * `useCustomer()` after the intent is created.
+   */
+  prefillCustomer?: PrefillCustomer
+  /**
+   * When true, the default tree renders a terms checkbox and gates the
+   * submit button until it is ticked.
+   */
+  requireTermsAcceptance?: boolean
+  /** Slot composition. When omitted, a sensible default tree is rendered. */
+  children?: React.ReactNode
+}
 
 /**
- * Payment form component for handling Stripe checkout.
- *
- * This component provides a complete payment form with Stripe integration,
- * including card input, plan selection, and payment processing. It handles
- * the entire checkout flow including payment intent creation and confirmation.
- *
- * When `planRef` is omitted but `productRef` is provided, the component
- * auto-resolves the plan by fetching the product's plans and selecting the
- * single active plan or the one marked as default.
- *
- * @param props - Payment form configuration
- * @param props.planRef - Plan reference (optional if product has single/default plan)
- * @param props.productRef - Product reference (required when planRef is omitted)
- * @param props.onSuccess - Callback when payment succeeds
- * @param props.onError - Callback when payment fails
- * @param props.returnUrl - Optional return URL after payment (for redirects)
- * @param props.submitButtonText - Custom text for submit button (default: 'Pay Now')
- * @param props.className - Custom CSS class for the form container
- * @param props.buttonClassName - Custom CSS class for the submit button
- *
- * @example
- * ```tsx
- * // Explicit plan
- * <PaymentForm planRef="pln_premium" productRef="prd_myapi" onSuccess={...} />
- *
- * // Auto-resolve plan (product must have exactly one plan or a default)
- * <PaymentForm productRef="prd_myapi" onSuccess={...} />
- * ```
+ * Inner form: lives inside Stripe `<Elements>`, wires up submission, and
+ * provides `PaymentFormContext` to slot subcomponents (or to the default
+ * tree when `children` is omitted).
  */
-export const PaymentForm: React.FC<PaymentFormProps> = ({
+const PaymentFormInner: React.FC<{
+  planRef?: string
+  productRef?: string
+  prefillCustomer?: PrefillCustomer
+  resolvedPlanRef: string | null
+  clientSecret: string
+  returnUrl: string
+  submitButtonText?: string
+  buttonClassName?: string
+  requireTermsAcceptance: boolean
+  onSuccess?: PaymentFormProps['onSuccess']
+  onError?: PaymentFormProps['onError']
+  children?: React.ReactNode
+}> = ({
+  planRef,
+  productRef,
+  prefillCustomer,
+  resolvedPlanRef,
+  clientSecret,
+  returnUrl,
+  submitButtonText,
+  buttonClassName,
+  requireTermsAcceptance,
+  onSuccess,
+  onError,
+  children,
+}) => {
+  const stripe = useStripe()
+  const elements = useElements()
+  const copy = useCopy()
+  const customer = useCustomer()
+  const { processPayment } = useSolvaPay()
+  const { refetch } = usePurchase()
+
+  const [elementKind, setElementKind] = useState<PaymentElementKind>(
+    children ? null : 'payment-element',
+  )
+  const [paymentInputComplete, setPaymentInputComplete] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const isReady = !!(stripe && elements)
+
+  const canSubmit =
+    isReady &&
+    !!clientSecret &&
+    !!elementKind &&
+    paymentInputComplete &&
+    (!requireTermsAcceptance || termsAccepted) &&
+    !isProcessing
+
+  const submit = useCallback(async () => {
+    if (!stripe || !elements || !clientSecret || !elementKind) {
+      const msg = !stripe || !elements
+        ? copy.errors.stripeUnavailable
+        : copy.errors.paymentIntentUnavailable
+      setError(msg)
+      onError?.(new Error(msg))
+      return
+    }
+    setError(null)
+    setIsProcessing(true)
+
+    const result = await confirmPayment({
+      stripe: stripe as Stripe,
+      elements: elements as StripeElements,
+      clientSecret,
+      mode: elementKind,
+      returnUrl,
+      billingDetails: {
+        name: customer.name ?? prefillCustomer?.name,
+        email: customer.email ?? prefillCustomer?.email,
+      },
+      copy,
+    })
+
+    if (result.status === 'error') {
+      setError(result.message)
+      setIsProcessing(false)
+      onError?.(new Error(result.message))
+      return
+    }
+
+    if (result.status === 'requires_action') {
+      setError(result.message)
+      setIsProcessing(false)
+      return
+    }
+
+    if (result.status === 'other') {
+      setError(result.message)
+      setIsProcessing(false)
+      return
+    }
+
+    // succeeded — forward to backend processor
+    const paymentIntent = result.paymentIntent
+    const reconcileResult = await reconcilePayment({
+      paymentIntentId: paymentIntent.id as string,
+      productRef,
+      planRef: planRef || resolvedPlanRef || undefined,
+      processPayment,
+      refetchPurchase: refetch,
+      copy,
+    })
+
+    setIsProcessing(false)
+
+    if (reconcileResult.status === 'success') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onSuccess?.(paymentIntent as any)
+      return
+    }
+
+    const msg =
+      reconcileResult.status === 'timeout'
+        ? reconcileResult.error.message
+        : copy.errors.paymentProcessingFailed
+    setError(msg)
+    onError?.(reconcileResult.error)
+  }, [
+    stripe,
+    elements,
+    clientSecret,
+    elementKind,
+    returnUrl,
+    customer,
+    prefillCustomer,
+    copy,
+    processPayment,
+    productRef,
+    planRef,
+    resolvedPlanRef,
+    refetch,
+    onSuccess,
+    onError,
+  ])
+
+  const contextValue: PaymentFormContextValue = useMemo(
+    () => ({
+      planRef,
+      productRef,
+      prefillCustomer,
+      resolvedPlanRef,
+      plan: null,
+      clientSecret,
+      stripe: (stripe as Stripe | null) ?? null,
+      elements: (elements as StripeElements | null) ?? null,
+      isProcessing,
+      isReady,
+      paymentInputComplete,
+      termsAccepted,
+      requireTermsAcceptance,
+      canSubmit,
+      error,
+      elementKind,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
+      setElementKind,
+      setPaymentInputComplete,
+      setTermsAccepted,
+      submit,
+    }),
+    [
+      planRef,
+      productRef,
+      prefillCustomer,
+      resolvedPlanRef,
+      clientSecret,
+      stripe,
+      elements,
+      isProcessing,
+      isReady,
+      paymentInputComplete,
+      termsAccepted,
+      requireTermsAcceptance,
+      canSubmit,
+      error,
+      elementKind,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
+      submit,
+    ],
+  )
+
+  const defaultTree = (
+    <>
+      <PaymentFormSummary />
+      <PaymentFormCustomerFields />
+      <PaymentFormPaymentElement />
+      <PaymentFormError />
+      <PaymentFormMandateText />
+      {requireTermsAcceptance && <PaymentFormTermsCheckbox />}
+      <PaymentFormSubmitButton />
+    </>
+  )
+
+  return (
+    <PaymentFormProvider value={contextValue}>
+      {children ?? defaultTree}
+    </PaymentFormProvider>
+  )
+}
+
+const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
   planRef,
   productRef,
   onSuccess,
   onError,
   returnUrl,
-  submitButtonText = 'Pay Now',
+  submitButtonText,
   className,
   buttonClassName,
+  prefillCustomer,
+  requireTermsAcceptance = false,
+  children,
 }) => {
+  const copy = useCopy()
+  const locale = useLocale()
   const {
     loading: checkoutLoading,
     error: checkoutError,
@@ -55,11 +283,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     startCheckout,
     stripePromise,
     resolvedPlanRef,
-  } = useCheckout({ planRef, productRef })
-  const { refetch } = usePurchase()
-  const { processPayment } = useSolvaPay()
-  const hasInitializedRef = useRef(false)
+  } = useCheckout({ planRef, productRef, customer: prefillCustomer })
 
+  const hasInitializedRef = useRef(false)
   const hasPlanOrProduct = !!(planRef || productRef)
 
   useEffect(() => {
@@ -80,125 +306,107 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   }, [hasPlanOrProduct, checkoutLoading, checkoutError, clientSecret, startCheckout])
 
-  const effectivePlanRef = planRef || resolvedPlanRef
-
-  const handleSuccess = useCallback(
-    async (paymentIntent: unknown) => {
-      const paymentIntentAny = paymentIntent as Record<string, unknown>
-
-      if (processPayment && productRef) {
-        try {
-          const result = await processPayment({
-            paymentIntentId: paymentIntentAny.id as string,
-            productRef: productRef,
-            planRef: effectivePlanRef || undefined,
-          })
-
-          const isTimeout = (result as unknown as Record<string, unknown>)?.status === 'timeout'
-
-          if (isTimeout) {
-            for (let attempt = 1; attempt <= 5; attempt++) {
-              await new Promise(resolve => setTimeout(resolve, attempt * 1000))
-              await refetch()
-            }
-            const err = new Error('Payment processing timed out — webhooks may not be configured')
-            onError?.(err)
-            return
-          }
-
-          await refetch()
-        } catch (error) {
-          console.error('[PaymentForm] Failed to process payment:', error)
-          onError?.(error instanceof Error ? error : new Error(String(error)))
-          return
-        }
-      } else {
-        await refetch()
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onSuccess?.(paymentIntentAny as any)
-    },
-    [processPayment, productRef, effectivePlanRef, refetch, onSuccess, onError],
-  )
-
-  const handleError = useCallback(
-    (err: Error) => {
-      if (onError) {
-        onError(err)
-      }
-    },
-    [onError],
-  )
-
-  const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
-
-  const hasError = !!checkoutError
-  const hasStripeData = !!(stripePromise && clientSecret)
+  const finalReturnUrl =
+    returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret: clientSecret }
-  }, [clientSecret])
+    return { clientSecret, locale: locale as StripeElementLocale | undefined }
+  }, [clientSecret, locale])
 
-  const [hasMountedElements, setHasMountedElements] = useState(false)
+  const shouldRenderElements = !!(stripePromise && clientSecret)
 
-  useEffect(() => {
-    if (hasStripeData) {
-      setHasMountedElements(true)
-    }
-  }, [hasStripeData])
+  if (!hasPlanOrProduct) {
+    return (
+      <div className={className}>
+        <div>{copy.errors.configMissingPlanOrProduct}</div>
+      </div>
+    )
+  }
 
-  const shouldRenderElements =
-    hasStripeData || (hasMountedElements && stripePromise && clientSecret)
+  if (checkoutError) {
+    return (
+      <div className={className}>
+        <div>{copy.errors.paymentInitFailed}</div>
+        <div>{checkoutError.message || copy.errors.unknownError}</div>
+      </div>
+    )
+  }
 
-  return (
-    <div className={className}>
-      {!hasPlanOrProduct ? (
-        <div>PaymentForm: either planRef or productRef is required</div>
-      ) : hasError ? (
-        <div>
-          <div>Payment initialization failed</div>
-          <div>{checkoutError?.message || 'Unknown error'}</div>
-        </div>
-      ) : shouldRenderElements && elementsOptions ? (
+  if (shouldRenderElements && elementsOptions) {
+    return (
+      <div className={className}>
         <Elements
           key={clientSecret!}
           stripe={stripePromise}
           options={elementsOptions}
         >
-          <StripePaymentFormWrapper
-            onSuccess={handleSuccess}
-            onError={handleError}
+          <PaymentFormInner
+            planRef={planRef}
+            productRef={productRef}
+            prefillCustomer={prefillCustomer}
+            resolvedPlanRef={resolvedPlanRef}
+            clientSecret={clientSecret!}
             returnUrl={finalReturnUrl}
             submitButtonText={submitButtonText}
             buttonClassName={buttonClassName}
-            clientSecret={clientSecret!}
-          />
+            requireTermsAcceptance={requireTermsAcceptance}
+            onSuccess={onSuccess}
+            onError={onError}
+          >
+            {children}
+          </PaymentFormInner>
         </Elements>
-      ) : (
-        <div>
-          <div
-            style={{
-              minHeight: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Spinner size="md" />
-          </div>
-          <button
-            type="submit"
-            disabled
-            className={buttonClassName}
-            aria-busy="false"
-            aria-disabled="true"
-          >
-            {submitButtonText}
-          </button>
-        </div>
-      )}
+      </div>
+    )
+  }
+
+  return (
+    <div className={className}>
+      <div
+        style={{
+          minHeight: 40,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Spinner size="md" />
+      </div>
+      <button
+        type="submit"
+        disabled
+        className={buttonClassName}
+        aria-busy="false"
+        aria-disabled="true"
+      >
+        {submitButtonText ?? copy.cta.payNow}
+      </button>
     </div>
   )
 }
+
+/**
+ * PaymentForm root with composable slot subcomponents. The single-prop API is
+ * preserved: passing no `children` renders the default tree (Summary →
+ * PaymentElement → MandateText → optional TermsCheckbox → SubmitButton).
+ */
+export const PaymentForm: React.FC<PaymentFormRootProps> & {
+  Summary: typeof PaymentFormSummary
+  CustomerFields: typeof PaymentFormCustomerFields
+  PaymentElement: typeof PaymentFormPaymentElement
+  CardElement: typeof PaymentFormCardElement
+  MandateText: typeof PaymentFormMandateText
+  TermsCheckbox: typeof PaymentFormTermsCheckbox
+  SubmitButton: typeof PaymentFormSubmitButton
+  Error: typeof PaymentFormError
+} = Object.assign(PaymentFormBase, {
+  Summary: PaymentFormSummary,
+  CustomerFields: PaymentFormCustomerFields,
+  PaymentElement: PaymentFormPaymentElement,
+  CardElement: PaymentFormCardElement,
+  MandateText: PaymentFormMandateText,
+  TermsCheckbox: PaymentFormTermsCheckbox,
+  SubmitButton: PaymentFormSubmitButton,
+  Error: PaymentFormError,
+})

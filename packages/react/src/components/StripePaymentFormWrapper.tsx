@@ -2,6 +2,8 @@
 import React, { useState } from 'react'
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
 import { useCustomer } from '../hooks/useCustomer'
+import { useCopy } from '../hooks/useCopy'
+import { interpolate } from '../i18n/interpolate'
 import { Spinner } from './Spinner'
 
 interface StripePaymentFormWrapperProps {
@@ -22,7 +24,7 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
   onSuccess,
   onError,
   returnUrl: _returnUrl,
-  submitButtonText = 'Pay Now',
+  submitButtonText,
   buttonClassName,
   clientSecret,
 }) => {
@@ -30,6 +32,8 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
   const stripe = useStripe()
   const elements = useElements()
   const customer = useCustomer()
+  const copy = useCopy()
+  const effectiveSubmitText = submitButtonText ?? copy.cta.payNow
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [cardComplete, setCardComplete] = useState(false)
@@ -39,7 +43,7 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
 
     // Double-check Stripe availability (defensive programming)
     if (!stripe || !elements) {
-      const errorMessage = 'Stripe is not available. Please refresh the page.'
+      const errorMessage = copy.errors.stripeUnavailable
       setMessage(errorMessage)
       if (onError) {
         onError(new Error(errorMessage))
@@ -48,7 +52,7 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
     }
 
     if (!clientSecret) {
-      const errorMessage = 'Payment intent not available. Please refresh the page.'
+      const errorMessage = copy.errors.paymentIntentUnavailable
       setMessage(errorMessage)
       if (onError) {
         onError(new Error(errorMessage))
@@ -62,7 +66,7 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
     try {
       const cardElement = elements.getElement(CardElement)
       if (!cardElement) {
-        const errorMessage = 'Card element not found'
+        const errorMessage = copy.errors.cardElementMissing
         setMessage(errorMessage)
         setIsProcessing(false)
         if (onError) {
@@ -84,7 +88,7 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
 
       if (error) {
         // Show error to customer (e.g., payment details are invalid)
-        const errorMessage = error.message || 'An unexpected error occurred.'
+        const errorMessage = error.message || copy.errors.paymentUnexpected
         setMessage(errorMessage)
         setIsProcessing(false)
 
@@ -104,8 +108,8 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
             setMessage('Payment successful!')
           } catch (err) {
             // Backend processing failed
-            const error = err instanceof Error ? err : new Error('Payment processing failed')
-            setMessage('Payment processing failed. Please try again or contact support.')
+            const error = err instanceof Error ? err : new Error(copy.errors.paymentProcessingFailed)
+            setMessage(copy.errors.paymentProcessingFailed)
             setIsProcessing(false)
 
             if (onError) {
@@ -119,15 +123,18 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
         }
       } else if (paymentIntent && paymentIntent.status === 'requires_action') {
         // Payment requires additional action (3D Secure, etc.)
-        setMessage('Payment requires additional authentication. Please complete the verification.')
+        setMessage(copy.errors.paymentRequires3ds)
         setIsProcessing(false)
       } else if (paymentIntent) {
-        // Payment is processing or requires additional action
-        setMessage(`Payment status: ${paymentIntent.status || 'processing'}`)
+        setMessage(
+          interpolate(copy.errors.paymentStatusPrefix, {
+            status: paymentIntent.status || 'processing',
+          }),
+        )
         setIsProcessing(false)
       }
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred')
+      const error = err instanceof Error ? err : new Error(copy.errors.unknownError)
       setMessage(error.message)
 
       if (onError) {
@@ -199,10 +206,10 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
         {isProcessing ? (
           <>
             <Spinner size="sm" />
-            <span>Processing...</span>
+            <span>{copy.cta.processing}</span>
           </>
         ) : (
-          submitButtonText
+          effectiveSubmitText
         )}
       </button>
     </>

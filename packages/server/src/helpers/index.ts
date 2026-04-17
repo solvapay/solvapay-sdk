@@ -39,6 +39,10 @@ export { activatePlanCore } from './activation'
 // Export plans helpers
 export { listPlansCore } from './plans'
 
+// Export merchant/product helpers
+export { getMerchantCore } from './merchant'
+export { getProductCore } from './product'
+
 // Export purchase check helpers
 export { checkPurchaseCore } from './purchase'
 export type { PurchaseCheckResult } from './purchase'

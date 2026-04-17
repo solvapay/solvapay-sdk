@@ -5,6 +5,7 @@
 import type { PaymentIntent } from '@stripe/stripe-js'
 import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
+import type { PartialSolvaPayCopy } from '../i18n/types'
 
 export interface PurchaseInfo {
   reference: string
@@ -54,6 +55,77 @@ export interface PaymentIntentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string // Backend customer reference
+}
+
+/**
+ * Subset of merchant identity surfaced by `GET /v1/sdk/merchant`.
+ * Used by `<MandateText>` and customer-facing trust signals.
+ */
+export interface Merchant {
+  displayName: string
+  legalName: string
+  supportEmail?: string
+  supportUrl?: string
+  termsUrl?: string
+  privacyUrl?: string
+  country?: string
+  defaultCurrency?: string
+  statementDescriptor?: string
+  logoUrl?: string
+}
+
+export interface UseMerchantReturn {
+  merchant: Merchant | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
+
+export interface Product {
+  reference: string
+  name?: string
+  description?: string
+  status?: string
+  [key: string]: unknown
+}
+
+export interface UseProductReturn {
+  product: Product | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
+
+export interface UsePlanOptions {
+  /** Plan reference (e.g. `'pln_premium'`). */
+  planRef?: string
+  /**
+   * Optional product reference. When provided, the hook reuses the
+   * `usePlans` cache instead of fetching a dedicated plan endpoint.
+   */
+  productRef?: string
+  /**
+   * Fetcher for plan lookup when `productRef` is not provided. Required in
+   * that mode so the hook stays dependency-free.
+   */
+  fetcher?: (productRef: string) => Promise<Plan[]>
+}
+
+export interface UsePlanReturn {
+  plan: Plan | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
+
+/**
+ * Optional customer fields forwarded to payment-intent creation so the
+ * backend customer record is authoritative. Read back via `useCustomer()`
+ * after the intent is created.
+ */
+export interface PrefillCustomer {
+  name?: string
+  email?: string
 }
 
 export interface TopupPaymentResult {
@@ -150,7 +222,22 @@ export interface SolvaPayConfig {
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
     activatePlan?: string // Default: '/api/activate-plan'
     listPlans?: string // Default: '/api/list-plans'
+    getMerchant?: string // Default: '/api/merchant'
+    getProduct?: string // Default: '/api/get-product'
   }
+
+  /**
+   * BCP-47 locale tag (e.g. 'en', 'sv-SE'). Threaded through every SDK
+   * component, `Intl.NumberFormat`, and Stripe Elements. Defaults to the
+   * runtime default (typically 'en').
+   */
+  locale?: string
+
+  /**
+   * Partial copy overrides. Keys not supplied fall back to the bundled English
+   * defaults — consumers only provide the strings they actually want to change.
+   */
+  copy?: PartialSolvaPayCopy
 
   /**
    * Authentication configuration
@@ -229,7 +316,11 @@ export { type ActivatePlanResult }
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
-  createPayment: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
+  createPayment: (params: {
+    planRef?: string
+    productRef?: string
+    customer?: PrefillCustomer
+  }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
     paymentIntentId: string
     productRef: string
@@ -263,7 +354,11 @@ export interface SolvaPayProviderProps {
    * Custom API functions (override config defaults)
    * Use only if you need custom logic beyond standard API routes
    */
-  createPayment?: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
+  createPayment?: (params: {
+    planRef?: string
+    productRef?: string
+    customer?: PrefillCustomer
+  }) => Promise<PaymentIntentResult>
   checkPurchase?: () => Promise<CustomerPurchaseData>
   processPayment?: (params: {
     paymentIntentId: string
@@ -511,6 +606,18 @@ export interface PaymentFormProps {
    * Optional className for the submit button
    */
   buttonClassName?: string
+  /**
+   * Customer name/email to forward to backend PaymentIntent creation so the
+   * server-side customer record is authoritative. Echoed back via
+   * `useCustomer()` after the intent is created.
+   */
+  prefillCustomer?: PrefillCustomer
+  /**
+   * When true, the default tree renders a terms/privacy checkbox and gates
+   * the submit button until it is ticked. No-op when custom `children` are
+   * passed — compose `<PaymentForm.TermsCheckbox />` yourself.
+   */
+  requireTermsAcceptance?: boolean
 }
 
 export interface BalanceBadgeProps {

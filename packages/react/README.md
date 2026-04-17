@@ -34,6 +34,74 @@ By default, `SolvaPayProvider` uses:
 - `/api/check-purchase` for purchase checks
 - `/api/create-payment-intent` for payment creation
 - `/api/process-payment` for payment processing
+- `/api/merchant` for merchant identity (`useMerchant`, `MandateText`)
+- `/api/get-product` for single-product lookup (`useProduct`, `CheckoutSummary`)
+
+## Drop-in checkout with `<CheckoutLayout>`
+
+For full conversion-grade flows (summary, SCA mandate, Stripe PaymentElement,
+prefilled customer echo, optional terms checkbox), reach for the opinionated
+preset:
+
+```tsx
+import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
+
+export function BuyNow({ email }: { email: string }) {
+  return (
+    <SolvaPayProvider>
+      <CheckoutLayout
+        planRef="pln_premium"
+        productRef="prd_myapi"
+        prefillCustomer={{ email }}
+        requireTermsAcceptance
+        size="auto"
+        onSuccess={() => console.log('paid')}
+      />
+    </SolvaPayProvider>
+  )
+}
+```
+
+`size="auto"` uses a `ResizeObserver`, so the same component reflows cleanly
+in chat bubbles, phone viewports, and desktop iframes.
+
+## Composition: slot subcomponents
+
+When you need custom layout, compose `<PaymentForm>` with slot children:
+
+```tsx
+<PaymentForm planRef="pln_premium" productRef="prd_myapi" prefillCustomer={{ email }}>
+  <PaymentForm.Summary />
+  <PaymentForm.CustomerFields />
+  <PaymentForm.PaymentElement />
+  <PaymentForm.MandateText />
+  <PaymentForm.TermsCheckbox />
+  <PaymentForm.SubmitButton />
+</PaymentForm>
+```
+
+Passing no children keeps the current default tree for backwards compatibility.
+
+## Localization
+
+English ships by default. Swap the locale (which also flows through to Stripe
+Elements) and override any strings you like:
+
+```tsx
+import { SolvaPayProvider, CheckoutLayout, type PartialSolvaPayCopy } from '@solvapay/react'
+
+const svSECopy: PartialSolvaPayCopy = {
+  cta: { subscribe: 'Prenumerera', processing: 'Bearbetar...' },
+  terms: { checkboxLabel: 'Jag godkänner villkoren och integritetspolicyn' },
+}
+
+<SolvaPayProvider config={{ locale: 'sv-SE', copy: svSECopy }}>
+  <CheckoutLayout planRef="..." productRef="..." />
+</SolvaPayProvider>
+```
+
+Currency formatting is already locale-correct — `formatPrice` uses
+`Intl.NumberFormat` with the provider locale and the plan's `currency` field.
 
 ### Custom API Routes
 

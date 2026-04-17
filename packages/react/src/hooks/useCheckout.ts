@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
-import type { Plan } from '../types'
+import type { Plan, PrefillCustomer } from '../types'
 
 export interface UseCheckoutReturn {
   loading: boolean
@@ -93,8 +93,9 @@ async function resolvePlanRef(
 export function useCheckout(options: {
   planRef?: string
   productRef?: string
+  customer?: PrefillCustomer
 }): UseCheckoutReturn {
-  const { planRef, productRef } = options
+  const { planRef, productRef, customer } = options
   const { createPayment, customerRef, updateCustomerRef, _config } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -135,7 +136,11 @@ export function useCheckout(options: {
         throw new Error('Could not determine plan reference for checkout')
       }
 
-      const result = await createPayment({ planRef: effectivePlanRef, productRef })
+      const result = await createPayment({
+        planRef: effectivePlanRef,
+        productRef,
+        customer,
+      })
 
       if (!result || typeof result !== 'object') {
         throw new Error('Invalid payment intent response from server')
@@ -172,7 +177,7 @@ export function useCheckout(options: {
       setLoading(false)
       isStartingRef.current = false
     }
-  }, [planRef, productRef, createPayment, updateCustomerRef, loading, _config])
+  }, [planRef, productRef, customer, createPayment, updateCustomerRef, loading, _config])
 
   const reset = useCallback(() => {
     isStartingRef.current = false

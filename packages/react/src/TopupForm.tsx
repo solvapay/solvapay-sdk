@@ -1,7 +1,9 @@
 'use client'
 import React, { useEffect, useCallback, useRef, useMemo } from 'react'
 import { Elements } from '@stripe/react-stripe-js'
+import type { StripeElementLocale } from '@stripe/stripe-js'
 import { useTopup } from './hooks/useTopup'
+import { useCopy, useLocale } from './hooks/useCopy'
 import { Spinner } from './components/Spinner'
 import { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 import type { TopupFormProps } from './types'
@@ -20,10 +22,13 @@ export const TopupForm: React.FC<TopupFormProps> = ({
   onSuccess,
   onError,
   returnUrl,
-  submitButtonText = 'Top Up',
+  submitButtonText,
   className,
   buttonClassName,
 }) => {
+  const copy = useCopy()
+  const locale = useLocale()
+  const effectiveSubmitText = submitButtonText ?? copy.cta.topUp
   const {
     loading: topupLoading,
     error: topupError,
@@ -79,17 +84,17 @@ export const TopupForm: React.FC<TopupFormProps> = ({
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret }
-  }, [clientSecret])
+    return { clientSecret, locale: locale as StripeElementLocale | undefined }
+  }, [clientSecret, locale])
 
   return (
     <div className={className}>
       {!hasAmount ? (
-        <div>TopupForm: amount must be a positive number</div>
+        <div>{copy.errors.configMissingAmount}</div>
       ) : hasError ? (
         <div>
-          <div>Top-up initialization failed</div>
-          <div>{topupError?.message || 'Unknown error'}</div>
+          <div>{copy.errors.topupInitFailed}</div>
+          <div>{topupError?.message || copy.errors.unknownError}</div>
         </div>
       ) : hasStripeData && elementsOptions ? (
         <Elements
@@ -101,7 +106,7 @@ export const TopupForm: React.FC<TopupFormProps> = ({
             onSuccess={handleSuccess}
             onError={handleError}
             returnUrl={finalReturnUrl}
-            submitButtonText={submitButtonText}
+            submitButtonText={effectiveSubmitText}
             buttonClassName={buttonClassName}
             clientSecret={clientSecret!}
           />
@@ -125,7 +130,7 @@ export const TopupForm: React.FC<TopupFormProps> = ({
             aria-busy="false"
             aria-disabled="true"
           >
-            {submitButtonText}
+            {effectiveSubmitText}
           </button>
         </div>
       )}

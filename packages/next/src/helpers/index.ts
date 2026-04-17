@@ -26,6 +26,10 @@ export { cancelRenewal, reactivateRenewal } from './renewal'
 // Export plans helpers
 export { listPlans } from './plans'
 
+// Export merchant/product helpers
+export { getMerchant } from './merchant'
+export { getProduct } from './product'
+
 // Export usage helpers
 export { trackUsage } from './usage'
 

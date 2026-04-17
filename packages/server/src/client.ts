@@ -207,6 +207,44 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
     },
 
+    // GET: /v1/sdk/merchant
+    async getMerchant() {
+      const url = `${base}/v1/sdk/merchant`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get merchant failed (${res.status}): ${error}`)
+      }
+
+      return res.json()
+    },
+
+    // GET: /v1/sdk/products/{productRef}
+    async getProduct(productRef) {
+      const url = `${base}/v1/sdk/products/${encodeURIComponent(productRef)}`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get product failed (${res.status}): ${error}`)
+      }
+
+      const result = await res.json()
+      const data = (result.data as Record<string, unknown>) || {}
+      return { ...data, ...result }
+    },
+
     // Product management methods (primarily for integration tests)
 
     // GET: /v1/sdk/products
