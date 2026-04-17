@@ -150,11 +150,20 @@ describe('CheckoutLayout', () => {
     )
   })
 
-  it('applies classNames prop', async () => {
-    const { container } = renderLayout({
-      classNames: { root: 'my-root' },
+  it('renders stable solvapay-* class names on the root', async () => {
+    const { container } = renderLayout()
+    await waitFor(() =>
+      expect(container.querySelector('.solvapay-checkout-layout')).toBeTruthy(),
+    )
+  })
+
+  it('exposes data-solvapay-step on the root', async () => {
+    const { container } = renderLayout()
+    await waitFor(() => {
+      const root = container.querySelector('[data-solvapay-checkout-layout]')
+      expect(root).toBeTruthy()
+      expect(root?.getAttribute('data-solvapay-step')).toBe('pay')
     })
-    await waitFor(() => expect(container.querySelector('.my-root')).toBeTruthy())
   })
 })
 
@@ -240,33 +249,6 @@ describe('CheckoutLayout — new orchestration', () => {
     )
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Start using/ })).toBeTruthy(),
-    )
-  })
-
-  it('renderActivation overrides the default ActivationFlow', async () => {
-    plansCache.set('prd_usage', {
-      plans: [usagePlan],
-      timestamp: Date.now(),
-      promise: null,
-    })
-    productCache.set('prd_usage', {
-      product: { reference: 'prd_usage', name: 'Metered API' },
-      promise: null,
-      timestamp: Date.now(),
-    })
-    render(
-      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
-        <CheckoutLayout
-          planRef="pln_usage"
-          productRef="prd_usage"
-          renderActivation={({ plan }) => (
-            <div data-testid="custom-activation">{plan.reference}</div>
-          )}
-        />
-      </SolvaPayProvider>,
-    )
-    await waitFor(() =>
-      expect(screen.getByTestId('custom-activation').textContent).toBe('pln_usage'),
     )
   })
 

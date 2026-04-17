@@ -37,8 +37,13 @@ export function resolveCta(input: ResolveCtaInput): string {
     return interpolate(copy.cta.addAmount, { amount: amountFormatted })
   }
 
-  if (variant === 'usageMetered') {
-    return interpolate(copy.cta.startUsing, { product: product?.name ?? 'service' })
+  if (variant === 'usageMetered' || variant === 'freeTier') {
+    const productName =
+      product?.name ??
+      (typeof plan?.metadata?.productName === 'string'
+        ? plan.metadata.productName
+        : plan?.name ?? 'service')
+    return interpolate(copy.cta.startUsing, { product: productName })
   }
 
   return copy.cta.payNow

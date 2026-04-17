@@ -119,7 +119,6 @@ export type { MandateTextProps } from './components/MandateText'
 export type {
   CheckoutLayoutProps,
   CheckoutLayoutSize,
-  CheckoutLayoutClassNames,
   CheckoutLayoutPlanSelectorOptions,
 } from './components/CheckoutLayout'
 export type { PlanSelectorProps } from './components/PlanSelector'

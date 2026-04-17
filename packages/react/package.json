@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/react",
-  "version": "1.0.10-preview.2",
+  "version": "1.0.10-preview.3",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

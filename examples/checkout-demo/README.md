@@ -48,20 +48,9 @@ Same behavior, you own the surrounding layout. See the [SDK README](../../packag
 
 When you need to completely replace the default `<ActivationFlow>` — for
 example to show a bespoke credit-purchase flow or integrate with an external
-payment method — use the rare-case `renderActivation` escape hatch:
-
-```tsx
-<CheckoutLayout
-  productRef="prd_myapi"
-  renderActivation={({ plan, productRef, onBack, onResult }) => (
-    <MyCustomActivationUI {...} />
-  )}
-/>
-```
-
-This is rarely needed — the built-in `<ActivationFlow>` covers the full
-summary → top-up → retry → activated state machine, with `classNames`
-overrides on every visual region.
+payment method — compose `@solvapay/react/primitives` directly instead of
+using `<CheckoutLayout>`. The built-in `<ActivationFlow>` covers the full
+summary → top-up → retry → activated state machine for the common case.
 
 ## Table of Contents
 

@@ -1,30 +1,35 @@
 'use client'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+
+/**
+ * Opinionated one-line drop-in checkout built on top of `PlanSelector`,
+ * `PaymentForm`, and `ActivationFlow`. Renders the select → pay | activate
+ * machine internally, and auto-skips the select step when a product has a
+ * single selectable plan.
+ *
+ * Styling is done entirely via the `solvapay-*` class names documented in
+ * PR 5's `styles.css`. No inline styles. Full control (custom layouts,
+ * alternate CTAs, multi-step wizards) is available by composing the
+ * primitives at `@solvapay/react/primitives` directly.
+ */
+
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { PaymentForm } from '../PaymentForm'
 import { PlanSelector } from './PlanSelector'
 import { ActivationFlow } from './ActivationFlow'
 import { usePlan } from '../hooks/usePlan'
+import { usePlans } from '../hooks/usePlans'
 import { useCopy } from '../hooks/useCopy'
+import { SolvaPayContext } from '../SolvaPayProvider'
+import { buildRequestHeaders } from '../utils/headers'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import type {
-  ActivationResult,
   CheckoutResult,
   Plan,
   PrefillCustomer,
+  SolvaPayConfig,
 } from '../types'
 
 export type CheckoutLayoutSize = 'chat' | 'mobile' | 'desktop' | 'auto'
-
-export type CheckoutLayoutClassNames = {
-  root?: string
-  summary?: string
-  form?: string
-  mandate?: string
-  submit?: string
-  planSelector?: string
-  continueButton?: string
-  backButton?: string
-}
 
 export type CheckoutLayoutPlanSelectorOptions = {
   filter?: (plan: Plan, index: number) => boolean
@@ -61,21 +66,8 @@ export type CheckoutLayoutProps = {
   planSelector?: CheckoutLayoutPlanSelectorOptions
   /** Hide the "← Back to plans" affordance on the pay step. Defaults to true. */
   showBackButton?: boolean
-  /**
-   * Rarely needed escape hatch: fully replace the default `<ActivationFlow>`.
-   * The callback receives `{ plan, productRef, onBack }` and returns a
-   * React node. Prefer composition via classNames/slots on `<ActivationFlow>`
-   * unless you need to swap out the orchestrator wholesale.
-   */
-  renderActivation?: (args: {
-    plan: Plan
-    productRef: string
-    onBack: () => void
-    onResult?: (result: ActivationResult) => void
-  }) => React.ReactNode
   submitButtonText?: string
   returnUrl?: string
-  classNames?: CheckoutLayoutClassNames
 }
 
 type ResolvedSize = 'chat' | 'mobile' | 'desktop'
@@ -92,19 +84,6 @@ function widthToSize(width: number): ResolvedSize {
   return 'desktop'
 }
 
-/**
- * Opinionated one-line drop-in checkout.
- *
- * - **Without `planRef`** — renders the full flow: `<PlanSelector>` → pay or
- *   activate. Single-plan products auto-skip selection.
- * - **With `planRef`** — jumps straight to pay (paid/free plans) or activate
- *   (usage-based plans), preserving the payment-only behavior that existing
- *   integrators rely on.
- *
- * The layout also adapts to its container width (chat / mobile / desktop)
- * via `ResizeObserver` so it works identically inside a chat bubble, a phone
- * viewport, or a full-page desktop layout.
- */
 export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
   planRef,
   productRef,
@@ -119,10 +98,8 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
   onPlanSelect,
   planSelector,
   showBackButton = true,
-  renderActivation,
   submitButtonText,
   returnUrl,
-  classNames,
 }) => {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [autoSize, setAutoSize] = useState<ResolvedSize>('desktop')
@@ -134,8 +111,7 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
     if (!el || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(entries => {
       for (const entry of entries) {
-        const w = entry.contentRect.width
-        setAutoSize(widthToSize(w))
+        setAutoSize(widthToSize(entry.contentRect.width))
       }
     })
     ro.observe(el)
@@ -143,16 +119,11 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
   }, [size])
 
   const resolvedSize: ResolvedSize = size === 'auto' ? autoSize : size
-  const isDesktop = resolvedSize === 'desktop'
-  const isChat = resolvedSize === 'chat'
 
-  // When planRef is passed, we skip the select step but still route usage-based
-  // to ActivationFlow. When planRef is omitted, we run the select → pay|activate
-  // machine internally.
   const [selectedPlanRef, setSelectedPlanRef] = useState<string | null>(
     planRef ?? initialPlanRef ?? null,
   )
-  const [step, setStep] = useState<Step>(
+  const [userStep, setUserStep] = useState<Step>(
     planRef ? 'pay' : selectedPlanRef ? 'pay' : 'select',
   )
 
@@ -163,350 +134,182 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
   })
   const isUsageBased = resolvedPlan?.type === 'usage-based'
 
-  // Flip to 'activate' once we know the selected plan is usage-based.
-  useEffect(() => {
-    if (step === 'pay' && isUsageBased) setStep('activate')
-    if (step === 'activate' && resolvedPlan && !isUsageBased) setStep('pay')
-  }, [step, isUsageBased, resolvedPlan])
+  // Derive the rendered step from the user's intent + the resolved plan type.
+  // Auto-flips pay ↔ activate once we know whether the plan is usage-based,
+  // without bouncing through setState in an effect.
+  const step: Step = useMemo(() => {
+    if (userStep === 'pay' && isUsageBased) return 'activate'
+    if (userStep === 'activate' && resolvedPlan && !isUsageBased) return 'pay'
+    return userStep
+  }, [userStep, isUsageBased, resolvedPlan])
 
   const handlePlanSelect = useCallback(
     (ref: string, plan: Plan) => {
       setSelectedPlanRef(ref)
       onPlanSelect?.(ref, plan)
-      setStep(plan.type === 'usage-based' ? 'activate' : 'pay')
+      setUserStep(plan.type === 'usage-based' ? 'activate' : 'pay')
     },
     [onPlanSelect],
   )
 
   const handleBack = useCallback(() => {
     if (planRef) return
-    setStep('select')
+    setUserStep('select')
   }, [planRef])
-
-  const rootStyle: React.CSSProperties = {
-    display: 'grid',
-    gap: isDesktop ? 24 : 16,
-    gridTemplateColumns:
-      isDesktop && step === 'pay' ? 'minmax(0, 1fr) minmax(0, 1fr)' : '1fr',
-    padding: isChat ? 8 : isDesktop ? 24 : 16,
-    fontSize: resolvedSize === 'mobile' ? 15 : 14,
-  }
-
-  const backButton = !planRef && showBackButton && step !== 'select' && (
-    <button
-      type="button"
-      onClick={handleBack}
-      data-solvapay-checkout-back=""
-      className={classNames?.backButton}
-      style={{
-        alignSelf: 'flex-start',
-        background: 'none',
-        border: 'none',
-        color: 'rgba(0,0,0,0.6)',
-        fontSize: 14,
-        cursor: 'pointer',
-        padding: 0,
-        marginBottom: 8,
-      }}
-    >
-      {copy.planSelector.backButton}
-    </button>
-  )
-
-  let body: React.ReactNode
-  if (step === 'select') {
-    body = (
-      <SelectBody
-        productRef={productRef ?? ''}
-        initialPlanRef={initialPlanRef ?? selectedPlanRef ?? undefined}
-        filter={planSelector?.filter}
-        sortBy={planSelector?.sortBy}
-        popularPlanRef={planSelector?.popularPlanRef}
-        onSelect={handlePlanSelect}
-        classNames={classNames}
-      />
-    )
-  } else if (step === 'activate' && resolvedPlan && productRef) {
-    body = renderActivation ? (
-      renderActivation({
-        plan: resolvedPlan,
-        productRef,
-        onBack: handleBack,
-        onResult: result => onResult?.(result),
-      })
-    ) : (
-      <ActivationFlow
-        productRef={productRef}
-        planRef={effectivePlanRef}
-        onBack={planRef ? undefined : handleBack}
-        onSuccess={result => onResult?.(result)}
-        onError={onError}
-      />
-    )
-  } else {
-    // step === 'pay'
-    body = (
-      <PaymentForm
-        planRef={effectivePlanRef}
-        productRef={productRef}
-        prefillCustomer={prefillCustomer}
-        requireTermsAcceptance={requireTermsAcceptance}
-        onSuccess={onSuccess}
-        onResult={onResult}
-        onFreePlan={onFreePlan}
-        onError={onError}
-        submitButtonText={submitButtonText}
-        returnUrl={returnUrl}
-      >
-        <section
-          className={classNames?.summary}
-          data-solvapay-layout-section="summary"
-          style={{ gridColumn: isDesktop ? '1 / 2' : '1 / -1' }}
-        >
-          <PaymentForm.Summary />
-          <PaymentForm.CustomerFields />
-        </section>
-        <section
-          className={classNames?.form}
-          data-solvapay-layout-section="form"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            gridColumn: isDesktop ? '2 / 3' : '1 / -1',
-          }}
-        >
-          {isChat ? <PaymentForm.CardElement /> : <PaymentForm.PaymentElement />}
-          <PaymentForm.Error />
-          <PaymentForm.MandateText className={classNames?.mandate} />
-          {requireTermsAcceptance && <PaymentForm.TermsCheckbox />}
-          <PaymentForm.SubmitButton className={classNames?.submit} />
-        </section>
-      </PaymentForm>
-    )
-  }
 
   return (
     <div
       ref={rootRef}
       data-solvapay-checkout-layout={resolvedSize}
       data-solvapay-step={step}
-      className={classNames?.root}
-      style={rootStyle}
+      className="solvapay-checkout-layout"
     >
-      {backButton}
-      {body}
+      {!planRef && showBackButton && step !== 'select' && (
+        <button
+          type="button"
+          onClick={handleBack}
+          data-solvapay-checkout-back=""
+          className="solvapay-back"
+        >
+          {copy.planSelector.backButton}
+        </button>
+      )}
+      {step === 'select' && (
+        <SelectStep
+          productRef={productRef ?? ''}
+          initialPlanRef={initialPlanRef ?? selectedPlanRef ?? undefined}
+          filter={planSelector?.filter}
+          sortBy={planSelector?.sortBy}
+          popularPlanRef={planSelector?.popularPlanRef}
+          onContinue={handlePlanSelect}
+        />
+      )}
+      {step === 'activate' && resolvedPlan && productRef && (
+        <ActivationFlow
+          productRef={productRef}
+          planRef={effectivePlanRef}
+          onBack={planRef ? undefined : handleBack}
+          onSuccess={result => onResult?.(result)}
+          onError={onError}
+        />
+      )}
+      {step === 'pay' && (
+        <PaymentForm
+          planRef={effectivePlanRef}
+          productRef={productRef}
+          prefillCustomer={prefillCustomer}
+          requireTermsAcceptance={requireTermsAcceptance}
+          onSuccess={onSuccess}
+          onResult={onResult}
+          onFreePlan={onFreePlan}
+          onError={onError}
+          submitButtonText={submitButtonText}
+          returnUrl={returnUrl}
+        />
+      )}
     </div>
   )
 }
 
+async function defaultListPlans(
+  productRef: string,
+  config: SolvaPayConfig | undefined,
+): Promise<Plan[]> {
+  const base = config?.api?.listPlans || '/api/list-plans'
+  const url = `${base}?productRef=${encodeURIComponent(productRef)}`
+  const fetchFn = config?.fetch || fetch
+  const { headers } = await buildRequestHeaders(config)
+  const res = await fetchFn(url, { method: 'GET', headers })
+  if (!res.ok) {
+    const error = new Error(`Failed to fetch plans: ${res.statusText || res.status}`)
+    config?.onError?.(error, 'listPlans')
+    throw error
+  }
+  const data = (await res.json()) as { plans?: Plan[] }
+  return data.plans ?? []
+}
+
 /**
- * Plan-selection step body. Factored out so we can auto-skip single-plan
- * products via an effect on the resolved plans, without polluting the parent
- * with a plans-hook dependency that only matters during selection.
+ * Plan-selection step: renders the default `<PlanSelector>` tree with a
+ * sibling Continue button. Tracks the user's current selection locally so
+ * the CTA is gated until they pick a plan. Auto-skips the step when the
+ * product has exactly one selectable (paid) plan.
  */
-const SelectBody: React.FC<{
+const SelectStep: React.FC<{
   productRef: string
   initialPlanRef?: string
   filter?: (plan: Plan, index: number) => boolean
   sortBy?: (a: Plan, b: Plan) => number
   popularPlanRef?: string
-  onSelect: (planRef: string, plan: Plan) => void
-  classNames?: CheckoutLayoutClassNames
-}> = ({ productRef, initialPlanRef, filter, sortBy, popularPlanRef, onSelect, classNames }) => {
+  onContinue: (planRef: string, plan: Plan) => void
+}> = ({ productRef, initialPlanRef, filter, sortBy, popularPlanRef, onContinue }) => {
   const copy = useCopy()
-  const autoSkipRef = useRef(false)
+  const solva = useContext(SolvaPayContext)
+  const config = solva?._config
 
-  return (
-    <PlanSelector
-      productRef={productRef}
-      filter={filter}
-      sortBy={sortBy}
-      initialPlanRef={initialPlanRef}
-      popularPlanRef={popularPlanRef}
-      autoSelectFirstPaid
-      onSelect={onSelect}
-      className={classNames?.planSelector}
-    >
-      {args => {
-        // Auto-skip when filtering leaves exactly one selectable plan.
-        const selectable = args.plans.filter(
-          p => p.requiresPayment !== false && !args.isCurrentPlan(p.reference),
-        )
-        if (
-          !autoSkipRef.current &&
-          !args.loading &&
-          selectable.length === 1 &&
-          args.plans.length === 1
-        ) {
-          autoSkipRef.current = true
-          onSelect(selectable[0].reference, selectable[0])
-        }
-
-        return (
-          <RenderedSelector
-            args={args}
-            popularPlanRef={popularPlanRef}
-            onSelect={onSelect}
-            continueLabel={copy.planSelector.continueButton}
-            classNames={classNames}
-          />
-        )
-      }}
-    </PlanSelector>
+  const fetcher = useCallback(
+    (ref: string) => defaultListPlans(ref, config),
+    [config],
   )
-}
 
-/**
- * Renders the default grid + Continue button inside the PlanSelector
- * function-child. Separated so the `onSelect` keyboard path and the CTA
- * button share a single handler.
- */
-const RenderedSelector: React.FC<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: any
-  popularPlanRef?: string
-  onSelect: (planRef: string, plan: Plan) => void
-  continueLabel: string
-  classNames?: CheckoutLayoutClassNames
-}> = ({ args, popularPlanRef, onSelect, continueLabel, classNames }) => {
-  const copy = useCopy()
-  // args is from PlanSelectorRenderArgs — render the default grid ourselves
-  // so the Continue button can live inside this step container.
+  const { plans, selectedPlan } = usePlans({
+    productRef,
+    fetcher,
+    filter,
+    sortBy,
+    autoSelectFirstPaid: true,
+    initialPlanRef,
+  })
+
+  const [userSelected, setUserSelected] = useState<{ ref: string; plan: Plan } | null>(null)
+
+  // Fall back to the hook's auto-selected plan until the user picks something
+  // explicitly. Keeps the Continue button active immediately when plans load.
+  const selected: { ref: string; plan: Plan } | null =
+    userSelected ??
+    (selectedPlan && selectedPlan.requiresPayment !== false
+      ? { ref: selectedPlan.reference, plan: selectedPlan }
+      : null)
+
+  const autoSkipRef = useRef(false)
+  useEffect(() => {
+    if (autoSkipRef.current) return
+    const selectable = plans.filter(p => p.requiresPayment !== false)
+    if (plans.length === 1 && selectable.length === 1) {
+      autoSkipRef.current = true
+      onContinue(selectable[0].reference, selectable[0])
+    }
+  }, [plans, onContinue])
+
+  const handleSelect = useCallback((ref: string, plan: Plan) => {
+    setUserSelected({ ref, plan })
+  }, [])
+
+  const continueLabel = useMemo(() => copy.planSelector.continueButton, [copy])
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <h3
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: 'rgba(0,0,0,0.75)',
-          letterSpacing: 0.2,
-          textTransform: 'uppercase',
-          margin: 0,
-        }}
-      >
-        {copy.planSelector.heading}
-      </h3>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 12,
-        }}
-      >
-        {args.plans.map((plan: Plan) => {
-          const isCurrent = args.isCurrentPlan(plan.reference)
-          const isFree = args.isFreePlan(plan.reference)
-          const isPopular = popularPlanRef === plan.reference
-          const selected = args.selectedPlanRef === plan.reference
-          return (
-            <button
-              key={plan.reference}
-              type="button"
-              disabled={isFree || isCurrent}
-              onClick={() => args.select(plan.reference)}
-              data-selected={selected || undefined}
-              style={{
-                position: 'relative',
-                padding: '20px 16px',
-                border: `2px solid ${selected ? '#16a34a' : 'rgba(0,0,0,0.12)'}`,
-                borderRadius: 12,
-                background: isFree || isCurrent ? 'rgba(0,0,0,0.03)' : '#fff',
-                cursor: isFree || isCurrent ? 'not-allowed' : 'pointer',
-                opacity: isFree || isCurrent ? 0.6 : 1,
-                textAlign: 'left',
-                boxShadow: selected ? '0 0 0 3px rgba(22,163,74,0.12)' : 'none',
-                transition: 'border-color 120ms ease, box-shadow 120ms ease',
-              }}
-            >
-              {isCurrent && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -10,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#0f172a',
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 500,
-                    padding: '2px 10px',
-                    borderRadius: 999,
-                  }}
-                >
-                  {copy.planSelector.currentBadge}
-                </span>
-              )}
-              {!isCurrent && isPopular && !isFree && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -10,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#3b82f6',
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 500,
-                    padding: '2px 10px',
-                    borderRadius: 999,
-                  }}
-                >
-                  {copy.planSelector.popularBadge}
-                </span>
-              )}
-              {plan.name && (
-                <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.6)', marginBottom: 4 }}>
-                  {plan.name}
-                </div>
-              )}
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#0f172a' }}>
-                {isFree
-                  ? copy.planSelector.freeBadge
-                  : formatPlanPrice(plan, copy.interval.free)}
-              </div>
-              {!isFree && plan.interval && (
-                <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)' }}>
-                  /{plan.interval}
-                </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
+    <>
+      <PlanSelector
+        productRef={productRef}
+        initialPlanRef={initialPlanRef}
+        filter={filter}
+        sortBy={sortBy}
+        popularPlanRef={popularPlanRef}
+        autoSelectFirstPaid
+        onSelect={handleSelect}
+      />
       <button
         type="button"
-        disabled={!args.selectedPlan}
+        className="solvapay-continue"
+        data-solvapay-checkout-continue=""
+        data-state={selected ? 'idle' : 'disabled'}
+        disabled={!selected}
         onClick={() => {
-          if (args.selectedPlan) onSelect(args.selectedPlan.reference, args.selectedPlan)
-        }}
-        className={classNames?.continueButton}
-        style={{
-          padding: '12px 20px',
-          borderRadius: 8,
-          border: 'none',
-          background: args.selectedPlan ? '#0f172a' : 'rgba(0,0,0,0.15)',
-          color: '#fff',
-          fontWeight: 600,
-          fontSize: 15,
-          cursor: args.selectedPlan ? 'pointer' : 'not-allowed',
+          if (selected) onContinue(selected.ref, selected.plan)
         }}
       >
         {continueLabel}
       </button>
-    </div>
+    </>
   )
-}
-
-function formatPlanPrice(plan: Plan, freeLabel: string): string {
-  if (!plan.price) return freeLabel
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: (plan.currency ?? 'usd').toUpperCase(),
-      minimumFractionDigits: 2,
-    }).format(plan.price / 100)
-  } catch {
-    return `${plan.currency ?? '$'}${(plan.price / 100).toFixed(2)}`
-  }
 }

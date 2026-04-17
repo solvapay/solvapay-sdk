@@ -39,3 +39,17 @@ export {
   PlanSelectorError,
   usePlanSelector,
 } from './PlanSelector'
+
+export {
+  PaymentForm,
+  PaymentFormRoot,
+  PaymentFormSummary,
+  PaymentFormCustomerFields,
+  PaymentFormPaymentElement,
+  PaymentFormCardElement,
+  PaymentFormMandateText,
+  PaymentFormTermsCheckbox,
+  PaymentFormSubmitButton,
+  PaymentFormLoading,
+  PaymentFormError,
+} from './PaymentForm'
