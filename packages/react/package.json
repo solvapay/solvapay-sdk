@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/react",
-  "version": "1.0.1",
+  "version": "1.0.10-preview.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -11,6 +11,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./primitives": {
+      "types": "./dist/primitives/index.d.ts",
+      "import": "./dist/primitives/index.js",
+      "require": "./dist/primitives/index.cjs"
+    },
     "./adapters/auth": {
       "types": "./dist/adapters/auth.d.ts",
       "import": "./dist/adapters/auth.js",
@@ -19,7 +24,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CONTRIBUTING.md"
   ],
   "publishConfig": {
     "access": "public"
@@ -38,7 +44,7 @@
     "@stripe/stripe-js": "^9.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.tsx src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
+    "build": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
     "test:watch": "vitest",
