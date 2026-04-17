@@ -120,7 +120,8 @@ jobs:
                 'packages/server/package.json',
                 'packages/auth/package.json',
                 'packages/next/package.json',
-                'packages/cli/package.json'
+                'packages/cli/package.json',
+                'packages/supabase/package.json'
               ];
               packages.forEach(pkg => {
                 const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
@@ -143,7 +144,8 @@ jobs:
                 'packages/server/package.json',
                 'packages/auth/package.json',
                 'packages/next/package.json',
-                'packages/cli/package.json'
+                'packages/cli/package.json',
+                'packages/supabase/package.json'
               ];
               packages.forEach(pkg => {
                 const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));

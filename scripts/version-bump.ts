@@ -14,6 +14,7 @@ const PACKAGES_TO_VERSION = [
   'packages/auth/package.json',
   'packages/next/package.json',
   'packages/cli/package.json',
+  'packages/supabase/package.json',
 ]
 
 function parseVersion(version: string): { major: number; minor: number; patch: number } {
