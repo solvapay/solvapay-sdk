@@ -1,8 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import React from 'react'
+import React, { createRef } from 'react'
 import { CancelPlanButton } from './CancelPlanButton'
 import { SolvaPayContext } from '../SolvaPayProvider'
+import { MissingProviderError } from '../utils/errors'
 import type { PurchaseInfo, SolvaPayContextValue } from '../types'
 
 beforeEach(() => {
@@ -59,17 +60,22 @@ const usagePurchase: PurchaseInfo = {
   planSnapshot: { reference: 'pln_usage', planType: 'usage-based' },
 }
 
-function Wrap({
-  ctx,
-  children,
-}: {
-  ctx: SolvaPayContextValue
-  children: React.ReactNode
-}) {
+function Wrap({ ctx, children }: { ctx: SolvaPayContextValue; children: React.ReactNode }) {
   return <SolvaPayContext.Provider value={ctx}>{children}</SolvaPayContext.Provider>
 }
 
 describe('CancelPlanButton', () => {
+  it('renders default label and emits data-state=idle', () => {
+    render(
+      <Wrap ctx={buildCtx([recurringActivePurchase])}>
+        <CancelPlanButton />
+      </Wrap>,
+    )
+    const btn = screen.getByRole('button', { name: /Cancel plan/ })
+    expect(btn.getAttribute('data-state')).toBe('idle')
+    expect(btn.getAttribute('data-solvapay-cancel-plan')).toBe('')
+  })
+
   it('auto-reads active purchase and calls cancelRenewal on confirm', async () => {
     const ctx = buildCtx([recurringActivePurchase])
     const onCancelled = vi.fn()
@@ -113,23 +119,35 @@ describe('CancelPlanButton', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /Cancel plan/ }))
     expect(confirmSpy).toHaveBeenCalled()
-    const args = confirmSpy.mock.calls[0]
-    expect(args[0]).toMatch(/deactivate your plan/)
+    expect(confirmSpy.mock.calls[0][0]).toMatch(/deactivate your plan/)
   })
 
-  it('render-prop children receive cancel + isCancelling + purchase', () => {
+  it('asChild swaps element shell and forwards handlers + data-state', async () => {
     const ctx = buildCtx([recurringActivePurchase])
+    const consumerClick = vi.fn()
+    const ref = createRef<HTMLButtonElement>()
     render(
       <Wrap ctx={ctx}>
-        <CancelPlanButton>
-          {({ isCancelling, purchase }) => (
-            <span data-testid="custom">
-              custom-{purchase?.reference ?? 'none'}-{String(isCancelling)}
-            </span>
-          )}
+        <CancelPlanButton asChild confirm={false}>
+          <button ref={ref} className="from-consumer" onClick={consumerClick} data-testid="custom">
+            End subscription
+          </button>
         </CancelPlanButton>
       </Wrap>,
     )
-    expect(screen.getByTestId('custom').textContent).toBe('custom-pur_123-false')
+    const btn = screen.getByTestId('custom')
+    expect(btn.textContent).toBe('End subscription')
+    expect(btn.getAttribute('data-state')).toBe('idle')
+    expect(btn.className).toContain('from-consumer')
+    expect(ref.current).toBe(btn)
+    fireEvent.click(btn)
+    await waitFor(() => expect(ctx.cancelRenewal).toHaveBeenCalled())
+    expect(consumerClick).toHaveBeenCalled()
+  })
+
+  it('throws MissingProviderError when rendered outside SolvaPayProvider', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => render(<CancelPlanButton />)).toThrow(MissingProviderError)
+    spy.mockRestore()
   })
 })

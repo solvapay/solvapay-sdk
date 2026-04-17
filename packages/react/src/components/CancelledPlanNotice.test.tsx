@@ -1,8 +1,13 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
-import { CancelledPlanNotice } from './CancelledPlanNotice'
+import { CancelledPlanNotice as ShimCancelledPlanNotice } from './CancelledPlanNotice'
+import {
+  CancelledPlanNotice,
+  useCancelledPlanNotice,
+} from '../primitives/CancelledPlanNotice'
 import { SolvaPayContext } from '../SolvaPayProvider'
+import { MissingProviderError } from '../utils/errors'
 import type { PurchaseInfo, SolvaPayContextValue } from '../types'
 
 const inFiveDays = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
@@ -53,11 +58,11 @@ function Wrap({ ctx, children }: { ctx: SolvaPayContextValue; children: React.Re
   return <SolvaPayContext.Provider value={ctx}>{children}</SolvaPayContext.Provider>
 }
 
-describe('CancelledPlanNotice', () => {
+describe('CancelledPlanNotice (default-tree shim)', () => {
   it('renders nothing when there is no cancelled purchase', () => {
     const { container } = render(
       <Wrap ctx={buildCtx([])}>
-        <CancelledPlanNotice />
+        <ShimCancelledPlanNotice />
       </Wrap>,
     )
     expect(container.textContent?.trim() || '').toBe('')
@@ -66,7 +71,7 @@ describe('CancelledPlanNotice', () => {
   it('renders heading, expiration, days remaining, and reason', () => {
     render(
       <Wrap ctx={buildCtx([cancelledActivePurchase])}>
-        <CancelledPlanNotice />
+        <ShimCancelledPlanNotice />
       </Wrap>,
     )
     expect(screen.getByText('Your purchase has been cancelled')).toBeTruthy()
@@ -80,7 +85,7 @@ describe('CancelledPlanNotice', () => {
     const onReactivated = vi.fn()
     render(
       <Wrap ctx={ctx}>
-        <CancelledPlanNotice onReactivated={onReactivated} />
+        <ShimCancelledPlanNotice onReactivated={onReactivated} />
       </Wrap>,
     )
     fireEvent.click(screen.getByRole('button', { name: /Undo Cancellation/ }))
@@ -89,19 +94,46 @@ describe('CancelledPlanNotice', () => {
     )
     await waitFor(() => expect(onReactivated).toHaveBeenCalled())
   })
+})
 
-  it('render-prop receives purchase + daysRemaining + reactivate', () => {
+describe('CancelledPlanNotice primitive', () => {
+  it('emits data-state=active + data-has-reason flags', () => {
     render(
       <Wrap ctx={buildCtx([cancelledActivePurchase])}>
-        <CancelledPlanNotice>
-          {({ purchase, daysRemaining }) => (
-            <div data-testid="custom">
-              {purchase.reference} | days:{daysRemaining}
-            </div>
-          )}
-        </CancelledPlanNotice>
+        <CancelledPlanNotice.Root data-testid="root" />
       </Wrap>,
     )
-    expect(screen.getByTestId('custom').textContent).toBe('pur_456 | days:5')
+    const root = screen.getByTestId('root')
+    expect(root.getAttribute('data-state')).toBe('active')
+    expect(root.getAttribute('data-has-reason')).toBe('')
+  })
+
+  it('useCancelledPlanNotice exposes state + reactivate', async () => {
+    const ctx = buildCtx([cancelledActivePurchase])
+    const Custom = () => {
+      const { purchase, daysRemaining, reactivate } = useCancelledPlanNotice()
+      return (
+        <button onClick={() => void reactivate()} data-testid="custom">
+          {purchase.reference}|days:{daysRemaining}
+        </button>
+      )
+    }
+    render(
+      <Wrap ctx={ctx}>
+        <CancelledPlanNotice.Root>
+          <Custom />
+        </CancelledPlanNotice.Root>
+      </Wrap>,
+    )
+    const custom = screen.getByTestId('custom')
+    expect(custom.textContent).toBe('pur_456|days:5')
+    fireEvent.click(custom)
+    await waitFor(() => expect(ctx.reactivateRenewal).toHaveBeenCalled())
+  })
+
+  it('throws MissingProviderError when rendered outside SolvaPayProvider', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => render(<CancelledPlanNotice.Root />)).toThrow(MissingProviderError)
+    spy.mockRestore()
   })
 })

@@ -1,10 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import React from 'react'
-import { ActivationFlow } from './ActivationFlow'
+import { ActivationFlow as ShimActivationFlow } from './ActivationFlow'
+import { ActivationFlow, useActivationFlow } from '../primitives/ActivationFlow'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { plansCache } from '../hooks/usePlans'
 import { productCache } from '../hooks/useProduct'
+import { MissingProviderError, MissingProductRefError } from '../utils/errors'
 import type { ActivationResult, Plan } from '../types'
 
 const usagePlan: Plan = {
@@ -49,11 +51,7 @@ function makeFakeFetch(responses: Array<{ status: string } & Record<string, unkn
 beforeEach(() => {
   plansCache.clear()
   productCache.clear()
-  plansCache.set('prd_usage', {
-    plans: [usagePlan],
-    timestamp: Date.now(),
-    promise: null,
-  })
+  plansCache.set('prd_usage', { plans: [usagePlan], timestamp: Date.now(), promise: null })
   productCache.set('prd_usage', {
     product: { reference: 'prd_usage', name: 'Metered API' },
     promise: null,
@@ -61,7 +59,7 @@ beforeEach(() => {
   })
 })
 
-describe('ActivationFlow — state machine', () => {
+describe('ActivationFlow (default-tree shim) — state machine', () => {
   it('summary → activating → activated', async () => {
     const { fetchFn, activateCalls } = makeFakeFetch([
       { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
@@ -69,11 +67,7 @@ describe('ActivationFlow — state machine', () => {
     const onSuccess = vi.fn<(r: ActivationResult) => void>()
     render(
       <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
-        <ActivationFlow
-          productRef="prd_usage"
-          planRef="pln_usage"
-          onSuccess={onSuccess}
-        />
+        <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onSuccess={onSuccess} />
       </SolvaPayProvider>,
     )
 
@@ -92,7 +86,7 @@ describe('ActivationFlow — state machine', () => {
     ])
     render(
       <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
-        <ActivationFlow productRef="prd_usage" planRef="pln_usage" />
+        <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" />
       </SolvaPayProvider>,
     )
 
@@ -110,7 +104,7 @@ describe('ActivationFlow — state machine', () => {
     ])
     render(
       <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
-        <ActivationFlow productRef="prd_usage" planRef="pln_usage" />
+        <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" />
       </SolvaPayProvider>,
     )
 
@@ -122,26 +116,6 @@ describe('ActivationFlow — state machine', () => {
     await waitFor(() => expect(screen.getByText('Confirm your plan')).toBeTruthy())
   })
 
-  it('function-child receives step and plan', async () => {
-    const { fetchFn } = makeFakeFetch([
-      { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
-    ])
-    render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
-        <ActivationFlow productRef="prd_usage" planRef="pln_usage">
-          {({ step, plan }) => (
-            <div>
-              <span data-testid="step">{step}</span>
-              <span data-testid="plan">{plan?.reference ?? 'none'}</span>
-            </div>
-          )}
-        </ActivationFlow>
-      </SolvaPayProvider>,
-    )
-    await waitFor(() => expect(screen.getByTestId('plan').textContent).toBe('pln_usage'))
-    expect(screen.getByTestId('step').textContent).toBe('summary')
-  })
-
   it('onBack fires from the summary step', async () => {
     const { fetchFn } = makeFakeFetch([
       { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
@@ -149,16 +123,88 @@ describe('ActivationFlow — state machine', () => {
     const onBack = vi.fn()
     render(
       <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
-        <ActivationFlow
-          productRef="prd_usage"
-          planRef="pln_usage"
-          onBack={onBack}
-        />
+        <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onBack={onBack} />
       </SolvaPayProvider>,
     )
 
     await screen.findByText('Confirm your plan')
     fireEvent.click(screen.getByRole('button', { name: /Back to plan selection/ }))
     expect(onBack).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('ActivationFlow primitive', () => {
+  it('Root emits data-state=summary and subcomponents gate by step', async () => {
+    const { fetchFn } = makeFakeFetch([
+      { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
+    ])
+    render(
+      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+        <ActivationFlow.Root
+          productRef="prd_usage"
+          planRef="pln_usage"
+          data-testid="root"
+        >
+          <ActivationFlow.Summary data-testid="summary" />
+          <ActivationFlow.ActivateButton data-testid="activate" />
+          <ActivationFlow.Activated data-testid="activated" />
+        </ActivationFlow.Root>
+      </SolvaPayProvider>,
+    )
+    const root = screen.getByTestId('root')
+    await waitFor(() => expect(root.getAttribute('data-state')).toBe('summary'))
+    expect(screen.getByTestId('summary')).toBeTruthy()
+    expect(screen.getByTestId('activate').getAttribute('data-state')).toBe('idle')
+    expect(screen.queryByTestId('activated')).toBeNull()
+  })
+
+  it('useActivationFlow exposes step + plan for custom trees', async () => {
+    const { fetchFn } = makeFakeFetch([
+      { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
+    ])
+    const Probe = () => {
+      const { step, plan } = useActivationFlow()
+      return (
+        <div>
+          <span data-testid="step">{step}</span>
+          <span data-testid="plan">{plan?.reference ?? 'none'}</span>
+        </div>
+      )
+    }
+    render(
+      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+        <ActivationFlow.Root productRef="prd_usage" planRef="pln_usage">
+          <Probe />
+        </ActivationFlow.Root>
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId('plan').textContent).toBe('pln_usage'))
+    expect(screen.getByTestId('step').textContent).toBe('summary')
+  })
+
+  it('throws MissingProviderError outside SolvaPayProvider', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() =>
+      render(
+        <ActivationFlow.Root productRef="prd_usage" planRef="pln_usage">
+          <ActivationFlow.Summary />
+        </ActivationFlow.Root>,
+      ),
+    ).toThrow(MissingProviderError)
+    spy.mockRestore()
+  })
+
+  it('throws MissingProductRefError when productRef is omitted', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() =>
+      render(
+        <SolvaPayProvider config={{}}>
+          <ActivationFlow.Root>
+            <ActivationFlow.Summary />
+          </ActivationFlow.Root>
+        </SolvaPayProvider>,
+      ),
+    ).toThrow(MissingProductRefError)
+    spy.mockRestore()
   })
 })

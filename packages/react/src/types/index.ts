@@ -373,31 +373,6 @@ export interface SolvaPayProviderProps {
   children: React.ReactNode
 }
 
-export interface ProductBadgeProps {
-  children?: (props: {
-    purchases: PurchaseInfo[]
-    loading: boolean
-    displayPlan: string | null
-    shouldShow: boolean
-  }) => React.ReactNode
-  as?: React.ElementType
-  className?: string | ((props: { purchases: PurchaseInfo[] }) => string)
-}
-
-/** @deprecated Use ProductBadgeProps instead */
-export type PlanBadgeProps = ProductBadgeProps
-
-export interface PurchaseGateProps {
-  /** @deprecated Use requireProduct instead */
-  requirePlan?: string
-  requireProduct?: string
-  children: (props: {
-    hasAccess: boolean
-    purchases: PurchaseInfo[]
-    loading: boolean
-  }) => React.ReactNode
-}
-
 /**
  * Error type for payment operations
  */
@@ -496,42 +471,6 @@ export interface UsePlansReturn {
   refetch: () => Promise<void>
   /** True after the one-shot initial selection has been applied */
   isSelectionReady: boolean
-}
-
-/**
- * Props for headless PricingSelector component
- */
-export interface PricingSelectorProps {
-  /**
-   * Product reference to fetch plans for
-   */
-  productRef?: string
-  /**
-   * Fetcher function to retrieve plans
-   */
-  fetcher: (productRef: string) => Promise<Plan[]>
-  /**
-   * Optional filter function
-   */
-  filter?: (plan: Plan, index: number) => boolean
-  /**
-   * Optional sort function
-   */
-  sortBy?: (a: Plan, b: Plan) => number
-  /**
-   * Auto-select first paid plan on load
-   */
-  autoSelectFirstPaid?: boolean
-  /**
-   * Render prop function
-   */
-  children: (
-    props: UsePlansReturn & {
-      purchases: PurchaseInfo[]
-      isPaidPlan: (planRef: string) => boolean
-      isCurrentPlan: (planRef: string) => boolean
-    },
-  ) => React.ReactNode
 }
 
 /**
@@ -639,17 +578,6 @@ export interface PaymentFormProps {
    * passed — compose `<PaymentForm.TermsCheckbox />` yourself.
    */
   requireTermsAcceptance?: boolean
-}
-
-export interface BalanceBadgeProps {
-  className?: string
-  numberOnly?: boolean
-  children?: (props: {
-    credits: number | null
-    loading: boolean
-    displayCurrency: string | null
-    creditsPerMinorUnit: number | null
-  }) => React.ReactNode
 }
 
 export interface UseTopupAmountSelectorOptions {

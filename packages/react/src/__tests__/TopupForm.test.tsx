@@ -10,9 +10,10 @@ import type { SolvaPayContextValue } from '../types'
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-  useStripe: () => ({ confirmCardPayment: vi.fn() }),
+  useStripe: () => ({ confirmCardPayment: vi.fn(), confirmPayment: vi.fn() }),
   useElements: () => ({ getElement: vi.fn() }),
   CardElement: () => React.createElement('div', { 'data-testid': 'card-element' }),
+  PaymentElement: () => React.createElement('div', { 'data-testid': 'payment-element' }),
 }))
 
 vi.mock('@stripe/stripe-js', () => ({

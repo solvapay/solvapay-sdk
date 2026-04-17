@@ -14,7 +14,6 @@ export { TopupForm } from './TopupForm'
 // Headless Components
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
 export { PurchaseGate } from './components/PurchaseGate'
-export { PricingSelector } from './components/PricingSelector'
 export { Spinner } from './components/Spinner'
 export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 export { BalanceBadge } from './components/BalanceBadge'
@@ -78,10 +77,6 @@ export type {
   PurchaseInfo,
   CustomerPurchaseData,
   PaymentIntentResult,
-  ProductBadgeProps,
-  PlanBadgeProps,
-  PurchaseGateProps,
-  PricingSelectorProps,
   PaymentFormProps,
   CheckoutResult,
   PaymentResult,
@@ -97,7 +92,6 @@ export type {
   UseTopupOptions,
   UseTopupReturn,
   BalanceStatus,
-  BalanceBadgeProps,
   CancelResult,
   ReactivateResult,
   ActivatePlanResult,
@@ -122,31 +116,10 @@ export type {
   CheckoutLayoutPlanSelectorOptions,
 } from './components/CheckoutLayout'
 export type { PlanSelectorProps } from './components/PlanSelector'
-export type {
-  AmountPickerProps,
-  AmountPickerClassNames,
-  AmountPickerRenderArgs,
-} from './components/AmountPicker'
-export type {
-  ActivationFlowProps,
-  ActivationFlowClassNames,
-  ActivationFlowRenderArgs,
-  ActivationFlowStep,
-} from './components/ActivationFlow'
-export type {
-  CancelPlanButtonProps,
-  CancelPlanButtonClassNames,
-  CancelPlanButtonRenderArgs,
-} from './components/CancelPlanButton'
-export type {
-  CancelledPlanNoticeProps,
-  CancelledPlanNoticeClassNames,
-  CancelledPlanNoticeRenderArgs,
-} from './components/CancelledPlanNotice'
-export type {
-  CreditGateProps,
-  CreditGateRenderArgs,
-} from './components/CreditGate'
+export type { AmountPickerProps } from './components/AmountPicker'
+export type { ActivationFlowProps, ActivationFlowStep } from './components/ActivationFlow'
+export type { CancelledPlanNoticeProps } from './components/CancelledPlanNotice'
+export type { CreditGateProps } from './components/CreditGate'
 export type { CheckoutVariant } from './utils/checkoutVariant'
 
 // Adapters
