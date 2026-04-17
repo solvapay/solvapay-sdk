@@ -55,6 +55,7 @@
     "build": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && cp src/styles.css dist/styles.css",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
+    "test:types": "tsc --noEmit -p __tests__/tsconfig.types.json",
     "test:watch": "vitest",
     "lint": "eslint src --config ../../eslint.config.react.mjs",
     "lint:fix": "eslint src --config ../../eslint.config.react.mjs --fix"
