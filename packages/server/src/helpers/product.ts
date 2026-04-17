@@ -7,12 +7,16 @@
 
 import type { ErrorResult } from './types'
 import type { SdkProductResponse } from '../types/client'
+import type { SolvaPay } from '../factory'
 import { createSolvaPayClient } from '../client'
 import { handleRouteError } from './error'
 import { getSolvaPayConfig } from '@solvapay/core'
 
 export async function getProductCore(
   request: Request,
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
 ): Promise<SdkProductResponse | ErrorResult> {
   try {
     const url = new URL(request.url)
@@ -25,21 +29,21 @@ export async function getProductCore(
       }
     }
 
-    const config = getSolvaPayConfig()
-    const solvapaySecretKey = config.apiKey
-    const solvapayApiBaseUrl = config.apiBaseUrl
+    const apiClient = options.solvaPay?.apiClient ?? (() => {
+      const config = getSolvaPayConfig()
+      if (!config.apiKey) return null
+      return createSolvaPayClient({
+        apiKey: config.apiKey,
+        apiBaseUrl: config.apiBaseUrl,
+      })
+    })()
 
-    if (!solvapaySecretKey) {
+    if (!apiClient) {
       return {
         error: 'Server configuration error: SolvaPay secret key not configured',
         status: 500,
       }
     }
-
-    const apiClient = createSolvaPayClient({
-      apiKey: solvapaySecretKey,
-      apiBaseUrl: solvapayApiBaseUrl,
-    })
 
     if (!apiClient.getProduct) {
       return {

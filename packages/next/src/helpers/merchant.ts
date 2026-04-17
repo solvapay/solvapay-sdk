@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type { SolvaPay } from '@solvapay/server'
 import { getMerchantCore, isErrorResult } from '@solvapay/server'
 
 type GetMerchantSuccess = Exclude<
@@ -18,8 +19,11 @@ type GetMerchantSuccess = Exclude<
  */
 export async function getMerchant(
   request: globalThis.Request,
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
 ): Promise<GetMerchantSuccess | NextResponse> {
-  const result = await getMerchantCore(request)
+  const result = await getMerchantCore(request, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(

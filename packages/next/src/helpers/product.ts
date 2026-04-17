@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type { SolvaPay } from '@solvapay/server'
 import { getProductCore, isErrorResult } from '@solvapay/server'
 
 type GetProductSuccess = Exclude<
@@ -18,8 +19,11 @@ type GetProductSuccess = Exclude<
  */
 export async function getProduct(
   request: globalThis.Request,
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
 ): Promise<GetProductSuccess | NextResponse> {
-  const result = await getProductCore(request)
+  const result = await getProductCore(request, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(
