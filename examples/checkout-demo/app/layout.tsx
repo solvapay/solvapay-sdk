@@ -1,4 +1,5 @@
 import { ClientLayout } from './components/ClientLayout'
+import '@solvapay/react/styles.css'
 import './globals.css'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
