@@ -38,6 +38,7 @@ export interface SolvaPayCopy {
     oneTime: MandateTemplate
     topup: MandateTemplate
     usageMetered: MandateTemplate
+    freeTier: MandateTemplate
   }
   cta: {
     payNow: string
@@ -83,6 +84,59 @@ export interface SolvaPayCopy {
     invalidConfiguration: string
     unexpectedResponse: string
     failed: string
+  }
+  planSelector: {
+    heading: string
+    currentBadge: string
+    popularBadge: string
+    freeBadge: string
+    perIntervalShort: string
+    continueButton: string
+    backButton: string
+    trialBadge: string
+  }
+  amountPicker: {
+    selectAmountLabel: string
+    customAmountLabel: string
+    creditEstimateExact: string
+    creditEstimateApprox: string
+  }
+  activationFlow: {
+    heading: string
+    activateButton: string
+    activatingLabel: string
+    topupHeading: string
+    topupSubheading: string
+    continueToPayment: string
+    changeAmountButton: string
+    retryingHeading: string
+    retryingSubheading: string
+    activatedHeading: string
+    activatedSubheading: string
+    tryAgainButton: string
+    backButton: string
+  }
+  cancelPlan: {
+    button: string
+    buttonLoading: string
+    confirmRecurring: string
+    confirmUsageBased: string
+  }
+  cancelledNotice: {
+    heading: string
+    expiresLabel: string
+    daysRemaining: string
+    dayRemaining: string
+    accessUntil: string
+    accessEnded: string
+    cancelledOn: string
+    reactivateButton: string
+    reactivateButtonLoading: string
+  }
+  creditGate: {
+    lowBalanceHeading: string
+    lowBalanceSubheading: string
+    topUpCta: string
   }
   errors: {
     paymentInitFailed: string

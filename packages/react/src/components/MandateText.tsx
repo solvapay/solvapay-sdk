@@ -6,6 +6,7 @@ import { useMerchant } from '../hooks/useMerchant'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
+import { usePlanSelection } from './PlanSelectionContext'
 import type { MandateContext } from '../i18n/types'
 
 export type MandateTextProps = {
@@ -43,8 +44,11 @@ export const MandateText: React.FC<MandateTextProps> = ({
 }) => {
   const locale = useLocale()
   const copy = useCopy()
-  const { plan } = usePlan({ planRef, productRef })
-  const { product } = useProduct(productRef)
+  const planSelection = usePlanSelection()
+  const resolvedPlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
+  const resolvedProductRef = productRef ?? planSelection?.productRef
+  const { plan } = usePlan({ planRef: resolvedPlanRef, productRef: resolvedProductRef })
+  const { product } = useProduct(resolvedProductRef)
   const { merchant } = useMerchant()
 
   const resolvedVariant: CheckoutVariant = variant || deriveVariant(plan, mode)

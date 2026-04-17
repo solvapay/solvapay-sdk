@@ -5,6 +5,7 @@ import { useProduct } from '../hooks/useProduct'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
 import { interpolate } from '../i18n/interpolate'
+import { usePlanSelection } from './PlanSelectionContext'
 import type { Plan, Product } from '../types'
 
 export type CheckoutSummaryRenderArgs = {
@@ -42,8 +43,14 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
 }) => {
   const locale = useLocale()
   const copy = useCopy()
-  const { plan, loading: planLoading } = usePlan({ planRef, productRef })
-  const { product, loading: productLoading } = useProduct(productRef)
+  const planSelection = usePlanSelection()
+  const resolvedPlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
+  const resolvedProductRef = productRef ?? planSelection?.productRef
+  const { plan, loading: planLoading } = usePlan({
+    planRef: resolvedPlanRef,
+    productRef: resolvedProductRef,
+  })
+  const { product, loading: productLoading } = useProduct(resolvedProductRef)
 
   const loading = planLoading || productLoading
 

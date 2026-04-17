@@ -12,6 +12,8 @@ import {
   syncCustomerCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  getMerchantCore,
+  getProductCore,
   verifyWebhook,
   isErrorResult,
 } from '@solvapay/server'
@@ -196,6 +198,32 @@ export async function createCustomerSession(req: Request): Promise<Response> {
   if (corsResponse) return corsResponse
 
   const result = await createCustomerSessionCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getMerchant(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const result = await getMerchantCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getProduct(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const result = await getProductCore(req)
 
   if (isErrorResult(result)) {
     return errorResponse(result, req)

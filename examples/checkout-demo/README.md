@@ -1,6 +1,67 @@
-# SolvaPay Checkout Demo - Headless Components
+# SolvaPay Checkout Demo
 
-Complete payment integration demo showcasing SolvaPay's headless React components with locked content and purchase gates.
+A complete, drop-in checkout example built entirely around the SDK's
+`<CheckoutLayout>` component. The whole checkout page is ~50 lines — plan
+selection, payment, usage-based activation, and cancel/reactivate are all
+owned by the SDK.
+
+## Golden path (90% of integrations)
+
+The entire checkout surface is a single component call:
+
+```tsx
+<CheckoutLayout
+  productRef="prd_myapi"
+  prefillCustomer={{ email, name }}
+  initialPlanRef={activePurchase?.planRef}
+  requireTermsAcceptance
+  onResult={result => {
+    // result.kind === 'paid' | 'activated' — navigate away, show success, etc.
+  }}
+/>
+```
+
+`<CheckoutLayout>` internally:
+
+- Fetches plans for `productRef` via `/api/list-plans`
+- Renders `<PlanSelector>` if there's more than one plan (auto-skipped for single-plan products)
+- Routes paid/free plans to `<PaymentForm>`
+- Routes usage-based plans to `<ActivationFlow>` (summary → top-up → retry → activated)
+- Fires `onResult` with a discriminated `CheckoutResult` on success
+
+Pair it with `<CancelledPlanNotice>` (auto-shows when there's a cancelled
+active purchase) and `<CancelPlanButton>` (confirm dialog + plan-type-aware
+copy) for the full lifecycle — see [`app/checkout/page.tsx`](app/checkout/page.tsx).
+
+## Custom composition
+
+Need full layout control? Compose the SDK primitives directly:
+
+- `<PlanSelector>` — styled plan grid with selection state + `PlanSelectionContext`
+- `<PaymentForm>` — Stripe Elements with slot subcomponents (`.Summary`, `.CustomerFields`, `.PaymentElement`, `.MandateText`, `.TermsCheckbox`, `.SubmitButton`)
+- `<ActivationFlow>` — styled usage-based activation state machine
+- `<AmountPicker>` — quick-amount pills + custom input + credit estimate
+
+Same behavior, you own the surrounding layout. See the [SDK README](../../packages/react/README.md#custom-composition-pick-the-primitives-you-need) for slot examples.
+
+## Custom activation UI
+
+When you need to completely replace the default `<ActivationFlow>` — for
+example to show a bespoke credit-purchase flow or integrate with an external
+payment method — use the rare-case `renderActivation` escape hatch:
+
+```tsx
+<CheckoutLayout
+  productRef="prd_myapi"
+  renderActivation={({ plan, productRef, onBack, onResult }) => (
+    <MyCustomActivationUI {...} />
+  )}
+/>
+```
+
+This is rarely needed — the built-in `<ActivationFlow>` covers the full
+summary → top-up → retry → activated state machine, with `classNames`
+overrides on every visual region.
 
 ## Table of Contents
 
@@ -444,22 +505,12 @@ All components accept any styling approach:
 </PlanBadge>
 ```
 
-### Custom Payment Form
+### Custom layout
 
-```tsx
-<UpgradeButton
-  planRef="pro"
-  renderPaymentForm={({ onSuccess, onCancel }) => (
-    <Modal open onClose={onCancel}>
-      <h2>Complete Payment</h2>
-      <PaymentForm onSuccess={onSuccess} />
-      <button onClick={onCancel}>Cancel</button>
-    </Modal>
-  )}
->
-  {({ onClick }) => <button onClick={onClick}>Upgrade</button>}
-</UpgradeButton>
-```
+Need full control over the surrounding layout? Compose `<PlanSelector>`,
+`<PaymentForm>`, and `<ActivationFlow>` directly. See the
+[SDK README](../../packages/react/README.md#custom-composition-pick-the-primitives-you-need)
+for slot usage and render-prop escape hatches.
 
 ## Best Practices
 

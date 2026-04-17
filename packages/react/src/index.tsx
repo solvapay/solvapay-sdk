@@ -14,13 +14,21 @@ export { TopupForm } from './TopupForm'
 // Headless Components
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
 export { PurchaseGate } from './components/PurchaseGate'
-export { PricingSelector, PlanSelector } from './components/PricingSelector'
+export { PricingSelector } from './components/PricingSelector'
 export { Spinner } from './components/Spinner'
 export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 export { BalanceBadge } from './components/BalanceBadge'
 export { CheckoutSummary } from './components/CheckoutSummary'
 export { MandateText } from './components/MandateText'
 export { CheckoutLayout } from './components/CheckoutLayout'
+
+// Styled-default components (checkout composition)
+export { PlanSelector } from './components/PlanSelector'
+export { AmountPicker } from './components/AmountPicker'
+export { ActivationFlow } from './components/ActivationFlow'
+export { CancelPlanButton } from './components/CancelPlanButton'
+export { CancelledPlanNotice } from './components/CancelledPlanNotice'
+export { CreditGate } from './components/CreditGate'
 export {
   PaymentFormContext,
   usePaymentForm,
@@ -74,8 +82,10 @@ export type {
   PlanBadgeProps,
   PurchaseGateProps,
   PricingSelectorProps,
-  PlanSelectorProps,
   PaymentFormProps,
+  CheckoutResult,
+  PaymentResult,
+  ActivationResult,
   PaymentError,
   Plan,
   UsePlansOptions,
@@ -110,7 +120,38 @@ export type {
   CheckoutLayoutProps,
   CheckoutLayoutSize,
   CheckoutLayoutClassNames,
+  CheckoutLayoutPlanSelectorOptions,
 } from './components/CheckoutLayout'
+export type {
+  PlanSelectorProps,
+  PlanSelectorClassNames,
+  PlanSelectorRenderArgs,
+} from './components/PlanSelector'
+export type {
+  AmountPickerProps,
+  AmountPickerClassNames,
+  AmountPickerRenderArgs,
+} from './components/AmountPicker'
+export type {
+  ActivationFlowProps,
+  ActivationFlowClassNames,
+  ActivationFlowRenderArgs,
+  ActivationFlowStep,
+} from './components/ActivationFlow'
+export type {
+  CancelPlanButtonProps,
+  CancelPlanButtonClassNames,
+  CancelPlanButtonRenderArgs,
+} from './components/CancelPlanButton'
+export type {
+  CancelledPlanNoticeProps,
+  CancelledPlanNoticeClassNames,
+  CancelledPlanNoticeRenderArgs,
+} from './components/CancelledPlanNotice'
+export type {
+  CreditGateProps,
+  CreditGateRenderArgs,
+} from './components/CreditGate'
 export type { CheckoutVariant } from './utils/checkoutVariant'
 
 // Adapters

@@ -37,11 +37,63 @@ By default, `SolvaPayProvider` uses:
 - `/api/merchant` for merchant identity (`useMerchant`, `MandateText`)
 - `/api/get-product` for single-product lookup (`useProduct`, `CheckoutSummary`)
 
+## Golden path — `<CheckoutLayout>` one-liner
+
+`<CheckoutLayout>` handles the full flow: plan selection, payment (paid/free),
+and usage-based activation. For 90% of integrations this is the only
+component you need.
+
+```tsx
+import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
+
+export function BuyNow({ email }: { email: string }) {
+  return (
+    <SolvaPayProvider>
+      <CheckoutLayout
+        productRef="prd_myapi"
+        prefillCustomer={{ email }}
+        requireTermsAcceptance
+        onResult={result => {
+          // result.kind === 'paid' | 'activated'
+        }}
+      />
+    </SolvaPayProvider>
+  )
+}
+```
+
+What happens based on what `<CheckoutLayout>` resolves:
+
+| Product shape | Flow |
+|---|---|
+| One active plan | Auto-skip selection → pay or activate |
+| Multiple plans | Styled `<PlanSelector>` → pay or activate |
+| Free plan (`requiresPayment: false`) | Skip Stripe entirely → `useActivation` |
+| Usage-based plan | `<ActivationFlow>` (summary → top-up → retry → activated) |
+
+Pass `planRef` explicitly to skip the selector and keep today's payment-only
+behavior byte-for-byte (backwards compatible with pre-selector integrations).
+
+### Skipping plan selection
+
+```tsx
+<CheckoutLayout
+  planRef="pln_premium"
+  productRef="prd_myapi"
+  prefillCustomer={{ email }}
+  requireTermsAcceptance
+  size="auto"
+  onSuccess={() => console.log('paid')}
+/>
+```
+
+The section below ("Drop-in checkout with `<CheckoutLayout>`") is the original
+single-plan form — still supported, still works the same.
+
 ## Drop-in checkout with `<CheckoutLayout>`
 
-For full conversion-grade flows (summary, SCA mandate, Stripe PaymentElement,
-prefilled customer echo, optional terms checkbox), reach for the opinionated
-preset:
+For a fixed plan checkout (summary, SCA mandate, Stripe PaymentElement,
+prefilled customer echo, optional terms checkbox):
 
 ```tsx
 import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
@@ -384,8 +436,121 @@ const {
 All components and hooks are fully typed. Import types as needed:
 
 ```tsx
-import type { PaymentFormProps, PurchaseStatus, PaymentIntentResult } from '@solvapay/react'
+import type {
+  PaymentFormProps,
+  PurchaseStatus,
+  PaymentIntentResult,
+  CheckoutResult,
+  PaymentResult,
+  ActivationResult,
+} from '@solvapay/react'
 ```
+
+## Plan lifecycle
+
+Beyond checkout itself, three thin styled-default components cover the
+post-purchase experience without requiring custom UI.
+
+### `<CancelPlanButton>`
+
+Wraps `usePurchaseActions.cancelRenewal` with a built-in confirm dialog,
+loading state, and plan-type-aware copy (subscription vs usage-based).
+Auto-reads the active purchase from `usePurchase()`.
+
+```tsx
+import { CancelPlanButton } from '@solvapay/react'
+
+<CancelPlanButton onCancelled={() => router.push('/')} />
+```
+
+Use `confirm={false}` for a single-click cancel, or pass a string to override
+the default copy. The render-prop form exposes `{ cancel, isCancelling,
+disabled, purchase }` for fully custom UI.
+
+### `<CancelledPlanNotice>`
+
+Surfaces automatically when the customer has a cancelled-but-still-active
+purchase. Renders the expiration date, days remaining, cancellation reason,
+and a reactivate CTA. Renders nothing when there's nothing to show.
+
+```tsx
+import { CancelledPlanNotice } from '@solvapay/react'
+
+<CancelledPlanNotice onReactivated={() => refetch()} />
+```
+
+### `<CreditGate>`
+
+Companion to `<PurchaseGate>` for usage-based flows. Blocks access when the
+customer's credit balance falls below a threshold; renders an embedded
+`<TopupForm>` by default.
+
+```tsx
+import { CreditGate } from '@solvapay/react'
+
+<CreditGate minCredits={10}>
+  <ExpensiveFeature />
+</CreditGate>
+```
+
+Customize via the `fallback` prop, or use the render-prop form
+(`children: ({ balance, hasCredits, topup }) => …`) for fully custom UI.
+
+## Server-side usage tracking
+
+There is intentionally no `useTrackUsage()` client hook. Client-reported usage
+is trivially gamed — a user can simply block the fetch to conserve credits.
+Instead, record usage from your server when the expensive work actually runs:
+
+```ts
+// app/api/do-thing/route.ts
+import { trackUsage } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const result = await doTheExpensiveThing()
+  await trackUsage(request, { units: 1 })
+  return NextResponse.json(result)
+}
+```
+
+The same pattern works from a Supabase Edge Function — see below.
+
+## Using with Supabase Edge Functions
+
+Lovable-style apps deploy React frontends against Supabase Edge Functions
+(Deno runtime). The SDK's `api` URL overrides let the exact same
+`<CheckoutLayout>` drop-in work against `/functions/v1/*` routes:
+
+```tsx
+<SolvaPayProvider
+  config={{
+    api: {
+      checkPurchase: `${SUPABASE_URL}/functions/v1/check-purchase`,
+      createPayment: `${SUPABASE_URL}/functions/v1/create-payment-intent`,
+      processPayment: `${SUPABASE_URL}/functions/v1/process-payment`,
+      listPlans: `${SUPABASE_URL}/functions/v1/list-plans`,
+      getMerchant: `${SUPABASE_URL}/functions/v1/get-merchant`,
+      getProduct: `${SUPABASE_URL}/functions/v1/get-product`,
+      // …same pattern for every other endpoint
+    },
+    auth: {
+      adapter: createSupabaseAuthAdapter({ supabaseUrl, supabaseAnonKey }),
+    },
+  }}
+>
+  <CheckoutLayout
+    productRef="prd_myapi"
+    prefillCustomer={{ email }}
+    requireTermsAcceptance
+  />
+</SolvaPayProvider>
+```
+
+The matching Deno edge functions ship in
+[`@solvapay/supabase`](../../packages/supabase) — see
+[`examples/supabase-edge`](../../examples/supabase-edge) for one-liner
+`Deno.serve(handler)` files covering every handler including the new
+`get-merchant` and `get-product` endpoints.
 
 ## More Information
 

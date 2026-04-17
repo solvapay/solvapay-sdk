@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useBalance } from '@solvapay/react'
-import { AmountSelector } from './components/AmountSelector'
+import { AmountPicker, useBalance } from '@solvapay/react'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
   const { adjustBalance, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
   const currency = displayCurrency || 'USD'
+  const [amount, setAmount] = useState<number | null>(null)
   const [amountCents, setAmountCents] = useState<number | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [paymentFailed, setPaymentFailed] = useState(false)
@@ -80,12 +80,19 @@ export default function TopupPage() {
             <h2 className="text-xl font-semibold text-slate-900 mb-8">Top up credits</h2>
 
             {amountCents === null ? (
-              <AmountSelector
-                onSelect={setAmountCents}
-                currency={currency}
-                creditsPerMinorUnit={creditsPerMinorUnit}
-                displayExchangeRate={displayExchangeRate}
-              />
+              <div className="space-y-6">
+                <AmountPicker currency={currency} onChange={setAmount} />
+                <button
+                  type="button"
+                  disabled={!amount || amount < 1}
+                  onClick={() => {
+                    if (amount && amount >= 1) setAmountCents(Math.round(amount * 100))
+                  }}
+                  className="w-full px-6 py-3 rounded-lg bg-slate-900 text-white font-semibold disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
+                >
+                  Continue to payment
+                </button>
+              </div>
             ) : (
               <StyledTopupForm
                 amountCents={amountCents}

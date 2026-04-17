@@ -73,6 +73,8 @@ supabase functions deploy cancel-renewal
 supabase functions deploy reactivate-renewal
 supabase functions deploy activate-plan
 supabase functions deploy list-plans
+supabase functions deploy get-merchant
+supabase functions deploy get-product
 supabase functions deploy track-usage
 supabase functions deploy sync-customer
 supabase functions deploy create-checkout-session
@@ -99,6 +101,8 @@ supabase functions deploy
 | `reactivate-renewal`           | POST   | `reactivateRenewal`        | Reactivate cancelled subscription |
 | `activate-plan`                | POST   | `activatePlan`             | Activate a free/usage plan        |
 | `list-plans`                   | GET    | `listPlans`                | List available plans              |
+| `get-merchant`                 | GET    | `getMerchant`              | Fetch the authenticated merchant's public metadata (name, branding, currency). |
+| `get-product`                  | GET    | `getProduct`               | Fetch a product by reference (name, description). |
 | `track-usage`                  | POST   | `trackUsage`               | Track usage for metered billing   |
 | `sync-customer`                | POST   | `syncCustomer`             | Sync/create customer in SolvaPay  |
 | `create-checkout-session`      | POST   | `createCheckoutSession`    | Create hosted checkout session    |
@@ -177,6 +181,8 @@ supabase/functions/
 ├── reactivate-renewal/index.ts
 ├── activate-plan/index.ts
 ├── list-plans/index.ts
+├── get-merchant/index.ts
+├── get-product/index.ts
 ├── track-usage/index.ts
 ├── sync-customer/index.ts
 ├── create-checkout-session/index.ts

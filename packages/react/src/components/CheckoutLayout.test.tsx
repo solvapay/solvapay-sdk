@@ -157,3 +157,170 @@ describe('CheckoutLayout', () => {
     await waitFor(() => expect(container.querySelector('.my-root')).toBeTruthy())
   })
 })
+
+const usagePlan: Plan = {
+  reference: 'pln_usage',
+  name: 'Usage',
+  currency: 'usd',
+  type: 'usage-based',
+  billingModel: 'pre-paid',
+  creditsPerUnit: 100,
+  measures: 'call',
+  requiresPayment: true,
+}
+
+const freePlan: Plan = {
+  reference: 'pln_free',
+  name: 'Starter',
+  price: 0,
+  currency: 'usd',
+  type: 'recurring',
+  interval: 'month',
+  requiresPayment: false,
+}
+
+describe('CheckoutLayout — new orchestration', () => {
+  it('with planRef omitted, renders the PlanSelector step', async () => {
+    plansCache.set('prd_multi', {
+      plans: [plan, { ...plan, reference: 'pln_2', name: 'Yearly', interval: 'year' }],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_multi', {
+      product: { reference: 'prd_multi', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
+        <CheckoutLayout productRef="prd_multi" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('Choose your pricing')).toBeTruthy())
+    expect(screen.getByText('Monthly')).toBeTruthy()
+    expect(screen.getByText('Yearly')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy()
+  })
+
+  it('routes usage-based plans to ActivationFlow automatically', async () => {
+    plansCache.set('prd_usage', {
+      plans: [usagePlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_usage', {
+      product: { reference: 'prd_usage', name: 'Metered API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
+        <CheckoutLayout planRef="pln_usage" productRef="prd_usage" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('Confirm your plan')).toBeTruthy())
+    expect(screen.getByRole('button', { name: 'Activate' })).toBeTruthy()
+  })
+
+  it('routes free plans through the PaymentForm free branch', async () => {
+    plansCache.set('prd_free', {
+      plans: [freePlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_free', {
+      product: { reference: 'prd_free', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
+        <CheckoutLayout planRef="pln_free" productRef="prd_free" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Start using/ })).toBeTruthy(),
+    )
+  })
+
+  it('renderActivation overrides the default ActivationFlow', async () => {
+    plansCache.set('prd_usage', {
+      plans: [usagePlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_usage', {
+      product: { reference: 'prd_usage', name: 'Metered API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
+        <CheckoutLayout
+          planRef="pln_usage"
+          productRef="prd_usage"
+          renderActivation={({ plan }) => (
+            <div data-testid="custom-activation">{plan.reference}</div>
+          )}
+        />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('custom-activation').textContent).toBe('pln_usage'),
+    )
+  })
+
+  it('back button returns from pay step to select when planRef is omitted', async () => {
+    plansCache.set('prd_multi', {
+      plans: [plan, { ...plan, reference: 'pln_2', name: 'Yearly', interval: 'year' }],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_multi', {
+      product: { reference: 'prd_multi', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
+        <CheckoutLayout productRef="prd_multi" />
+      </SolvaPayProvider>,
+    )
+    const continueBtn = await screen.findByRole('button', { name: 'Continue' })
+    act(() => {
+      // pick the first plan + continue
+      screen.getByText('Monthly').click()
+    })
+    act(() => {
+      continueBtn.click()
+    })
+    await waitFor(() => expect(screen.queryByText('Choose your pricing')).toBeNull())
+    const back = screen.getByRole('button', { name: /Back to plans/ })
+    act(() => {
+      back.click()
+    })
+    await waitFor(() => expect(screen.getByText('Choose your pricing')).toBeTruthy())
+  })
+
+  it('auto-skips the selector when there is only one plan', async () => {
+    plansCache.set('prd_single', {
+      plans: [plan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_single', {
+      product: { reference: 'prd_single', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
+        <CheckoutLayout productRef="prd_single" />
+      </SolvaPayProvider>,
+    )
+    // Should skip 'Choose your pricing' and go straight to pay step.
+    await waitFor(() =>
+      expect(screen.queryByText('Choose your pricing')).toBeNull(),
+    )
+  })
+})

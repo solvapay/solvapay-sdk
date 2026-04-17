@@ -134,6 +134,8 @@ export {
   cancelRenewal,
   reactivateRenewal,
   listPlans,
+  getMerchant,
+  getProduct,
   trackUsage,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,

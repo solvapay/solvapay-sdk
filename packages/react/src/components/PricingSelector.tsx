@@ -104,6 +104,3 @@ export const PricingSelector: React.FC<PricingSelectorProps> = ({
     </>
   )
 }
-
-/** @deprecated Use PricingSelector instead */
-export const PlanSelector = PricingSelector

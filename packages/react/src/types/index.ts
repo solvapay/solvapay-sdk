@@ -534,9 +534,6 @@ export interface PricingSelectorProps {
   ) => React.ReactNode
 }
 
-/** @deprecated Use PricingSelectorProps instead */
-export type PlanSelectorProps = PricingSelectorProps
-
 /**
  * Return type for usePurchaseStatus hook
  *
@@ -570,6 +567,16 @@ export interface PurchaseStatusReturn {
 /**
  * Payment form props - simplified and minimal
  */
+/**
+ * Discriminated checkout-completion result surfaced by `<PaymentForm>` and
+ * `<CheckoutLayout>` via their `onResult` callback. Integrators handling
+ * both paid and free plans should use `onResult` to get a single typed
+ * callback; paid-only integrators keep using `onSuccess(paymentIntent)`.
+ */
+export type PaymentResult = { kind: 'paid'; paymentIntent: PaymentIntent }
+export type ActivationResult = { kind: 'activated'; result: ActivatePlanResult }
+export type CheckoutResult = PaymentResult | ActivationResult
+
 export interface PaymentFormProps {
   /**
    * Plan reference to checkout. When omitted, the SDK auto-resolves the plan from
@@ -583,9 +590,23 @@ export interface PaymentFormProps {
    */
   productRef?: string
   /**
-   * Callback when payment succeeds
+   * Callback when payment succeeds. Fires on paid flows only — preserved
+   * exactly for backwards compatibility. Free/activation flows do NOT fire
+   * `onSuccess`; use `onResult` to receive both paid and activated results.
    */
   onSuccess?: (paymentIntent: PaymentIntent) => void
+  /**
+   * Unified callback fired on both paid and activated completions with a
+   * discriminated result. Safe to provide alongside `onSuccess` — for paid
+   * flows both fire (in order: `onSuccess` first, then `onResult`).
+   */
+  onResult?: (result: CheckoutResult) => void
+  /**
+   * Override the default free-plan activation step. When provided, the form
+   * awaits this promise on submit and fires `onResult` when it resolves.
+   * When omitted, the default behavior calls `activatePlan` from context.
+   */
+  onFreePlan?: (plan: Plan) => Promise<unknown> | void
   /**
    * Callback when payment fails
    */

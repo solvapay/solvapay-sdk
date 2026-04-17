@@ -13,12 +13,18 @@ import { usePurchase } from './hooks/usePurchase'
 import { useSolvaPay } from './hooks/useSolvaPay'
 import { useCustomer } from './hooks/useCustomer'
 import { useCopy, useLocale } from './hooks/useCopy'
+import { usePlan } from './hooks/usePlan'
+import { useActivation } from './hooks/useActivation'
 import { Spinner } from './components/Spinner'
+import { CheckoutSummary } from './components/CheckoutSummary'
+import { MandateText } from './components/MandateText'
+import { interpolate } from './i18n/interpolate'
 import {
   PaymentFormProvider,
   type PaymentElementKind,
   type PaymentFormContextValue,
 } from './components/PaymentFormContext'
+import { usePlanSelection } from './components/PlanSelectionContext'
 import {
   PaymentFormSummary,
   PaymentFormCustomerFields,
@@ -31,7 +37,13 @@ import {
 } from './components/PaymentFormSlots'
 import { confirmPayment } from './utils/confirmPayment'
 import { reconcilePayment } from './utils/processPaymentResult'
-import type { PaymentFormProps, PrefillCustomer } from './types'
+import type {
+  ActivationResult,
+  PaymentFormProps,
+  PaymentResult,
+  PrefillCustomer,
+  Plan,
+} from './types'
 
 type PaymentFormRootProps = PaymentFormProps & {
   /**
@@ -65,6 +77,7 @@ const PaymentFormInner: React.FC<{
   buttonClassName?: string
   requireTermsAcceptance: boolean
   onSuccess?: PaymentFormProps['onSuccess']
+  onResult?: PaymentFormProps['onResult']
   onError?: PaymentFormProps['onError']
   children?: React.ReactNode
 }> = ({
@@ -78,6 +91,7 @@ const PaymentFormInner: React.FC<{
   buttonClassName,
   requireTermsAcceptance,
   onSuccess,
+  onResult,
   onError,
   children,
 }) => {
@@ -165,7 +179,10 @@ const PaymentFormInner: React.FC<{
 
     if (reconcileResult.status === 'success') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onSuccess?.(paymentIntent as any)
+      const pi = paymentIntent as any
+      onSuccess?.(pi)
+      const result: PaymentResult = { kind: 'paid', paymentIntent: pi }
+      onResult?.(result)
       return
     }
 
@@ -190,6 +207,7 @@ const PaymentFormInner: React.FC<{
     resolvedPlanRef,
     refetch,
     onSuccess,
+    onResult,
     onError,
   ])
 
@@ -261,10 +279,146 @@ const PaymentFormInner: React.FC<{
   )
 }
 
+/**
+ * Free-plan branch rendered when `plan.requiresPayment === false`. Bypasses
+ * Stripe Elements entirely: no client secret, no payment confirmation. On
+ * submit, calls the `onFreePlan` override if provided, otherwise activates
+ * via `useActivation`. Fires `onResult({ kind: 'activated', ... })` on success.
+ */
+const FreePlanActivationForm: React.FC<{
+  className?: string
+  plan: Plan
+  productRef?: string
+  requireTermsAcceptance: boolean
+  submitButtonText?: string
+  buttonClassName?: string
+  onFreePlan?: PaymentFormProps['onFreePlan']
+  onResult?: PaymentFormProps['onResult']
+  onError?: PaymentFormProps['onError']
+}> = ({
+  className,
+  plan,
+  productRef,
+  requireTermsAcceptance,
+  submitButtonText,
+  buttonClassName,
+  onFreePlan,
+  onResult,
+  onError,
+}) => {
+  const copy = useCopy()
+  const { refetch } = usePurchase()
+  const { activate, state, error: activationError, result } = useActivation()
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+  const resultFiredRef = useRef(false)
+
+  useEffect(() => {
+    if (state === 'activated' && result && !resultFiredRef.current) {
+      resultFiredRef.current = true
+      const activationResult: ActivationResult = { kind: 'activated', result }
+      onResult?.(activationResult)
+      refetch().catch(() => {
+        // refetch errors are non-fatal for activation success
+      })
+    }
+  }, [state, result, onResult, refetch])
+
+  const isProcessing = state === 'activating'
+  const canSubmit =
+    !isProcessing && (!requireTermsAcceptance || termsAccepted) && !!productRef
+
+  const handleSubmit = useCallback(async () => {
+    if (!productRef) {
+      const msg = copy.errors.configMissingPlanOrProduct
+      setLocalError(msg)
+      onError?.(new Error(msg))
+      return
+    }
+    setLocalError(null)
+    try {
+      if (onFreePlan) {
+        await onFreePlan(plan)
+        // When the integrator handles activation themselves, we still emit
+        // a synthetic activated result so `onResult` consumers get notified.
+        onResult?.({
+          kind: 'activated',
+          result: {
+            status: 'activated',
+            productRef,
+            planRef: plan.reference,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any,
+        })
+        return
+      }
+      await activate({ productRef, planRef: plan.reference })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : copy.activation.failed
+      setLocalError(msg)
+      onError?.(err instanceof Error ? err : new Error(msg))
+    }
+  }, [productRef, plan, onFreePlan, activate, onResult, onError, copy])
+
+  const productName =
+    typeof plan.metadata?.productName === 'string'
+      ? plan.metadata.productName
+      : plan.name ?? 'product'
+  const label = interpolate(copy.cta.startUsing, { product: productName })
+  const errorText = localError ?? activationError
+
+  return (
+    <div className={className}>
+      <CheckoutSummary planRef={plan.reference} productRef={productRef} />
+      <div style={{ marginTop: 16 }}>
+        <MandateText planRef={plan.reference} productRef={productRef} />
+      </div>
+      {requireTermsAcceptance && (
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 12,
+            fontSize: 14,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={e => setTermsAccepted(e.target.checked)}
+          />
+          <span>{copy.terms.checkboxLabel}</span>
+        </label>
+      )}
+      {errorText && (
+        <div
+          role="alert"
+          style={{ marginTop: 12, color: '#b91c1c', fontSize: 14 }}
+        >
+          {errorText}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={!canSubmit}
+        className={buttonClassName}
+        style={{ marginTop: 16 }}
+        aria-busy={isProcessing}
+      >
+        {isProcessing ? copy.cta.processing : submitButtonText ?? label}
+      </button>
+    </div>
+  )
+}
+
 const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
   planRef,
   productRef,
   onSuccess,
+  onResult,
+  onFreePlan,
   onError,
   returnUrl,
   submitButtonText,
@@ -276,6 +430,16 @@ const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
 }) => {
   const copy = useCopy()
   const locale = useLocale()
+  const planSelection = usePlanSelection()
+  const effectivePlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
+  const effectiveProductRef = productRef ?? planSelection?.productRef
+
+  const { plan: resolvedPlan } = usePlan({
+    planRef: effectivePlanRef,
+    productRef: effectiveProductRef,
+  })
+  const isFreePlan = resolvedPlan?.requiresPayment === false
+
   const {
     loading: checkoutLoading,
     error: checkoutError,
@@ -283,12 +447,18 @@ const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
     startCheckout,
     stripePromise,
     resolvedPlanRef,
-  } = useCheckout({ planRef, productRef, customer: prefillCustomer })
+  } = useCheckout({
+    planRef: effectivePlanRef,
+    productRef: effectiveProductRef,
+    customer: prefillCustomer,
+  })
 
   const hasInitializedRef = useRef(false)
-  const hasPlanOrProduct = !!(planRef || productRef)
+  const hasPlanOrProduct = !!(effectivePlanRef || effectiveProductRef)
 
   useEffect(() => {
+    // Free plans skip createPayment entirely — no clientSecret, no Elements.
+    if (isFreePlan) return
     if (
       !hasInitializedRef.current &&
       hasPlanOrProduct &&
@@ -304,7 +474,14 @@ const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
     if (hasPlanOrProduct && clientSecret) {
       hasInitializedRef.current = true
     }
-  }, [hasPlanOrProduct, checkoutLoading, checkoutError, clientSecret, startCheckout])
+  }, [
+    hasPlanOrProduct,
+    checkoutLoading,
+    checkoutError,
+    clientSecret,
+    startCheckout,
+    isFreePlan,
+  ])
 
   const finalReturnUrl =
     returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
@@ -333,6 +510,22 @@ const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
     )
   }
 
+  if (isFreePlan && resolvedPlan) {
+    return (
+      <FreePlanActivationForm
+        className={className}
+        plan={resolvedPlan}
+        productRef={effectiveProductRef}
+        requireTermsAcceptance={requireTermsAcceptance}
+        submitButtonText={submitButtonText}
+        buttonClassName={buttonClassName}
+        onFreePlan={onFreePlan}
+        onResult={onResult}
+        onError={onError}
+      />
+    )
+  }
+
   if (shouldRenderElements && elementsOptions) {
     return (
       <div className={className}>
@@ -342,8 +535,8 @@ const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
           options={elementsOptions}
         >
           <PaymentFormInner
-            planRef={planRef}
-            productRef={productRef}
+            planRef={effectivePlanRef}
+            productRef={effectiveProductRef}
             prefillCustomer={prefillCustomer}
             resolvedPlanRef={resolvedPlanRef}
             clientSecret={clientSecret!}
@@ -352,6 +545,7 @@ const PaymentFormBase: React.FC<PaymentFormRootProps> = ({
             buttonClassName={buttonClassName}
             requireTermsAcceptance={requireTermsAcceptance}
             onSuccess={onSuccess}
+            onResult={onResult}
             onError={onError}
           >
             {children}

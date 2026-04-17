@@ -12,6 +12,8 @@ export {
   syncCustomer,
   createCheckoutSession,
   createCustomerSession,
+  getMerchant,
+  getProduct,
   solvapayWebhook,
 } from './handlers'
 export type { SolvapayWebhookOptions } from './handlers'
