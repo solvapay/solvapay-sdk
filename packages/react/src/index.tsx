@@ -114,7 +114,7 @@ export type {
 export type { PurchaseActions } from './hooks/usePurchaseActions'
 export type { UseActivationReturn, ActivationState } from './hooks/useActivation'
 export type { CustomerInfo } from './hooks/useCustomer'
-export type { CheckoutSummaryProps, CheckoutSummaryRenderArgs } from './components/CheckoutSummary'
+export type { CheckoutSummaryProps } from './components/CheckoutSummary'
 export type { MandateTextProps } from './components/MandateText'
 export type {
   CheckoutLayoutProps,
@@ -122,11 +122,7 @@ export type {
   CheckoutLayoutClassNames,
   CheckoutLayoutPlanSelectorOptions,
 } from './components/CheckoutLayout'
-export type {
-  PlanSelectorProps,
-  PlanSelectorClassNames,
-  PlanSelectorRenderArgs,
-} from './components/PlanSelector'
+export type { PlanSelectorProps } from './components/PlanSelector'
 export type {
   AmountPickerProps,
   AmountPickerClassNames,

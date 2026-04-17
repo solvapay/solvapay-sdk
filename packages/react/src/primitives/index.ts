@@ -13,3 +13,29 @@
 export { Slot, Slottable } from './slot'
 export { composeRefs, setRef } from './composeRefs'
 export { composeEventHandlers } from './composeEventHandlers'
+
+export {
+  CheckoutSummary,
+  CheckoutSummaryRoot,
+  CheckoutSummaryProduct,
+  CheckoutSummaryPlan,
+  CheckoutSummaryPrice,
+  CheckoutSummaryTrial,
+  CheckoutSummaryTaxNote,
+  useCheckoutSummary,
+} from './CheckoutSummary'
+
+export {
+  PlanSelector,
+  PlanSelectorRoot,
+  PlanSelectorHeading,
+  PlanSelectorGrid,
+  PlanSelectorCard,
+  PlanSelectorCardName,
+  PlanSelectorCardPrice,
+  PlanSelectorCardInterval,
+  PlanSelectorCardBadge,
+  PlanSelectorLoading,
+  PlanSelectorError,
+  usePlanSelector,
+} from './PlanSelector'

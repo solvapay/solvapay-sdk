@@ -2,12 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 import { composeEventHandlers } from './composeEventHandlers'
 
 function makeEvent(overrides: Partial<{ defaultPrevented: boolean }> = {}) {
+  const state = { defaultPrevented: overrides.defaultPrevented ?? false }
   return {
-    defaultPrevented: false,
-    preventDefault() {
-      this.defaultPrevented = true
+    get defaultPrevented() {
+      return state.defaultPrevented
     },
-    ...overrides,
+    preventDefault() {
+      state.defaultPrevented = true
+    },
   } as unknown as React.SyntheticEvent
 }
 
