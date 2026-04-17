@@ -1,6 +1,6 @@
 {
   "name": "solvapay",
-  "version": "1.0.10-preview.6",
+  "version": "1.0.8-preview.1",
   "description": "SolvaPay CLI",
   "type": "module",
   "bin": {
