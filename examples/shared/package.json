@@ -7,7 +7,8 @@
   "main": "./stub-api-client.ts",
   "exports": {
     ".": "./stub-api-client.ts",
-    "./stub-api-client": "./stub-api-client.ts"
+    "./stub-api-client": "./stub-api-client.ts",
+    "./next-stub": "./next-stub.ts"
   },
   "peerDependencies": {
     "@solvapay/server": "*"
