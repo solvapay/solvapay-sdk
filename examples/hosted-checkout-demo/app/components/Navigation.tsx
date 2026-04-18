@@ -12,7 +12,7 @@ import { useState, useCallback } from 'react'
  * Displays navigation bar with current plan badge and upgrade button
  */
 export function Navigation() {
-  const { loading: purchasesLoading, hasPaidPurchase } = usePurchase()
+  const { loading: purchasesLoading, hasPaidPurchase, activePurchase } = usePurchase()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
 
@@ -105,19 +105,9 @@ export function Navigation() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <ProductBadge>
-              {({ displayPlan, shouldShow }) => {
-                if (!shouldShow) {
-                  return null
-                }
-
-                return (
-                  <div className="px-2.5 py-1 rounded-md bg-slate-50 text-xs font-medium">
-                    <span className="text-emerald-600">{displayPlan}</span>
-                  </div>
-                )
-              }}
-            </ProductBadge>
+            {activePurchase ? (
+              <ProductBadge className="px-2.5 py-1 rounded-md bg-slate-50 text-xs font-medium text-emerald-600" />
+            ) : null}
 
             {/* Upgrade button - hidden until loaded */}
             {showUpgradeButton && (
