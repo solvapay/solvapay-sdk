@@ -19,6 +19,21 @@ type ListedPackage = {
 }
 
 const CRITICAL_LIBRARIES = ['react', 'react-dom', 'vite', 'vitest', '@types/react']
+
+// Packages intentionally pinned outside the monorepo-wide major for a specific reason.
+// Keep this list small and justify each entry.
+const CRITICAL_DRIFT_ALLOWLIST = new Set<string>([
+  // Mirrors Lovable's default stack (React 18 + Vite 5 + Tailwind v3). Intentional.
+  'spa-checkout',
+  // Demo app for the MCP App SDK which ships on Vite 8. Not part of the web checkout surface.
+  '@example/mcp-time-app',
+])
+
+// Matches strict semver prerelease versions like `1.2.3-preview.1`. pnpm's recursive ls
+// sometimes reports workspace-resolved dependencies with a bracketed peer tree (e.g.
+// `file:packages/react(react@18.3.1)...`) which can contain `-` for packages like
+// `react-dom`; this regex avoids false-flagging those as prereleases.
+const SEMVER_PRERELEASE = /^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const ROOT_DIR = path.resolve(__dirname, '..')
@@ -97,6 +112,9 @@ const findCriticalMajorDrift = (packages: ListedPackage[]): string[] => {
   const byLibrary = new Map<string, Map<number, Set<string>>>()
 
   for (const pkg of packages) {
+    if (CRITICAL_DRIFT_ALLOWLIST.has(pkg.name)) {
+      continue
+    }
     for (const dependencyGroup of collectDependencyGroups(pkg)) {
       for (const [dependencyName, dependencyInfo] of Object.entries(dependencyGroup)) {
         if (!CRITICAL_LIBRARIES.includes(dependencyName)) {
@@ -149,10 +167,10 @@ const findSolvaPayPrereleaseDrift = (packages: ListedPackage[]): string[] => {
         }
 
         const version = dependencyInfo.version
-        if (!version || version.startsWith('link:') || version.startsWith('workspace:')) {
+        if (!version || version.startsWith('link:') || version.startsWith('workspace:') || version.startsWith('file:')) {
           continue
         }
-        if (!version.includes('-')) {
+        if (!SEMVER_PRERELEASE.test(version)) {
           continue
         }
 
