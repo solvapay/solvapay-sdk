@@ -1,8 +1,8 @@
 {
   "imports": {
-    "@solvapay/supabase": "npm:@solvapay/supabase",
-    "@solvapay/server": "npm:@solvapay/server",
-    "@solvapay/auth": "npm:@solvapay/auth",
-    "@solvapay/core": "npm:@solvapay/core"
+    "@solvapay/supabase": "npm:@solvapay/supabase@preview",
+    "@solvapay/server": "npm:@solvapay/server@preview",
+    "@solvapay/auth": "npm:@solvapay/auth@preview",
+    "@solvapay/core": "npm:@solvapay/core@preview"
   }
 }
