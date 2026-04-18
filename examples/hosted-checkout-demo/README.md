@@ -329,22 +329,21 @@ const handleManagePurchase = async () => {
 ```tsx
 // app/page.tsx
 import { PurchaseGate } from '@solvapay/react'
-;<PurchaseGate requirePlan="Pro Plan">
-  {({ hasAccess, loading }) => {
-    if (loading) return <Skeleton />
 
-    if (!hasAccess) {
-      return (
-        <div>
-          <h2>Premium Content</h2>
-          <button onClick={handleViewPlans}>Upgrade Now</button>
-        </div>
-      )
-    }
-
-    return <PremiumContent />
-  }}
-</PurchaseGate>
+;<PurchaseGate.Root planRef="pln_pro">
+  <PurchaseGate.Loading>
+    <Skeleton />
+  </PurchaseGate.Loading>
+  <PurchaseGate.Blocked>
+    <div>
+      <h2>Premium Content</h2>
+      <button onClick={handleViewPlans}>Upgrade Now</button>
+    </div>
+  </PurchaseGate.Blocked>
+  <PurchaseGate.Allowed>
+    <PremiumContent />
+  </PurchaseGate.Allowed>
+</PurchaseGate.Root>
 ```
 
 ### 7. Navigation with Product Badge
@@ -431,7 +430,7 @@ The provider automatically:
 
 - Fetches purchase on mount
 - Provides refetch method for updates
-- Exposes helper methods (`hasActivePurchase`, `hasPlan`)
+- Exposes `hasPurchase(criteria?)` helper with AND semantics matching `<PurchaseGate.Root>`
 - Manages loading states
 
 ### Authentication

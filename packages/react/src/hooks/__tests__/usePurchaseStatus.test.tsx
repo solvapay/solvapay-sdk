@@ -31,8 +31,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -52,8 +51,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -76,8 +74,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: true,
         activePaidPurchase: purchases[0],
@@ -97,8 +94,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -122,8 +118,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -148,8 +143,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -184,8 +178,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -221,8 +214,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: activePaid,
         hasPaidPurchase: true,
         activePaidPurchase: activePaid,
@@ -240,8 +232,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -260,8 +251,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -282,8 +272,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [cancelledPurchase],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -304,8 +293,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [cancelledFree],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -323,8 +311,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -347,8 +334,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -364,8 +350,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -383,8 +368,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -405,8 +389,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -428,8 +411,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -445,8 +427,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -464,8 +445,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -488,8 +468,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -508,8 +487,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -531,8 +509,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -567,8 +544,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -597,8 +573,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [purchase],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -634,8 +609,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: activePaid,
         hasPaidPurchase: true,
         activePaidPurchase: activePaid,
@@ -675,8 +649,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -694,8 +667,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -724,8 +696,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -743,8 +714,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [cancelledPurchase],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -767,8 +737,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [cancelledPurchase],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -797,8 +766,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases,
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: true,
         activePaidPurchase: paidPurchase,
@@ -816,8 +784,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [cancelledPaid],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -837,8 +804,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [cancelledFree],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,
@@ -859,8 +825,7 @@ describe('usePurchaseStatus', () => {
       vi.mocked(usePurchaseModule.usePurchase).mockReturnValue({
         purchases: [cancelledUndefined],
         loading: false,
-        hasProduct: vi.fn(),
-        hasPlan: vi.fn(),
+        hasPurchase: vi.fn(),
         activePurchase: null,
         hasPaidPurchase: false,
         activePaidPurchase: null,

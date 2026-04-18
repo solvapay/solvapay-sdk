@@ -395,23 +395,48 @@ Displays current product subscription with render props or className pattern.
 
 ### PurchaseGate
 
-Controls access to content based on purchase status.
+Controls access to content based on purchase status. Uses a compound
+primitive API (`PurchaseGate.Root`, `.Allowed`, `.Blocked`, `.Loading`,
+`.Error`). Matching is by stable reference — `productRef` (`prd_*`) and/or
+`planRef` (`pln_*`) — never by product or plan name.
 
-**Props:**
+**Root props:**
 
-- `requireProduct?: string` - Optional product name to check for an active purchase
-- `children: (props) => React.ReactNode` - Render prop function
+- `productRef?: string` - Require an active purchase for this product
+- `planRef?: string` - Require an active purchase for this specific plan
+- `asChild?: boolean` - Merge onto the consumer element via `Slot`
 
-**Example:**
+Matching precedence:
+
+- If neither is set, any `status === 'active'` purchase allows access
+- If only one is set, that field must match on an active purchase
+- If both are set, both must match on the **same** active purchase (AND)
+
+**Example — product-level gating:**
 
 ```tsx
-<PurchaseGate requireProduct="Pro Plan">
-  {({ hasAccess, loading, purchases }) => {
-    if (loading) return <Loading />
-    if (!hasAccess) return <Paywall />
-    return <PremiumContent />
-  }}
-</PurchaseGate>
+<PurchaseGate.Root productRef="prd_widget">
+  <PurchaseGate.Loading>Loading…</PurchaseGate.Loading>
+  <PurchaseGate.Allowed>
+    <PremiumContent />
+  </PurchaseGate.Allowed>
+  <PurchaseGate.Blocked>
+    <Paywall />
+  </PurchaseGate.Blocked>
+</PurchaseGate.Root>
+```
+
+**Example — plan-level gating:**
+
+```tsx
+<PurchaseGate.Root planRef="pln_premium">
+  <PurchaseGate.Allowed>
+    <PremiumOnlyFeature />
+  </PurchaseGate.Allowed>
+  <PurchaseGate.Blocked>
+    <UpgradePrompt />
+  </PurchaseGate.Blocked>
+</PurchaseGate.Root>
 ```
 
 ## Hooks
@@ -426,8 +451,15 @@ const {
   loading, // Loading state
   hasPaidPurchase, // Boolean: has any paid purchase
   activePurchase, // Most recent active purchase
+  hasPurchase, // (criteria?: { productRef?, planRef? }) => boolean — predicate matching the PurchaseGate.Root shape
   refetch, // Function to refetch purchases
 } = usePurchase()
+
+// Examples — criteria-based checks:
+hasPurchase() // any active purchase
+hasPurchase({ productRef: 'prd_widget' }) // any active purchase for this product
+hasPurchase({ planRef: 'pln_premium' }) // any active purchase for this specific plan
+hasPurchase({ productRef: 'prd_widget', planRef: 'pln_premium' }) // both must match the same active purchase
 ```
 
 ### usePlans

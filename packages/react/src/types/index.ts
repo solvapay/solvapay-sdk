@@ -170,9 +170,15 @@ export interface PurchaseStatus {
   email?: string
   name?: string
   purchases: PurchaseInfo[]
-  hasProduct: (productName: string) => boolean
-  /** @deprecated Use hasProduct instead */
-  hasPlan: (productName: string) => boolean
+  /**
+   * Check if the user has an active purchase matching the given criteria.
+   *
+   * - No criteria: any active purchase
+   * - `productRef` only: any active purchase for that product (any plan)
+   * - `planRef` only: any active purchase for that specific plan
+   * - Both: both must match on the same active purchase (AND)
+   */
+  hasPurchase: (criteria?: { productRef?: string; planRef?: string }) => boolean
   /**
    * Primary active purchase (paid or free) - most recent purchase with status === 'active'
    * Backend keeps purchases as 'active' until expiration, even when cancelled.

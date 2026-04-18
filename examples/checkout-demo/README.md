@@ -241,26 +241,25 @@ const handleCreatePayment = async ({ planRef }) => {
 ```tsx
 // app/page.tsx
 import { PurchaseGate, UpgradeButton } from '@solvapay/react'
-;<PurchaseGate requirePlan="Pro Plan">
-  {({ hasAccess, loading }) => {
-    if (loading) return <Skeleton />
 
-    if (!hasAccess) {
-      return (
-        <div>
-          <h2>Premium Content</h2>
-          <UpgradeButton planRef="pln_pro">
-            {({ onClick, loading }) => (
-              <button onClick={onClick}>{loading ? 'Loading...' : 'Upgrade Now'}</button>
-            )}
-          </UpgradeButton>
-        </div>
-      )
-    }
-
-    return <PremiumContent />
-  }}
-</PurchaseGate>
+;<PurchaseGate.Root planRef="pln_pro">
+  <PurchaseGate.Loading>
+    <Skeleton />
+  </PurchaseGate.Loading>
+  <PurchaseGate.Blocked>
+    <div>
+      <h2>Premium Content</h2>
+      <UpgradeButton planRef="pln_pro">
+        {({ onClick, loading }) => (
+          <button onClick={onClick}>{loading ? 'Loading...' : 'Upgrade Now'}</button>
+        )}
+      </UpgradeButton>
+    </div>
+  </PurchaseGate.Blocked>
+  <PurchaseGate.Allowed>
+    <PremiumContent />
+  </PurchaseGate.Allowed>
+</PurchaseGate.Root>
 ```
 
 ### 4. Navigation with Plan Badge
@@ -378,7 +377,7 @@ The provider automatically:
 
 - Fetches purchase on mount
 - Provides refetch method for updates
-- Exposes helper methods (`hasActivePurchase`, `hasPlan`)
+- Exposes `hasPurchase(criteria?)` helper with AND semantics matching `<PurchaseGate.Root>`
 - Manages loading states
 
 ### Authentication

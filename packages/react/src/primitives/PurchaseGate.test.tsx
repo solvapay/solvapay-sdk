@@ -8,17 +8,25 @@ import type { PurchaseInfo, SolvaPayContextValue } from '../types'
 
 function ctxWith(
   purchases: PurchaseInfo[],
-  hasProduct: (name: string) => boolean = () => false,
   loading = false,
 ): SolvaPayContextValue {
+  const hasPurchase = (criteria?: { productRef?: string; planRef?: string }) => {
+    const productRef = criteria?.productRef
+    const planRef = criteria?.planRef
+    return purchases.some(
+      p =>
+        p.status === 'active' &&
+        (!productRef || p.productRef === productRef) &&
+        (!planRef || p.planRef === planRef),
+    )
+  }
   return {
     purchase: {
       loading,
       isRefetching: false,
       error: null,
       purchases,
-      hasProduct,
-      hasPlan: () => false,
+      hasPurchase,
       activePurchase: purchases.find(p => p.status === 'active') ?? null,
       hasPaidPurchase: false,
       activePaidPurchase: null,
@@ -48,15 +56,17 @@ function Wrap({ ctx, children }: { ctx: SolvaPayContextValue; children: React.Re
 const active: PurchaseInfo = {
   reference: 'pur_1',
   productName: 'Widget API',
+  productRef: 'prd_widget',
+  planRef: 'pln_monthly',
   status: 'active',
   startDate: new Date().toISOString(),
 }
 
 describe('PurchaseGate primitive', () => {
-  it('emits data-state=allowed when requireProduct matches and renders Allowed', () => {
+  it('emits data-state=allowed when productRef matches and renders Allowed', () => {
     render(
-      <Wrap ctx={ctxWith([active], name => name === 'Widget API')}>
-        <PurchaseGate.Root requireProduct="Widget API" data-testid="root">
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root productRef="prd_widget" data-testid="root">
           <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
           <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
         </PurchaseGate.Root>
@@ -67,10 +77,10 @@ describe('PurchaseGate primitive', () => {
     expect(screen.queryByTestId('blocked')).toBeNull()
   })
 
-  it('emits data-state=blocked when requireProduct does not match', () => {
+  it('emits data-state=blocked when productRef does not match', () => {
     render(
       <Wrap ctx={ctxWith([active])}>
-        <PurchaseGate.Root requireProduct="Other Product" data-testid="root">
+        <PurchaseGate.Root productRef="prd_other" data-testid="root">
           <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
           <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
         </PurchaseGate.Root>
@@ -81,9 +91,101 @@ describe('PurchaseGate primitive', () => {
     expect(screen.queryByTestId('allowed')).toBeNull()
   })
 
+  it('emits data-state=allowed when planRef matches', () => {
+    render(
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root planRef="pln_monthly" data-testid="root">
+          <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
+          <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
+        </PurchaseGate.Root>
+      </Wrap>,
+    )
+    expect(screen.getByTestId('root').getAttribute('data-state')).toBe('allowed')
+    expect(screen.getByTestId('allowed').textContent).toBe('unlocked')
+  })
+
+  it('emits data-state=blocked when planRef does not match', () => {
+    render(
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root planRef="pln_yearly" data-testid="root">
+          <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
+          <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
+        </PurchaseGate.Root>
+      </Wrap>,
+    )
+    expect(screen.getByTestId('root').getAttribute('data-state')).toBe('blocked')
+    expect(screen.getByTestId('blocked').textContent).toBe('paywall')
+  })
+
+  it('emits data-state=allowed when productRef and planRef both match the same purchase', () => {
+    render(
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root productRef="prd_widget" planRef="pln_monthly" data-testid="root">
+          <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
+          <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
+        </PurchaseGate.Root>
+      </Wrap>,
+    )
+    expect(screen.getByTestId('root').getAttribute('data-state')).toBe('allowed')
+    expect(screen.getByTestId('allowed').textContent).toBe('unlocked')
+  })
+
+  it('emits data-state=blocked when productRef matches but planRef is a different plan under the same product', () => {
+    render(
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root productRef="prd_widget" planRef="pln_yearly" data-testid="root">
+          <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
+          <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
+        </PurchaseGate.Root>
+      </Wrap>,
+    )
+    expect(screen.getByTestId('root').getAttribute('data-state')).toBe('blocked')
+    expect(screen.getByTestId('blocked').textContent).toBe('paywall')
+  })
+
+  it('requires productRef and planRef to match on the same purchase (AND, not OR across purchases)', () => {
+    const widgetYearly: PurchaseInfo = {
+      reference: 'pur_2',
+      productName: 'Widget API',
+      productRef: 'prd_widget',
+      planRef: 'pln_yearly',
+      status: 'active',
+      startDate: new Date().toISOString(),
+    }
+    const gadgetMonthly: PurchaseInfo = {
+      reference: 'pur_3',
+      productName: 'Gadget',
+      productRef: 'prd_gadget',
+      planRef: 'pln_monthly',
+      status: 'active',
+      startDate: new Date().toISOString(),
+    }
+    render(
+      <Wrap ctx={ctxWith([widgetYearly, gadgetMonthly])}>
+        <PurchaseGate.Root productRef="prd_widget" planRef="pln_monthly" data-testid="root">
+          <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
+          <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
+        </PurchaseGate.Root>
+      </Wrap>,
+    )
+    expect(screen.getByTestId('root').getAttribute('data-state')).toBe('blocked')
+  })
+
+  it('allows any active purchase when no productRef or planRef is set', () => {
+    render(
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root data-testid="root">
+          <PurchaseGate.Allowed data-testid="allowed">unlocked</PurchaseGate.Allowed>
+          <PurchaseGate.Blocked data-testid="blocked">paywall</PurchaseGate.Blocked>
+        </PurchaseGate.Root>
+      </Wrap>,
+    )
+    expect(screen.getByTestId('root').getAttribute('data-state')).toBe('allowed')
+  })
+
   it('emits data-state=loading when purchase data is loading', () => {
     render(
-      <Wrap ctx={ctxWith([], undefined, true)}>
+      <Wrap ctx={ctxWith([], true)}>
         <PurchaseGate.Root data-testid="root">
           <PurchaseGate.Loading data-testid="loading">loading</PurchaseGate.Loading>
         </PurchaseGate.Root>
@@ -96,8 +198,8 @@ describe('PurchaseGate primitive', () => {
   it('asChild swaps Root element shell and forwards refs', () => {
     const ref = createRef<HTMLDivElement>()
     render(
-      <Wrap ctx={ctxWith([active], () => true)}>
-        <PurchaseGate.Root asChild requireProduct="Widget API" data-testid="root">
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root asChild productRef="prd_widget" data-testid="root">
           <section ref={ref as unknown as React.Ref<HTMLDivElement>} className="from-consumer">
             <PurchaseGate.Allowed>gated</PurchaseGate.Allowed>
           </section>
@@ -120,8 +222,8 @@ describe('PurchaseGate primitive', () => {
       )
     }
     render(
-      <Wrap ctx={ctxWith([active], () => true)}>
-        <PurchaseGate.Root requireProduct="Widget API">
+      <Wrap ctx={ctxWith([active])}>
+        <PurchaseGate.Root productRef="prd_widget">
           <Probe />
         </PurchaseGate.Root>
       </Wrap>,

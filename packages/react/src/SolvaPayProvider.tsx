@@ -665,14 +665,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       email: purchaseData.email,
       name: purchaseData.name,
       purchases: purchaseData.purchases,
-      hasProduct: (productName: string) => {
+      hasPurchase: (criteria?: { productRef?: string; planRef?: string }) => {
+        const productRef = criteria?.productRef
+        const planRef = criteria?.planRef
         return purchaseData.purchases.some(
-          p => p.productName.toLowerCase() === productName.toLowerCase() && p.status === 'active',
-        )
-      },
-      hasPlan: (productName: string) => {
-        return purchaseData.purchases.some(
-          p => p.productName.toLowerCase() === productName.toLowerCase() && p.status === 'active',
+          p =>
+            p.status === 'active' &&
+            (!productRef || p.productRef === productRef) &&
+            (!planRef || p.planRef === planRef),
         )
       },
       activePurchase,

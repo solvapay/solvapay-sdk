@@ -229,20 +229,21 @@ function PricingPage() {
 
 ### PurchaseGate
 
-Conditionally render content based on purchase status using the render-prop pattern:
+Conditionally render content based on purchase status using the compound
+primitive. Match by `productRef` (any plan of that product) or `planRef`
+(specific plan). Both together require they match on the same active
+purchase.
 
 ```tsx
 import { PurchaseGate } from '@solvapay/react'
 
 function PremiumContent() {
   return (
-    <PurchaseGate requireProduct="pln_premium">
-      {({ hasAccess, loading }) => {
-        if (loading) return <div>Loading...</div>
-        if (!hasAccess) return <div>Please subscribe to access this content.</div>
-        return <div>Premium content here!</div>
-      }}
-    </PurchaseGate>
+    <PurchaseGate.Root planRef="pln_premium">
+      <PurchaseGate.Loading>Loading...</PurchaseGate.Loading>
+      <PurchaseGate.Blocked>Please subscribe to access this content.</PurchaseGate.Blocked>
+      <PurchaseGate.Allowed>Premium content here!</PurchaseGate.Allowed>
+    </PurchaseGate.Root>
   )
 }
 ```
@@ -310,7 +311,7 @@ function Dashboard() {
 - `activePurchase` - The active purchase (or null)
 - `hasPaidPurchase` - Boolean indicating if user has paid purchase
 - `activePaidPurchase` - The active paid purchase (or null)
-- `hasProduct(productName)` - Function to check if user has a specific product
+- `hasPurchase(criteria?)` - Predicate with AND semantics. Pass `{ productRef }`, `{ planRef }`, or both (both must match the same active purchase). Call with no arguments to check for any active purchase. Mirrors `<PurchaseGate.Root>` prop shape.
 - `refetch` - Function to manually refetch purchase status
 
 ### useCheckout

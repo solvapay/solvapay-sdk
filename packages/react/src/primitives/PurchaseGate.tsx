@@ -40,26 +40,27 @@ function useGateCtx(part: string): PurchaseGateContextValue {
 }
 
 type RootProps = {
-  /** @deprecated Use `requireProduct`. */
-  requirePlan?: string
-  requireProduct?: string
+  /** Require an active purchase for this product (e.g. "prd_abc"). */
+  productRef?: string
+  /** Require an active purchase for this specific plan (e.g. "pln_premium"). */
+  planRef?: string
   asChild?: boolean
   children?: React.ReactNode
 } & Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>
 
 const Root = forwardRef<HTMLDivElement, RootProps>(function PurchaseGateRoot(
-  { requirePlan, requireProduct, asChild, children, ...rest },
+  { productRef, planRef, asChild, children, ...rest },
   forwardedRef,
 ) {
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('PurchaseGate')
 
-  const { purchases, loading, hasProduct, error } = usePurchase()
+  const { loading, hasPurchase, error } = usePurchase()
 
-  const productToCheck = requireProduct || requirePlan
-  const hasAccess = productToCheck
-    ? hasProduct(productToCheck)
-    : purchases.some(p => p.status === 'active')
+  const hasAccess = useMemo(
+    () => hasPurchase({ productRef, planRef }),
+    [hasPurchase, productRef, planRef],
+  )
 
   const state: GateState = loading ? 'loading' : hasAccess ? 'allowed' : 'blocked'
 

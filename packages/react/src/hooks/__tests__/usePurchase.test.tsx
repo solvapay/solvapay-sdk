@@ -23,8 +23,7 @@ const createMockPurchaseStatus = (
   isRefetching: false,
   error: null,
   purchases: [],
-  hasProduct: vi.fn(() => false),
-  hasPlan: vi.fn(() => false),
+  hasPurchase: vi.fn(() => false),
   activePurchase: null,
   hasPaidPurchase: false,
   activePaidPurchase: null,
@@ -351,39 +350,74 @@ describe('usePurchase', () => {
     })
   })
 
-  describe('hasProduct function', () => {
-    it('should return hasProduct function from context', () => {
-      const mockHasProduct = vi.fn(() => true)
-      const mockPurchase = createMockPurchaseStatus({
-        hasProduct: mockHasProduct,
-        hasPlan: mockHasProduct,
-      })
+  describe('hasPurchase function', () => {
+    it('should expose hasPurchase from context and forward criteria', () => {
+      const mockHasPurchase = vi.fn(() => true)
+      const mockPurchase = createMockPurchaseStatus({ hasPurchase: mockHasPurchase })
       const mockContextValue = createMockContextValue(mockPurchase)
 
       vi.mocked(useSolvaPayModule.useSolvaPay).mockReturnValue(mockContextValue)
 
       const { result } = renderHook(() => usePurchase())
 
-      expect(result.current.hasProduct).toBeDefined()
-      expect(typeof result.current.hasProduct).toBe('function')
-      expect(result.current.hasProduct('Test Product')).toBe(true)
-      expect(mockHasProduct).toHaveBeenCalledWith('Test Product')
+      expect(result.current.hasPurchase).toBeDefined()
+      expect(typeof result.current.hasPurchase).toBe('function')
+      expect(result.current.hasPurchase({ productRef: 'prd_test' })).toBe(true)
+      expect(mockHasPurchase).toHaveBeenCalledWith({ productRef: 'prd_test' })
     })
 
-    it('should return false when hasProduct returns false', () => {
-      const mockHasProduct = vi.fn(() => false)
-      const mockPurchase = createMockPurchaseStatus({
-        hasProduct: mockHasProduct,
-        hasPlan: mockHasProduct,
-      })
+    it('should accept planRef-only criteria', () => {
+      const mockHasPurchase = vi.fn(() => true)
+      const mockPurchase = createMockPurchaseStatus({ hasPurchase: mockHasPurchase })
       const mockContextValue = createMockContextValue(mockPurchase)
 
       vi.mocked(useSolvaPayModule.useSolvaPay).mockReturnValue(mockContextValue)
 
       const { result } = renderHook(() => usePurchase())
 
-      expect(result.current.hasProduct('Non-existent Product')).toBe(false)
-      expect(mockHasProduct).toHaveBeenCalledWith('Non-existent Product')
+      expect(result.current.hasPurchase({ planRef: 'pln_test' })).toBe(true)
+      expect(mockHasPurchase).toHaveBeenCalledWith({ planRef: 'pln_test' })
+    })
+
+    it('should accept combined productRef + planRef criteria', () => {
+      const mockHasPurchase = vi.fn(() => true)
+      const mockPurchase = createMockPurchaseStatus({ hasPurchase: mockHasPurchase })
+      const mockContextValue = createMockContextValue(mockPurchase)
+
+      vi.mocked(useSolvaPayModule.useSolvaPay).mockReturnValue(mockContextValue)
+
+      const { result } = renderHook(() => usePurchase())
+
+      expect(result.current.hasPurchase({ productRef: 'prd_x', planRef: 'pln_y' })).toBe(true)
+      expect(mockHasPurchase).toHaveBeenCalledWith({
+        productRef: 'prd_x',
+        planRef: 'pln_y',
+      })
+    })
+
+    it('should accept no criteria (any active purchase)', () => {
+      const mockHasPurchase = vi.fn(() => true)
+      const mockPurchase = createMockPurchaseStatus({ hasPurchase: mockHasPurchase })
+      const mockContextValue = createMockContextValue(mockPurchase)
+
+      vi.mocked(useSolvaPayModule.useSolvaPay).mockReturnValue(mockContextValue)
+
+      const { result } = renderHook(() => usePurchase())
+
+      expect(result.current.hasPurchase()).toBe(true)
+      expect(mockHasPurchase).toHaveBeenCalledWith()
+    })
+
+    it('should return false when hasPurchase returns false', () => {
+      const mockHasPurchase = vi.fn(() => false)
+      const mockPurchase = createMockPurchaseStatus({ hasPurchase: mockHasPurchase })
+      const mockContextValue = createMockContextValue(mockPurchase)
+
+      vi.mocked(useSolvaPayModule.useSolvaPay).mockReturnValue(mockContextValue)
+
+      const { result } = renderHook(() => usePurchase())
+
+      expect(result.current.hasPurchase({ productRef: 'prd_missing' })).toBe(false)
     })
   })
 
