@@ -13,6 +13,57 @@ pnpm add @solvapay/react
 - `react` ^18.2.0 || ^19.0.0
 - `react-dom` ^18.2.0 || ^19.0.0
 
+## Tailwind setup
+
+SolvaPay primitives ship plain CSS. They work with Tailwind v3 and v4
+identically. Import `@solvapay/react/styles.css` **after** your Tailwind
+entry so the SolvaPay rules resolve above preflight.
+
+### Tailwind v4 (recommended for new projects)
+
+`src/index.css`:
+
+```css
+@import "tailwindcss";
+@import "@solvapay/react/styles.css";
+```
+
+No `tailwind.config.ts` needed. Theme via `@theme` block if desired.
+
+### Tailwind v3 (Lovable, older projects)
+
+`tailwind.config.ts`:
+
+```ts
+import type { Config } from 'tailwindcss'
+
+export default {
+  content: ['./src/**/*.{ts,tsx}'],
+  theme: { extend: {} },
+  plugins: [],
+} satisfies Config
+```
+
+`src/index.css`:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "@solvapay/react/styles.css";
+```
+
+No `content[]` entry for `@solvapay/react` is needed — primitives don't ship
+utility classes. `data-[state=*]:` variants work natively in v3.3+.
+
+### CSS loading order
+
+Always import `@solvapay/react/styles.css` **after** `@tailwind utilities`
+(v3) or `@import "tailwindcss"` (v4). SolvaPay rules are unlayered; they beat
+Tailwind's preflight when loaded last. See
+[`examples/spa-checkout/src/index.css`](../../examples/spa-checkout/src/index.css)
+for the canonical demonstration.
+
 ## Quick Start
 
 ### Zero-Config Usage (Recommended)

@@ -59,6 +59,10 @@ The `supabase/functions/deno.json` maps npm packages for Deno:
 }
 ```
 
+> **Preview builds**: during the primitives preview window, use
+> `npm:@solvapay/supabase@preview` (and the same for the other three
+> imports). Drop the `@preview` suffix once `1.0.8` promotes to `@latest`.
+
 ### 3. Deploy
 
 Deploy individually:
