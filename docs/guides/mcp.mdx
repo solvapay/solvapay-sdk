@@ -266,14 +266,41 @@ Fail closed on auth failures. Do not substitute fallback identities such as `ano
 
 ### Non-hosted OAuth Bridge Pattern
 
-If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP proxy):
+If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP proxy), the
+`createMcpOAuthBridge` helper turns your MCP origin into a fully self-consistent OAuth
+authorization server (RFC 8414 §3.3). All OAuth endpoints are served from your MCP origin
+and transparently proxied to SolvaPay:
 
-1. Serve local discovery endpoints:
-   - `/.well-known/oauth-protected-resource`
-   - `/.well-known/oauth-authorization-server`
-2. Point discovery metadata to SolvaPay OAuth endpoints (`/v1/customer/auth/*`)
-3. Ensure `registration_endpoint` includes `mcp_server_id`
-4. Protect `/mcp` with bearer auth and return RFC9728 `WWW-Authenticate` challenge when missing
+| Endpoint (on MCP origin)                         | Proxied to                                         |
+| ------------------------------------------------ | -------------------------------------------------- |
+| `GET /.well-known/oauth-protected-resource`      | local (`authorization_servers: [mcpOrigin]`)       |
+| `GET /.well-known/oauth-authorization-server`    | local (`issuer` = MCP origin, endpoints on origin) |
+| `POST /oauth/register`                           | `POST /v1/customer/auth/register?product_ref=…`    |
+| `GET  /oauth/authorize`                          | `302` → `/v1/customer/auth/authorize`              |
+| `POST /oauth/token`                              | `POST /v1/customer/auth/token`                     |
+| `POST /oauth/revoke`                             | `POST /v1/customer/auth/revoke`                    |
+
+`product_ref` is injected automatically at Dynamic Client Registration, so your MCP clients
+do not need to know about it. `/mcp` is still protected with bearer auth and returns an
+RFC9728 `WWW-Authenticate` challenge when the token is missing or invalid.
+
+```ts
+import express from 'express'
+import { createMcpOAuthBridge } from '@solvapay/server'
+
+const app = express()
+app.use(express.json())
+// /oauth/token uses application/x-www-form-urlencoded
+app.use(express.urlencoded({ extended: false }))
+app.use(
+  ...createMcpOAuthBridge({
+    publicBaseUrl: process.env.MCP_PUBLIC_BASE_URL!,
+    apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL!,
+    productRef: process.env.SOLVAPAY_PRODUCT_REF!,
+    mcpPath: '/mcp',
+  }),
+)
+```
 
 Reference implementation: `examples/mcp-oauth-bridge`.
 
