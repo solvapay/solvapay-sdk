@@ -50,6 +50,20 @@ export async function confirmPayment(
         return { status: 'error', message: copy.errors.cardElementMissing }
       }
 
+      // Stripe requires elements.submit() before confirmPayment() for the
+      // Payment Element whenever async work happens between the user click
+      // and confirmPayment (deferred-intent mode, or any flow that resolves
+      // billing details/plan before confirming). Calling it unconditionally
+      // is safe: it validates the form and is a no-op if nothing is pending.
+      // https://stripe.com/docs/payments/accept-a-payment-deferred
+      const { error: submitError } = await elements.submit()
+      if (submitError) {
+        return {
+          status: 'error',
+          message: submitError.message || copy.errors.paymentUnexpected,
+        }
+      }
+
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         clientSecret,

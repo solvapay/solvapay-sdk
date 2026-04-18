@@ -226,6 +226,19 @@ const Inner: React.FC<InnerProps> = ({
     setError(null)
     setIsProcessing(true)
 
+    // Stripe requires elements.submit() before confirmPayment() whenever async
+    // work happens between click and confirm. Calling it unconditionally is
+    // safe — it validates the Payment Element and is a no-op otherwise.
+    // https://stripe.com/docs/payments/accept-a-payment-deferred
+    const { error: submitError } = await elements.submit()
+    if (submitError) {
+      const msg = submitError.message || copy.errors.paymentUnexpected
+      setError(msg)
+      setIsProcessing(false)
+      onError?.(new Error(msg))
+      return
+    }
+
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
       clientSecret,
