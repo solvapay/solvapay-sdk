@@ -1668,9 +1668,7 @@ export interface components {
             email?: string;
             name?: string;
             telephone?: string;
-            metadata: {
-                [key: string]: unknown;
-            };
+            metadata?: unknown;
             externalRef?: string;
         };
         CreateCustomerSessionResponse: {
