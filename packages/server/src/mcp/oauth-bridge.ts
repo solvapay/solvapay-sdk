@@ -432,6 +432,26 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
 
   const paths = resolvePaths(oauthPaths)
 
+  // SolvaPay is an OAuth 2.0 authorization server (RFC 8414), not an OpenID Provider.
+  // We don't issue id_tokens or expose a JWKS endpoint, so advertising an OIDC discovery
+  // doc would be a false capability claim. Strict OIDC validators (current Cursor) reject
+  // a non-compliant doc and log a noisy Zod error; returning 404 here tells them to fall
+  // back to RFC 8414, which we serve correctly on `/.well-known/oauth-authorization-server`.
+  const openidDiscoveryMiddleware: Middleware = (req, res, next) => {
+    if (req.method !== 'GET' || req.path !== '/.well-known/openid-configuration') {
+      next()
+      return
+    }
+
+    applyCorsHeaders(req, res)
+    res.status(404)
+    if (typeof res.end === 'function') {
+      res.end()
+    } else {
+      res.json({ error: 'not_found' })
+    }
+  }
+
   const protectedResourceMiddleware: Middleware = (req, res, next) => {
     if (req.method !== 'GET' || req.path !== protectedResourcePath) {
       next()
@@ -478,6 +498,21 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
       return
     }
 
+    // Streamable HTTP clients (Cursor, etc.) probe GET /mcp for a server-initiated
+    // SSE back-channel. Stateless MCP servers can't serve it; respond 405 so the
+    // client stays connected instead of transitioning to failed on a 400.
+    if (req.method && req.method !== 'POST' && req.method !== 'OPTIONS') {
+      applyCorsHeaders(req, res)
+      res.setHeader('Allow', 'POST, OPTIONS')
+      res.status(405)
+      if (typeof res.end === 'function') {
+        res.end()
+      } else {
+        res.json({ error: 'method_not_allowed' })
+      }
+      return
+    }
+
     const authHeader = getRequestAuthHeader(req)
     const id = getRequestJsonRpcId(req.body)
 
@@ -495,6 +530,8 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
       req.auth = auth
       next()
     } catch {
+      applyCorsHeaders(req, res)
+      res.setHeader('Access-Control-Expose-Headers', 'WWW-Authenticate')
       setMcpChallengeHeader(res, publicBaseUrl, protectedResourcePath)
 
       if (req.method === 'POST') {
@@ -507,6 +544,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
   }
 
   return [
+    openidDiscoveryMiddleware,
     protectedResourceMiddleware,
     authorizationServerMiddleware,
     registerMiddleware,

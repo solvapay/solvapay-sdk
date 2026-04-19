@@ -421,6 +421,89 @@ describe('createMcpOAuthBridge integration', () => {
     expect(body.registration_endpoint).toBe(`${publicBaseUrl}/oauth/register`)
   })
 
+  it('returns 405 with Allow: POST, OPTIONS on GET /mcp', async () => {
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+    })
+    const { res, state } = mockRes()
+    const req = mockReq({
+      method: 'GET',
+      path: '/mcp',
+      headers: { accept: 'text/event-stream' },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
+    expect(state.statusCode).toBe(405)
+    expect(state.headers['allow']).toBe('POST, OPTIONS')
+    expect(state.ended).toBe(true)
+  })
+
+  it('mirrors native-scheme Origin on GET /mcp 405', async () => {
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+    })
+    const { res, state } = mockRes()
+    const req = mockReq({
+      method: 'GET',
+      path: '/mcp',
+      headers: { origin: 'cursor://test', accept: 'text/event-stream' },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
+    expect(state.statusCode).toBe(405)
+    expect(state.headers['allow']).toBe('POST, OPTIONS')
+    expect(state.headers['access-control-allow-origin']).toBe('cursor://test')
+  })
+
+  it('exposes WWW-Authenticate via CORS on 401 POST /mcp with native origin', async () => {
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+    })
+    const { res, state } = mockRes()
+    const req = mockReq({
+      method: 'POST',
+      path: '/mcp',
+      headers: { origin: 'cursor://test', 'content-type': 'application/json' },
+      body: { jsonrpc: '2.0', id: 1, method: 'initialize' },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
+    expect(state.statusCode).toBe(401)
+    expect(state.headers['access-control-allow-origin']).toBe('cursor://test')
+    expect(state.headers['access-control-expose-headers']).toBe('WWW-Authenticate')
+    expect(state.headers['www-authenticate']).toContain('Bearer')
+    expect(state.headers['www-authenticate']).toContain('resource_metadata=')
+  })
+
+  it('returns 404 on GET /.well-known/openid-configuration (SolvaPay is an OAuth AS, not an OIDC Provider)', async () => {
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+    })
+    const { res, state } = mockRes()
+    const req = mockReq({
+      method: 'GET',
+      path: '/.well-known/openid-configuration',
+      headers: { origin: 'cursor://test' },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
+    expect(state.statusCode).toBe(404)
+    expect(state.ended).toBe(true)
+    expect(state.headers['access-control-allow-origin']).toBe('cursor://test')
+  })
+
   it('proxies DCR through the mounted register middleware with product_ref injected', async () => {
     fetchMock.mockResolvedValueOnce(jsonFetchResponse(201, { client_id: 'c1' }))
 

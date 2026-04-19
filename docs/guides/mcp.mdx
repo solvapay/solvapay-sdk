@@ -304,6 +304,26 @@ app.use(
 
 Reference implementation: `examples/mcp-oauth-bridge`.
 
+### Streamable HTTP transport tips
+
+- **`GET /mcp` must return 405, not 400.** Cursor (and other Streamable HTTP clients) opens
+  a server-initiated SSE back-channel with `GET /mcp` + `Accept: text/event-stream` right
+  after OAuth completes. Stateless MCP servers can't serve it; respond `405 Method Not
+  Allowed` with `Allow: POST, OPTIONS` and the client stays connected. `createMcpOAuthBridge`
+  does this for you — if your router forwards GETs to a different transport, make sure the
+  fallback returns 405, not 400, or the client will transition to `failed` on
+  "Failed to open SSE stream: Bad Request".
+- **`/.well-known/openid-configuration` must return 404.** Cursor attempts OIDC Discovery
+  before RFC 8414. `createMcpOAuthBridge` returns 404 on this path for you. If you don't
+  use the bridge, add a handler that explicitly returns 404 — a JSON response missing
+  `jwks_uri`, `subject_types_supported`, or `id_token_signing_alg_values_supported` fails
+  Cursor's OIDC validator and logs a noisy Zod error. We return 404 (rather than a full
+  OIDC doc) because SolvaPay is an OAuth 2.0 authorization server (RFC 8414), not an
+  OpenID Provider: we don't issue `id_token`s or expose a JWKS endpoint, so advertising
+  OIDC would be a false capability claim that could break strict OIDC clients later in
+  the flow. Only serve `/.well-known/oauth-authorization-server` and
+  `/.well-known/oauth-protected-resource` from your MCP origin.
+
 ## Error Handling
 
 ### Basic Error Handling
