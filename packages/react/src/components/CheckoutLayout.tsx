@@ -120,12 +120,12 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
 
   const resolvedSize: ResolvedSize = size === 'auto' ? autoSize : size
 
-  const [selectedPlanRef, setSelectedPlanRef] = useState<string | null>(
-    planRef ?? initialPlanRef ?? null,
-  )
-  const [userStep, setUserStep] = useState<Step>(
-    planRef ? 'pay' : selectedPlanRef ? 'pay' : 'select',
-  )
+  // `initialPlanRef` pre-selects inside the selector step — it does not bypass
+  // selection. Only an explicit `planRef` skips the selector entirely. This
+  // keeps returning users (e.g. with `activePurchase?.planRef` from usePurchase)
+  // able to see and switch plans instead of landing straight on payment.
+  const [selectedPlanRef, setSelectedPlanRef] = useState<string | null>(planRef ?? null)
+  const [userStep, setUserStep] = useState<Step>(planRef ? 'pay' : 'select')
 
   const effectivePlanRef = planRef ?? selectedPlanRef ?? undefined
   const { plan: resolvedPlan } = usePlan({
