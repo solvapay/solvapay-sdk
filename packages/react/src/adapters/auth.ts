@@ -34,6 +34,20 @@ export interface AuthAdapter {
    * return null and let the caller decide how to handle unauthenticated requests.
    */
   getUserId: () => Promise<string | null>
+
+  /**
+   * Subscribe to auth-state changes. Optional.
+   *
+   * When provided, `SolvaPayProvider` calls `subscribe` on mount and
+   * triggers `detectAuth` every time the listener fires instead of
+   * only running `detectAuth` once. This is how reactive adapters such
+   * as `@solvapay/react-supabase` push sign-in / sign-out / token-refresh
+   * events into the SDK without the app having to reload.
+   *
+   * @param listener - Called with no arguments whenever auth state changes
+   * @returns An unsubscribe function the provider calls on cleanup
+   */
+  subscribe?: (listener: () => void) => () => void
 }
 
 /**

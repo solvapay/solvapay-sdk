@@ -17,7 +17,6 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
       error: null,
       purchases: [],
       hasProduct: () => false,
-      hasPlan: () => false,
       activePurchase: null,
       hasPaidPurchase: false,
       activePaidPurchase: null,

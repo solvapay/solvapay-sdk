@@ -21,53 +21,38 @@ export type SupabaseClientLike = {
         session: { access_token?: string; user?: { id?: string } } | null
       }
     }>
+    /**
+     * Supabase's native auth-state subscription. Structurally typed so we
+     * don't import `@supabase/supabase-js`. Returns `{ data: { subscription: { unsubscribe } } }`.
+     */
+    onAuthStateChange: (
+      callback: (event: string, session: unknown) => void,
+    ) => {
+      data: {
+        subscription: {
+          unsubscribe: () => void
+        }
+      }
+    }
   }
 }
 
 /**
  * Configuration for `createSupabaseAuthAdapter`.
  *
- * Prefer the `{ client }` form: pass your app's existing Supabase client so
- * only one `GoTrue` instance is ever in the page. The URL/key form is kept
- * for backwards compatibility but creates a second client that can miss
- * sessions when the host app uses custom storage keys, `@supabase/ssr`, or
- * iframe-isolated storage.
+ * Pass your app's existing Supabase client so only one `GoTrue` instance is
+ * ever in the page. This works with `@supabase/ssr`, custom storage keys,
+ * and SSR hydration without the adapter creating a second client.
  */
-export type SupabaseAuthAdapterConfig =
-  | {
-      /** The host app's existing Supabase client. Recommended. */
-      client: SupabaseClientLike
-    }
-  | {
-      /** @deprecated Prefer `{ client }` — pass your existing Supabase client instead. */
-      supabaseUrl: string
-      /** @deprecated Prefer `{ client }` — pass your existing Supabase client instead. */
-      supabaseAnonKey: string
-    }
-
-let urlKeyDeprecationWarned = false
-
-function isClientConfig(
-  config: SupabaseAuthAdapterConfig,
-): config is { client: SupabaseClientLike } {
-  return 'client' in config && config.client !== undefined && config.client !== null
+export type SupabaseAuthAdapterConfig = {
+  client: SupabaseClientLike
 }
 
 /**
  * Create a Supabase authentication adapter for SolvaPayProvider.
  *
- * Two configuration forms are supported:
- *
- * 1. **`{ client }` (recommended)** — reuse the host app's existing Supabase
- *    client. No dynamic import, no second `GoTrue` instance, works with
- *    `@supabase/ssr` and custom storage configurations.
- * 2. **`{ supabaseUrl, supabaseAnonKey }` (deprecated)** — the adapter
- *    dynamically imports `@supabase/supabase-js` and creates its own client.
- *    Emits a one-time `console.warn` recommending migration to `{ client }`.
- *
  * @example
  * ```tsx
- * // Recommended: reuse the host app's client
  * import { createClient } from '@supabase/supabase-js'
  * import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
  * import { SolvaPayProvider } from '@solvapay/react'
@@ -89,61 +74,22 @@ function isClientConfig(
  * @since 1.0.0
  */
 export function createSupabaseAuthAdapter(config: SupabaseAuthAdapterConfig): AuthAdapter {
-  if (isClientConfig(config)) {
-    return adapterFromClient(() => Promise.resolve(config.client))
-  }
-
-  const { supabaseUrl, supabaseAnonKey } = config
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!config || !config.client) {
     throw new Error(
-      'createSupabaseAuthAdapter: pass { client } with your existing Supabase client, or { supabaseUrl, supabaseAnonKey } to have the adapter create one.',
+      'createSupabaseAuthAdapter: pass { client } with your existing Supabase client.',
     )
   }
 
-  if (!urlKeyDeprecationWarned) {
-    urlKeyDeprecationWarned = true
-    console.warn(
-      '[SupabaseAuthAdapter] The { supabaseUrl, supabaseAnonKey } form is deprecated and creates a second GoTrueClient that can miss sessions with @supabase/ssr or custom auth.storageKey. Pass { client: yourExistingSupabaseClient } instead.',
-    )
-  }
+  const client = config.client
 
-  let supabaseClient: SupabaseClientLike | null = null
-  let clientPromise: Promise<SupabaseClientLike> | null = null
-
-  const getClient = (): Promise<SupabaseClientLike> => {
-    if (supabaseClient) return Promise.resolve(supabaseClient)
-    if (clientPromise) return clientPromise
-
-    clientPromise = (async () => {
-      try {
-        const { createClient } = await import('@supabase/supabase-js')
-        const client = createClient(supabaseUrl, supabaseAnonKey) as unknown as SupabaseClientLike
-        supabaseClient = client
-        return client
-      } catch {
-        clientPromise = null
-        throw new Error(
-          'Failed to load @supabase/supabase-js. Make sure it is installed: npm install @supabase/supabase-js',
-        )
-      }
-    })()
-
-    return clientPromise
-  }
-
-  return adapterFromClient(getClient)
-}
-
-function adapterFromClient(getClient: () => Promise<SupabaseClientLike>): AuthAdapter {
   return {
     async getToken(): Promise<string | null> {
       if (typeof window === 'undefined') return null
 
       try {
-        const supabase = await getClient()
         const {
           data: { session },
-        } = await supabase.auth.getSession()
+        } = await client.auth.getSession()
         return session?.access_token || null
       } catch (error) {
         console.warn('[SupabaseAuthAdapter] Failed to get token:', error)
@@ -155,25 +101,38 @@ function adapterFromClient(getClient: () => Promise<SupabaseClientLike>): AuthAd
       if (typeof window === 'undefined') return null
 
       try {
-        const supabase = await getClient()
         const {
           data: { session },
-        } = await supabase.auth.getSession()
+        } = await client.auth.getSession()
         return session?.user?.id || null
       } catch (error) {
         console.warn('[SupabaseAuthAdapter] Failed to get user ID:', error)
         return null
       }
     },
-  }
-}
 
-/**
- * Test-only: reset the one-time deprecation warning flag so tests can
- * assert the warning fires exactly once per process in realistic usage.
- *
- * @internal
- */
-export function __resetUrlKeyDeprecationWarned(): void {
-  urlKeyDeprecationWarned = false
+    subscribe(listener: () => void): () => void {
+      if (typeof window === 'undefined') {
+        return () => undefined
+      }
+
+      try {
+        const {
+          data: { subscription },
+        } = client.auth.onAuthStateChange(() => {
+          listener()
+        })
+        return () => {
+          try {
+            subscription.unsubscribe()
+          } catch (error) {
+            console.warn('[SupabaseAuthAdapter] Failed to unsubscribe:', error)
+          }
+        }
+      } catch (error) {
+        console.warn('[SupabaseAuthAdapter] Failed to subscribe to auth changes:', error)
+        return () => undefined
+      }
+    },
+  }
 }

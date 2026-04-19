@@ -152,6 +152,23 @@ export interface SolvaPayClient {
     params: components['schemas']['CreateCustomerRequest'],
   ): Promise<{ customerRef: string }>
 
+  /**
+   * PATCH: /v1/sdk/customers/{customerRef}
+   * Update mutable customer fields. Used by `ensureCustomer` to backfill
+   * `externalRef` on an existing email-matched customer, and exposed
+   * directly for integrators who need it.
+   */
+  updateCustomer?(
+    customerRef: string,
+    params: {
+      email?: string
+      name?: string
+      telephone?: string
+      metadata?: Record<string, unknown>
+      externalRef?: string
+    },
+  ): Promise<{ customerRef: string }>
+
   // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
   getCustomer(params: {
     customerRef?: string

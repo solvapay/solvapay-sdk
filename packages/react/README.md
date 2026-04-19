@@ -182,12 +182,10 @@ export default function App() {
 ```tsx
 import { SolvaPayProvider } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+import { supabase } from './lib/supabase'
 
 export default function App() {
-  const adapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  })
+  const adapter = createSupabaseAuthAdapter({ client: supabase })
 
   return (
     <SolvaPayProvider config={{ auth: { adapter } }}>
@@ -534,7 +532,7 @@ Lovable-style apps deploy React frontends against Supabase Edge Functions
       // …same pattern for every other endpoint
     },
     auth: {
-      adapter: createSupabaseAuthAdapter({ supabaseUrl, supabaseAnonKey }),
+      adapter: createSupabaseAuthAdapter({ client: supabase }),
     },
   }}
 >

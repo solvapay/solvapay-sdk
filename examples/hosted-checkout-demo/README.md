@@ -431,7 +431,7 @@ The provider automatically:
 
 - Fetches purchase on mount
 - Provides refetch method for updates
-- Exposes helper methods (`hasActivePurchase`, `hasPlan`)
+- Exposes helper methods (`hasActivePurchase`)
 - Manages loading states
 
 ### Authentication
