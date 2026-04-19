@@ -45,6 +45,9 @@ Script to fix common documentation link issues. Run this if links need to be upd
 ## Publishing
 
 - `test-publish.ts` - Test publishing workflow
+- `unpublish-preview.sh` - Unpublish a preview version across all 8 publishable packages. Works within npm's 72h self-service window **and** only if no other registry packages depend on the version. Auto-detects auth (bypass-2FA token in `~/.npmrc` or interactive TOTP). Usage: `./scripts/unpublish-preview.sh 1.0.9-preview.1`
+- `deprecate-version.sh` - Mark a version as deprecated across all 8 publishable packages. Use when `unpublish-preview.sh` fails with E405 (has dependent packages in the registry) — typical for cross-referenced SolvaPay previews. Deprecated versions stay installable by exact pin but show a warning. Usage: `./scripts/deprecate-version.sh 1.0.9-preview.1 "orphaned preview"`
+- `verify-preview.sh` - Smoke-test a published preview. Creates a scratch dir, installs all 8 packages from npm, checks versions + subpath export resolution (including `@solvapay/react/primitives` and `@solvapay/react/styles.css`). Usage: `./scripts/verify-preview.sh` (tests `@preview` dist-tag) or `./scripts/verify-preview.sh 1.0.8-preview.1` (exact version)
 
 ## Repository Management
 

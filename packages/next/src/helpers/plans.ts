@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type { SolvaPay } from '@solvapay/server'
 import { listPlansCore, isErrorResult } from '@solvapay/server'
 
 type ListPlansSuccess = Exclude<Awaited<ReturnType<typeof listPlansCore>>, { error: string }>
@@ -9,8 +10,11 @@ type ListPlansSuccess = Exclude<Awaited<ReturnType<typeof listPlansCore>>, { err
 
 export async function listPlans(
   request: globalThis.Request,
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
 ): Promise<ListPlansSuccess | NextResponse> {
-  const result = await listPlansCore(request)
+  const result = await listPlansCore(request, options)
 
   if (isErrorResult(result)) {
     return NextResponse.json(

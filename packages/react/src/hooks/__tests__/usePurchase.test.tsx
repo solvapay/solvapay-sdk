@@ -48,6 +48,8 @@ const createMockContextValue = (
     loading: false,
     credits: null,
     displayCurrency: null,
+    creditsPerMinorUnit: null,
+    displayExchangeRate: null,
     refetch: vi.fn(),
     adjustBalance: vi.fn(),
   },

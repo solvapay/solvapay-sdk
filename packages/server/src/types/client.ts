@@ -60,6 +60,28 @@ export interface ProcessPaymentResult {
 
 export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 
+/**
+ * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
+ *
+ * Hand-typed here until the OpenAPI generator picks up the new endpoint.
+ * Fields match `SdkMerchantResponseDto` on the backend.
+ */
+export type SdkMerchantResponse = {
+  displayName: string
+  legalName: string
+  supportEmail?: string
+  supportUrl?: string
+  termsUrl?: string
+  privacyUrl?: string
+  country?: string
+  defaultCurrency?: string
+  statementDescriptor?: string
+  logoUrl?: string
+}
+
+/** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
+export type SdkProductResponse = components['schemas']['SdkProductResponse']
+
 export type McpBootstrapPlanInput =
   NonNullable<components['schemas']['McpBootstrapDto']['plans']>[number]
 
@@ -136,6 +158,16 @@ export interface SolvaPayClient {
     externalRef?: string
     email?: string
   }): Promise<CustomerResponseMapped>
+
+  /**
+   * SDK-facing merchant identity (GET /v1/sdk/merchant).
+   * Returns the subset of provider fields safe for browser consumption —
+   * used by `<MandateText>`, `<CheckoutSummary>`, and trust signals.
+   */
+  getMerchant?(): Promise<SdkMerchantResponse>
+
+  // GET: /v1/sdk/products/{productRef}
+  getProduct?(productRef: string): Promise<SdkProductResponse>
 
   // Management methods
 

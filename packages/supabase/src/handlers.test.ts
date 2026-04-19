@@ -14,6 +14,8 @@ vi.mock('@solvapay/server', () => ({
   syncCustomerCore: vi.fn(),
   createCheckoutSessionCore: vi.fn(),
   createCustomerSessionCore: vi.fn(),
+  getMerchantCore: vi.fn(),
+  getProductCore: vi.fn(),
   verifyWebhook: vi.fn(),
   isErrorResult: vi.fn(
     (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
@@ -34,6 +36,8 @@ import {
   syncCustomerCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  getMerchantCore,
+  getProductCore,
   verifyWebhook,
 } from '@solvapay/server'
 import {
@@ -50,6 +54,8 @@ import {
   syncCustomer,
   createCheckoutSession,
   createCustomerSession,
+  getMerchant,
+  getProduct,
   solvapayWebhook,
 } from './handlers'
 import { configureCors } from './cors'
@@ -67,6 +73,8 @@ const mockListPlansCore = vi.mocked(listPlansCore)
 const mockSyncCustomerCore = vi.mocked(syncCustomerCore)
 const mockCreateCheckoutSessionCore = vi.mocked(createCheckoutSessionCore)
 const mockCreateCustomerSessionCore = vi.mocked(createCustomerSessionCore)
+const mockGetMerchantCore = vi.mocked(getMerchantCore)
+const mockGetProductCore = vi.mocked(getProductCore)
 const mockVerifyWebhook = vi.mocked(verifyWebhook)
 
 function fakeGet(url = 'http://localhost/api/test') {
@@ -263,6 +271,32 @@ describe('listPlans', () => {
     const res = await listPlans(fakeGet('http://localhost/api/plans?productRef=prd_1'))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ plans: [{ reference: 'pln_1' }] })
+  })
+})
+
+describe('getMerchant', () => {
+  it('returns merchant JSON passthrough on success', async () => {
+    mockGetMerchantCore.mockResolvedValue({
+      name: 'Test Merchant',
+      reference: 'mer_1',
+    } as never)
+
+    const res = await getMerchant(fakeGet('http://localhost/api/merchant'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ name: 'Test Merchant', reference: 'mer_1' })
+  })
+})
+
+describe('getProduct', () => {
+  it('passes through query params and returns product', async () => {
+    mockGetProductCore.mockResolvedValue({
+      reference: 'prd_1',
+      name: 'Widget API',
+    } as never)
+
+    const res = await getProduct(fakeGet('http://localhost/api/product?productRef=prd_1'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ reference: 'prd_1', name: 'Widget API' })
   })
 })
 

@@ -31,6 +31,7 @@ const PACKAGES = [
   'packages/auth/package.json',
   'packages/next/package.json',
   'packages/cli/package.json',
+  'packages/supabase/package.json',
 ]
 
 function getLatestTag(preview: boolean = false): string {

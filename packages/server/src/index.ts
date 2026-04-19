@@ -162,6 +162,8 @@ export type {
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,
   ToolPlanMappingInput,
+  SdkMerchantResponse,
+  SdkProductResponse,
 } from './types/client'
 
 // Export utilities for general use
@@ -190,6 +192,8 @@ export {
   checkPurchaseCore,
   trackUsageCore,
   listPlansCore,
+  getMerchantCore,
+  getProductCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'

@@ -7,12 +7,17 @@
   "main": "./stub-api-client.ts",
   "exports": {
     ".": "./stub-api-client.ts",
-    "./stub-api-client": "./stub-api-client.ts"
+    "./stub-api-client": "./stub-api-client.ts",
+    "./next-stub": "./next-stub.ts",
+    "./next-route-dispatcher": "./next-route-dispatcher.ts"
   },
   "peerDependencies": {
-    "@solvapay/server": "*"
+    "@solvapay/next": "*",
+    "@solvapay/server": "*",
+    "next": "*"
   },
   "devDependencies": {
+    "@solvapay/next": "workspace:*",
     "@solvapay/server": "workspace:*"
   }
 }

@@ -53,19 +53,7 @@ export function Navigation() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <ProductBadge>
-              {({ displayPlan, shouldShow }) => {
-                if (!shouldShow) {
-                  return null
-                }
-
-                return (
-                  <div className="px-2.5 py-1 rounded-md bg-slate-50 text-xs font-medium">
-                    <span className="text-emerald-600">{displayPlan}</span>
-                  </div>
-                )
-              }}
-            </ProductBadge>
+            <ProductBadge className="px-2.5 py-1 rounded-md bg-slate-50 text-xs font-medium text-emerald-600" />
 
             <Link
               href="/topup"

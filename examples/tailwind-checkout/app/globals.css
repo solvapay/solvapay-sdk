@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+/*
+ * This example does NOT import `@solvapay/react/styles.css` on purpose —
+ * every primitive is styled end-to-end with Tailwind v4 utilities and
+ * `data-[state=X]:` variants. The goal is to prove the primitives' data
+ * vocabulary is sufficient on its own.
+ */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #ffffff;
+  color: #0f172a;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

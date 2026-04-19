@@ -10,6 +10,7 @@ import type {
   BalanceStatus,
   CancelResult,
   ReactivateResult,
+  PrefillCustomer,
 } from './types'
 import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import {
@@ -24,6 +25,7 @@ import {
   clearCachedCustomerRef,
   buildRequestHeaders,
 } from './utils/headers'
+import { CopyProvider } from './i18n/context'
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null)
 
@@ -141,7 +143,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   // Store functions in refs to avoid dependency issues
   const checkPurchaseRef = useRef<(() => Promise<CustomerPurchaseData>) | null>(null)
   const createPaymentRef = useRef<
-    ((params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>) | null
+    | ((params: {
+        planRef?: string
+        productRef?: string
+        customer?: PrefillCustomer
+      }) => Promise<PaymentIntentResult>)
+    | null
   >(null)
   const processPaymentRef = useRef<
     | ((params: {
@@ -202,18 +209,29 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [buildDefaultCheckPurchase])
 
   const buildDefaultCreatePayment = useCallback(
-    async (params: { planRef?: string; productRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: {
+      planRef?: string
+      productRef?: string
+      customer?: PrefillCustomer
+    }): Promise<PaymentIntentResult> => {
       const currentConfig = configRef.current
       const { headers } = await buildRequestHeaders(currentConfig)
       const route = currentConfig?.api?.createPayment || '/api/create-payment-intent'
       const fetchFn = currentConfig?.fetch || fetch
 
-      const body: { planRef?: string; productRef?: string } = {}
+      const body: {
+        planRef?: string
+        productRef?: string
+        customer?: PrefillCustomer
+      } = {}
       if (params.planRef) {
         body.planRef = params.planRef
       }
       if (params.productRef) {
         body.productRef = params.productRef
+      }
+      if (params.customer && (params.customer.name || params.customer.email)) {
+        body.customer = params.customer
       }
 
       const res = await fetchFn(route, {
@@ -371,7 +389,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
   }, [buildDefaultCheckPurchase])
 
   const createPayment = useCallback(
-    async (params: { planRef?: string; productRef?: string }): Promise<PaymentIntentResult> => {
+    async (params: {
+      planRef?: string
+      productRef?: string
+      customer?: PrefillCustomer
+    }): Promise<PaymentIntentResult> => {
       if (createPaymentRef.current) {
         return createPaymentRef.current(params)
       }
@@ -703,5 +725,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     ],
   )
 
-  return <SolvaPayContext.Provider value={contextValue}>{children}</SolvaPayContext.Provider>
+  return (
+    <SolvaPayContext.Provider value={contextValue}>
+      <CopyProvider locale={config?.locale} copy={config?.copy}>
+        {children}
+      </CopyProvider>
+    </SolvaPayContext.Provider>
+  )
 }

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useSolvaPay } from './useSolvaPay'
+import { useCopy } from './useCopy'
 import type { ActivatePlanResult } from '../types'
 
 export type ActivationState =
@@ -40,6 +41,7 @@ export interface UseActivationReturn {
  */
 export function useActivation(): UseActivationReturn {
   const { activatePlan } = useSolvaPay()
+  const copy = useCopy()
   const [state, setState] = useState<ActivationState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ActivatePlanResult | null>(null)
@@ -63,23 +65,23 @@ export function useActivation(): UseActivationReturn {
             setState('topup_required')
             break
           case 'payment_required':
-            setError('This plan requires payment. Please select a different plan.')
+            setError(copy.activation.paymentRequired)
             setState('payment_required')
             break
           case 'invalid':
-            setError(data.message || 'Invalid plan configuration.')
+            setError(data.message || copy.activation.invalidConfiguration)
             setState('error')
             break
           default:
-            setError('Unexpected response from server.')
+            setError(copy.activation.unexpectedResponse)
             setState('error')
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Activation failed')
+        setError(err instanceof Error ? err.message : copy.activation.failed)
         setState('error')
       }
     },
-    [activatePlan],
+    [activatePlan, copy],
   )
 
   const reset = useCallback(() => {

@@ -40,6 +40,7 @@ const PACKAGES_TO_TAG = [
   '@solvapay/auth',
   '@solvapay/next',
   'solvapay',
+  '@solvapay/supabase',
 ]
 
 function getCurrentVersion(): string {

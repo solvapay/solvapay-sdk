@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/react-supabase",
-  "version": "1.0.1",
+  "version": "1.0.8-preview.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -18,7 +18,7 @@
     "directory": "packages/react-supabase"
   },
   "peerDependencies": {
-    "@solvapay/react": "^1.0.1",
+    "@solvapay/react": "workspace:^",
     "@supabase/supabase-js": "^2.0.0"
   },
   "scripts": {

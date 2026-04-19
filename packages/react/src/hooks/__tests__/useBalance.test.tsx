@@ -30,6 +30,8 @@ function createMockContext(
       loading: false,
       credits: 250000,
       displayCurrency: 'USD',
+      creditsPerMinorUnit: null,
+      displayExchangeRate: null,
       refetch: vi.fn(),
       adjustBalance: vi.fn(),
       ...balanceOverrides,

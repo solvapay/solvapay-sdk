@@ -1,4 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
+import { useCopy } from './useCopy'
+import { interpolate } from '../i18n/interpolate'
 import type { UseTopupAmountSelectorOptions, UseTopupAmountSelectorReturn } from '../types'
 
 function getQuickAmounts(currency: string): number[] {
@@ -51,6 +53,7 @@ export function useTopupAmountSelector(
   options: UseTopupAmountSelectorOptions,
 ): UseTopupAmountSelectorReturn {
   const { currency, minAmount = DEFAULT_MIN, maxAmount = DEFAULT_MAX } = options
+  const copy = useCopy()
 
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null)
   const [customAmount, setCustomAmountRaw] = useState('')
@@ -93,20 +96,28 @@ export function useTopupAmountSelector(
 
   const validate = useCallback((): boolean => {
     if (resolvedAmount == null) {
-      setError('Please select or enter an amount')
+      setError(copy.topup.selectOrEnterAmount)
       return false
     }
     if (resolvedAmount < minAmount) {
-      setError(`Minimum amount is ${currencySymbol}${minAmount}`)
+      setError(
+        interpolate(copy.topup.minAmount, {
+          amount: `${currencySymbol}${minAmount}`,
+        }),
+      )
       return false
     }
     if (resolvedAmount > maxAmount) {
-      setError(`Maximum amount is ${currencySymbol}${maxAmount.toLocaleString()}`)
+      setError(
+        interpolate(copy.topup.maxAmount, {
+          amount: `${currencySymbol}${maxAmount.toLocaleString()}`,
+        }),
+      )
       return false
     }
     setError(null)
     return true
-  }, [resolvedAmount, minAmount, maxAmount, currencySymbol])
+  }, [resolvedAmount, minAmount, maxAmount, currencySymbol, copy])
 
   const reset = useCallback(() => {
     setSelectedAmount(null)
