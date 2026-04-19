@@ -11,9 +11,10 @@ function makeStripe(overrides: Partial<Stripe>): Stripe {
   } as unknown as Stripe
 }
 
-function makeElements(element: unknown): StripeElements {
+function makeElements(element: unknown, submitResult: unknown = {}): StripeElements {
   return {
     getElement: vi.fn().mockReturnValue(element),
+    submit: vi.fn().mockResolvedValue(submitResult),
   } as unknown as StripeElements
 }
 
@@ -35,6 +36,7 @@ describe('confirmPayment', () => {
     })
 
     expect(result.status).toBe('succeeded')
+    expect(elements.submit).toHaveBeenCalledTimes(1)
     expect(confirmPaymentFn).toHaveBeenCalledWith(
       expect.objectContaining({
         elements,
@@ -42,6 +44,59 @@ describe('confirmPayment', () => {
         redirect: 'if_required',
       }),
     )
+  })
+
+  it('calls elements.submit() before stripe.confirmPayment() for payment-element mode', async () => {
+    const callOrder: string[] = []
+    const submitFn = vi.fn(async () => {
+      callOrder.push('submit')
+      return {}
+    })
+    const confirmPaymentFn = vi.fn(async () => {
+      callOrder.push('confirm')
+      return { paymentIntent: { status: 'succeeded', id: 'pi_order' } }
+    })
+    const stripe = makeStripe({ confirmPayment: confirmPaymentFn })
+    const elements = {
+      getElement: vi.fn().mockReturnValue({ __tag: 'payment' }),
+      submit: submitFn,
+    } as unknown as StripeElements
+
+    const result = await confirmPayment({
+      stripe,
+      elements,
+      clientSecret: 'cs_order',
+      mode: 'payment-element',
+      returnUrl: 'https://example.com/return',
+      copy: enCopy,
+    })
+
+    expect(result.status).toBe('succeeded')
+    expect(callOrder).toEqual(['submit', 'confirm'])
+  })
+
+  it('returns error when elements.submit() fails and does not call confirmPayment', async () => {
+    const confirmPaymentFn = vi.fn()
+    const stripe = makeStripe({ confirmPayment: confirmPaymentFn })
+    const elements = makeElements(
+      { __tag: 'payment' },
+      { error: { message: 'Your postal code is incomplete.' } },
+    )
+
+    const result = await confirmPayment({
+      stripe,
+      elements,
+      clientSecret: 'cs_submit_err',
+      mode: 'payment-element',
+      returnUrl: 'https://example.com/return',
+      copy: enCopy,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      message: 'Your postal code is incomplete.',
+    })
+    expect(confirmPaymentFn).not.toHaveBeenCalled()
   })
 
   it('uses confirmCardPayment for card-element mode', async () => {
