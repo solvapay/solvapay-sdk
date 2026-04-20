@@ -22,7 +22,6 @@ function buildCtx(
       error: null,
       purchases,
       hasProduct: () => false,
-      hasPlan: () => false,
       activePurchase: active,
       hasPaidPurchase: !!active && (active.amount ?? 0) > 0,
       activePaidPurchase: active,

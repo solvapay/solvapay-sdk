@@ -487,6 +487,22 @@ export class SolvaPayPaywall {
                 this.log(
                   `⚠️ Resolved customer ${customerRef} by email after conflict; using existing customer ${byEmail.customerRef}`,
                 )
+
+                // Best-effort: backfill externalRef so the next lookup takes the
+                // fast getCustomer({externalRef}) path and we don't trip the
+                // email-conflict branch again. Swallow errors — the resolved
+                // customerRef is already cached and usable.
+                if (!byEmail.externalRef && this.apiClient.updateCustomer) {
+                  try {
+                    await this.apiClient.updateCustomer(byEmail.customerRef, { externalRef })
+                  } catch (backfillError: unknown) {
+                    this.log(
+                      `⚠️ Failed to backfill externalRef on ${byEmail.customerRef}:`,
+                      backfillError instanceof Error ? backfillError.message : backfillError,
+                    )
+                  }
+                }
+
                 return byEmail.customerRef
               }
             } catch (emailLookupError: unknown) {

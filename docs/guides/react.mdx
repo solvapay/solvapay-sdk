@@ -97,12 +97,10 @@ Use the Supabase auth adapter for automatic user ID extraction:
 ```tsx
 import { SolvaPayProvider } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+import { supabase } from './lib/supabase'
 
 function App() {
-  const supabaseAdapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  })
+  const supabaseAdapter = createSupabaseAuthAdapter({ client: supabase })
 
   return (
     <SolvaPayProvider
@@ -563,14 +561,12 @@ Here's a complete React application with SolvaPay integration:
 // App.tsx
 import { SolvaPayProvider } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+import { supabase } from './lib/supabase'
 import { Dashboard } from './Dashboard'
 import { Checkout } from './Checkout'
 
 function App() {
-  const supabaseAdapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  })
+  const supabaseAdapter = createSupabaseAuthAdapter({ client: supabase })
 
   return (
     <SolvaPayProvider config={{ auth: { adapter: supabaseAdapter } }}>

@@ -426,7 +426,15 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
     [buildDefaultCreateTopupPayment],
   )
 
-  // Detect authentication state and user ID
+  // Detect authentication state and user ID.
+  //
+  // Reactive path (preferred): if the adapter exposes `subscribe`, we run
+  // `detectAuth` on every emitted auth event (sign-in, sign-out, token
+  // refresh, etc.) and skip polling entirely.
+  //
+  // Fallback path: for adapters that don't implement `subscribe` (e.g.
+  // custom inline adapters), we run `detectAuth` once on mount and then
+  // poll every 30s so stale token changes are eventually picked up.
   useEffect(() => {
     const detectAuth = async () => {
       const currentConfig = configRef.current
@@ -459,8 +467,15 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
 
     detectAuth()
 
-    const interval = setInterval(detectAuth, 30000)
+    const adapter = getAuthAdapter(configRef.current)
+    if (typeof adapter.subscribe === 'function') {
+      const unsubscribe = adapter.subscribe(() => {
+        detectAuth()
+      })
+      return unsubscribe
+    }
 
+    const interval = setInterval(detectAuth, 30000)
     return () => clearInterval(interval)
   }, [userId])
 
@@ -666,11 +681,6 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({
       name: purchaseData.name,
       purchases: purchaseData.purchases,
       hasProduct: (productName: string) => {
-        return purchaseData.purchases.some(
-          p => p.productName.toLowerCase() === productName.toLowerCase() && p.status === 'active',
-        )
-      },
-      hasPlan: (productName: string) => {
         return purchaseData.purchases.some(
           p => p.productName.toLowerCase() === productName.toLowerCase() && p.status === 'active',
         )

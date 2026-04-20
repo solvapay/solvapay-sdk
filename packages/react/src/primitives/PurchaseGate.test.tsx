@@ -18,7 +18,6 @@ function ctxWith(
       error: null,
       purchases,
       hasProduct,
-      hasPlan: () => false,
       activePurchase: purchases.find(p => p.status === 'active') ?? null,
       hasPaidPurchase: false,
       activePaidPurchase: null,

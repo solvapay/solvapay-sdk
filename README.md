@@ -101,13 +101,11 @@ Wrap your app with `SolvaPayProvider` and use `PaymentForm` for checkout:
 ```tsx
 import { SolvaPayProvider, PaymentForm, usePurchase } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+import { supabase } from './lib/supabase'
 
 function RootLayout({ children }) {
   // Optional: Use Supabase auth adapter
-  const supabaseAdapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  })
+  const supabaseAdapter = createSupabaseAuthAdapter({ client: supabase })
 
   return (
     <SolvaPayProvider

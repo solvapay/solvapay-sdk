@@ -28,7 +28,6 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
       error: null,
       purchases: [],
       hasProduct: () => false,
-      hasPlan: () => false,
       activePurchase: null,
       hasPaidPurchase: false,
       activePaidPurchase: null,

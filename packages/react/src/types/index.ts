@@ -171,8 +171,6 @@ export interface PurchaseStatus {
   name?: string
   purchases: PurchaseInfo[]
   hasProduct: (productName: string) => boolean
-  /** @deprecated Use hasProduct instead */
-  hasPlan: (productName: string) => boolean
   /**
    * Primary active purchase (paid or free) - most recent purchase with status === 'active'
    * Backend keeps purchases as 'active' until expiration, even when cancelled.
@@ -265,18 +263,6 @@ export interface SolvaPayConfig {
      * ```
      */
     adapter?: AuthAdapter
-
-    /**
-     * @deprecated Use `adapter` instead. Will be removed in a future version.
-     * Function to get auth token
-     */
-    getToken?: () => Promise<string | null>
-
-    /**
-     * @deprecated Use `adapter` instead. Will be removed in a future version.
-     * Function to get user ID (for cache key)
-     */
-    getUserId?: () => Promise<string | null>
   }
 
   /**

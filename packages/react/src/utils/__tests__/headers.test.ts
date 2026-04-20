@@ -31,21 +31,10 @@ describe('getAuthAdapter', () => {
     expect(result).toBe(adapter)
   })
 
-  it('wraps deprecated getToken/getUserId functions', async () => {
-    const config: SolvaPayConfig = {
-      auth: {
-        getToken: () => Promise.resolve('legacy-token'),
-        getUserId: () => Promise.resolve('legacy-user'),
-      },
-    }
-    const adapter = getAuthAdapter(config)
-    expect(await adapter.getToken()).toBe('legacy-token')
-    expect(await adapter.getUserId()).toBe('legacy-user')
-  })
-
   it('returns defaultAuthAdapter when no auth config', () => {
     expect(getAuthAdapter(undefined)).toBe(defaultAuthAdapter)
     expect(getAuthAdapter({})).toBe(defaultAuthAdapter)
+    expect(getAuthAdapter({ auth: {} })).toBe(defaultAuthAdapter)
   })
 })
 

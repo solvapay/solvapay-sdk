@@ -39,24 +39,15 @@ Reusing the host app's client avoids spawning a second `GoTrue` instance and is 
 
 ### `createSupabaseAuthAdapter(config)`
 
-Creates a Supabase auth adapter instance. Accepts one of two config shapes:
+Creates a Supabase auth adapter instance.
 
-**`{ client }`** (recommended)
-
-- `config.client` (`SupabaseClient`, required) - Your existing Supabase client.
-
-**`{ supabaseUrl, supabaseAnonKey }`** (deprecated)
-
-- `config.supabaseUrl` (string) - Your Supabase project URL.
-- `config.supabaseAnonKey` (string) - Your Supabase anonymous/public key.
-
-The URL/key form dynamically imports `@supabase/supabase-js` and creates a second client. It emits a one-time `console.warn` recommending migration to the `{ client }` form.
+- `config.client` (`SupabaseClient`, required) — your existing Supabase client.
 
 **Returns:** `AuthAdapter` instance.
 
 ## How It Works
 
-The adapter calls `supabase.auth.getSession()` and returns the access token + user ID. Returns `null` when there is no active session. Never throws.
+The adapter calls `supabase.auth.getSession()` to resolve the current access token and user ID, and subscribes to `supabase.auth.onAuthStateChange(...)` so `SolvaPayProvider` reacts immediately to sign-in, sign-out, and token-refresh events without polling. Returns `null` when there is no active session. Never throws.
 
 ## Custom Adapters
 

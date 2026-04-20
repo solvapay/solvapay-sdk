@@ -14,7 +14,6 @@ function ctxWith(overrides: Partial<BalanceStatus> = {}): SolvaPayContextValue {
       error: null,
       purchases: [],
       hasProduct: () => false,
-      hasPlan: () => false,
       activePurchase: null,
       hasPaidPurchase: false,
       activePaidPurchase: null,
