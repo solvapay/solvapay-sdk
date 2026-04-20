@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   App,
@@ -17,10 +17,20 @@ const adapter = createMcpAdapter(app)
 
 // Keep polling fast enough that the UI feels responsive after the user
 // completes payment in the other tab, but not so fast that we hammer the MCP
-// server if the user wanders off. Backs off to focus-only once awaitingMs is
-// exceeded (defined below).
+// server if the user wanders off.
 const POLL_INTERVAL_MS = 3_000
 const AWAITING_TIMEOUT_MS = 10 * 60 * 1000
+
+// `SolvaPayProvider` short-circuits its fetch pipeline when there's no auth
+// token, which means our `checkPurchase` override would never run. In the
+// MCP App the real identity lives server-side on the OAuth bridge's
+// `customer_ref`, so we just need to tell the provider "yes, you're
+// authenticated". Returning a sentinel token is enough to flip
+// `isAuthenticated` true and unlock the refetch path.
+const mcpAuthAdapter = {
+  getToken: async () => 'mcp-session',
+  getUserId: async () => null,
+}
 
 function applyContext(ctx: McpUiHostContext | undefined) {
   if (!ctx) return
@@ -93,7 +103,12 @@ type HostedLinkButtonProps = {
   onLaunch?: (href: string) => void
 }
 
-function HostedLinkButton({ state, loadingLabel, readyLabel, onLaunch }: HostedLinkButtonProps) {
+const HostedLinkButton = memo(function HostedLinkButton({
+  state,
+  loadingLabel,
+  readyLabel,
+  onLaunch,
+}: HostedLinkButtonProps) {
   if (state.status === 'ready') {
     return (
       <a
@@ -115,22 +130,27 @@ function HostedLinkButton({ state, loadingLabel, readyLabel, onLaunch }: HostedL
       {state.status === 'error' ? 'Unavailable' : loadingLabel}
     </button>
   )
-}
+})
 
 function Spinner() {
   return <span className="checkout-spinner" aria-hidden="true" />
 }
 
-type AwaitingCardProps = {
-  awaiting: AwaitingState
+type AwaitingBodyProps = {
+  href: string
   timedOut: boolean
   onReopen: () => void
   onCancel: () => void
 }
 
-function AwaitingCard({ awaiting, timedOut, onReopen, onCancel }: AwaitingCardProps) {
+const AwaitingBody = memo(function AwaitingBody({
+  href,
+  timedOut,
+  onReopen,
+  onCancel,
+}: AwaitingBodyProps) {
   return (
-    <div className="checkout-card">
+    <>
       <div className="checkout-awaiting-header">
         <Spinner />
         <h2>{timedOut ? 'Still waiting for payment' : 'Waiting for payment…'}</h2>
@@ -142,7 +162,7 @@ function AwaitingCard({ awaiting, timedOut, onReopen, onCancel }: AwaitingCardPr
       </p>
       <a
         className="hosted-link"
-        href={awaiting.href}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => onReopen()}
@@ -154,17 +174,128 @@ function AwaitingCard({ awaiting, timedOut, onReopen, onCancel }: AwaitingCardPr
       <button type="button" className="checkout-link-button" onClick={onCancel}>
         Didn't complete? Cancel
       </button>
-    </div>
+    </>
   )
+})
+
+type ManageBodyProps = {
+  productName: string
+  customer: AsyncUrlState
 }
 
+const ManageBody = memo(function ManageBody({ productName, customer }: ManageBodyProps) {
+  return (
+    <>
+      <h2>You're on the {productName} plan</h2>
+      <p className="checkout-muted">
+        Manage billing, switch plans, or cancel in the SolvaPay portal.
+      </p>
+      <HostedLinkButton
+        state={customer}
+        loadingLabel="Loading portal…"
+        readyLabel="Manage purchase"
+      />
+      {customer.status === 'error' && (
+        <p className="checkout-error" role="alert">
+          {customer.message}
+        </p>
+      )}
+    </>
+  )
+})
+
+type CancelledBodyProps = {
+  productName: string
+  endDate?: string
+  daysLeft: number | null
+  formattedEndDate: string | null
+  checkout: AsyncUrlState
+  onLaunch: (href: string) => void
+}
+
+const CancelledBody = memo(function CancelledBody({
+  productName,
+  endDate,
+  daysLeft,
+  formattedEndDate,
+  checkout,
+  onLaunch,
+}: CancelledBodyProps) {
+  return (
+    <>
+      <h2>Your {productName} purchase is cancelled</h2>
+      {endDate && formattedEndDate ? (
+        <div className="checkout-notice">
+          <p>
+            <strong>Access expires {formattedEndDate}</strong>
+          </p>
+          {daysLeft !== null && daysLeft > 0 && (
+            <p className="checkout-muted">
+              {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="checkout-muted">Your purchase access has ended.</p>
+      )}
+      <HostedLinkButton
+        state={checkout}
+        loadingLabel="Loading checkout…"
+        readyLabel="Purchase again"
+        onLaunch={onLaunch}
+      />
+      {checkout.status === 'error' && (
+        <p className="checkout-error" role="alert">
+          {checkout.message}
+        </p>
+      )}
+    </>
+  )
+})
+
+type UpgradeBodyProps = {
+  checkout: AsyncUrlState
+  onLaunch: (href: string) => void
+}
+
+const UpgradeBody = memo(function UpgradeBody({ checkout, onLaunch }: UpgradeBodyProps) {
+  return (
+    <>
+      <h2>Upgrade your plan</h2>
+      <p className="checkout-muted">
+        The SolvaPay checkout opens in a new tab. Return here after payment and your purchase will
+        show up automatically.
+      </p>
+      <HostedLinkButton
+        state={checkout}
+        loadingLabel="Loading checkout…"
+        readyLabel="Upgrade"
+        onLaunch={onLaunch}
+      />
+      {checkout.status === 'error' && (
+        <p className="checkout-error" role="alert">
+          {checkout.message}
+        </p>
+      )}
+    </>
+  )
+})
+
 function CheckoutBody({ productRef }: { productRef: string }) {
-  const { loading, refetch, hasPaidPurchase, activePurchase } = usePurchase()
+  const { loading, isRefetching, refetch, hasPaidPurchase, activePurchase } = usePurchase()
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
 
   const [awaiting, setAwaiting] = useState<AwaitingState | null>(null)
   const [awaitingTimedOut, setAwaitingTimedOut] = useState(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+
+  // After the first successful fetch, never show the full-bleed "Loading
+  // purchase…" card again. Subsequent polls are signalled by `isRefreshing`
+  // below instead, so the card frame stays stable.
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) setHasLoadedOnce(true)
+  }, [loading, hasLoadedOnce])
 
   const fetchCheckoutUrl = useCallback(async () => {
     const { checkoutUrl } = await adapter.createCheckoutSession({ productRef })
@@ -176,8 +307,14 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     return { href: customerUrl }
   }, [])
 
-  const checkout = useHostedUrl(!loading, fetchCheckoutUrl, 'checkout session')
-  const customer = useHostedUrl(!loading && hasPaidPurchase, fetchCustomerUrl, 'customer portal')
+  // Pre-fetch checkout session once hasLoadedOnce flips (so we don't race the
+  // initial auth round-trip). Keep the href stable across polls.
+  const checkout = useHostedUrl(hasLoadedOnce, fetchCheckoutUrl, 'checkout session')
+  const customer = useHostedUrl(
+    hasLoadedOnce && hasPaidPurchase,
+    fetchCustomerUrl,
+    'customer portal',
+  )
 
   const safeRefetch = useCallback(() => {
     refetch().catch(err => {
@@ -185,8 +322,7 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     })
   }, [refetch])
 
-  // Refetch purchase when the iframe regains focus so the card reflects a
-  // purchase completed in the external hosted-checkout tab.
+  // Refetch on focus/visibility for when the user returns from the hosted tab.
   useEffect(() => {
     const onFocus = () => safeRefetch()
     const onVisibility = () => {
@@ -200,9 +336,8 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     }
   }, [safeRefetch])
 
-  // While awaiting a checkout completion, poll `check_purchase` so the card
-  // flips automatically even if the user never returns focus to this iframe
-  // (e.g. they leave the payment tab open alongside).
+  // While awaiting, poll so the card flips automatically even if the user
+  // never returns focus (e.g. they leave the payment tab alongside).
   useEffect(() => {
     if (!awaiting) return
     const interval = window.setInterval(() => {
@@ -219,7 +354,6 @@ function CheckoutBody({ productRef }: { productRef: string }) {
   }, [awaiting, safeRefetch])
 
   // Clear `awaiting` the moment `check_purchase` reports a new paid purchase.
-  // The underlying card then auto-transitions to the Manage state.
   useEffect(() => {
     if (!awaiting) return
     if (!hasPaidPurchase) return
@@ -250,7 +384,79 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     setAwaitingTimedOut(false)
   }, [])
 
-  if (loading) {
+  const dismissTimeout = useCallback(() => {
+    setAwaitingTimedOut(false)
+  }, [])
+
+  // Derive primitive inputs for the memoised child bodies so they skip
+  // re-renders when nothing they care about has changed (a poll that returns
+  // identical data shouldn't cause any DOM mutations inside the card).
+  const activeProductName = activePurchase?.productName ?? null
+  const cancelledProductName = cancelledPurchase?.productName ?? null
+  const cancelledEndDate = cancelledPurchase?.endDate
+  const cancelledDaysLeft = useMemo(
+    () => (cancelledEndDate ? getDaysUntilExpiration(cancelledEndDate) : null),
+    [cancelledEndDate, getDaysUntilExpiration],
+  )
+  const cancelledFormattedEndDate = useMemo(
+    () => (cancelledEndDate ? formatDate(cancelledEndDate) : null),
+    [cancelledEndDate, formatDate],
+  )
+
+  const awaitingHref = awaiting?.href ?? null
+
+  const inner = useMemo(() => {
+    if (awaiting && awaitingHref) {
+      return (
+        <AwaitingBody
+          href={awaitingHref}
+          timedOut={awaitingTimedOut}
+          onReopen={dismissTimeout}
+          onCancel={cancelAwaiting}
+        />
+      )
+    }
+
+    if (hasPaidPurchase && activeProductName) {
+      return <ManageBody productName={activeProductName} customer={customer} />
+    }
+
+    if (shouldShowCancelledNotice && cancelledProductName) {
+      return (
+        <CancelledBody
+          productName={cancelledProductName}
+          endDate={cancelledEndDate}
+          daysLeft={cancelledDaysLeft}
+          formattedEndDate={cancelledFormattedEndDate}
+          checkout={checkout}
+          onLaunch={beginAwaiting}
+        />
+      )
+    }
+
+    return <UpgradeBody checkout={checkout} onLaunch={beginAwaiting} />
+  }, [
+    awaiting,
+    awaitingHref,
+    awaitingTimedOut,
+    dismissTimeout,
+    cancelAwaiting,
+    hasPaidPurchase,
+    activeProductName,
+    customer,
+    shouldShowCancelledNotice,
+    cancelledProductName,
+    cancelledEndDate,
+    cancelledDaysLeft,
+    cancelledFormattedEndDate,
+    checkout,
+    beginAwaiting,
+  ])
+
+  // Initial mount: show a dedicated loading card until the first fetch
+  // finishes. After that, the outer frame below stays mounted forever and
+  // polls are invisible except for a subtle `data-refreshing` opacity dip.
+  if (loading && !hasLoadedOnce) {
     return (
       <div className="checkout-card">
         <p>Loading purchase…</p>
@@ -258,105 +464,13 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     )
   }
 
-  if (awaiting) {
-    return (
-      <AwaitingCard
-        awaiting={awaiting}
-        timedOut={awaitingTimedOut}
-        onReopen={() => setAwaitingTimedOut(false)}
-        onCancel={cancelAwaiting}
-      />
-    )
-  }
-
-  if (hasPaidPurchase && activePurchase) {
-    return (
-      <div className="checkout-card">
-        <h2>You're on the {activePurchase.productName} plan</h2>
-        <p className="checkout-muted">
-          Manage billing, switch plans, or cancel in the SolvaPay portal.
-        </p>
-        <HostedLinkButton
-          state={customer}
-          loadingLabel="Loading portal…"
-          readyLabel="Manage purchase"
-        />
-        {customer.status === 'error' && (
-          <p className="checkout-error" role="alert">
-            {customer.message}
-          </p>
-        )}
-      </div>
-    )
-  }
-
-  if (shouldShowCancelledNotice && cancelledPurchase) {
-    const daysLeft = cancelledPurchase.endDate
-      ? getDaysUntilExpiration(cancelledPurchase.endDate)
-      : null
-    return (
-      <div className="checkout-card">
-        <h2>Your {cancelledPurchase.productName} purchase is cancelled</h2>
-        {cancelledPurchase.endDate ? (
-          <div className="checkout-notice">
-            <p>
-              <strong>Access expires {formatDate(cancelledPurchase.endDate)}</strong>
-            </p>
-            {daysLeft !== null && daysLeft > 0 && (
-              <p className="checkout-muted">
-                {daysLeft} {daysLeft === 1 ? 'day' : 'days'} remaining
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="checkout-muted">Your purchase access has ended.</p>
-        )}
-        <HostedLinkButton
-          state={checkout}
-          loadingLabel="Loading checkout…"
-          readyLabel="Purchase again"
-          onLaunch={beginAwaiting}
-        />
-        {checkout.status === 'error' && (
-          <p className="checkout-error" role="alert">
-            {checkout.message}
-          </p>
-        )}
-      </div>
-    )
-  }
+  const isRefreshing = (loading || isRefetching) && hasLoadedOnce
 
   return (
-    <div className="checkout-card">
-      <h2>Upgrade your plan</h2>
-      <p className="checkout-muted">
-        The SolvaPay checkout opens in a new tab. Return here after payment and your purchase will
-        show up automatically.
-      </p>
-      <HostedLinkButton
-        state={checkout}
-        loadingLabel="Loading checkout…"
-        readyLabel="Upgrade"
-        onLaunch={beginAwaiting}
-      />
-      {checkout.status === 'error' && (
-        <p className="checkout-error" role="alert">
-          {checkout.message}
-        </p>
-      )}
+    <div className="checkout-card" data-refreshing={isRefreshing ? 'true' : undefined}>
+      {inner}
     </div>
   )
-}
-
-// `SolvaPayProvider` short-circuits its fetch pipeline when there's no auth
-// token, which means our `checkPurchase` override would never run. In the
-// MCP App the real identity lives server-side on the OAuth bridge's
-// `customer_ref`, so we just need to tell the provider "yes, you're
-// authenticated". Returning a sentinel token is enough to flip
-// `isAuthenticated` true and unlock the refetch path.
-const mcpAuthAdapter = {
-  getToken: async () => 'mcp-session',
-  getUserId: async () => null,
 }
 
 function CheckoutApp({ productRef }: { productRef: string }) {
