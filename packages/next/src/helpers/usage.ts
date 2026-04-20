@@ -1,7 +1,22 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { trackUsageCore, isErrorResult } from '@solvapay/server'
+import { trackUsageCore } from '@solvapay/server'
+import { toNextRouteResponse } from './_response'
 
+/**
+ * Next.js route wrapper for POST /api/track-usage.
+ *
+ * @example
+ * ```ts
+ * // app/api/track-usage/route.ts
+ * import { trackUsage } from '@solvapay/next/helpers'
+ *
+ * export async function POST(request: Request) {
+ *   const body = await request.json()
+ *   return trackUsage(request, body)
+ * }
+ * ```
+ */
 export async function trackUsage(
   request: globalThis.Request,
   body: {
@@ -16,13 +31,5 @@ export async function trackUsage(
   } = {},
 ): Promise<NextResponse> {
   const result = await trackUsageCore(request, body, options)
-
-  if (isErrorResult(result)) {
-    return NextResponse.json(
-      { error: result.error, details: result.details },
-      { status: result.status },
-    )
-  }
-
-  return NextResponse.json(result)
+  return toNextRouteResponse(result)
 }

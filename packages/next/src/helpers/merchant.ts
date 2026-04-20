@@ -1,11 +1,7 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { getMerchantCore, isErrorResult } from '@solvapay/server'
-
-type GetMerchantSuccess = Exclude<
-  Awaited<ReturnType<typeof getMerchantCore>>,
-  { error: string }
->
+import { getMerchantCore } from '@solvapay/server'
+import { toNextRouteResponse } from './_response'
 
 /**
  * Next.js route wrapper for GET /api/merchant.
@@ -22,15 +18,7 @@ export async function getMerchant(
   options: {
     solvaPay?: SolvaPay
   } = {},
-): Promise<GetMerchantSuccess | NextResponse> {
+): Promise<NextResponse> {
   const result = await getMerchantCore(request, options)
-
-  if (isErrorResult(result)) {
-    return NextResponse.json(
-      { error: result.error, details: result.details },
-      { status: result.status },
-    )
-  }
-
-  return result
+  return toNextRouteResponse(result)
 }

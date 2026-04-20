@@ -8,12 +8,13 @@
 
 import { NextResponse } from 'next/server'
 import type { SolvaPay, ErrorResult } from '@solvapay/server'
-import { checkPurchaseCore, isErrorResult } from '@solvapay/server'
+import { checkPurchaseCore } from '@solvapay/server'
 import {
   getSharedDeduplicator,
   type RequestDeduplicationOptions,
   type PurchaseCheckResult,
 } from './cache'
+import { toNextRouteResponse } from './helpers/_response'
 
 // Re-export types for backward compatibility
 export type { RequestDeduplicationOptions, PurchaseCheckResult } from './cache'
@@ -62,16 +63,22 @@ export interface CheckPurchaseOptions {
  *
  * Delegates to `checkPurchaseCore` from `@solvapay/server` for the actual logic,
  * wrapping with Next.js-specific deduplication and response formatting.
+ *
+ * @example
+ * ```ts
+ * // app/api/check-purchase/route.ts
+ * import { checkPurchase } from '@solvapay/next'
+ * export const GET = (request: Request) => checkPurchase(request)
+ * ```
  */
 export async function checkPurchase(
   request: Request,
   options: CheckPurchaseOptions = {},
-): Promise<PurchaseCheckResult | NextResponse> {
-  // Without deduplication, delegate directly to core
+): Promise<NextResponse> {
   const deduplicator = getSharedDeduplicator(options.deduplication)
 
-  // Extract a cache key from the request's auth header for deduplication
-  // The core helper handles the actual auth extraction, but we need a key for the cache
+  // Extract a cache key from the request's auth header for deduplication.
+  // The core helper handles the actual auth extraction, but we need a key for the cache.
   try {
     const { requireUserId } = await import('@solvapay/auth')
     const userIdOrError = requireUserId(request)
@@ -95,14 +102,7 @@ export async function checkPurchase(
       },
     )
 
-    if (isErrorResult(response)) {
-      return NextResponse.json(
-        { error: response.error, details: response.details },
-        { status: response.status },
-      )
-    }
-
-    return response
+    return toNextRouteResponse(response)
   } catch (error) {
     console.error('Check purchase failed:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -136,6 +136,7 @@ export {
   listPlans,
   getMerchant,
   getProduct,
+  getPaymentMethod,
   trackUsage,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSolvaPay } from './useSolvaPay'
 import { createHttpTransport } from '../transport/http'
+import { createTransportCacheKey } from '../transport/cache-key'
 import type { Merchant, SolvaPayConfig, UseMerchantReturn } from '../types'
 
 type CacheEntry = {
@@ -15,25 +16,8 @@ const CACHE_DURATION = 5 * 60 * 1000
 /** @internal Exported only for tests — do not use in application code */
 export { merchantCache, CACHE_DURATION }
 
-/**
- * Cache key: prefer the custom transport identity when present (assigned
- * lazily via WeakMap so distinct transports don't share cache entries). HTTP
- * consumers key off the configured route as before.
- */
-const transportIds = new WeakMap<object, number>()
-let nextTransportId = 0
-
 function cacheKeyFor(config: SolvaPayConfig | undefined): string {
-  const transport = config?.transport
-  if (transport) {
-    let id = transportIds.get(transport)
-    if (id === undefined) {
-      id = ++nextTransportId
-      transportIds.set(transport, id)
-    }
-    return `transport:${id}`
-  }
-  return config?.api?.getMerchant || '/api/merchant'
+  return createTransportCacheKey(config, config?.api?.getMerchant || '/api/merchant')
 }
 
 async function fetchMerchant(config: SolvaPayConfig | undefined): Promise<Merchant> {

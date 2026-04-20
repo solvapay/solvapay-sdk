@@ -1,24 +1,30 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
 import {
   cancelPurchaseCore,
   reactivatePurchaseCore,
   isErrorResult,
-  getAuthenticatedUserCore,
 } from '@solvapay/server'
-import { clearPurchaseCache } from '../cache'
+import { toNextRouteResponse } from './_response'
+import { invalidatePurchaseCacheForRequest } from './_cache'
 
 /**
  * Next.js Purchase Cancellation & Reactivation Helpers
  */
 
 /**
- * Cancel purchase - Next.js wrapper
+ * Next.js route wrapper for POST /api/cancel-renewal.
  *
- * @param request - Next.js request object
- * @param body - Cancellation parameters
- * @param options - Configuration options
- * @returns Cancelled purchase response or NextResponse error
+ * @example
+ * ```ts
+ * // app/api/cancel-renewal/route.ts
+ * import { cancelRenewal } from '@solvapay/next/helpers'
+ *
+ * export async function POST(request: Request) {
+ *   const { purchaseRef, reason } = await request.json()
+ *   return cancelRenewal(request, { purchaseRef, reason })
+ * }
+ * ```
  */
 export async function cancelRenewal(
   request: globalThis.Request,
@@ -29,37 +35,29 @@ export async function cancelRenewal(
   options: {
     solvaPay?: SolvaPay
   } = {},
-): Promise<Record<string, unknown> | NextResponse> {
+): Promise<NextResponse> {
   const result = await cancelPurchaseCore(request, body, options)
-
-  if (isErrorResult(result)) {
-    return NextResponse.json(
-      { error: result.error, details: result.details },
-      { status: result.status },
-    )
+  if (!isErrorResult(result)) {
+    await invalidatePurchaseCacheForRequest(request)
   }
-
-  try {
-    const userResult = await getAuthenticatedUserCore(request)
-    if (!isErrorResult(userResult)) {
-      clearPurchaseCache(userResult.userId)
-    }
-  } catch {
-    // Ignore errors in cache clearing
-  }
-
-  return result
+  return toNextRouteResponse(result)
 }
 
 /**
- * Reactivate purchase - Next.js wrapper
+ * Next.js route wrapper for POST /api/reactivate-renewal.
  *
  * Undoes a pending cancellation, restoring auto-renewal.
  *
- * @param request - Next.js request object
- * @param body - Reactivation parameters
- * @param options - Configuration options
- * @returns Reactivated purchase response or NextResponse error
+ * @example
+ * ```ts
+ * // app/api/reactivate-renewal/route.ts
+ * import { reactivateRenewal } from '@solvapay/next/helpers'
+ *
+ * export async function POST(request: Request) {
+ *   const { purchaseRef } = await request.json()
+ *   return reactivateRenewal(request, { purchaseRef })
+ * }
+ * ```
  */
 export async function reactivateRenewal(
   request: globalThis.Request,
@@ -69,24 +67,10 @@ export async function reactivateRenewal(
   options: {
     solvaPay?: SolvaPay
   } = {},
-): Promise<Record<string, unknown> | NextResponse> {
+): Promise<NextResponse> {
   const result = await reactivatePurchaseCore(request, body, options)
-
-  if (isErrorResult(result)) {
-    return NextResponse.json(
-      { error: result.error, details: result.details },
-      { status: result.status },
-    )
+  if (!isErrorResult(result)) {
+    await invalidatePurchaseCacheForRequest(request)
   }
-
-  try {
-    const userResult = await getAuthenticatedUserCore(request)
-    if (!isErrorResult(userResult)) {
-      clearPurchaseCache(userResult.userId)
-    }
-  } catch {
-    // Ignore errors in cache clearing
-  }
-
-  return result
+  return toNextRouteResponse(result)
 }
