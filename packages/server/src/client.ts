@@ -132,7 +132,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       const result = await res.json()
-      return result
+      return {
+        customerRef: result.reference || result.customerRef,
+      }
     },
 
     // PATCH: /v1/sdk/customers/{customerRef}
