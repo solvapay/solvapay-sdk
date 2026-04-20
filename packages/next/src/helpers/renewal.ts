@@ -4,10 +4,9 @@ import {
   cancelPurchaseCore,
   reactivatePurchaseCore,
   isErrorResult,
-  getAuthenticatedUserCore,
 } from '@solvapay/server'
-import { clearPurchaseCache } from '../cache'
 import { toNextRouteResponse } from './_response'
+import { invalidatePurchaseCacheForRequest } from './_cache'
 
 /**
  * Next.js Purchase Cancellation & Reactivation Helpers
@@ -38,18 +37,9 @@ export async function cancelRenewal(
   } = {},
 ): Promise<NextResponse> {
   const result = await cancelPurchaseCore(request, body, options)
-
   if (!isErrorResult(result)) {
-    try {
-      const userResult = await getAuthenticatedUserCore(request)
-      if (!isErrorResult(userResult)) {
-        clearPurchaseCache(userResult.userId)
-      }
-    } catch {
-      // Ignore errors in cache clearing
-    }
+    await invalidatePurchaseCacheForRequest(request)
   }
-
   return toNextRouteResponse(result)
 }
 
@@ -79,17 +69,8 @@ export async function reactivateRenewal(
   } = {},
 ): Promise<NextResponse> {
   const result = await reactivatePurchaseCore(request, body, options)
-
   if (!isErrorResult(result)) {
-    try {
-      const userResult = await getAuthenticatedUserCore(request)
-      if (!isErrorResult(userResult)) {
-        clearPurchaseCache(userResult.userId)
-      }
-    } catch {
-      // Ignore errors in cache clearing
-    }
+    await invalidatePurchaseCacheForRequest(request)
   }
-
   return toNextRouteResponse(result)
 }

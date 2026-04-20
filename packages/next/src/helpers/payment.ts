@@ -9,21 +9,9 @@ import {
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
   isErrorResult,
-  getAuthenticatedUserCore,
 } from '@solvapay/server'
-import { clearPurchaseCache } from '../cache'
 import { toNextRouteResponse } from './_response'
-
-async function maybeClearPurchaseCache(request: globalThis.Request): Promise<void> {
-  try {
-    const userResult = await getAuthenticatedUserCore(request)
-    if (!isErrorResult(userResult)) {
-      clearPurchaseCache(userResult.userId)
-    }
-  } catch {
-    // Ignore errors in cache clearing
-  }
-}
+import { invalidatePurchaseCacheForRequest } from './_cache'
 
 /**
  * Next.js route wrapper for POST /api/create-payment-intent.
@@ -53,7 +41,7 @@ export async function createPaymentIntent(
 ): Promise<NextResponse> {
   const result = await createPaymentIntentCore(request, body, options)
   if (!isErrorResult(result)) {
-    await maybeClearPurchaseCache(request)
+    await invalidatePurchaseCacheForRequest(request)
   }
   return toNextRouteResponse(result)
 }
@@ -87,7 +75,7 @@ export async function createTopupPaymentIntent(
 ): Promise<NextResponse> {
   const result = await createTopupPaymentIntentCore(request, body, options)
   if (!isErrorResult(result)) {
-    await maybeClearPurchaseCache(request)
+    await invalidatePurchaseCacheForRequest(request)
   }
   return toNextRouteResponse(result)
 }
@@ -119,7 +107,7 @@ export async function processPaymentIntent(
 ): Promise<NextResponse> {
   const result = await processPaymentIntentCore(request, body, options)
   if (!isErrorResult(result)) {
-    await maybeClearPurchaseCache(request)
+    await invalidatePurchaseCacheForRequest(request)
   }
   return toNextRouteResponse(result)
 }

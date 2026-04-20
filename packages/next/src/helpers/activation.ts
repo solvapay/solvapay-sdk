@@ -1,8 +1,8 @@
 import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { activatePlanCore, isErrorResult, getAuthenticatedUserCore } from '@solvapay/server'
-import { clearPurchaseCache } from '../cache'
+import { activatePlanCore, isErrorResult } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
+import { invalidatePurchaseCacheForRequest } from './_cache'
 
 /**
  * Next.js route wrapper for POST /api/activate-plan.
@@ -34,17 +34,8 @@ export async function activatePlan(
   } = {},
 ): Promise<NextResponse> {
   const result = await activatePlanCore(request, body, options)
-
   if (!isErrorResult(result)) {
-    try {
-      const userResult = await getAuthenticatedUserCore(request)
-      if (!isErrorResult(userResult)) {
-        clearPurchaseCache(userResult.userId)
-      }
-    } catch {
-      // Ignore errors in cache clearing
-    }
+    await invalidatePurchaseCacheForRequest(request)
   }
-
   return toNextRouteResponse(result)
 }
