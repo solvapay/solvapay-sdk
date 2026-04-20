@@ -103,7 +103,8 @@ export function useProduct(productRef: string | undefined): UseProductReturn {
         setProduct(p)
       } catch (err) {
         productCache.delete(key)
-        _config?.onError?.(err instanceof Error ? err : new Error(String(err)), 'getProduct')
+        // The HTTP transport already invokes `config.onError` before throwing; custom
+        // transports own their own error callbacks. Re-emitting here would double-fire.
         setError(err instanceof Error ? err : new Error('Failed to load product'))
       } finally {
         setLoading(false)

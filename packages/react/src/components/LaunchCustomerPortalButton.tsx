@@ -12,7 +12,7 @@
  * round-trip is blocked — see `mcp-checkout-app` for prior art).
  */
 
-import React, { forwardRef, useEffect, useState } from 'react'
+import React, { forwardRef, useEffect, useRef, useState } from 'react'
 import { useTransport } from '../hooks/useTransport'
 import { useCopy } from '../hooks/useCopy'
 import { composeEventHandlers } from '../primitives/composeEventHandlers'
@@ -50,6 +50,13 @@ export const LaunchCustomerPortalButton = forwardRef<
   const copy = useCopy()
   const [state, setState] = useState<UrlState>({ status: 'loading' })
 
+  // Capture onError in a ref so parents passing an inline arrow don't
+  // re-fire the pre-fetch effect on every render.
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onErrorRef.current = onError
+  }, [onError])
+
   useEffect(() => {
     let cancelled = false
     transport
@@ -62,12 +69,12 @@ export const LaunchCustomerPortalButton = forwardRef<
         if (cancelled) return
         const error = err instanceof Error ? err : new Error(String(err))
         setState({ status: 'error', message: error.message })
-        onError?.(error)
+        onErrorRef.current?.(error)
       })
     return () => {
       cancelled = true
     }
-  }, [transport, onError])
+  }, [transport])
 
   if (state.status === 'ready') {
     return (

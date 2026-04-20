@@ -98,7 +98,8 @@ export function useMerchant(): UseMerchantReturn {
         setMerchant(m)
       } catch (err) {
         merchantCache.delete(key)
-        _config?.onError?.(err instanceof Error ? err : new Error(String(err)), 'getMerchant')
+        // The HTTP transport already invokes `config.onError` before throwing; custom
+        // transports own their own error callbacks. Re-emitting here would double-fire.
         setError(err instanceof Error ? err : new Error('Failed to load merchant'))
       } finally {
         setLoading(false)
