@@ -159,7 +159,6 @@ export const enCopy: SolvaPayCopy = {
   currentPlan: {
     heading: 'Your plan',
     nextBilling: 'Next billing: {date}',
-    renewsOn: 'Renews {date}',
     expiresOn: 'Expires {date}',
     validIndefinitely: 'Valid indefinitely',
     paymentMethod: '{brand} •••• {last4}',

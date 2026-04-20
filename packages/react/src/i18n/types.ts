@@ -141,7 +141,6 @@ export interface SolvaPayCopy {
   currentPlan: {
     heading: string
     nextBilling: string
-    renewsOn: string
     expiresOn: string
     validIndefinitely: string
     paymentMethod: string

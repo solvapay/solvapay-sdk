@@ -281,6 +281,16 @@ function CheckoutBody({ productRef }: { productRef: string }) {
 
   const [awaiting, setAwaiting] = useState<AwaitingState | null>(null)
   const [awaitingTimedOut, setAwaitingTimedOut] = useState(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+
+  // `loading` starts `false` in the provider and only flips `true` for the
+  // first fetch per cacheKey (subsequent polls report via `isRefetching`),
+  // so gating directly on `!loading` would fire `useHostedUrl` before auth
+  // detection and race `createCheckoutSession`. Flip a local latch the first
+  // time `loading` transitions back to `false`.
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) setHasLoadedOnce(true)
+  }, [loading, hasLoadedOnce])
 
   const fetchCheckoutUrl = useCallback(async () => {
     if (!_config?.transport) throw new Error('transport missing from provider config')
@@ -288,15 +298,12 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     return { href: checkoutUrl }
   }, [productRef, _config])
 
-  // Pre-fetch checkout session once the initial purchase fetch is done (so we
-  // don't race the initial auth round-trip). `loading` from the SDK only flips
-  // true for the first fetch per cacheKey; subsequent polls report via
-  // `isRefetching` instead, so gating on `!loading` is stable across polls.
+  // Pre-fetch checkout session once the initial purchase fetch has completed.
   //
   // Customer-portal pre-fetching for the "paid" branch is now owned by
   // `<CurrentPlanCard>` → `<UpdatePaymentMethodButton>` → the SDK's
   // `<LaunchCustomerPortalButton>` — no local `fetchCustomerUrl` needed.
-  const checkout = useHostedUrl(!loading, fetchCheckoutUrl, 'checkout session')
+  const checkout = useHostedUrl(hasLoadedOnce, fetchCheckoutUrl, 'checkout session')
 
   const safeRefetch = useCallback(() => {
     refetch().catch(err => {
