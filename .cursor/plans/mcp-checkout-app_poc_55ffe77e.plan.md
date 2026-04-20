@@ -1,36 +1,36 @@
 ---
-name: mcp-checkout-app poc
-overview: Prove that an MCP App can run the SolvaPay checkout + account flows with no Next.js backend by building a minimal example (create intent → confirm → process) inside the MCP server itself, then lay out follow-up tasks to reach full parity with the `checkout-demo`.
+name: mcp-checkout-app poc — SUPERSEDED
+overview: 'Superseded by [mcp-checkout-app_hosted-button-pivot_b3d9c1a2.plan.md](solvapay-sdk/.cursor/plans/mcp-checkout-app_hosted-button-pivot_b3d9c1a2.plan.md). The `stripe-spike` risk (Stripe Elements inside the MCP host iframe) was confirmed in practice — host CSP + sandbox blocked `js.stripe.com` — and the example pivoted to hosted-checkout launch buttons. Original scaffolding + tool wiring from this plan still shipped under the new architecture; roadmap items (tool parity, React adapter, account UI, docs) moved into dedicated plans. Kept for historical context only.'
 todos:
   - id: scaffold
-    content: Scaffold examples/mcp-checkout-app from mcp-time-app (package.json, vite.config.ts, .env.example, entry files, OAuth bridge wiring)
-    status: pending
+    content: "Scaffold examples/mcp-checkout-app from mcp-time-app (package.json, vite.config.ts, .env.example, entry files, OAuth bridge wiring). **Done** — shipped under the hosted-button pivot. The example at `examples/mcp-checkout-app/` is live and smoke-tested end-to-end."
+    status: completed
   - id: tools-poc
-    content: Implement 6 PoC tool handlers (sync_customer, check_purchase, list_plans, get_product, create_payment_intent, process_payment_intent) that wrap @solvapay/server core helpers and forward customer_ref from extra.authInfo
-    status: pending
+    content: "Implement 6 PoC tool handlers (sync_customer, check_purchase, list_plans, get_product, create_payment_intent, process_payment_intent) that wrap @solvapay/server core helpers and forward customer_ref from extra.authInfo. **Done** — `sync_customer`, `check_purchase`, `create_checkout_session`, `create_customer_session`, `get_payment_method` are registered in [examples/mcp-checkout-app/src/server.ts](solvapay-sdk/examples/mcp-checkout-app/src/server.ts). `create_payment_intent` / `process_payment_intent` were dropped in the hosted-button pivot (no inline Stripe flow needed)."
+    status: completed
   - id: ui-bundle
-    content: Build single-file React UI with SolvaPayProvider + <CheckoutLayout>, Stripe.js loaded from CDN, and custom mcpAdapter wiring checkPurchase/createPayment/processPayment to app.callServerTool
-    status: pending
+    content: "Build single-file React UI with SolvaPayProvider + <CheckoutLayout>, Stripe.js loaded from CDN, and custom mcpAdapter wiring checkPurchase/createPayment/processPayment to app.callServerTool. **Superseded** — UI bundled successfully but `<CheckoutLayout>` was replaced by the hosted-checkout anchor pattern. `createMcpAppAdapter` replaced the inline mcpAdapter and was promoted to a first-class `@solvapay/react/mcp` export (see [react-mcp-app-adapter_e5a04f19.plan.md](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md))."
+    status: completed
   - id: stripe-spike
-    content: Validate Stripe Elements mounts, accepts a test card, and confirms payment inside basic-host's iframe (main PoC risk)
-    status: pending
+    content: "Validate Stripe Elements mounts, accepts a test card, and confirms payment inside basic-host's iframe (main PoC risk). **Failed as predicted** — confirmed the risk, triggered the hosted-button pivot. Re-evaluation is tracked on the frontend side under [solvapay-frontend/.cursor/plans/mcp-checkout-app_embedded_stripe_9d9df271.plan.md](solvapay-frontend/.cursor/plans/mcp-checkout-app_embedded_stripe_9d9df271.plan.md) for when host CSP changes land."
+    status: completed
   - id: verify-e2e
-    content: "Run full flow in basic-host: plan select → pay → check_purchase shows active purchase; document findings"
-    status: pending
+    content: "Run full flow in basic-host: plan select → pay → check_purchase shows active purchase; document findings. **Done** — smoke test walked the 5-state flow (Upgrade → Awaiting → Manage → Cancelled → Error) end-to-end. Recorded under [react-mcp-app-adapter_e5a04f19.plan.md](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) `smoke-run`. Works cleanly with `4242 4242 4242 4242`."
+    status: completed
   - id: tool-parity
-    content: "Next: add remaining tools (topup, balance, activate_plan, cancel/reactivate_renewal, track_usage, get_merchant) to reach checkout-demo parity"
+    content: "Next: add remaining tools (topup, balance, activate_plan, cancel/reactivate_renewal, track_usage, get_merchant) to reach checkout-demo parity. **Partial** — `SolvaPayTransport` contract now covers the full surface so the adapter already knows every tool name; server-side registration in `mcp-checkout-app` is still limited to the five tools needed by the hosted-button flow (plus `get_payment_method`). Adding more server-side tools is a demo-polish follow-up, not a demo blocker."
     status: pending
   - id: react-adapter
-    content: "Next: extract createMcpAppAdapter(app) into a reusable export in @solvapay/react (or new @solvapay/mcp-app package)"
-    status: pending
+    content: "Next: extract createMcpAppAdapter(app) into a reusable export in @solvapay/react (or new @solvapay/mcp-app package). **Done** — shipped as the `@solvapay/react/mcp` subpath; see [react-mcp-app-adapter_e5a04f19.plan.md](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) for the full refactor record."
+    status: completed
   - id: server-helper
-    content: "Next: ship registerCheckoutToolsMcp(server, opts) in @solvapay/server mirroring registerVirtualToolsMcp"
+    content: "Next: ship registerCheckoutToolsMcp(server, opts) in @solvapay/server mirroring registerVirtualToolsMcp. **Not shipped** — deferred. The current example registers tools one-by-one from core helpers; a `registerCheckoutToolsMcp` helper is still good ergonomics for third-party integrators but isn't blocking. Move to its own plan when prioritised."
     status: pending
   - id: account-ui
-    content: "Next: add second ui resource (account.html) with balance/topup/cancel using existing React components"
-    status: pending
+    content: "Next: add second ui resource (account.html) with balance/topup/cancel using existing React components. **Superseded** — the account-management flow landed inside the existing `mcp-app.html` resource via `<CurrentPlanCard>` + `<LaunchCustomerPortalButton>` + `<UpdatePaymentMethodButton>`. No separate bundle needed — the Manage-body branch inside `<CheckoutBody>` swaps in the account UI once `hasPaidPurchase` flips true."
+    status: completed
   - id: docs
-    content: "Next: document the pattern under MCP Server docs + update mcp-time-app README to cross-link"
+    content: "Next: document the pattern under MCP Server docs + update mcp-time-app README to cross-link. **Partial** — the MCP App guide lives at [docs/sdks/typescript/guides/mcp-app.mdx](docs/sdks/typescript/guides/mcp-app.mdx) (not under MCP Server docs — see the `docs-page` note on `react-mcp-app-adapter`). `mcp-time-app/README.md` cross-link is still open; low priority since `mcp-time-app` is an older reference example."
     status: pending
 isProject: false
 ---

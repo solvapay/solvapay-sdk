@@ -1,28 +1,28 @@
 ---
 name: mcp-checkout-app polling without jank
-overview: The 3-second `check_purchase` poll in `examples/mcp-checkout-app` remounts the whole card on every tick for users without an existing purchase. Fix the visual jank by stabilizing the card frame, gating the loading state behind "first load only", and making the polling feedback a subtle inline indicator instead of a full card replacement. Flag one provider behaviour to revisit in `@solvapay/react`.
+overview: 'The 3-second `check_purchase` poll in `examples/mcp-checkout-app` used to remount the whole card on every tick for users without an existing purchase. **Shipped** — example side landed in commit `24cc55e` (stop mcp-checkout-app remounting on every poll); provider side landed under [react-provider-loading-vs-refetching_c2d8b3a7.plan.md](solvapay-sdk/.cursor/plans/react-provider-loading-vs-refetching_c2d8b3a7.plan.md) via `loadedCacheKeysRef` in `SolvaPayProvider`. Closed for historical record.'
 todos:
   - id: diagnose
-    content: Reproduce + document the jank — loading flash on poll when `purchases.length === 0`, plus React unmount/remount across the three top-level return branches in `CheckoutBody`
-    status: pending
+    content: "Reproduce + document the jank — loading flash on poll when `purchases.length === 0`, plus React unmount/remount across the three top-level return branches in `CheckoutBody`. **Done** — root cause documented in the body below."
+    status: completed
   - id: stabilize-frame
-    content: Collapse the four `return` branches in `CheckoutBody` into a single outer `<div className="checkout-card">` whose inner content swaps based on derived state, so React keeps the same DOM node across polls
-    status: pending
+    content: "Collapse the four `return` branches in `CheckoutBody` into a single outer `<div className=\"checkout-card\">` whose inner content swaps based on derived state, so React keeps the same DOM node across polls. **Done** — see [examples/mcp-checkout-app/src/mcp-app.tsx](solvapay-sdk/examples/mcp-checkout-app/src/mcp-app.tsx) `CheckoutBody`: single outer `<div className=\"checkout-card\" data-refreshing={...}>` wraps the derived `inner` state."
+    status: completed
   - id: hasloadedonce
-    content: Track `hasLoadedOnce` locally so the full-bleed "Loading purchase…" view only renders on the very first mount; subsequent polls never replace the card
-    status: pending
+    content: "Track `hasLoadedOnce` locally so the full-bleed \"Loading purchase…\" view only renders on the very first mount; subsequent polls never replace the card. **Done via SDK fix** — the local gate was removed after the `sdk-followup` shipped. Now `loading` from `usePurchase` only flips true on the first fetch per cacheKey; `isRefetching` covers background polls. See `mcp-app.tsx` \"Initial mount: show a dedicated loading card until the first fetch finishes.\""
+    status: completed
   - id: refresh-indicator
-    content: Replace the full "Loading" card with a subtle inline indicator (dim opacity / tiny header spinner) during background refetches so the user still sees activity without layout shift
-    status: pending
+    content: "Replace the full \"Loading\" card with a subtle inline indicator (dim opacity / tiny header spinner) during background refetches so the user still sees activity without layout shift. **Done** — `data-refreshing={isRefetching ? 'true' : undefined}` on the outer card drives a CSS opacity dip via `examples/mcp-checkout-app/src/mcp-app.css`."
+    status: completed
   - id: memo-awaiting
-    content: Memoize `AwaitingCard` + extract the hosted-link subtree so polling-induced parent re-renders don't rerun anchor DOM diffs
-    status: pending
+    content: "Memoize `AwaitingCard` + extract the hosted-link subtree so polling-induced parent re-renders don't rerun anchor DOM diffs. **Done** — `AwaitingBody`, `ManageBody`, `CancelledBody`, `UpgradeBody`, and `HostedLinkButton` are all wrapped in `React.memo` in `mcp-app.tsx`. `inner` is derived via `useMemo` with primitive dep inputs."
+    status: completed
   - id: verify
-    content: Confirm via `basic-host`: clicking Upgrade → awaiting card stays stable across ~5 polls; completing payment flips the card once without intermediate flash
-    status: pending
+    content: "Confirm via `basic-host`: clicking Upgrade → awaiting card stays stable across ~5 polls; completing payment flips the card once without intermediate flash. **Done** — covered by the `smoke-run` on [react-mcp-app-adapter_e5a04f19.plan.md](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md); State 3 Manage polling observed cleanly with no layout shift."
+    status: completed
   - id: sdk-followup
-    content: "Follow-up: file an issue / open PR against `SolvaPayProvider` to switch the `setLoading` vs `setIsRefetching` branch from `purchases.length > 0` to a `hasLoadedOnce` check scoped to the current cacheKey — that would fix this class of jank for every consumer, not just the MCP example"
-    status: pending
+    content: "Follow-up: file an issue / open PR against `SolvaPayProvider` to switch the `setLoading` vs `setIsRefetching` branch from `purchases.length > 0` to a `hasLoadedOnce` check scoped to the current cacheKey. **Done** — shipped under [react-provider-loading-vs-refetching_c2d8b3a7.plan.md](solvapay-sdk/.cursor/plans/react-provider-loading-vs-refetching_c2d8b3a7.plan.md) via `loadedCacheKeysRef: Set<string>` in [packages/react/src/SolvaPayProvider.tsx](solvapay-sdk/packages/react/src/SolvaPayProvider.tsx), with two unit tests asserting `isRefetching: true, loading: false` mid-flight on both empty-state and non-empty refetches."
+    status: completed
 isProject: false
 ---
 
