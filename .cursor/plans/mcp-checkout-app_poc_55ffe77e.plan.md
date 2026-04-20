@@ -131,6 +131,8 @@ Extract the ad-hoc `mcpAdapter` into `@solvapay/react/mcp` (or a new `@solvapay/
 
 May need to extend `SolvaPayProviderProps` with overrides for hooks that currently only go via `fetch` (`useBalance`, `useProduct`, `useMerchant`, cancel/reactivate/activate). Either broaden the override surface or introduce a single `transport` prop.
 
+[`react-provider-loading-vs-refetching_c2d8b3a7.plan.md`](solvapay-sdk/.cursor/plans/react-provider-loading-vs-refetching_c2d8b3a7.plan.md) is **downstream of this work** — the `loading` vs `isRefetching` fix should land inside whichever module owns `fetchPurchase` after this refactor (provider, transport, or a new shared hook).
+
 ### 3. Tool-surface helper in `@solvapay/server`
 
 Ship a `registerCheckoutToolsMcp(server, options)` helper that registers the full tool set the same way `registerVirtualToolsMcp` does today ([virtual-tools.ts](solvapay-sdk/packages/server/src/virtual-tools.ts)). Removes boilerplate for every MCP integrator that wants checkout + account UIs.
