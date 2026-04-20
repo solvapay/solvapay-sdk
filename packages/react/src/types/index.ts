@@ -21,8 +21,13 @@ export interface PurchaseInfo {
   endDate?: string
   cancelledAt?: string
   cancellationReason?: string
+  /** Normalised amount in USD cents (for cross-currency aggregation). */
   amount?: number
+  /** Amount in minor units of `currency` — what the customer was actually charged. */
+  originalAmount?: number
   currency?: string
+  /** Exchange rate used to convert `originalAmount` → `amount` (USD). */
+  exchangeRate?: number
   planType?: string
   isRecurring?: boolean
   nextBillingDate?: string

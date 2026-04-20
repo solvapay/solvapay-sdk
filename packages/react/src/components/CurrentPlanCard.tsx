@@ -151,7 +151,10 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   const planType = activePurchase.planSnapshot?.planType ?? 'one-time'
   const isUsageBased = planType === 'usage-based'
 
-  const amount = activePurchase.amount ?? 0
+  // Prefer `originalAmount` (customer-currency minor units) so the label
+  // matches `currency`. `amount` is always USD cents — pairing it with a
+  // non-USD `currency` would render e.g. "SEK 54.26" for a 500 SEK charge.
+  const amount = activePurchase.originalAmount ?? activePurchase.amount ?? 0
   const currency = activePurchase.currency ?? 'usd'
   const priceLabel = formatPrice(amount, currency, {
     interval: activePurchase.billingCycle,

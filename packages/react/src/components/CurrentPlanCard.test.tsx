@@ -222,6 +222,35 @@ describe('CurrentPlanCard', () => {
     })
   })
 
+  it('renders the customer-currency price when originalAmount differs from amount', async () => {
+    // 500 SEK charge: backend sends amount as USD cents (5426) and
+    // originalAmount as SEK öre (50000). Without `originalAmount` the card
+    // would render "SEK 54.26" (USD cents labelled SEK).
+    const sekPurchase: PurchaseInfo = {
+      reference: 'purchase_sek',
+      productName: 'MCP pro',
+      status: 'active',
+      startDate: '2026-04-20T00:00:00Z',
+      amount: 5426,
+      originalAmount: 50000,
+      currency: 'SEK',
+      exchangeRate: 0.1085,
+      planRef: 'plan_sek_monthly',
+      billingCycle: 'month',
+      isRecurring: true,
+      planSnapshot: { planType: 'recurring', reference: 'plan_sek_monthly' },
+    }
+    const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price).toBeTruthy()
+    const priceText = price?.textContent ?? ''
+    expect(priceText).toContain('500')
+    expect(priceText).not.toContain('54.26')
+  })
+
   it('honours hidePaymentMethod and hideCancelButton / hideUpdatePaymentButton', async () => {
     const card: PaymentMethodInfo = {
       kind: 'card',
