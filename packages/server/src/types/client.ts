@@ -64,38 +64,18 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
  * SDK-facing payment-method projection returned by
  * `GET /v1/sdk/payment-method?customerRef=...`.
  *
- * Hand-typed until the OpenAPI generator picks up the new endpoint (the
- * backend serves a discriminated union that openapi-typescript produces
- * as a plain `{ kind: string }` shape otherwise).
+ * Derived from the generated operation response so any backend shape
+ * change propagates through a single `npm run generate:types` run. The
+ * inline `oneOf` schema on the backend controller translates to a clean
+ * `{ kind: 'card', ... } | { kind: 'none' }` discriminated union here.
  */
 export type PaymentMethodInfo =
-  | {
-      kind: 'card'
-      brand: string
-      last4: string
-      expMonth: number
-      expYear: number
-    }
-  | { kind: 'none' }
+  operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
 
 /**
  * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
- *
- * Hand-typed here until the OpenAPI generator picks up the new endpoint.
- * Fields match `SdkMerchantResponseDto` on the backend.
  */
-export type SdkMerchantResponse = {
-  displayName: string
-  legalName: string
-  supportEmail?: string
-  supportUrl?: string
-  termsUrl?: string
-  privacyUrl?: string
-  country?: string
-  defaultCurrency?: string
-  statementDescriptor?: string
-  logoUrl?: string
-}
+export type SdkMerchantResponse = components['schemas']['SdkMerchantResponseDto']
 
 /** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
 export type SdkProductResponse = components['schemas']['SdkProductResponse']
