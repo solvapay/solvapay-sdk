@@ -35,6 +35,8 @@ todos:
 isProject: false
 ---
 
+> **Superseded** by [mcp-checkout-app_hosted-button-pivot_b3d9c1a2.plan.md](solvapay-sdk/.cursor/plans/mcp-checkout-app_hosted-button-pivot_b3d9c1a2.plan.md). The embedded-Stripe-Elements risk called out below was confirmed in practice (host CSP + sandbox blocks `js.stripe.com`), and the example pivoted to a hosted-checkout-launch button. The risks + roadmap sections are preserved because they remain useful context for future parity work (topup, cancel/reactivate, track_usage).
+
 ## Goal
 
 Validate end-to-end that a SolvaPay checkout works entirely from an MCP App UI resource talking to MCP tools on the MCP server (which holds `SOLVAPAY_SECRET_KEY`). Key unknown to de-risk: **Stripe Elements rendering and confirming inside an MCP host iframe.**
