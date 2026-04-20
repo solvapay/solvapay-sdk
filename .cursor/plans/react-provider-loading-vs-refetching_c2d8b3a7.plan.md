@@ -1,9 +1,9 @@
 ---
 name: SolvaPayProvider loading vs isRefetching semantics
-overview: The provider's `fetchPurchase` decides `setLoading` vs `setIsRefetching` based on "do purchases currently exist?". That branch misfires for consumers polling an empty-state user (e.g. Upgrade flow) — every refetch flips `loading` true for the duration of the round-trip, causing view-level remounts. Switch the decision to "has this cacheKey ever completed a fetch?" so polling behaves correctly regardless of whether the user has paid yet. Blocked on the MCP-apps / transport refactor in [`mcp-checkout-app_poc_55ffe77e.plan.md`](solvapay-sdk/.cursor/plans/mcp-checkout-app_poc_55ffe77e.plan.md) §2 — the data-fetch layer is moving behind a `transport` abstraction, and this fix should land in whatever owns `fetchPurchase` after that split.
+overview: The provider's `fetchPurchase` decides `setLoading` vs `setIsRefetching` based on "do purchases currently exist?". That branch misfires for consumers polling an empty-state user (e.g. Upgrade flow) — every refetch flips `loading` true for the duration of the round-trip, causing view-level remounts. Switch the decision to "has this cacheKey ever completed a fetch?" so polling behaves correctly regardless of whether the user has paid yet. Blocked on the MCP-apps adapter refactor in [`react-mcp-app-adapter_e5a04f19.plan.md`](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) — the data-fetch layer is moving behind a `transport` abstraction, and this fix should land in whatever owns `fetchPurchase` after that split.
 todos:
   - id: wait-on-refactor
-    content: "**Dependency**: do not start until [mcp-checkout-app_poc_55ffe77e.plan.md](solvapay-sdk/.cursor/plans/mcp-checkout-app_poc_55ffe77e.plan.md) §2 (Reusable React adapter / `transport` prop) is merged. The location of `fetchPurchase` (provider vs transport vs shared hook) changes under that refactor — applying this fix beforehand creates merge conflicts and likely re-work"
+    content: "**Dependency**: do not start until [react-mcp-app-adapter_e5a04f19.plan.md](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) is merged. The location of `fetchPurchase` (provider vs transport vs shared hook) changes under that refactor — applying this fix beforehand creates merge conflicts and likely re-work"
     status: pending
   - id: locate
     content: "After the refactor, confirm where `fetchPurchase` lives (e.g. `@solvapay/react` provider, shared `transport.fetchPurchase`, or a new `useRemotePurchase` hook) and relocate this fix into that module"
@@ -28,9 +28,7 @@ isProject: false
 
 ## Dependency — wait on the MCP-apps / transport refactor
 
-This fix is **blocked** on [`mcp-checkout-app_poc_55ffe77e.plan.md`](solvapay-sdk/.cursor/plans/mcp-checkout-app_poc_55ffe77e.plan.md) §2 ("Reusable React adapter"):
-
-> Extract the ad-hoc `mcpAdapter` into `@solvapay/react/mcp` (or a new `@solvapay/mcp-app` package) exporting `createMcpAppAdapter(app)` that returns the full set of `SolvaPayProvider` overrides. … May need to extend `SolvaPayProviderProps` with overrides for hooks that currently only go via `fetch` (`useBalance`, `useProduct`, `useMerchant`, cancel/reactivate/activate). Either broaden the override surface or introduce a single `transport` prop.
+This fix is **blocked** on [`react-mcp-app-adapter_e5a04f19.plan.md`](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md), which extracts `createMcpAppAdapter(app)` and chooses between broadening `SolvaPayProviderProps` or introducing a single `transport` prop covering every hook that currently routes through `config.fetch`.
 
 That refactor directly reshapes the module this fix edits:
 

@@ -127,11 +127,7 @@ Add the remaining tools to the example so every route in [checkout-demo/app/api]
 
 ### 2. Reusable React adapter
 
-Extract the ad-hoc `mcpAdapter` into `@solvapay/react/mcp` (or a new `@solvapay/mcp-app` package) exporting `createMcpAppAdapter(app)` that returns the full set of `SolvaPayProvider` overrides. Goal: a consumer can write `<SolvaPayProvider {...createMcpAppAdapter(app)}>` and reuse every existing hook/component.
-
-May need to extend `SolvaPayProviderProps` with overrides for hooks that currently only go via `fetch` (`useBalance`, `useProduct`, `useMerchant`, cancel/reactivate/activate). Either broaden the override surface or introduce a single `transport` prop.
-
-[`react-provider-loading-vs-refetching_c2d8b3a7.plan.md`](solvapay-sdk/.cursor/plans/react-provider-loading-vs-refetching_c2d8b3a7.plan.md) is **downstream of this work** — the `loading` vs `isRefetching` fix should land inside whichever module owns `fetchPurchase` after this refactor (provider, transport, or a new shared hook).
+**Promoted to its own plan: [`react-mcp-app-adapter_e5a04f19.plan.md`](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md).** The original §2 text lived here while this PoC plan was active; it moved because this plan is now superseded by the hosted-button pivot and the refactor needs a stable home so downstream plans can depend on it.
 
 ### 3. Tool-surface helper in `@solvapay/server`
 
