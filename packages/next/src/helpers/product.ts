@@ -1,11 +1,7 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { getProductCore, isErrorResult } from '@solvapay/server'
-
-type GetProductSuccess = Exclude<
-  Awaited<ReturnType<typeof getProductCore>>,
-  { error: string }
->
+import { getProductCore } from '@solvapay/server'
+import { toNextRouteResponse } from './_response'
 
 /**
  * Next.js route wrapper for GET /api/get-product?productRef=...
@@ -22,15 +18,7 @@ export async function getProduct(
   options: {
     solvaPay?: SolvaPay
   } = {},
-): Promise<GetProductSuccess | NextResponse> {
+): Promise<NextResponse> {
   const result = await getProductCore(request, options)
-
-  if (isErrorResult(result)) {
-    return NextResponse.json(
-      { error: result.error, details: result.details },
-      { status: result.status },
-    )
-  }
-
-  return result
+  return toNextRouteResponse(result)
 }

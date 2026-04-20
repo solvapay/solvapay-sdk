@@ -27,7 +27,7 @@ import {
 } from '@solvapay/next'
 import type { SolvaPay } from '@solvapay/server'
 
-type Handler = (request: NextRequest) => Promise<unknown>
+type Handler = (request: NextRequest) => Promise<NextResponse>
 
 export type SolvaPayRouteHandlers = {
   GET: (
@@ -46,10 +46,6 @@ async function bodyJson(request: NextRequest): Promise<Record<string, unknown>> 
   } catch {
     return {}
   }
-}
-
-function toResponse(result: unknown): NextResponse {
-  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 
 async function resolveRouteKey(
@@ -79,7 +75,11 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   }
 
   const postRoutes: Record<string, Handler> = {
-    'sync-customer': request => syncCustomer(request, { solvaPay }),
+    'sync-customer': async request => {
+      const result = await syncCustomer(request, { solvaPay })
+      if (result instanceof NextResponse) return result
+      return NextResponse.json({ customerRef: result, success: true })
+    },
     'create-payment-intent': async request => {
       const body = await bodyJson(request)
       return createPaymentIntent(
@@ -150,7 +150,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
     if (!handler) {
       return NextResponse.json({ error: `Unknown GET route: ${key}` }, { status: 404 })
     }
-    return toResponse(await handler(request))
+    return handler(request)
   }
 
   async function POST(
@@ -162,7 +162,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
     if (!handler) {
       return NextResponse.json({ error: `Unknown POST route: ${key}` }, { status: 404 })
     }
-    return toResponse(await handler(request))
+    return handler(request)
   }
 
   return { GET, POST }

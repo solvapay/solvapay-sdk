@@ -5,15 +5,29 @@
  */
 
 import { NextResponse } from 'next/server'
-import type { SolvaPay, CustomerBalanceResult } from '@solvapay/server'
+import type { SolvaPay } from '@solvapay/server'
 import { syncCustomerCore, getCustomerBalanceCore, isErrorResult } from '@solvapay/server'
+import { toNextRouteResponse } from './_response'
 
 /**
- * Sync customer - Next.js wrapper
+ * Get the authenticated customer's SolvaPay reference.
  *
- * @param request - Next.js request object
- * @param options - Configuration options
- * @returns Customer reference or NextResponse error
+ * Unlike the other route-wrapper helpers, this one returns the raw customer
+ * reference string on success so callers can use it to build their own
+ * response body. Errors are still returned as a `NextResponse`.
+ *
+ * @example
+ * ```ts
+ * // app/api/sync-customer/route.ts
+ * import { NextResponse } from 'next/server'
+ * import { syncCustomer } from '@solvapay/next/helpers'
+ *
+ * export async function POST(request: Request) {
+ *   const result = await syncCustomer(request)
+ *   if (result instanceof NextResponse) return result
+ *   return NextResponse.json({ customerRef: result })
+ * }
+ * ```
  */
 export async function syncCustomer(
   request: globalThis.Request,
@@ -36,26 +50,21 @@ export async function syncCustomer(
 }
 
 /**
- * Get customer credits - Next.js wrapper
+ * Next.js route wrapper for GET /api/customer-balance.
  *
- * @param request - Next.js request object
- * @param options - Configuration options
- * @returns Customer credits result or NextResponse error
+ * @example
+ * ```ts
+ * // app/api/customer-balance/route.ts
+ * import { getCustomerBalance } from '@solvapay/next/helpers'
+ * export const GET = (request: Request) => getCustomerBalance(request)
+ * ```
  */
 export async function getCustomerBalance(
   request: globalThis.Request,
   options: {
     solvaPay?: SolvaPay
   } = {},
-): Promise<CustomerBalanceResult | NextResponse> {
+): Promise<NextResponse> {
   const result = await getCustomerBalanceCore(request, options)
-
-  if (isErrorResult(result)) {
-    return NextResponse.json(
-      { error: result.error, details: result.details },
-      { status: result.status },
-    )
-  }
-
-  return result
+  return toNextRouteResponse(result)
 }
