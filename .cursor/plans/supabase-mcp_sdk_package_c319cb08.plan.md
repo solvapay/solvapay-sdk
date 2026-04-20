@@ -12,7 +12,7 @@ todos:
     content: "Implement createWellKnownHandlers: self-consistent discovery per RFC 8414 §3.3 (issuer and every endpoint on publicBaseUrl, endpoints under /oauth/*), plus createUnauthenticatedResponse with WWW-Authenticate header"
     status: pending
   - id: oauth_proxy
-    content: "Implement createOAuthProxyHandlers: register (inject product_ref), authorize (302 to SolvaPay preserving query), token (raw-body POST forward, authorization header passthrough), revoke (raw-body POST forward). Returns Hono route installer `mountOAuthProxy(app, opts)` plus individual `(req: Request) => Promise<Response>` helpers for non-Hono callers"
+    content: "Implement createOAuthProxyHandlers: register (inject product_ref), authorize (302 to SolvaPay preserving query), token (raw-body POST forward via `await req.text()`, authorization header passthrough, NO `URLSearchParams` re-serialization fallback), revoke (same raw-body rule as token). Returns Hono route installer `mountOAuthProxy(app, opts)` plus individual `(req: Request) => Promise<Response>` helpers for non-Hono callers. Deliberately stricter than the existing Node `oauth-bridge.ts` — see Behavioural contract"
     status: pending
   - id: cors_preflight
     content: "Implement native-scheme CORS preflight helper: matches origins against /^(cursor|vscode|vscode-webview|claude):\\/\\/.+$/, mirrors Origin back with Vary: Origin, echoes requested method/headers. Wired into mountOAuthProxy and exported standalone for reuse on /mcp 401 responses"
@@ -31,6 +31,9 @@ todos:
     status: pending
   - id: update_skill_plan
     content: After preview publish, update .cursor/plans/lovable-mcp-server_skill_e622a6f4.plan.md so the skill uses createSolvaPayMcp as the happy path and mentions primitives only in an escape-hatch section
+    status: pending
+  - id: harden_node_spec
+    content: "One-line hardening on the existing [`packages/server/src/mcp/oauth-bridge.spec.ts`](../../solvapay-sdk/packages/server/src/mcp/oauth-bridge.spec.ts): add `expect(JSON.stringify(doc)).not.toContain('product_ref')` to the discovery test so the Node middleware is guarded by the same negative assertion this package's `well-known.unit.test.ts` adds. Out of scope for the package work itself but should land in the same PR sequence so both surfaces are protected."
     status: pending
 isProject: false
 ---
@@ -147,23 +150,31 @@ The package's OAuth surface exists to pass RFC 8414 §3.3 self-consistency while
 
 - `issuer` in `/.well-known/oauth-authorization-server` is exactly `mcpPublicBaseUrl` — no trailing slash drift, no scheme swap.
 - Every endpoint URL in the discovery doc is a prefix match of `mcpPublicBaseUrl` + `/oauth/*` or `/.well-known/*`.
-- `product_ref` is injected **only** in the `/oauth/register` proxy as a query parameter — it never leaks into discovery JSON or downstream authorize/token/revoke requests.
-- `/oauth/token` forwards `await req.text()` verbatim. No `parseBody()`, no header case normalization beyond what `fetch` already does, no re-serialization.
+- `product_ref` is injected **only** in the `/oauth/register` proxy as a query parameter — it never leaks into discovery JSON or downstream authorize/token/revoke requests. Enforced by a negative assertion in `well-known.unit.test.ts` (`expect(JSON.stringify(doc)).not.toContain('product_ref')`), not just positive endpoint checks.
+- `/oauth/token` forwards `await req.text()` verbatim. **No `parseBody()`, no header case normalization beyond what `fetch` already does, no re-serialization** — not even the `URLSearchParams.toString()` fallback. This is stricter than the existing Node middleware (see "Relationship to existing Node middleware" below).
+- `/oauth/revoke` follows the same byte-for-byte rule as `/oauth/token`.
 - CORS preflight mirrors the requesting `Origin` only when it matches the native-scheme regex; any other origin gets zero CORS headers (effectively same-origin only).
 - The turnkey factory and the primitives produce **byte-identical** discovery JSON for the same inputs — the factory is a literal composition.
 
-These invariants mirror what [`packages/server/src/mcp/oauth-bridge.ts`](../../solvapay-sdk/packages/server/src/mcp/oauth-bridge.ts) already enforces in Node; this package is the Fetch-first mirror.
+### Relationship to existing Node middleware
+
+[`packages/server/src/mcp/oauth-bridge.ts`](../../solvapay-sdk/packages/server/src/mcp/oauth-bridge.ts) already enforces invariants 1, 2, and the CORS/composition rules (verified in [`oauth-bridge.spec.ts`](../../solvapay-sdk/packages/server/src/mcp/oauth-bridge.spec.ts)). This package mirrors those into Fetch-first primitives.
+
+It diverges deliberately on the body-forwarding rule: the Node middleware has a `serializeFormBody()` fallback that re-serializes parsed-object bodies via `URLSearchParams.toString()` when `body-parser` style middleware has already consumed the stream. That fallback happens to work for SolvaPay's current upstream (PKCE verifier characters and Basic-auth-in-header are unaffected) but is a latent compatibility hazard — `+` vs `%20` drift and iteration-order dependence on the parser's output. `@solvapay/supabase-mcp` drops the fallback entirely: the token/revoke handlers require the raw request and will surface a clear error if a consumer has stacked a body parser ahead of them.
+
+Additionally, the Node spec today asserts the discovery document *positively* (every endpoint is on `publicBaseUrl`) but has no *negative* assertion that the string `product_ref` is absent. Adding that assertion to the Node spec as a one-line hardening is tracked separately — out of scope for this plan, but worth doing before this package publishes so both surfaces are protected by the same guard.
 
 ## Tests (vitest)
 
 - `auth-middleware.unit.test.ts` — mocks `fetch` to userinfo, asserts `ctx.state.customerRef` set and `_auth` injected for `tools/call` only (not other methods).
 - `virtual-tools.unit.test.ts` — feeds three synthetic `VirtualToolDefinition`s, asserts `mcp.tool` called with correct args and handlers unwrapped (no `payable.mcp` wrapping).
-- `well-known.unit.test.ts` — snapshots the JSON documents and asserts: `issuer === mcpPublicBaseUrl`; every endpoint starts with `mcpPublicBaseUrl`; no `product_ref` string appears anywhere in either document.
+- `well-known.unit.test.ts` — snapshots the JSON documents and asserts: `issuer === mcpPublicBaseUrl`; every endpoint starts with `mcpPublicBaseUrl`; no `product_ref` string appears anywhere in either document (negative assertion: `expect(JSON.stringify(doc)).not.toContain('product_ref')`); trailing-slash on input `mcpPublicBaseUrl` is normalized (mirrors the existing Node spec's `'strips trailing slashes'` case).
 - `oauth-proxy.unit.test.ts` — mocks upstream `fetch` and asserts:
   - `register` POSTs to `<apiBaseUrl>/v1/customer/auth/register?product_ref=<productRef>` with the exact JSON body forwarded; error responses from upstream are relayed with the same status and body.
   - `authorize` returns a 302 whose `Location` is `<apiBaseUrl>/v1/customer/auth/authorize<qs>` with the original search string including `?` intact.
-  - `token` forwards the request body **byte-for-byte** (test uses a form body with `+` and `%20` preserved and asserts the upstream receives the same string); `authorization` and `content-type` headers pass through.
-  - `revoke` mirrors upstream status with an empty body.
+  - `token` forwards the request body **byte-for-byte**: the test constructs a `new Request(url, { body: 'grant_type=authorization_code&code=a+b&redirect_uri=cursor%3A%2F%2Fcb&code_verifier=... '})` where the body contains both `+` and `%20` and asserts the upstream `fetch` mock receives the **exact same string** (no round-trip through `URLSearchParams`). `authorization` and `content-type` headers pass through.
+  - `token` with no body at all still produces a valid upstream `POST` — confirms the handler doesn't synthesize `{}`.
+  - `revoke` applies the same byte-for-byte rule and mirrors upstream status (including 204 with empty body).
   - `OPTIONS /oauth/register` with `Origin: cursor://x` returns 204 + `Access-Control-Allow-Origin: cursor://x` + `Vary: Origin`; `Origin: https://evil.com` returns 204 with no CORS headers.
 - `cors.unit.test.ts` — unit-tests the origin regex for true/false cases across `cursor://`, `vscode://`, `vscode-webview://`, `claude://`, empty string, `null`, and arbitrary HTTPS origins.
 - `factory.unit.test.ts` — end-to-end via the returned `handler(req)`:
@@ -193,6 +204,10 @@ Do not execute the skill-update plan until this package is published to `@previe
 
 1. Land `@solvapay/supabase-mcp` (this plan) → publish `@preview`.
 2. Update `skills/lovable-mcp-server/SKILL.md` to prefer `createSolvaPayMcp` with the current hand-wired flow preserved as the escape hatch.
+
+## Related work
+
+- [`react-mcp-app-adapter_e5a04f19.plan.md`](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) — the **client-side** companion. Ships `createMcpAppAdapter(app)` from `@solvapay/react/mcp` so an MCP App's React UI routes through `app.callServerTool` instead of HTTP, reusing every existing `@solvapay/react` hook and component. No blocking relationship in either direction: the adapter talks to the server via tool names (`check_purchase`, `create_checkout_session`, `create_customer_session`, ...), so any server that exposes those tools — `@solvapay/supabase-mcp`, the Node `registerVirtualToolsMcp` flow, or a hand-wired `@modelcontextprotocol/sdk` server — satisfies the contract. Together the two plans complete the "MCP App with paywalled server" story: `createSolvaPayMcp({...})` on the server + `<SolvaPayProvider {...createMcpAppAdapter(app)}>` in the UI resource.
 
 ## Out of scope
 
