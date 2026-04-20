@@ -61,6 +61,24 @@ export interface ProcessPaymentResult {
 export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 
 /**
+ * SDK-facing payment-method projection returned by
+ * `GET /v1/sdk/payment-method?customerRef=...`.
+ *
+ * Hand-typed until the OpenAPI generator picks up the new endpoint (the
+ * backend serves a discriminated union that openapi-typescript produces
+ * as a plain `{ kind: string }` shape otherwise).
+ */
+export type PaymentMethodInfo =
+  | {
+      kind: 'card'
+      brand: string
+      last4: string
+      expMonth: number
+      expYear: number
+    }
+  | { kind: 'none' }
+
+/**
  * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
  *
  * Hand-typed here until the OpenAPI generator picks up the new endpoint.
@@ -317,4 +335,7 @@ export interface SolvaPayClient {
   activatePlan?(
     params: components['schemas']['ActivatePlanDto'],
   ): Promise<ActivatePlanResult>
+
+  // GET: /v1/sdk/payment-method?customerRef=...
+  getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
 }

@@ -178,23 +178,13 @@ Use these test card numbers in the checkout form:
 ```tsx
 // app/layout.tsx
 import { SolvaPayProvider } from '@solvapay/react'
-;<SolvaPayProvider
-  customerRef={customerId}
-  createPayment={async ({ planRef, customerRef }) => {
-    const res = await fetch('/api/create-payment-intent', {
-      method: 'POST',
-      body: JSON.stringify({ planRef, customerRef, productRef }),
-    })
-    return res.json()
-  }}
-  checkPurchase={async customerRef => {
-    const res = await fetch(`/api/check-purchase?customerRef=${customerRef}`)
-    return res.json()
-  }}
->
-  {children}
-</SolvaPayProvider>
+
+// Zero config: uses the default HTTP transport wired to /api/* routes.
+;<SolvaPayProvider>{children}</SolvaPayProvider>
 ```
+
+To override individual methods, pass a custom `transport` on the config. See
+[`@solvapay/react` README](../../packages/react/README.md#fully-custom-implementation).
 
 ### 2. Authentication Setup
 
@@ -509,18 +499,16 @@ Always wrap your app with `SolvaPayProvider` at the root level:
 
 ```tsx
 // app/layout.tsx
-<SolvaPayProvider
-  customerRef={customerId}
-  createPayment={handleCreatePayment}
-  checkPurchase={handleCheckPurchase}
->
-  {children}
-</SolvaPayProvider>
+<SolvaPayProvider>{children}</SolvaPayProvider>
 ```
+
+Pass a custom transport only when you need to override the default HTTP
+routing (e.g. MCP App). See
+[`@solvapay/react` README](../../packages/react/README.md#fully-custom-implementation).
 
 ### 2. Error Handling
 
-Handle errors in your API callbacks:
+Handle errors via `config.onError` or wrap your transport:
 
 ```tsx
 const handleCreatePayment = async ({ planRef, customerRef }) => {

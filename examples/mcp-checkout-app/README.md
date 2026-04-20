@@ -53,16 +53,24 @@ the host — the card updates to **Manage purchase** automatically.
 ## Flow
 
 1. Host loads `ui://mcp-checkout-app/mcp-app.html` — a single-file React
-   bundle mounting `<SolvaPayProvider>` with the MCP `check_purchase`
-   tool as its `checkPurchase` override.
+   bundle mounting `<SolvaPayProvider config={{ transport }}>` where
+   `transport = createMcpAppAdapter(app)` from
+   [`@solvapay/react/mcp`](../../packages/react/src/mcp). Every data-access
+   call the provider makes (check purchase, create checkout/customer
+   session, etc.) is tunnelled through `app.callServerTool` instead of
+   HTTP — tool names come from the shared `MCP_TOOL_NAMES` constant so the
+   server and client can't drift apart.
 2. On mount the UI calls `open_checkout` to fetch the configured
    `productRef`.
 3. `usePurchase` loads the current purchase (via `check_purchase`). The
    UI then pre-fetches a hosted URL for the state it is about to render:
    - No active purchase → `create_checkout_session` → populates the
      Upgrade anchor's `href`
-   - Active paid purchase → `create_customer_session` → populates the
-     Manage anchor's `href`
+   - Active paid purchase → renders `<CurrentPlanCard>` which calls
+     `get_payment_method` for the card display and composes
+     `<UpdatePaymentMethodButton>` (pre-fetches `create_customer_session`
+     under the hood) + `<CancelPlanButton>`. The card is a pure projection
+     of provider state — no custom plumbing.
    - Cancelled purchase → `create_checkout_session` → populates the
      Purchase Again anchor's `href`
 4. The user clicks a real `<a target="_blank">` element. The sandbox
@@ -81,6 +89,7 @@ the host — the card updates to **Manage purchase** automatically.
 | `check_purchase` | Fetches the active purchase for the authenticated customer |
 | `create_checkout_session` | Returns `{ sessionId, checkoutUrl }` for the SolvaPay hosted checkout |
 | `create_customer_session` | Returns `{ sessionId, customerUrl }` for the SolvaPay customer portal |
+| `get_payment_method` | Returns `{ kind: 'card', brand, last4, expMonth, expYear }` or `{ kind: 'none' }` for the `<CurrentPlanCard>` payment line |
 
 `returnUrl` on `create_checkout_session` is intentionally unset — there
 is no meaningful URL to return to inside an MCP host iframe, so the
@@ -88,11 +97,12 @@ SolvaPay backend default is used.
 
 ## Known boundaries
 
-- Only the five tools above are shipped. `create_topup_payment_intent`,
+- Only the six tools above are shipped. Plan switching (`change_plan`) and
+  inline card-update (`create_setup_intent`) are in flight as follow-ups —
+  see [`sdk_plan_management_phase2_6e40d833.plan.md`](../../.cursor/plans/sdk_plan_management_phase2_6e40d833.plan.md)
+  for the deferred scope. `create_topup_payment_intent`,
   `customer_balance`, `activate_plan`, `cancel_renewal`,
-  `reactivate_renewal`, `track_usage`, and `get_merchant` are roadmap —
-  see the "After the PoC" section of the superseded PoC plan at
-  [`solvapay-sdk/.cursor/plans/mcp-checkout-app_poc_55ffe77e.plan.md`](../../.cursor/plans/mcp-checkout-app_poc_55ffe77e.plan.md).
+  `reactivate_renewal`, `track_usage`, and `get_merchant` are roadmap.
 - Auth comes exclusively from `createMcpOAuthBridge` → `customer_ref`
   on `extra.authInfo`. There is no client-side auth adapter.
 

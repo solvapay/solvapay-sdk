@@ -136,18 +136,14 @@ The hosted checkout page accepts standard Stripe test cards:
 ```tsx
 // app/layout.tsx
 import { SolvaPayProvider } from '@solvapay/react'
-;<SolvaPayProvider
-  customerRef={customerId}
-  checkPurchase={async customerRef => {
-    const res = await fetch(`/api/check-purchase?customerRef=${customerRef}`)
-    return res.json()
-  }}
->
-  {children}
-</SolvaPayProvider>
+
+// Zero config: uses the default HTTP transport wired to /api/* routes.
+;<SolvaPayProvider>{children}</SolvaPayProvider>
 ```
 
-**Note**: `createPayment` and `processPayment` callbacks are not needed for hosted checkout - users are redirected to hosted pages instead.
+**Note**: Stripe Elements flows (`createPayment` / `processPayment`) are not
+exercised in hosted checkout — users are redirected to hosted pages instead.
+To customise routing, pass `config.transport` on the provider.
 
 ### 2. Authentication Setup
 

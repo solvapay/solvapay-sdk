@@ -197,31 +197,97 @@ export default function App() {
 
 ### Fully Custom Implementation
 
+Every data-access call flows through `config.transport`. Build a custom one by
+spreading `createHttpTransport(config)` and overriding the methods you need:
+
 ```tsx
-import { SolvaPayProvider } from '@solvapay/react'
+import { SolvaPayProvider, createHttpTransport } from '@solvapay/react'
 
 export default function App() {
+  const transport = {
+    ...createHttpTransport(undefined),
+    createPayment: async ({ planRef, productRef }) => {
+      const res = await fetch('/api/custom/payment', {
+        method: 'POST',
+        body: JSON.stringify({ planRef, productRef }),
+      })
+      if (!res.ok) throw new Error('Failed to create payment')
+      return res.json()
+    },
+    checkPurchase: async () => {
+      const res = await fetch('/api/custom/purchase')
+      if (!res.ok) throw new Error('Failed to check purchase')
+      return res.json()
+    },
+  }
+
   return (
-    <SolvaPayProvider
-      createPayment={async ({ planRef, productRef }) => {
-        const res = await fetch('/api/custom/payment', {
-          method: 'POST',
-          body: JSON.stringify({ planRef, productRef }),
-        })
-        if (!res.ok) throw new Error('Failed to create payment')
-        return res.json()
-      }}
-      checkPurchase={async customerRef => {
-        const res = await fetch(`/api/custom/purchase?customerRef=${customerRef}`)
-        if (!res.ok) throw new Error('Failed to check purchase')
-        return res.json()
-      }}
-    >
+    <SolvaPayProvider config={{ transport }}>
       <CheckoutPage />
     </SolvaPayProvider>
   )
 }
 ```
+
+### MCP App
+
+For React trees hosted inside an MCP App (where Stripe.js and direct HTTP
+to your backend are both blocked by the host sandbox), use the MCP subpath:
+
+```tsx
+import { App } from '@modelcontextprotocol/ext-apps'
+import { SolvaPayProvider } from '@solvapay/react'
+import { createMcpAppAdapter } from '@solvapay/react/mcp'
+
+const app = new App({ name: 'solvapay', version: '1.0.0' })
+const transport = createMcpAppAdapter(app)
+
+export default function Root() {
+  return (
+    <SolvaPayProvider config={{ transport }}>
+      <CheckoutPage />
+    </SolvaPayProvider>
+  )
+}
+```
+
+The MCP server is expected to expose tools whose names match `MCP_TOOL_NAMES`
+from `@solvapay/react/mcp` — each transport method maps 1:1 to a tool call.
+
+### Managing plans in an MCP App
+
+Once a customer is paid, drop `<CurrentPlanCard />` into the UI and the
+SDK does the rest — plan name, price, next-billing / expiry line,
+payment-method summary (via `get_payment_method`), Update-card and
+Cancel-plan actions. The card returns `null` when there's no active
+purchase, so you can render it unconditionally:
+
+```tsx
+import { CurrentPlanCard } from '@solvapay/react'
+
+function Account() {
+  return <CurrentPlanCard />
+}
+```
+
+Behind the scenes:
+
+- Plan metadata comes from `usePurchase` (provider state, no extra fetch)
+- Payment-method line comes from `usePaymentMethod` → `transport.getPaymentMethod()`
+- `<UpdatePaymentMethodButton>` pre-fetches `transport.createCustomerSession()`
+  on mount and renders a real `<a target="_blank">` to the hosted portal —
+  MCP host sandboxes permit direct anchor clicks even though scripted
+  `window.open` after an async round-trip is blocked.
+- `<CancelPlanButton>` reuses Phase 1 behaviour — no new plumbing.
+
+If you want the bare portal-launch button on its own (e.g. in a top nav),
+use `<LaunchCustomerPortalButton />` directly.
+
+> `<PlanSwitcher>` (plan upgrade/downgrade with proration) and
+> `<PaymentMethodForm>` (inline Stripe Elements card update) are deferred
+> to follow-up PRs — see the plan in the SDK repo for scope. For plan
+> changes today, MCP apps use `<CancelPlanButton>` + `<CurrentPlanCard>`
+> + a fresh hosted checkout flow.
 
 ## Components
 

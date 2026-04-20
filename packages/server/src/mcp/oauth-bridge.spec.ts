@@ -347,6 +347,177 @@ describe('createOAuthTokenHandler', () => {
   })
 })
 
+describe('createOAuthTokenHandler — RFC 6749 §5.2 error normalisation', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  async function invokeToken(body: unknown = 'grant_type=refresh_token&refresh_token=rt') {
+    const handler = createOAuthTokenHandler({ apiBaseUrl })
+    const { res, state } = mockRes()
+    await handler(
+      mockReq({
+        method: 'POST',
+        path: '/oauth/token',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body,
+      }),
+      res,
+      vi.fn(),
+    )
+    return state
+  }
+
+  it('relays a 2xx upstream body verbatim (no rewriting of successful token payloads)', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(200, { access_token: 'tok', token_type: 'Bearer', expires_in: 3600 }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.statusCode).toBe(200)
+    expect(state.body).toEqual({
+      access_token: 'tok',
+      token_type: 'Bearer',
+      expires_in: 3600,
+    })
+  })
+
+  it('maps a NestJS Zod validation error for missing grant_type to invalid_request', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(400, {
+        statusCode: 400,
+        message: 'Validation failed',
+        errors: [
+          {
+            code: 'invalid_type',
+            expected: 'string',
+            received: 'undefined',
+            path: ['grant_type'],
+            message: 'Required',
+          },
+        ],
+        timestamp: '2026-04-20T17:35:19.912Z',
+        path: '/v1/customer/auth/token',
+      }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.statusCode).toBe(400)
+    expect(state.body).toEqual({
+      error: 'invalid_request',
+      error_description: 'grant_type: Required',
+    })
+    expect(state.headers['content-type']).toBe('application/json')
+  })
+
+  it('maps a received-but-unknown grant_type to unsupported_grant_type', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(400, {
+        statusCode: 400,
+        message: 'Validation failed',
+        errors: [
+          {
+            code: 'invalid_enum_value',
+            received: 'password',
+            path: ['grant_type'],
+            message: 'grant_type must be authorization_code or refresh_token',
+          },
+        ],
+      }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.body).toMatchObject({ error: 'unsupported_grant_type' })
+  })
+
+  it('maps a code-path validation failure to invalid_grant', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(400, {
+        statusCode: 400,
+        message: 'Authorization code expired',
+        errors: [{ path: ['code'], message: 'Code not found or expired' }],
+      }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.body).toMatchObject({
+      error: 'invalid_grant',
+      error_description: expect.stringContaining('Code not found'),
+    })
+  })
+
+  it('maps a 401 upstream to invalid_client and preserves the 401 status', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(401, {
+        statusCode: 401,
+        message: 'Invalid client credentials',
+      }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.statusCode).toBe(401)
+    expect(state.body).toEqual({
+      error: 'invalid_client',
+      error_description: 'Invalid client credentials',
+    })
+  })
+
+  it('maps a 500 upstream to server_error', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(500, { statusCode: 500, message: 'Internal error' }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.statusCode).toBe(500)
+    expect(state.body).toMatchObject({ error: 'server_error' })
+  })
+
+  it('passes an already-OAuth-shaped error body through verbatim', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(400, {
+        error: 'invalid_grant',
+        error_description: 'Refresh token revoked',
+      }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.body).toEqual({
+      error: 'invalid_grant',
+      error_description: 'Refresh token revoked',
+    })
+  })
+
+  it('handles a non-JSON upstream body with a generic invalid_request', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response('upstream went sideways', {
+        status: 400,
+        headers: { 'content-type': 'text/plain' },
+      }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.body).toEqual({
+      error: 'invalid_request',
+      error_description: 'upstream went sideways',
+    })
+  })
+})
+
 describe('createOAuthRevokeHandler', () => {
   let fetchMock: ReturnType<typeof vi.fn>
 

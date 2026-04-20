@@ -16,6 +16,11 @@ const sessions: Record<string, SessionEntry> = {}
 
 const app = express()
 app.use(express.json())
+// OAuth token + revoke endpoints submit `application/x-www-form-urlencoded`
+// per RFC 6749 §4.1.3 — without this parser, `req.body` stays empty and the
+// bridge forwards an empty body upstream, which the backend rejects with
+// `grant_type is required`. `express.json()` alone is NOT enough.
+app.use(express.urlencoded({ extended: false }))
 app.use(
   ...createMcpOAuthBridge({
     publicBaseUrl: mcpPublicBaseUrl,

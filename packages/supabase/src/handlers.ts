@@ -8,6 +8,7 @@ import {
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,
+  getPaymentMethodCore,
   listPlansCore,
   syncCustomerCore,
   createCheckoutSessionCore,
@@ -145,6 +146,19 @@ export async function activatePlan(req: Request): Promise<Response> {
 
   const body = await parseJsonBody(req)
   const result = await activatePlanCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getPaymentMethod(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const result = await getPaymentMethodCore(req)
 
   if (isErrorResult(result)) {
     return errorResponse(result, req)

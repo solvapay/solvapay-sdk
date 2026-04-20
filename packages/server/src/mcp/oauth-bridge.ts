@@ -194,6 +194,153 @@ async function relayJsonResponse(upstream: Response, res: ResponseLike): Promise
   res.json(body)
 }
 
+/**
+ * RFC 6749 §5.2 valid error codes for the token endpoint. Revocation
+ * (RFC 7009 §2.2.1) accepts the first two plus `unsupported_token_type`,
+ * which we never synthesise — an HTTP 400 without a recognisable mapping
+ * always lands on `invalid_request` regardless of endpoint.
+ */
+type OAuthTokenErrorCode =
+  | 'invalid_request'
+  | 'invalid_client'
+  | 'invalid_grant'
+  | 'unauthorized_client'
+  | 'unsupported_grant_type'
+  | 'invalid_scope'
+  | 'server_error'
+  | 'temporarily_unavailable'
+
+interface OAuthErrorBody {
+  error: OAuthTokenErrorCode | string
+  error_description?: string
+  [key: string]: unknown
+}
+
+function hasOAuthErrorShape(body: unknown): body is OAuthErrorBody {
+  return (
+    body !== null &&
+    typeof body === 'object' &&
+    typeof (body as Record<string, unknown>).error === 'string'
+  )
+}
+
+function extractZodErrors(body: Record<string, unknown>): Array<Record<string, unknown>> {
+  const errs = body.errors
+  if (!Array.isArray(errs)) return []
+  return errs.filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+}
+
+function deriveOAuthErrorCode(
+  status: number,
+  nestBody: Record<string, unknown>,
+): OAuthTokenErrorCode {
+  // 401/403 on the token endpoint means client authentication failed —
+  // RFC 6749 §5.2 says that's `invalid_client` (with 401 preserved).
+  if (status === 401 || status === 403) return 'invalid_client'
+
+  if (status >= 500) return 'server_error'
+
+  // Introspect Zod / class-validator error paths for a tighter mapping.
+  const zodErrors = extractZodErrors(nestBody)
+  const touches = (field: string): boolean =>
+    zodErrors.some(e => {
+      const path = (e as { path?: unknown }).path
+      return Array.isArray(path) && path.includes(field)
+    })
+
+  if (touches('grant_type')) {
+    // `grant_type` present but unrecognised → unsupported_grant_type.
+    // `grant_type` missing → invalid_request (default below).
+    const grantTypeErr = zodErrors.find(e => {
+      const path = (e as { path?: unknown }).path
+      return Array.isArray(path) && path.includes('grant_type')
+    })
+    const received = grantTypeErr && (grantTypeErr as { received?: unknown }).received
+    if (received !== 'undefined' && received !== undefined && received !== '') {
+      return 'unsupported_grant_type'
+    }
+    return 'invalid_request'
+  }
+
+  if (touches('code') || touches('refresh_token')) return 'invalid_grant'
+  if (touches('scope')) return 'invalid_scope'
+  if (touches('client_id') || touches('client_secret')) return 'invalid_client'
+
+  return 'invalid_request'
+}
+
+function buildErrorDescription(nestBody: Record<string, unknown>): string | undefined {
+  const zodErrors = extractZodErrors(nestBody)
+  if (zodErrors.length > 0) {
+    const parts = zodErrors
+      .map(e => {
+        const path = (e as { path?: unknown }).path
+        const message = (e as { message?: unknown }).message
+        const pathStr = Array.isArray(path) ? path.filter(p => typeof p === 'string').join('.') : ''
+        const msgStr = typeof message === 'string' ? message : ''
+        if (pathStr && msgStr) return `${pathStr}: ${msgStr}`
+        return pathStr || msgStr
+      })
+      .filter(Boolean)
+    if (parts.length > 0) return parts.join('; ')
+  }
+
+  const message = nestBody.message
+  if (typeof message === 'string') return message
+  if (Array.isArray(message)) {
+    const strings = message.filter((m: unknown): m is string => typeof m === 'string')
+    if (strings.length > 0) return strings.join('; ')
+  }
+
+  return undefined
+}
+
+/**
+ * Translate a non-2xx upstream body into RFC 6749 §5.2 shape.
+ *
+ * - If the body is already `{ error: <string>, ... }`, it's left alone.
+ * - NestJS Zod pipe shape `{ statusCode, message, errors, timestamp, path }`
+ *   is mapped to `{ error, error_description }` with the code derived from
+ *   the validation failures (path → OAuth error code table).
+ * - Plain text / empty / unknown shapes fall back to `invalid_request`
+ *   (4xx) or `server_error` (5xx) with a best-effort description.
+ *
+ * Only called on non-2xx responses from the `/oauth/token` and
+ * `/oauth/revoke` handlers. 2xx responses are relayed verbatim — we never
+ * rewrite successful token payloads.
+ */
+function toOAuthErrorBody(body: unknown, text: string, status: number): OAuthErrorBody {
+  if (hasOAuthErrorShape(body)) return body
+
+  if (body && typeof body === 'object') {
+    const nestBody = body as Record<string, unknown>
+    const error = deriveOAuthErrorCode(status, nestBody)
+    const error_description = buildErrorDescription(nestBody)
+    return error_description ? { error, error_description } : { error }
+  }
+
+  // Non-JSON body (plain text) — use the text as the description when short.
+  const fallbackError: OAuthTokenErrorCode = status >= 500 ? 'server_error' : 'invalid_request'
+  const description = typeof text === 'string' && text.length > 0 && text.length < 500 ? text : undefined
+  return description ? { error: fallbackError, error_description: description } : { error: fallbackError }
+}
+
+async function relayOAuthJsonResponse(
+  upstream: Response,
+  res: ResponseLike,
+): Promise<void> {
+  if (upstream.ok || upstream.status === 204) {
+    await relayJsonResponse(upstream, res)
+    return
+  }
+
+  const { body, text } = await readJsonFromResponse(upstream)
+  const normalized = toOAuthErrorBody(body, text, upstream.status)
+  res.status(upstream.status)
+  res.setHeader('Content-Type', 'application/json')
+  res.json(normalized)
+}
+
 function sendUpstreamError(res: ResponseLike, _error: unknown) {
   // 502 Bad Gateway — upstream SolvaPay unreachable or network error.
   res.status(502)
@@ -366,7 +513,7 @@ export function createOAuthTokenHandler(options: OAuthTokenHandlerOptions): Midd
         body: serializeRequestBody(contentType, req.body),
       })
       applyCorsHeaders(req, res)
-      await relayJsonResponse(response, res)
+      await relayOAuthJsonResponse(response, res)
     } catch (error) {
       applyCorsHeaders(req, res)
       sendUpstreamError(res, error)
@@ -409,7 +556,7 @@ export function createOAuthRevokeHandler(options: OAuthRevokeHandlerOptions): Mi
         body: serializeRequestBody(contentType, req.body),
       })
       applyCorsHeaders(req, res)
-      await relayJsonResponse(response, res)
+      await relayOAuthJsonResponse(response, res)
     } catch (error) {
       applyCorsHeaders(req, res)
       sendUpstreamError(res, error)

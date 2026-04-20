@@ -8,10 +8,12 @@ import {
   checkPurchaseCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  getPaymentMethodCore,
   isErrorResult,
   syncCustomerCore,
   type McpToolExtra,
 } from '@solvapay/server'
+import { MCP_TOOL_NAMES } from '@solvapay/react/mcp'
 import { solvaPay, solvapayProductRef } from './config'
 
 const DIST_DIR = import.meta.filename.endsWith('.ts')
@@ -173,14 +175,14 @@ export function createServer(): McpServer {
 
   registerAppTool(
     server,
-    'check_purchase',
+    MCP_TOOL_NAMES.checkPurchase,
     {
       description: 'Fetch the active purchase for the authenticated customer.',
       inputSchema: {},
       _meta: toolMeta,
     },
     async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
-      traceTool('check_purchase', args, extra, async () => {
+      traceTool(MCP_TOOL_NAMES.checkPurchase, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
         const result = await checkPurchaseCore(buildRequest(extra), { solvaPay })
@@ -191,7 +193,7 @@ export function createServer(): McpServer {
 
   registerAppTool(
     server,
-    'create_checkout_session',
+    MCP_TOOL_NAMES.createCheckoutSession,
     {
       description:
         'Create a SolvaPay hosted checkout session and return its URL. The UI opens this URL in a new tab because Stripe.js is blocked inside the MCP host sandbox. returnUrl is intentionally unset — there is no meaningful URL for the MCP iframe to return to, so the SolvaPay backend default is used.',
@@ -202,7 +204,7 @@ export function createServer(): McpServer {
       _meta: toolMeta,
     },
     async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
-      traceTool('create_checkout_session', args, extra, async () => {
+      traceTool(MCP_TOOL_NAMES.createCheckoutSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 
@@ -223,7 +225,26 @@ export function createServer(): McpServer {
 
   registerAppTool(
     server,
-    'create_customer_session',
+    MCP_TOOL_NAMES.getPaymentMethod,
+    {
+      description:
+        "Return the customer's default card brand / last4 / expiry so the UI can render a \"Visa •••• 4242\" line on the current-plan card. Returns { kind: 'none' } when no card is on file.",
+      inputSchema: {},
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.getPaymentMethod, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+        const result = await getPaymentMethodCore(buildRequest(extra), { solvaPay })
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.createCustomerSession,
     {
       description:
         'Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.',
@@ -231,7 +252,7 @@ export function createServer(): McpServer {
       _meta: toolMeta,
     },
     async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
-      traceTool('create_customer_session', args, extra, async () => {
+      traceTool(MCP_TOOL_NAMES.createCustomerSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 

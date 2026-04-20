@@ -36,6 +36,9 @@ export { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
 // Export activation helpers
 export { activatePlanCore } from './activation'
 
+// Export payment-method helpers
+export { getPaymentMethodCore } from './payment-method'
+
 // Export plans helpers
 export { listPlansCore } from './plans'
 

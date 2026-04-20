@@ -1,76 +1,39 @@
+/**
+ * Thin wrapper around `@solvapay/react/mcp` that adds the example-specific
+ * `open_checkout` bootstrap call.
+ *
+ * Before the React SDK shipped a first-class `createMcpAppAdapter`, this
+ * file owned the full transport surface — checking purchases, minting
+ * hosted checkout/customer URLs, the `unwrap` helper, tool-name constants.
+ * All of that is now re-exported from the SDK; this file only carries the
+ * MCP-App-specific pieces (fetching the product ref on boot).
+ */
+
 import type { App } from '@modelcontextprotocol/ext-apps'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import type { CustomerPurchaseData, SolvaPayProviderProps } from '@solvapay/react'
+import { createMcpAppAdapter } from '@solvapay/react/mcp'
+
+export { createMcpAppAdapter }
 
 /**
- * Wire a SolvaPayProvider against the MCP server via `app.callServerTool`.
- *
- * Stripe.js is blocked inside the MCP host sandbox, so this adapter no longer
- * proxies payment intents. It exposes:
- *   - `checkPurchase` as a SolvaPayProvider override so `usePurchase` /
- *     `usePurchaseStatus` work against the MCP `check_purchase` tool
- *   - `createCheckoutSession` / `createCustomerSession` URL fetchers the UI
- *     uses to populate `<a target="_blank">` hrefs before the user clicks
+ * Kick off the MCP session and return the product the host opened us for.
+ * The SolvaPay backend knows this from the tool registration; the UI just
+ * reads it so the correct plan is displayed.
  */
-export type McpAdapter = {
-  checkPurchase: NonNullable<SolvaPayProviderProps['checkPurchase']>
-  createCheckoutSession: (args?: {
-    planRef?: string
-    productRef?: string
-  }) => Promise<{ checkoutUrl: string }>
-  createCustomerSession: () => Promise<{ customerUrl: string }>
-}
-
-function unwrap<T>(result: CallToolResult): T {
-  if (result.isError) {
-    const first = result.content?.[0]
+export async function fetchOpenCheckoutProductRef(app: App): Promise<string> {
+  const result = await app.callServerTool({ name: 'open_checkout', arguments: {} })
+  if ((result as CallToolResult).isError) {
+    const first = (result as CallToolResult).content?.[0]
     const message =
-      first && 'text' in first && typeof first.text === 'string' ? first.text : 'MCP tool failed'
+      first && 'text' in first && typeof first.text === 'string'
+        ? first.text
+        : 'open_checkout failed'
     throw new Error(message)
   }
-  if (result.structuredContent !== undefined) {
-    return result.structuredContent as T
-  }
-  const first = result.content?.[0]
-  if (first && 'text' in first && typeof first.text === 'string') {
-    try {
-      return JSON.parse(first.text) as T
-    } catch {
-      // Fall through to error below
-    }
-  }
-  throw new Error('MCP tool returned no parseable content')
-}
-
-export function createMcpAdapter(app: App): McpAdapter {
-  const callTool = async <T>(name: string, args: Record<string, unknown> = {}): Promise<T> => {
-    const started = performance.now()
-    console.warn(`[mcp-checkout-ui] -> ${name}`, args)
-    try {
-      const result = await app.callServerTool({ name, arguments: args })
-      const ms = Math.round(performance.now() - started)
-      if (result.isError) {
-        console.warn(`[mcp-checkout-ui] <- ${name} ERROR in ${ms}ms`, result)
-      } else {
-        console.warn(`[mcp-checkout-ui] <- ${name} ok in ${ms}ms`, result.structuredContent)
-      }
-      return unwrap<T>(result)
-    } catch (err) {
-      const ms = Math.round(performance.now() - started)
-      console.error(`[mcp-checkout-ui] <- ${name} THREW in ${ms}ms`, err)
-      throw err
-    }
-  }
-
-  return {
-    checkPurchase: async () => callTool<CustomerPurchaseData>('check_purchase'),
-    createCheckoutSession: async (args = {}) => {
-      const payload: Record<string, unknown> = {}
-      if (args.planRef) payload.planRef = args.planRef
-      if (args.productRef) payload.productRef = args.productRef
-      return callTool<{ checkoutUrl: string }>('create_checkout_session', payload)
-    },
-    createCustomerSession: async () =>
-      callTool<{ customerUrl: string }>('create_customer_session'),
-  }
+  const structured = (result as CallToolResult).structuredContent as
+    | { productRef?: string }
+    | undefined
+  const ref = structured?.productRef
+  if (!ref) throw new Error('Server did not return a productRef')
+  return ref
 }
