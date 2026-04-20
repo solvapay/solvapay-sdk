@@ -21,6 +21,8 @@ const sessions: Record<string, SessionEntry> = {}
 
 const app = express()
 app.use(express.json())
+// /oauth/token uses application/x-www-form-urlencoded; parse it so the bridge can forward it.
+app.use(express.urlencoded({ extended: false }))
 app.use(
   ...createMcpOAuthBridge({
     publicBaseUrl: mcpPublicBaseUrl,

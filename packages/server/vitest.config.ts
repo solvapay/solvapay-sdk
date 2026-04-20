@@ -25,7 +25,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts'],
+    include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
     // Increase timeout for integration tests (default is 5000ms)
     // Integration tests make multiple slow API calls to real backend
     testTimeout: 120000, // 120 seconds — exhaustion tests burn through many units

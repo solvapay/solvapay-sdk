@@ -118,10 +118,14 @@ export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools
 export { registerVirtualToolsMcpImpl, jsonSchemaToZodRawShape } from './register-virtual-tools-mcp'
 export type { McpServerLike, RegisterVirtualToolsMcpOptions } from './register-virtual-tools-mcp'
 export { buildAuthInfoFromBearer } from './mcp/auth-bridge'
-export { createMcpOAuthBridge } from './mcp/oauth-bridge'
 export {
-  getOAuthProtectedResourceResponse,
+  createMcpOAuthBridge,
+  createOAuthAuthorizeHandler,
+  createOAuthRegisterHandler,
+  createOAuthRevokeHandler,
+  createOAuthTokenHandler,
   getOAuthAuthorizationServerResponse,
+  getOAuthProtectedResourceResponse,
 } from './mcp/oauth-bridge'
 
 // Export types
