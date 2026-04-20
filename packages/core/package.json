@@ -27,6 +27,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
     "test:watch": "vitest",

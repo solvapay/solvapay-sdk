@@ -72,6 +72,78 @@ function toolResult(data: unknown): CallToolResult {
   }
 }
 
+// ISO 4217 currencies where the "minor unit" equals the major unit. Keep in
+// sync with the matching list in @solvapay/react's `formatPrice`.
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga',
+  'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf',
+])
+
+function formatMinorUnits(
+  amountMinor: number | null | undefined,
+  currency: string | null | undefined,
+): string | null {
+  if (amountMinor == null || !currency) return null
+  const zeroDecimal = ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
+  const fractionDigits = zeroDecimal ? 0 : 2
+  const major = zeroDecimal ? amountMinor : amountMinor / 100
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(major)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Augment a purchase with human-readable price strings so callers (especially
+ * LLMs rendering the JSON directly) don't have to reason about minor units.
+ * The raw `amount` / `originalAmount` / `currency` fields are preserved for
+ * programmatic consumers such as the React transport.
+ */
+function enrichPurchase(purchase: Record<string, unknown>): Record<string, unknown> {
+  const amount = typeof purchase.amount === 'number' ? purchase.amount : undefined
+  const originalAmount =
+    typeof purchase.originalAmount === 'number' ? purchase.originalAmount : undefined
+  const currency = typeof purchase.currency === 'string' ? purchase.currency : undefined
+
+  // `originalAmount` is minor units of `currency` (what the customer was
+  // charged). `amount` is always USD cents — used only as a fallback when the
+  // currency-aware value isn't populated (free/pending purchases).
+  const priceDisplay =
+    formatMinorUnits(originalAmount, currency) ?? formatMinorUnits(amount, 'USD')
+
+  // Expose the USD equivalent separately when the customer currency isn't USD
+  // so the model can reference both without inventing an FX rate.
+  const priceUsdDisplay =
+    currency && currency.toUpperCase() !== 'USD'
+      ? formatMinorUnits(amount, 'USD')
+      : null
+
+  const planSnapshot = purchase.planSnapshot
+  const enrichedPlanSnapshot =
+    planSnapshot && typeof planSnapshot === 'object'
+      ? (() => {
+          const snap = planSnapshot as Record<string, unknown>
+          const price = typeof snap.price === 'number' ? snap.price : undefined
+          const snapCurrency = typeof snap.currency === 'string' ? snap.currency : undefined
+          const snapPriceDisplay = formatMinorUnits(price, snapCurrency)
+          return snapPriceDisplay ? { ...snap, priceDisplay: snapPriceDisplay } : snap
+        })()
+      : planSnapshot
+
+  return {
+    ...purchase,
+    ...(priceDisplay ? { priceDisplay } : {}),
+    ...(priceUsdDisplay ? { priceUsdDisplay } : {}),
+    ...(enrichedPlanSnapshot !== undefined ? { planSnapshot: enrichedPlanSnapshot } : {}),
+  }
+}
+
 function toolErrorResult(error: { error: string; status: number; details?: string }): CallToolResult {
   return {
     isError: true,
@@ -177,7 +249,13 @@ export function createServer(): McpServer {
     server,
     MCP_TOOL_NAMES.checkPurchase,
     {
-      description: 'Fetch the active purchase for the authenticated customer.',
+      description: [
+        'Fetch the active purchase for the authenticated customer.',
+        'For any human-readable price, prefer `priceDisplay` (customer-facing,',
+        'e.g. "SEK 500.00") or `planSnapshot.priceDisplay`. Raw `amount` is',
+        'always USD cents and `originalAmount` is minor units of `currency`',
+        '(e.g. öre for SEK) — do not present them as whole-currency values.',
+      ].join(' '),
       inputSchema: {},
       _meta: toolMeta,
     },
@@ -187,7 +265,13 @@ export function createServer(): McpServer {
         if (typeof auth !== 'string') return auth
         const result = await checkPurchaseCore(buildRequest(extra), { solvaPay })
         if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
+        const enriched = {
+          ...result,
+          purchases: result.purchases.map(p =>
+            enrichPurchase(p as Record<string, unknown>),
+          ),
+        }
+        return toolResult(enriched)
       }),
   )
 
