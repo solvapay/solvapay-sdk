@@ -246,6 +246,98 @@ describe('SolvaPayProvider - purchase state management', () => {
       expect(result.current.purchase.isRefetching).toBe(false)
       expect(result.current.purchase.loading).toBe(false)
     })
+
+    it('flips isRefetching (not loading) when refetching an empty-state user', async () => {
+      // Empty-state customer: first fetch returns no purchases. A subsequent
+      // refetch must report via `isRefetching`, not `loading`, so polling
+      // consumers don't remount their UI on every background poll.
+      const PURCHASE_EMPTY = { customerRef: 'cus_empty', purchases: [] }
+      fetchSpy.mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(PURCHASE_EMPTY),
+        }),
+      )
+
+      const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+      // Wait for both the initial userId-keyed fetch and the customerRef-keyed
+      // follow-up (triggered by the provider discovering `cus_empty`) to settle.
+      await waitFor(() => {
+        expect(result.current.purchase.loading).toBe(false)
+        expect(result.current.purchase.isRefetching).toBe(false)
+        expect(result.current.customerRef).toBe('cus_empty')
+      })
+      expect(result.current.purchase.purchases).toHaveLength(0)
+
+      // Hold the next fetch open via a manual resolver so we can observe the
+      // intermediate state cleanly — a setTimeout-based delay races with
+      // `shouldAdvanceTime: true`.
+      let resolveRefetch: (() => void) | undefined
+      const refetchGate = new Promise<void>(resolve => {
+        resolveRefetch = resolve
+      })
+      fetchSpy.mockImplementation(async () => {
+        await refetchGate
+        return {
+          ok: true,
+          json: () => Promise.resolve(PURCHASE_EMPTY),
+        }
+      })
+
+      const refetchPromise = result.current.refetchPurchase()
+
+      await waitFor(() => {
+        expect(result.current.purchase.isRefetching).toBe(true)
+      })
+      expect(result.current.purchase.loading).toBe(false)
+
+      await act(async () => {
+        resolveRefetch?.()
+        await refetchPromise
+      })
+
+      expect(result.current.purchase.loading).toBe(false)
+      expect(result.current.purchase.isRefetching).toBe(false)
+    })
+
+    it('flips isRefetching (not loading) when refetching a non-empty user', async () => {
+      const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+      await waitFor(() => {
+        expect(result.current.purchase.loading).toBe(false)
+        expect(result.current.purchase.isRefetching).toBe(false)
+        expect(result.current.customerRef).toBe('cus_test')
+        expect(result.current.purchase.purchases).toHaveLength(1)
+      })
+
+      let resolveRefetch: (() => void) | undefined
+      const refetchGate = new Promise<void>(resolve => {
+        resolveRefetch = resolve
+      })
+      fetchSpy.mockImplementation(async () => {
+        await refetchGate
+        return {
+          ok: true,
+          json: () => Promise.resolve(PURCHASE_UPDATED),
+        }
+      })
+
+      const refetchPromise = result.current.refetchPurchase()
+
+      await waitFor(() => {
+        expect(result.current.purchase.isRefetching).toBe(true)
+      })
+      expect(result.current.purchase.loading).toBe(false)
+
+      await act(async () => {
+        resolveRefetch?.()
+        await refetchPromise
+      })
+
+      expect(result.current.purchase.loading).toBe(false)
+      expect(result.current.purchase.isRefetching).toBe(false)
+    })
   })
 
   describe('auth polling interval', () => {

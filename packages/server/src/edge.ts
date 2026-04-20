@@ -64,6 +64,7 @@ export {
   listPlansCore,
   getMerchantCore,
   getProductCore,
+  getPaymentMethodCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'

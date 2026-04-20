@@ -156,6 +156,20 @@ export const enCopy: SolvaPayCopy = {
     lowBalanceSubheading: 'Top up to continue using {product}',
     topUpCta: 'Top up now',
   },
+  currentPlan: {
+    heading: 'Your plan',
+    nextBilling: 'Next billing: {date}',
+    expiresOn: 'Expires {date}',
+    validIndefinitely: 'Valid indefinitely',
+    paymentMethod: '{brand} •••• {last4}',
+    paymentMethodExpires: 'expires {month}/{year}',
+    noPaymentMethod: 'No payment method on file',
+    updatePaymentButton: 'Update card',
+  },
+  customerPortal: {
+    launchButton: 'Manage billing',
+    loadingLabel: 'Loading portal…',
+  },
   errors: {
     paymentInitFailed: 'Payment initialization failed',
     topupInitFailed: 'Top-up initialization failed',

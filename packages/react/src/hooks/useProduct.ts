@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSolvaPay } from './useSolvaPay'
-import { buildRequestHeaders } from '../utils/headers'
+import { createHttpTransport } from '../transport/http'
 import type { Product, SolvaPayConfig, UseProductReturn } from '../types'
 
 type CacheEntry = {
@@ -15,37 +15,39 @@ const CACHE_DURATION = 5 * 60 * 1000
 /** @internal Exported only for tests */
 export { productCache, CACHE_DURATION }
 
-function routeFor(config: SolvaPayConfig | undefined): string {
-  return config?.api?.getProduct || '/api/get-product'
+const transportIds = new WeakMap<object, number>()
+let nextTransportId = 0
+
+function cacheKeyFor(config: SolvaPayConfig | undefined, productRef: string): string {
+  const transport = config?.transport
+  if (transport) {
+    let id = transportIds.get(transport)
+    if (id === undefined) {
+      id = ++nextTransportId
+      transportIds.set(transport, id)
+    }
+    return `transport:${id}:${productRef}`
+  }
+  return productRef
 }
 
 async function fetchProduct(
   productRef: string,
   config: SolvaPayConfig | undefined,
 ): Promise<Product> {
-  const base = routeFor(config)
-  const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-  const fetchFn = config?.fetch || fetch
-  const { headers } = await buildRequestHeaders(config)
-
-  const res = await fetchFn(url, { method: 'GET', headers })
-  if (!res.ok) {
-    const error = new Error(`Failed to fetch product: ${res.statusText || res.status}`)
-    config?.onError?.(error, 'getProduct')
-    throw error
-  }
-  return (await res.json()) as Product
+  const transport = config?.transport ?? createHttpTransport(config)
+  return transport.getProduct(productRef)
 }
 
 /**
  * Hook to load a single product by reference. Uses a module-level
- * single-flight cache keyed by `productRef` so concurrent consumers share the
- * same in-flight request.
+ * single-flight cache keyed by `productRef` (and transport identity) so
+ * concurrent consumers share the same in-flight request.
  */
 export function useProduct(productRef: string | undefined): UseProductReturn {
   const { _config } = useSolvaPay()
 
-  const cacheKey = productRef || ''
+  const cacheKey = productRef ? cacheKeyFor(_config, productRef) : ''
 
   const [product, setProduct] = useState<Product | null>(
     () => (productRef ? (productCache.get(cacheKey)?.product ?? null) : null),
@@ -66,7 +68,8 @@ export function useProduct(productRef: string | undefined): UseProductReturn {
         return
       }
 
-      const cached = productCache.get(productRef)
+      const key = cacheKeyFor(_config, productRef)
+      const cached = productCache.get(key)
       const now = Date.now()
 
       if (!force && cached?.product && now - cached.timestamp < CACHE_DURATION) {
@@ -94,12 +97,14 @@ export function useProduct(productRef: string | undefined): UseProductReturn {
         setLoading(true)
         setError(null)
         const promise = fetchProduct(productRef, _config)
-        productCache.set(productRef, { product: null, promise, timestamp: now })
+        productCache.set(key, { product: null, promise, timestamp: now })
         const p = await promise
-        productCache.set(productRef, { product: p, promise: null, timestamp: now })
+        productCache.set(key, { product: p, promise: null, timestamp: now })
         setProduct(p)
       } catch (err) {
-        productCache.delete(productRef)
+        productCache.delete(key)
+        // The HTTP transport already invokes `config.onError` before throwing; custom
+        // transports own their own error callbacks. Re-emitting here would double-fire.
         setError(err instanceof Error ? err : new Error('Failed to load product'))
       } finally {
         setLoading(false)

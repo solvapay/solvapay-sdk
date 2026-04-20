@@ -621,6 +621,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/payment-method": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the default payment method for a customer
+         * @description Returns the customer's default card for the authenticated provider. Sourced from stored payment-method records (no Stripe round-trip). Returns `{ kind: 'none' }` when no card is on file.
+         */
+        get: operations["PaymentMethodSdkController_getPaymentMethod"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3126,6 +3146,43 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PaymentMethodSdkController_getPaymentMethod: {
+        parameters: {
+            query: {
+                /** @description Customer reference (e.g. `customer_...`). */
+                customerRef: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The customer's default card, or `{ kind: 'none' }` when no card is on file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        kind: "card";
+                        /** @example visa */
+                        brand: string;
+                        /** @example 4242 */
+                        last4: string;
+                        /** @example 12 */
+                        expMonth: number;
+                        /** @example 2030 */
+                        expYear: number;
+                    } | {
+                        /** @enum {string} */
+                        kind: "none";
+                    };
+                };
             };
         };
     };

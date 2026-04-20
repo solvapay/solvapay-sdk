@@ -1,0 +1,235 @@
+'use client'
+
+/**
+ * `<CurrentPlanCard>` — summary card for the customer's active purchase.
+ *
+ * Pure projection of existing provider state (`usePurchase`,
+ * `usePurchaseStatus`, `useBalance`, `usePaymentMethod`) plus Phase 1
+ * action components (`<CancelPlanButton>`, Phase 2's
+ * `<UpdatePaymentMethodButton>`). No Stripe Elements dependency, so the
+ * default tree renders identically inside an MCP host sandbox and a
+ * standalone HTTP app.
+ *
+ * Returns `null` when `usePurchase()` reports no active purchase, so
+ * integrators can drop it into account pages without wrapping in
+ * `{hasPaidPurchase && ...}`.
+ *
+ * Plan-type-aware lines:
+ * - `recurring` — "Next billing: {date}"
+ * - `one-time`  — "Expires {date}" or "Valid indefinitely"
+ * - `usage-based` — `<BalanceBadge>` line; no date
+ */
+
+import React from 'react'
+import { usePurchase } from '../hooks/usePurchase'
+import { usePurchaseStatus } from '../hooks/usePurchaseStatus'
+import { usePaymentMethod } from '../hooks/usePaymentMethod'
+import { useCopy } from '../hooks/useCopy'
+import { BalanceBadge } from './BalanceBadge'
+import { CancelPlanButton } from './CancelPlanButton'
+import { UpdatePaymentMethodButton } from './UpdatePaymentMethodButton'
+import { formatPrice } from '../utils/format'
+import { interpolate } from '../i18n/interpolate'
+import type { PaymentMethodInfo } from '@solvapay/server'
+import type { PurchaseInfo } from '../types'
+
+export interface CurrentPlanCardClassNames {
+  root?: string
+  heading?: string
+  planName?: string
+  price?: string
+  dateLine?: string
+  balanceLine?: string
+  paymentMethod?: string
+  actions?: string
+}
+
+export interface CurrentPlanCardProps {
+  /** Hide the payment-method line even when the endpoint returns a card. Default: `false`. */
+  hidePaymentMethod?: boolean
+  /** Hide the "Cancel plan" action. Default: `false`. */
+  hideCancelButton?: boolean
+  /** Hide the "Update card" action. Default: `false`. */
+  hideUpdatePaymentButton?: boolean
+  /** Per-element classNames. */
+  classNames?: CurrentPlanCardClassNames
+  /**
+   * Custom className on the root. Appended after `solvapay-current-plan-card`
+   * so integrators can tweak without losing the SDK baseline.
+   */
+  className?: string
+}
+
+function PlanTypeLine({
+  purchase,
+  formatDate,
+  className,
+}: {
+  purchase: PurchaseInfo
+  formatDate: (d?: string) => string | null
+  className?: string
+}) {
+  const copy = useCopy()
+  const planType = purchase.planSnapshot?.planType ?? 'one-time'
+
+  if (planType === 'recurring' || purchase.isRecurring) {
+    const date = formatDate(purchase.nextBillingDate)
+    if (!date) return null
+    return (
+      <span
+        className={className}
+        data-solvapay-current-plan-next-billing=""
+      >
+        {interpolate(copy.currentPlan.nextBilling, { date })}
+      </span>
+    )
+  }
+
+  if (planType === 'usage-based') {
+    // Usage-based plans show a balance badge instead of a date.
+    return null
+  }
+
+  // one-time
+  const date = formatDate(purchase.endDate)
+  return (
+    <span className={className} data-solvapay-current-plan-expires="">
+      {date
+        ? interpolate(copy.currentPlan.expiresOn, { date })
+        : copy.currentPlan.validIndefinitely}
+    </span>
+  )
+}
+
+function PaymentMethodLine({
+  paymentMethod,
+  className,
+}: {
+  paymentMethod: PaymentMethodInfo
+  className?: string
+}) {
+  const copy = useCopy()
+
+  if (paymentMethod.kind === 'none') {
+    return (
+      <span className={className} data-solvapay-current-plan-payment-method="none">
+        {copy.currentPlan.noPaymentMethod}
+      </span>
+    )
+  }
+
+  const brandDisplay = paymentMethod.brand.charAt(0).toUpperCase() + paymentMethod.brand.slice(1)
+  const label = interpolate(copy.currentPlan.paymentMethod, {
+    brand: brandDisplay,
+    last4: paymentMethod.last4,
+  })
+  const expires = interpolate(copy.currentPlan.paymentMethodExpires, {
+    month: String(paymentMethod.expMonth).padStart(2, '0'),
+    year: paymentMethod.expYear,
+  })
+  return (
+    <span className={className} data-solvapay-current-plan-payment-method="card">
+      {label}, {expires}
+    </span>
+  )
+}
+
+export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
+  hidePaymentMethod,
+  hideCancelButton,
+  hideUpdatePaymentButton,
+  classNames: overrides,
+  className,
+}) => {
+  const copy = useCopy()
+  const { activePurchase } = usePurchase()
+  const { formatDate } = usePurchaseStatus()
+  const { paymentMethod } = usePaymentMethod()
+
+  if (!activePurchase) return null
+
+  const planType = activePurchase.planSnapshot?.planType ?? 'one-time'
+  const isUsageBased = planType === 'usage-based'
+
+  const amount = activePurchase.amount ?? 0
+  const currency = activePurchase.currency ?? 'usd'
+  const priceLabel = formatPrice(amount, currency, {
+    interval: activePurchase.billingCycle,
+  })
+
+  const planName =
+    activePurchase.planRef ?? activePurchase.planSnapshot?.reference ?? activePurchase.productName
+
+  const rootClass = [
+    'solvapay-current-plan-card',
+    overrides?.root,
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  // Hide the payment-method row entirely when the hook errored OR returned a
+  // null (no endpoint deployed yet / MCP server doesn't expose the tool) so
+  // the card degrades gracefully.
+  const shouldShowPaymentMethod =
+    !hidePaymentMethod && paymentMethod !== null
+
+  return (
+    <div
+      className={rootClass}
+      data-solvapay-current-plan-card=""
+      data-plan-type={planType}
+    >
+      <h2
+        className={overrides?.heading ?? 'solvapay-current-plan-heading'}
+        data-solvapay-current-plan-heading=""
+      >
+        {copy.currentPlan.heading}
+      </h2>
+
+      <div
+        className={overrides?.planName ?? 'solvapay-current-plan-name'}
+        data-solvapay-current-plan-name=""
+      >
+        {planName}
+      </div>
+
+      <div
+        className={overrides?.price ?? 'solvapay-current-plan-price'}
+        data-solvapay-current-plan-price=""
+      >
+        {priceLabel}
+      </div>
+
+      <PlanTypeLine
+        purchase={activePurchase}
+        formatDate={formatDate}
+        className={overrides?.dateLine ?? 'solvapay-current-plan-date-line'}
+      />
+
+      {isUsageBased && (
+        <div
+          className={overrides?.balanceLine ?? 'solvapay-current-plan-balance-line'}
+          data-solvapay-current-plan-balance-line=""
+        >
+          <BalanceBadge />
+        </div>
+      )}
+
+      {shouldShowPaymentMethod && paymentMethod && (
+        <PaymentMethodLine
+          paymentMethod={paymentMethod}
+          className={overrides?.paymentMethod ?? 'solvapay-current-plan-payment-method'}
+        />
+      )}
+
+      <div
+        className={overrides?.actions ?? 'solvapay-current-plan-actions'}
+        data-solvapay-current-plan-actions=""
+      >
+        {!hideUpdatePaymentButton && <UpdatePaymentMethodButton />}
+        {!hideCancelButton && <CancelPlanButton />}
+      </div>
+    </div>
+  )
+}

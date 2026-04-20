@@ -3,9 +3,14 @@
  */
 
 import type { PaymentIntent } from '@stripe/stripe-js'
-import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
+import type {
+  ProcessPaymentResult,
+  ActivatePlanResult,
+  PaymentMethodInfo,
+} from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
 import type { PartialSolvaPayCopy } from '../i18n/types'
+import type { SolvaPayTransport } from '../transport/types'
 
 export interface PurchaseInfo {
   reference: string
@@ -222,7 +227,18 @@ export interface SolvaPayConfig {
     listPlans?: string // Default: '/api/list-plans'
     getMerchant?: string // Default: '/api/merchant'
     getProduct?: string // Default: '/api/get-product'
+    createCheckoutSession?: string // Default: '/api/create-checkout-session'
+    createCustomerSession?: string // Default: '/api/create-customer-session'
+    getPaymentMethod?: string // Default: '/api/payment-method'
   }
+
+  /**
+   * Data-access transport. Replaces the default HTTP calls with any
+   * compatible implementation (e.g. `createMcpAppAdapter(app)` from
+   * `@solvapay/react/mcp`). When omitted, the provider builds a default
+   * HTTP transport from `config.api` + `config.fetch`.
+   */
+  transport?: SolvaPayTransport
 
   /**
    * BCP-47 locale tag (e.g. 'en', 'sv-SE'). Threaded through every SDK
@@ -297,7 +313,14 @@ export interface ReactivateResult {
   [key: string]: unknown
 }
 
-export { type ActivatePlanResult }
+export { type ActivatePlanResult, type PaymentMethodInfo }
+
+export interface UsePaymentMethodReturn {
+  paymentMethod: PaymentMethodInfo | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
 
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
@@ -331,30 +354,16 @@ export interface SolvaPayContextValue {
 
 export interface SolvaPayProviderProps {
   /**
-   * Configuration object with sensible defaults
-   * If not provided, uses standard Next.js API routes
+   * Configuration object with sensible defaults.
+   *
+   * To customise data access (e.g. route through MCP instead of HTTP), pass
+   * `config.transport`. Legacy per-method overrides (`createPayment`,
+   * `checkPurchase`, `processPayment`, `createTopupPayment`) have been
+   * removed in favour of the unified transport surface — see
+   * [`SolvaPayTransport`](../transport/types.ts) and
+   * `@solvapay/react/mcp` for an MCP implementation.
    */
   config?: SolvaPayConfig
-
-  /**
-   * Custom API functions (override config defaults)
-   * Use only if you need custom logic beyond standard API routes
-   */
-  createPayment?: (params: {
-    planRef?: string
-    productRef?: string
-    customer?: PrefillCustomer
-  }) => Promise<PaymentIntentResult>
-  checkPurchase?: () => Promise<CustomerPurchaseData>
-  processPayment?: (params: {
-    paymentIntentId: string
-    productRef: string
-    planRef?: string
-  }) => Promise<ProcessPaymentResult>
-  createTopupPayment?: (params: {
-    amount: number
-    currency?: string
-  }) => Promise<TopupPaymentResult>
 
   children: React.ReactNode
 }

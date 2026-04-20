@@ -800,5 +800,20 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       return await res.json()
     },
+
+    async getPaymentMethod(params) {
+      const url = new URL(`${base}/v1/sdk/payment-method`)
+      url.searchParams.set('customerRef', params.customerRef)
+
+      const res = await fetch(url.toString(), { method: 'GET', headers })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get payment method failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
   }
 }

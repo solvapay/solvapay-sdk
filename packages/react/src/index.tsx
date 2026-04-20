@@ -28,6 +28,11 @@ export { ActivationFlow } from './components/ActivationFlow'
 export { CancelPlanButton } from './components/CancelPlanButton'
 export { CancelledPlanNotice } from './components/CancelledPlanNotice'
 export { CreditGate } from './components/CreditGate'
+
+// Account-management (phase 2 — MCP slice)
+export { CurrentPlanCard } from './components/CurrentPlanCard'
+export { LaunchCustomerPortalButton } from './components/LaunchCustomerPortalButton'
+export { UpdatePaymentMethodButton } from './components/UpdatePaymentMethodButton'
 export {
   PaymentFormContext,
   usePaymentForm,
@@ -54,6 +59,8 @@ export { useActivation } from './hooks/useActivation'
 export { useTopup } from './hooks/useTopup'
 export { useBalance } from './hooks/useBalance'
 export { useTopupAmountSelector } from './hooks/useTopupAmountSelector'
+export { usePaymentMethod } from './hooks/usePaymentMethod'
+export { useTransport } from './hooks/useTransport'
 
 // i18n primitives (for consumers who want to author copy bundles or mount
 // CopyProvider independently of SolvaPayProvider)
@@ -95,6 +102,8 @@ export type {
   CancelResult,
   ReactivateResult,
   ActivatePlanResult,
+  PaymentMethodInfo,
+  UsePaymentMethodReturn,
   UseTopupAmountSelectorOptions,
   UseTopupAmountSelectorReturn,
   Merchant,
@@ -121,6 +130,15 @@ export type { ActivationFlowProps, ActivationFlowStep } from './components/Activ
 export type { CancelledPlanNoticeProps } from './components/CancelledPlanNotice'
 export type { CreditGateProps } from './components/CreditGate'
 export type { CheckoutVariant } from './utils/checkoutVariant'
+export type {
+  CurrentPlanCardProps,
+  CurrentPlanCardClassNames,
+} from './components/CurrentPlanCard'
+export type { LaunchCustomerPortalButtonProps } from './components/LaunchCustomerPortalButton'
+export type {
+  UpdatePaymentMethodButtonProps,
+  UpdatePaymentMethodButtonMode,
+} from './components/UpdatePaymentMethodButton'
 
 // Adapters
 export type { AuthAdapter } from './adapters/auth'
@@ -145,3 +163,13 @@ export type {
   ConfirmPaymentInput,
   ConfirmPaymentResult,
 } from './utils/confirmPayment'
+
+// Transport — unified data-access surface. Use with SolvaPayProvider via
+// `config.transport`. See `@solvapay/react/mcp` for an MCP implementation.
+export { createHttpTransport, DEFAULT_ROUTES, UnsupportedTransportMethodError } from './transport'
+export type {
+  SolvaPayTransport,
+  TransportBalanceResult,
+  TransportCheckoutSessionResult,
+  TransportCustomerSessionResult,
+} from './transport'

@@ -1,53 +1,92 @@
 ---
-name: sdk plan management (phase 2)
-overview: 'Phase 2 of the Lovable-stack SDK work: add current-plan display, plan switching (upgrade/downgrade with proration), and payment method update so a Lovable app can manage subscriptions post-checkout without leaving the app. Depends on Phase 1 ([sdk_plan_selector](.cursor/plans/sdk_plan_selector_3646143f.plan.md)) landing first. Phase 3 ([sdk_lovable_rollout_phase3](.cursor/plans/sdk_lovable_rollout_phase3_9a1b3c2e.plan.md)) rolls this surface out to docs, skills, cursor-plugin, and remaining examples.'
+name: sdk plan management (phase 2) — MCP account-management slice
+overview: 'Phase 2 scoped to what ships the MCP account-management UI without gating on any protected-file work. Ships `<CurrentPlanCard>`, `<LaunchCustomerPortalButton>`, `<UpdatePaymentMethodButton mode="portal">`, the `usePaymentMethod` hook, a new `getPaymentMethod` transport method, and MCP demo extension. Backend `GET /v1/sdk/payment-method` already landed 2026-04-20. Change-plan (`<PlanSwitcher>`, `changePlan` transport + endpoint) and setup-intent (`<PaymentMethodForm>`, `createSetupIntent` transport + endpoint) are deferred to separate PRs — see "Deferred" below. Depends on Phase 1 ([sdk_plan_selector](.cursor/plans/sdk_plan_selector_3646143f.plan.md)) + the MCP-adapter transport refactor ([react-mcp-app-adapter](.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md)) landing first — both done.'
 todos:
-  - id: backend-endpoints
-    content: 'Verify/add backend endpoints: POST /v1/sdk/change-plan, POST /v1/sdk/create-setup-intent, GET /v1/sdk/payment-method. Separate backend PR; prerequisite for all SDK work.'
+  - id: backend-payment-method
+    content: 'Backend: GET /v1/sdk/payment-method returning { kind: ''card'', brand, last4, expMonth, expYear } | { kind: ''none'' }. **Shipped 2026-04-20** — Mongo-only projection from `Customer.paymentMethods[providerId]`, no stripe.service.ts edit needed. Files: `src/customers/services/flows/customer-payment-method.flow.ts` (+ spec, 8 tests), `src/customers/types/payment-method.schemas.ts`, `src/customers/controllers/payment-method.sdk.controller.ts` (+ spec, 4 tests), CustomerService `getDefaultPaymentMethod`, `CustomerModule` registered. 12 new tests green, 41 customer tests green, full backend build clean.'
+    status: completed
+  - id: transport-getpaymentmethod
+    content: '`SolvaPayTransport.getPaymentMethod` is already defined on the transport (landed with the adapter refactor). No change to the transport interface needed for this slice. `createHttpTransport` already wires `config.api.getPaymentMethod` (default `/api/payment-method`). `createMcpAppAdapter` already wires `MCP_TOOL_NAMES.getPaymentMethod` → `get_payment_method` tool. **Verified**.'
+    status: completed
+  - id: server-core-getpaymentmethod
+    content: 'Add `getPaymentMethodCore(request, options)` helper to `@solvapay/server/src/helpers/payment-method.ts` following the `activation.ts` pattern (extract customerRef via `syncCustomerCore`, call `solvaPay.apiClient.getPaymentMethod`, return payload or `ErrorResult`). Add `getPaymentMethod` to the `SolvaPayClient` interface in `packages/server/src/types/client.ts`. Also add `PaymentMethodInfo` type export.'
     status: pending
-  - id: server-core
-    content: Add changePlanCore, createSetupIntentCore, getPaymentMethodCore helpers to @solvapay/server; wire into typed client interface
+  - id: next-wrappers-paymentmethod
+    content: 'Add Next.js route wrapper `getPaymentMethod` to `packages/next/src/helpers/payment-method.ts` following `renewal.ts` pattern. Export from `packages/next/src/helpers/index.ts`.'
     status: pending
-  - id: next-wrappers
-    content: Add Next.js route wrappers for change-plan, create-setup-intent, payment-method in packages/next/src/helpers/; update default api config keys in SolvaPayProvider
+  - id: supabase-wrappers-paymentmethod
+    content: 'Add `getPaymentMethod` handler to `@solvapay/supabase/src/handlers.ts` (+ export from index). Add `get-payment-method` Deno.serve Edge Function to `examples/supabase-edge/supabase/functions/`.'
     status: pending
-  - id: supabase-wrappers
-    content: Add changePlan, createSetupIntent, getPaymentMethod handlers to @solvapay/supabase; export from index; add corresponding Edge Function files to examples/supabase-edge/
+  - id: use-payment-method-hook
+    content: 'Add `usePaymentMethod` hook at `packages/react/src/hooks/usePaymentMethod.ts` — mirrors `useMerchant`: transport-keyed module-level single-flight cache, returns `{ paymentMethod: PaymentMethodInfo | null, loading, error, refetch }`. Reads through `config.transport.getPaymentMethod()` so MCP and HTTP share one path. Graceful `null` return when the transport method throws (so `<CurrentPlanCard>` can hide the section).'
     status: pending
   - id: current-plan-card
-    content: Implement <CurrentPlanCard> with plan-type-aware rendering (recurring/one-time/usage-based), payment method display, and action slots (ChangePlanButton, UpdatePaymentMethodButton, CancelPlanButton). Auto-hides when no active purchase.
+    content: 'Implement `<CurrentPlanCard>` at `packages/react/src/components/CurrentPlanCard.tsx`. Plan-type-aware rendering: recurring shows next billing date, one-time shows expiration or "valid indefinitely", usage-based embeds `<BalanceBadge>`. Payment-method line via `usePaymentMethod` — hidden on `{ kind: ''none'' }` OR when the hook errors. Action slots compose existing Phase 1 `<CancelPlanButton>` plus new `<UpdatePaymentMethodButton>`. Returns `null` when `usePurchase().activePurchase` is null. Primitive + default-tree shim pattern matching `PlanSelector.tsx` / `ActivationFlow.tsx`. Out of scope in this slice: `<ChangePlanButton>` slot (gated on `<PlanSwitcher>` landing in a later PR).'
     status: pending
-  - id: plan-switcher
-    content: Implement <PlanSwitcher> with select -> confirming -> changing -> payment? -> switched state machine; reuses <PlanSelector> filtered to exclude current plan; handles changed / requires_payment / invalid backend responses; proration note in confirm step
-    status: pending
-  - id: payment-method-form
-    content: Implement <PaymentMethodForm> using Stripe SetupIntent (not PaymentIntent). Extend confirmPayment util to branch on stripe.confirmPayment vs stripe.confirmSetup.
+  - id: launch-customer-portal-button
+    content: '`<LaunchCustomerPortalButton>` at `packages/react/src/components/LaunchCustomerPortalButton.tsx`. Pre-fetches `transport.createCustomerSession()` on first render (lazy — not on mount), renders `<a href={customerUrl} target="_blank" rel="noopener noreferrer">` with the provided `children` / copy default. While loading the URL, renders a disabled button with the loading label. Works identically in MCP and HTTP because `createCustomerSession` is already on `SolvaPayTransport`. Minimal API: `classNames`, `children` (render-prop or ReactNode), `onLaunch(href)` callback, copy slots.'
     status: pending
   - id: update-payment-method-button
-    content: Implement <UpdatePaymentMethodButton> trigger component with inline drawer containing <PaymentMethodForm>; render-prop override for custom modal
+    content: '`<UpdatePaymentMethodButton>` at `packages/react/src/components/UpdatePaymentMethodButton.tsx`. **Portal-only for this slice** — composes `<LaunchCustomerPortalButton>` under the hood with SDK-standard copy ("Update card"). The `mode="inline"` (drawer with `<PaymentMethodForm>`) path is deferred to the Lovable-stack PR — we add the `mode` prop with a type of `''portal''` only and reserve the union for the future variant. Keeps the API stable when inline mode lands.'
     status: pending
-  - id: hooks
-    content: Extend usePurchaseActions with changePlan + updatePaymentMethod methods; add new usePaymentMethod hook with cached fetch
+  - id: i18n-slice
+    content: 'Add `currentPlan` (9 keys: heading, nextBilling, renewsOn, expiresOn, paymentMethod, paymentMethodExpires, noPaymentMethod, updatePaymentButton, changePlanButton-stub), `customerPortal` (2 keys: launchButton, loadingLabel) slices to `SolvaPayCopy` types and `en.ts`. `paymentMethod` (4 keys) and `planSwitcher` (11 keys) i18n deferred with their owning components.'
     status: pending
-  - id: i18n-phase2
-    content: Add currentPlan (9 keys), planSwitcher (11 keys), paymentMethod (4 keys) slices to SolvaPayCopy types and en.ts
+  - id: types-exports
+    content: 'Export `CurrentPlanCard`, `LaunchCustomerPortalButton`, `UpdatePaymentMethodButton`, `usePaymentMethod`, `PaymentMethodInfo`, all `*Props` types from `packages/react/src/index.tsx`. Defer `<PlanSwitcher>` / `<PaymentMethodForm>` / `ChangePlanResult` / `ChangePlanStatus` exports — they land with their components.'
     status: pending
-  - id: types-exports-phase2
-    content: Export CurrentPlanCard, PlanSwitcher (+ Selector/ConfirmStep/PaymentStep subcomponents), PaymentMethodForm, UpdatePaymentMethodButton, ChangePlanResult/ChangePlanStatus/PaymentMethodInfo types, all *Props types, usePaymentMethod hook
+  - id: tests
+    content: 'Unit tests: `CurrentPlanCard.test.tsx` (plan-type variants recurring/one-time/usage-based; payment method present vs none vs endpoint error; slot overrides; returns null on no active purchase), `LaunchCustomerPortalButton.test.tsx` (lazy fetch, loading state, click-through, error handling), `UpdatePaymentMethodButton.test.tsx` (portal mode renders the portal button), `usePaymentMethod.test.tsx` (cached fetch, error-returns-null, refetch invalidation, transport-keyed cache isolation across providers).'
     status: pending
-  - id: tests-phase2
-    content: 'Unit tests: CurrentPlanCard (plan-type variants, payment method, slot overrides), PlanSwitcher (full state machine + cross-type routing), PaymentMethodForm (SetupIntent flow), usePaymentMethod, usePurchaseActions changePlan/updatePaymentMethod coverage'
+  - id: readme
+    content: 'Add "Managing plans in an MCP App" section to `packages/react/README.md` showing the `<SolvaPayProvider config={{ transport }}>` + `<CurrentPlanCard>` + `<UpdatePaymentMethodButton>` one-liner. Note the deferred `<PlanSwitcher>` / `<PaymentMethodForm>` components with a link to the follow-up plans. Add `get_payment_method` to the "MCP App" tool-name table.'
     status: pending
-  - id: readme-phase2
-    content: Add 'Managing plans post-checkout' section to packages/react/README.md showing <CurrentPlanCard> one-liner + <PlanSwitcher> composition. Extend Supabase Edge Functions section with three new endpoints.
+  - id: demo-mcp-account-card
+    content: 'Extend `examples/mcp-checkout-app/src/mcp-app.tsx`: when `hasPaidPurchase`, render `<CurrentPlanCard>` + `<LaunchCustomerPortalButton>` inside the Manage body (replaces the current `<HostedLinkButton state={customer} readyLabel="Manage purchase" />` chunk). Prove the full MCP account-management surface works inside the basic-host sandbox. Add `get_payment_method` tool registration to `examples/mcp-checkout-app/src/server.ts` wrapping `getPaymentMethodCore`.'
     status: pending
-  - id: demo-account-page
-    content: Add new /account route to examples/checkout-demo with <CurrentPlanCard /> as the page body; add three new API route wrappers; link from home nav when authenticated + has active purchase
-    status: pending
-  - id: demo-readme-phase2
-    content: Update examples/checkout-demo/README.md with 'Managing plans' section showing the /account drop-in
+  - id: demo-readme
+    content: 'Update `examples/mcp-checkout-app/README.md` — extend the tool table with `get_payment_method`, add a "What the card shows" paragraph under Flow, and note the two deferred plans (change-plan, setup-intent) so readers know what''s next.'
     status: pending
 isProject: false
+---
+
+## Scope reduction: what shipped vs what deferred
+
+User direction on 2026-04-20 cut this plan to the MVP slice that unblocks the **MCP account-management UI** without gating on any protected-file work.
+
+### In scope (this slice)
+
+- `GET /v1/sdk/payment-method` (already shipped, Mongo-only) ✓
+- `getPaymentMethodCore` / next / supabase / edge-function wrappers
+- `usePaymentMethod` React hook
+- `<CurrentPlanCard>` — view-only, reads purchase + balance + payment-method
+- `<LaunchCustomerPortalButton>` — works in MCP + HTTP via `createCustomerSession`
+- `<UpdatePaymentMethodButton mode="portal">` — thin wrapper around the portal button
+- i18n for the above (`currentPlan` + `customerPortal` copy slices)
+- Tests + README + MCP demo extension
+
+### Deferred — separate PRs
+
+- **`<PlanSwitcher>` + change-plan backend endpoint** → new plan `sdk_plan_change_phase2b_<tbd>.plan.md`.
+  - Moves the proration flow (backend PR editing `payment.service.ts` + `PurchaseProrationCalculator` wiring, new SDK transport method, React state machine with `onRequiresPayment` extension point, MCP hosted-checkout fallback) into its own deliverable.
+  - Non-trivial business logic (money movement) deserves focused review and should not block the read-only account-management surface.
+  - Prior exploration findings kept in the plan backlog: no Stripe Subscription in this backend, proration via `PurchaseProrationCalculator`, no `stripePriceId` on plans.
+
+- **`<PaymentMethodForm>` + create-setup-intent backend endpoint** → new plan `sdk_setup_intent_phase2c_<tbd>.plan.md`.
+  - Stripe Elements SetupIntent flow is HTTP-only (blocked in MCP iframes). MCP users update cards via `<LaunchCustomerPortalButton>` today.
+  - Requires `stripe.processor.ts` edit (add `createSetupIntent`) — approved in principle but cleaner as a focused PR alongside `<PaymentMethodForm>` + `useUpdatePaymentMethod` hook + Lovable demo extension.
+  - `<UpdatePaymentMethodButton>` ships now with `mode="portal"` only; `mode="inline"` added when this lands. Single prop keeps the API stable across the two PRs.
+
+### Why this split works cleanly
+
+Every deferred piece has a **graceful current path**: MCP users already launch hosted checkout / portal for plan changes and card updates — the hosted flows are production-ready and what the plan explicitly calls out as the sandbox-safe fallback. Landing the view-only surface first means an MCP App can show "current plan + card + manage billing" TODAY, without waiting on money-moving code review.
+
+When `<PlanSwitcher>` lands later, the existing `<CurrentPlanCard>` grows a `<ChangePlanButton>` slot (additive change, no signature break). When `<PaymentMethodForm>` lands later, `<UpdatePaymentMethodButton mode="inline">` starts working (additive prop value).
+
+---
+
+> **Reading this file**: the frontmatter above defines what this PR delivers (MCP account-management MVP slice). The detailed design sections below describe the **original** Phase 2 scope — now split across this slice + two deferred follow-up plans (`<PlanSwitcher>` / change-plan, `<PaymentMethodForm>` / setup-intent). Kept as reference; do not treat the deferred content as scope.
+
 ---
 
 ## Relationship to Phase 1
@@ -342,3 +381,9 @@ The [examples/checkout-demo/app/checkout/page.tsx](examples/checkout-demo/app/ch
 5. Tests + docs + demo (depends on 4)
 
 Each step is a separate PR. Phase 2 is not landable in a single PR.
+
+## Related work
+
+- [`react-mcp-app-adapter_e5a04f19.plan.md`](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) — **`SolvaPayTransport` integration point**. That plan's `pick-shape` decision chooses between (a) broadening `SolvaPayProviderProps` with per-method overrides or (b) introducing a single `transport: SolvaPayTransport` prop covering every hook that currently routes through `config.fetch`. If (b) wins, the three new methods this plan adds to `SolvaPayProvider` (`changePlan`, `createSetupIntent`, `getPaymentMethod`) must land on the `SolvaPayTransport` surface rather than as new per-method `SolvaPayProviderProps` fields — otherwise Phase 2 grows a second overrides lane that has to be migrated again later.
+
+  **Preferred sequencing**: let the adapter plan land first so `next-wrappers`, `supabase-wrappers`, and `current-plan-card` todos above target the stable `SolvaPayTransport` shape. If release cadence forces the reverse order, add a `transport-migration` follow-up todo here to fold the three Phase 2 methods back into the unified transport surface once the adapter ships. Either way, `api` config keys (`api.changePlan`, `api.createSetupIntent`, `api.paymentMethod`) stay as the HTTP-default routing and don't need to change.

@@ -4,31 +4,31 @@ overview: The provider's `fetchPurchase` decides `setLoading` vs `setIsRefetchin
 todos:
   - id: wait-on-refactor
     content: "**Dependency**: do not start until [react-mcp-app-adapter_e5a04f19.plan.md](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) is merged. The location of `fetchPurchase` (provider vs transport vs shared hook) changes under that refactor — applying this fix beforehand creates merge conflicts and likely re-work"
-    status: pending
+    status: completed
   - id: locate
-    content: "After the refactor, confirm where `fetchPurchase` lives (e.g. `@solvapay/react` provider, shared `transport.fetchPurchase`, or a new `useRemotePurchase` hook) and relocate this fix into that module"
-    status: pending
+    content: "After the refactor, confirm where `fetchPurchase` lives (e.g. `@solvapay/react` provider, shared `transport.fetchPurchase`, or a new `useRemotePurchase` hook) and relocate this fix into that module. **DONE**: `fetchPurchase` still lives inline in `SolvaPayProvider` post-adapter refactor, so the fix applied directly in [packages/react/src/SolvaPayProvider.tsx](solvapay-sdk/packages/react/src/SolvaPayProvider.tsx)"
+    status: completed
   - id: introduce-hasloadedonce
-    content: Add a `loadedCacheKeysRef: Set<string>` (or equivalent map) to the post-refactor fetch owner; mark the cacheKey on the `finally` block of a successful fetch
-    status: pending
+    content: "Added `loadedCacheKeysRef: Set<string>` on the provider; `finally` block of `fetchPurchase` adds the current cacheKey. Also marks the resolved `data.customerRef` as loaded inline so the follow-up fetch triggered by `setInternalCustomerRef` doesn't re-flip `loading: true` on the customerRef-keyed re-run"
+    status: completed
   - id: swap-branch
-    content: Replace `const hasExistingData = purchaseData.purchases.length > 0` with `const hasLoadedOnce = loadedCacheKeysRef.current.has(cacheKey)`; use that to choose `setIsRefetching(true)` vs `setLoading(true)`
-    status: pending
+    content: "Replaced `const hasExistingData = purchaseData.purchases.length > 0` with `const hasLoadedOnce = loadedCacheKeysRef.current.has(cacheKey)` and dropped `purchaseData.purchases.length` from the `useCallback` deps. Cleared the ref on sign-out and userId-change paths in `detectAuth` so subsequent sign-in re-enters first-load"
+    status: completed
   - id: tests
-    content: Add a unit test covering the empty-state-refetch path — calling `refetch()` after an initial empty fetch should flip `isRefetching`, not `loading`
-    status: pending
+    content: "Added two unit tests in [packages/react/src/__tests__/SolvaPayProvider-purchase.test.tsx](solvapay-sdk/packages/react/src/__tests__/SolvaPayProvider-purchase.test.tsx) under `loading vs isRefetching`: empty-state refetch and non-empty refetch both assert `isRefetching: true, loading: false` mid-flight. Used a manual `refetchGate` promise to avoid racing with `shouldAdvanceTime: true` fake timers"
+    status: completed
   - id: migration
-    content: Audit existing consumers (`@example/checkout-demo`, `@example/hosted-checkout-demo`, `@example/tailwind-checkout`, docs snippets) for places that treat `loading` as the sole refetch signal; update any that should now watch `isRefetching` instead
-    status: pending
+    content: "No example consumer watches `loading` as a refetch signal; they all gate initial render on it, which is still correct. Updated one docs snippet in [docs/sdks/typescript/guides/react.mdx](docs/sdks/typescript/guides/react.mdx) that disabled a Refresh button on `loading` — now uses `loading || isRefetching`. Also added `isRefetching` to the `usePurchase` return-value reference so future consumers pick the right signal"
+    status: completed
   - id: mcp-example-simplify
-    content: Once the fix lands, remove the local `hasLoadedOnce` gate in `examples/mcp-checkout-app/src/mcp-app.tsx` — it becomes redundant
-    status: pending
+    content: "Removed the local `hasLoadedOnce` state + useEffect in [examples/mcp-checkout-app/src/mcp-app.tsx](solvapay-sdk/examples/mcp-checkout-app/src/mcp-app.tsx); `useHostedUrl` gating now uses `!loading`, the initial loading card checks `if (loading)` directly, and `data-refreshing` reads `isRefetching`"
+    status: completed
 isProject: false
 ---
 
 ## Dependency — wait on the MCP-apps / transport refactor
 
-This fix is **blocked** on [`react-mcp-app-adapter_e5a04f19.plan.md`](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md), which extracts `createMcpAppAdapter(app)` and chooses between broadening `SolvaPayProviderProps` or introducing a single `transport` prop covering every hook that currently routes through `config.fetch`.
+This fix is **blocked** on [`react-mcp-app-adapter_e5a04f19.plan.md`](solvapay-sdk/.cursor/plans/react-mcp-app-adapter_e5a04f19.plan.md) — itself promoted out of the superseded [`mcp-checkout-app_poc_55ffe77e.plan.md`](solvapay-sdk/.cursor/plans/mcp-checkout-app_poc_55ffe77e.plan.md) §2 so the refactor has a stable home. That plan extracts `createMcpAppAdapter(app)` and chooses between broadening `SolvaPayProviderProps` or introducing a single `transport` prop covering every hook that currently routes through `config.fetch`.
 
 That refactor directly reshapes the module this fix edits:
 

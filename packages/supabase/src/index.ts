@@ -8,6 +8,7 @@ export {
   cancelRenewal,
   reactivateRenewal,
   activatePlan,
+  getPaymentMethod,
   listPlans,
   syncCustomer,
   createCheckoutSession,

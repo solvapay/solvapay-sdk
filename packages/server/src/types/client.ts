@@ -61,23 +61,21 @@ export interface ProcessPaymentResult {
 export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 
 /**
- * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
+ * SDK-facing payment-method projection returned by
+ * `GET /v1/sdk/payment-method?customerRef=...`.
  *
- * Hand-typed here until the OpenAPI generator picks up the new endpoint.
- * Fields match `SdkMerchantResponseDto` on the backend.
+ * Derived from the generated operation response so any backend shape
+ * change propagates through a single `npm run generate:types` run. The
+ * inline `oneOf` schema on the backend controller translates to a clean
+ * `{ kind: 'card', ... } | { kind: 'none' }` discriminated union here.
  */
-export type SdkMerchantResponse = {
-  displayName: string
-  legalName: string
-  supportEmail?: string
-  supportUrl?: string
-  termsUrl?: string
-  privacyUrl?: string
-  country?: string
-  defaultCurrency?: string
-  statementDescriptor?: string
-  logoUrl?: string
-}
+export type PaymentMethodInfo =
+  operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
+
+/**
+ * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
+ */
+export type SdkMerchantResponse = components['schemas']['SdkMerchantResponseDto']
 
 /** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
 export type SdkProductResponse = components['schemas']['SdkProductResponse']
@@ -317,4 +315,7 @@ export interface SolvaPayClient {
   activatePlan?(
     params: components['schemas']['ActivatePlanDto'],
   ): Promise<ActivatePlanResult>
+
+  // GET: /v1/sdk/payment-method?customerRef=...
+  getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
 }

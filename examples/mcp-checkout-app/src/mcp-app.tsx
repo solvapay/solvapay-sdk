@@ -7,13 +7,19 @@ import {
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
-import { SolvaPayProvider, usePurchase, usePurchaseStatus } from '@solvapay/react'
+import {
+  CurrentPlanCard,
+  SolvaPayProvider,
+  usePurchase,
+  usePurchaseStatus,
+  useSolvaPay,
+} from '@solvapay/react'
 import '@solvapay/react/styles.css'
-import { createMcpAdapter } from './mcp-adapter'
+import { createMcpAppAdapter, fetchOpenCheckoutProductRef } from './mcp-adapter'
 import './mcp-app.css'
 
 const app = new App({ name: 'SolvaPay checkout', version: '1.0.0' })
-const adapter = createMcpAdapter(app)
+const transport = createMcpAppAdapter(app)
 
 // Keep polling fast enough that the UI feels responsive after the user
 // completes payment in the other tab, but not so fast that we hammer the MCP
@@ -178,28 +184,14 @@ const AwaitingBody = memo(function AwaitingBody({
   )
 })
 
-type ManageBodyProps = {
-  productName: string
-  customer: AsyncUrlState
-}
-
-const ManageBody = memo(function ManageBody({ productName, customer }: ManageBodyProps) {
+const ManageBody = memo(function ManageBody() {
   return (
     <>
-      <h2>You're on the {productName} plan</h2>
+      <CurrentPlanCard />
       <p className="checkout-muted">
-        Manage billing, switch plans, or cancel in the SolvaPay portal.
+        Update your card or cancel your plan above. Plan switching is coming
+        soon — for now, cancel and re-subscribe to change tier.
       </p>
-      <HostedLinkButton
-        state={customer}
-        loadingLabel="Loading portal…"
-        readyLabel="Manage purchase"
-      />
-      {customer.status === 'error' && (
-        <p className="checkout-error" role="alert">
-          {customer.message}
-        </p>
-      )}
     </>
   )
 })
@@ -285,36 +277,33 @@ function CheckoutBody({ productRef }: { productRef: string }) {
   const { loading, isRefetching, refetch, hasPaidPurchase, activePurchase } = usePurchase()
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
+  const { _config } = useSolvaPay()
 
   const [awaiting, setAwaiting] = useState<AwaitingState | null>(null)
   const [awaitingTimedOut, setAwaitingTimedOut] = useState(false)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
-  // After the first successful fetch, never show the full-bleed "Loading
-  // purchase…" card again. Subsequent polls are signalled by `isRefreshing`
-  // below instead, so the card frame stays stable.
+  // `loading` starts `false` in the provider and only flips `true` for the
+  // first fetch per cacheKey (subsequent polls report via `isRefetching`),
+  // so gating directly on `!loading` would fire `useHostedUrl` before auth
+  // detection and race `createCheckoutSession`. Flip a local latch the first
+  // time `loading` transitions back to `false`.
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true)
   }, [loading, hasLoadedOnce])
 
   const fetchCheckoutUrl = useCallback(async () => {
-    const { checkoutUrl } = await adapter.createCheckoutSession({ productRef })
+    if (!_config?.transport) throw new Error('transport missing from provider config')
+    const { checkoutUrl } = await _config.transport.createCheckoutSession({ productRef })
     return { href: checkoutUrl }
-  }, [productRef])
+  }, [productRef, _config])
 
-  const fetchCustomerUrl = useCallback(async () => {
-    const { customerUrl } = await adapter.createCustomerSession()
-    return { href: customerUrl }
-  }, [])
-
-  // Pre-fetch checkout session once hasLoadedOnce flips (so we don't race the
-  // initial auth round-trip). Keep the href stable across polls.
+  // Pre-fetch checkout session once the initial purchase fetch has completed.
+  //
+  // Customer-portal pre-fetching for the "paid" branch is now owned by
+  // `<CurrentPlanCard>` → `<UpdatePaymentMethodButton>` → the SDK's
+  // `<LaunchCustomerPortalButton>` — no local `fetchCustomerUrl` needed.
   const checkout = useHostedUrl(hasLoadedOnce, fetchCheckoutUrl, 'checkout session')
-  const customer = useHostedUrl(
-    hasLoadedOnce && hasPaidPurchase,
-    fetchCustomerUrl,
-    'customer portal',
-  )
 
   const safeRefetch = useCallback(() => {
     refetch().catch(err => {
@@ -418,7 +407,7 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     }
 
     if (hasPaidPurchase && activeProductName) {
-      return <ManageBody productName={activeProductName} customer={customer} />
+      return <ManageBody />
     }
 
     if (shouldShowCancelledNotice && cancelledProductName) {
@@ -443,7 +432,6 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     cancelAwaiting,
     hasPaidPurchase,
     activeProductName,
-    customer,
     shouldShowCancelledNotice,
     cancelledProductName,
     cancelledEndDate,
@@ -456,7 +444,9 @@ function CheckoutBody({ productRef }: { productRef: string }) {
   // Initial mount: show a dedicated loading card until the first fetch
   // finishes. After that, the outer frame below stays mounted forever and
   // polls are invisible except for a subtle `data-refreshing` opacity dip.
-  if (loading && !hasLoadedOnce) {
+  // `loading` only goes true for the first fetch per cacheKey — subsequent
+  // polls surface via `isRefetching`, so this branch only fires once.
+  if (loading) {
     return (
       <div className="checkout-card">
         <p>Loading purchase…</p>
@@ -464,20 +454,21 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     )
   }
 
-  const isRefreshing = (loading || isRefetching) && hasLoadedOnce
-
   return (
-    <div className="checkout-card" data-refreshing={isRefreshing ? 'true' : undefined}>
+    <div className="checkout-card" data-refreshing={isRefetching ? 'true' : undefined}>
       {inner}
     </div>
   )
 }
 
 function CheckoutApp({ productRef }: { productRef: string }) {
-  const providerConfig = useMemo(() => ({ auth: { adapter: mcpAuthAdapter } }), [])
+  const providerConfig = useMemo(
+    () => ({ auth: { adapter: mcpAuthAdapter }, transport }),
+    [],
+  )
 
   return (
-    <SolvaPayProvider config={providerConfig} checkPurchase={adapter.checkPurchase}>
+    <SolvaPayProvider config={providerConfig}>
       <main className="main">
         <header className="header">
           <h1>SolvaPay</h1>
@@ -522,10 +513,7 @@ function Bootstrap() {
         await app.connect()
         applyContext(app.getHostContext())
 
-        const result = await app.callServerTool({ name: 'open_checkout', arguments: {} })
-        const structured = result.structuredContent as { productRef?: string } | undefined
-        const ref = structured?.productRef
-        if (!ref) throw new Error('Server did not return a productRef')
+        const ref = await fetchOpenCheckoutProductRef(app)
         if (!cancelled) {
           setProductRef(ref)
           setReady(true)

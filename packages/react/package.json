@@ -25,6 +25,11 @@
       "import": "./dist/adapters/auth.js",
       "require": "./dist/adapters/auth.cjs"
     },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js",
+      "require": "./dist/mcp/index.cjs"
+    },
     "./styles.css": "./dist/styles.css",
     "./registry/*": "./registry/*"
   },
@@ -52,7 +57,7 @@
     "@stripe/stripe-js": "^9.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && cp src/styles.css dist/styles.css",
+    "build": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts src/mcp/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && cp src/styles.css dist/styles.css",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
     "test:types": "tsc --noEmit -p __tests__/tsconfig.types.json",

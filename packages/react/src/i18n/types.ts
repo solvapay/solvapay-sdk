@@ -138,6 +138,20 @@ export interface SolvaPayCopy {
     lowBalanceSubheading: string
     topUpCta: string
   }
+  currentPlan: {
+    heading: string
+    nextBilling: string
+    expiresOn: string
+    validIndefinitely: string
+    paymentMethod: string
+    paymentMethodExpires: string
+    noPaymentMethod: string
+    updatePaymentButton: string
+  }
+  customerPortal: {
+    launchButton: string
+    loadingLabel: string
+  }
   errors: {
     paymentInitFailed: string
     topupInitFailed: string
