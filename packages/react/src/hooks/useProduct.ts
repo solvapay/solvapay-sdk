@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSolvaPay } from './useSolvaPay'
 import { createHttpTransport } from '../transport/http'
+import { createTransportCacheKey } from '../transport/cache-key'
 import type { Product, SolvaPayConfig, UseProductReturn } from '../types'
 
 type CacheEntry = {
@@ -15,20 +16,11 @@ const CACHE_DURATION = 5 * 60 * 1000
 /** @internal Exported only for tests */
 export { productCache, CACHE_DURATION }
 
-const transportIds = new WeakMap<object, number>()
-let nextTransportId = 0
-
 function cacheKeyFor(config: SolvaPayConfig | undefined, productRef: string): string {
-  const transport = config?.transport
-  if (transport) {
-    let id = transportIds.get(transport)
-    if (id === undefined) {
-      id = ++nextTransportId
-      transportIds.set(transport, id)
-    }
-    return `transport:${id}:${productRef}`
-  }
-  return productRef
+  // With a custom transport: `transport:<id>:<productRef>`.
+  // Without: the raw `productRef` (preserves legacy behavior — no HTTP route
+  // component in the key, since useProduct already scopes by productRef).
+  return createTransportCacheKey(config, productRef, productRef)
 }
 
 async function fetchProduct(
