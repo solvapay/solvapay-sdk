@@ -27,6 +27,10 @@ export default function TopupPage() {
   }
 
   const handleBack = () => {
+    // Reset both states: AmountPicker's selection resets on remount, so the
+    // parent `amount` must clear too or the "Continue" button stays enabled
+    // with a stale, visually-unselected amount.
+    setAmount(null)
     setAmountCents(null)
   }
 
@@ -61,6 +65,7 @@ export default function TopupPage() {
             <button
               onClick={() => {
                 setPaymentFailed(false)
+                setAmount(null)
                 setAmountCents(null)
               }}
               className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"

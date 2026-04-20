@@ -31,7 +31,6 @@ function buildCtx(purchases: PurchaseInfo[]): SolvaPayContextValue {
       error: null,
       purchases,
       hasProduct: () => false,
-      hasPlan: () => false,
       activePurchase: purchases.find(p => p.status === 'active') ?? null,
       hasPaidPurchase: false,
       activePaidPurchase: null,

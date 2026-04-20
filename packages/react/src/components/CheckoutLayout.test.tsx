@@ -284,6 +284,27 @@ describe('CheckoutLayout — new orchestration', () => {
     await waitFor(() => expect(screen.getByText('Choose your pricing')).toBeTruthy())
   })
 
+  it('renders the selector (not payment) when initialPlanRef is provided without planRef', async () => {
+    plansCache.set('prd_multi', {
+      plans: [plan, { ...plan, reference: 'pln_2', name: 'Yearly', interval: 'year' }],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_multi', {
+      product: { reference: 'prd_multi', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
+        <CheckoutLayout productRef="prd_multi" initialPlanRef="pln_2" />
+      </SolvaPayProvider>,
+    )
+    // Must land on the selector, not skip to payment.
+    await waitFor(() => expect(screen.getByText('Choose your pricing')).toBeTruthy())
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy()
+  })
+
   it('auto-skips the selector when there is only one plan', async () => {
     plansCache.set('prd_single', {
       plans: [plan],

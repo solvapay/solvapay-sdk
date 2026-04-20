@@ -10,17 +10,6 @@ export function getAuthAdapter(config: SolvaPayConfig | undefined): AuthAdapter 
     return config.auth.adapter
   }
 
-  if (config?.auth?.getToken || config?.auth?.getUserId) {
-    return {
-      async getToken() {
-        return config?.auth?.getToken?.() || null
-      },
-      async getUserId() {
-        return config?.auth?.getUserId?.() || null
-      },
-    }
-  }
-
   return defaultAuthAdapter
 }
 

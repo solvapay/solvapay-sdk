@@ -62,6 +62,8 @@ export {
   checkPurchaseCore,
   trackUsageCore,
   listPlansCore,
+  getMerchantCore,
+  getProductCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'

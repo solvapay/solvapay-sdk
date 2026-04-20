@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/supabase",
-  "version": "1.0.8-preview.8",
+  "version": "1.0.8-preview.10",
   "description": "SolvaPay adapter for Supabase Edge Functions",
   "type": "module",
   "main": "./dist/index.cjs",

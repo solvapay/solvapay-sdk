@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/server",
-  "version": "1.0.8-preview.8",
+  "version": "1.0.8-preview.10",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -39,8 +39,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && tsup src/edge.ts --format esm --dts --tsconfig tsconfig.build.json",
     "generate:types": "tsx scripts/generate-types.ts",
-    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts src/mcp/oauth-bridge.spec.ts",
-    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts src/mcp/oauth-bridge.spec.ts",
+    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts src/mcp/oauth-bridge.spec.ts",
+    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts src/mcp/oauth-bridge.spec.ts",
     "test:integration": "vitest run __tests__/backend.integration.test.ts",
     "test:integration:payment": "vitest run __tests__/payment-stripe.integration.test.ts",
     "test:all": "vitest run",

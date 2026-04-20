@@ -89,6 +89,26 @@ Set the webhook secret alongside your API key:
 supabase secrets set SOLVAPAY_WEBHOOK_SECRET=whsec_...
 ```
 
+## Authentication model
+
+Every handler extracts the authenticated user from the `Authorization: Bearer <jwt>` header that the Supabase platform gateway forwards. Supabase Edge Functions run with `verify_jwt = true` by default, so the token is cryptographically validated at the gateway before your function runs -- inside the function the SDK decodes the payload to read `sub`, `email`, and `user_metadata.full_name`.
+
+If you want cryptographic verification inside the function as well (defence-in-depth, or to lock down a function where you've disabled gateway verification), set the Supabase JWT secret:
+
+```bash
+supabase secrets set SUPABASE_JWT_SECRET=<project jwt secret>
+```
+
+The SDK verifies HS256 tokens when this secret is present. Asymmetric JWT signing keys (ES256/RS256, Supabase Auth GA 2025) are covered by the gateway-trust path and do not require this secret.
+
+To require verified tokens (reject the unverified-decode fallback), also set:
+
+```bash
+supabase secrets set SOLVAPAY_AUTH_STRICT=true
+```
+
+`SOLVAPAY_JWT_SECRET` works as a provider-neutral alias for `SUPABASE_JWT_SECRET`.
+
 ## CORS configuration
 
 Default: `*` (permissive). Tighten for production:

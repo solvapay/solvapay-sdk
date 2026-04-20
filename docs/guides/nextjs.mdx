@@ -383,13 +383,11 @@ Wrap your app with `SolvaPayProvider`:
 // app/layout.tsx
 import { SolvaPayProvider } from '@solvapay/react';
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Optional: Use Supabase auth adapter
-  const supabaseAdapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  });
+  const supabaseAdapter = createSupabaseAuthAdapter({ client: supabase });
 
   return (
     <html>
@@ -543,12 +541,10 @@ proxy.ts
 // app/layout.tsx
 import { SolvaPayProvider } from '@solvapay/react';
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabaseAdapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  });
+  const supabaseAdapter = createSupabaseAuthAdapter({ client: supabase });
 
   return (
     <html>

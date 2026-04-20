@@ -10,6 +10,94 @@
  */
 
 /**
+ * JWT payload shape we care about (Supabase/JWT conventions).
+ */
+type JwtPayload = {
+  sub?: unknown
+  email?: unknown
+  name?: unknown
+  user_metadata?: {
+    full_name?: unknown
+    name?: unknown
+  }
+}
+
+function base64UrlDecode(input: string): string {
+  const padded = input.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
+  const base64 = padded + padding
+
+  if (typeof atob === 'function') {
+    const binary = atob(base64)
+    let result = ''
+    for (let i = 0; i < binary.length; i++) {
+      result += String.fromCharCode(binary.charCodeAt(i))
+    }
+    try {
+      return decodeURIComponent(escape(result))
+    } catch {
+      return result
+    }
+  }
+
+  const BufferCtor = (globalThis as { Buffer?: { from(s: string, enc: string): { toString(enc: string): string } } })
+    .Buffer
+  if (BufferCtor) {
+    return BufferCtor.from(base64, 'base64').toString('utf-8')
+  }
+
+  throw new Error('No base64 decoder available in this runtime')
+}
+
+function decodeJwtUnverified(token: string): JwtPayload | null {
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  try {
+    const json = base64UrlDecode(parts[1])
+    const payload = JSON.parse(json) as unknown
+    if (typeof payload !== 'object' || payload === null) return null
+    return payload as JwtPayload
+  } catch {
+    return null
+  }
+}
+
+function extractBearerToken(request: Request): string | null {
+  const authHeader = request.headers.get('authorization')
+  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) return null
+  const token = authHeader.slice(7).trim()
+  return token.length > 0 ? token : null
+}
+
+function readEnv(name: string): string | undefined {
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
+  return proc?.env?.[name]
+}
+
+function isStrictMode(): boolean {
+  return readEnv('SOLVAPAY_AUTH_STRICT') === 'true'
+}
+
+async function resolveJwtPayload(token: string, jwtSecret?: string): Promise<JwtPayload | null> {
+  const secret = jwtSecret || readEnv('SOLVAPAY_JWT_SECRET') || readEnv('SUPABASE_JWT_SECRET')
+
+  if (secret) {
+    try {
+      const { jwtVerify } = await import('jose')
+      const key = new TextEncoder().encode(secret)
+      const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] })
+      return payload as JwtPayload
+    } catch {
+      return null
+    }
+  }
+
+  if (isStrictMode()) return null
+
+  return decodeJwtUnverified(token)
+}
+
+/**
  * Extract user ID from request headers.
  *
  * Checks for the 'x-user-id' header which is commonly set by authentication
@@ -52,34 +140,20 @@ export function getUserIdFromRequest(
 }
 
 /**
- * Extract user email from Supabase JWT token in Authorization header.
+ * Extract user email from a Bearer JWT in the Authorization header.
  *
- * Parses and validates a Supabase JWT token from the Authorization header
- * and extracts the email claim. Returns null if the token is missing, invalid,
- * or expired.
- *
- * Uses dynamic imports for Edge runtime compatibility.
+ * When `SOLVAPAY_JWT_SECRET` or `SUPABASE_JWT_SECRET` is set (or the
+ * equivalent `options.jwtSecret`), the token is verified via HS256.
+ * Otherwise, the payload is decoded without verification — safe when the
+ * platform gateway has already validated the token (e.g. Supabase Edge
+ * Functions with `verify_jwt = true`, which is the default). Opt into
+ * strict mode with `SOLVAPAY_AUTH_STRICT=true` to disable the
+ * unverified-decode fallback.
  *
  * @param request - Request object (works with NextRequest from next/server)
  * @param options - Configuration options
- * @param options.jwtSecret - Supabase JWT secret (defaults to SUPABASE_JWT_SECRET env var)
+ * @param options.jwtSecret - JWT secret (defaults to SOLVAPAY_JWT_SECRET / SUPABASE_JWT_SECRET env var)
  * @returns User email string or null if not found
- *
- * @example
- * ```typescript
- * import { NextRequest, NextResponse } from 'next/server';
- * import { getUserEmailFromRequest } from '@solvapay/auth';
- *
- * export async function GET(request: NextRequest) {
- *   const email = await getUserEmailFromRequest(request);
- *
- *   if (!email) {
- *     return NextResponse.json({ error: 'Email not found' }, { status: 401 });
- *   }
- *
- *   return NextResponse.json({ email });
- * }
- * ```
  *
  * @see {@link getUserNameFromRequest} for extracting user name
  * @since 1.0.0
@@ -90,66 +164,29 @@ export async function getUserEmailFromRequest(
     jwtSecret?: string
   },
 ): Promise<string | null> {
-  const authHeader = request.headers.get('authorization')
+  const token = extractBearerToken(request)
+  if (!token) return null
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
-  }
+  const payload = await resolveJwtPayload(token, options?.jwtSecret)
+  if (!payload) return null
 
-  const token = authHeader.slice(7)
-  if (!token) {
-    return null
-  }
-
-  try {
-    // Dynamic import to avoid requiring jose if not used (Edge-compatible)
-    const { jwtVerify } = await import('jose')
-
-    const jwtSecret = options?.jwtSecret || process.env.SUPABASE_JWT_SECRET
-    if (!jwtSecret) {
-      return null
-    }
-
-    const secret = new TextEncoder().encode(jwtSecret)
-    const { payload } = await jwtVerify(token, secret, {
-      algorithms: ['HS256'],
-    })
-
-    // Extract email from payload (Supabase stores email in 'email' claim)
-    return payload.email ? String(payload.email) : null
-  } catch {
-    // Return null on any error (invalid token, expired, etc.)
-    return null
-  }
+  return typeof payload.email === 'string' ? payload.email : null
 }
 
 /**
- * Extract user name from Supabase JWT token in Authorization header.
+ * Extract user name from a Bearer JWT in the Authorization header.
  *
- * Parses and validates a Supabase JWT token from the Authorization header
- * and extracts the name from user metadata. Checks multiple possible locations:
+ * Checks multiple possible locations:
  * - `user_metadata.full_name`
  * - `user_metadata.name`
  * - `name` claim
  *
- * Returns null if the token is missing, invalid, or name is not found.
+ * See {@link getUserEmailFromRequest} for the verification/fallback model.
  *
  * @param request - Request object (works with NextRequest from next/server)
  * @param options - Configuration options
- * @param options.jwtSecret - Supabase JWT secret (defaults to SUPABASE_JWT_SECRET env var)
+ * @param options.jwtSecret - JWT secret (defaults to SOLVAPAY_JWT_SECRET / SUPABASE_JWT_SECRET env var)
  * @returns User name string or null if not found
- *
- * @example
- * ```typescript
- * import { NextRequest, NextResponse } from 'next/server';
- * import { getUserNameFromRequest } from '@solvapay/auth';
- *
- * export async function GET(request: NextRequest) {
- *   const name = await getUserNameFromRequest(request);
- *
- *   return NextResponse.json({ name: name || 'Guest' });
- * }
- * ```
  *
  * @see {@link getUserEmailFromRequest} for extracting user email
  * @since 1.0.0
@@ -160,50 +197,19 @@ export async function getUserNameFromRequest(
     jwtSecret?: string
   },
 ): Promise<string | null> {
-  const authHeader = request.headers.get('authorization')
+  const token = extractBearerToken(request)
+  if (!token) return null
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
-  }
+  const payload = await resolveJwtPayload(token, options?.jwtSecret)
+  if (!payload) return null
 
-  const token = authHeader.slice(7)
-  if (!token) {
-    return null
-  }
+  const metadataFullName =
+    typeof payload.user_metadata?.full_name === 'string' ? payload.user_metadata.full_name : null
+  const metadataName =
+    typeof payload.user_metadata?.name === 'string' ? payload.user_metadata.name : null
+  const claimName = typeof payload.name === 'string' ? payload.name : null
 
-  try {
-    // Dynamic import to avoid requiring jose if not used (Edge-compatible)
-    const { jwtVerify } = await import('jose')
-
-    const jwtSecret = options?.jwtSecret || process.env.SUPABASE_JWT_SECRET
-    if (!jwtSecret) {
-      return null
-    }
-
-    const secret = new TextEncoder().encode(jwtSecret)
-    const { payload } = await jwtVerify(token, secret, {
-      algorithms: ['HS256'],
-    })
-
-    // Extract name from payload (Supabase stores name in 'user_metadata.full_name' or 'user_metadata.name' or 'name' claim)
-    type PayloadWithMetadata = {
-      user_metadata?: {
-        full_name?: unknown
-        name?: unknown
-      }
-      name?: unknown
-    }
-    const payloadWithMetadata = payload as PayloadWithMetadata
-    const name =
-      (payloadWithMetadata.user_metadata?.full_name as string | undefined) ||
-      (payloadWithMetadata.user_metadata?.name as string | undefined) ||
-      (payloadWithMetadata.name as string | undefined) ||
-      null
-    return name ? String(name) : null
-  } catch {
-    // Return null on any error (invalid token, expired, etc.)
-    return null
-  }
+  return metadataFullName || metadataName || claimName || null
 }
 
 /**

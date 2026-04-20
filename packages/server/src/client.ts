@@ -132,7 +132,31 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       const result = await res.json()
-      return result
+      return {
+        customerRef: result.reference || result.customerRef,
+      }
+    },
+
+    // PATCH: /v1/sdk/customers/{customerRef}
+    async updateCustomer(customerRef, params) {
+      const url = `${base}/v1/sdk/customers/${encodeURIComponent(customerRef)}`
+
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Update customer failed (${res.status}): ${error}`)
+      }
+
+      const result = await res.json()
+      return {
+        customerRef: result.reference || result.customerRef || customerRef,
+      }
     },
 
     // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}|email={email}

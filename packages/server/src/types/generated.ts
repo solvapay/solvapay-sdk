@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/sdk/merchant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get merchant identity for the authenticated provider
+         * @description Returns the subset of provider data safe to render in a customer-facing checkout: display name, legal name, support contact, terms and privacy URLs, and logo. Used by SDK components like MandateText and CheckoutSummary.
+         */
+        get: operations["getMerchant"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/payment-intents": {
         parameters: {
             query?: never;
@@ -497,26 +517,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sdk/customers/{reference}/balance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get customer credit balance
-         * @description Returns the credit balance for a customer identified by reference.
-         */
-        get: operations["CustomerSdkController_getCustomerBalance"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/sdk/customers/{reference}": {
         parameters: {
             query?: never;
@@ -529,6 +529,30 @@ export interface paths {
          * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
          */
         get: operations["CustomerSdkController_getCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a customer
+         * @description Updates an existing customer identified by reference. Use this to backfill or change fields such as `externalRef`, `name`, or `email`. Only the fields supplied in the body are modified.
+         */
+        patch: operations["CustomerSdkController_updateCustomer"];
+        trace?: never;
+    };
+    "/v1/sdk/customers/{reference}/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get customer credit balance
+         * @description Returns the credit balance for a customer identified by reference.
+         */
+        get: operations["CustomerSdkController_getCustomerBalance"];
         put?: never;
         post?: never;
         delete?: never;
@@ -601,6 +625,46 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        SdkMerchantResponseDto: {
+            /**
+             * Brand name shown in UI
+             * @example Acme
+             */
+            displayName: string;
+            /**
+             * Legal entity name used in SCA mandate copy
+             * @example Acme Inc.
+             */
+            legalName: string;
+            /** @example support@acme.com */
+            supportEmail?: string;
+            /** @example https://acme.com/support */
+            supportUrl?: string;
+            /** @example https://acme.com/terms */
+            termsUrl?: string;
+            /** @example https://acme.com/privacy */
+            privacyUrl?: string;
+            /**
+             * ISO-3166 alpha-2 country code of the merchant
+             * @example US
+             */
+            country?: string;
+            /**
+             * ISO-4217 default settlement currency
+             * @example usd
+             */
+            defaultCurrency?: string;
+            /**
+             * Descriptor appearing on the customer card statement
+             * @example ACME INC
+             */
+            statementDescriptor?: string;
+            /**
+             * Absolute URL to the merchant logo
+             * @example https://cdn.acme.com/logo.png
+             */
+            logoUrl?: string;
+        };
         CreatePaymentIntentDto: {
             productRef?: string;
             customerRef: string;
@@ -1599,6 +1663,14 @@ export interface components {
             /** @description Active purchases */
             purchases?: components["schemas"]["PurchaseInfo"][];
         };
+        UpdateCustomerRequest: {
+            /** Format: email */
+            email?: string;
+            name?: string;
+            telephone?: string;
+            metadata?: unknown;
+            externalRef?: string;
+        };
         CreateCustomerSessionResponse: {
             /**
              * Customer session ID/token
@@ -1733,6 +1805,33 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getMerchant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Merchant identity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdkMerchantResponseDto"];
+                };
+            };
+            /** @description Provider not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     PaymentIntentSdkController_getPaymentIntents: {
         parameters: {
             query?: {
@@ -2811,38 +2910,6 @@ export interface operations {
             };
         };
     };
-    CustomerSdkController_getCustomerBalance: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Customer reference identifier */
-                reference: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Customer balance retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Customer not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
     CustomerSdkController_getCustomer: {
         parameters: {
             query?: never;
@@ -2862,6 +2929,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    CustomerSdkController_updateCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer reference identifier */
+                reference: string;
+            };
+            cookie?: never;
+        };
+        /** @description Fields to update (all optional) */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCustomerRequest"];
+            };
+        };
+        responses: {
+            /** @description Customer updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Invalid update payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomerSdkController_getCustomerBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer reference identifier */
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer balance retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Customer not found */
