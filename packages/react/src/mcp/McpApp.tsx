@@ -140,6 +140,11 @@ export function McpApp({
     setInitError(null)
     setBootstrap(null)
 
+    // `@modelcontextprotocol/ext-apps` `App` exposes lifecycle hooks as
+    // property setters — mutating the `app` prop is intentional and part
+    // of the documented integration contract. The react-hooks immutability
+    // rule can't infer that distinction; disable at the mutation site.
+    // eslint-disable-next-line react-hooks/immutability
     app.onhostcontextchanged = (ctx: McpUiHostContextLike) => {
       applyContextRef.current?.(ctx)
     }
