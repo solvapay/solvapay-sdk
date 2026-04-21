@@ -7,6 +7,8 @@
   },
   "include": [
     "packages/server/src/**/*",
+    "packages/mcp/src/**/*",
+    "packages/mcp-sdk/src/**/*",
     "packages/react/src/**/*",
     "packages/next/src/**/*",
     "packages/auth/src/**/*",
@@ -17,6 +19,7 @@
     "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx",
+    "**/*.spec.ts",
     "**/node_modules/**",
     "**/dist/**"
   ]

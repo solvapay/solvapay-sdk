@@ -3,6 +3,8 @@
   "tsconfig": "tsconfig.docs.json",
   "entryPoints": [
     "packages/server/src/index.ts",
+    "packages/mcp/src/index.ts",
+    "packages/mcp-sdk/src/index.ts",
     "packages/react/src/index.tsx",
     "packages/next/src/index.ts",
     "packages/auth/src/index.ts",
