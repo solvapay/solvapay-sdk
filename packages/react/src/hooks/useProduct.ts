@@ -92,10 +92,25 @@ export function useProduct(productRef: string | undefined): UseProductReturn {
         setLoading(true)
         setError(null)
         const promise = fetchProduct(productRef, _config)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        productCache.set(key, { product: null, promise: promise as Promise<Product>, timestamp: now })
+        // Preserve the seeded product (if any) on the in-flight entry
+        // so concurrent consumers render the cached value while the
+        // fetch is in progress.
+        productCache.set(key, {
+          product: cached?.product ?? null,
+          promise: promise as Promise<Product>,
+          timestamp: now,
+        })
         const p = await promise
+        // Transports without `getProduct` (MCP adapter) return null;
+        // restore the seeded entry so the TTL doesn't evict it on next
+        // access.
         if (p === null) {
+          productCache.set(key, {
+            product: cached?.product ?? null,
+            promise: null,
+            timestamp: cached?.timestamp ?? now,
+          })
+          setProduct(cached?.product ?? null)
           setLoading(false)
           return
         }

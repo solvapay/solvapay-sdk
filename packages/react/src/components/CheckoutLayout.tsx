@@ -17,16 +17,15 @@ import { PaymentForm } from '../PaymentForm'
 import { PlanSelector } from './PlanSelector'
 import { ActivationFlow } from './ActivationFlow'
 import { usePlan } from '../hooks/usePlan'
-import { plansCache, usePlans } from '../hooks/usePlans'
+import { usePlans } from '../hooks/usePlans'
+import { defaultListPlans } from '../transport/list-plans'
 import { useCopy } from '../hooks/useCopy'
 import { SolvaPayContext } from '../SolvaPayProvider'
-import { buildRequestHeaders } from '../utils/headers'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import type {
   CheckoutResult,
   Plan,
   PrefillCustomer,
-  SolvaPayConfig,
 } from '../types'
 
 export type CheckoutLayoutSize = 'chat' | 'mobile' | 'desktop' | 'auto'
@@ -209,37 +208,6 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
       )}
     </div>
   )
-}
-
-async function defaultListPlans(
-  productRef: string,
-  config: SolvaPayConfig | undefined,
-): Promise<Plan[]> {
-  // Prefer a configured transport (e.g. the MCP adapter) when it
-  // implements `listPlans`. When the transport omits the method (MCP
-  // mode after Phase 2c) the plans arrived on the bootstrap snapshot
-  // via `seedMcpCaches`, so echo whatever `plansCache` already holds
-  // — matches the "accept in-session staleness" policy and avoids a
-  // broken `/api/list-plans` fetch from inside the iframe.
-  const transport = config?.transport
-  if (transport) {
-    return transport.listPlans
-      ? transport.listPlans(productRef)
-      : (plansCache.get(productRef)?.plans ?? [])
-  }
-
-  const base = config?.api?.listPlans || '/api/list-plans'
-  const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-  const fetchFn = config?.fetch || fetch
-  const { headers } = await buildRequestHeaders(config)
-  const res = await fetchFn(url, { method: 'GET', headers })
-  if (!res.ok) {
-    const error = new Error(`Failed to fetch plans: ${res.statusText || res.status}`)
-    config?.onError?.(error, 'listPlans')
-    throw error
-  }
-  const data = (await res.json()) as { plans?: Plan[] }
-  return data.plans ?? []
 }
 
 /**

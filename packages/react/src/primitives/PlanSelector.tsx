@@ -23,16 +23,16 @@ import React, {
 } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
-import { plansCache, usePlans } from '../hooks/usePlans'
+import { usePlans } from '../hooks/usePlans'
+import { defaultListPlans } from '../transport/list-plans'
 import { usePurchase } from '../hooks/usePurchase'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
 import { interpolate } from '../i18n/interpolate'
 import { PlanSelectionProvider } from '../components/PlanSelectionContext'
-import { buildRequestHeaders } from '../utils/headers'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProductRefError, MissingProviderError } from '../utils/errors'
-import type { Plan, SolvaPayConfig } from '../types'
+import type { Plan } from '../types'
 
 type CardState = 'idle' | 'selected' | 'current' | 'disabled'
 
@@ -78,38 +78,6 @@ function useCardContext(part: string): CardContextValue {
     throw new Error(`PlanSelector.${part} must be rendered inside <PlanSelector.Card>.`)
   }
   return ctx
-}
-
-async function defaultListPlans(
-  productRef: string,
-  config: SolvaPayConfig | undefined,
-): Promise<Plan[]> {
-  // Prefer a configured transport (e.g. the MCP adapter) when it
-  // implements `listPlans`. When the transport omits the method (MCP
-  // mode after Phase 2c) the data arrived on the bootstrap snapshot
-  // via `seedMcpCaches`, so fall back to whatever `plansCache`
-  // already holds — this matches the plan's "accept in-session
-  // staleness, fetcher is a no-op" policy and avoids a broken
-  // `/api/list-plans` request from inside the iframe.
-  const transport = config?.transport
-  if (transport) {
-    return transport.listPlans
-      ? transport.listPlans(productRef)
-      : (plansCache.get(productRef)?.plans ?? [])
-  }
-
-  const base = config?.api?.listPlans || '/api/list-plans'
-  const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-  const fetchFn = config?.fetch || fetch
-  const { headers } = await buildRequestHeaders(config)
-  const res = await fetchFn(url, { method: 'GET', headers })
-  if (!res.ok) {
-    const error = new Error(`Failed to fetch plans: ${res.statusText || res.status}`)
-    config?.onError?.(error, 'listPlans')
-    throw error
-  }
-  const data = (await res.json()) as { plans?: Plan[] }
-  return data.plans ?? []
 }
 
 type RootProps = {

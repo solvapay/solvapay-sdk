@@ -81,12 +81,25 @@ export function useMerchant(): UseMerchantReturn {
         setLoading(true)
         setError(null)
         const promise = fetchMerchant(_config)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        merchantCache.set(key, { merchant: null, promise: promise as Promise<Merchant>, timestamp: now })
+        // Preserve the seeded merchant (if any) on the in-flight entry
+        // so concurrent `useMerchant` consumers still render the cached
+        // value while the fetch is in progress.
+        merchantCache.set(key, {
+          merchant: cached?.merchant ?? null,
+          promise: promise as Promise<Merchant>,
+          timestamp: now,
+        })
         const m = await promise
         // Transports without `getMerchant` (MCP adapter) return null;
-        // leave the previously-seeded cache untouched in that case.
+        // restore the seeded entry so the TTL doesn't evict it on next
+        // access — matches the "accept in-session staleness" policy.
         if (m === null) {
+          merchantCache.set(key, {
+            merchant: cached?.merchant ?? null,
+            promise: null,
+            timestamp: cached?.timestamp ?? now,
+          })
+          setMerchant(cached?.merchant ?? null)
           setLoading(false)
           return
         }
