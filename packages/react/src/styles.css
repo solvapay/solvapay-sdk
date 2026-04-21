@@ -23,6 +23,28 @@
 }
 
 /* -----------------------------------------------------------------------------
+ * Spinner (shared across PaymentForm, TopupForm, StripePaymentFormWrapper)
+ * -------------------------------------------------------------------------- */
+
+@keyframes solvapay-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[data-solvapay-spinner] {
+  animation: solvapay-spin 0.8s linear infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-solvapay-spinner] {
+    animation: none;
+  }
+}
+
+/* -----------------------------------------------------------------------------
  * Checkout layout shell (drop-in)
  * -------------------------------------------------------------------------- */
 
