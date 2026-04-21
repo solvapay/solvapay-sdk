@@ -16,6 +16,7 @@ function buildCtx(overrides: Partial<SolvaPayContextValue> = {}): SolvaPayContex
       activePurchase: null,
       hasPaidPurchase: false,
       activePaidPurchase: null,
+      balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),

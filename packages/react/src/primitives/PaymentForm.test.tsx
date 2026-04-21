@@ -242,6 +242,7 @@ const PaidHarness: React.FC<{
         activePurchase: null,
         hasPaidPurchase,
         activePaidPurchase: null,
+        balanceTransactions: [],
       },
       refetchPurchase,
       createPayment: vi.fn().mockResolvedValue({

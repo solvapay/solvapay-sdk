@@ -21,6 +21,7 @@ const cancelledActivePurchase: PurchaseInfo = {
   cancelledAt: new Date().toISOString(),
   cancellationReason: 'Too expensive',
   amount: 1999,
+  planSnapshot: { reference: 'pln_widget', planType: 'recurring' },
 }
 
 function buildCtx(purchases: PurchaseInfo[]): SolvaPayContextValue {
@@ -34,6 +35,7 @@ function buildCtx(purchases: PurchaseInfo[]): SolvaPayContextValue {
       activePurchase: purchases.find(p => p.status === 'active') ?? null,
       hasPaidPurchase: false,
       activePaidPurchase: null,
+      balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),

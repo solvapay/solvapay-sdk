@@ -25,6 +25,7 @@ function buildCtx(
       activePurchase: active,
       hasPaidPurchase: !!active && (active.amount ?? 0) > 0,
       activePaidPurchase: active,
+      balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),

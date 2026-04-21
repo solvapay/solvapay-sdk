@@ -17,6 +17,7 @@ function ctxWith(overrides: Partial<BalanceStatus> = {}): SolvaPayContextValue {
       activePurchase: null,
       hasPaidPurchase: false,
       activePaidPurchase: null,
+      balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),
