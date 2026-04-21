@@ -29,17 +29,13 @@ import {
 } from '../../primitives/AmountPicker'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { TopupForm } from '../../primitives/TopupForm'
-import { getMinorUnitsPerMajor } from '../../utils/format'
+import { toMajorUnits } from '../../utils/format'
 import { useStripeProbe } from '../useStripeProbe'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 // Safety net only — `useMerchant().merchant.defaultCurrency` is the source of
 // truth. Falls back to USD if the merchant fetch is pending or fails.
 const FALLBACK_TOPUP_CURRENCY = 'USD'
-
-function toMajorUnits(amountMinor: number, currency: string): number {
-  return amountMinor / getMinorUnitsPerMajor(currency)
-}
 
 function formatCurrency(amount: number, currency: string): string {
   try {

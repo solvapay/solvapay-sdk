@@ -117,7 +117,7 @@ const TopupPaymentStep: React.FC = () => {
         {copy.activationFlow.changeAmountButton}
       </button>
       <TopupForm
-        amount={ctx.amountCents}
+        amount={ctx.amountMinor}
         currency={ctx.currency}
         onSuccess={ctx.onTopupSuccess}
         onError={err => ctx.onError?.(err instanceof Error ? err : new Error(String(err)))}

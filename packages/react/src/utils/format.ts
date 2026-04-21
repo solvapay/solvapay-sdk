@@ -53,7 +53,12 @@ export function getMinorUnitsPerMajor(currency: string): number {
   return getFractionDigits(currency) === 0 ? 1 : 100
 }
 
-function toMajorUnits(amountMinor: number, currency: string): number {
+/**
+ * Convert a minor-unit amount to its major-unit equivalent. Zero-decimal
+ * currencies pass through unchanged (1000 JPY minor = 1000 JPY major);
+ * two-decimal currencies divide by 100 (1999 USD minor = 19.99 USD).
+ */
+export function toMajorUnits(amountMinor: number, currency: string): number {
   const fractionDigits = getFractionDigits(currency)
   return fractionDigits === 0 ? amountMinor : amountMinor / 100
 }
