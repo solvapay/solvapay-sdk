@@ -155,7 +155,7 @@ export {
   isPlanPurchase,
   isTopupPurchase,
 } from './utils/purchases'
-export { formatPrice } from './utils/format'
+export { formatPrice, getMinorUnitsPerMajor } from './utils/format'
 export type { FormatPriceOptions } from './utils/format'
 export { deriveVariant } from './utils/checkoutVariant'
 export { resolveCta } from './utils/checkoutCta'

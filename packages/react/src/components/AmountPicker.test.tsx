@@ -115,3 +115,75 @@ describe('AmountPicker primitive', () => {
     spy.mockRestore()
   })
 })
+
+describe('AmountPicker emit="minor" mode', () => {
+  it('delivers minor units to onChange for USD (×100)', async () => {
+    const onChange = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <AmountPicker.Root currency="usd" emit="minor" onChange={onChange}>
+          <AmountPicker.Option amount={10} data-testid="pill-10" />
+        </AmountPicker.Root>
+      </SolvaPayProvider>,
+    )
+    fireEvent.click(screen.getByTestId('pill-10'))
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(1000))
+  })
+
+  it('delivers integer yen (not yen×100) for JPY', async () => {
+    const onChange = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <AmountPicker.Root currency="jpy" emit="minor" onChange={onChange}>
+          <AmountPicker.Option amount={1000} data-testid="pill" />
+        </AmountPicker.Root>
+      </SolvaPayProvider>,
+    )
+    fireEvent.click(screen.getByTestId('pill'))
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(1000))
+  })
+
+  it('Confirm.onConfirm receives minor units when emit="minor"', async () => {
+    const onConfirm = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <AmountPicker.Root currency="usd" emit="minor">
+          <AmountPicker.Option amount={50} data-testid="pill" />
+          <AmountPicker.Confirm onConfirm={onConfirm} data-testid="confirm">
+            Continue
+          </AmountPicker.Confirm>
+        </AmountPicker.Root>
+      </SolvaPayProvider>,
+    )
+    fireEvent.click(screen.getByTestId('pill'))
+    fireEvent.click(screen.getByTestId('confirm'))
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(5000))
+  })
+
+  it('custom input resolves to minor units', async () => {
+    const onChange = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <AmountPicker.Root currency="usd" emit="minor" onChange={onChange}>
+          <AmountPicker.Custom data-testid="custom" />
+        </AmountPicker.Root>
+      </SolvaPayProvider>,
+    )
+    const input = screen.getByTestId('custom') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '25.50' } })
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(2550))
+  })
+
+  it('default emit remains major for back-compat', async () => {
+    const onChange = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <AmountPicker.Root currency="usd" onChange={onChange}>
+          <AmountPicker.Option amount={10} data-testid="pill" />
+        </AmountPicker.Root>
+      </SolvaPayProvider>,
+    )
+    fireEvent.click(screen.getByTestId('pill'))
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(10))
+  })
+})

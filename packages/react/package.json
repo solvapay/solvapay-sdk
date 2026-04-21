@@ -7,6 +7,7 @@
   "types": "./dist/index.d.ts",
   "sideEffects": [
     "dist/styles.css",
+    "dist/mcp/styles.css",
     "*.css"
   ],
   "exports": {
@@ -30,6 +31,7 @@
       "import": "./dist/mcp/index.js",
       "require": "./dist/mcp/index.cjs"
     },
+    "./mcp/styles.css": "./dist/mcp/styles.css",
     "./styles.css": "./dist/styles.css",
     "./registry/*": "./registry/*"
   },
@@ -58,8 +60,8 @@
     "@stripe/stripe-js": "^9.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts src/mcp/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && cp src/styles.css dist/styles.css",
-    "dev": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts src/mcp/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch --onSuccess \"cp src/styles.css dist/styles.css\"",
+    "build": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts src/mcp/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && cp src/styles.css dist/styles.css && mkdir -p dist/mcp && cp src/mcp/styles.css dist/mcp/styles.css",
+    "dev": "tsup src/index.tsx src/primitives/index.ts src/adapters/auth.ts src/mcp/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch --onSuccess \"cp src/styles.css dist/styles.css && mkdir -p dist/mcp && cp src/mcp/styles.css dist/mcp/styles.css\"",
     "test": "vitest run || exit 0",
     "test:unit": "vitest run || exit 0",
     "test:types": "tsc --noEmit -p __tests__/tsconfig.types.json",

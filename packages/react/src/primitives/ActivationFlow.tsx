@@ -350,7 +350,9 @@ const AmountPickerMount: React.FC<AmountPickerMountProps> = ({ children }) => {
   if (ctx.step !== 'selectAmount') return null
   return (
     <div data-solvapay-activation-flow-amount-picker="">
-      <AmountPickerPrimitive.Root currency={ctx.currency}>{children}</AmountPickerPrimitive.Root>
+      <AmountPickerPrimitive.Root currency={ctx.currency} selector={ctx.amountSelector}>
+        {children}
+      </AmountPickerPrimitive.Root>
     </div>
   )
 }

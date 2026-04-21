@@ -30,16 +30,24 @@ import { useCopy } from '../hooks/useCopy'
 import { interpolate } from '../i18n/interpolate'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
+import { getMinorUnitsPerMajor } from '../utils/format'
 import type { UseTopupAmountSelectorReturn } from '../types'
 
 type OptionState = 'idle' | 'selected' | 'disabled'
 
 type AmountPickerContextValue = UseTopupAmountSelectorReturn & {
   currency: string
+  emit: 'major' | 'minor'
   creditsPerMinorUnit: number | null
   displayExchangeRate: number | null
   estimatedCredits: number | null
   isApproximate: boolean
+  /**
+   * `resolvedAmount` expressed in minor units (e.g. cents). Respects
+   * zero-decimal currencies: for JPY this equals `resolvedAmount`; for USD
+   * it equals `resolvedAmount * 100`. `null` when no valid amount is set.
+   */
+  resolvedAmountMinor: number | null
 }
 
 const AmountPickerContext = createContext<AmountPickerContextValue | null>(null)
@@ -56,29 +64,60 @@ type RootProps = {
   currency: string
   minAmount?: number
   maxAmount?: number
+  /**
+   * Whether `onChange` and `Confirm.onConfirm` deliver the amount in major
+   * units (e.g. dollars, `19.99`) or minor units (e.g. cents, `1999`).
+   * Defaults to `'major'` for back-compat. Respects zero-decimal currencies
+   * (JPY → integer yen in either mode).
+   */
+  emit?: 'major' | 'minor'
+  /**
+   * Externally-owned selector. When provided, `Root` uses this instance
+   * instead of calling `useTopupAmountSelector` internally. Lets parent
+   * flows (e.g. `ActivationFlow.AmountPicker`) share state with the inner
+   * picker so selections feed back into retry logic.
+   */
+  selector?: UseTopupAmountSelectorReturn
   onChange?: (amount: number | null) => void
   asChild?: boolean
   children?: React.ReactNode
 } & Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onChange'>
 
 const Root = forwardRef<HTMLDivElement, RootProps>(function AmountPickerRoot(
-  { currency, minAmount, maxAmount, onChange, asChild, children, ...rest },
+  {
+    currency,
+    minAmount,
+    maxAmount,
+    emit = 'major',
+    selector: externalSelector,
+    onChange,
+    asChild,
+    children,
+    ...rest
+  },
   forwardedRef,
 ) {
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('AmountPicker')
 
-  const selector = useTopupAmountSelector({ currency, minAmount, maxAmount })
+  const internalSelector = useTopupAmountSelector({ currency, minAmount, maxAmount })
+  const selector = externalSelector ?? internalSelector
   const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
 
-  useEffect(() => {
-    onChange?.(selector.resolvedAmount)
-  }, [selector.resolvedAmount, onChange])
-
+  const minorPerMajor = getMinorUnitsPerMajor(currency)
   const resolvedAmountMinor =
     selector.resolvedAmount != null && selector.resolvedAmount > 0
-      ? Math.round(selector.resolvedAmount * 100)
+      ? Math.round(selector.resolvedAmount * minorPerMajor)
       : null
+
+  useEffect(() => {
+    if (emit === 'minor') {
+      onChange?.(resolvedAmountMinor)
+    } else {
+      onChange?.(selector.resolvedAmount)
+    }
+  }, [emit, selector.resolvedAmount, resolvedAmountMinor, onChange])
+
   const rate = displayExchangeRate ?? 1
   const estimatedCredits =
     creditsPerMinorUnit != null && creditsPerMinorUnit > 0 && resolvedAmountMinor != null
@@ -90,12 +129,23 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function AmountPickerRoot(
     () => ({
       ...selector,
       currency,
+      emit,
       creditsPerMinorUnit,
       displayExchangeRate,
       estimatedCredits,
       isApproximate,
+      resolvedAmountMinor,
     }),
-    [selector, currency, creditsPerMinorUnit, displayExchangeRate, estimatedCredits, isApproximate],
+    [
+      selector,
+      currency,
+      emit,
+      creditsPerMinorUnit,
+      displayExchangeRate,
+      estimatedCredits,
+      isApproximate,
+      resolvedAmountMinor,
+    ],
   )
 
   const Comp = asChild ? Slot : 'div'
@@ -206,9 +256,12 @@ const Confirm = forwardRef<HTMLButtonElement, ConfirmProps>(function AmountPicke
   const isDisabled = disabled || !ctx.resolvedAmount
 
   const handleConfirm = useCallback(() => {
-    if (ctx.validate() && ctx.resolvedAmount != null) {
-      onConfirm?.(ctx.resolvedAmount)
+    if (!ctx.validate()) return
+    if (ctx.emit === 'minor') {
+      if (ctx.resolvedAmountMinor != null) onConfirm?.(ctx.resolvedAmountMinor)
+      return
     }
+    if (ctx.resolvedAmount != null) onConfirm?.(ctx.resolvedAmount)
   }, [ctx, onConfirm])
 
   const commonProps = {
