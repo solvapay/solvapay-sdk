@@ -23,7 +23,7 @@ import React, {
 } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
-import { usePlans } from '../hooks/usePlans'
+import { plansCache, usePlans } from '../hooks/usePlans'
 import { usePurchase } from '../hooks/usePurchase'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
@@ -84,6 +84,20 @@ async function defaultListPlans(
   productRef: string,
   config: SolvaPayConfig | undefined,
 ): Promise<Plan[]> {
+  // Prefer a configured transport (e.g. the MCP adapter) when it
+  // implements `listPlans`. When the transport omits the method (MCP
+  // mode after Phase 2c) the data arrived on the bootstrap snapshot
+  // via `seedMcpCaches`, so fall back to whatever `plansCache`
+  // already holds — this matches the plan's "accept in-session
+  // staleness, fetcher is a no-op" policy and avoids a broken
+  // `/api/list-plans` request from inside the iframe.
+  const transport = config?.transport
+  if (transport) {
+    return transport.listPlans
+      ? transport.listPlans(productRef)
+      : (plansCache.get(productRef)?.plans ?? [])
+  }
+
   const base = config?.api?.listPlans || '/api/list-plans'
   const url = `${base}?productRef=${encodeURIComponent(productRef)}`
   const fetchFn = config?.fetch || fetch

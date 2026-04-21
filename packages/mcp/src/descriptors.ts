@@ -461,8 +461,19 @@ export function buildSolvaPayDescriptors(
 
         // No plan picked yet — return the picker bootstrap (the React
         // shell opens `<McpActivateView>`; text-only hosts narrate the
-        // markdown summary listing the available plans).
+        // markdown summary listing the available plans). Respect the
+        // `views` filter so consumers that restrict the surface (e.g.
+        // `views: ['checkout']`) don't accidentally expose the
+        // activation picker as an alternate entry point.
         if (!planRef) {
+          if (!enabledViews.has('activate')) {
+            return toolErrorResult({
+              error: 'activate_plan requires a planRef on this server',
+              status: 400,
+              details:
+                'The activation-picker view is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "activate" view via the `views` option.',
+            })
+          }
           return toolResult(await buildBootstrapPayload('activate', extra))
         }
 

@@ -297,4 +297,21 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(sc.view).toBe('activate')
     expect(sc.plans).toBeTruthy()
   })
+
+  it('activate_plan without planRef errors when activate view is disabled', async () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      views: ['checkout'],
+    })
+    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
+    const result = await activate.handler({}, {})
+    expect(result.isError).toBe(true)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.status).toBe(400)
+    expect(String(sc.error)).toMatch(/planRef/)
+  })
 })
