@@ -537,9 +537,11 @@ function HostedCheckout({ productRef }: { productRef: string }) {
  */
 function PaymentFormGate({
   productRef,
+  returnUrl,
   children,
 }: {
   productRef: string
+  returnUrl: string
   children: React.ReactNode
 }) {
   const { selectedPlanRef } = usePlanSelector()
@@ -549,6 +551,7 @@ function PaymentFormGate({
       key={selectedPlanRef}
       planRef={selectedPlanRef}
       productRef={productRef}
+      returnUrl={returnUrl}
       requireTermsAcceptance={false}
     >
       {children}
@@ -563,7 +566,13 @@ function PaymentFormGate({
  * declared CSP `frameDomains`). Post-purchase management stays hosted —
  * the customer portal isn't embeddable today.
  */
-function EmbeddedCheckout({ productRef }: { productRef: string }) {
+function EmbeddedCheckout({
+  productRef,
+  returnUrl,
+}: {
+  productRef: string
+  returnUrl: string
+}) {
   const { loading, isRefetching, hasPaidPurchase, activePurchase } = usePurchase()
   const { shouldShowCancelledNotice, cancelledPurchase } = usePurchaseStatus()
 
@@ -596,7 +605,7 @@ function EmbeddedCheckout({ productRef }: { productRef: string }) {
             </PlanSelector.Grid>
             <PlanSelector.Loading className="solvapay-plan-selector-loading" />
             <PlanSelector.Error className="solvapay-plan-selector-error" />
-            <PaymentFormGate productRef={productRef}>
+            <PaymentFormGate productRef={productRef} returnUrl={returnUrl}>
               <PaymentForm.Summary />
               <PaymentForm.Loading />
               <PaymentForm.PaymentElement />
@@ -614,9 +623,11 @@ function EmbeddedCheckout({ productRef }: { productRef: string }) {
 function CheckoutApp({
   productRef,
   publishableKey,
+  returnUrl,
 }: {
   productRef: string
   publishableKey: string | null
+  returnUrl: string
 }) {
   const probe = useStripeProbe(publishableKey)
 
@@ -630,7 +641,7 @@ function CheckoutApp({
           <p>Loading checkout…</p>
         </div>
       ) : probe === 'ready' ? (
-        <EmbeddedCheckout productRef={productRef} />
+        <EmbeddedCheckout productRef={productRef} returnUrl={returnUrl} />
       ) : (
         <HostedCheckout productRef={productRef} />
       )}
@@ -642,6 +653,7 @@ function Bootstrap() {
   const [ready, setReady] = useState(false)
   const [productRef, setProductRef] = useState<string | null>(null)
   const [publishableKey, setPublishableKey] = useState<string | null>(null)
+  const [returnUrl, setReturnUrl] = useState<string | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -673,10 +685,15 @@ function Bootstrap() {
         await app.connect()
         applyContext(app.getHostContext())
 
-        const { productRef: ref, stripePublishableKey } = await fetchOpenCheckoutProductRef(app)
+        const {
+          productRef: ref,
+          stripePublishableKey,
+          returnUrl: resolvedReturnUrl,
+        } = await fetchOpenCheckoutProductRef(app)
         if (!cancelled) {
           setProductRef(ref)
           setPublishableKey(stripePublishableKey)
+          setReturnUrl(resolvedReturnUrl)
           setReady(true)
         }
       } catch (err) {
@@ -709,7 +726,7 @@ function Bootstrap() {
     )
   }
 
-  if (!ready || !productRef) {
+  if (!ready || !productRef || !returnUrl) {
     return (
       <main className="main">
         <div className="checkout-card">
@@ -721,7 +738,11 @@ function Bootstrap() {
 
   return (
     <SolvaPayProvider config={providerConfig}>
-      <CheckoutApp productRef={productRef} publishableKey={publishableKey} />
+      <CheckoutApp
+        productRef={productRef}
+        publishableKey={publishableKey}
+        returnUrl={returnUrl}
+      />
     </SolvaPayProvider>
   )
 }

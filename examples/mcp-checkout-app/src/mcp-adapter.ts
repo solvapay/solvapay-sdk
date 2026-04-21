@@ -25,9 +25,11 @@ export { createMcpAppAdapter }
  * The SolvaPay backend knows this from the tool registration; the UI just
  * reads it so the correct plan is displayed.
  */
-export async function fetchOpenCheckoutProductRef(
-  app: App,
-): Promise<{ productRef: string; stripePublishableKey: string | null }> {
+export async function fetchOpenCheckoutProductRef(app: App): Promise<{
+  productRef: string
+  stripePublishableKey: string | null
+  returnUrl: string
+}> {
   const result = await app.callServerTool({ name: 'open_checkout', arguments: {} })
   if ((result as CallToolResult).isError) {
     const first = (result as CallToolResult).content?.[0]
@@ -38,12 +40,34 @@ export async function fetchOpenCheckoutProductRef(
     throw new Error(message)
   }
   const structured = (result as CallToolResult).structuredContent as
-    | { productRef?: string; stripePublishableKey?: string | null }
+    | {
+        productRef?: string
+        stripePublishableKey?: string | null
+        returnUrl?: string | null
+      }
     | undefined
   const ref = structured?.productRef
   if (!ref) throw new Error('Server did not return a productRef')
   const key = structured?.stripePublishableKey ?? null
-  return { productRef: ref, stripePublishableKey: typeof key === 'string' && key ? key : null }
+  // Stripe's confirmPayment validator requires `return_url` to be an
+  // http(s) URL with an explicit scheme. Inside the MCP host iframe
+  // `window.location.origin` is the literal string `"null"` (browsers
+  // return "null" as the origin for non-standard schemes like `ui://`),
+  // which Stripe rejects with "An explicit scheme (such as https) must
+  // be provided." So we require the server to supply a concrete
+  // http(s) origin and fail loudly if it doesn't — there's no safe
+  // fallback we can derive client-side in this host.
+  const raw = structured?.returnUrl
+  if (typeof raw !== 'string' || !/^https?:\/\//i.test(raw)) {
+    throw new Error(
+      'open_checkout did not return a valid http(s) returnUrl. Set MCP_PUBLIC_BASE_URL on the MCP server.',
+    )
+  }
+  return {
+    productRef: ref,
+    stripePublishableKey: typeof key === 'string' && key ? key : null,
+    returnUrl: raw,
+  }
 }
 
 /**

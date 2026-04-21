@@ -19,7 +19,7 @@ import {
   type McpToolExtra,
 } from '@solvapay/server'
 import { MCP_TOOL_NAMES } from '@solvapay/react/mcp'
-import { solvaPay, solvapayApiOrigin, solvapayProductRef } from './config'
+import { mcpPublicBaseUrl, solvaPay, solvapayApiOrigin, solvapayProductRef } from './config'
 
 const DIST_DIR = import.meta.filename.endsWith('.ts')
   ? path.join(import.meta.dirname, '../dist')
@@ -260,6 +260,10 @@ export function createServer(): McpServer {
         return toolResult({
           productRef: solvapayProductRef,
           stripePublishableKey,
+          // Stripe's confirmPayment validator rejects the `ui://` iframe
+          // location as a `return_url`. Surface the MCP app's public https
+          // origin so the client can thread it into `PaymentForm.Root`.
+          returnUrl: mcpPublicBaseUrl,
         })
       }),
   )
