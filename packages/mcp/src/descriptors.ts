@@ -261,27 +261,31 @@ export function buildSolvaPayDescriptors(
       name: MCP_TOOL_NAMES.openPaywall,
       title: 'Open paywall',
       description:
-        'Open the SolvaPay paywall view so the customer can resolve a payment- or activation-required gate inside the host. Input: `{ content: PaywallStructuredContent }` — pass the structured content returned from a failed paywall-protected tool call.',
+        'Open the SolvaPay paywall view so the customer can resolve a payment- or activation-required gate inside the host. Input: `{ content?: PaywallStructuredContent }` — pass the structured content returned from a failed paywall-protected tool call. Omitting `content` yields a bootstrap payload without paywall details (the React shell falls back to the account view in that case).',
+      // `content` is optional on the wire so the React client's
+      // `fetchMcpBootstrap` can re-invoke `open_paywall` at app startup
+      // without access to the host's original call args. When content is
+      // missing, the server returns a bootstrap payload without the
+      // `paywall` field and the client falls back to a neutral view.
       inputSchema: {
         content: z
           .object({
             kind: z.enum(['payment_required', 'activation_required']),
           })
-          .passthrough(),
+          .passthrough()
+          .optional(),
       },
       meta: toolMeta,
       handler: async (args, extra) =>
         trace(MCP_TOOL_NAMES.openPaywall, args, extra, async () => {
-          const content = args.content as PaywallStructuredContent | undefined
-          if (!content || typeof content !== 'object' || !('kind' in content)) {
-            return toolErrorResult({
-              error: 'Invalid paywall content',
-              status: 400,
-              details:
-                'Expected { content: { kind: "payment_required" | "activation_required", ... } }',
-            })
-          }
-          return toolResult(await buildBootstrapPayload('paywall', { paywall: content }))
+          const raw = args.content
+          const content: PaywallStructuredContent | undefined =
+            raw && typeof raw === 'object' && 'kind' in raw
+              ? (raw as PaywallStructuredContent)
+              : undefined
+          return toolResult(
+            await buildBootstrapPayload('paywall', content ? { paywall: content } : {}),
+          )
         }),
     })
   }

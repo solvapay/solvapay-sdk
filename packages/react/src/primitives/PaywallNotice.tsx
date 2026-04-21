@@ -267,14 +267,10 @@ const HostedCheckoutLink = forwardRef<
 
 interface EmbeddedCheckoutProps {
   /**
-   * Stripe publishable key used to gate Stripe Elements mounting.
-   * When omitted, the compound delegates to the host transport's
-   * `createPayment` / `processPayment` flow.
+   * Return URL forwarded to `<PaymentForm.Root>` for Stripe's
+   * confirmPayment step.
    */
-  publishableKey?: string | null
   returnUrl: string
-  /** Hide the embedded flow when the host CSP blocks Stripe. */
-  hideWhenBlocked?: boolean
   className?: string
   children?: React.ReactNode
 }

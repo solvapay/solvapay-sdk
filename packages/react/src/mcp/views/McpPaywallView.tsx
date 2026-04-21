@@ -12,6 +12,7 @@
 
 import React from 'react'
 import type { PaywallStructuredContent } from '@solvapay/server'
+import { useCopy } from '../../hooks/useCopy'
 import { PaywallNotice } from '../../primitives/PaywallNotice'
 import { useStripeProbe } from '../useStripeProbe'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
@@ -38,6 +39,7 @@ export function McpPaywallView({
   onResolved,
 }: McpPaywallViewProps) {
   const cx = resolveMcpClassNames(classNames)
+  const copy = useCopy()
   const probe = useStripeProbe(publishableKey)
 
   const showEmbeddedCheckout = probe === 'ready' && content.kind === 'payment_required'
@@ -67,10 +69,9 @@ export function McpPaywallView({
         )}
 
         {isLoading ? (
-          <div className={cx.muted}>Loading checkout…</div>
+          <div className={cx.muted}>{copy.paywall.hostedCheckoutLoading}</div>
         ) : showEmbeddedCheckout ? (
           <PaywallNotice.EmbeddedCheckout
-            publishableKey={publishableKey}
             returnUrl={returnUrl}
             className="solvapay-mcp-paywall-embedded-checkout"
           />

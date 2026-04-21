@@ -137,14 +137,21 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     )
   }
   const key = structured?.stripePublishableKey ?? null
-  const resolvedView = structured?.view ?? view
+  const requestedView = structured?.view ?? view
   const paywall =
-    resolvedView === 'paywall' && isPaywallStructuredContent(structured?.paywall)
+    requestedView === 'paywall' && isPaywallStructuredContent(structured?.paywall)
       ? structured.paywall
       : undefined
-  if (resolvedView === 'paywall' && !paywall) {
-    throw new Error(`${toolName} did not return a valid paywall content object`)
-  }
+  // When the host invokes `open_paywall({ content })` to load the app,
+  // the initial call arrives on the server with content and returns a
+  // bootstrap payload including `paywall`. The app's *second* call from
+  // inside the iframe (this function) can't recover those args from the
+  // host context — `McpUiHostContextSchema.toolInfo.tool` only carries
+  // the tool `name`, not its arguments — so the server responds with a
+  // content-less bootstrap. Fall back to the `account` view so the
+  // customer sees their current status rather than a blank paywall.
+  const resolvedView: SolvaPayMcpViewKind =
+    requestedView === 'paywall' && !paywall ? 'account' : requestedView
   return {
     view: resolvedView,
     productRef: ref,
