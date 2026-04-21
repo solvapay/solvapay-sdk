@@ -25,7 +25,7 @@ import {
   type McpAppBootstrapLike,
 } from './bootstrap'
 import { seedMcpCaches } from './cache-seed'
-import type { Merchant, Plan, Product, SolvaPayProviderInitial } from '../types'
+import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import {
   McpAccountView,
   type McpAccountViewProps,
@@ -116,6 +116,25 @@ export interface McpAppProps {
   applyContext?: (ctx: McpUiHostContextLike | undefined) => void
 }
 
+/**
+ * Pure mapper from the wire `McpBootstrap` (what `fetchMcpBootstrap`
+ * returns) to the provider-shaped `SolvaPayProviderInitial`. Hoisted
+ * out of the component so the reference is stable across renders and
+ * safe to close over from `useMemo` / `useCallback`.
+ */
+function bootstrapToInitial(bs: McpBootstrap): SolvaPayProviderInitial {
+  return {
+    customerRef: bs.customer?.ref ?? null,
+    purchase: bs.customer?.purchase ?? null,
+    paymentMethod: bs.customer?.paymentMethod ?? null,
+    balance: bs.customer?.balance ?? null,
+    usage: bs.customer?.usage ?? null,
+    merchant: bs.merchant as unknown as Merchant,
+    product: bs.product as unknown as Product,
+    plans: bs.plans as unknown as Plan[],
+  }
+}
+
 export function McpApp({
   app,
   productRef: productRefOverride,
@@ -182,17 +201,6 @@ export function McpApp({
 
   const transport = useMemo(() => createMcpAppAdapter(app), [app])
 
-  const bootstrapToInitial = (bs: McpBootstrap): SolvaPayProviderInitial => ({
-    customerRef: bs.customer?.ref ?? null,
-    purchase: bs.customer?.purchase ?? null,
-    paymentMethod: bs.customer?.paymentMethod ?? null,
-    balance: bs.customer?.balance ?? null,
-    usage: bs.customer?.usage ?? null,
-    merchant: bs.merchant as unknown as Merchant,
-    product: bs.product as unknown as Product,
-    plans: bs.plans as unknown as Plan[],
-  })
-
   const initial: SolvaPayProviderInitial | undefined = useMemo(
     () => (bootstrap ? bootstrapToInitial(bootstrap) : undefined),
     [bootstrap],
@@ -200,7 +208,12 @@ export function McpApp({
 
   const providerConfig = useMemo(
     () => {
-      const config = {
+      // Build the resolved config first so every `seedMcpCaches` call
+      // (first render + post-refresh) runs against the same object the
+      // hooks later read via `configRef.current` — otherwise
+      // `createTransportCacheKey` could in principle compute a
+      // different key at refresh-time than at mount-time.
+      const resolved: SolvaPayConfig = {
         // `SolvaPayProvider` short-circuits its fetch pipeline when there's
         // no auth token, which means our `checkPurchase` override would
         // never run. In the MCP App the real identity lives server-side on
@@ -216,18 +229,17 @@ export function McpApp({
         },
         transport,
         initial,
+        refreshInitial: async (): Promise<SolvaPayProviderInitial | null> => {
+          // Re-fetch the bootstrap payload by replaying the host-invoked
+          // intent tool (`fetchMcpBootstrap` infers it from host context —
+          // defaulting to `upgrade` when none is present). Re-seeds the
+          // module caches so every hook sees the refreshed snapshot.
+          const fresh = await fetchMcpBootstrap(app)
+          const next = bootstrapToInitial(fresh)
+          seedMcpCaches(next, resolved)
+          return next
+        },
       }
-      const refreshInitial = async (): Promise<SolvaPayProviderInitial | null> => {
-        // Re-fetch the bootstrap payload by replaying the host-invoked
-        // intent tool (`fetchMcpBootstrap` infers it from host context —
-        // defaulting to `upgrade` when none is present). Re-seeds the
-        // module caches so every hook sees the refreshed snapshot.
-        const fresh = await fetchMcpBootstrap(app)
-        const next = bootstrapToInitial(fresh)
-        seedMcpCaches(next, config)
-        return next
-      }
-      const resolved = { ...config, refreshInitial }
       // Seed module-level caches synchronously *inside* the provider-config
       // useMemo — React runs child effects before parent effects, so
       // `useMerchant` / `useProduct` / `usePlans` / `usePaymentMethod`
