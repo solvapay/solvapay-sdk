@@ -7,7 +7,6 @@ import {
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
-import { loadStripe } from '@stripe/stripe-js'
 import {
   CurrentPlanCard,
   SolvaPayProvider,
@@ -17,7 +16,16 @@ import {
 } from '@solvapay/react'
 import { PaymentForm, PlanSelector, usePlanSelector } from '@solvapay/react/primitives'
 import '@solvapay/react/styles.css'
-import { createMcpAppAdapter, createMcpFetch, fetchOpenCheckoutProductRef } from './mcp-adapter'
+import {
+  createMcpAppAdapter,
+  createMcpFetch,
+  fetchBootstrap,
+  type Bootstrap,
+} from './mcp-adapter'
+import { useStripeProbe } from './views/useStripeProbe'
+import { AccountView } from './views/AccountView'
+import { TopupView } from './views/TopupView'
+import { ActivateView } from './views/ActivateView'
 import './mcp-app.css'
 
 const app = new App({ name: 'SolvaPay checkout', version: '1.0.0' })
@@ -29,11 +37,6 @@ const mcpFetch = createMcpFetch(transport)
 // server if the user wanders off.
 const POLL_INTERVAL_MS = 3_000
 const AWAITING_TIMEOUT_MS = 10 * 60 * 1000
-
-// Stripe.js takes ~1-2s to load on a warm cache. 3s is long enough to
-// distinguish a slow CDN from a CSP-blocked host without making the user
-// stare at a spinner.
-const STRIPE_PROBE_TIMEOUT_MS = 3_000
 
 // `SolvaPayProvider` short-circuits its fetch pipeline when there's no auth
 // token, which means our `checkPurchase` override would never run. In the
@@ -60,62 +63,6 @@ function applyContext(ctx: McpUiHostContext | undefined) {
     root.style.paddingBottom = `${16 + insets.bottom}px`
     root.style.paddingLeft = `${16 + insets.left}px`
   }
-}
-
-type ProbeState = 'loading' | 'ready' | 'blocked'
-
-/**
- * Probe whether `@stripe/stripe-js` can mount inside the current host
- * sandbox. Compliant hosts (basic-host, ChatGPT) honour the declared
- * `_meta.ui.csp.frameDomains` and Stripe loads normally; non-compliant
- * hosts (Claude today — see anthropics/claude-ai-mcp#40) hardcode
- * `frame-src 'self' blob: data:` and the nested card iframe is refused.
- *
- * We race `loadStripe()` against a 3s timeout — in the blocked case
- * Stripe.js either throws a ContentSecurityPolicy error or the promise
- * simply never resolves, and the timeout wins.
- *
- * Note on the key: `publishableKey` is SolvaPay's **platform** Stripe
- * pk (same one the backend returns from `create_payment_intent`). It
- * is used here only to satisfy `loadStripe()`'s validator so we can
- * exercise `frameDomains` — we never feed it into `confirmPayment`.
- * The real payment flow re-fetches the pk (and, crucially, the
- * connected `accountId`) from `create_payment_intent` and boots its
- * own `Stripe` instance via the SDK's `useCheckout`. SolvaPay is a
- * Stripe Connect direct-charge platform, so all browser-side Stripe
- * calls pair the platform pk with `{ stripeAccount: acct_XXX }`; the
- * connected merchant's own publishable key is never involved.
- */
-function useStripeProbe(publishableKey: string | null): ProbeState {
-  const [state, setState] = useState<ProbeState>(publishableKey ? 'loading' : 'blocked')
-
-  useEffect(() => {
-    if (!publishableKey) {
-      setState('blocked')
-      return
-    }
-
-    let cancelled = false
-    setState('loading')
-
-    const timeout = new Promise<'blocked'>(resolve => {
-      window.setTimeout(() => resolve('blocked'), STRIPE_PROBE_TIMEOUT_MS)
-    })
-
-    const load = loadStripe(publishableKey)
-      .then(stripe => (stripe ? 'ready' : 'blocked'))
-      .catch(() => 'blocked' as const)
-
-    Promise.race([load, timeout]).then(result => {
-      if (!cancelled) setState(result)
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [publishableKey])
-
-  return state
 }
 
 type AsyncUrlState =
@@ -620,7 +567,7 @@ function EmbeddedCheckout({
   )
 }
 
-function CheckoutApp({
+function CheckoutView({
   productRef,
   publishableKey,
   returnUrl,
@@ -631,29 +578,58 @@ function CheckoutApp({
 }) {
   const probe = useStripeProbe(publishableKey)
 
+  if (probe === 'loading') {
+    return (
+      <div className="checkout-card">
+        <p>Loading checkout…</p>
+      </div>
+    )
+  }
+  if (probe === 'ready') {
+    return <EmbeddedCheckout productRef={productRef} returnUrl={returnUrl} />
+  }
+  return <HostedCheckout productRef={productRef} />
+}
+
+/**
+ * Top-level view router. Dispatches on the `view` discriminator surfaced
+ * by the server's `open_*` tool so one UI resource can serve four
+ * distinct flows (checkout, account, top-up, plan activation) without
+ * the host needing separate resources per entrypoint.
+ */
+function ViewRouter({ bootstrap }: { bootstrap: Bootstrap }) {
+  const { view, productRef, stripePublishableKey, returnUrl } = bootstrap
+
+  const headerTitle: Record<Bootstrap['view'], string> = {
+    checkout: 'SolvaPay',
+    account: 'Your SolvaPay account',
+    topup: 'Add SolvaPay credits',
+    activate: 'Activate your plan',
+  }
+
   return (
     <main className="main">
       <header className="header">
-        <h1>SolvaPay</h1>
+        <h1>{headerTitle[view]}</h1>
       </header>
-      {probe === 'loading' ? (
-        <div className="checkout-card">
-          <p>Loading checkout…</p>
-        </div>
-      ) : probe === 'ready' ? (
-        <EmbeddedCheckout productRef={productRef} returnUrl={returnUrl} />
-      ) : (
-        <HostedCheckout productRef={productRef} />
+      {view === 'checkout' && (
+        <CheckoutView
+          productRef={productRef}
+          publishableKey={stripePublishableKey}
+          returnUrl={returnUrl}
+        />
       )}
+      {view === 'account' && <AccountView />}
+      {view === 'topup' && (
+        <TopupView publishableKey={stripePublishableKey} returnUrl={returnUrl} />
+      )}
+      {view === 'activate' && <ActivateView productRef={productRef} />}
     </main>
   )
 }
 
 function Bootstrap() {
-  const [ready, setReady] = useState(false)
-  const [productRef, setProductRef] = useState<string | null>(null)
-  const [publishableKey, setPublishableKey] = useState<string | null>(null)
-  const [returnUrl, setReturnUrl] = useState<string | null>(null)
+  const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -684,21 +660,11 @@ function Bootstrap() {
       try {
         await app.connect()
         applyContext(app.getHostContext())
-
-        const {
-          productRef: ref,
-          stripePublishableKey,
-          returnUrl: resolvedReturnUrl,
-        } = await fetchOpenCheckoutProductRef(app)
-        if (!cancelled) {
-          setProductRef(ref)
-          setPublishableKey(stripePublishableKey)
-          setReturnUrl(resolvedReturnUrl)
-          setReady(true)
-        }
+        const result = await fetchBootstrap(app)
+        if (!cancelled) setBootstrap(result)
       } catch (err) {
         if (!cancelled) {
-          setInitError(err instanceof Error ? err.message : 'Failed to initialize checkout')
+          setInitError(err instanceof Error ? err.message : 'Failed to initialize SolvaPay')
         }
       }
     })()
@@ -719,18 +685,18 @@ function Bootstrap() {
     return (
       <main className="main">
         <div className="checkout-card checkout-error">
-          <h2>Unable to load checkout</h2>
+          <h2>Unable to load SolvaPay</h2>
           <p>{initError}</p>
         </div>
       </main>
     )
   }
 
-  if (!ready || !productRef || !returnUrl) {
+  if (!bootstrap) {
     return (
       <main className="main">
         <div className="checkout-card">
-          <p>Loading checkout…</p>
+          <p>Loading…</p>
         </div>
       </main>
     )
@@ -738,11 +704,7 @@ function Bootstrap() {
 
   return (
     <SolvaPayProvider config={providerConfig}>
-      <CheckoutApp
-        productRef={productRef}
-        publishableKey={publishableKey}
-        returnUrl={returnUrl}
-      />
+      <ViewRouter bootstrap={bootstrap} />
     </SolvaPayProvider>
   )
 }

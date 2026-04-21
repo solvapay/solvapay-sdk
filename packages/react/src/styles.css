@@ -349,6 +349,10 @@
 }
 
 [data-solvapay-payment-form-submit] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background: var(--solvapay-accent);
   color: var(--solvapay-accent-foreground);
   border: none;
@@ -818,6 +822,10 @@
 
 [data-solvapay-topup-form-submit],
 .solvapay-topup-form-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   align-self: stretch;
   background: var(--solvapay-accent);
   color: var(--solvapay-accent-foreground);
