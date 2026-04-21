@@ -1,5 +1,5 @@
-import { McpBearerAuthError } from '../mcp-auth'
 import { buildAuthInfoFromBearer, type BuildAuthInfoFromBearerOptions } from './auth-bridge'
+import { McpBearerAuthError } from './bearer'
 
 type JsonRpcId = string | number | null
 

@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { createSolvaPayMcpServer } from '@solvapay/server/mcp'
+import { createSolvaPayMcpServer } from '@solvapay/mcp-sdk'
 import { mcpPublicBaseUrl, solvaPay, solvapayApiOrigin, solvapayProductRef } from './config'
 
 const DIST_DIR = import.meta.filename.endsWith('.ts')

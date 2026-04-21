@@ -24,7 +24,7 @@
 
 import type { Plan } from '../types'
 import type { SolvaPayTransport } from '../transport/types'
-import { MCP_TOOL_NAMES } from './tool-names'
+import { MCP_TOOL_NAMES } from '@solvapay/mcp'
 
 /**
  * Minimal shape of `@modelcontextprotocol/sdk` `CallToolResult` — kept here

@@ -1,8 +1,9 @@
 /**
- * MCP OAuth helper utilities.
+ * MCP OAuth bearer-token helper utilities.
  *
- * These helpers are intentionally lightweight and do not verify JWT signatures.
- * Use them after token validation (for example via /v1/customer/auth/userinfo).
+ * These helpers are intentionally lightweight and do not verify JWT
+ * signatures. Use them after token validation (for example via
+ * `/v1/customer/auth/userinfo`).
  */
 
 export class McpBearerAuthError extends Error {

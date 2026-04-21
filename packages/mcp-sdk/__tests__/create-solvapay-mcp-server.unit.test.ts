@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { createSolvaPay } from '../src'
-import { createSolvaPayMcpServer } from '../src/mcp'
-import { MCP_TOOL_NAMES } from '../src/mcp/tool-names'
-import type { SolvaPayClient } from '../src/types'
+import { MCP_TOOL_NAMES } from '@solvapay/mcp'
+import { createSolvaPay } from '@solvapay/server'
+import type { SolvaPayClient } from '@solvapay/server'
+import { createSolvaPayMcpServer } from '../src'
 
 // Stub the filesystem read for the UI resource so the helper can be tested
 // without a real HTML bundle on disk.

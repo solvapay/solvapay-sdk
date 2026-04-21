@@ -5,11 +5,11 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@solvapay/core": ["../core/src"],
-      "@solvapay/auth": ["../auth/src"]
+      "@solvapay/server": ["../server/src"],
+      "@solvapay/core": ["../core/src"]
     }
   },
   "include": ["src"],
   "exclude": ["__tests__", "**/*.test.ts"],
-  "references": [{ "path": "../core" }, { "path": "../auth" }]
+  "references": [{ "path": "../core" }]
 }

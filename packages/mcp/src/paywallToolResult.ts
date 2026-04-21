@@ -1,11 +1,12 @@
 /**
  * Helper for hand-rolled MCP tool handlers that still want to attach the
  * `_meta.ui` envelope to paywall results without adopting
- * `registerPayableTool` wholesale.
+ * `buildPayableHandler` / `registerPayableTool` wholesale.
  */
 
-import { PaywallError } from '../paywall'
-import type { PaywallToolResult } from '../types'
+import type { PaywallError } from '@solvapay/server'
+import { buildPaywallUiMeta } from './paywall-meta'
+import type { PaywallToolResult } from './types'
 
 export interface PaywallToolResultContext {
   /** UI resource URI the MCP host should open to render the paywall view. */
@@ -26,7 +27,7 @@ export interface PaywallToolResultContext {
  * ```ts
  * registerAppTool(server, 'create_video', schema, async (args, extra) => {
  *   try {
- *     return await solvaPay.payable({ product }).function(handler)(args, extra)
+ *     return await solvaPay.payable({ product }).mcp(handler)(args, extra)
  *   } catch (err) {
  *     if (err instanceof PaywallError) {
  *       return paywallToolResult(err, { resourceUri: 'ui://my-app/mcp-app.html' })
@@ -43,12 +44,7 @@ export function paywallToolResult(
   return {
     isError: true,
     content: [{ type: 'text', text: err.message }],
-    structuredContent: err.structuredContent,
-    _meta: {
-      ui: {
-        resourceUri: ctx.resourceUri,
-        toolName: ctx.toolName ?? 'open_paywall',
-      },
-    },
+    structuredContent: err.structuredContent as unknown as Record<string, unknown>,
+    _meta: buildPaywallUiMeta({ resourceUri: ctx.resourceUri, toolName: ctx.toolName }),
   }
 }

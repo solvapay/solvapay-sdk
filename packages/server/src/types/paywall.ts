@@ -54,7 +54,11 @@ export type PaywallStructuredContent =
     }
 
 /**
- * MCP tool result with optional paywall information
+ * MCP tool result with optional paywall information — structural copy
+ * of `PaywallToolResult` from `@solvapay/mcp` kept here to avoid a
+ * build-time circular dependency between `@solvapay/server` and
+ * `@solvapay/mcp`. Keep in lockstep — a snapshot test in
+ * `@solvapay/mcp` guards the shape.
  */
 export interface PaywallToolResult {
   content?: Array<{

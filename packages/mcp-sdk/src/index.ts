@@ -1,11 +1,17 @@
 /**
- * `@solvapay/server/mcp` — opinionated helpers for wiring a SolvaPay MCP
- * server in one call instead of hand-rolling ~700 lines of
- * `registerAppTool` boilerplate.
+ * `@solvapay/mcp-sdk` — official `@modelcontextprotocol/sdk` +
+ * `@modelcontextprotocol/ext-apps` adapter for the SolvaPay MCP
+ * toolbox.
+ *
+ * This is the only SolvaPay package that imports
+ * `@modelcontextprotocol/*`. Everything else (tool names, descriptors,
+ * paywall meta, OAuth bridge, JWT helpers) lives in `@solvapay/mcp`
+ * and can be reused by alternative adapters (`mcp-lite`, `fastmcp`,
+ * raw JSON-RPC).
  *
  * @example
  * ```ts
- * import { createSolvaPayMcpServer } from '@solvapay/server/mcp'
+ * import { createSolvaPayMcpServer } from '@solvapay/mcp-sdk'
  *
  * const server = createSolvaPayMcpServer({
  *   solvaPay,
@@ -25,27 +31,9 @@
 
 export { createSolvaPayMcpServer } from './server'
 export type {
-  CreateSolvaPayMcpServerOptions,
-  SolvaPayMcpViewKind,
-  SolvaPayMcpCsp,
   AdditionalToolsContext,
+  CreateSolvaPayMcpServerOptions,
 } from './server'
-
-export {
-  buildSolvaPayRequest,
-  defaultGetCustomerRef,
-  enrichPurchase,
-  previewJson,
-  toolErrorResult,
-  toolResult,
-} from './helpers'
-export type { BuildSolvaPayRequestOptions } from './helpers'
-
-export { paywallToolResult } from './paywallToolResult'
-export type { PaywallToolResultContext } from './paywallToolResult'
 
 export { registerPayableTool } from './registerPayableTool'
 export type { RegisterPayableToolOptions } from './registerPayableTool'
-
-export { MCP_TOOL_NAMES } from './tool-names'
-export type { McpToolName } from './tool-names'

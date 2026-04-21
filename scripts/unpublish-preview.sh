@@ -34,6 +34,8 @@ fi
 PACKAGES=(
   "@solvapay/auth"
   "@solvapay/core"
+  "@solvapay/mcp"
+  "@solvapay/mcp-sdk"
   "@solvapay/next"
   "@solvapay/react"
   "@solvapay/react-supabase"

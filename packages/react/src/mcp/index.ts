@@ -21,8 +21,8 @@
 
 export { createMcpAppAdapter } from './adapter'
 export type { McpAppLike } from './adapter'
-export { MCP_TOOL_NAMES } from './tool-names'
-export type { McpToolName } from './tool-names'
+export { MCP_TOOL_NAMES } from '@solvapay/mcp'
+export type { McpToolName } from '@solvapay/mcp'
 
 export { useStripeProbe } from './useStripeProbe'
 export type { StripeProbeState } from './useStripeProbe'

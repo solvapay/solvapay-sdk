@@ -118,16 +118,6 @@ export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
 export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 export { registerVirtualToolsMcpImpl, jsonSchemaToZodRawShape } from './register-virtual-tools-mcp'
 export type { McpServerLike, RegisterVirtualToolsMcpOptions } from './register-virtual-tools-mcp'
-export { buildAuthInfoFromBearer } from './mcp/auth-bridge'
-export {
-  createMcpOAuthBridge,
-  createOAuthAuthorizeHandler,
-  createOAuthRegisterHandler,
-  createOAuthRevokeHandler,
-  createOAuthTokenHandler,
-  getOAuthAuthorizationServerResponse,
-  getOAuthProtectedResourceResponse,
-} from './mcp/oauth-bridge'
 
 // Export types
 export type {
@@ -139,13 +129,10 @@ export type {
   PayableOptions,
   HttpAdapterOptions,
   NextAdapterOptions,
-  McpAdapterOptions,
   PaywallArgs,
   PaywallMetadata,
   PaywallStructuredContent,
-  PaywallToolResult,
   RetryOptions,
-  McpToolExtra,
   WebhookEvent,
   WebhookEventType,
   WebhookEventForType,
@@ -174,13 +161,6 @@ export type {
 
 // Export utilities for general use
 export { withRetry } from './utils'
-export {
-  McpBearerAuthError,
-  extractBearerToken,
-  decodeJwtPayload,
-  getCustomerRefFromJwtPayload,
-  getCustomerRefFromBearerAuthHeader,
-} from './mcp-auth'
 
 // Export route helpers (generic, framework-agnostic)
 export {

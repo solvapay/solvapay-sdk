@@ -17,12 +17,23 @@ description: "This guide shows you how to integrate SolvaPay SDK with Model Cont
 Install the required packages:
 
 ```bash
-npm install @solvapay/server @modelcontextprotocol/sdk
+npm install @solvapay/server @solvapay/mcp @solvapay/mcp-sdk \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 # or
-pnpm add @solvapay/server @modelcontextprotocol/sdk
+pnpm add @solvapay/server @solvapay/mcp @solvapay/mcp-sdk \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 # or
-yarn add @solvapay/server @modelcontextprotocol/sdk
+yarn add @solvapay/server @solvapay/mcp @solvapay/mcp-sdk \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 ```
+
+Package split:
+
+- **`@solvapay/server`** — paywall core, `createSolvaPay`, `PaywallError`, webhook verification.
+- **`@solvapay/mcp`** — framework-neutral MCP contracts: `MCP_TOOL_NAMES`, `buildSolvaPayDescriptors`, `buildPayableHandler`, `createMcpOAuthBridge`, JWT bearer helpers. No `@modelcontextprotocol/*` dependency.
+- **`@solvapay/mcp-sdk`** — official `@modelcontextprotocol/sdk` + `ext-apps` adapter. Exports `createSolvaPayMcpServer` and `registerPayableTool`. Only package that imports `@modelcontextprotocol/*`.
+
+Skip `@solvapay/mcp-sdk` + `@modelcontextprotocol/*` if you only need the OAuth bridge / bearer helpers, or if you're adapting SolvaPay onto a non-official MCP server (mcp-lite, fastmcp-node, raw JSON-RPC).
 
 ## Basic Setup
 
@@ -243,7 +254,7 @@ For MCP servers that authenticate with bearer tokens, you can use the server SDK
 import {
   getCustomerRefFromBearerAuthHeader,
   McpBearerAuthError,
-} from '@solvapay/server'
+} from '@solvapay/mcp'
 
 const handler = payable.mcp(createTask, {
   getCustomerRef: args => {
@@ -286,7 +297,7 @@ RFC9728 `WWW-Authenticate` challenge when the token is missing or invalid.
 
 ```ts
 import express from 'express'
-import { createMcpOAuthBridge } from '@solvapay/server'
+import { createMcpOAuthBridge } from '@solvapay/mcp'
 
 const app = express()
 app.use(express.json())

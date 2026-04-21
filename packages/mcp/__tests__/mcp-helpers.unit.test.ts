@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { PaywallError, isPaywallStructuredContent } from '../src'
-import { paywallToolResult } from '../src/mcp/paywallToolResult'
+import { PaywallError, isPaywallStructuredContent } from '@solvapay/server'
 import {
   buildSolvaPayRequest,
   enrichPurchase,
+  paywallToolResult,
   toolErrorResult,
   toolResult,
-} from '../src/mcp/helpers'
+} from '../src'
 
 describe('isPaywallStructuredContent', () => {
   it('accepts payment_required content', () => {

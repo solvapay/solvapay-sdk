@@ -1,16 +1,11 @@
 /**
  * Canonical MCP tool names for the SolvaPay transport + bootstrap tools.
  *
- * Mirrors `@solvapay/react/mcp/tool-names.ts` so server and client share a
- * single source of truth without pulling the React package into the
- * server's dependency tree.
- *
- * Keep the two files in sync — the integration contract breaks the moment
- * they drift.
+ * Single source of truth for `@solvapay/mcp`, `@solvapay/mcp-sdk`,
+ * `@solvapay/react/mcp/adapter`, and any third-party adapter (mcp-lite,
+ * fastmcp, etc.). Adding a new tool means editing exactly one file.
  */
-
 export const MCP_TOOL_NAMES = {
-  // Transport tools (consumed by the SolvaPay React transport).
   checkPurchase: 'check_purchase',
   createPayment: 'create_payment_intent',
   processPayment: 'process_payment',
@@ -27,7 +22,6 @@ export const MCP_TOOL_NAMES = {
   getPaymentMethod: 'get_payment_method',
   getUsage: 'get_usage',
   syncCustomer: 'sync_customer',
-  // Bootstrap / open_* tools.
   openCheckout: 'open_checkout',
   openAccount: 'open_account',
   openTopup: 'open_topup',

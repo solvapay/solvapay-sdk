@@ -1,14 +1,13 @@
 /**
- * Shared building blocks for `createSolvaPayMcpServer` (and any hand-rolled
- * SolvaPay MCP server that prefers to register tools directly).
+ * Shared building blocks for `buildSolvaPayDescriptors` and any hand-rolled
+ * SolvaPay MCP server that prefers to register tools directly.
  *
  * Lifted from the canonical example at `examples/mcp-checkout-app/src/server.ts`
  * so every integrator gets the same behavior for price enrichment, synthetic
  * `Request` construction, and tool-result wrapping.
  */
 
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import type { McpToolExtra } from '../types'
+import type { McpToolExtra, SolvaPayCallToolResult } from './types'
 
 /**
  * ISO 4217 currencies where the "minor unit" equals the major unit.
@@ -160,11 +159,11 @@ export function buildSolvaPayRequest(
 }
 
 /**
- * Wrap arbitrary data in an MCP `CallToolResult`. Produces a `text` content
- * block and `structuredContent` so both LLM-facing and tool-call consumers
- * see a consistent shape.
+ * Wrap arbitrary data in a `SolvaPayCallToolResult`. Produces a `text`
+ * content block and `structuredContent` so both LLM-facing and tool-call
+ * consumers see a consistent shape.
  */
-export function toolResult(data: unknown): CallToolResult {
+export function toolResult(data: unknown): SolvaPayCallToolResult {
   return {
     content: [{ type: 'text', text: JSON.stringify(data) }],
     structuredContent: data as Record<string, unknown>,
@@ -172,14 +171,14 @@ export function toolResult(data: unknown): CallToolResult {
 }
 
 /**
- * Wrap an error payload (typically the result of `handleRouteError`) in an
- * MCP `CallToolResult` with `isError: true`.
+ * Wrap an error payload (typically the result of `handleRouteError`) in a
+ * `SolvaPayCallToolResult` with `isError: true`.
  */
 export function toolErrorResult(error: {
   error: string
   status: number
   details?: string
-}): CallToolResult {
+}): SolvaPayCallToolResult {
   return {
     isError: true,
     content: [{ type: 'text', text: JSON.stringify(error) }],

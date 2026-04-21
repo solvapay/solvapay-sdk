@@ -22,6 +22,8 @@ TARGET="${1:-preview}"
 PACKAGES=(
   "@solvapay/auth"
   "@solvapay/core"
+  "@solvapay/mcp"
+  "@solvapay/mcp-sdk"
   "@solvapay/next"
   "@solvapay/react"
   "@solvapay/react-supabase"

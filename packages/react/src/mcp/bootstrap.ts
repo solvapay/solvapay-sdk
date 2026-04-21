@@ -14,23 +14,35 @@
  * so any MCP App can use them verbatim.
  */
 
+import type { SolvaPayMcpViewKind } from '@solvapay/mcp'
+import { OPEN_TOOL_FOR_VIEW, VIEW_FOR_OPEN_TOOL } from '@solvapay/mcp'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { isPaywallStructuredContent } from '@solvapay/server'
 import type { Plan } from '../types'
 import type { SolvaPayTransport } from '../transport/types'
 import type { McpAppLike } from './adapter'
 
-export type McpView = 'checkout' | 'account' | 'topup' | 'activate' | 'paywall' | 'usage'
+/**
+ * @deprecated Use `SolvaPayMcpViewKind` from `@solvapay/mcp` directly.
+ * Kept as a type alias so existing consumers don't break.
+ */
+export type McpView = SolvaPayMcpViewKind
 
+/**
+ * Bootstrap payload returned from `fetchMcpBootstrap`. Structurally
+ * compatible with `BootstrapPayload` from `@solvapay/mcp` but narrows
+ * `paywall` to the server-owned `PaywallStructuredContent` union so
+ * the client-side views can discriminate on `kind`.
+ */
 export interface McpBootstrap {
-  view: McpView
+  view: SolvaPayMcpViewKind
   productRef: string
   stripePublishableKey: string | null
   returnUrl: string
   /**
-   * Set when the MCP host invokes `open_paywall` — the structured content
-   * gets forwarded on the bootstrap payload so the client doesn't have to
-   * re-fetch it. Only populated for `view: 'paywall'`.
+   * Set when the MCP host invokes `open_paywall` — the structured
+   * content gets forwarded on the bootstrap payload so the client
+   * doesn't have to re-fetch it. Only populated for `view: 'paywall'`.
    */
   paywall?: PaywallStructuredContent
 }
@@ -64,24 +76,6 @@ interface CallToolResultLike {
   isError?: boolean
   structuredContent?: unknown
   content?: Array<{ type: string; text?: string }>
-}
-
-const OPEN_TOOL_FOR_VIEW: Record<McpView, string> = {
-  checkout: 'open_checkout',
-  account: 'open_account',
-  topup: 'open_topup',
-  activate: 'open_plan_activation',
-  paywall: 'open_paywall',
-  usage: 'open_usage',
-}
-
-const VIEW_FOR_OPEN_TOOL: Record<string, McpView> = {
-  open_checkout: 'checkout',
-  open_account: 'account',
-  open_topup: 'topup',
-  open_plan_activation: 'activate',
-  open_paywall: 'paywall',
-  open_usage: 'usage',
 }
 
 /**
