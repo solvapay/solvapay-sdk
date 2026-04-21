@@ -1,10 +1,17 @@
+/**
+ * Build an MCP `authInfo` envelope from an `Authorization: Bearer <jwt>`
+ * header. Populates `authInfo.extra.customer_ref` so downstream
+ * `getCustomerRef` extractors (adapter + descriptor handlers) can read
+ * the caller identity without re-parsing the token.
+ */
+
 import {
   decodeJwtPayload,
   extractBearerToken,
   getCustomerRefFromJwtPayload,
   type McpBearerCustomerRefOptions,
-} from '../mcp-auth'
-import type { McpToolExtra } from '../types'
+} from './bearer'
+import type { McpToolExtra } from './types'
 
 type JwtPayload = Record<string, unknown>
 

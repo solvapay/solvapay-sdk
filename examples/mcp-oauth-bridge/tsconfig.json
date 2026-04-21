@@ -11,6 +11,7 @@
     "paths": {
       "@solvapay/core": ["../../packages/core/dist/index.d.ts"],
       "@solvapay/demo-services": ["../../packages/demo-services/dist/index.d.ts"],
+      "@solvapay/mcp": ["../../packages/mcp/dist/index.d.ts"],
       "@solvapay/server": ["../../packages/server/dist/index.d.ts"]
     },
     "allowSyntheticDefaultImports": true,

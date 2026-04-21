@@ -21,7 +21,7 @@ import type {
   Product,
   Plan,
 } from '../types'
-import type { ProcessPaymentResult, PaymentMethodInfo } from '@solvapay/server'
+import type { GetUsageResult, ProcessPaymentResult, PaymentMethodInfo } from '@solvapay/server'
 
 export interface TransportBalanceResult {
   credits: number
@@ -29,6 +29,9 @@ export interface TransportBalanceResult {
   creditsPerMinorUnit: number
   displayExchangeRate: number
 }
+
+/** Re-exported from `@solvapay/server` for transport consumers. */
+export type TransportUsageResult = GetUsageResult
 
 export interface TransportCheckoutSessionResult {
   checkoutUrl: string
@@ -101,6 +104,13 @@ export interface SolvaPayTransport {
    * the `get_payment_method` MCP tool on MCP adapters.
    */
   getPaymentMethod: () => Promise<PaymentMethodInfo>
+
+  /**
+   * Optional: fetch the authenticated customer's usage snapshot for the
+   * active usage-based plan. When omitted, `useUsage()` falls back to
+   * reading the usage field out of `checkPurchase`.
+   */
+  getUsage?: () => Promise<GetUsageResult>
 }
 
 export class UnsupportedTransportMethodError extends Error {

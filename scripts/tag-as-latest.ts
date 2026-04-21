@@ -34,6 +34,8 @@ import { execSync } from 'child_process'
 
 const PACKAGES_TO_TAG = [
   '@solvapay/core',
+  '@solvapay/mcp',
+  '@solvapay/mcp-sdk',
   '@solvapay/react',
   '@solvapay/react-supabase',
   '@solvapay/server',

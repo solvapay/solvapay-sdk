@@ -61,6 +61,10 @@ export { useBalance } from './hooks/useBalance'
 export { useTopupAmountSelector } from './hooks/useTopupAmountSelector'
 export { usePaymentMethod } from './hooks/usePaymentMethod'
 export { useTransport } from './hooks/useTransport'
+export { useUsage } from './hooks/useUsage'
+export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
+export { usePaywallResolver } from './hooks/usePaywallResolver'
+export type { UsePaywallResolverReturn } from './hooks/usePaywallResolver'
 
 // i18n primitives (for consumers who want to author copy bundles or mount
 // CopyProvider independently of SolvaPayProvider)

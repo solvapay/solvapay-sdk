@@ -128,13 +128,26 @@ export const POST = solvaPay.payable({ product: 'my-api' }).next(
 This automatically extracts the user ID from authentication tokens and uses it as the customer reference for paywall checks.
 Fail closed on missing/invalid auth. Do not fall back to shared identities like `anonymous`.
 
-For MCP bearer-token flows, the SDK also exports helper utilities:
+### MCP servers
+
+`@solvapay/server` is framework-free. For a full SolvaPay MCP server
+(transport tools + `open_*` bootstrap tools + UI resource) use
+[`@solvapay/mcp-sdk`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-sdk)'s
+`createSolvaPayMcpServer`. For framework-neutral descriptors (mcp-lite,
+fastmcp, raw JSON-RPC), use
+[`@solvapay/mcp`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp)'s
+`buildSolvaPayDescriptors`. OAuth-bridge middleware
+(`createMcpOAuthBridge`) and JWT bearer helpers
+(`getCustomerRefFromBearerAuthHeader`, `McpBearerAuthError`) also live
+in `@solvapay/mcp`.
+
+For MCP bearer-token flows, import the helpers from `@solvapay/mcp`:
 
 ```ts
 import {
   getCustomerRefFromBearerAuthHeader,
   McpBearerAuthError,
-} from '@solvapay/server'
+} from '@solvapay/mcp'
 
 const handler = solvaPay.payable({ product: 'my-api' }).mcp(
   async args => ({ ok: true }),

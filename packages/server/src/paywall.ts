@@ -728,10 +728,39 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     }
   }
 
+  /**
+   * MCP handler that auto-converts `PaywallError` to a `PaywallToolResult`
+   * so integrators don't need to `try/catch` around the returned handler.
+   *
+   * Note: `_meta.ui` is intentionally NOT attached here — that requires the
+   * MCP server's `resourceUri`, which this layer doesn't know. Use
+   * `registerPayableTool` or `paywallToolResult` from
+   * `@solvapay/server/mcp` to attach it.
+   */
   function createMCPHandler(
     methodOrMetadata: ((...args: unknown[]) => unknown) | PaywallMetadata,
     handler?: (args: PaywallArgs) => Promise<unknown>,
   ) {
+    const wrapWithPaywallCatch = (
+      protectedHandlerPromise: Promise<(args: PaywallArgs) => Promise<unknown>>,
+    ) => {
+      return async (args: PaywallArgs): Promise<unknown> => {
+        const protectedHandler = await protectedHandlerPromise
+        try {
+          return await protectedHandler(args)
+        } catch (err) {
+          if (err instanceof PaywallError) {
+            return {
+              isError: true,
+              content: [{ type: 'text', text: err.message }],
+              structuredContent: err.structuredContent,
+            } satisfies PaywallToolResult
+          }
+          throw err
+        }
+      }
+    }
+
     if (typeof methodOrMetadata === 'function') {
       const method = methodOrMetadata
       const metadata = (method as unknown as Record<string, unknown>)
@@ -742,16 +771,18 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
       }
 
       const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
-      return paywall.protect(
-        method as unknown as (args: PaywallArgs) => Promise<unknown>,
-        metadata,
-        getCustomerRef,
+      return wrapWithPaywallCatch(
+        paywall.protect(
+          method as unknown as (args: PaywallArgs) => Promise<unknown>,
+          metadata,
+          getCustomerRef,
+        ),
       )
     }
 
     const metadata = methodOrMetadata
     const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
-    return paywall.protect(handler!, metadata, getCustomerRef)
+    return wrapWithPaywallCatch(paywall.protect(handler!, metadata, getCustomerRef))
   }
 
   function createNextHandler(

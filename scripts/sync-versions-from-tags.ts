@@ -28,6 +28,8 @@ const PACKAGES = [
   'packages/react/package.json',
   'packages/react-supabase/package.json',
   'packages/server/package.json',
+  'packages/mcp/package.json',
+  'packages/mcp-sdk/package.json',
   'packages/auth/package.json',
   'packages/next/package.json',
   'packages/cli/package.json',

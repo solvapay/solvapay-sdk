@@ -21,8 +21,8 @@
 
 export { createMcpAppAdapter } from './adapter'
 export type { McpAppLike } from './adapter'
-export { MCP_TOOL_NAMES } from './tool-names'
-export type { McpToolName } from './tool-names'
+export { MCP_TOOL_NAMES } from '@solvapay/mcp'
+export type { McpToolName } from '@solvapay/mcp'
 
 export { useStripeProbe } from './useStripeProbe'
 export type { StripeProbeState } from './useStripeProbe'
@@ -50,6 +50,12 @@ export type { McpTopupViewProps } from './views/McpTopupView'
 
 export { McpActivateView } from './views/McpActivateView'
 export type { McpActivateViewProps } from './views/McpActivateView'
+
+export { McpPaywallView } from './views/McpPaywallView'
+export type { McpPaywallViewProps } from './views/McpPaywallView'
+
+export { McpUsageView } from './views/McpUsageView'
+export type { McpUsageViewProps } from './views/McpUsageView'
 
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'

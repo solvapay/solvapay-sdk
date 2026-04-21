@@ -37,11 +37,11 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && tsup src/edge.ts --format esm --dts --tsconfig tsconfig.build.json",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "generate:types": "tsx scripts/generate-types.ts",
-    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts src/mcp/oauth-bridge.spec.ts",
-    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts src/mcp/oauth-bridge.spec.ts",
+    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts",
+    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts",
     "test:integration": "vitest run __tests__/backend.integration.test.ts",
     "test:integration:payment": "vitest run __tests__/payment-stripe.integration.test.ts",
     "test:all": "vitest run",
@@ -54,14 +54,10 @@
     "@solvapay/core": "workspace:*"
   },
   "peerDependencies": {
-    "@modelcontextprotocol/sdk": "^1.28.0",
     "@solvapay/auth": "workspace:*",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
-    "@modelcontextprotocol/sdk": {
-      "optional": true
-    },
     "zod": {
       "optional": true
     }
@@ -76,6 +72,7 @@
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "zod": "^4.3.6"
   }
 }

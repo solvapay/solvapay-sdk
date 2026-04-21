@@ -5,7 +5,7 @@ import {
   extractBearerToken,
   getCustomerRefFromBearerAuthHeader,
   getCustomerRefFromJwtPayload,
-} from '../src/mcp-auth'
+} from '../src/bearer'
 
 function createUnsignedJwt(payload: Record<string, unknown>) {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url')

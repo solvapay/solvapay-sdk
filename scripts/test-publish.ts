@@ -14,6 +14,8 @@ const PACKAGES_TO_CHECK = [
   { name: '@solvapay/react', path: 'packages/react' },
   { name: '@solvapay/react-supabase', path: 'packages/react-supabase' },
   { name: '@solvapay/server', path: 'packages/server' },
+  { name: '@solvapay/mcp', path: 'packages/mcp' },
+  { name: '@solvapay/mcp-sdk', path: 'packages/mcp-sdk' },
   { name: '@solvapay/auth', path: 'packages/auth' },
   { name: '@solvapay/next', path: 'packages/next' },
   { name: 'solvapay', path: 'packages/cli' },

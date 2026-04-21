@@ -1012,3 +1012,104 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* -----------------------------------------------------------------------------
+ * UsageMeter (Phase 2.2)
+ *
+ * Horizontal progress bar with `data-state="safe|warning|critical|loading"`
+ * on both the root and the bar itself. The fill width is driven by a CSS
+ * custom property so the bar never needs inline styles.
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --solvapay-usage-safe: var(--solvapay-accent);
+  --solvapay-usage-warning: var(--solvapay-warning);
+  --solvapay-usage-critical: var(--solvapay-destructive);
+  --solvapay-usage-meter-fill: 0%;
+}
+
+[data-solvapay-usage-meter] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-usage-meter-bar] {
+  position: relative;
+  width: 100%;
+  height: 0.5rem;
+  background: var(--solvapay-muted);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+[data-solvapay-usage-meter-bar]::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: var(--solvapay-usage-meter-fill, 0%);
+  background: var(--solvapay-usage-safe);
+  border-radius: inherit;
+  transition: width 200ms ease;
+}
+
+[data-solvapay-usage-meter-bar][data-state='warning']::after {
+  background: var(--solvapay-usage-warning);
+}
+
+[data-solvapay-usage-meter-bar][data-state='critical']::after {
+  background: var(--solvapay-usage-critical);
+}
+
+[data-solvapay-usage-meter-label] {
+  color: var(--solvapay-accent);
+  font-weight: 500;
+}
+
+[data-solvapay-usage-meter-percentage],
+[data-solvapay-usage-meter-resets-in] {
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-usage-meter-empty] {
+  color: var(--solvapay-muted-foreground);
+  font-style: italic;
+}
+
+/* -----------------------------------------------------------------------------
+ * PaywallNotice (Phase 2.1)
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-paywall-notice] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  background: var(--solvapay-surface);
+}
+
+[data-solvapay-paywall-heading] {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-paywall-message] {
+  margin: 0;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-paywall-balance] {
+  font-weight: 500;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-paywall-retry][data-state='waiting'] {
+  opacity: 0.5;
+  cursor: wait;
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createMcpAppAdapter } from '../adapter'
-import { MCP_TOOL_NAMES } from '../tool-names'
+import { MCP_TOOL_NAMES } from '@solvapay/mcp'
 
 interface CallRecord {
   name: string
@@ -115,7 +115,10 @@ describe('createMcpAppAdapter', () => {
     }))
     const transport = createMcpAppAdapter(app)
 
-    const keys: Array<keyof typeof MCP_TOOL_NAMES> = [
+    // Narrowed to transport-surface keys only — the rest of
+    // `MCP_TOOL_NAMES` covers bootstrap / sync tools that don't have a
+    // matching transport method by design.
+    const keys = [
       'checkPurchase',
       'createPayment',
       'processPayment',
@@ -130,7 +133,8 @@ describe('createMcpAppAdapter', () => {
       'getProduct',
       'listPlans',
       'getPaymentMethod',
-    ]
+      'getUsage',
+    ] as const
 
     for (const key of keys) {
       expect(typeof transport[key]).toBe('function')

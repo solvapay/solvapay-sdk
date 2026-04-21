@@ -177,6 +177,35 @@ export interface SolvaPayCopy {
     paymentRequires3ds: string
     paymentProcessingTimeout: string
     paymentStatusPrefix: string
+    paywallInvalidContent: string
+    usageLoadFailed: string
+  }
+  paywall: {
+    header: string
+    paymentRequiredHeading: string
+    activationRequiredHeading: string
+    resolvedHeading: string
+    productContext: string
+    balanceLine: string
+    retryButton: string
+    hostedCheckoutButton: string
+    hostedCheckoutLoading: string
+  }
+  usage: {
+    header: string
+    percentUsedLabel: string
+    usedLabel: string
+    remainingLabel: string
+    unlimitedLabel: string
+    resetsInLabel: string
+    resetsOnLabel: string
+    loadingLabel: string
+    emptyLabel: string
+    approachingLimit: string
+    atLimit: string
+    topUpCta: string
+    upgradeCta: string
+    refreshCta: string
   }
 }
 

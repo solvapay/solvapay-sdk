@@ -28,11 +28,9 @@ export type {
   PayableOptions,
   HttpAdapterOptions,
   NextAdapterOptions,
-  McpAdapterOptions,
   PaywallArgs,
   PaywallMetadata,
   PaywallStructuredContent,
-  PaywallToolResult,
   RetryOptions,
   WebhookEvent,
   WebhookEventType,
@@ -61,6 +59,7 @@ export {
   activatePlanCore,
   checkPurchaseCore,
   trackUsageCore,
+  getUsageCore,
   listPlansCore,
   getMerchantCore,
   getProductCore,
@@ -68,7 +67,13 @@ export {
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult, PurchaseCheckResult } from './helpers'
+export type {
+  ErrorResult,
+  AuthenticatedUser,
+  CustomerBalanceResult,
+  PurchaseCheckResult,
+  GetUsageResult,
+} from './helpers'
 
 /**
  * Verify webhook signature using edge-compatible Web Crypto API.

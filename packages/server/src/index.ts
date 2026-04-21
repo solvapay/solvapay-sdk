@@ -111,22 +111,13 @@ export function verifyWebhook({
 
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
+export { isPaywallStructuredContent } from './types/paywall'
 
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
 export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 export { registerVirtualToolsMcpImpl, jsonSchemaToZodRawShape } from './register-virtual-tools-mcp'
 export type { McpServerLike, RegisterVirtualToolsMcpOptions } from './register-virtual-tools-mcp'
-export { buildAuthInfoFromBearer } from './mcp/auth-bridge'
-export {
-  createMcpOAuthBridge,
-  createOAuthAuthorizeHandler,
-  createOAuthRegisterHandler,
-  createOAuthRevokeHandler,
-  createOAuthTokenHandler,
-  getOAuthAuthorizationServerResponse,
-  getOAuthProtectedResourceResponse,
-} from './mcp/oauth-bridge'
 
 // Export types
 export type {
@@ -138,13 +129,10 @@ export type {
   PayableOptions,
   HttpAdapterOptions,
   NextAdapterOptions,
-  McpAdapterOptions,
   PaywallArgs,
   PaywallMetadata,
   PaywallStructuredContent,
-  PaywallToolResult,
   RetryOptions,
-  McpToolExtra,
   WebhookEvent,
   WebhookEventType,
   WebhookEventForType,
@@ -173,13 +161,6 @@ export type {
 
 // Export utilities for general use
 export { withRetry } from './utils'
-export {
-  McpBearerAuthError,
-  extractBearerToken,
-  decodeJwtPayload,
-  getCustomerRefFromJwtPayload,
-  getCustomerRefFromBearerAuthHeader,
-} from './mcp-auth'
 
 // Export route helpers (generic, framework-agnostic)
 export {
@@ -197,10 +178,17 @@ export {
   getPaymentMethodCore,
   checkPurchaseCore,
   trackUsageCore,
+  getUsageCore,
   listPlansCore,
   getMerchantCore,
   getProductCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult, PurchaseCheckResult } from './helpers'
+export type {
+  ErrorResult,
+  AuthenticatedUser,
+  CustomerBalanceResult,
+  PurchaseCheckResult,
+  GetUsageResult,
+} from './helpers'

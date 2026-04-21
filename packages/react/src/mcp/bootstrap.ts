@@ -14,17 +14,37 @@
  * so any MCP App can use them verbatim.
  */
 
+import type { SolvaPayMcpViewKind } from '@solvapay/mcp'
+import { OPEN_TOOL_FOR_VIEW, VIEW_FOR_OPEN_TOOL } from '@solvapay/mcp'
+import type { PaywallStructuredContent } from '@solvapay/server'
+import { isPaywallStructuredContent } from '@solvapay/server'
 import type { Plan } from '../types'
 import type { SolvaPayTransport } from '../transport/types'
 import type { McpAppLike } from './adapter'
 
-export type McpView = 'checkout' | 'account' | 'topup' | 'activate'
+/**
+ * @deprecated Use `SolvaPayMcpViewKind` from `@solvapay/mcp` directly.
+ * Kept as a type alias so existing consumers don't break.
+ */
+export type McpView = SolvaPayMcpViewKind
 
+/**
+ * Bootstrap payload returned from `fetchMcpBootstrap`. Structurally
+ * compatible with `BootstrapPayload` from `@solvapay/mcp` but narrows
+ * `paywall` to the server-owned `PaywallStructuredContent` union so
+ * the client-side views can discriminate on `kind`.
+ */
 export interface McpBootstrap {
-  view: McpView
+  view: SolvaPayMcpViewKind
   productRef: string
   stripePublishableKey: string | null
   returnUrl: string
+  /**
+   * Set when the MCP host invokes `open_paywall` — the structured
+   * content gets forwarded on the bootstrap payload so the client
+   * doesn't have to re-fetch it. Only populated for `view: 'paywall'`.
+   */
+  paywall?: PaywallStructuredContent
 }
 
 /**
@@ -58,13 +78,6 @@ interface CallToolResultLike {
   content?: Array<{ type: string; text?: string }>
 }
 
-const OPEN_TOOL_FOR_VIEW: Record<McpView, string> = {
-  checkout: 'open_checkout',
-  account: 'open_account',
-  topup: 'open_topup',
-  activate: 'open_plan_activation',
-}
-
 /**
  * Infer which `open_*` tool the host invoked so the client router knows
  * which view to mount. MCP Apps surface the launching tool via
@@ -73,9 +86,7 @@ const OPEN_TOOL_FOR_VIEW: Record<McpView, string> = {
  */
 function inferViewFromHost(app: McpAppBootstrapLike): McpView {
   const name = app.getHostContext()?.toolInfo?.tool?.name
-  if (name === 'open_account') return 'account'
-  if (name === 'open_topup') return 'topup'
-  if (name === 'open_plan_activation') return 'activate'
+  if (name && VIEW_FOR_OPEN_TOOL[name]) return VIEW_FOR_OPEN_TOOL[name]
   return 'checkout'
 }
 
@@ -106,6 +117,7 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
         productRef?: string
         stripePublishableKey?: string | null
         returnUrl?: string | null
+        paywall?: unknown
       }
     | undefined
   const ref = structured?.productRef
@@ -125,11 +137,27 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     )
   }
   const key = structured?.stripePublishableKey ?? null
+  const requestedView = structured?.view ?? view
+  const paywall =
+    requestedView === 'paywall' && isPaywallStructuredContent(structured?.paywall)
+      ? structured.paywall
+      : undefined
+  // When the host invokes `open_paywall({ content })` to load the app,
+  // the initial call arrives on the server with content and returns a
+  // bootstrap payload including `paywall`. The app's *second* call from
+  // inside the iframe (this function) can't recover those args from the
+  // host context — `McpUiHostContextSchema.toolInfo.tool` only carries
+  // the tool `name`, not its arguments — so the server responds with a
+  // content-less bootstrap. Fall back to the `account` view so the
+  // customer sees their current status rather than a blank paywall.
+  const resolvedView: SolvaPayMcpViewKind =
+    requestedView === 'paywall' && !paywall ? 'account' : requestedView
   return {
-    view: structured?.view ?? view,
+    view: resolvedView,
     productRef: ref,
     stripePublishableKey: typeof key === 'string' && key ? key : null,
     returnUrl: raw,
+    ...(paywall ? { paywall } : {}),
   }
 }
 

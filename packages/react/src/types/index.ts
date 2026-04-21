@@ -249,6 +249,7 @@ export interface SolvaPayConfig {
     createCheckoutSession?: string // Default: '/api/create-checkout-session'
     createCustomerSession?: string // Default: '/api/create-customer-session'
     getPaymentMethod?: string // Default: '/api/payment-method'
+    getUsage?: string // Default: '/api/usage'
   }
 
   /**
