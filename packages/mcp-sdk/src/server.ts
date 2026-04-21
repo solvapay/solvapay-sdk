@@ -137,11 +137,14 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
   if (additionalTools) {
     const { solvaPay, productRef, resourceUri } = descriptorOptions
     const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
+      // Spread `opts` *first* so an explicit `product: undefined` on
+      // `opts` (shape allows it via `product?: string`) can't overwrite
+      // the `productRef` fallback below.
       registerPayableTool(server, name, {
         solvaPay,
         resourceUri,
-        product: opts.product ?? productRef,
         ...opts,
+        product: opts.product ?? productRef,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
     }
