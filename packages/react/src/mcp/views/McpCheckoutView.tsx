@@ -16,7 +16,7 @@
  * components (`<ManageBody>`, `<CancelledBody>`, `<UpgradeBody>`).
  */
 
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CurrentPlanCard } from '../../components/CurrentPlanCard'
 import { useTransport } from '../../hooks/useTransport'
 import { usePurchase } from '../../hooks/usePurchase'
@@ -78,7 +78,11 @@ export function McpCheckoutView({
     )
   }
   return (
-    <HostedCheckout productRef={productRef} cx={cx}>
+    <HostedCheckout
+      productRef={productRef}
+      onPurchaseSuccess={onPurchaseSuccess}
+      cx={cx}
+    >
       {children}
     </HostedCheckout>
   )
@@ -328,10 +332,12 @@ const UpgradeBody = memo(function UpgradeBody({ checkout, onLaunch, cx }: Upgrad
  */
 function HostedCheckout({
   productRef,
+  onPurchaseSuccess,
   cx,
   children,
 }: {
   productRef: string
+  onPurchaseSuccess?: () => void
   cx: Cx
   children?: React.ReactNode
 }) {
@@ -343,6 +349,14 @@ function HostedCheckout({
   const [awaiting, setAwaiting] = useState<AwaitingState | null>(null)
   const [awaitingTimedOut, setAwaitingTimedOut] = useState(false)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+
+  // Mirror EmbeddedCheckout's `onSuccess` semantics — fire once after the
+  // hosted-checkout poll confirms a new paid purchase. Capture in a ref so
+  // inline arrow consumers don't churn the effect deps.
+  const onPurchaseSuccessRef = useRef(onPurchaseSuccess)
+  useEffect(() => {
+    onPurchaseSuccessRef.current = onPurchaseSuccess
+  }, [onPurchaseSuccess])
 
   // `loading` starts `false` in the provider and only flips `true` for the
   // first fetch per cacheKey (subsequent polls report via `isRefetching`),
@@ -405,6 +419,7 @@ function HostedCheckout({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAwaiting(null)
       setAwaitingTimedOut(false)
+      onPurchaseSuccessRef.current?.()
     }
   }, [awaiting, hasPaidPurchase, activePurchase?.reference])
 

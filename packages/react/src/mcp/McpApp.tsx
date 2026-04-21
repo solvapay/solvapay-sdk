@@ -16,7 +16,7 @@
  * `<McpViewRouter>` + the per-view primitives directly.
  */
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {
@@ -117,34 +117,51 @@ export function McpApp({
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
 
+  // Capture `applyContext` / `onInitError` in refs so the persistent
+  // `onhostcontextchanged` handler and the bootstrap effect always see
+  // the latest prop value. Without this, consumers passing inline arrows
+  // would be pinned to the first render's closure for every subsequent
+  // host theme/font update.
+  const applyContextRef = useRef(applyContext)
+  const onInitErrorRef = useRef(onInitError)
+  useEffect(() => {
+    applyContextRef.current = applyContext
+  }, [applyContext])
+  useEffect(() => {
+    onInitErrorRef.current = onInitError
+  }, [onInitError])
+
   useEffect(() => {
     let cancelled = false
 
+    // Reset transient bootstrap state whenever `app` changes so a stale
+    // error card from a prior failed attempt doesn't survive a successful
+    // re-bootstrap against the new app.
+    setInitError(null)
+    setBootstrap(null)
+
     app.onhostcontextchanged = (ctx: McpUiHostContextLike) => {
-      applyContext?.(ctx)
+      applyContextRef.current?.(ctx)
     }
     app.onteardown = async () => ({})
 
     ;(async () => {
       try {
         await app.connect()
-        applyContext?.(app.getHostContext())
+        applyContextRef.current?.(app.getHostContext())
         const result = await fetchMcpBootstrap(app)
         if (!cancelled) setBootstrap(result)
       } catch (err) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : 'Failed to initialize SolvaPay'
         setInitError(message)
-        onInitError?.(err instanceof Error ? err : new Error(message))
+        onInitErrorRef.current?.(err instanceof Error ? err : new Error(message))
       }
     })()
 
     return () => {
       cancelled = true
     }
-    // `app` is the only stable input; other deps are refs or stable
-    // callbacks we intentionally do not restart the bootstrap on.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app])
 
   const transport = useMemo(() => createMcpAppAdapter(app), [app])
