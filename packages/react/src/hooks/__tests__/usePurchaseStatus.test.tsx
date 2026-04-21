@@ -5,7 +5,10 @@ import { usePurchaseStatus } from '../usePurchaseStatus'
 import * as usePurchaseModule from '../usePurchase'
 import type { PurchaseInfo } from '../../types'
 
-// Helper function to create a test purchase
+// Helper function to create a test purchase. A default `planSnapshot` marks
+// the row as a plan purchase so `usePurchaseStatus` (which filters out
+// balance transactions) keeps it in its cancelled-notice pool. Tests that
+// specifically want a balance transaction override with `planSnapshot: undefined`.
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
   productName: 'Test Product',
@@ -13,6 +16,7 @@ const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => 
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
   amount: 1000,
+  planSnapshot: { reference: 'pln_default', planType: 'recurring' },
   ...overrides,
 })
 

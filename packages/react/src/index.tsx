@@ -152,6 +152,8 @@ export {
   getMostRecentPurchase,
   getPrimaryPurchase,
   isPaidPurchase,
+  isPlanPurchase,
+  isTopupPurchase,
 } from './utils/purchases'
 export { formatPrice } from './utils/format'
 export type { FormatPriceOptions } from './utils/format'

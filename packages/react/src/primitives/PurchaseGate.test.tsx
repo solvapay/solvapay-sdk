@@ -21,6 +21,7 @@ function ctxWith(
       activePurchase: purchases.find(p => p.status === 'active') ?? null,
       hasPaidPurchase: false,
       activePaidPurchase: null,
+      balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),
