@@ -86,8 +86,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       // The server-side `PurchaseCheckResult.purchases` shape has looser
       // optional fields than `PurchaseInfo`, but the runtime data is
       // identical — the same rows flow through `transport.checkPurchase()`
-      // today. Cast once here to unify the two entry points.
-      purchases: (initial.purchase?.purchases ?? []) as unknown as CustomerPurchaseData['purchases'],
+      // today. Cast once here to unify the two entry points, and run
+      // the same `filterPurchases` the HTTP path applies in
+      // `fetchPurchase` so the bootstrap-hydrated data never contains
+      // cancelled / expired / suspended rows the active-only derivations
+      // (`activePurchase`, `hasPaidPurchase`, …) wouldn't expect.
+      purchases: filterPurchases(
+        (initial.purchase?.purchases ?? []) as unknown as CustomerPurchaseData['purchases'],
+      ),
       customerRef: initial.customerRef ?? initial.purchase?.customerRef,
       email: initial.purchase?.email,
       name: initial.purchase?.name,
@@ -366,7 +372,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
 
   const applyInitial = useCallback((next: SolvaPayProviderInitial) => {
     setPurchaseData({
-      purchases: (next.purchase?.purchases ?? []) as unknown as CustomerPurchaseData['purchases'],
+      // Mirror the HTTP path: strip non-active rows before any
+      // derivation (`activePurchase` etc.) reads the array.
+      purchases: filterPurchases(
+        (next.purchase?.purchases ?? []) as unknown as CustomerPurchaseData['purchases'],
+      ),
       customerRef: next.customerRef ?? next.purchase?.customerRef,
       email: next.purchase?.email,
       name: next.purchase?.name,

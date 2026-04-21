@@ -240,17 +240,23 @@ export function McpApp({
           return next
         },
       }
-      // Seed module-level caches synchronously *inside* the provider-config
-      // useMemo — React runs child effects before parent effects, so
-      // `useMerchant` / `useProduct` / `usePlans` / `usePaymentMethod`
-      // would read from empty caches in their `useState` initializers
-      // if we deferred seeding to a parent `useEffect`. Seeding here
-      // runs during render, before `SolvaPayProvider`'s children mount.
-      if (initial) seedMcpCaches(initial, resolved)
       return resolved
     },
     [transport, initial, app],
   )
+
+  // Seed the module-level hook caches synchronously during render,
+  // before any child mounts. Children (`useMerchant` / `useProduct` /
+  // `usePlans` / `usePaymentMethod`) read the caches in their
+  // `useState` initializers, and React runs child effects *after*
+  // children render — so deferring to `useEffect` would miss the
+  // initial read. A ref guard keeps the seed a one-shot per
+  // `initial` change even under strict-mode double rendering.
+  const seededInitialRef = useRef<SolvaPayProviderInitial | null>(null)
+  if (initial && seededInitialRef.current !== initial) {
+    seedMcpCaches(initial, providerConfig)
+    seededInitialRef.current = initial
+  }
 
   if (initError) {
     return (
