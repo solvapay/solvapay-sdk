@@ -14,7 +14,7 @@
  * Returns `null` values when the active plan isn't usage-based.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePurchase } from './usePurchase'
 import { useTransport } from './useTransport'
 import type { PurchaseInfo } from '../types'
@@ -82,6 +82,15 @@ export function useUsage(): UseUsageReturn {
   const [transportLoading, setTransportLoading] = useState(false)
 
   const derived = useMemo(() => deriveUsage(activePurchase ?? null), [activePurchase])
+
+  // Clear transport-fetched override when the active purchase changes
+  // — otherwise a stale override from a previous plan keeps shadowing
+  // the fresh `derived` snapshot (`usage = override ?? derived`).
+  const activePurchaseRef = activePurchase?.reference ?? null
+  useEffect(() => {
+    setOverride(null)
+  }, [activePurchaseRef])
+
   const usage = override ?? derived
 
   const refetch = useCallback(async () => {
