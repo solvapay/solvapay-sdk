@@ -125,6 +125,31 @@ describe('LaunchCustomerPortalButton', () => {
     expect(onLaunch).toHaveBeenCalledWith('https://portal.solvapay.test/launch')
   })
 
+  it('asChild swaps the ready-state shell for a consumer <button>', async () => {
+    const createCustomerSession = vi.fn().mockResolvedValue({
+      customerUrl: 'https://portal.solvapay.test/as-child',
+    })
+    const onLaunch = vi.fn()
+
+    renderWithTransport(
+      { createCustomerSession },
+      {
+        asChild: true,
+        onLaunch,
+        children: <button data-testid="custom-btn">Open portal</button>,
+        // @ts-expect-error — asChild intentionally accepts arbitrary child shells
+      } as Parameters<typeof LaunchCustomerPortalButton>[0],
+    )
+
+    const btn = await screen.findByTestId('custom-btn')
+    expect(btn.tagName).toBe('BUTTON')
+    expect(btn.getAttribute('href')).toBe('https://portal.solvapay.test/as-child')
+    expect(btn.getAttribute('target')).toBe('_blank')
+    expect(btn.getAttribute('rel')).toBe('noopener noreferrer')
+    fireEvent.click(btn)
+    expect(onLaunch).toHaveBeenCalledWith('https://portal.solvapay.test/as-child')
+  })
+
   it('shows an error state and calls onError when the fetch throws', async () => {
     const createCustomerSession = vi
       .fn()

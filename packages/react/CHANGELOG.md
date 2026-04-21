@@ -8,6 +8,67 @@ below are grouped by the first preview that contains them.
 
 ## Unreleased
 
+### `@solvapay/react/mcp` — per-view primitives + `<McpApp>` compound (minor, additive)
+
+The MCP App reference views (`checkout`, `account`, `topup`, `activate`) that
+previously lived in `examples/mcp-checkout-app` have been lifted into
+`@solvapay/react/mcp` as four composable primitives plus a thin compound
+wrapper:
+
+```tsx
+import '@solvapay/react/styles.css'
+import '@solvapay/react/mcp/styles.css'
+import { App } from '@modelcontextprotocol/ext-apps'
+import { McpApp } from '@solvapay/react/mcp'
+
+const app = new App({ name: 'my-mcp-app', version: '1.0.0' })
+createRoot(rootEl).render(<McpApp app={app} />)
+```
+
+Integrators who want a custom shell compose the primitives directly:
+
+```tsx
+import {
+  McpCheckoutView,
+  McpAccountView,
+  McpTopupView,
+  McpActivateView,
+  McpViewRouter,
+  fetchMcpBootstrap,
+  createMcpFetch,
+  createMcpAppAdapter,
+  useStripeProbe,
+} from '@solvapay/react/mcp'
+```
+
+Each view accepts a `classNames?: McpViewClassNames` partial for per-slot
+overrides; defaults render the `solvapay-mcp-*` classes from the new
+`@solvapay/react/mcp/styles.css` stylesheet. `<McpApp>` also takes a `views`
+map for per-screen component overrides without losing routing.
+
+### Seam fixes on primitives that the MCP views needed
+
+Three additive primitive changes landed alongside the lift:
+
+- **`<AmountPicker.Root emit="minor">`** — when set, `onChange` and
+  `Confirm.onConfirm` deliver the amount in minor units (respects
+  zero-decimal currencies like JPY). Default stays `'major'` for
+  back-compat. `useAmountPicker().resolvedAmountMinor` is a new sibling to
+  `resolvedAmount` for custom layouts. A new
+  `getMinorUnitsPerMajor(currency)` util is exported from
+  `@solvapay/react` for integrators doing conversions outside the picker.
+- **`<AmountPicker.Root selector={…}>`** — accepts an externally-owned
+  `UseTopupAmountSelectorReturn`, letting parent flows share state with
+  the inner picker. `ActivationFlow.AmountPicker` now threads the flow's
+  selector through this prop, so amounts picked in the sub-picker feed
+  straight into `useActivation().retry()` without the old workaround.
+- **`<LaunchCustomerPortalButton asChild>`** — renders the ready-state
+  anchor via `Slot` so consumers can substitute a real `<button>` inside
+  an anchor wrapper (matches the `ActivationFlow.ActivateButton`
+  convention). Loading / error fallback buttons are untouched.
+
+All three are additive — no consumer API moves or renames.
+
 ### Plans vs balance transactions (minor, behavioural filtering)
 
 Credit top-ups now surface as balance transactions, not plans. `PurchaseInfo`

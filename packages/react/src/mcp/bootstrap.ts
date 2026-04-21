@@ -1,38 +1,64 @@
 /**
- * Thin wrapper around `@solvapay/react/mcp` that adds the example-specific
- * `open_*` bootstrap call plus a `fetch` shim for the handful of SDK hooks
- * that still hit `/api/*` HTTP routes directly (they don't yet consult the
- * transport — mainly `usePlan` and `useCheckout`'s plan resolver).
+ * Bootstrap + fetch-shim helpers for SolvaPay MCP Apps.
  *
- * Before the React SDK shipped a first-class `createMcpAppAdapter`, this
- * file owned the full transport surface — checking purchases, minting
- * hosted checkout/customer URLs, the `unwrap` helper, tool-name constants.
- * All of that is now re-exported from the SDK; this file only carries the
- * MCP-App-specific pieces (bootstrapping the view, the fetch shim).
+ * `fetchMcpBootstrap(app)` — kicks off the MCP session by invoking the
+ * `open_*` tool matching the host's invocation context and returns the
+ * view discriminator + bootstrap payload every view needs.
+ *
+ * `createMcpFetch(transport)` — tunnels the handful of SDK HTTP calls that
+ * still hit `/api/*` directly (mainly `usePlan` and `useCheckout`'s plan
+ * resolver) through the transport so they work inside MCP host sandboxes
+ * with no network egress.
+ *
+ * Both helpers moved out of the example `mcp-checkout-app/src/mcp-adapter.ts`
+ * so any MCP App can use them verbatim.
  */
 
-import type { App } from '@modelcontextprotocol/ext-apps'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import type { SolvaPayTransport } from '@solvapay/react'
-import { createMcpAppAdapter } from '@solvapay/react/mcp'
+import type { Plan } from '../types'
+import type { SolvaPayTransport } from '../transport/types'
+import type { McpAppLike } from './adapter'
 
-export { createMcpAppAdapter }
+export type McpView = 'checkout' | 'account' | 'topup' | 'activate'
 
-/**
- * View discriminators the server returns from `open_*` tools. Mirrors the
- * `BootstrapView` union in `server.ts`; kept local to avoid a cross-import
- * between the browser bundle and the Node server module.
- */
-export type BootstrapView = 'checkout' | 'account' | 'topup' | 'activate'
-
-export interface Bootstrap {
-  view: BootstrapView
+export interface McpBootstrap {
+  view: McpView
   productRef: string
   stripePublishableKey: string | null
   returnUrl: string
 }
 
-const OPEN_TOOL_FOR_VIEW: Record<BootstrapView, string> = {
+/**
+ * Extended `McpAppLike` shape used by `fetchMcpBootstrap` — the base adapter
+ * only needs `callServerTool`, but the bootstrap helper also reads the
+ * host context to infer which `open_*` tool the host invoked.
+ *
+ * The return type is intentionally loose so the real
+ * `@modelcontextprotocol/ext-apps` `McpUiHostContext` is structurally
+ * assignable without forcing consumers into our narrower shape.
+ */
+export interface McpAppBootstrapLike extends McpAppLike {
+  getHostContext: () => McpHostContextLike | undefined
+}
+
+/**
+ * Structural shape of `McpUiHostContext` for the fields `fetchMcpBootstrap`
+ * reads. Loose on purpose — we only need `toolInfo?.tool?.name`.
+ */
+export interface McpHostContextLike {
+  toolInfo?: {
+    tool?: { name?: string }
+  }
+  // Permit arbitrary additional fields from the real host context.
+  [key: string]: unknown
+}
+
+interface CallToolResultLike {
+  isError?: boolean
+  structuredContent?: unknown
+  content?: Array<{ type: string; text?: string }>
+}
+
+const OPEN_TOOL_FOR_VIEW: Record<McpView, string> = {
   checkout: 'open_checkout',
   account: 'open_account',
   topup: 'open_topup',
@@ -42,12 +68,11 @@ const OPEN_TOOL_FOR_VIEW: Record<BootstrapView, string> = {
 /**
  * Infer which `open_*` tool the host invoked so the client router knows
  * which view to mount. MCP Apps surface the launching tool via
- * `app.getHostContext()?.toolInfo?.tool.name`; we fall back to `checkout`
- * when the context is unavailable (older hosts, direct resource opens),
- * which matches the pre-router behaviour.
+ * `app.getHostContext()?.toolInfo?.tool.name`; falls back to `checkout`
+ * when the context is unavailable (older hosts, direct resource opens).
  */
-function inferViewFromHost(app: App): BootstrapView {
-  const name = app.getHostContext()?.toolInfo?.tool.name
+function inferViewFromHost(app: McpAppBootstrapLike): McpView {
+  const name = app.getHostContext()?.toolInfo?.tool?.name
   if (name === 'open_account') return 'account'
   if (name === 'open_topup') return 'topup'
   if (name === 'open_plan_activation') return 'activate'
@@ -59,27 +84,25 @@ function inferViewFromHost(app: App): BootstrapView {
  * host's invocation context. Returns the bootstrap payload every view
  * needs (product ref, publishable key, return url) along with the view
  * discriminator so the top-level router can pick the right screen.
- *
- * The server returns the same bootstrap shape for every `open_*` tool,
- * but we still dispatch to the matching one so the MCP trace reflects
- * intent and so the server has a hook to diverge later (e.g. gating
- * `open_plan_activation` behind a usage-based product).
  */
-export async function fetchBootstrap(app: App): Promise<Bootstrap> {
+export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBootstrap> {
   const view = inferViewFromHost(app)
   const toolName = OPEN_TOOL_FOR_VIEW[view]
-  const result = await app.callServerTool({ name: toolName, arguments: {} })
-  if ((result as CallToolResult).isError) {
-    const first = (result as CallToolResult).content?.[0]
+  const result = (await app.callServerTool({
+    name: toolName,
+    arguments: {},
+  })) as CallToolResultLike
+  if (result.isError) {
+    const first = result.content?.[0]
     const message =
       first && 'text' in first && typeof first.text === 'string'
         ? first.text
         : `${toolName} failed`
     throw new Error(message)
   }
-  const structured = (result as CallToolResult).structuredContent as
+  const structured = result.structuredContent as
     | {
-        view?: BootstrapView
+        view?: McpView
         productRef?: string
         stripePublishableKey?: string | null
         returnUrl?: string | null
@@ -149,7 +172,6 @@ export function createMcpFetch(transport: SolvaPayTransport): typeof fetch {
 
     const method = (init?.method || 'GET').toUpperCase()
 
-    // Parse relative URLs against a dummy origin so `URL` accepts them.
     const parsed = new URL(url, 'http://mcp-checkout-app.local')
     const pathname = parsed.pathname
 
@@ -159,7 +181,7 @@ export function createMcpFetch(transport: SolvaPayTransport): typeof fetch {
         if (!productRef) {
           return jsonResponse({ error: 'Missing required parameter: productRef' }, { status: 400 })
         }
-        const plans = await transport.listPlans(productRef)
+        const plans: Plan[] = await transport.listPlans(productRef)
         return jsonResponse({ plans, productRef })
       }
 

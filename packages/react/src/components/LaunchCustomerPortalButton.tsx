@@ -16,6 +16,7 @@ import React, { forwardRef, useEffect, useRef, useState } from 'react'
 import { useTransport } from '../hooks/useTransport'
 import { useCopy } from '../hooks/useCopy'
 import { composeEventHandlers } from '../primitives/composeEventHandlers'
+import { Slot } from '../primitives/slot'
 
 type UrlState =
   | { status: 'loading' }
@@ -37,13 +38,29 @@ export interface LaunchCustomerPortalButtonProps
   loadingClassName?: string
   /** Optional className applied to the disabled <button> shown on error. */
   errorClassName?: string
+  /**
+   * Render the ready-state anchor via `Slot` so consumers can substitute
+   * their own element (typically a real `<button>`) while preserving the
+   * `href`, `target`, `rel`, and click chain. The loading/error fallback
+   * buttons are untouched — `asChild` only swaps the ready-state shell.
+   */
+  asChild?: boolean
 }
 
 export const LaunchCustomerPortalButton = forwardRef<
   HTMLAnchorElement,
   LaunchCustomerPortalButtonProps
 >(function LaunchCustomerPortalButton(
-  { children, onLaunch, onError, onClick, loadingClassName, errorClassName, ...rest },
+  {
+    children,
+    onLaunch,
+    onError,
+    onClick,
+    loadingClassName,
+    errorClassName,
+    asChild,
+    ...rest
+  },
   forwardedRef,
 ) {
   const transport = useTransport()
@@ -77,19 +94,27 @@ export const LaunchCustomerPortalButton = forwardRef<
   }, [transport])
 
   if (state.status === 'ready') {
+    const readyProps = {
+      href: state.href,
+      target: '_blank' as const,
+      rel: 'noopener noreferrer',
+      'data-solvapay-launch-customer-portal': '',
+      'data-state': 'ready' as const,
+      onClick: composeEventHandlers(onClick, () => {
+        onLaunch?.(state.href)
+      }),
+      ...rest,
+    }
+    if (asChild) {
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Slot ref={forwardedRef as any} {...(readyProps as Record<string, unknown>)}>
+          {children ?? copy.customerPortal.launchButton}
+        </Slot>
+      )
+    }
     return (
-      <a
-        ref={forwardedRef}
-        href={state.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-solvapay-launch-customer-portal=""
-        data-state="ready"
-        onClick={composeEventHandlers(onClick, () => {
-          onLaunch?.(state.href)
-        })}
-        {...rest}
-      >
+      <a ref={forwardedRef} {...readyProps}>
         {children ?? copy.customerPortal.launchButton}
       </a>
     )

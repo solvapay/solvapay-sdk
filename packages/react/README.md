@@ -289,6 +289,82 @@ use `<LaunchCustomerPortalButton />` directly.
 > changes today, MCP apps use `<CancelPlanButton>` + `<CurrentPlanCard>`
 > + a fresh hosted checkout flow.
 
+## Building MCP Apps
+
+`@solvapay/react/mcp` ships a turnkey compound plus four composable
+primitives for SolvaPay MCP Apps built on
+[`@modelcontextprotocol/ext-apps`](https://github.com/modelcontextprotocol/ext-apps).
+
+### Quick start — `<McpApp>`
+
+```tsx
+import { createRoot } from 'react-dom/client'
+import { App } from '@modelcontextprotocol/ext-apps'
+import { McpApp } from '@solvapay/react/mcp'
+import '@solvapay/react/styles.css'
+import '@solvapay/react/mcp/styles.css'
+
+const app = new App({ name: 'my-mcp-app', version: '1.0.0' })
+createRoot(document.getElementById('root')!).render(<McpApp app={app} />)
+```
+
+`<McpApp>` handles `app.connect()`, calls the `open_*` tool matching the
+host's invocation context, mounts `<SolvaPayProvider>` with
+`createMcpAppAdapter(app)` + `createMcpFetch(transport)`, and routes to the
+correct per-view primitive.
+
+Pass `applyContext` to wire host theme / fonts / safe-area insets from the
+`ext-apps` helpers, override individual screens via `views`, and tweak
+per-slot styling via `classNames`:
+
+```tsx
+<McpApp
+  app={app}
+  applyContext={ctx => {
+    if (ctx?.theme) applyDocumentTheme(ctx.theme)
+  }}
+  views={{
+    account: MyCustomAccountScreen, // optional — one-off override
+  }}
+  classNames={{ card: 'my-card', button: 'my-btn' }}
+  onInitError={err => console.error('[mcp]', err)}
+/>
+```
+
+See [`examples/mcp-checkout-app`](../../examples/mcp-checkout-app) for the
+full host integration including the server-side `open_*` tool + UI resource
+registration.
+
+### Per-view primitives
+
+When you need a custom shell — your own provider mount, additional routes,
+a bespoke layout — compose the pieces directly:
+
+```tsx
+import {
+  createMcpAppAdapter,
+  createMcpFetch,
+  fetchMcpBootstrap,
+  McpCheckoutView,
+  McpAccountView,
+  McpTopupView,
+  McpActivateView,
+  McpViewRouter,
+  useStripeProbe,
+} from '@solvapay/react/mcp'
+```
+
+Every view accepts a `classNames?: McpViewClassNames` partial. Props are
+typed per-view (`McpCheckoutViewProps`, `McpAccountViewProps`,
+`McpTopupViewProps`, `McpActivateViewProps`).
+
+### Architecture ADR
+
+See [`docs/mcp-app-architecture.md`](./docs/mcp-app-architecture.md) for the
+hybrid-API decision record and the three primitive seam fixes
+(`AmountPicker emit="minor"` / `selector={…}`, `LaunchCustomerPortalButton asChild`)
+that landed with this lift.
+
 ## Components
 
 ### SolvaPayProvider

@@ -71,14 +71,16 @@ refetches `check_purchase` and flips the card to **Manage purchase**.
    registration declares `_meta.ui.csp` with Stripe's required
    `resourceDomains` / `connectDomains` / `frameDomains` — hosts that
    implement the spec propagate these to the iframe's CSP.
-2. The bundle mounts `<SolvaPayProvider config={{ transport, fetch }}>`.
-   `transport = createMcpAppAdapter(app)` from
-   [`@solvapay/react/mcp`](../../packages/react/src/mcp) tunnels every
-   provider data-access call through `app.callServerTool`. The
-   `fetch` prop is a small [shim](./src/mcp-adapter.ts) that reroutes
-   the two SDK hooks that still go through HTTP (`usePlan`'s
-   `/api/list-plans`, `useProduct`/`useMerchant`'s `/api/get-product`
-   and `/api/merchant`) into the same tool calls.
+2. The bundle renders `<McpApp app={app} />` from
+   [`@solvapay/react/mcp`](../../packages/react/src/mcp). `McpApp` runs
+   `app.connect()`, calls the matching `open_*` tool, mounts
+   `<SolvaPayProvider config={{ transport, fetch }}>`, and routes to the
+   correct `<Mcp*View>` primitive. `transport = createMcpAppAdapter(app)`
+   tunnels every provider data-access call through `app.callServerTool`;
+   the `fetch` prop (`createMcpFetch(transport)`) reroutes the two SDK
+   hooks that still go through HTTP (`usePlan`'s `/api/list-plans`,
+   `useProduct`/`useMerchant`'s `/api/get-product` and `/api/merchant`)
+   into the same tool calls.
 3. On mount the UI calls `open_checkout`. The tool fetches SolvaPay's
    platform Stripe pk from the backend (`GET /sdk/platform-config`,
    resolved sandbox/live against the authenticated provider) and
