@@ -319,7 +319,12 @@ const PaidInner: React.FC<{
   const copy = useCopy()
   const customer = useCustomer()
   const { processPayment } = useSolvaPay()
-  const { refetch } = usePurchase()
+  const { refetch, hasPaidPurchase } = usePurchase()
+
+  const hasPaidPurchaseRef = useRef(hasPaidPurchase)
+  useEffect(() => {
+    hasPaidPurchaseRef.current = hasPaidPurchase
+  }, [hasPaidPurchase])
 
   const [elementKind, setElementKind] = useState<PaymentElementKind>(
     children ? null : 'payment-element',
@@ -388,16 +393,50 @@ const PaidInner: React.FC<{
       copy,
     })
 
-    setIsProcessing(false)
-
     if (reconcileResult.status === 'success') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pi = paymentIntent as any
       onSuccess?.(pi)
       const paid: PaymentResult = { kind: 'paid', paymentIntent: pi }
       onResult?.(paid)
+
+      // Hold isProcessing=true until the provider observes the paid purchase,
+      // or a ceiling elapses. Prevents a flicker back to the idle Subscribe
+      // button on consumers (e.g. MCP embedded checkout) that gate the view
+      // swap on `hasPaidPurchase`. See close_mcp_checkout_success_gap plan.
+      const CONFIRMATION_TIMEOUT_MS = 10_000
+      const startedAt = Date.now()
+      let attempt = 0
+      while (
+        !hasPaidPurchaseRef.current &&
+        Date.now() - startedAt < CONFIRMATION_TIMEOUT_MS
+      ) {
+        attempt += 1
+        await new Promise(r => setTimeout(r, Math.min(500 * attempt, 1500)))
+        if (hasPaidPurchaseRef.current) break
+        try {
+          await refetch()
+        } catch {
+          // Swallow transient refetch errors; the ceiling will surface a
+          // retryable timeout if the purchase never materialises.
+        }
+      }
+
+      if (!hasPaidPurchaseRef.current) {
+        const timeoutMsg = copy.errors.paymentProcessingTimeout
+        setError(timeoutMsg)
+        setIsProcessing(false)
+        onError?.(new Error(timeoutMsg))
+        return
+      }
+
+      // Defensive: consumers that gate view on `hasPaidPurchase` typically
+      // unmount this form on the same render, so this may never execute.
+      setIsProcessing(false)
       return
     }
+
+    setIsProcessing(false)
 
     const msg =
       reconcileResult.status === 'timeout'
