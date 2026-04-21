@@ -374,6 +374,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     if (next.customerRef) {
       setInternalCustomerRef(next.customerRef)
       loadedCacheKeysRef.current.add(next.customerRef)
+    } else {
+      // Refreshed snapshot reports the session as unauthenticated —
+      // drop the stale ref so the context doesn't hand consumers an
+      // out-of-date customerRef and the fetch-effect guard
+      // (`isAuthenticated || internalCustomerRef`) correctly short-
+      // circuits.
+      setInternalCustomerRef(undefined)
+      loadedCacheKeysRef.current.clear()
     }
     setIsAuthenticated(next.customerRef !== null)
     setCreditsValue(next.balance?.credits ?? null)
