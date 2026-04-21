@@ -12,6 +12,7 @@ import type {
   ReactivateResult,
   PrefillCustomer,
   SolvaPayConfig,
+  SolvaPayProviderInitial,
 } from './types'
 import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import {
@@ -363,9 +364,42 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     await fetchPurchaseRef.current(true)
   }, [])
 
+  const applyInitial = useCallback((next: SolvaPayProviderInitial) => {
+    setPurchaseData({
+      purchases: (next.purchase?.purchases ?? []) as unknown as CustomerPurchaseData['purchases'],
+      customerRef: next.customerRef ?? next.purchase?.customerRef,
+      email: next.purchase?.email,
+      name: next.purchase?.name,
+    })
+    if (next.customerRef) {
+      setInternalCustomerRef(next.customerRef)
+      loadedCacheKeysRef.current.add(next.customerRef)
+    }
+    setIsAuthenticated(next.customerRef !== null)
+    setCreditsValue(next.balance?.credits ?? null)
+    setDisplayCurrencyValue(next.balance?.displayCurrency ?? null)
+    setCreditsPerMinorUnitValue(next.balance?.creditsPerMinorUnit ?? null)
+    setDisplayExchangeRateValue(next.balance?.displayExchangeRate ?? null)
+    balanceLoadedRef.current = !!next.balance
+  }, [])
+
   const refreshBootstrap = useCallback(async () => {
+    // MCP mode: re-invoke the host's bootstrap producer and re-apply
+    // the snapshot. `configRef.current.refreshInitial` is wired by
+    // `<McpApp>` to call `fetchMcpBootstrap(app)` again.
+    const refresh = configRef.current?.refreshInitial
+    if (refresh) {
+      try {
+        const next = await refresh()
+        if (next) applyInitial(next)
+      } catch (err) {
+        console.error('[SolvaPayProvider] refreshBootstrap failed:', err)
+      }
+      return
+    }
+    // HTTP mode: no bootstrap tool — refetch via transport.
     await Promise.all([refetchPurchase(), fetchBalanceRef.current?.() ?? Promise.resolve()])
-  }, [refetchPurchase])
+  }, [refetchPurchase, applyInitial])
 
   const cancelRenewal = useCallback(
     async (params: { purchaseRef: string; reason?: string }): Promise<CancelResult> => {

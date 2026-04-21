@@ -182,39 +182,54 @@ export function McpApp({
 
   const transport = useMemo(() => createMcpAppAdapter(app), [app])
 
-  const initial: SolvaPayProviderInitial | undefined = useMemo(() => {
-    if (!bootstrap) return undefined
-    return {
-      customerRef: bootstrap.customer?.ref ?? null,
-      purchase: bootstrap.customer?.purchase ?? null,
-      paymentMethod: bootstrap.customer?.paymentMethod ?? null,
-      balance: bootstrap.customer?.balance ?? null,
-      usage: bootstrap.customer?.usage ?? null,
-      merchant: bootstrap.merchant as unknown as Merchant,
-      product: bootstrap.product as unknown as Product,
-      plans: bootstrap.plans as unknown as Plan[],
-    }
-  }, [bootstrap])
+  const bootstrapToInitial = (bs: McpBootstrap): SolvaPayProviderInitial => ({
+    customerRef: bs.customer?.ref ?? null,
+    purchase: bs.customer?.purchase ?? null,
+    paymentMethod: bs.customer?.paymentMethod ?? null,
+    balance: bs.customer?.balance ?? null,
+    usage: bs.customer?.usage ?? null,
+    merchant: bs.merchant as unknown as Merchant,
+    product: bs.product as unknown as Product,
+    plans: bs.plans as unknown as Plan[],
+  })
+
+  const initial: SolvaPayProviderInitial | undefined = useMemo(
+    () => (bootstrap ? bootstrapToInitial(bootstrap) : undefined),
+    [bootstrap],
+  )
 
   const providerConfig = useMemo(
-    () => ({
-      // `SolvaPayProvider` short-circuits its fetch pipeline when there's
-      // no auth token, which means our `checkPurchase` override would
-      // never run. In the MCP App the real identity lives server-side on
-      // the OAuth bridge's `customer_ref`, so we just need to tell the
-      // provider "yes, you're authenticated". Returning a sentinel token
-      // is enough to flip `isAuthenticated` true and unlock the refetch
-      // path.
-      auth: {
-        adapter: {
-          getToken: async () => 'mcp-session',
-          getUserId: async () => initial?.customerRef ?? null,
+    () => {
+      const config = {
+        // `SolvaPayProvider` short-circuits its fetch pipeline when there's
+        // no auth token, which means our `checkPurchase` override would
+        // never run. In the MCP App the real identity lives server-side on
+        // the OAuth bridge's `customer_ref`, so we just need to tell the
+        // provider "yes, you're authenticated". Returning a sentinel token
+        // is enough to flip `isAuthenticated` true and unlock the refetch
+        // path.
+        auth: {
+          adapter: {
+            getToken: async () => 'mcp-session',
+            getUserId: async () => initial?.customerRef ?? null,
+          },
         },
-      },
-      transport,
-      initial,
-    }),
-    [transport, initial],
+        transport,
+        initial,
+      }
+      const refreshInitial = async (): Promise<SolvaPayProviderInitial | null> => {
+        // Re-fetch the bootstrap payload by replaying the host-invoked
+        // intent tool (`fetchMcpBootstrap` infers it from host context —
+        // defaulting to `upgrade` when none is present). Re-seeds the
+        // module caches so every hook sees the refreshed snapshot.
+        const fresh = await fetchMcpBootstrap(app)
+        const next = bootstrapToInitial(fresh)
+        seedMcpCaches(next, config)
+        return next
+      }
+      return { ...config, refreshInitial }
+    },
+    [transport, initial, app],
   )
 
   // Seed module-level caches on every `initial` change so the provider

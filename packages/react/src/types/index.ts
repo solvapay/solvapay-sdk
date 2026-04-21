@@ -348,6 +348,18 @@ export interface SolvaPayConfig {
    * this undefined; HTTP behaviour is unchanged.
    */
   initial?: SolvaPayProviderInitial
+
+  /**
+   * Post-mutation re-fetch for MCP App hosts. When provided, the
+   * provider's `refreshBootstrap()` calls this to get a fresh
+   * `SolvaPayProviderInitial` snapshot (typically by re-invoking
+   * `manage_account` on the host) and re-applies it to provider state
+   * and the module caches. Non-MCP integrators leave this undefined —
+   * `refreshBootstrap()` falls back to `refetchPurchase()` +
+   * `balance.refetch()`. Return `null` to skip the refresh (e.g. when
+   * the host is offline).
+   */
+  refreshInitial?: () => Promise<SolvaPayProviderInitial | null>
 }
 
 export interface CancelResult {

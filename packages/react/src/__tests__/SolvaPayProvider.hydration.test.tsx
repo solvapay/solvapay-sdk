@@ -97,11 +97,59 @@ describe('SolvaPayProvider hydration from config.initial', () => {
     expect(ctx.balance.loading).toBe(false)
   })
 
-  it('exposes refreshBootstrap on context', async () => {
+  it('exposes refreshBootstrap that falls back to refetchPurchase in HTTP mode', async () => {
     const transport = makeTransport({
       checkPurchase: vi.fn().mockResolvedValue({ customerRef: 'cus_42', purchases: [] }),
     })
-    const config: SolvaPayConfig = { transport, initial: makeInitial() }
+    // Provide an auth adapter so `isAuthenticated` flips true and the
+    // HTTP-path `refetchPurchase` actually reaches `transport.checkPurchase`.
+    // No `initial` / `refreshInitial` — HTTP-transport code path.
+    const config: SolvaPayConfig = {
+      transport,
+      auth: {
+        adapter: {
+          getToken: async () => 'http-session',
+          getUserId: async () => 'user_1',
+        },
+      },
+    }
+
+    let snapshot: unknown
+    render(
+      <SolvaPayProvider config={config}>
+        <Probe onValue={v => (snapshot = v)} />
+      </SolvaPayProvider>,
+    )
+
+    await waitFor(() => expect((snapshot as { purchase?: { loading: boolean } })?.purchase))
+    await waitFor(() => expect(transport.checkPurchase).toHaveBeenCalled())
+
+    const ctx = snapshot as { refreshBootstrap?: () => Promise<void> }
+    ;(transport.checkPurchase as ReturnType<typeof vi.fn>).mockClear()
+    await act(async () => {
+      await ctx.refreshBootstrap?.()
+    })
+    expect(transport.checkPurchase).toHaveBeenCalled()
+  })
+
+  it('refreshBootstrap re-applies the snapshot returned by config.refreshInitial (MCP mode)', async () => {
+    const transport = makeTransport()
+    const refreshed = makeInitial({
+      customerRef: 'cus_42',
+      balance: {
+        customerRef: 'cus_42',
+        credits: 999,
+        displayCurrency: 'USD',
+        creditsPerMinorUnit: 1,
+        displayExchangeRate: 1,
+      },
+    })
+    const refreshInitial = vi.fn().mockResolvedValue(refreshed)
+    const config: SolvaPayConfig = {
+      transport,
+      initial: makeInitial(),
+      refreshInitial,
+    }
 
     let snapshot: unknown
     render(
@@ -111,13 +159,19 @@ describe('SolvaPayProvider hydration from config.initial', () => {
     )
 
     await waitFor(() => expect(snapshot).toBeTruthy())
-    const ctx = snapshot as {
-      refreshBootstrap?: () => Promise<void>
-    }
-    expect(ctx.refreshBootstrap).toBeTypeOf('function')
+    const getCtx = () =>
+      snapshot as {
+        refreshBootstrap?: () => Promise<void>
+        balance: { credits: number | null }
+      }
+    expect(getCtx().balance.credits).toBe(500)
+
     await act(async () => {
-      await ctx.refreshBootstrap?.()
+      await getCtx().refreshBootstrap?.()
     })
-    expect(transport.checkPurchase).toHaveBeenCalled()
+
+    expect(refreshInitial).toHaveBeenCalledTimes(1)
+    expect(transport.checkPurchase).not.toHaveBeenCalled()
+    expect(getCtx().balance.credits).toBe(999)
   })
 })
