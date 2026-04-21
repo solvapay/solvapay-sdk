@@ -110,3 +110,64 @@ describe('ActivationFlow selector sharing (phase 0.2)', () => {
     fireEvent.click(screen.getByTestId('continue'))
   })
 })
+
+describe('ActivationFlow amountMinor (zero-decimal currencies)', () => {
+  function renderFlowForCurrency(currency: string) {
+    const fetchFn = makeFetch({ plans: [{ ...usageBasedPlan, currency }] })
+    return render(
+      <SolvaPayProvider
+        config={{
+          fetch: fetchFn as unknown as typeof fetch,
+          transport: {
+            checkPurchase: vi.fn().mockResolvedValue({ purchases: [] }),
+            activatePlan: activatePlanTopupRequired(),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any,
+        }}
+      >
+        <ActivationFlow.Root productRef="prd_x" planRef="pln_usage">
+          <ActivationFlow.ActivateButton data-testid="activate" />
+          <ActivationFlow.AmountPicker>
+            <AmountPicker.Option amount={1000} data-testid="pill-1000" />
+          </ActivationFlow.AmountPicker>
+          <FlowAmountMinor />
+          <FlowAmountCents />
+        </ActivationFlow.Root>
+      </SolvaPayProvider>,
+    )
+  }
+
+  function FlowAmountMinor() {
+    const flow = useActivationFlow()
+    return <span data-testid="amount-minor">{flow.amountMinor}</span>
+  }
+
+  function FlowAmountCents() {
+    const flow = useActivationFlow()
+    return <span data-testid="amount-cents">{flow.amountCents}</span>
+  }
+
+  it('treats JPY amounts as whole yen, not yen×100', async () => {
+    renderFlowForCurrency('jpy')
+
+    fireEvent.click(await screen.findByTestId('activate'))
+    fireEvent.click(await screen.findByTestId('pill-1000'))
+
+    // JPY is zero-decimal: picked 1000 should surface as 1000 minor units,
+    // not 100000 (the pre-fix `* 100` behaviour).
+    await waitFor(() => expect(screen.getByTestId('amount-minor').textContent).toBe('1000'))
+    // Deprecated alias mirrors amountMinor for back-compat.
+    expect(screen.getByTestId('amount-cents').textContent).toBe('1000')
+  })
+
+  it('keeps USD amounts in cents (×100)', async () => {
+    renderFlowForCurrency('usd')
+
+    fireEvent.click(await screen.findByTestId('activate'))
+    fireEvent.click(await screen.findByTestId('pill-1000'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('amount-minor').textContent).toBe('100000'),
+    )
+  })
+})

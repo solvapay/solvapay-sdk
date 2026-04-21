@@ -44,6 +44,7 @@ import {
   MissingProductRefError,
   MissingProviderError,
 } from '../utils/errors'
+import { getMinorUnitsPerMajor } from '../utils/format'
 import type {
   ActivationResult,
   Plan,
@@ -65,6 +66,16 @@ type ActivationFlowContextValue = {
   productRef: string
   planRef: string
   amountSelector: UseTopupAmountSelectorReturn
+  /**
+   * Resolved top-up amount in the currency's minor units. Respects
+   * zero-decimal currencies (JPY → whole yen, USD → cents).
+   */
+  amountMinor: number
+  /**
+   * @deprecated Use `amountMinor`. Kept as an alias for back-compat; will
+   * be removed in the next major. For zero-decimal currencies this is the
+   * same value as `amountMinor` (not cents).
+   */
   amountCents: number
   currency: string
   activate: () => Promise<void>
@@ -176,7 +187,9 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
     if (!resolvedPlanRef) return
     setStep('retrying')
 
-    const amountMinor = Math.round((amountSelector.resolvedAmount || 0) * 100)
+    const amountMinor = Math.round(
+      (amountSelector.resolvedAmount || 0) * getMinorUnitsPerMajor(currency),
+    )
     const rate = displayExchangeRate ?? 1
     if (creditsPerMinorUnit) {
       adjustBalance(Math.floor((amountMinor / rate) * creditsPerMinorUnit))
@@ -187,6 +200,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
   }, [
     resolvedPlanRef,
     amountSelector.resolvedAmount,
+    currency,
     displayExchangeRate,
     creditsPerMinorUnit,
     adjustBalance,
@@ -217,7 +231,9 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
     setStep('summary')
   }, [reset])
 
-  const amountCents = Math.round((amountSelector.resolvedAmount || 0) * 100)
+  const amountMinor = Math.round(
+    (amountSelector.resolvedAmount || 0) * getMinorUnitsPerMajor(currency),
+  )
 
   const ctx = useMemo<ActivationFlowContextValue>(
     () => ({
@@ -226,7 +242,11 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
       productRef,
       planRef: resolvedPlanRef ?? '',
       amountSelector,
-      amountCents,
+      amountMinor,
+      // Deprecated alias — same value as amountMinor so legacy consumers
+      // keep working after the zero-decimal fix (previously this was
+      // `resolvedAmount * 100`, which over-billed JPY/KRW by 100x).
+      amountCents: amountMinor,
       currency,
       activate: handleActivate,
       reset: resetFlow,
@@ -242,7 +262,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
       productRef,
       resolvedPlanRef,
       amountSelector,
-      amountCents,
+      amountMinor,
       currency,
       handleActivate,
       resetFlow,
