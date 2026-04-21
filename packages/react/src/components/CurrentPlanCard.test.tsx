@@ -22,6 +22,7 @@ function buildCtx(
       activePurchase,
       hasPaidPurchase: !!activePurchase && (activePurchase.amount ?? 0) > 0,
       activePaidPurchase: activePurchase,
+      balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),
@@ -138,7 +139,9 @@ describe('CurrentPlanCard', () => {
     expect(screen.getByText(/Next billing:/)).toBeTruthy()
     // Date formatted via toLocaleDateString — only assert it's not the literal "{date}" placeholder
     expect(screen.queryByText('Next billing: {date}')).toBeNull()
-    expect(screen.getByText('plan_monthly')).toBeTruthy()
+    // Legacy purchase (no planSnapshot.name) falls back to productName — never to planRef
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    expect(screen.queryByText('plan_monthly')).toBeNull()
   })
 
   it('renders one-time plan line with Expires {date}', async () => {
@@ -249,6 +252,103 @@ describe('CurrentPlanCard', () => {
     const priceText = price?.textContent ?? ''
     expect(priceText).toContain('500')
     expect(priceText).not.toContain('54.26')
+  })
+
+  it('renders the SEK billing cycle as "/ month" rather than "/ monthly"', async () => {
+    const sekPurchase: PurchaseInfo = {
+      reference: 'purchase_sek_cycle',
+      productName: 'MCP pro',
+      status: 'active',
+      startDate: '2026-04-20T00:00:00Z',
+      amount: 5426,
+      originalAmount: 50000,
+      currency: 'SEK',
+      planRef: 'pln_sek_m',
+      billingCycle: 'monthly',
+      isRecurring: true,
+      planSnapshot: {
+        planType: 'recurring',
+        reference: 'pln_sek_m',
+        name: 'Pro Monthly',
+      },
+    }
+    const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price?.textContent).toContain('/ month')
+    expect(price?.textContent).not.toContain('/ monthly')
+  })
+
+  it('renders planSnapshot.name when present and falls back to productName when absent', async () => {
+    const named: PurchaseInfo = {
+      ...recurringPurchase,
+      productName: 'Widget API',
+      planSnapshot: {
+        planType: 'recurring',
+        reference: 'plan_monthly',
+        name: 'Pro Monthly',
+      },
+    }
+    const ctx = buildCtx(named, { config: { transport: makeTransport() } })
+    const { rerender } = render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pro Monthly')
+    // Opaque planRef must never appear in visible text
+    expect(screen.queryByText('plan_monthly')).toBeNull()
+    // When plan name differs from product name, product name renders as context
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    const root = document.querySelector('[data-solvapay-current-plan-card]')
+    expect(root?.getAttribute('data-solvapay-current-plan-ref')).toBe('plan_monthly')
+
+    // Legacy purchase — no snapshot name — falls back to productName
+    const legacyCtx = buildCtx(recurringPurchase, {
+      config: { transport: makeTransport() },
+    })
+    rerender(<Renderer ctx={legacyCtx} />)
+    await screen.findByText('Widget API')
+    expect(screen.queryByText('plan_monthly')).toBeNull()
+  })
+
+  it('renders the plan-name line unconditionally for every plan type', async () => {
+    for (const p of [recurringPurchase, oneTimePurchase, usageBasedPurchase]) {
+      const ctx = buildCtx(p, { config: { transport: makeTransport() } })
+      const { unmount } = render(<Renderer ctx={ctx} />)
+      await screen.findByText('Your plan')
+      expect(document.querySelector('[data-solvapay-current-plan-name]')).toBeTruthy()
+      unmount()
+    }
+  })
+
+  it('does not render when the only purchase is a credit top-up', () => {
+    const topup: PurchaseInfo = {
+      reference: 'pur_topup',
+      productName: 'Credits',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00Z',
+      amount: 10000,
+      currency: 'SEK',
+      metadata: { purpose: 'credit_topup' },
+    }
+    // Simulate provider-level filtering: balance transactions never become
+    // the activePurchase, so the card receives null.
+    const ctx = buildCtx(null, {
+      config: { transport: makeTransport() },
+      purchase: {
+        loading: false,
+        isRefetching: false,
+        error: null,
+        purchases: [topup],
+        hasProduct: () => false,
+        activePurchase: null,
+        hasPaidPurchase: false,
+        activePaidPurchase: null,
+        balanceTransactions: [topup],
+      },
+    })
+    const { container } = render(<Renderer ctx={ctx} />)
+    expect(container.firstChild).toBeNull()
   })
 
   it('honours hidePaymentMethod and hideCancelButton / hideUpdatePaymentButton', async () => {

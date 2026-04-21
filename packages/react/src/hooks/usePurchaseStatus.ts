@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react'
 import type { PurchaseInfo, PurchaseStatusReturn } from '../types'
 import { usePurchase } from './usePurchase'
 import { useLocale } from './useCopy'
+import { isPlanPurchase } from '../utils/purchases'
 
 /**
  * Hook providing advanced status and helper functions for purchase management
@@ -33,8 +34,9 @@ export function usePurchaseStatus(): PurchaseStatusReturn {
   // Backend keeps cancelled purchases as 'active' until expiration, tracked via cancelledAt
   const purchaseData = useMemo(() => {
     const cancelledPaidPurchases = purchases.filter(p => {
-      // Look for purchases with cancelledAt set and status === 'active'
-      return p.status === 'active' && p.cancelledAt && isPaidPurchase(p)
+      // Plan-only: credit top-ups aren't cancellable in the "your plan was
+      // cancelled" sense, so keep them out of the cancelled-notice pool.
+      return p.status === 'active' && p.cancelledAt && isPaidPurchase(p) && isPlanPurchase(p)
     })
 
     const cancelledPurchase =

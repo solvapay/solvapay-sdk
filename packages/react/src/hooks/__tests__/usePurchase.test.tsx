@@ -27,6 +27,7 @@ const createMockPurchaseStatus = (
   activePurchase: null,
   hasPaidPurchase: false,
   activePaidPurchase: null,
+  balanceTransactions: [],
   ...overrides,
 })
 

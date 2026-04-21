@@ -147,6 +147,17 @@ export interface SolvaPayCopy {
     paymentMethodExpires: string
     noPaymentMethod: string
     updatePaymentButton: string
+    /**
+     * Human-readable unit names for `billingCycle`, used as the `interval`
+     * arg to `formatPrice` so a monthly SEK plan renders "500 kr / month"
+     * rather than "500 kr / monthly".
+     */
+    cycleUnit: {
+      weekly: string
+      monthly: string
+      quarterly: string
+      yearly: string
+    }
   }
   customerPortal: {
     launchButton: string

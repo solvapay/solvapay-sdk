@@ -8,6 +8,37 @@ below are grouped by the first preview that contains them.
 
 ## Unreleased
 
+### Plans vs balance transactions (minor, behavioural filtering)
+
+Credit top-ups now surface as balance transactions, not plans. `PurchaseInfo`
+gains a `metadata?: Record<string, unknown>` field, and two new utilities —
+`isPlanPurchase` / `isTopupPurchase` — classify structurally from
+`planSnapshot`. The classification is applied inside `usePurchase()` so every
+plan-shaped accessor is consistent:
+
+- `activePurchase`, `activePaidPurchase`, `hasPaidPurchase`, `hasProduct`,
+  and `cancelledPurchase` / `shouldShowCancelledNotice` (on
+  `usePurchaseStatus`) all skip balance transactions.
+- A new `balanceTransactions: PurchaseInfo[]` accessor on `usePurchase()`
+  returns the complement.
+- `purchases` (raw) is unchanged — the full ordering is still available for
+  integrators that classify themselves.
+
+`PurchaseInfo.planSnapshot.name` is now surfaced as a first-class field so
+`<CurrentPlanCard>` renders a real plan name ("Pro Monthly") instead of the
+opaque `planRef`. Legacy purchases without a snapshot name fall back to
+`productName`. The `planRef` is retained only as `data-solvapay-current-plan-ref`
+on the card root for QA hooks.
+
+`<CurrentPlanCard>` also uses `copy.currentPlan.cycleUnit` to render
+"500 kr / month" rather than "500 kr / monthly". Override any of
+`weekly` / `monthly` / `quarterly` / `yearly` in your copy bundle to localise
+the interval label.
+
+Behavioural note for integrators who previously relied on top-ups surfacing on
+`activePurchase`: drop to `purchases` (raw) to restore the old most-recent
+ordering, or read from `balanceTransactions` directly.
+
 ### BREAKING: Unified `transport` replaces per-method provider overrides
 
 `SolvaPayProvider` now takes a single `config.transport: SolvaPayTransport`

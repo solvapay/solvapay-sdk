@@ -31,6 +31,7 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
       activePurchase: null,
       hasPaidPurchase: false,
       activePaidPurchase: null,
+      balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
     createPayment: vi.fn(),

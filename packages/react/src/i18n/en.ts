@@ -165,6 +165,12 @@ export const enCopy: SolvaPayCopy = {
     paymentMethodExpires: 'expires {month}/{year}',
     noPaymentMethod: 'No payment method on file',
     updatePaymentButton: 'Update card',
+    cycleUnit: {
+      weekly: 'week',
+      monthly: 'month',
+      quarterly: '3 months',
+      yearly: 'year',
+    },
   },
   customerPortal: {
     launchButton: 'Manage billing',

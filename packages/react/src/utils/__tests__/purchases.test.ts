@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   isPaidPurchase,
+  isPlanPurchase,
+  isTopupPurchase,
   filterPurchases,
   getActivePurchases,
   getCancelledPurchasesWithEndDate,
@@ -111,6 +113,53 @@ describe('isPaidPurchase', () => {
   it('should return false for purchase with undefined amount', () => {
     const purchase = createPurchase({ amount: undefined })
     expect(isPaidPurchase(purchase)).toBe(false)
+  })
+})
+
+describe('isPlanPurchase', () => {
+  it('classifies a recurring purchase with a planSnapshot as a plan', () => {
+    const purchase = createPurchase({
+      planSnapshot: { reference: 'pln_pro', planType: 'recurring' },
+    })
+    expect(isPlanPurchase(purchase)).toBe(true)
+    expect(isTopupPurchase(purchase)).toBe(false)
+  })
+
+  it('classifies a one-time purchase with a planSnapshot as a plan', () => {
+    const purchase = createPurchase({
+      planSnapshot: { reference: 'pln_lifetime', planType: 'one-time' },
+    })
+    expect(isPlanPurchase(purchase)).toBe(true)
+  })
+
+  it('classifies a usage-based purchase with a planSnapshot as a plan', () => {
+    const purchase = createPurchase({
+      planSnapshot: { reference: 'pln_usage', planType: 'usage-based' },
+    })
+    expect(isPlanPurchase(purchase)).toBe(true)
+  })
+
+  it('classifies a purchase with no planSnapshot as not a plan (structural signal)', () => {
+    const purchase = createPurchase({ planSnapshot: undefined })
+    expect(isPlanPurchase(purchase)).toBe(false)
+    expect(isTopupPurchase(purchase)).toBe(true)
+  })
+
+  it('classifies a credit top-up as not a plan even if a snapshot slips through (regression guard)', () => {
+    const purchase = createPurchase({
+      planSnapshot: { reference: 'pln_accident', planType: 'one-time' },
+      metadata: { purpose: 'credit_topup' },
+    })
+    expect(isPlanPurchase(purchase)).toBe(false)
+    expect(isTopupPurchase(purchase)).toBe(true)
+  })
+
+  it('classifies a future non-plan purpose with null snapshot as not a plan (forward-compat)', () => {
+    const purchase = createPurchase({
+      planSnapshot: undefined,
+      metadata: { purpose: 'gift_credit' },
+    })
+    expect(isPlanPurchase(purchase)).toBe(false)
   })
 })
 

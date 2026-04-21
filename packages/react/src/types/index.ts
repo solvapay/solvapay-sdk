@@ -35,6 +35,7 @@ export interface PurchaseInfo {
   planRef?: string
   planSnapshot?: {
     reference?: string
+    name?: string | null
     price?: number
     meterRef?: string
     limit?: number
@@ -51,6 +52,12 @@ export interface PurchaseInfo {
     periodStart?: string
     periodEnd?: string
   }
+  /**
+   * Arbitrary metadata attached to the purchase. `metadata.purpose ===
+   * 'credit_topup'` signals a balance top-up rather than a plan purchase;
+   * see `isPlanPurchase` / `isTopupPurchase` for classification helpers.
+   */
+  metadata?: Record<string, unknown>
 }
 
 export interface CustomerPurchaseData {
@@ -199,6 +206,13 @@ export interface PurchaseStatus {
    * null if no active paid purchase exists
    */
   activePaidPurchase: PurchaseInfo | null
+  /**
+   * Purchases that are not plans — e.g. credit top-ups, and any future
+   * balance-transaction purposes the backend introduces. Classified
+   * structurally (`planSnapshot == null`) with a belt-and-braces check on
+   * `metadata.purpose`. See `isPlanPurchase` / `isTopupPurchase`.
+   */
+  balanceTransactions: PurchaseInfo[]
 }
 
 /**

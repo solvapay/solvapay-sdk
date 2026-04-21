@@ -36,6 +36,7 @@ const PURCHASE_ACTIVE = {
       status: 'active',
       startDate: '2026-01-01',
       planRef: 'pln_pro',
+      planSnapshot: { reference: 'pln_pro', planType: 'recurring' },
     },
   ],
 }
@@ -49,6 +50,7 @@ const PURCHASE_UPDATED = {
       status: 'active',
       startDate: '2026-01-01',
       planRef: 'pln_pro_v2',
+      planSnapshot: { reference: 'pln_pro_v2', planType: 'recurring' },
     },
   ],
 }
@@ -337,6 +339,52 @@ describe('SolvaPayProvider - purchase state management', () => {
 
       expect(result.current.purchase.loading).toBe(false)
       expect(result.current.purchase.isRefetching).toBe(false)
+    })
+  })
+
+  describe('plan vs balance transaction filtering', () => {
+    it('keeps the recurring plan on activePurchase while exposing top-ups on balanceTransactions', async () => {
+      const MIXED_PURCHASES = {
+        customerRef: 'cus_test',
+        purchases: [
+          {
+            reference: 'pur_plan',
+            productName: 'Pro',
+            status: 'active',
+            startDate: '2026-01-01',
+            planRef: 'pln_pro',
+            amount: 999,
+            planSnapshot: { reference: 'pln_pro', planType: 'recurring', name: 'Pro Monthly' },
+          },
+          {
+            reference: 'pur_topup',
+            productName: 'Credits',
+            status: 'active',
+            startDate: '2026-03-01',
+            amount: 10000,
+            metadata: { purpose: 'credit_topup' },
+          },
+        ],
+      }
+      fetchSpy.mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(MIXED_PURCHASES),
+        }),
+      )
+
+      const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+      await waitFor(() => {
+        expect(result.current.purchase.activePurchase?.reference).toBe('pur_plan')
+      })
+
+      expect(result.current.purchase.hasPaidPurchase).toBe(true)
+      expect(result.current.purchase.activePaidPurchase?.reference).toBe('pur_plan')
+      expect(result.current.purchase.balanceTransactions).toHaveLength(1)
+      expect(result.current.purchase.balanceTransactions[0].reference).toBe('pur_topup')
+      // Raw purchases still include both rows for integrators that need them
+      expect(result.current.purchase.purchases).toHaveLength(2)
     })
   })
 

@@ -435,13 +435,41 @@ Access purchase status, active purchases, and helper functions.
 
 ```tsx
 const {
-  purchases, // Array of all purchases
+  purchases, // Array of all purchases (raw — plans + balance transactions)
+  balanceTransactions, // Credit top-ups and other non-plan rows
   loading, // Loading state
-  hasPaidPurchase, // Boolean: has any paid purchase
-  activePurchase, // Most recent active purchase
+  hasPaidPurchase, // Boolean: has any paid plan purchase
+  activePurchase, // Most recent active plan purchase
   refetch, // Function to refetch purchases
 } = usePurchase()
 ```
+
+#### Plans vs balance
+
+Plans and balance credits are orthogonal. A customer can hold at most one
+active plan and any number of balance transactions (credit top-ups today; gift
+credits, referral bonuses, refunds tomorrow).
+
+Every plan-shaped accessor — `activePurchase`, `activePaidPurchase`,
+`hasPaidPurchase`, `hasProduct`, plus `cancelledPurchase` /
+`shouldShowCancelledNotice` on `usePurchaseStatus` — filters out balance
+transactions. Top-ups surface on `balanceTransactions`, and the aggregate
+credit balance on `useBalance()`.
+
+Classification is structural (`isPlanPurchase` / `isTopupPurchase`): a purchase
+with no `planSnapshot` was never a plan. `metadata.purpose === 'credit_topup'`
+acts as a defense-in-depth guard.
+
+```tsx
+import { isPlanPurchase, isTopupPurchase } from '@solvapay/react'
+
+const plans = purchases.filter(isPlanPurchase)
+const topups = purchases.filter(isTopupPurchase)
+```
+
+If you previously relied on top-ups surfacing on `activePurchase` (e.g. "show
+the most recent transaction"), read from `purchases` or `balanceTransactions`
+directly.
 
 ### usePlans
 

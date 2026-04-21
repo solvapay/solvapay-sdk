@@ -37,6 +37,7 @@ export interface CurrentPlanCardClassNames {
   root?: string
   heading?: string
   planName?: string
+  productContext?: string
   price?: string
   dateLine?: string
   balanceLine?: string
@@ -156,12 +157,22 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   // non-USD `currency` would render e.g. "SEK 54.26" for a 500 SEK charge.
   const amount = activePurchase.originalAmount ?? activePurchase.amount ?? 0
   const currency = activePurchase.currency ?? 'usd'
+  const cycleKey = activePurchase.billingCycle as
+    | keyof typeof copy.currentPlan.cycleUnit
+    | undefined
+  const intervalLabel = cycleKey ? copy.currentPlan.cycleUnit[cycleKey] ?? cycleKey : undefined
   const priceLabel = formatPrice(amount, currency, {
-    interval: activePurchase.billingCycle,
+    interval: intervalLabel,
   })
 
-  const planName =
-    activePurchase.planRef ?? activePurchase.planSnapshot?.reference ?? activePurchase.productName
+  // Plan name is a first-class field: every plan has a name in the plans
+  // table, and the backend now snapshots it at purchase time. Legacy
+  // purchases (pre-snapshot) fall back to productName — never to planRef.
+  const planName = activePurchase.planSnapshot?.name ?? activePurchase.productName
+  const productContext =
+    activePurchase.productName && activePurchase.productName !== planName
+      ? activePurchase.productName
+      : null
 
   const rootClass = [
     'solvapay-current-plan-card',
@@ -182,6 +193,7 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       className={rootClass}
       data-solvapay-current-plan-card=""
       data-plan-type={planType}
+      data-solvapay-current-plan-ref={activePurchase.planRef ?? undefined}
     >
       <h2
         className={overrides?.heading ?? 'solvapay-current-plan-heading'}
@@ -189,6 +201,15 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       >
         {copy.currentPlan.heading}
       </h2>
+
+      {productContext && (
+        <div
+          className={overrides?.productContext ?? 'solvapay-current-plan-product-context'}
+          data-solvapay-current-plan-product-context=""
+        >
+          {productContext}
+        </div>
+      )}
 
       <div
         className={overrides?.planName ?? 'solvapay-current-plan-name'}

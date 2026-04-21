@@ -17,6 +17,7 @@ import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
 import {
   filterPurchases,
   isPaidPurchase,
+  isPlanPurchase,
   getPrimaryPurchase,
 } from './utils/purchases'
 import {
@@ -368,9 +369,16 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   )
 
   const purchase: PurchaseStatus = useMemo(() => {
-    const activePurchase = getPrimaryPurchase(purchaseData.purchases)
+    // Plans and balance transactions are orthogonal — filter non-plan rows
+    // out of every plan-shaped accessor so credit top-ups don't masquerade
+    // as a subscription. `purchases` (raw) stays unchanged for integrators
+    // who want to classify themselves.
+    const planPurchases = purchaseData.purchases.filter(isPlanPurchase)
+    const balanceTransactions = purchaseData.purchases.filter(p => !isPlanPurchase(p))
 
-    const activePaidPurchases = purchaseData.purchases.filter(
+    const activePurchase = getPrimaryPurchase(planPurchases)
+
+    const activePaidPurchases = planPurchases.filter(
       p => p.status === 'active' && isPaidPurchase(p),
     )
 
@@ -388,13 +396,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       name: purchaseData.name,
       purchases: purchaseData.purchases,
       hasProduct: (productName: string) => {
-        return purchaseData.purchases.some(
+        return planPurchases.some(
           p => p.productName.toLowerCase() === productName.toLowerCase() && p.status === 'active',
         )
       },
       activePurchase,
       hasPaidPurchase: activePaidPurchases.length > 0,
       activePaidPurchase,
+      balanceTransactions,
     }
   }, [loading, isRefetching, purchaseError, purchaseData, internalCustomerRef])
 
