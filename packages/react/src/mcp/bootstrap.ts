@@ -14,17 +14,25 @@
  * so any MCP App can use them verbatim.
  */
 
+import type { PaywallStructuredContent } from '@solvapay/server'
+import { isPaywallStructuredContent } from '@solvapay/server'
 import type { Plan } from '../types'
 import type { SolvaPayTransport } from '../transport/types'
 import type { McpAppLike } from './adapter'
 
-export type McpView = 'checkout' | 'account' | 'topup' | 'activate'
+export type McpView = 'checkout' | 'account' | 'topup' | 'activate' | 'paywall' | 'usage'
 
 export interface McpBootstrap {
   view: McpView
   productRef: string
   stripePublishableKey: string | null
   returnUrl: string
+  /**
+   * Set when the MCP host invokes `open_paywall` — the structured content
+   * gets forwarded on the bootstrap payload so the client doesn't have to
+   * re-fetch it. Only populated for `view: 'paywall'`.
+   */
+  paywall?: PaywallStructuredContent
 }
 
 /**
@@ -63,6 +71,17 @@ const OPEN_TOOL_FOR_VIEW: Record<McpView, string> = {
   account: 'open_account',
   topup: 'open_topup',
   activate: 'open_plan_activation',
+  paywall: 'open_paywall',
+  usage: 'open_usage',
+}
+
+const VIEW_FOR_OPEN_TOOL: Record<string, McpView> = {
+  open_checkout: 'checkout',
+  open_account: 'account',
+  open_topup: 'topup',
+  open_plan_activation: 'activate',
+  open_paywall: 'paywall',
+  open_usage: 'usage',
 }
 
 /**
@@ -73,9 +92,7 @@ const OPEN_TOOL_FOR_VIEW: Record<McpView, string> = {
  */
 function inferViewFromHost(app: McpAppBootstrapLike): McpView {
   const name = app.getHostContext()?.toolInfo?.tool?.name
-  if (name === 'open_account') return 'account'
-  if (name === 'open_topup') return 'topup'
-  if (name === 'open_plan_activation') return 'activate'
+  if (name && VIEW_FOR_OPEN_TOOL[name]) return VIEW_FOR_OPEN_TOOL[name]
   return 'checkout'
 }
 
@@ -106,6 +123,7 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
         productRef?: string
         stripePublishableKey?: string | null
         returnUrl?: string | null
+        paywall?: unknown
       }
     | undefined
   const ref = structured?.productRef
@@ -125,11 +143,20 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     )
   }
   const key = structured?.stripePublishableKey ?? null
+  const resolvedView = structured?.view ?? view
+  const paywall =
+    resolvedView === 'paywall' && isPaywallStructuredContent(structured?.paywall)
+      ? structured.paywall
+      : undefined
+  if (resolvedView === 'paywall' && !paywall) {
+    throw new Error(`${toolName} did not return a valid paywall content object`)
+  }
   return {
-    view: structured?.view ?? view,
+    view: resolvedView,
     productRef: ref,
     stripePublishableKey: typeof key === 'string' && key ? key : null,
     returnUrl: raw,
+    ...(paywall ? { paywall } : {}),
   }
 }
 

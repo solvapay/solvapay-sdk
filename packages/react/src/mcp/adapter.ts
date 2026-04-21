@@ -129,5 +129,7 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
     },
 
     getPaymentMethod: () => callTool(MCP_TOOL_NAMES.getPaymentMethod),
+
+    getUsage: () => callTool(MCP_TOOL_NAMES.getUsage),
   }
 }

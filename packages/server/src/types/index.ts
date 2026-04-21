@@ -36,6 +36,7 @@ export type {
   PaywallStructuredContent,
   PaywallToolResult,
 } from './paywall'
+export { isPaywallStructuredContent } from './paywall'
 
 // Re-export configuration options
 export type {

@@ -51,4 +51,5 @@ export { checkPurchaseCore } from './purchase'
 export type { PurchaseCheckResult } from './purchase'
 
 // Export usage tracking helpers
-export { trackUsageCore } from './usage'
+export { trackUsageCore, getUsageCore } from './usage'
+export type { GetUsageResult } from './usage'

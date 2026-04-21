@@ -111,6 +111,7 @@ export function verifyWebhook({
 
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
+export { isPaywallStructuredContent } from './types/paywall'
 
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
@@ -197,10 +198,17 @@ export {
   getPaymentMethodCore,
   checkPurchaseCore,
   trackUsageCore,
+  getUsageCore,
   listPlansCore,
   getMerchantCore,
   getProductCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult, PurchaseCheckResult } from './helpers'
+export type {
+  ErrorResult,
+  AuthenticatedUser,
+  CustomerBalanceResult,
+  PurchaseCheckResult,
+  GetUsageResult,
+} from './helpers'

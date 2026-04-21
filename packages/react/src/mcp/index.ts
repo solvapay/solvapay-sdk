@@ -51,5 +51,11 @@ export type { McpTopupViewProps } from './views/McpTopupView'
 export { McpActivateView } from './views/McpActivateView'
 export type { McpActivateViewProps } from './views/McpActivateView'
 
+export { McpPaywallView } from './views/McpPaywallView'
+export type { McpPaywallViewProps } from './views/McpPaywallView'
+
+export { McpUsageView } from './views/McpUsageView'
+export type { McpUsageViewProps } from './views/McpUsageView'
+
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'

@@ -18,6 +18,11 @@
       "types": "./dist/edge.d.ts",
       "import": "./dist/edge.js",
       "default": "./dist/edge.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js",
+      "require": "./dist/mcp/index.cjs"
     }
   },
   "files": [
@@ -37,11 +42,11 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && tsup src/edge.ts --format esm --dts --tsconfig tsconfig.build.json",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
+    "build": "tsup src/index.ts src/mcp/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && tsup src/edge.ts --format esm --dts --tsconfig tsconfig.build.json",
+    "dev": "tsup src/index.ts src/mcp/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
     "generate:types": "tsx scripts/generate-types.ts",
-    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts src/mcp/oauth-bridge.spec.ts",
-    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts src/mcp/oauth-bridge.spec.ts",
+    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts __tests__/mcp-helpers.unit.test.ts __tests__/create-mcp-handler.unit.test.ts __tests__/create-solvapay-mcp-server.unit.test.ts src/mcp/oauth-bridge.spec.ts",
+    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/mcp-auth.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts __tests__/mcp-helpers.unit.test.ts __tests__/create-mcp-handler.unit.test.ts __tests__/create-solvapay-mcp-server.unit.test.ts src/mcp/oauth-bridge.spec.ts",
     "test:integration": "vitest run __tests__/backend.integration.test.ts",
     "test:integration:payment": "vitest run __tests__/payment-stripe.integration.test.ts",
     "test:all": "vitest run",
@@ -54,11 +59,15 @@
     "@solvapay/core": "workspace:*"
   },
   "peerDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "@solvapay/auth": "workspace:*",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
+    "@modelcontextprotocol/ext-apps": {
+      "optional": true
+    },
     "@modelcontextprotocol/sdk": {
       "optional": true
     },
@@ -67,6 +76,8 @@
     }
   },
   "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@solvapay/auth": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/test-utils": "workspace:^",
@@ -76,6 +87,7 @@
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "zod": "^4.3.6"
   }
 }

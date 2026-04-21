@@ -66,6 +66,7 @@ export const DEFAULT_ROUTES = {
   getProduct: '/api/get-product',
   listPlans: '/api/list-plans',
   getPaymentMethod: '/api/payment-method',
+  getUsage: '/api/usage',
 } as const
 
 function routeFor(
@@ -208,6 +209,13 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         method: 'GET',
         onErrorContext: 'getPaymentMethod',
         errorPrefix: 'Failed to load payment method',
+      }),
+
+    getUsage: () =>
+      request(config, routeFor(config, 'getUsage'), {
+        method: 'GET',
+        onErrorContext: 'getUsage',
+        errorPrefix: 'Failed to load usage',
       }),
   }
 }

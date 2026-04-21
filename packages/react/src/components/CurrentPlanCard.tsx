@@ -28,6 +28,7 @@ import { useCopy } from '../hooks/useCopy'
 import { BalanceBadge } from './BalanceBadge'
 import { CancelPlanButton } from './CancelPlanButton'
 import { UpdatePaymentMethodButton } from './UpdatePaymentMethodButton'
+import { UsageMeter } from '../primitives/UsageMeter'
 import { formatPrice } from '../utils/format'
 import { interpolate } from '../i18n/interpolate'
 import type { PaymentMethodInfo } from '@solvapay/server'
@@ -41,6 +42,7 @@ export interface CurrentPlanCardClassNames {
   price?: string
   dateLine?: string
   balanceLine?: string
+  usageMeter?: string
   paymentMethod?: string
   actions?: string
 }
@@ -52,6 +54,12 @@ export interface CurrentPlanCardProps {
   hideCancelButton?: boolean
   /** Hide the "Update card" action. Default: `false`. */
   hideUpdatePaymentButton?: boolean
+  /**
+   * Hide the `<UsageMeter>` that automatically renders for usage-based
+   * plans. Default: `false` (meter renders whenever the active plan has
+   * a quota).
+   */
+  hideUsageMeter?: boolean
   /** Per-element classNames. */
   classNames?: CurrentPlanCardClassNames
   /**
@@ -139,6 +147,7 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   hidePaymentMethod,
   hideCancelButton,
   hideUpdatePaymentButton,
+  hideUsageMeter,
   classNames: overrides,
   className,
 }) => {
@@ -230,6 +239,21 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         formatDate={formatDate}
         className={overrides?.dateLine ?? 'solvapay-current-plan-date-line'}
       />
+
+      {isUsageBased && !hideUsageMeter && (
+        <div
+          className={overrides?.usageMeter ?? 'solvapay-current-plan-usage-meter'}
+          data-solvapay-current-plan-usage-meter=""
+        >
+          <UsageMeter.Root>
+            <UsageMeter.Label />
+            <UsageMeter.Bar />
+            <UsageMeter.Percentage />
+            <UsageMeter.ResetsIn />
+            <UsageMeter.Loading />
+          </UsageMeter.Root>
+        </div>
+      )}
 
       {isUsageBased && (
         <div

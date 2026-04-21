@@ -38,9 +38,17 @@ import {
   type McpCheckoutViewProps,
 } from './views/McpCheckoutView'
 import {
+  McpPaywallView,
+  type McpPaywallViewProps,
+} from './views/McpPaywallView'
+import {
   McpTopupView,
   type McpTopupViewProps,
 } from './views/McpTopupView'
+import {
+  McpUsageView,
+  type McpUsageViewProps,
+} from './views/McpUsageView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 
 /**
@@ -74,6 +82,8 @@ export interface McpAppViewOverrides {
   account?: React.ComponentType<McpAccountViewProps>
   topup?: React.ComponentType<McpTopupViewProps>
   activate?: React.ComponentType<McpActivateViewProps>
+  paywall?: React.ComponentType<McpPaywallViewProps>
+  usage?: React.ComponentType<McpUsageViewProps>
 }
 
 export interface McpAppProps {
@@ -245,19 +255,23 @@ export interface McpViewRouterProps {
 export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterProps) {
   // Note: `classNames` is intentionally forwarded as-is to each view —
   // `resolveMcpClassNames` runs inside them, not here.
-  const { view, productRef, stripePublishableKey, returnUrl } = bootstrap
+  const { view, productRef, stripePublishableKey, returnUrl, paywall } = bootstrap
 
   const headerTitle: Record<McpBootstrap['view'], string> = {
     checkout: 'SolvaPay',
     account: 'Your SolvaPay account',
     topup: 'Add SolvaPay credits',
     activate: 'Activate your plan',
+    paywall: 'Unlock access',
+    usage: 'Your usage',
   }
 
   const CheckoutView = views?.checkout ?? McpCheckoutView
   const AccountView = views?.account ?? McpAccountView
   const TopupView = views?.topup ?? McpTopupView
   const ActivateView = views?.activate ?? McpActivateView
+  const PaywallView = views?.paywall ?? McpPaywallView
+  const UsageView = views?.usage ?? McpUsageView
 
   return (
     <>
@@ -283,6 +297,15 @@ export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterPro
       {view === 'activate' && (
         <ActivateView productRef={productRef} classNames={classNames} />
       )}
+      {view === 'paywall' && paywall && (
+        <PaywallView
+          content={paywall}
+          publishableKey={stripePublishableKey}
+          returnUrl={returnUrl}
+          classNames={classNames}
+        />
+      )}
+      {view === 'usage' && <UsageView classNames={classNames} />}
     </>
   )
 }

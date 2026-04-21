@@ -65,4 +65,22 @@ export interface PaywallToolResult {
   }>
   isError?: boolean
   structuredContent?: PaywallStructuredContent | Record<string, unknown>
+  _meta?: Record<string, unknown>
+}
+
+/**
+ * Runtime type guard for `PaywallStructuredContent`.
+ *
+ * Used by the MCP registration layer to detect paywall-shaped tool results
+ * coming out of `.mcp()` so it knows whether to attach the `_meta.ui`
+ * envelope that tells MCP hosts which UI resource to open.
+ *
+ * @since 1.0.9
+ */
+export function isPaywallStructuredContent(value: unknown): value is PaywallStructuredContent {
+  if (typeof value !== 'object' || value === null || !('kind' in value)) {
+    return false
+  }
+  const kind = (value as { kind?: unknown }).kind
+  return kind === 'payment_required' || kind === 'activation_required'
 }
