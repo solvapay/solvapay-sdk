@@ -5,16 +5,21 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import {
+  activatePlanCore,
+  cancelPurchaseCore,
   checkPurchaseCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   createPaymentIntentCore,
+  createTopupPaymentIntentCore,
+  getCustomerBalanceCore,
   getMerchantCore,
   getPaymentMethodCore,
   getProductCore,
   isErrorResult,
   listPlansCore,
   processPaymentIntentCore,
+  reactivatePurchaseCore,
   syncCustomerCore,
   type McpToolExtra,
 } from '@solvapay/server'
@@ -211,6 +216,47 @@ function requireCustomerRef(extra?: McpToolExtra): CallToolResult | string {
   return customerRef
 }
 
+/**
+ * View discriminators returned by every `open_*` bootstrap tool. The client
+ * router in `mcp-app.tsx` reads this to decide which screen to mount.
+ */
+type BootstrapView = 'checkout' | 'account' | 'topup' | 'activate'
+
+async function fetchPlatformPublishableKey(): Promise<string | null> {
+  // Fetch SolvaPay's platform Stripe pk (resolved sandbox/live against the
+  // authenticated provider on the backend) so the client can prime
+  // `useStripeProbe`. Safe to forward — publishable keys are browser-visible
+  // by design, and `create_payment_intent` returns the same value for the
+  // actual confirm call. On any failure (backend down, missing config, older
+  // backend without the endpoint) we fall back to `null` so the UI probe
+  // reports `'blocked'` and the hosted-button card renders.
+  try {
+    const platform = await solvaPay.apiClient.getPlatformConfig?.()
+    return platform?.stripePublishableKey ?? null
+  } catch (err) {
+    console.warn('[mcp-checkout-app] getPlatformConfig failed', err)
+    return null
+  }
+}
+
+async function buildBootstrapPayload(view: BootstrapView): Promise<{
+  view: BootstrapView
+  productRef: string
+  stripePublishableKey: string | null
+  returnUrl: string
+}> {
+  const stripePublishableKey = await fetchPlatformPublishableKey()
+  return {
+    view,
+    productRef: solvapayProductRef,
+    stripePublishableKey,
+    // Stripe's confirmPayment validator rejects the `ui://` iframe location
+    // as a `return_url`. Surface the MCP app's public https origin so the
+    // client can thread it into `PaymentForm.Root` / `TopupForm.Root`.
+    returnUrl: mcpPublicBaseUrl,
+  }
+}
+
 export function createServer(): McpServer {
   const server = new McpServer({
     name: 'solvapay-mcp-checkout-app',
@@ -219,53 +265,47 @@ export function createServer(): McpServer {
 
   const toolMeta = { ui: { resourceUri } }
 
-  registerAppTool(
-    server,
+  const registerOpenTool = (
+    name: string,
+    title: string,
+    description: string,
+    view: BootstrapView,
+  ) => {
+    registerAppTool(
+      server,
+      name,
+      { title, description, inputSchema: {}, _meta: toolMeta },
+      async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+        traceTool(name, args, extra, async () => toolResult(await buildBootstrapPayload(view))),
+    )
+  }
+
+  registerOpenTool(
     'open_checkout',
-    {
-      title: 'Open checkout',
-      description: 'Open the SolvaPay checkout UI inside the host.',
-      inputSchema: {},
-      _meta: toolMeta,
-    },
-    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
-      traceTool('open_checkout', args, extra, async () => {
-        // Fetch SolvaPay's platform Stripe pk (resolved sandbox/live against
-        // the authenticated provider on the backend) so the client can prime
-        // `useStripeProbe`. Safe to forward — publishable keys are browser-
-        // visible by design, and `create_payment_intent` returns the same
-        // value for the actual confirm call. On any failure (backend down,
-        // missing config, older backend without the endpoint) we fall back
-        // to `null` so the UI probe reports `'blocked'` and the hosted-
-        // button card renders. See the SDK's Connect rationale: this is
-        // SolvaPay's *platform* pk; it pairs with the connected `accountId`
-        // returned from `create_payment_intent`, not a merchant's own pk.
-        let stripePublishableKey: string | null = null
-        console.warn(
-          '[open_checkout debug] getPlatformConfig typeof:',
-          typeof solvaPay.apiClient.getPlatformConfig,
-          'keys:',
-          Object.keys(solvaPay.apiClient).slice(0, 5),
-        )
-        try {
-          const platform = await solvaPay.apiClient.getPlatformConfig?.()
-          console.warn('[open_checkout debug] platform result:', JSON.stringify(platform))
-          stripePublishableKey = platform?.stripePublishableKey ?? null
-        } catch (err) {
-          console.warn(
-            '[mcp-checkout-app] getPlatformConfig failed; falling back to hosted checkout',
-            err,
-          )
-        }
-        return toolResult({
-          productRef: solvapayProductRef,
-          stripePublishableKey,
-          // Stripe's confirmPayment validator rejects the `ui://` iframe
-          // location as a `return_url`. Surface the MCP app's public https
-          // origin so the client can thread it into `PaymentForm.Root`.
-          returnUrl: mcpPublicBaseUrl,
-        })
-      }),
+    'Open checkout',
+    'Open the SolvaPay checkout UI inside the host. Use when the customer needs to purchase or upgrade a plan.',
+    'checkout',
+  )
+
+  registerOpenTool(
+    'open_account',
+    'Open account',
+    'Open the SolvaPay account dashboard inside the host: current plan, balance, payment method, cancel/reactivate controls, and a portal launcher.',
+    'account',
+  )
+
+  registerOpenTool(
+    'open_topup',
+    'Open top up',
+    'Open the SolvaPay top-up flow inside the host so the customer can add usage credits without leaving the conversation.',
+    'topup',
+  )
+
+  registerOpenTool(
+    'open_plan_activation',
+    'Open plan activation',
+    'Open the SolvaPay activation flow inside the host for free, trial, or usage-based plans that do not require an upfront payment.',
+    'activate',
   )
 
   registerAppTool(
@@ -523,6 +563,149 @@ export function createServer(): McpServer {
         const result = await createCustomerSessionCore(buildRequest(extra, { method: 'POST' }), {
           solvaPay,
         })
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.createTopupPayment,
+    {
+      description:
+        'Create a Stripe payment intent for a credit top-up. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI. Credits are recorded by the SolvaPay webhook after confirmation — no follow-up process_payment call is needed.',
+      inputSchema: {
+        amount: z.number().int().positive(),
+        currency: z.string(),
+        description: z.string().optional(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.createTopupPayment, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const amount = typeof args.amount === 'number' ? args.amount : 0
+        const currency = typeof args.currency === 'string' ? args.currency : ''
+        const description = typeof args.description === 'string' ? args.description : undefined
+
+        const result = await createTopupPaymentIntentCore(
+          buildRequest(extra, { method: 'POST' }),
+          { amount, currency, description },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.getBalance,
+    {
+      description:
+        "Return the authenticated customer's credit balance and display-currency metadata. Used by `useBalance` / `<BalanceBadge>` / `<CreditGate>`.",
+      inputSchema: {},
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.getBalance, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const result = await getCustomerBalanceCore(buildRequest(extra), { solvaPay })
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.cancelRenewal,
+    {
+      description:
+        "Cancel the auto-renewal on an active purchase. Backend keeps access until the current period ends; `check_purchase` will start reporting the purchase as cancelled-with-access-until. Used by `<CancelPlanButton>`.",
+      inputSchema: {
+        purchaseRef: z.string(),
+        reason: z.string().optional(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.cancelRenewal, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const purchaseRef = typeof args.purchaseRef === 'string' ? args.purchaseRef : ''
+        const reason = typeof args.reason === 'string' ? args.reason : undefined
+
+        const result = await cancelPurchaseCore(
+          buildRequest(extra, { method: 'POST' }),
+          { purchaseRef, reason },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.reactivateRenewal,
+    {
+      description:
+        "Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed. Used by `<CancelledPlanNotice>`'s reactivate CTA.",
+      inputSchema: {
+        purchaseRef: z.string(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.reactivateRenewal, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const purchaseRef = typeof args.purchaseRef === 'string' ? args.purchaseRef : ''
+
+        const result = await reactivatePurchaseCore(
+          buildRequest(extra, { method: 'POST' }),
+          { purchaseRef },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.activatePlan,
+    {
+      description:
+        'Activate a zero-priced, trial, or usage-based plan without collecting payment up-front. Returns the resulting purchase. Used by `useActivation` / `<ActivationFlow>`. For paid plans, use `create_payment_intent` + `process_payment` instead.',
+      inputSchema: {
+        productRef: z.string(),
+        planRef: z.string(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.activatePlan, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const productRef =
+          typeof args.productRef === 'string' && args.productRef
+            ? args.productRef
+            : solvapayProductRef
+        const planRef = typeof args.planRef === 'string' ? args.planRef : ''
+
+        const result = await activatePlanCore(
+          buildRequest(extra, { method: 'POST' }),
+          { productRef, planRef },
+          { solvaPay },
+        )
         if (isErrorResult(result)) return toolErrorResult(result)
         return toolResult(result)
       }),
