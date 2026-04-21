@@ -37,7 +37,7 @@ isProject: false
 
 ## Scope
 
-**In scope** (all in [`/Users/tommy/projects/solvapay/solvapay-sdk`](/Users/tommy/projects/solvapay/solvapay-sdk)):
+**In scope** (all in this repo):
 
 - Vendor Slot + compose helpers at `packages/react/src/primitives/`.
 - Compound-primitive rewrite of 12 components + deletion of `PricingSelector`.
@@ -54,9 +54,9 @@ isProject: false
 **Deferred to follow-up ticket (not this plan):**
 
 - Cut `1.0.9` stable (or `1.0.10` if the release is deemed breaking): align `scripts/version-bump*.ts` `PACKAGES_TO_VERSION` with the filesystem scan, lockstep bump all 8 packages, publish, promote `preview` → `latest`, git tag.
-- `docs/headless-primitives.mdx`, `docs/ai-builders/{lovable,v0,bolt}.mdx`, `docs/frameworks/{vite,remix}.mdx`, `docs/shadcn.mdx` (live in `/Users/tommy/projects/solvapay/docs`).
+- `docs/headless-primitives.mdx`, `docs/ai-builders/{lovable,v0,bolt}.mdx`, `docs/frameworks/{vite,remix}.mdx`, `docs/shadcn.mdx` (live in [`solvapay/docs`](https://github.com/solvapay/docs)).
 - Mintlify `llms.txt` / `llms-full.txt` configuration.
-- `solvapay.com/r/*` rewrite to unpkg (lives in `/Users/tommy/projects/solvapay/solvapay-website`).
+- `solvapay.com/r/*` rewrite to unpkg (lives in [`solvapay/solvapay-website`](https://github.com/solvapay/solvapay-website)).
 - Registry end-to-end CI (`shadcn add <hosted-url>`) — needs hosting first.
 - Lovable smoke test by external reviewer — runs against the `1.0.8-preview.1` build published in PR 8.
 

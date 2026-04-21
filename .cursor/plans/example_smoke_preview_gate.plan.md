@@ -33,7 +33,7 @@ isProject: false
 
 ## Why this exists
 
-The [go-live preview for Lovable plan](/Users/tommy/.cursor/plans/go_live_preview_for_lovable_f6111d29.plan.md) shipped `1.0.8-preview.5` without example-level runtime smoke coverage. That was a deliberate deferral — the user accepted the risk for the preview window but we need real automated coverage before any preview graduates to `@latest`.
+The go-live preview for Lovable plan shipped `1.0.8-preview.5` without example-level runtime smoke coverage. That was a deliberate deferral — the user accepted the risk for the preview window but we need real automated coverage before any preview graduates to `@latest`.
 
 Two things this plan prevents:
 
@@ -48,12 +48,12 @@ Target examples:
 
 | Example | Type | Start cmd | Ready probe |
 | --- | --- | --- | --- |
-| [`examples/checkout-demo`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/checkout-demo) | Next.js | `pnpm --filter checkout-demo dev` | GET `/` -> 200 |
-| [`examples/hosted-checkout-demo`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/hosted-checkout-demo) | Next.js | `pnpm --filter hosted-checkout-demo dev` | GET `/` -> 200 |
-| [`examples/shadcn-checkout`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/shadcn-checkout) | Next.js | `pnpm --filter shadcn-checkout dev` | GET `/` -> 200 |
-| [`examples/tailwind-checkout`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/tailwind-checkout) | Next.js | `pnpm --filter tailwind-checkout dev` | GET `/` -> 200 |
-| [`examples/spa-checkout`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/spa-checkout) | Vite SPA | `pnpm --filter spa-checkout dev` | GET `/` -> 200 |
-| [`examples/express-basic`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/express-basic) | Node server | `pnpm --filter express-basic dev` | GET `/health` -> 200 |
+| [`examples/checkout-demo`](examples/checkout-demo) | Next.js | `pnpm --filter checkout-demo dev` | GET `/` -> 200 |
+| [`examples/hosted-checkout-demo`](examples/hosted-checkout-demo) | Next.js | `pnpm --filter hosted-checkout-demo dev` | GET `/` -> 200 |
+| [`examples/shadcn-checkout`](examples/shadcn-checkout) | Next.js | `pnpm --filter shadcn-checkout dev` | GET `/` -> 200 |
+| [`examples/tailwind-checkout`](examples/tailwind-checkout) | Next.js | `pnpm --filter tailwind-checkout dev` | GET `/` -> 200 |
+| [`examples/spa-checkout`](examples/spa-checkout) | Vite SPA | `pnpm --filter spa-checkout dev` | GET `/` -> 200 |
+| [`examples/express-basic`](examples/express-basic) | Node server | `pnpm --filter express-basic dev` | GET `/health` -> 200 |
 
 For each: `pnpm build` must exit 0, dev server must respond within 60s. No click-through yet.
 
@@ -91,7 +91,7 @@ Single workflow file `example-smoke.yml`:
 - Full browser matrix. Chromium only until we see real cross-browser regressions.
 - Mobile / touch coverage — defer to a dedicated mobile-checkout plan.
 - Load testing — separate concern.
-- `examples/supabase-edge` — backend-only, covered by the existing [Gap 4 deno-preview](/Users/tommy/projects/solvapay/solvapay-frontend/.cursor/plans/sdk_gaps_for_lovable_skill_0be93609.plan.md) spike and its future CI job.
+- `examples/supabase-edge` — backend-only, covered by the existing [Gap 4 deno-preview](.cursor/plans/sdk_gaps_for_lovable_skill_0be93609.plan.md) spike and its future CI job.
 
 ## Sequencing
 
