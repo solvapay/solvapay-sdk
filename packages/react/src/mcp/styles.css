@@ -131,6 +131,7 @@ body {
   color: var(--color-text-on-accent, #ffffff);
   font-size: 14px;
   font-weight: 500;
+  text-decoration: none;
   cursor: pointer;
   transition: opacity 120ms ease;
 }

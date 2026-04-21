@@ -126,7 +126,7 @@ function EmbeddedTopup({
           Add more credits
         </button>
         <LaunchCustomerPortalButton
-          className={`${cx.button} ${cx.linkButton}`.trim()}
+          className={cx.button}
           loadingClassName={cx.button}
           errorClassName={cx.button}
         >
@@ -232,7 +232,7 @@ function HostedTopupFallback({ cx }: { cx: Cx }) {
         }
       </p>
       <LaunchCustomerPortalButton
-        className={`${cx.button} ${cx.linkButton}`.trim()}
+        className={cx.button}
         loadingClassName={cx.button}
         errorClassName={cx.button}
       >

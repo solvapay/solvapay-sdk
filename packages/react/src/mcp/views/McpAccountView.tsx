@@ -82,7 +82,7 @@ export function McpAccountView({ classNames }: McpAccountViewProps) {
       </div>
 
       <LaunchCustomerPortalButton
-        className={`${cx.button} ${cx.linkButton}`.trim()}
+        className={cx.button}
         loadingClassName={cx.button}
         errorClassName={cx.button}
       >
