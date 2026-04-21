@@ -8,13 +8,58 @@ import { describe, expect, it, vi } from 'vitest'
 import { createSolvaPay, type SolvaPayClient } from '@solvapay/server'
 import { buildSolvaPayDescriptors, MCP_TOOL_NAMES } from '../src'
 
-function makeSolvaPay() {
+interface MakeSolvaPayOverrides {
+  customer?: {
+    customerRef: string
+    externalRef?: string
+    email?: string
+    name?: string
+    purchases?: Array<Record<string, unknown>>
+  }
+  merchant?: Record<string, unknown>
+  product?: Record<string, unknown>
+  plans?: Array<Record<string, unknown>>
+  balance?: {
+    customerRef: string
+    credits: number
+    displayCurrency: string
+    creditsPerMinorUnit: number
+    displayExchangeRate: number
+  }
+  paymentMethod?: Record<string, unknown>
+}
+
+function makeSolvaPay(overrides: MakeSolvaPayOverrides = {}) {
+  const customer = overrides.customer ?? {
+    customerRef: 'cus_existing',
+    externalRef: 'cus_existing',
+    purchases: [],
+  }
   const client = {
     checkLimits: vi.fn().mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
     trackUsage: vi.fn().mockResolvedValue(undefined),
-    createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus_new' }),
-    getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus_existing' }),
+    createCustomer: vi.fn().mockResolvedValue({ customerRef: customer.customerRef }),
+    getCustomer: vi.fn().mockResolvedValue(customer),
     getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getMerchant: vi
+      .fn()
+      .mockResolvedValue(overrides.merchant ?? { displayName: 'Acme', legalName: 'Acme Inc' }),
+    getProduct: vi
+      .fn()
+      .mockResolvedValue(overrides.product ?? { reference: 'prd_test', name: 'Test product' }),
+    listPlans: vi
+      .fn()
+      .mockResolvedValue(overrides.plans ?? [{ reference: 'pln_basic', name: 'Basic' }]),
+    getCustomerBalance: vi.fn().mockResolvedValue(
+      overrides.balance ?? {
+        customerRef: customer.customerRef,
+        credits: 0,
+        displayCurrency: 'USD',
+        creditsPerMinorUnit: 1,
+        displayExchangeRate: 1,
+      },
+    ),
+    getPaymentMethod: vi.fn().mockResolvedValue(overrides.paymentMethod ?? { kind: 'none' }),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
@@ -34,26 +79,16 @@ describe('buildSolvaPayDescriptors', () => {
       [
         MCP_TOOL_NAMES.activatePlan,
         MCP_TOOL_NAMES.cancelRenewal,
-        MCP_TOOL_NAMES.checkPurchase,
+        MCP_TOOL_NAMES.checkUsage,
         MCP_TOOL_NAMES.createCheckoutSession,
         MCP_TOOL_NAMES.createCustomerSession,
         MCP_TOOL_NAMES.createPayment,
         MCP_TOOL_NAMES.createTopupPayment,
-        MCP_TOOL_NAMES.getBalance,
-        MCP_TOOL_NAMES.getMerchant,
-        MCP_TOOL_NAMES.getPaymentMethod,
-        MCP_TOOL_NAMES.getProduct,
-        MCP_TOOL_NAMES.getUsage,
-        MCP_TOOL_NAMES.listPlans,
-        MCP_TOOL_NAMES.openAccount,
-        MCP_TOOL_NAMES.openCheckout,
-        MCP_TOOL_NAMES.openPaywall,
-        MCP_TOOL_NAMES.openPlanActivation,
-        MCP_TOOL_NAMES.openTopup,
-        MCP_TOOL_NAMES.openUsage,
+        MCP_TOOL_NAMES.manageAccount,
         MCP_TOOL_NAMES.processPayment,
         MCP_TOOL_NAMES.reactivateRenewal,
-        MCP_TOOL_NAMES.syncCustomer,
+        MCP_TOOL_NAMES.topup,
+        MCP_TOOL_NAMES.upgrade,
       ].sort(),
     )
 
@@ -61,7 +96,39 @@ describe('buildSolvaPayDescriptors', () => {
       expect(tool.description).toBeTypeOf('string')
       expect(tool.description.length).toBeGreaterThan(10)
       expect(tool.handler).toBeTypeOf('function')
-      expect(tool.meta).toEqual({ ui: { resourceUri: 'ui://test/view.html' } })
+      expect(tool.meta).toMatchObject({ ui: { resourceUri: 'ui://test/view.html' } })
+    }
+
+    // Intent tools (LLM-callable, dual-audience) carry the plain
+    // `{ ui: { resourceUri } }` meta with no audience tag.
+    const intentTools = [
+      MCP_TOOL_NAMES.upgrade,
+      MCP_TOOL_NAMES.manageAccount,
+      MCP_TOOL_NAMES.topup,
+      MCP_TOOL_NAMES.checkUsage,
+      MCP_TOOL_NAMES.activatePlan,
+    ]
+    for (const name of intentTools) {
+      const tool = tools.find(t => t.name === name)
+      expect(tool).toBeTruthy()
+      expect((tool!.meta as Record<string, unknown>).audience).toBeUndefined()
+    }
+
+    // UI-transport tools (state-change, no LLM use) all tag themselves.
+    const uiOnlyTools = [
+      MCP_TOOL_NAMES.createPayment,
+      MCP_TOOL_NAMES.processPayment,
+      MCP_TOOL_NAMES.createTopupPayment,
+      MCP_TOOL_NAMES.cancelRenewal,
+      MCP_TOOL_NAMES.reactivateRenewal,
+      MCP_TOOL_NAMES.createCheckoutSession,
+      MCP_TOOL_NAMES.createCustomerSession,
+    ]
+    for (const name of uiOnlyTools) {
+      const tool = tools.find(t => t.name === name)
+      expect(tool).toBeTruthy()
+      expect((tool!.meta as Record<string, unknown>).audience).toBe('ui')
+      expect(tool!.description).toMatch(/UI-only/i)
     }
 
     expect(resource.uri).toBe('ui://test/view.html')
@@ -70,7 +137,39 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
   })
 
-  it('filters open_* tools by views option', () => {
+  it('does not register tools removed/renamed in the Phase 2 trim', () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const names = tools.map(t => t.name)
+    for (const removed of [
+      // Phase 1 + 2c — dropped read tools
+      'sync_customer',
+      'check_purchase',
+      'get_merchant',
+      'get_product',
+      'get_payment_method',
+      'get_customer_balance',
+      'get_usage',
+      'list_plans',
+      // Phase 2d — paywall now rides on the gate response
+      'open_paywall',
+      // Phase 2e — renamed to intent verbs
+      'open_checkout',
+      'open_account',
+      'open_topup',
+      'open_usage',
+      'open_plan_activation',
+    ]) {
+      expect(names).not.toContain(removed)
+    }
+  })
+
+  it('filters intent tools by views option', () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),
       productRef: 'prd_test',
@@ -80,9 +179,9 @@ describe('buildSolvaPayDescriptors', () => {
       views: ['checkout'],
     })
     const names = tools.map(t => t.name)
-    expect(names).toContain(MCP_TOOL_NAMES.openCheckout)
-    expect(names).not.toContain(MCP_TOOL_NAMES.openAccount)
-    expect(names).not.toContain(MCP_TOOL_NAMES.openPaywall)
+    expect(names).toContain(MCP_TOOL_NAMES.upgrade)
+    expect(names).not.toContain(MCP_TOOL_NAMES.manageAccount)
+    expect(names).not.toContain(MCP_TOOL_NAMES.topup)
   })
 
   it('rejects non-http publicBaseUrl', () => {
@@ -95,5 +194,107 @@ describe('buildSolvaPayDescriptors', () => {
         publicBaseUrl: 'ui://nope',
       }),
     ).toThrow(/http\(s\)/)
+  })
+})
+
+describe('buildSolvaPayDescriptors → bootstrap payload', () => {
+  async function invokeOpen(
+    toolName: string,
+    overrides: MakeSolvaPayOverrides = {},
+    extra?: Parameters<
+      ReturnType<typeof buildSolvaPayDescriptors>['tools'][number]['handler']
+    >[1],
+  ) {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(overrides),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === toolName)
+    if (!tool) throw new Error(`tool ${toolName} not registered`)
+    return tool.handler({}, extra)
+  }
+
+  it('includes merchant, product, plans on every intent bootstrap', async () => {
+    const result = await invokeOpen(MCP_TOOL_NAMES.upgrade)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.view).toBe('checkout')
+    expect(sc.productRef).toBe('prd_test')
+    expect(sc.merchant).toMatchObject({ displayName: 'Acme' })
+    expect(sc.product).toMatchObject({ reference: 'prd_test' })
+    expect(sc.plans).toEqual([{ reference: 'pln_basic', name: 'Basic' }])
+  })
+
+  it('omits customer snapshot when unauthenticated', async () => {
+    const result = await invokeOpen(MCP_TOOL_NAMES.upgrade)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.customer).toBeNull()
+  })
+
+  it('includes customer snapshot when customer_ref is on authInfo', async () => {
+    const result = await invokeOpen(
+      MCP_TOOL_NAMES.manageAccount,
+      {
+        customer: {
+          customerRef: 'cus_42',
+          externalRef: 'cus_42',
+          email: 'a@b.test',
+          purchases: [{ reference: 'pur_1', status: 'active', productRef: 'prd_test' }],
+        },
+        balance: {
+          customerRef: 'cus_42',
+          credits: 500,
+          displayCurrency: 'USD',
+          creditsPerMinorUnit: 1,
+          displayExchangeRate: 1,
+        },
+        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242' },
+      },
+      { authInfo: { extra: { customer_ref: 'cus_42' } } },
+    )
+    const sc = result.structuredContent as Record<string, unknown>
+    const customer = sc.customer as Record<string, unknown>
+    expect(customer).not.toBeNull()
+    expect(customer.ref).toBe('cus_42')
+    expect((customer.purchase as Record<string, unknown>).customerRef).toBe('cus_42')
+    expect(customer.paymentMethod).toMatchObject({ kind: 'card', last4: '4242' })
+    expect(customer.balance).toMatchObject({ credits: 500, displayCurrency: 'USD' })
+    expect(customer.usage).not.toBeUndefined()
+  })
+
+  it('defaults plans to [] if list_plans errors', async () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: createSolvaPay({
+        apiClient: {
+          checkLimits: vi
+            .fn()
+            .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
+          trackUsage: vi.fn(),
+          createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
+          getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
+          getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: null }),
+          getMerchant: vi.fn().mockResolvedValue({ displayName: 'M', legalName: 'L' }),
+          getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test' }),
+          listPlans: vi.fn().mockRejectedValue(new Error('boom')),
+        } as unknown as SolvaPayClient,
+      }),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const open = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
+    const result = await open.handler({}, {})
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.plans).toEqual([])
+  })
+
+  it('activate_plan without planRef returns the picker bootstrap (view: activate)', async () => {
+    const result = await invokeOpen(MCP_TOOL_NAMES.activatePlan, {}, undefined)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.view).toBe('activate')
+    expect(sc.plans).toBeTruthy()
   })
 })

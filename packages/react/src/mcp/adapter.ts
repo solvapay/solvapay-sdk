@@ -22,7 +22,6 @@
  * message. Call sites can feature-detect by catching and matching.
  */
 
-import type { Plan } from '../types'
 import type { SolvaPayTransport } from '../transport/types'
 import { MCP_TOOL_NAMES } from '@solvapay/mcp'
 
@@ -87,18 +86,18 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
   const callTool = async <T>(name: string, args: Record<string, unknown> = {}): Promise<T> =>
     unwrap<T>(await app.callServerTool({ name, arguments: args }))
 
+  // Read tools (check_purchase, get_merchant, get_product, list_plans,
+  // get_payment_method, get_customer_balance, get_usage) are intentionally
+  // omitted — their data is folded into the `BootstrapPayload` returned
+  // by every intent tool and seeded into the provider's module-level
+  // caches via `seedMcpCaches`, so the transport never has to fetch.
   return {
-    checkPurchase: () => callTool(MCP_TOOL_NAMES.checkPurchase),
-
-    createPayment: params =>
-      callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ ...params })),
+    createPayment: params => callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ ...params })),
 
     processPayment: params => callTool(MCP_TOOL_NAMES.processPayment, pickDefined({ ...params })),
 
     createTopupPayment: params =>
       callTool(MCP_TOOL_NAMES.createTopupPayment, pickDefined({ ...params })),
-
-    getBalance: () => callTool(MCP_TOOL_NAMES.getBalance),
 
     cancelRenewal: params => callTool(MCP_TOOL_NAMES.cancelRenewal, pickDefined({ ...params })),
 
@@ -111,25 +110,5 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
       callTool(MCP_TOOL_NAMES.createCheckoutSession, pickDefined({ ...(params ?? {}) })),
 
     createCustomerSession: () => callTool(MCP_TOOL_NAMES.createCustomerSession),
-
-    getMerchant: () => callTool(MCP_TOOL_NAMES.getMerchant),
-
-    getProduct: productRef => callTool(MCP_TOOL_NAMES.getProduct, { productRef }),
-
-    // `list_plans` mirrors the HTTP route, returning `{ plans, productRef }`
-    // as structured content. Unwrap here so the transport honours its
-    // declared `Promise<Plan[]>` return type and callers (e.g. the MCP App
-    // fetch shim) don't double-wrap the response.
-    listPlans: async productRef => {
-      const result = await callTool<{ plans?: Plan[] } | Plan[]>(MCP_TOOL_NAMES.listPlans, {
-        productRef,
-      })
-      if (Array.isArray(result)) return result
-      return result.plans ?? []
-    },
-
-    getPaymentMethod: () => callTool(MCP_TOOL_NAMES.getPaymentMethod),
-
-    getUsage: () => callTool(MCP_TOOL_NAMES.getUsage),
   }
 }

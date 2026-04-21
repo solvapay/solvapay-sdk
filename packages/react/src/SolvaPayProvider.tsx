@@ -78,30 +78,53 @@ function resolveTransport(config: SolvaPayConfig | undefined): SolvaPayTransport
  * ```
  */
 export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, children }) => {
-  const [purchaseData, setPurchaseData] = useState<CustomerPurchaseData>({
-    purchases: [],
+  const initial = config?.initial
+  const [purchaseData, setPurchaseData] = useState<CustomerPurchaseData>(() => {
+    if (!initial) return { purchases: [] }
+    return {
+      // The server-side `PurchaseCheckResult.purchases` shape has looser
+      // optional fields than `PurchaseInfo`, but the runtime data is
+      // identical — the same rows flow through `transport.checkPurchase()`
+      // today. Cast once here to unify the two entry points.
+      purchases: (initial.purchase?.purchases ?? []) as unknown as CustomerPurchaseData['purchases'],
+      customerRef: initial.customerRef ?? initial.purchase?.customerRef,
+      email: initial.purchase?.email,
+      name: initial.purchase?.name,
+    }
   })
   const [loading, setLoading] = useState(false)
   const [isRefetching, setIsRefetching] = useState(false)
   const [purchaseError, setPurchaseError] = useState<Error | null>(null)
-  const [internalCustomerRef, setInternalCustomerRef] = useState<string | undefined>(undefined)
+  const [internalCustomerRef, setInternalCustomerRef] = useState<string | undefined>(
+    initial?.customerRef ?? undefined,
+  )
   const [userId, setUserId] = useState<string | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(!!initial?.customerRef)
 
-  const [creditsValue, setCreditsValue] = useState<number | null>(null)
-  const [displayCurrencyValue, setDisplayCurrencyValue] = useState<string | null>(null)
-  const [creditsPerMinorUnitValue, setCreditsPerMinorUnitValue] = useState<number | null>(null)
-  const [displayExchangeRateValue, setDisplayExchangeRateValue] = useState<number | null>(null)
+  const [creditsValue, setCreditsValue] = useState<number | null>(
+    initial?.balance?.credits ?? null,
+  )
+  const [displayCurrencyValue, setDisplayCurrencyValue] = useState<string | null>(
+    initial?.balance?.displayCurrency ?? null,
+  )
+  const [creditsPerMinorUnitValue, setCreditsPerMinorUnitValue] = useState<number | null>(
+    initial?.balance?.creditsPerMinorUnit ?? null,
+  )
+  const [displayExchangeRateValue, setDisplayExchangeRateValue] = useState<number | null>(
+    initial?.balance?.displayExchangeRate ?? null,
+  )
   const [balanceLoading, setBalanceLoading] = useState(false)
   const balanceInFlightRef = useRef(false)
-  const balanceLoadedRef = useRef(false)
+  const balanceLoadedRef = useRef(!!initial?.balance)
 
   const optimisticUntilRef = useRef(0)
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fetchBalanceRef = useRef<(() => Promise<void>) | null>(null)
 
   const inFlightRef = useRef<string | null>(null)
-  const loadedCacheKeysRef = useRef<Set<string>>(new Set())
+  const loadedCacheKeysRef = useRef<Set<string>>(
+    new Set(initial?.customerRef ? [initial.customerRef] : []),
+  )
 
   const configRef = useRef(config)
   const transportRef = useRef<SolvaPayTransport>(resolveTransport(config))
@@ -131,6 +154,13 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     }
 
     try {
+      if (!transportRef.current.getBalance) {
+        // MCP transport: balance lives on the bootstrap snapshot and
+        // refreshes via `refreshBootstrap()`. Nothing to fetch here.
+        setBalanceLoading(false)
+        balanceInFlightRef.current = false
+        return
+      }
       const data = await transportRef.current.getBalance()
       setCreditsValue(data.credits ?? null)
       setDisplayCurrencyValue(data.displayCurrency ?? null)
@@ -194,6 +224,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   )
 
   useEffect(() => {
+    // MCP mode: identity already resolved by the OAuth bridge and carried
+    // on `config.initial`. Skip the polling auth loop — nothing would
+    // change and the extra `getToken` calls add no signal.
+    if (configRef.current?.initial) {
+      setIsAuthenticated(configRef.current.initial.customerRef !== null)
+      return
+    }
+
     const detectAuth = async () => {
       const currentConfig = configRef.current
       const adapter = getAuthAdapter(currentConfig)
@@ -266,6 +304,15 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       }
 
       try {
+        if (!transportRef.current.checkPurchase) {
+          // MCP transport: purchase snapshot arrives on the bootstrap.
+          // Clear loading flags and leave the seeded state untouched.
+          setLoading(false)
+          setIsRefetching(false)
+          loadedCacheKeysRef.current.add(cacheKey)
+          inFlightRef.current = null
+          return
+        }
         const data = await transportRef.current.checkPurchase()
 
         if (data.customerRef) {
@@ -316,6 +363,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     await fetchPurchaseRef.current(true)
   }, [])
 
+  const refreshBootstrap = useCallback(async () => {
+    await Promise.all([refetchPurchase(), fetchBalanceRef.current?.() ?? Promise.resolve()])
+  }, [refetchPurchase])
+
   const cancelRenewal = useCallback(
     async (params: { purchaseRef: string; reason?: string }): Promise<CancelResult> => {
       const result = await transportRef.current.cancelRenewal(params)
@@ -345,8 +396,18 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     [refetchPurchase],
   )
 
+  const hydratedFromInitialRef = useRef(!!initial)
   useEffect(() => {
     inFlightRef.current = null
+
+    // In MCP mode the initial snapshot is authoritative — skip the
+    // first-mount `fetchPurchase` so we don't fire `check_purchase` (the
+    // tool may not exist after Phase 2c) and so refetches after
+    // mutations flip `isRefetching` rather than `loading`.
+    if (hydratedFromInitialRef.current) {
+      hydratedFromInitialRef.current = false
+      return
+    }
 
     if (isAuthenticated || internalCustomerRef) {
       fetchPurchase()
@@ -441,6 +502,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       customerRef: purchaseData.customerRef || internalCustomerRef,
       updateCustomerRef,
       balance,
+      refreshBootstrap,
       _config: configRef.current,
     }),
     [
@@ -456,6 +518,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       internalCustomerRef,
       updateCustomerRef,
       balance,
+      refreshBootstrap,
     ],
   )
 

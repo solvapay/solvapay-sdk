@@ -27,8 +27,10 @@ export type { McpToolName } from '@solvapay/mcp'
 export { useStripeProbe } from './useStripeProbe'
 export type { StripeProbeState } from './useStripeProbe'
 
-export { fetchMcpBootstrap, createMcpFetch } from './bootstrap'
+export { fetchMcpBootstrap } from './bootstrap'
 export type { McpBootstrap, McpView, McpAppBootstrapLike } from './bootstrap'
+
+export { seedMcpCaches } from './cache-seed'
 
 export { McpApp, McpViewRouter } from './McpApp'
 export type {

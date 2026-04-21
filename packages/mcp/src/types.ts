@@ -10,7 +10,50 @@
  */
 
 import type { ZodTypeAny } from 'zod'
+import type {
+  CustomerBalanceResult,
+  GetUsageResult,
+  PaymentMethodInfo,
+  PurchaseCheckResult,
+  SdkMerchantResponse,
+  SdkProductResponse,
+  components,
+} from '@solvapay/server'
 import type { MCP_TOOL_NAMES } from './tool-names'
+
+/**
+ * Merchant identity surfaced on every `BootstrapPayload`. Structural
+ * alias for the server's `SdkMerchantResponse` so the React shell can
+ * hydrate `<MandateText>` and the rest of the trust-signal surface
+ * without an extra fetch.
+ */
+export type BootstrapMerchant = SdkMerchantResponse
+
+/**
+ * Product projection surfaced on every `BootstrapPayload`. Structural
+ * alias for the server's `SdkProductResponse`.
+ */
+export type BootstrapProduct = SdkProductResponse
+
+/**
+ * Plan projection surfaced on every `BootstrapPayload`. Structural
+ * alias for the generated `Plan` schema so the embedded checkout can
+ * mount its plan picker from the snapshot.
+ */
+export type BootstrapPlan = components['schemas']['Plan']
+
+/**
+ * Per-customer snapshot surfaced on every `BootstrapPayload`. Null when
+ * unauthenticated; individual fields are null when the corresponding
+ * sub-read errored or doesn't apply.
+ */
+export interface BootstrapCustomer {
+  ref: string
+  purchase: PurchaseCheckResult | null
+  paymentMethod: PaymentMethodInfo | null
+  balance: CustomerBalanceResult | null
+  usage: GetUsageResult | null
+}
 
 /**
  * MCP tool call result — a structural subset of the official SDK's
@@ -104,6 +147,12 @@ export interface SolvaPayMcpPaywallContent {
  * React MCP App shell to render the right view. Single source of truth —
  * the react bootstrap (`@solvapay/react/mcp`) imports this type so field
  * renames can't silently drift between server and client.
+ *
+ * Product-scoped fields (`merchant`, `product`, `plans`) are always
+ * present so the shell can render without firing follow-up read tools.
+ * `customer` is `null` when the call is unauthenticated; each nested
+ * field is `null` when the corresponding sub-read errored or doesn't
+ * apply (e.g. `paymentMethod: null` when no card is on file).
  */
 export interface BootstrapPayload {
   view: SolvaPayMcpViewKind
@@ -112,6 +161,10 @@ export interface BootstrapPayload {
   returnUrl: string
   /** Only set for the `open_paywall` branch. */
   paywall?: SolvaPayMcpPaywallContent
+  merchant: BootstrapMerchant
+  product: BootstrapProduct
+  plans: BootstrapPlan[]
+  customer: BootstrapCustomer | null
 }
 
 /**
@@ -154,24 +207,41 @@ export interface SolvaPayResourceDescriptor {
 }
 
 /**
- * View → open_* tool map, derived from `MCP_TOOL_NAMES` so a new view
+ * View → intent-tool map, derived from `MCP_TOOL_NAMES` so a new view
  * requires exactly one edit across the entire ecosystem.
+ *
+ * `paywall` has no dedicated intent tool — the paywall response carries
+ * the bootstrap payload directly (`paywallToolResult` merges it into
+ * `structuredContent`), so the shell renders the paywall view without
+ * re-invoking a tool.
  */
-export const OPEN_TOOL_FOR_VIEW = {
-  checkout: 'open_checkout',
-  account: 'open_account',
-  topup: 'open_topup',
-  activate: 'open_plan_activation',
-  paywall: 'open_paywall',
-  usage: 'open_usage',
-} as const satisfies Record<SolvaPayMcpViewKind, (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]>
+export const TOOL_FOR_VIEW = {
+  checkout: 'upgrade',
+  account: 'manage_account',
+  topup: 'topup',
+  activate: 'activate_plan',
+  usage: 'check_usage',
+} as const satisfies Partial<
+  Record<SolvaPayMcpViewKind, (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]>
+>
 
 /**
- * Inverse of `OPEN_TOOL_FOR_VIEW` — `open_*` tool name → view kind.
+ * Inverse of `TOOL_FOR_VIEW` — intent-tool name → view kind.
  */
-export const VIEW_FOR_OPEN_TOOL: Record<string, SolvaPayMcpViewKind> = Object.fromEntries(
-  (Object.entries(OPEN_TOOL_FOR_VIEW) as [SolvaPayMcpViewKind, string][]).map(([view, tool]) => [
+export const VIEW_FOR_TOOL: Record<string, SolvaPayMcpViewKind> = Object.fromEntries(
+  (Object.entries(TOOL_FOR_VIEW) as [SolvaPayMcpViewKind, string][]).map(([view, tool]) => [
     tool,
     view,
   ]),
 )
+
+/**
+ * @deprecated Use `TOOL_FOR_VIEW`. Kept as an alias so the rename lands
+ * without a simultaneous import update across the ecosystem.
+ */
+export const OPEN_TOOL_FOR_VIEW = TOOL_FOR_VIEW
+
+/**
+ * @deprecated Use `VIEW_FOR_TOOL`.
+ */
+export const VIEW_FOR_OPEN_TOOL = VIEW_FOR_TOOL

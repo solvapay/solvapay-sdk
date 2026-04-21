@@ -35,10 +35,16 @@ export type { McpToolName } from './tool-names'
 export {
   OPEN_TOOL_FOR_VIEW,
   SOLVAPAY_MCP_VIEW_KINDS,
+  TOOL_FOR_VIEW,
   VIEW_FOR_OPEN_TOOL,
+  VIEW_FOR_TOOL,
 } from './types'
 export type {
+  BootstrapCustomer,
+  BootstrapMerchant,
   BootstrapPayload,
+  BootstrapPlan,
+  BootstrapProduct,
   McpAdapterOptions,
   McpToolExtra,
   PaywallToolResult,
@@ -62,7 +68,7 @@ export {
 export type { BuildSolvaPayRequestOptions } from './helpers'
 
 // ---- Paywall envelope builders ----
-export { PAYWALL_BOOTSTRAP_TOOL_NAME, buildPaywallUiMeta } from './paywall-meta'
+export { buildPaywallUiMeta } from './paywall-meta'
 export type { PaywallUiMeta, PaywallUiMetaInput } from './paywall-meta'
 
 export { paywallToolResult } from './paywallToolResult'
@@ -77,6 +83,12 @@ export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,
 } from './descriptors'
+
+export { createBuildBootstrapPayload } from './bootstrap-payload'
+export type {
+  BuildBootstrapPayloadFn,
+  CreateBuildBootstrapPayloadOptions,
+} from './bootstrap-payload'
 
 export { buildPayableHandler } from './payable-handler'
 export type { BuildPayableHandlerContext } from './payable-handler'

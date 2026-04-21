@@ -21,10 +21,11 @@ import { SolvaPayProvider } from '../SolvaPayProvider'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {
   fetchMcpBootstrap,
-  createMcpFetch,
   type McpBootstrap,
   type McpAppBootstrapLike,
 } from './bootstrap'
+import { seedMcpCaches } from './cache-seed'
+import type { Merchant, Plan, Product, SolvaPayProviderInitial } from '../types'
 import {
   McpAccountView,
   type McpAccountViewProps,
@@ -180,7 +181,20 @@ export function McpApp({
   }, [app])
 
   const transport = useMemo(() => createMcpAppAdapter(app), [app])
-  const mcpFetch = useMemo(() => createMcpFetch(transport), [transport])
+
+  const initial: SolvaPayProviderInitial | undefined = useMemo(() => {
+    if (!bootstrap) return undefined
+    return {
+      customerRef: bootstrap.customer?.ref ?? null,
+      purchase: bootstrap.customer?.purchase ?? null,
+      paymentMethod: bootstrap.customer?.paymentMethod ?? null,
+      balance: bootstrap.customer?.balance ?? null,
+      usage: bootstrap.customer?.usage ?? null,
+      merchant: bootstrap.merchant as unknown as Merchant,
+      product: bootstrap.product as unknown as Product,
+      plans: bootstrap.plans as unknown as Plan[],
+    }
+  }, [bootstrap])
 
   const providerConfig = useMemo(
     () => ({
@@ -194,14 +208,21 @@ export function McpApp({
       auth: {
         adapter: {
           getToken: async () => 'mcp-session',
-          getUserId: async () => null,
+          getUserId: async () => initial?.customerRef ?? null,
         },
       },
       transport,
-      fetch: mcpFetch,
+      initial,
     }),
-    [transport, mcpFetch],
+    [transport, initial],
   )
+
+  // Seed module-level caches on every `initial` change so the provider
+  // mounts with `useMerchant` / `useProduct` / `usePlans` / `usePaymentMethod`
+  // already satisfied. Keeps the first render fetch-free.
+  useEffect(() => {
+    if (initial) seedMcpCaches(initial, providerConfig)
+  }, [initial, providerConfig])
 
   if (initError) {
     return (

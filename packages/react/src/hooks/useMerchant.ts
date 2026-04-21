@@ -20,8 +20,13 @@ function cacheKeyFor(config: SolvaPayConfig | undefined): string {
   return createTransportCacheKey(config, config?.api?.getMerchant || '/api/merchant')
 }
 
-async function fetchMerchant(config: SolvaPayConfig | undefined): Promise<Merchant> {
+async function fetchMerchant(config: SolvaPayConfig | undefined): Promise<Merchant | null> {
   const transport = config?.transport ?? createHttpTransport(config)
+  // MCP adapters omit `getMerchant` — the data arrives on `BootstrapPayload`
+  // and `seedMcpCaches` populates `merchantCache` before the hook mounts.
+  // Returning null here lets the hook fall back to whatever the cache
+  // already holds (seeded value) without flagging an error.
+  if (!transport.getMerchant) return null
   return transport.getMerchant()
 }
 
@@ -76,8 +81,15 @@ export function useMerchant(): UseMerchantReturn {
         setLoading(true)
         setError(null)
         const promise = fetchMerchant(_config)
-        merchantCache.set(key, { merchant: null, promise, timestamp: now })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        merchantCache.set(key, { merchant: null, promise: promise as Promise<Merchant>, timestamp: now })
         const m = await promise
+        // Transports without `getMerchant` (MCP adapter) return null;
+        // leave the previously-seeded cache untouched in that case.
+        if (m === null) {
+          setLoading(false)
+          return
+        }
         merchantCache.set(key, { merchant: m, promise: null, timestamp: now })
         setMerchant(m)
       } catch (err) {

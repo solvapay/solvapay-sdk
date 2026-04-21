@@ -51,7 +51,33 @@ export interface TransportCustomerSessionResult {
  * tool, and the adapter propagates that straight through.
  */
 export interface SolvaPayTransport {
-  checkPurchase: () => Promise<CustomerPurchaseData>
+  /**
+   * Read tools. HTTP transports implement these via `GET /api/*` routes.
+   * MCP adapters omit them because the data is delivered on the
+   * bootstrap payload (see `BootstrapPayload.customer` / `merchant` /
+   * `product` / `plans` in `@solvapay/mcp`). Hooks consume these via
+   * module-level caches that the MCP host seeds at mount time, so the
+   * transport path is only exercised on HTTP.
+   */
+  checkPurchase?: () => Promise<CustomerPurchaseData>
+  getBalance?: () => Promise<TransportBalanceResult>
+  getMerchant?: () => Promise<Merchant>
+  getProduct?: (productRef: string) => Promise<Product>
+  listPlans?: (productRef: string) => Promise<Plan[]>
+  /**
+   * Fetch the customer's default payment method for rendering under
+   * `<CurrentPlanCard>`. Returns `{ kind: 'none' }` when no card is on
+   * file — the SDK treats both that and a throw as "hide the section".
+   * HTTP transports implement via `GET /api/payment-method`; MCP
+   * adapters omit (the field is on the bootstrap customer snapshot).
+   */
+  getPaymentMethod?: () => Promise<PaymentMethodInfo>
+  /**
+   * Optional: fetch the authenticated customer's usage snapshot for the
+   * active usage-based plan. When omitted, `useUsage()` falls back to
+   * reading the usage field out of `checkPurchase`.
+   */
+  getUsage?: () => Promise<GetUsageResult>
 
   createPayment: (params: {
     planRef?: string
@@ -70,8 +96,6 @@ export interface SolvaPayTransport {
     currency?: string
   }) => Promise<TopupPaymentResult>
 
-  getBalance: () => Promise<TransportBalanceResult>
-
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
@@ -88,29 +112,6 @@ export interface SolvaPayTransport {
   }) => Promise<TransportCheckoutSessionResult>
 
   createCustomerSession: () => Promise<TransportCustomerSessionResult>
-
-  getMerchant: () => Promise<Merchant>
-
-  getProduct: (productRef: string) => Promise<Product>
-
-  listPlans: (productRef: string) => Promise<Plan[]>
-
-  /**
-   * Fetch the customer's default payment method for rendering under
-   * `<CurrentPlanCard>`. Returns `{ kind: 'none' }` when no card is on
-   * file — the SDK treats both that and a throw as "hide the section".
-   *
-   * Sourced from `GET /v1/sdk/payment-method` on HTTP transports and from
-   * the `get_payment_method` MCP tool on MCP adapters.
-   */
-  getPaymentMethod: () => Promise<PaymentMethodInfo>
-
-  /**
-   * Optional: fetch the authenticated customer's usage snapshot for the
-   * active usage-based plan. When omitted, `useUsage()` falls back to
-   * reading the usage field out of `checkPurchase`.
-   */
-  getUsage?: () => Promise<GetUsageResult>
 }
 
 export class UnsupportedTransportMethodError extends Error {

@@ -7,6 +7,9 @@ import type {
   ProcessPaymentResult,
   ActivatePlanResult,
   PaymentMethodInfo,
+  CustomerBalanceResult,
+  GetUsageResult,
+  PurchaseCheckResult,
 } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
 import type { PartialSolvaPayCopy } from '../i18n/types'
@@ -229,6 +232,24 @@ export interface BalanceStatus {
   adjustBalance: (credits: number) => void
 }
 
+/**
+ * Hydration seed passed by MCP App hosts so `SolvaPayProvider` can mount
+ * with cached data instead of firing per-view tool calls. Non-MCP
+ * integrators leave this undefined — all current behaviour (fetch on
+ * mount, HTTP routes) is preserved.
+ */
+export interface SolvaPayProviderInitial {
+  /** Authenticated customer ref (`customer.ref` from the bootstrap). */
+  customerRef: string | null
+  purchase: PurchaseCheckResult | null
+  paymentMethod: PaymentMethodInfo | null
+  balance: CustomerBalanceResult | null
+  usage: GetUsageResult | null
+  merchant: Merchant
+  product: Product
+  plans: Plan[]
+}
+
 export interface SolvaPayConfig {
   /**
    * API route configuration
@@ -318,6 +339,15 @@ export interface SolvaPayConfig {
    * Default: logs to console
    */
   onError?: (error: Error, context: string) => void
+
+  /**
+   * Pre-fetched seed for MCP App hosts. When provided, the provider
+   * mounts with the snapshot already applied — no `checkPurchase`,
+   * `getBalance`, `getMerchant`, `getProduct`, `getPlans`, or
+   * `getPaymentMethod` calls on first render. Non-MCP integrators leave
+   * this undefined; HTTP behaviour is unchanged.
+   */
+  initial?: SolvaPayProviderInitial
 }
 
 export interface CancelResult {
@@ -368,6 +398,13 @@ export interface SolvaPayContextValue {
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
   balance: BalanceStatus
+  /**
+   * Re-bootstrap the MCP snapshot (customer + product-scoped data).
+   * Always callable; on non-MCP transports falls back to
+   * `refetchPurchase()` + `balance.refetch()` so every caller can use
+   * the same post-mutation hook.
+   */
+  refreshBootstrap?: () => Promise<void>
   /** @internal Provider config — used by SDK hooks, not part of public API */
   _config?: SolvaPayConfig
 }

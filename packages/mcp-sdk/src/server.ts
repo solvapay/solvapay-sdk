@@ -97,7 +97,8 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     ...descriptorOptions
   } = options
 
-  const { tools, resource } = buildSolvaPayDescriptors(descriptorOptions)
+  const { tools, resource, buildBootstrapPayload } =
+    buildSolvaPayDescriptors(descriptorOptions)
   const server = new McpServer({ name: serverName, version: serverVersion })
 
   for (const tool of tools) {
@@ -139,10 +140,13 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
       // Spread `opts` *first* so an explicit `product: undefined` on
       // `opts` (shape allows it via `product?: string`) can't overwrite
-      // the `productRef` fallback below.
+      // the `productRef` fallback below. `buildBootstrap` defaults to
+      // the one the descriptors bundle already built so paywall results
+      // carry a fully-hydrated `BootstrapPayload`.
       registerPayableTool(server, name, {
         solvaPay,
         resourceUri,
+        buildBootstrap: buildBootstrapPayload,
         ...opts,
         product: opts.product ?? productRef,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

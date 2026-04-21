@@ -26,8 +26,11 @@ function cacheKeyFor(config: SolvaPayConfig | undefined): string {
 
 async function fetchPaymentMethod(
   config: SolvaPayConfig | undefined,
-): Promise<PaymentMethodInfo> {
+): Promise<PaymentMethodInfo | null> {
   const transport = config?.transport ?? createHttpTransport(config)
+  // MCP adapters omit `getPaymentMethod`; the value arrives on the
+  // bootstrap and `seedMcpCaches` seeds `paymentMethodCache`.
+  if (!transport.getPaymentMethod) return null
   return transport.getPaymentMethod()
 }
 
@@ -96,8 +99,17 @@ export function usePaymentMethod(): UsePaymentMethodReturn {
         setLoading(true)
         setError(null)
         const promise = fetchPaymentMethod(_config)
-        paymentMethodCache.set(key, { paymentMethod: null, promise, timestamp: now })
+        paymentMethodCache.set(key, {
+          paymentMethod: null,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          promise: promise as Promise<PaymentMethodInfo>,
+          timestamp: now,
+        })
         const pm = await promise
+        if (pm === null) {
+          setLoading(false)
+          return
+        }
         paymentMethodCache.set(key, { paymentMethod: pm, promise: null, timestamp: now })
         setPaymentMethod(pm)
       } catch (err) {
