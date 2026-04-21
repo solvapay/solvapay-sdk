@@ -31,6 +31,26 @@ import { useStripeProbe } from './useStripeProbe'
 // truth. Falls back to USD if the merchant fetch is pending or fails.
 const FALLBACK_TOPUP_CURRENCY = 'USD'
 
+// ISO 4217 zero-decimal currencies — minor units === major units, so the
+// major↔minor conversion factor is 1, not 100. Mirrors the SDK's internal
+// list in `packages/react/src/utils/format.ts`.
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA',
+  'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+])
+
+function minorUnitsPerMajor(currency: string): number {
+  return ZERO_DECIMAL_CURRENCIES.has(currency.toUpperCase()) ? 1 : 100
+}
+
+function toMajorUnits(amountMinor: number, currency: string): number {
+  return amountMinor / minorUnitsPerMajor(currency)
+}
+
+function toMinorUnits(amountMajor: number, currency: string): number {
+  return Math.round(amountMajor * minorUnitsPerMajor(currency))
+}
+
 type TopupViewProps = {
   publishableKey: string | null
   returnUrl: string
@@ -65,7 +85,7 @@ function EmbeddedTopup({ returnUrl, currency }: { returnUrl: string; currency: s
   const { adjustBalance, creditsPerMinorUnit } = useBalance()
 
   if (justPaidMinor != null) {
-    const displayAmount = formatCurrency(justPaidMinor / 100, currency)
+    const displayAmount = formatCurrency(toMajorUnits(justPaidMinor, currency), currency)
     return (
       <div className="checkout-card">
         <div className="account-balance-row">
@@ -92,7 +112,7 @@ function EmbeddedTopup({ returnUrl, currency }: { returnUrl: string; currency: s
   }
 
   if (committedAmountMinor != null && committedAmountMinor > 0) {
-    const displayAmount = formatCurrency(committedAmountMinor / 100, currency)
+    const displayAmount = formatCurrency(toMajorUnits(committedAmountMinor, currency), currency)
     return (
       <div className="checkout-card">
         <div className="account-balance-row">
@@ -142,7 +162,7 @@ function EmbeddedTopup({ returnUrl, currency }: { returnUrl: string; currency: s
         <AmountPicker.Custom className="topup-amount-custom" />
         <AmountPicker.Confirm
           className="hosted-button"
-          onConfirm={amount => setCommittedAmountMinor(Math.round(amount * 100))}
+          onConfirm={amount => setCommittedAmountMinor(toMinorUnits(amount, currency))}
         >
           Continue
         </AmountPicker.Confirm>
