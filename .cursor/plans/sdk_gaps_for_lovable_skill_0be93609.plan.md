@@ -38,7 +38,7 @@ isProject: false
 
 The [mcp-app-checkout preview skill PR #5](https://github.com/solvapay/skills/pull/5) shipped without SDK changes because the MCP App flow can work around preview-only gaps in the skill doc. The forthcoming `lovable-checkout` skill cannot — it's pasted into Lovable's chat to produce working code on the first turn. Any gap in the SDK becomes a gap in what Lovable generates.
 
-Confirmed from [`packages/react/package.json`](/Users/tommy/projects/solvapay/solvapay-sdk/packages/react/package.json) and [`packages/react/src/styles.css`](/Users/tommy/projects/solvapay/solvapay-sdk/packages/react/src/styles.css):
+Confirmed from [`packages/react/package.json`](packages/react/package.json) and [`packages/react/src/styles.css`](packages/react/src/styles.css):
 
 - React peer dep already `^18.2.0 || ^19.0.0` — no change needed.
 - `styles.css` is plain CSS (no `@layer` / `@tailwind` / `@import`) — should coexist with Tailwind v3 and v4 preflight; needs a loading-order callout (gap6a) and an optional `@layer` wrap (gap6b, deferred).
@@ -59,11 +59,11 @@ Confirmed from [`packages/react/package.json`](/Users/tommy/projects/solvapay/so
 
 ## Gap 1 — Tailwind v3 + v4 setup section in README
 
-Current state: [`examples/tailwind-checkout`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/tailwind-checkout) and [`examples/shadcn-checkout`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/shadcn-checkout) both use Tailwind v4's config-less `@import "tailwindcss"` syntax. Lovable's stack is Tailwind v3.4.17 with classic `tailwind.config.ts`. Pasting the current README into Lovable would produce v4 syntax that breaks.
+Current state: [`examples/tailwind-checkout`](examples/tailwind-checkout) and [`examples/shadcn-checkout`](examples/shadcn-checkout) both use Tailwind v4's config-less `@import "tailwindcss"` syntax. Lovable's stack is Tailwind v3.4.17 with classic `tailwind.config.ts`. Pasting the current README into Lovable would produce v4 syntax that breaks.
 
 ### Work
 
-Add a **"Tailwind setup"** section to [`packages/react/README.md`](/Users/tommy/projects/solvapay/solvapay-sdk/packages/react/README.md). Insert before the "Golden path" section, after "Peer Dependencies".
+Add a **"Tailwind setup"** section to [`packages/react/README.md`](packages/react/README.md). Insert before the "Golden path" section, after "Peer Dependencies".
 
 Structure:
 
@@ -137,7 +137,7 @@ This example is the **primary** reference for the `lovable-checkout` skill — t
 - `react-router-dom@^6`
 - `@supabase/supabase-js@^2`
 - `@solvapay/react` + `@solvapay/react-supabase` (workspace:\* locally; `@preview` tag when pasted into Lovable)
-- Backend: reuse [`examples/supabase-edge`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/supabase-edge). No duplication.
+- Backend: reuse [`examples/supabase-edge`](examples/supabase-edge). No duplication.
 
 ### File tree
 
@@ -342,7 +342,7 @@ VITE_SUPABASE_ANON_KEY=<from `supabase status`>
 
 ## Gap 3 — Preview version hygiene
 
-Current state per [`sdk_headless_v2_sdk-only_d067ca0f.plan.md`](/Users/tommy/projects/solvapay/solvapay-frontend/.cursor/plans/sdk_headless_v2_sdk-only_d067ca0f.plan.md): `1.0.9-preview.1` is the orphaned preview published without primitives. `@preview` dist-tag points at `1.0.8-preview.4`+ (fresh track above `1.0.7` stable).
+Current state per [`sdk_headless_v2_sdk-only_d067ca0f.plan.md`](.cursor/plans/sdk_headless_v2_sdk-only_d067ca0f.plan.md): `1.0.9-preview.1` is the orphaned preview published without primitives. `@preview` dist-tag points at `1.0.8-preview.4`+ (fresh track above `1.0.7` stable).
 
 Problem for Lovable: Lovable's starter template pins `@solvapay/react@1.0.9-preview.1` exactly. `npm install` gives them the broken build. `npm view @solvapay/react` shows `1.0.9-preview.1` as highest version, confusing humans and agents.
 
@@ -370,13 +370,13 @@ Deprecates across 7 packages that got `1.0.9-preview.1`. `@solvapay/supabase` ne
 
 ## Gap 4 — Supabase Edge + `npm:@preview` specifier resolution
 
-Current state: [`examples/supabase-edge/supabase/functions/deno.json`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/supabase-edge/supabase/functions/deno.json) maps `"@solvapay/supabase": "npm:@solvapay/supabase"` — resolves to `@latest` (currently `1.0.1` for supabase pkg, pre-primitives). The Lovable skill needs `@preview` end-to-end.
+Current state: [`examples/supabase-edge/supabase/functions/deno.json`](examples/supabase-edge/supabase/functions/deno.json) maps `"@solvapay/supabase": "npm:@solvapay/supabase"` — resolves to `@latest` (currently `1.0.1` for supabase pkg, pre-primitives). The Lovable skill needs `@preview` end-to-end.
 
 ### Work
 
 1. **Spike**: in a scratch Supabase project, set `deno.json` to `"@solvapay/supabase": "npm:@solvapay/supabase@preview"` and invoke `list-plans`. Verify function cold-starts and responds.
 2. **If it works**: update `examples/supabase-edge/supabase/functions/deno.json` to append `@preview` on all four imports. Commit.
-3. **If it doesn't work**: do NOT pivot to Gap 3 Option B (semver-republish). Instead, flag to [`lovable-checkout_preview_skill_0936277f.plan.md`](/Users/tommy/projects/solvapay/solvapay-frontend/.cursor/plans/lovable-checkout_preview_skill_0936277f.plan.md) that the Lovable skill must defer until the stable cut and update the skill's blocker section.
+3. **If it doesn't work**: do NOT pivot to Gap 3 Option B (semver-republish). Instead, flag to [`lovable-checkout_preview_skill_0936277f.plan.md`](https://github.com/solvapay/solvapay-frontend/blob/dev/.cursor/plans/lovable-checkout_preview_skill_0936277f.plan.md) that the Lovable skill must defer until the stable cut and update the skill's blocker section.
 4. **CI**: add a GitHub Actions job to the sdk repo that deploys `examples/supabase-edge` against a disposable Supabase project with `@preview` in the import map, invokes `list-plans`, and asserts HTTP 200 + a well-formed response. Runs on every `examples/supabase-edge/**` change.
 
 ### Acceptance
@@ -390,7 +390,7 @@ Current state: [`examples/supabase-edge/supabase/functions/deno.json`](/Users/to
 
 ## Gap 5 — Supabase Edge example uses the preview tag
 
-Current state: [`examples/supabase-edge/README.md`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/supabase-edge/README.md) documents `npm:@solvapay/supabase` without a tag.
+Current state: [`examples/supabase-edge/README.md`](examples/supabase-edge/README.md) documents `npm:@solvapay/supabase` without a tag.
 
 ### Work
 
@@ -448,7 +448,7 @@ Gap 6a's import-order rule is sufficient for Lovable. Revisit this spike after t
 
 ## Gap 7 — PR 8 bundle smoke CI includes `spa-checkout`
 
-Current state: [`sdk_headless_v2_sdk-only_d067ca0f.plan.md`](/Users/tommy/projects/solvapay/solvapay-frontend/.cursor/plans/sdk_headless_v2_sdk-only_d067ca0f.plan.md) PR 8 plans a "non-Next bundle smoke (Vite + Remix)". `examples/spa-checkout` is the realistic Vite target — richer than a toy importer.
+Current state: [`sdk_headless_v2_sdk-only_d067ca0f.plan.md`](.cursor/plans/sdk_headless_v2_sdk-only_d067ca0f.plan.md) PR 8 plans a "non-Next bundle smoke (Vite + Remix)". `examples/spa-checkout` is the realistic Vite target — richer than a toy importer.
 
 ### Work
 

@@ -42,9 +42,9 @@ isProject: false
 
 ## Why hello MCP "works" but Supabase Edge doesn't
 
-Both implementations use `@solvapay/server`'s [`createMcpOAuthBridge`](/Users/tommy/projects/solvapay/solvapay-sdk/packages/server/src/mcp/oauth-bridge.ts). As shipped, the SDK produces a discovery doc that **already violates RFC 8414 §3.3** (issuer must match the metadata URL):
+Both implementations use `@solvapay/server`'s [`createMcpOAuthBridge`](packages/server/src/mcp/oauth-bridge.ts). As shipped, the SDK produces a discovery doc that **already violates RFC 8414 §3.3** (issuer must match the metadata URL):
 
-```85:103:/Users/tommy/projects/solvapay/solvapay-sdk/packages/server/src/mcp/oauth-bridge.ts
+```85:103:packages/server/src/mcp/oauth-bridge.ts
 export function getOAuthAuthorizationServerResponse({
   apiBaseUrl,
   productRef,
@@ -92,7 +92,7 @@ sequenceDiagram
     Client->>MCP: POST /mcp (Bearer)
 ```
 
-Key point: `/authorize` and `/token` in the backend already resolve product context from `client_id` alone (see [authorization-server.controller.ts](/Users/tommy/projects/solvapay/solvapay-backend/src/auth/controllers/customer/authorization-server.controller.ts)), so `product_ref` only needs to be injected at DCR.
+Key point: `/authorize` and `/token` in the backend already resolve product context from `client_id` alone (see [authorization-server.controller.ts](https://github.com/solvapay/solvapay-backend/blob/main/src/auth/controllers/customer/authorization-server.controller.ts)), so `product_ref` only needs to be injected at DCR.
 
 ## Changes
 
@@ -131,12 +131,12 @@ Works unchanged since it reads `registration_endpoint` from the metadata — whi
 
 ### 5. SDK docs
 
-- [`docs/guides/mcp.mdx`](/Users/tommy/projects/solvapay/solvapay-sdk/docs/guides/mcp.mdx): update the OAuth bridge section to note that all OAuth endpoints are now served from the MCP origin and the bridge fully proxies DCR/authorize/token.
-- [`examples/mcp-oauth-bridge/README.md`](/Users/tommy/projects/solvapay/solvapay-sdk/examples/mcp-oauth-bridge/README.md): update the "Endpoints" list and remove the outdated note about backend-hosted discovery inference.
+- [`docs/guides/mcp.mdx`](docs/guides/mcp.mdx): update the OAuth bridge section to note that all OAuth endpoints are now served from the MCP origin and the bridge fully proxies DCR/authorize/token.
+- [`examples/mcp-oauth-bridge/README.md`](examples/mcp-oauth-bridge/README.md): update the "Endpoints" list and remove the outdated note about backend-hosted discovery inference.
 
 ### 6. Keep the backend `.well-known/*` fix in place
 
-The recently-added [WellKnownController](/Users/tommy/projects/solvapay/solvapay-backend/src/mcp/controllers/well-known.controller.ts) at the API root stays. It doesn't conflict with Option A and remains useful for any integrator who still points `authorization_servers` directly at SolvaPay. No backend changes needed for this plan.
+The recently-added [WellKnownController](https://github.com/solvapay/solvapay-backend/blob/main/src/mcp/controllers/well-known.controller.ts) at the API root stays. It doesn't conflict with Option A and remains useful for any integrator who still points `authorization_servers` directly at SolvaPay. No backend changes needed for this plan.
 
 ## Verification
 
