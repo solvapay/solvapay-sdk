@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
-import type { Plan, PrefillCustomer } from '../types'
+import { buildRequestHeaders } from '../utils/headers'
+import type { Plan, PrefillCustomer, SolvaPayConfig } from '../types'
 
 export interface UseCheckoutReturn {
   loading: boolean
@@ -31,11 +32,12 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  */
 async function resolvePlanRef(
   productRef: string,
-  fetchFn: typeof fetch,
-  headers: HeadersInit,
-  listPlansRoute: string,
+  config: SolvaPayConfig | undefined,
 ): Promise<string> {
+  const listPlansRoute = config?.api?.listPlans || '/api/list-plans'
   const url = `${listPlansRoute}?productRef=${encodeURIComponent(productRef)}`
+  const fetchFn = config?.fetch || fetch
+  const { headers } = await buildRequestHeaders(config)
   const res = await fetchFn(url, { method: 'GET', headers })
 
   if (!res.ok) {
@@ -127,8 +129,7 @@ export function useCheckout(options: {
       let effectivePlanRef = planRef
 
       if (!effectivePlanRef && productRef) {
-        const listPlansRoute = _config?.api?.listPlans || '/api/list-plans'
-        effectivePlanRef = await resolvePlanRef(productRef, fetch, {}, listPlansRoute)
+        effectivePlanRef = await resolvePlanRef(productRef, _config)
         setResolvedPlanRef(effectivePlanRef)
       }
 

@@ -159,7 +159,10 @@ describe('createMcpAppAdapter', () => {
   })
 
   it('forwards a single-string argument (listPlans, getProduct) under its documented key', async () => {
-    const app = createMockApp(() => ({ structuredContent: [] }))
+    const app = createMockApp(record => ({
+      structuredContent:
+        record.name === MCP_TOOL_NAMES.listPlans ? { plans: [], productRef: 'prd_api' } : {},
+    }))
     const transport = createMcpAppAdapter(app)
 
     await transport.listPlans?.('prd_api')
@@ -173,5 +176,20 @@ describe('createMcpAppAdapter', () => {
       name: MCP_TOOL_NAMES.getProduct,
       args: { productRef: 'prd_api' },
     })
+  })
+
+  it('unwraps listPlans structured content to a Plan[] matching the declared return type', async () => {
+    const plans = [
+      { reference: 'pln_free', name: 'Free', isActive: true },
+      { reference: 'pln_pro', name: 'Pro', isActive: true, default: true },
+    ]
+    const app = createMockApp(() => ({
+      structuredContent: { plans, productRef: 'prd_api' },
+    }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.listPlans?.('prd_api')
+
+    expect(result).toEqual(plans)
   })
 })

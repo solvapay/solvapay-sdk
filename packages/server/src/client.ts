@@ -249,6 +249,24 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return res.json()
     },
 
+    // GET: /v1/sdk/platform-config
+    async getPlatformConfig() {
+      const url = `${base}/v1/sdk/platform-config`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get platform config failed (${res.status}): ${error}`)
+      }
+
+      return res.json()
+    },
+
     // GET: /v1/sdk/products/{productRef}
     async getProduct(productRef) {
       const url = `${base}/v1/sdk/products/${encodeURIComponent(productRef)}`

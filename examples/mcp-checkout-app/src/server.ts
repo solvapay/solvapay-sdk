@@ -8,13 +8,18 @@ import {
   checkPurchaseCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  createPaymentIntentCore,
+  getMerchantCore,
   getPaymentMethodCore,
+  getProductCore,
   isErrorResult,
+  listPlansCore,
+  processPaymentIntentCore,
   syncCustomerCore,
   type McpToolExtra,
 } from '@solvapay/server'
 import { MCP_TOOL_NAMES } from '@solvapay/react/mcp'
-import { solvaPay, solvapayProductRef } from './config'
+import { solvaPay, solvapayApiOrigin, solvapayProductRef } from './config'
 
 const DIST_DIR = import.meta.filename.endsWith('.ts')
   ? path.join(import.meta.dirname, '../dist')
@@ -224,7 +229,39 @@ export function createServer(): McpServer {
       _meta: toolMeta,
     },
     async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
-      traceTool('open_checkout', args, extra, async () => toolResult({ productRef: solvapayProductRef })),
+      traceTool('open_checkout', args, extra, async () => {
+        // Fetch SolvaPay's platform Stripe pk (resolved sandbox/live against
+        // the authenticated provider on the backend) so the client can prime
+        // `useStripeProbe`. Safe to forward — publishable keys are browser-
+        // visible by design, and `create_payment_intent` returns the same
+        // value for the actual confirm call. On any failure (backend down,
+        // missing config, older backend without the endpoint) we fall back
+        // to `null` so the UI probe reports `'blocked'` and the hosted-
+        // button card renders. See the SDK's Connect rationale: this is
+        // SolvaPay's *platform* pk; it pairs with the connected `accountId`
+        // returned from `create_payment_intent`, not a merchant's own pk.
+        let stripePublishableKey: string | null = null
+        console.warn(
+          '[open_checkout debug] getPlatformConfig typeof:',
+          typeof solvaPay.apiClient.getPlatformConfig,
+          'keys:',
+          Object.keys(solvaPay.apiClient).slice(0, 5),
+        )
+        try {
+          const platform = await solvaPay.apiClient.getPlatformConfig?.()
+          console.warn('[open_checkout debug] platform result:', JSON.stringify(platform))
+          stripePublishableKey = platform?.stripePublishableKey ?? null
+        } catch (err) {
+          console.warn(
+            '[mcp-checkout-app] getPlatformConfig failed; falling back to hosted checkout',
+            err,
+          )
+        }
+        return toolResult({
+          productRef: solvapayProductRef,
+          stripePublishableKey,
+        })
+      }),
   )
 
   registerAppTool(
@@ -328,6 +365,145 @@ export function createServer(): McpServer {
 
   registerAppTool(
     server,
+    MCP_TOOL_NAMES.createPayment,
+    {
+      description:
+        'Create a Stripe payment intent for the authenticated customer to purchase a plan. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI. Requires the MCP host to permit Stripe domains via declared CSP — the app falls back to create_checkout_session when the embedded path is blocked.',
+      inputSchema: {
+        planRef: z.string(),
+        productRef: z.string(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.createPayment, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const planRef = typeof args.planRef === 'string' ? args.planRef : ''
+        const productRef =
+          typeof args.productRef === 'string' && args.productRef
+            ? args.productRef
+            : solvapayProductRef
+
+        const result = await createPaymentIntentCore(
+          buildRequest(extra, { method: 'POST' }),
+          { planRef, productRef },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.processPayment,
+    {
+      description:
+        'Process a Stripe payment intent after client-side confirmation and create the SolvaPay purchase. Call after confirmPayment resolves to short-circuit webhook latency.',
+      inputSchema: {
+        paymentIntentId: z.string(),
+        productRef: z.string(),
+        planRef: z.string().optional(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.processPayment, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const paymentIntentId = typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const productRef =
+          typeof args.productRef === 'string' && args.productRef
+            ? args.productRef
+            : solvapayProductRef
+        const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
+
+        const result = await processPaymentIntentCore(
+          buildRequest(extra, { method: 'POST' }),
+          { paymentIntentId, productRef, planRef },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.listPlans,
+    {
+      description:
+        "List the active plans for a product. Used by the embedded checkout to resolve a plan reference when only productRef is known, and by <PricingSelector> to render the plan list.",
+      inputSchema: {
+        productRef: z.string(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.listPlans, args, extra, async () => {
+        const productRef =
+          typeof args.productRef === 'string' && args.productRef
+            ? args.productRef
+            : solvapayProductRef
+
+        const result = await listPlansCore(
+          buildRequest(extra, { query: { productRef } }),
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.getProduct,
+    {
+      description:
+        'Fetch a single product by reference. Used by the embedded checkout summary and by <CheckoutSummary>.',
+      inputSchema: {
+        productRef: z.string(),
+      },
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.getProduct, args, extra, async () => {
+        const productRef =
+          typeof args.productRef === 'string' && args.productRef
+            ? args.productRef
+            : solvapayProductRef
+
+        const result = await getProductCore(
+          buildRequest(extra, { query: { productRef } }),
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
+    MCP_TOOL_NAMES.getMerchant,
+    {
+      description:
+        "Return the merchant identity (name, legal name, support contact) used by <MandateText> and trust signals in the embedded checkout.",
+      inputSchema: {},
+      _meta: toolMeta,
+    },
+    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+      traceTool(MCP_TOOL_NAMES.getMerchant, args, extra, async () => {
+        const result = await getMerchantCore(buildRequest(extra), { solvaPay })
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  )
+
+  registerAppTool(
+    server,
     MCP_TOOL_NAMES.createCustomerSession,
     {
       description:
@@ -348,11 +524,49 @@ export function createServer(): McpServer {
       }),
   )
 
+  // CSP the app needs so Stripe Elements can load inside the host sandbox.
+  // Hosts that implement the MCP Apps spec honor these lists when building
+  // the iframe's Content-Security-Policy. Declare them on both the
+  // resource metadata (listing-level default) and the content item
+  // (what hosts actually read at render time) so compliant hosts like
+  // basic-host / ChatGPT see a complete policy.
+  //
+  // Keep resourceDomains / connectDomains / frameDomains aligned with
+  // Stripe's recommended allowlist — trimming any of them risks blocking
+  // the nested card-input iframes Stripe serves from js.stripe.com.
+  const appCsp = {
+    resourceDomains: [
+      'https://js.stripe.com',
+      'https://*.stripe.com',
+      'https://b.stripecdn.com',
+    ],
+    connectDomains: [
+      'https://api.stripe.com',
+      'https://m.stripe.com',
+      'https://r.stripe.com',
+      'https://q.stripe.com',
+      'https://errors.stripe.com',
+      solvapayApiOrigin,
+    ],
+    frameDomains: [
+      'https://js.stripe.com',
+      'https://hooks.stripe.com',
+    ],
+  }
+
   registerAppResource(
     server,
     resourceUri,
     resourceUri,
-    { mimeType: RESOURCE_MIME_TYPE },
+    {
+      mimeType: RESOURCE_MIME_TYPE,
+      _meta: {
+        ui: {
+          csp: appCsp,
+          prefersBorder: true,
+        },
+      },
+    },
     async (): Promise<ReadResourceResult> => {
       const html = await fs.readFile(path.join(DIST_DIR, 'mcp-app.html'), 'utf-8')
       return {
@@ -361,6 +575,12 @@ export function createServer(): McpServer {
             uri: resourceUri,
             mimeType: RESOURCE_MIME_TYPE,
             text: html,
+            _meta: {
+              ui: {
+                csp: appCsp,
+                prefersBorder: true,
+              },
+            },
           },
         ],
       }

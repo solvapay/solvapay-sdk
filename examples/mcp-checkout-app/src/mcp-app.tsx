@@ -7,6 +7,7 @@ import {
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
+import { loadStripe } from '@stripe/stripe-js'
 import {
   CurrentPlanCard,
   SolvaPayProvider,
@@ -14,18 +15,25 @@ import {
   usePurchaseStatus,
   useSolvaPay,
 } from '@solvapay/react'
+import { PaymentForm, PlanSelector, usePlanSelector } from '@solvapay/react/primitives'
 import '@solvapay/react/styles.css'
-import { createMcpAppAdapter, fetchOpenCheckoutProductRef } from './mcp-adapter'
+import { createMcpAppAdapter, createMcpFetch, fetchOpenCheckoutProductRef } from './mcp-adapter'
 import './mcp-app.css'
 
 const app = new App({ name: 'SolvaPay checkout', version: '1.0.0' })
 const transport = createMcpAppAdapter(app)
+const mcpFetch = createMcpFetch(transport)
 
 // Keep polling fast enough that the UI feels responsive after the user
 // completes payment in the other tab, but not so fast that we hammer the MCP
 // server if the user wanders off.
 const POLL_INTERVAL_MS = 3_000
 const AWAITING_TIMEOUT_MS = 10 * 60 * 1000
+
+// Stripe.js takes ~1-2s to load on a warm cache. 3s is long enough to
+// distinguish a slow CDN from a CSP-blocked host without making the user
+// stare at a spinner.
+const STRIPE_PROBE_TIMEOUT_MS = 3_000
 
 // `SolvaPayProvider` short-circuits its fetch pipeline when there's no auth
 // token, which means our `checkPurchase` override would never run. In the
@@ -52,6 +60,62 @@ function applyContext(ctx: McpUiHostContext | undefined) {
     root.style.paddingBottom = `${16 + insets.bottom}px`
     root.style.paddingLeft = `${16 + insets.left}px`
   }
+}
+
+type ProbeState = 'loading' | 'ready' | 'blocked'
+
+/**
+ * Probe whether `@stripe/stripe-js` can mount inside the current host
+ * sandbox. Compliant hosts (basic-host, ChatGPT) honour the declared
+ * `_meta.ui.csp.frameDomains` and Stripe loads normally; non-compliant
+ * hosts (Claude today — see anthropics/claude-ai-mcp#40) hardcode
+ * `frame-src 'self' blob: data:` and the nested card iframe is refused.
+ *
+ * We race `loadStripe()` against a 3s timeout — in the blocked case
+ * Stripe.js either throws a ContentSecurityPolicy error or the promise
+ * simply never resolves, and the timeout wins.
+ *
+ * Note on the key: `publishableKey` is SolvaPay's **platform** Stripe
+ * pk (same one the backend returns from `create_payment_intent`). It
+ * is used here only to satisfy `loadStripe()`'s validator so we can
+ * exercise `frameDomains` — we never feed it into `confirmPayment`.
+ * The real payment flow re-fetches the pk (and, crucially, the
+ * connected `accountId`) from `create_payment_intent` and boots its
+ * own `Stripe` instance via the SDK's `useCheckout`. SolvaPay is a
+ * Stripe Connect direct-charge platform, so all browser-side Stripe
+ * calls pair the platform pk with `{ stripeAccount: acct_XXX }`; the
+ * connected merchant's own publishable key is never involved.
+ */
+function useStripeProbe(publishableKey: string | null): ProbeState {
+  const [state, setState] = useState<ProbeState>(publishableKey ? 'loading' : 'blocked')
+
+  useEffect(() => {
+    if (!publishableKey) {
+      setState('blocked')
+      return
+    }
+
+    let cancelled = false
+    setState('loading')
+
+    const timeout = new Promise<'blocked'>(resolve => {
+      window.setTimeout(() => resolve('blocked'), STRIPE_PROBE_TIMEOUT_MS)
+    })
+
+    const load = loadStripe(publishableKey)
+      .then(stripe => (stripe ? 'ready' : 'blocked'))
+      .catch(() => 'blocked' as const)
+
+    Promise.race([load, timeout]).then(result => {
+      if (!cancelled) setState(result)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [publishableKey])
+
+  return state
 }
 
 type AsyncUrlState =
@@ -273,7 +337,12 @@ const UpgradeBody = memo(function UpgradeBody({ checkout, onLaunch }: UpgradeBod
   )
 })
 
-function CheckoutBody({ productRef }: { productRef: string }) {
+/**
+ * The original hosted-button experience, kept as the probe-blocked
+ * fallback. Unchanged logic — launches SolvaPay hosted checkout in a new
+ * tab, polls `check_purchase` until the purchase flips active.
+ */
+function HostedCheckout({ productRef }: { productRef: string }) {
   const { loading, isRefetching, refetch, hasPaidPurchase, activePurchase } = usePurchase()
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
@@ -299,10 +368,6 @@ function CheckoutBody({ productRef }: { productRef: string }) {
   }, [productRef, _config])
 
   // Pre-fetch checkout session once the initial purchase fetch has completed.
-  //
-  // Customer-portal pre-fetching for the "paid" branch is now owned by
-  // `<CurrentPlanCard>` → `<UpdatePaymentMethodButton>` → the SDK's
-  // `<LaunchCustomerPortalButton>` — no local `fetchCustomerUrl` needed.
   const checkout = useHostedUrl(hasLoadedOnce, fetchCheckoutUrl, 'checkout session')
 
   const safeRefetch = useCallback(() => {
@@ -378,8 +443,7 @@ function CheckoutBody({ productRef }: { productRef: string }) {
   }, [])
 
   // Derive primitive inputs for the memoised child bodies so they skip
-  // re-renders when nothing they care about has changed (a poll that returns
-  // identical data shouldn't cause any DOM mutations inside the card).
+  // re-renders when nothing they care about has changed.
   const activeProductName = activePurchase?.productName ?? null
   const cancelledProductName = cancelledPurchase?.productName ?? null
   const cancelledEndDate = cancelledPurchase?.endDate
@@ -441,11 +505,6 @@ function CheckoutBody({ productRef }: { productRef: string }) {
     beginAwaiting,
   ])
 
-  // Initial mount: show a dedicated loading card until the first fetch
-  // finishes. After that, the outer frame below stays mounted forever and
-  // polls are invisible except for a subtle `data-refreshing` opacity dip.
-  // `loading` only goes true for the first fetch per cacheKey — subsequent
-  // polls surface via `isRefetching`, so this branch only fires once.
   if (loading) {
     return (
       <div className="checkout-card">
@@ -461,27 +520,128 @@ function CheckoutBody({ productRef }: { productRef: string }) {
   )
 }
 
-function CheckoutApp({ productRef }: { productRef: string }) {
-  const providerConfig = useMemo(
-    () => ({ auth: { adapter: mcpAuthAdapter }, transport }),
-    [],
+/**
+ * Gates `<PaymentForm.Root>` behind `PlanSelector`'s selection state.
+ *
+ * Mounting `PaymentForm.Root` immediately (before `usePlans` has loaded)
+ * would fire its init `useEffect` with `effectivePlanRef = undefined`,
+ * sending `useCheckout` into the `resolvePlanRef` path — which throws
+ * "has N active plans but none is marked as default" on products without
+ * a default. Waiting for `selectedPlanRef` (populated by
+ * `autoSelectFirstPaid` once plans resolve) skips that path entirely.
+ *
+ * The `key={selectedPlanRef}` forces a fresh `PaymentForm.Root` instance
+ * when the user picks a different card, so `useCheckout` reinitialises
+ * the PaymentIntent against the new plan instead of keeping the old
+ * `clientSecret`.
+ */
+function PaymentFormGate({
+  productRef,
+  children,
+}: {
+  productRef: string
+  children: React.ReactNode
+}) {
+  const { selectedPlanRef } = usePlanSelector()
+  if (!selectedPlanRef) return null
+  return (
+    <PaymentForm.Root
+      key={selectedPlanRef}
+      planRef={selectedPlanRef}
+      productRef={productRef}
+      requireTermsAcceptance={false}
+    >
+      {children}
+    </PaymentForm.Root>
   )
+}
+
+/**
+ * Embedded checkout body — only rendered when the Stripe probe reports
+ * `'ready'`. Reuses the SDK's `<PaymentForm>` compound primitive so card
+ * inputs mount inline as a nested `js.stripe.com` iframe (allowed by the
+ * declared CSP `frameDomains`). Post-purchase management stays hosted —
+ * the customer portal isn't embeddable today.
+ */
+function EmbeddedCheckout({ productRef }: { productRef: string }) {
+  const { loading, isRefetching, hasPaidPurchase, activePurchase } = usePurchase()
+  const { shouldShowCancelledNotice, cancelledPurchase } = usePurchaseStatus()
+
+  if (loading) {
+    return (
+      <div className="checkout-card">
+        <p>Loading purchase…</p>
+      </div>
+    )
+  }
+
+  const showManage = hasPaidPurchase && activePurchase?.productName
+  const showRepurchase = shouldShowCancelledNotice && cancelledPurchase?.productName
 
   return (
-    <SolvaPayProvider config={providerConfig}>
-      <main className="main">
-        <header className="header">
-          <h1>SolvaPay</h1>
-        </header>
-        <CheckoutBody productRef={productRef} />
-      </main>
-    </SolvaPayProvider>
+    <div className="checkout-card" data-refreshing={isRefetching ? 'true' : undefined}>
+      {showManage ? (
+        <ManageBody />
+      ) : (
+        <>
+          <h2>{showRepurchase ? 'Renew your plan' : 'Complete your purchase'}</h2>
+          <PlanSelector.Root productRef={productRef} className="solvapay-plan-selector">
+            <PlanSelector.Grid className="solvapay-plan-selector-grid">
+              <PlanSelector.Card className="solvapay-plan-selector-card">
+                <PlanSelector.CardBadge className="solvapay-plan-selector-card-badge" />
+                <PlanSelector.CardName className="solvapay-plan-selector-card-name" />
+                <PlanSelector.CardPrice className="solvapay-plan-selector-card-price" />
+                <PlanSelector.CardInterval className="solvapay-plan-selector-card-interval" />
+              </PlanSelector.Card>
+            </PlanSelector.Grid>
+            <PlanSelector.Loading className="solvapay-plan-selector-loading" />
+            <PlanSelector.Error className="solvapay-plan-selector-error" />
+            <PaymentFormGate productRef={productRef}>
+              <PaymentForm.Summary />
+              <PaymentForm.Loading />
+              <PaymentForm.PaymentElement />
+              <PaymentForm.Error />
+              <PaymentForm.MandateText />
+              <PaymentForm.SubmitButton className="hosted-button" />
+            </PaymentFormGate>
+          </PlanSelector.Root>
+        </>
+      )}
+    </div>
+  )
+}
+
+function CheckoutApp({
+  productRef,
+  publishableKey,
+}: {
+  productRef: string
+  publishableKey: string | null
+}) {
+  const probe = useStripeProbe(publishableKey)
+
+  return (
+    <main className="main">
+      <header className="header">
+        <h1>SolvaPay</h1>
+      </header>
+      {probe === 'loading' ? (
+        <div className="checkout-card">
+          <p>Loading checkout…</p>
+        </div>
+      ) : probe === 'ready' ? (
+        <EmbeddedCheckout productRef={productRef} />
+      ) : (
+        <HostedCheckout productRef={productRef} />
+      )}
+    </main>
   )
 }
 
 function Bootstrap() {
   const [ready, setReady] = useState(false)
   const [productRef, setProductRef] = useState<string | null>(null)
+  const [publishableKey, setPublishableKey] = useState<string | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -513,9 +673,10 @@ function Bootstrap() {
         await app.connect()
         applyContext(app.getHostContext())
 
-        const ref = await fetchOpenCheckoutProductRef(app)
+        const { productRef: ref, stripePublishableKey } = await fetchOpenCheckoutProductRef(app)
         if (!cancelled) {
           setProductRef(ref)
+          setPublishableKey(stripePublishableKey)
           setReady(true)
         }
       } catch (err) {
@@ -531,6 +692,11 @@ function Bootstrap() {
       window.removeEventListener('unhandledrejection', onRejection)
     }
   }, [])
+
+  const providerConfig = useMemo(
+    () => ({ auth: { adapter: mcpAuthAdapter }, transport, fetch: mcpFetch }),
+    [],
+  )
 
   if (initError) {
     return (
@@ -553,7 +719,11 @@ function Bootstrap() {
     )
   }
 
-  return <CheckoutApp productRef={productRef} />
+  return (
+    <SolvaPayProvider config={providerConfig}>
+      <CheckoutApp productRef={productRef} publishableKey={publishableKey} />
+    </SolvaPayProvider>
+  )
 }
 
 const rootEl = document.getElementById('root')

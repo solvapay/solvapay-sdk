@@ -77,6 +77,16 @@ export type PaymentMethodInfo =
  */
 export type SdkMerchantResponse = components['schemas']['SdkMerchantResponseDto']
 
+/**
+ * SDK-facing platform config (source: GET /v1/sdk/platform-config).
+ *
+ * Environment-aware platform values resolved against the authenticated
+ * provider. Primary consumer today is the MCP checkout app, which uses
+ * `stripePublishableKey` to boot Stripe.js for a CSP probe before a
+ * PaymentIntent exists.
+ */
+export type SdkPlatformConfigResponse = components['schemas']['SdkPlatformConfigResponseDto']
+
 /** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
 export type SdkProductResponse = components['schemas']['SdkProductResponse']
 
@@ -180,6 +190,15 @@ export interface SolvaPayClient {
    * used by `<MandateText>`, `<CheckoutSummary>`, and trust signals.
    */
   getMerchant?(): Promise<SdkMerchantResponse>
+
+  /**
+   * SDK-facing platform config (GET /v1/sdk/platform-config).
+   * Returns environment-aware browser-safe values (resolved sandbox/live
+   * against the authenticated provider). Primary consumer today is the
+   * MCP checkout app, which uses `stripePublishableKey` to boot Stripe.js
+   * for a CSP probe before a PaymentIntent exists.
+   */
+  getPlatformConfig?(): Promise<SdkPlatformConfigResponse>
 
   // GET: /v1/sdk/products/{productRef}
   getProduct?(productRef: string): Promise<SdkProductResponse>

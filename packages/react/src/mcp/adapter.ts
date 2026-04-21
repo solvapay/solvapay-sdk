@@ -22,6 +22,7 @@
  * message. Call sites can feature-detect by catching and matching.
  */
 
+import type { Plan } from '../types'
 import type { SolvaPayTransport } from '../transport/types'
 import { MCP_TOOL_NAMES } from './tool-names'
 
@@ -115,7 +116,17 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
 
     getProduct: productRef => callTool(MCP_TOOL_NAMES.getProduct, { productRef }),
 
-    listPlans: productRef => callTool(MCP_TOOL_NAMES.listPlans, { productRef }),
+    // `list_plans` mirrors the HTTP route, returning `{ plans, productRef }`
+    // as structured content. Unwrap here so the transport honours its
+    // declared `Promise<Plan[]>` return type and callers (e.g. the MCP App
+    // fetch shim) don't double-wrap the response.
+    listPlans: async productRef => {
+      const result = await callTool<{ plans?: Plan[] } | Plan[]>(MCP_TOOL_NAMES.listPlans, {
+        productRef,
+      })
+      if (Array.isArray(result)) return result
+      return result.plans ?? []
+    },
 
     getPaymentMethod: () => callTool(MCP_TOOL_NAMES.getPaymentMethod),
   }

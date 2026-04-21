@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/platform-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get environment-aware platform config for the authenticated provider
+         * @description Returns browser-safe platform values resolved against the provider environment. Today: the SolvaPay platform Stripe publishable key. This endpoint is the canonical home for future platform-wide, environment-gated SDK config (API version hints, feature flags, public hosted URLs) — additions land here instead of bloating /sdk/merchant (strictly provider identity) or /sdk/payment-intents (runs too late for pre-intent UI decisions).
+         */
+        get: operations["getPlatformConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/payment-intents": {
         parameters: {
             query?: never;
@@ -684,6 +704,13 @@ export interface components {
              * @example https://cdn.acme.com/logo.png
              */
             logoUrl?: string;
+        };
+        SdkPlatformConfigResponseDto: {
+            /**
+             * SolvaPay's platform Stripe publishable key for the authenticated provider's environment. Safe to expose browser-side; paired with the connected `accountId` returned from `create-payment-intent` for Stripe Connect direct charges. Omitted when not configured so callers can fall back cleanly to a hosted flow.
+             * @example pk_test_...
+             */
+            stripePublishableKey?: string;
         };
         CreatePaymentIntentDto: {
             productRef?: string;
@@ -1849,6 +1876,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    getPlatformConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdkPlatformConfigResponseDto"];
+                };
             };
         };
     };
