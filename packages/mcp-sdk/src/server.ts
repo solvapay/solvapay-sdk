@@ -88,6 +88,7 @@ function registerDescriptor(server: McpServer, tool: SolvaPayToolDescriptor): vo
       description: tool.description,
       inputSchema: tool.inputSchema,
       _meta: tool.meta,
+      ...(tool.annotations !== undefined ? { annotations: tool.annotations } : {}),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     // `SolvaPayCallToolResult` is a structural subset of the official

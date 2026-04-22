@@ -50,6 +50,10 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
     description:
       'Demo data tool — returns deterministic fake snippets for a query. Wrapped with `solvaPay.payable.mcp()` so each call consumes 1 unit of usage; when the customer runs out, the tool returns a paywall bootstrap instead of results. Pair with `/search_knowledge` for a one-keystroke exercise of the paywall.',
     schema: { query: z.string().min(1) },
+    // Explicit for docs clarity; `registerPayable` would otherwise
+    // default to `{ readOnlyHint: true, openWorldHint: true }` — the
+    // same 80% case most paywalled data tools land on.
+    annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ query }: { query: string }) => ({
       query,
       results: [
@@ -65,6 +69,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
     description:
       'Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as `search_knowledge`: one unit of usage per call, and the gate response opens the embedded top-up iframe. Use `/get_market_quote` to try the paywall on a second tool.',
     schema: { symbol: z.string().min(1).max(8) },
+    annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol }: { symbol: string }) => {
       const upper = symbol.toUpperCase()
       return {

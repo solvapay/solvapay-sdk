@@ -56,6 +56,7 @@ export type {
   SolvaPayPromptDescriptor,
   SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
+  SolvaPayToolAnnotations,
   SolvaPayToolDescriptor,
 } from './types'
 

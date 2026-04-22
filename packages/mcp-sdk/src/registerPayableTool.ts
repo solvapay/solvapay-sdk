@@ -16,6 +16,7 @@ import {
   buildPayableHandler,
   type BuildBootstrapPayloadFn,
   type McpToolExtra,
+  type SolvaPayToolAnnotations,
 } from '@solvapay/mcp'
 import type { SolvaPay } from '@solvapay/server'
 
@@ -66,6 +67,14 @@ export interface RegisterPayableToolOptions<InputSchema extends ZodRawShapeCompa
    * `resourceUri` and cannot be overridden here.
    */
   meta?: Record<string, unknown>
+  /**
+   * Portable MCP tool annotations. Defaults to
+   * `{ readOnlyHint: true, openWorldHint: true }` — sensible for a
+   * paywalled *data* tool that reads from the merchant's backend.
+   * Override for tools that mutate state (e.g. `submit_order`) with
+   * `annotations: { readOnlyHint: false, destructiveHint: true }`.
+   */
+  annotations?: SolvaPayToolAnnotations
 }
 
 /**
@@ -87,6 +96,7 @@ export function registerPayableTool<InputSchema extends ZodRawShapeCompat | AnyS
     buildBootstrap,
     getCustomerRef,
     meta,
+    annotations,
   } = options
 
   const protectedHandler = buildPayableHandler(
@@ -103,6 +113,17 @@ export function registerPayableTool<InputSchema extends ZodRawShapeCompat | AnyS
     },
   }
 
+  // Sensible default: paywalled data tools are most often read-only
+  // queries (search, fetch, quote). State-mutating merchant tools
+  // override via `annotations: { readOnlyHint: false, destructiveHint:
+  // true }`. `openWorldHint` is always true — a paywalled tool by
+  // definition talks to the merchant's backend and SolvaPay's backend.
+  const effectiveAnnotations: SolvaPayToolAnnotations = {
+    readOnlyHint: true,
+    openWorldHint: true,
+    ...annotations,
+  }
+
   return registerAppTool(
     server,
     name,
@@ -114,6 +135,7 @@ export function registerPayableTool<InputSchema extends ZodRawShapeCompat | AnyS
       ...(description !== undefined ? { description } : {}),
       ...(schema !== undefined ? { inputSchema: schema } : {}),
       _meta: toolMeta,
+      annotations: effectiveAnnotations,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>

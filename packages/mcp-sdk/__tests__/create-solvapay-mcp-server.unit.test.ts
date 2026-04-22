@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { z } from 'zod'
 import { MCP_TOOL_NAMES } from '@solvapay/mcp'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
@@ -161,5 +162,68 @@ describe('createSolvaPayMcpServer', () => {
     expect(upgrade?.description).toContain('Also available')
     expect(upgrade?.description).toContain('manage_account')
     expect(upgrade?.description).toContain('activate_plan')
+  })
+
+  describe('tool annotations', () => {
+    it('flows readOnly + idempotent annotations on manage_account', () => {
+      const { server } = buildTestServer()
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const manageAccount = registered[MCP_TOOL_NAMES.manageAccount]
+      expect(manageAccount?.annotations).toEqual({
+        readOnlyHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      })
+    })
+
+    it('flows destructive annotations on upgrade', () => {
+      const { server } = buildTestServer()
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      expect(upgrade?.annotations?.destructiveHint).toBe(true)
+      expect(upgrade?.annotations?.openWorldHint).toBe(true)
+    })
+
+    it('registerPayable defaults to readOnly + openWorld for data tools', () => {
+      const { server } = buildTestServer({
+        additionalTools: ({ registerPayable }) => {
+          registerPayable('search', {
+            product: 'prd_x',
+            schema: { q: z.string() },
+            handler: async () => ({ ok: true }),
+          })
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const search = registered['search']
+      expect(search?.annotations).toEqual({
+        readOnlyHint: true,
+        openWorldHint: true,
+      })
+    })
+
+    it('registerPayable respects explicit destructive override', () => {
+      const { server } = buildTestServer({
+        additionalTools: ({ registerPayable }) => {
+          registerPayable('submit_order', {
+            product: 'prd_x',
+            schema: { id: z.string() },
+            annotations: { readOnlyHint: false, destructiveHint: true },
+            handler: async () => ({ ok: true }),
+          })
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const submit = registered['submit_order']
+      expect(submit?.annotations).toEqual({
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: true,
+      })
+    })
   })
 })

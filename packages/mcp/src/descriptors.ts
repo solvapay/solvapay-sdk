@@ -55,8 +55,30 @@ import type {
   SolvaPayPromptDescriptor,
   SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
+  SolvaPayToolAnnotations,
   SolvaPayToolDescriptor,
 } from './types'
+
+/**
+ * All SolvaPay tools talk to the SolvaPay backend, so `openWorldHint`
+ * is universal. This helper stamps it on every annotation set and keeps
+ * each call site focused on the read/destructive/idempotent decision.
+ */
+const solvapayTool = (
+  hints: Omit<SolvaPayToolAnnotations, 'openWorldHint'>,
+): SolvaPayToolAnnotations => ({ openWorldHint: true, ...hints })
+
+/**
+ * Per-view annotation map for the intent tools registered via
+ * `pushIntentTool`. Keep aligned with `TOOL_FOR_VIEW`.
+ */
+const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> = {
+  account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+  usage: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+  topup: solvapayTool({ destructiveHint: true }),
+  checkout: solvapayTool({ destructiveHint: true }),
+  activate: solvapayTool({}),
+}
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
 
@@ -247,6 +269,7 @@ export function buildSolvaPayDescriptors(
       // rendering the UI iframe). Default `'auto'` emits both.
       inputSchema: { mode: z.enum(['ui', 'text', 'auto']).optional() },
       meta: toolMeta,
+      annotations: INTENT_TOOL_ANNOTATIONS[view],
       handler: async (args, extra) =>
         trace(name, args, extra, async () => {
           const mode = parseMode(args.mode)
@@ -306,6 +329,7 @@ export function buildSolvaPayDescriptors(
       productRef: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCheckoutSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -335,6 +359,7 @@ export function buildSolvaPayDescriptors(
       productRef: z.string(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -365,6 +390,7 @@ export function buildSolvaPayDescriptors(
       planRef: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({ destructiveHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.processPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -392,6 +418,7 @@ export function buildSolvaPayDescriptors(
       'Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.',
     inputSchema: {},
     meta: uiToolMeta,
+    annotations: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCustomerSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -415,6 +442,7 @@ export function buildSolvaPayDescriptors(
       description: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createTopupPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -444,6 +472,7 @@ export function buildSolvaPayDescriptors(
       reason: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({ destructiveHint: true, idempotentHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.cancelRenewal, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -469,6 +498,7 @@ export function buildSolvaPayDescriptors(
       "Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
     inputSchema: { purchaseRef: z.string() },
     meta: uiToolMeta,
+    annotations: solvapayTool({ idempotentHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.reactivateRenewal, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -496,6 +526,7 @@ export function buildSolvaPayDescriptors(
       mode: z.enum(['ui', 'text', 'auto']).optional(),
     },
     meta: toolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.activatePlan, args, extra, async () => {
         const effectiveProduct =

@@ -186,6 +186,29 @@ export interface SolvaPayMcpCsp {
 }
 
 /**
+ * MCP tool annotations — hints to hosts about the tool's behaviour.
+ * Structural subset of the official spec's `ToolAnnotations` so hosts
+ * can surface confirmation prompts (destructive actions) and filter
+ * tools appropriately (read-only vs. mutating).
+ *
+ * See https://modelcontextprotocol.io/specification for the full
+ * semantics. Hosts on pre-annotations SDK versions ignore the field
+ * without error — the wire shape is additive.
+ */
+export interface SolvaPayToolAnnotations {
+  /** Human-readable title override (prefer the descriptor's `title`). */
+  title?: string
+  /** Tool only retrieves data — no side effects on SolvaPay state. */
+  readOnlyHint?: boolean
+  /** Tool has destructive / non-reversible side effects (charges, cancellations). */
+  destructiveHint?: boolean
+  /** Repeated calls with the same args produce the same effect. */
+  idempotentHint?: boolean
+  /** Tool interacts with external systems (true for every SolvaPay tool). */
+  openWorldHint?: boolean
+}
+
+/**
  * Framework-neutral tool descriptor. Adapters translate this to their
  * own registration API (`registerAppTool` on the official SDK,
  * `tool.define` on mcp-lite, etc.).
@@ -200,6 +223,12 @@ export interface SolvaPayToolDescriptor {
    */
   inputSchema: Record<string, ZodTypeAny>
   meta?: Record<string, unknown>
+  /**
+   * Portable MCP tool annotations surfaced on `tools/list`. Adapters
+   * that support the upstream `ToolAnnotations` field forward these
+   * verbatim; adapters that don't silently ignore them.
+   */
+  annotations?: SolvaPayToolAnnotations
   handler: (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult>
 }
 
