@@ -514,3 +514,202 @@ body {
   font-weight: 500;
   line-height: 1.4;
 }
+
+/* ---- About view ---- */
+
+.solvapay-mcp-about {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solvapay-mcp-about-product {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solvapay-mcp-about-image {
+  display: block;
+  max-height: 160px;
+  width: auto;
+  align-self: flex-start;
+  border-radius: 6px;
+}
+
+.solvapay-mcp-about-description {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--color-text-secondary, #475467);
+}
+
+.solvapay-mcp-about-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.solvapay-mcp-about-cta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.solvapay-mcp-about-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solvapay-mcp-about-commands {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--color-background-subtle, #f9fafb);
+}
+
+.solvapay-mcp-about-command-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.solvapay-mcp-about-command {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-size: 13px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-background-raised, #eef2f6);
+}
+
+.solvapay-mcp-about-activity {
+  border: 1px solid var(--color-border-default, #e4e7ec);
+}
+
+/* ---- Back-link primitive ---- */
+
+.solvapay-mcp-back-link {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  margin: 0 0 8px 0;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-secondary, #475467);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.solvapay-mcp-back-link:hover {
+  color: var(--color-text-primary, #101828);
+  text-decoration: underline;
+}
+
+.solvapay-mcp-back-link-glyph {
+  font-weight: 500;
+}
+
+/* ---- External-link glyph ---- */
+
+.solvapay-mcp-external-glyph {
+  display: inline-block;
+  opacity: 0.75;
+  font-size: 0.9em;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Plan actions row ---- */
+
+.solvapay-mcp-plan-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.solvapay-mcp-plan-topup-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ---- First-run tour ---- */
+
+.solvapay-mcp-tour-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.solvapay-mcp-tour-popover {
+  position: fixed;
+  max-width: 280px;
+  pointer-events: auto;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--color-background-elevated, #ffffff);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+  border: 1px solid var(--color-border-default, #e4e7ec);
+}
+
+.solvapay-mcp-tour-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.solvapay-mcp-tour-body {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary, #475467);
+}
+
+.solvapay-mcp-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.solvapay-mcp-tour-skip,
+.solvapay-mcp-tour-next {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.solvapay-mcp-tour-next {
+  background: var(--color-background-primary, #0f172a);
+  color: var(--color-text-on-primary, #ffffff);
+}
+
+.solvapay-mcp-tour-progress {
+  color: var(--color-text-tertiary, #667085);
+}
+
+.solvapay-mcp-tour-replay {
+  appearance: none;
+  background: none;
+  border: 1px solid var(--color-border-default, #e4e7ec);
+  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--color-text-secondary, #475467);
+}
+
+.solvapay-mcp-tour-replay:hover {
+  color: var(--color-text-primary, #101828);
+}

@@ -4,16 +4,21 @@
  * `<McpAppShell>` — persistent in-iframe shell with tab navigation.
  *
  * Wraps `<McpViewRouter>` so end users can move between views
- * (Credits / Plan / Top up / Account / Activate) without a second MCP
- * tool call. `bootstrap.view` is the initial tab; tab changes mutate
- * local state only, re-using the module-level caches seeded by
- * `seedMcpCaches` during initial mount.
+ * (About / Plan / Top up / Account) without a second MCP tool call.
+ * `bootstrap.view` is the initial tab; tab changes mutate local state
+ * only, re-using the module-level caches seeded by `seedMcpCaches`
+ * during initial mount.
  *
- * Visibility rules live in `computeVisibleTabs()` — Credits hides when
- * the customer has no usage/balance/unlimited plan, Top up hides when
- * no usage-based plan exists, etc. The paywall view takes over the
- * whole viewport (no tabs, no footer) because it's a gate, not a
- * destination.
+ * Visibility rules live in `computeVisibleTabs()`:
+ *  - About — always visible. It's the product landing page.
+ *  - Plan — always visible. Contextual (picker vs active-plan summary).
+ *  - Top up — visible when any usage-based plan exists, the customer
+ *    holds one, or has a non-zero credit balance.
+ *  - Account — visible when `customer != null`. Carries balance +
+ *    usage meter inline (the former "Credits" tab).
+ *
+ * The paywall view takes over the whole viewport (no tabs, no footer)
+ * because it's a gate, not a destination.
  *
  * Accessibility:
  *  - The tab row uses `role="tablist"` with `role="tab"` children.
@@ -30,6 +35,13 @@ import { useUsage } from '../hooks/useUsage'
 import { useMerchant } from '../hooks/useMerchant'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
+import { McpFirstRunTour, TourReplayButton } from './McpFirstRunTour'
+import { MCP_TAB_HINTS, TAB_LABELS } from './tab-metadata'
+import { MCP_TAB_ORDER, type McpTabKind } from './tab-kind'
+import {
+  McpAboutView,
+  type McpAboutViewProps,
+} from './views/McpAboutView'
 import {
   McpAccountView,
   type McpAccountViewProps,
@@ -57,37 +69,23 @@ import {
 } from './views/McpUsageView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 
-export type McpTabKind = 'usage' | 'checkout' | 'topup' | 'account' | 'activate'
-
-/**
- * Stable ordering used by the tab strip. `usage` (rendered as
- * "Credits") sits first because it's the most-revisited view and the
- * natural landing spot after a paywall resolution.
- */
-export const MCP_TAB_ORDER: McpTabKind[] = [
-  'usage',
-  'checkout',
-  'topup',
-  'account',
-  'activate',
-]
-
-const TAB_LABELS: Record<McpTabKind, string> = {
-  usage: 'Credits',
-  checkout: 'Plan',
-  topup: 'Top up',
-  account: 'Account',
-  activate: 'Activate',
-}
+export { MCP_TAB_HINTS } from './tab-metadata'
+export { MCP_TAB_ORDER, type McpTabKind } from './tab-kind'
 
 export interface McpAppShellProps {
   bootstrap: McpBootstrap
   views?: McpAppViewOverrides
   classNames?: McpViewClassNames
-  /** `'auto'` (default) runs the visibility rules; `'all'` pins all five; array pins the given list in that order. */
+  /** `'auto'` (default) runs the visibility rules; `'all'` pins every known tab; array pins the given list in that order. */
   tabs?: 'auto' | 'all' | McpTabKind[]
   /** Render the footer? Defaults to `true` when the merchant has any of support/terms/privacy URLs. */
   footer?: boolean
+  /**
+   * Optional slash-command hints forwarded to `<McpAboutView>`. The
+   * `<McpApp>` wrapper derives these from the server's prompt
+   * registrations; standalone consumers can pass their own list.
+   */
+  slashCommands?: Array<{ command: string; description: string }>
   /**
    * Refresh the bootstrap snapshot. Wired by `<McpApp>` to
    * `SolvaPayProvider.refreshInitial` so a stale tab switch can
@@ -103,6 +101,10 @@ const STALE_THRESHOLD_MS = 60_000
 /**
  * Compute the set of tabs the shell should render. Returned list is
  * stable in `MCP_TAB_ORDER` order so the strip never re-shuffles.
+ *
+ * The default set is About / Plan / Top up / Account. Credits folds
+ * into Account; Activate merges into Plan. Integrators who want the
+ * legacy tabs can pass `tabs='all'` or pass an explicit array.
  */
 export function computeVisibleTabs(
   bootstrap: McpBootstrap,
@@ -110,53 +112,37 @@ export function computeVisibleTabs(
 ): McpTabKind[] {
   if (override === 'all') return [...MCP_TAB_ORDER]
   if (Array.isArray(override)) {
-    // Keep consumer-specified order, filter to known kinds.
     return override.filter((t): t is McpTabKind => MCP_TAB_ORDER.includes(t))
   }
 
   const visible = new Set<McpTabKind>()
   const customer = bootstrap.customer
   const plans = bootstrap.plans ?? []
-  // `BootstrapCustomer.purchase` is a `PurchaseCheckResult` whose
-  // `purchases` array holds the full per-purchase records; the plan
-  // snapshot lives on the first entry.
   const activePurchase = (customer?.purchase?.purchases?.[0] ?? null) as
     | { planSnapshot?: PlanSnapshotLike | null }
     | null
   const planSnapshot = activePurchase?.planSnapshot ?? null
   const hasUsageBasedPlan = plans.some((p) => isUsageBasedPlan(p as PlanSnapshotLike))
   const customerHasUsageBased = planSnapshot ? isUsageBasedPlan(planSnapshot) : false
-  const isUnlimitedPurchase = planSnapshot ? isUnlimitedPlan(planSnapshot) : false
-  const hasUsageData = customer?.usage != null
   const hasBalanceData = customer?.balance != null
 
-  // Credits — metered usage, prepaid balance, or an affirming
-  // "Unlimited" state for recurring customers.
-  if (hasUsageData || hasBalanceData || isUnlimitedPurchase) {
-    visible.add('usage')
-  }
+  // About — always visible. Cold-start users land here; returning
+  // customers still use it as the product info / slash-command hub.
+  visible.add('about')
 
-  // Plan — always present, the guaranteed fallback.
+  // Plan — always visible. Empty state = picker; active state =
+  // current-plan summary.
   visible.add('checkout')
 
-  // Top up — any usage-based plan on the product, or customer already
-  // holds one.
-  if (hasUsageBasedPlan || customerHasUsageBased) {
+  // Top up — any usage-based plan on the product, the customer holds
+  // one, or has a non-zero credit balance.
+  if (hasUsageBasedPlan || customerHasUsageBased || hasBalanceData) {
     visible.add('topup')
   }
 
-  // Account — only when authenticated. (Phase 5 hides it at `xl` in
-  // favour of the sidebar, but the shell itself stays breakpoint-
-  // agnostic; the caller / CSS decides.)
+  // Account — only when authenticated.
   if (customer !== null) {
     visible.add('account')
-  }
-
-  // Activate — when at least one plan could plausibly be activated
-  // (free plan, or any plan we haven't already activated). Keeping
-  // this permissive; `McpActivateView` filters further.
-  if (plans.length > 0) {
-    visible.add('activate')
   }
 
   return MCP_TAB_ORDER.filter((tab) => visible.has(tab))
@@ -165,7 +151,6 @@ export function computeVisibleTabs(
 interface PlanSnapshotLike {
   planType?: string
   meterRef?: string | null
-  /** Present on `BootstrapPlan`; absent on `PurchaseCheckResult.purchases[i].planSnapshot`. */
   meterId?: string | null
   limit?: number | null
 }
@@ -191,37 +176,44 @@ export function McpAppShell({
   classNames,
   tabs = 'auto',
   footer,
+  slashCommands,
   onRefreshBootstrap,
 }: McpAppShellProps) {
   const cx = resolveMcpClassNames(classNames)
   const visibleTabs = useMemo(() => computeVisibleTabs(bootstrap, tabs), [bootstrap, tabs])
   const { merchant } = useMerchant()
-  // When the user picks the paywall's secondary "Upgrade" CTA, dismiss
-  // the gate locally and route the shell into the Plan tab. The
-  // bootstrap's `view` still reads `'paywall'`, but the user has
-  // escaped into the regular tabbed flow.
   const [paywallDismissed, setPaywallDismissed] = useState(false)
 
-  // Paywall is a take-over — it doesn't participate in the tab strip.
   const isPaywall = bootstrap.view === 'paywall' && !paywallDismissed
 
   // Treat the incoming `bootstrap.view` as the *initial* tab; tab
-  // changes after that mutate local state only.
+  // changes after that mutate local state only. The server may route
+  // `manage_account` → `'about'` for cold-start customers; we honour
+  // it when the tab is visible.
   const initialTab: McpTabKind = useMemo(() => {
-    if (isPaywall) return 'usage'
+    if (isPaywall) return 'about'
     const incoming = bootstrap.view
-    if (incoming === 'activate' || incoming === 'account' || incoming === 'topup' || incoming === 'checkout' || incoming === 'usage') {
-      if (visibleTabs.includes(incoming)) return incoming
+    const mapped: McpTabKind | null =
+      incoming === 'about' ||
+      incoming === 'activate' ||
+      incoming === 'account' ||
+      incoming === 'topup' ||
+      incoming === 'checkout' ||
+      incoming === 'usage'
+        ? (incoming satisfies McpTabKind)
+        : null
+    // Legacy `activate` routes to the merged Plan tab.
+    if (mapped === 'activate' && !visibleTabs.includes('activate')) {
+      return visibleTabs.includes('checkout') ? 'checkout' : (visibleTabs[0] ?? 'checkout')
     }
+    if (mapped && visibleTabs.includes(mapped)) return mapped
     return visibleTabs[0] ?? 'checkout'
   }, [bootstrap.view, visibleTabs, isPaywall])
 
   const [activeTab, setActiveTab] = useState<McpTabKind>(initialTab)
   const lastRefreshedAtRef = useRef<number>(Date.now())
+  const [tourForceOpen, setTourForceOpen] = useState(0)
 
-  // Snap the active tab back inside the visible set when a refresh
-  // removes it (e.g. the customer cancels their usage-based purchase
-  // and the Top up tab disappears).
   useEffect(() => {
     if (!visibleTabs.includes(activeTab) && visibleTabs.length > 0) {
       setActiveTab(visibleTabs[0])
@@ -236,43 +228,35 @@ export function McpAppShell({
       if (onRefreshBootstrap && now - lastRefreshedAtRef.current > STALE_THRESHOLD_MS) {
         lastRefreshedAtRef.current = now
         void Promise.resolve(onRefreshBootstrap()).catch(() => {
-          /* best-effort: a nav refresh is a soft signal, not a user-driven retry. */
+          /* best-effort. */
         })
       }
     },
     [activeTab, onRefreshBootstrap],
   )
 
-  // Footer renders `Terms · Privacy · Provided by SolvaPay` — hidden
-  // entirely when the merchant has no terms/privacy URLs so we don't
-  // show an empty strip. `supportUrl` lives in `McpSellerDetailsCard`
-  // now, not the footer, so it doesn't participate in this decision.
   const showFooter = footer ?? Boolean(merchant?.termsUrl || merchant?.privacyUrl)
 
-  // The responsive sidebar is driven by CSS — at `xl` and above the
-  // `.solvapay-mcp-shell-layout` grid gives the aside its own column;
-  // below, the aside is `display: none` and Account stays in the tab
-  // strip. React can't read the viewport width here reliably (iframes
-  // resize, SSR is possible), so we render the sidebar markup only
-  // when the customer exists (otherwise Customer/Seller cards would
-  // be empty) and let CSS hide it on narrow iframes. The `account`
-  // tab is always included in `visibleTabs` — the tab bar filter
-  // `isShellSidebarEligible` strips it only from the *rendered* tab
-  // list when the sidebar is present, which CSS also gates.
   const isShellSidebarEligible = bootstrap.customer !== null
+
+  // Product-driven title; the merchant/brand marker stays above it.
+  const productName =
+    (bootstrap.product as { name?: string } | undefined)?.name ?? null
 
   return (
     <div className="solvapay-mcp-shell" data-paywall={isPaywall ? 'true' : undefined}>
-      <ShellHeader merchant={merchant} classNames={classNames} />
+      <ShellHeader
+        merchant={merchant}
+        productName={productName}
+        classNames={classNames}
+        onReplayTour={isPaywall ? undefined : () => setTourForceOpen((n) => n + 1)}
+      />
 
       {!isPaywall && visibleTabs.length > 1 ? (
         <McpTabBar
           tabs={visibleTabs}
           active={activeTab}
           onSelect={handleSelect}
-          // CSS hides the Account tab at `xl+` because the sidebar
-          // renders the same content there. The data attribute lets
-          // `.solvapay-mcp-tab[data-kind="account"]` target it.
           hideAtWide={['account']}
         />
       ) : null}
@@ -294,6 +278,7 @@ export function McpAppShell({
                 bootstrap,
                 views,
                 classNames,
+                slashCommands,
                 onSelect: handleSelect,
                 suppressDetailCards: isShellSidebarEligible,
               })}
@@ -311,16 +296,27 @@ export function McpAppShell({
       </div>
 
       {!isPaywall && showFooter ? <ShellFooter classNames={classNames} merchant={merchant} /> : null}
+
+      {!isPaywall ? (
+        <McpFirstRunTour
+          key={tourForceOpen}
+          forceOpen={tourForceOpen > 0}
+        />
+      ) : null}
     </div>
   )
 }
 
 function ShellHeader({
   merchant,
+  productName,
   classNames,
+  onReplayTour,
 }: {
   merchant: ReturnType<typeof useMerchant>['merchant']
+  productName: string | null
   classNames?: McpViewClassNames
+  onReplayTour?: () => void
 }) {
   const cx = resolveMcpClassNames(classNames)
   const displayName = merchant?.displayName ?? null
@@ -333,6 +329,9 @@ function ShellHeader({
         .map((part) => part[0]!.toUpperCase())
         .join('')
     : 'SP'
+
+  // Fallback chain: product.name → merchant.displayName → 'My account'.
+  const headingText = productName ?? displayName ?? 'My account'
 
   return (
     <header className="solvapay-mcp-shell-header">
@@ -352,7 +351,8 @@ function ShellHeader({
           <span className="solvapay-mcp-shell-brand-name">{displayName}</span>
         ) : null}
       </div>
-      <h1 className={`${cx.heading} solvapay-mcp-shell-title`.trim()}>My account</h1>
+      <h1 className={`${cx.heading} solvapay-mcp-shell-title`.trim()}>{headingText}</h1>
+      {onReplayTour ? <TourReplayButton onReplay={onReplayTour} /> : null}
     </header>
   )
 }
@@ -384,8 +384,12 @@ function ShellFooter({
           href={termsUrl}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Terms (opens in a new tab)"
         >
           Terms
+          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
+            {' '}↗
+          </span>
         </a>
       ) : null}
       {termsUrl && privacyUrl ? <span aria-hidden="true"> · </span> : null}
@@ -395,8 +399,12 @@ function ShellFooter({
           href={privacyUrl}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Privacy (opens in a new tab)"
         >
           Privacy
+          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
+            {' '}↗
+          </span>
         </a>
       ) : null}
       <span aria-hidden="true"> · </span>
@@ -409,12 +417,6 @@ interface McpTabBarProps {
   tabs: McpTabKind[]
   active: McpTabKind
   onSelect: (tab: McpTabKind) => void
-  /**
-   * List of tab kinds that should be hidden at wide viewports (`xl+`)
-   * via CSS — typically `['account']` because the sidebar renders the
-   * same content there. Hidden tabs stay mounted so keyboard arrow nav
-   * doesn't jump, but they're `display: none` at the breakpoint.
-   */
   hideAtWide?: McpTabKind[]
 }
 
@@ -472,27 +474,35 @@ function McpTabBar({ tabs, active, onSelect, hideAtWide }: McpTabBarProps) {
       {tabs.map((tab) => {
         const isActive = tab === active
         const hideWide = hideAtWide?.includes(tab) ? 'true' : undefined
+        const hintId = `solvapay-mcp-tab-hint-${tab}`
         return (
-          <button
-            key={tab}
-            ref={(el) => {
-              tabRefs.current.set(tab, el)
-            }}
-            role="tab"
-            type="button"
-            id={`solvapay-mcp-tab-${tab}`}
-            aria-selected={isActive}
-            aria-controls={`solvapay-mcp-tabpanel-${tab}`}
-            tabIndex={isActive ? 0 : -1}
-            className="solvapay-mcp-tab"
-            data-active={isActive ? 'true' : undefined}
-            data-kind={tab}
-            data-hide-wide={hideWide}
-            onClick={() => onSelect(tab)}
-            onKeyDown={(event) => handleKeyDown(event, tab)}
-          >
-            {TAB_LABELS[tab]}
-          </button>
+          <React.Fragment key={tab}>
+            <button
+              ref={(el) => {
+                tabRefs.current.set(tab, el)
+              }}
+              role="tab"
+              type="button"
+              id={`solvapay-mcp-tab-${tab}`}
+              aria-selected={isActive}
+              aria-controls={`solvapay-mcp-tabpanel-${tab}`}
+              aria-describedby={hintId}
+              tabIndex={isActive ? 0 : -1}
+              className="solvapay-mcp-tab"
+              data-active={isActive ? 'true' : undefined}
+              data-kind={tab}
+              data-hide-wide={hideWide}
+              data-tour-step={tab}
+              title={MCP_TAB_HINTS[tab]}
+              onClick={() => onSelect(tab)}
+              onKeyDown={(event) => handleKeyDown(event, tab)}
+            >
+              {TAB_LABELS[tab]}
+            </button>
+            <span id={hintId} hidden>
+              {MCP_TAB_HINTS[tab]}
+            </span>
+          </React.Fragment>
         )
       })}
     </div>
@@ -504,18 +514,22 @@ type RenderTabArgs = {
   bootstrap: McpBootstrap
   views?: McpAppViewOverrides
   classNames?: McpViewClassNames
+  slashCommands?: Array<{ command: string; description: string }>
   onSelect: (tab: McpTabKind) => void
-  /**
-   * When `true`, the Account tab body skips its Customer + Seller
-   * detail cards because the shell's wide-iframe sidebar already
-   * renders them. At narrow viewports the sidebar is hidden and the
-   * cards render in-place.
-   */
   suppressDetailCards?: boolean
 }
 
-function renderTab({ tab, bootstrap, views, classNames, onSelect, suppressDetailCards }: RenderTabArgs): React.ReactNode {
+function renderTab({
+  tab,
+  bootstrap,
+  views,
+  classNames,
+  slashCommands,
+  onSelect,
+  suppressDetailCards,
+}: RenderTabArgs): React.ReactNode {
   const { productRef, stripePublishableKey, returnUrl } = bootstrap
+  const AboutView = (views?.about ?? McpAboutView) as React.ComponentType<McpAboutViewProps>
   const CheckoutView = (views?.checkout ?? McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
@@ -534,6 +548,17 @@ function renderTab({ tab, bootstrap, views, classNames, onSelect, suppressDetail
   )
 
   switch (tab) {
+    case 'about':
+      return panel(
+        <AboutView
+          bootstrap={bootstrap}
+          classNames={classNames}
+          slashCommands={slashCommands}
+          onSeePlans={() => onSelect('checkout')}
+          onTopup={() => onSelect('topup')}
+          onUpgrade={() => onSelect('checkout')}
+        />,
+      )
     case 'checkout':
       return panel(
         <CheckoutView
@@ -541,6 +566,7 @@ function renderTab({ tab, bootstrap, views, classNames, onSelect, suppressDetail
           publishableKey={stripePublishableKey}
           returnUrl={returnUrl}
           classNames={classNames}
+          onRequestTopup={() => onSelect('topup')}
         />,
       )
     case 'account':
@@ -548,6 +574,7 @@ function renderTab({ tab, bootstrap, views, classNames, onSelect, suppressDetail
         <AccountView
           classNames={classNames}
           onTopup={() => onSelect('topup')}
+          onChangePlan={() => onSelect('checkout')}
           hideDetailCards={suppressDetailCards}
         />,
       )
@@ -557,6 +584,7 @@ function renderTab({ tab, bootstrap, views, classNames, onSelect, suppressDetail
           publishableKey={stripePublishableKey}
           returnUrl={returnUrl}
           classNames={classNames}
+          onBack={() => onSelect('account')}
         />,
       )
     case 'activate':
@@ -624,8 +652,6 @@ function findRecurringPlan(plans: McpBootstrap['plans']): UpgradeCandidatePlan |
   if (!list || list.length === 0) return null
   const match = list.find((p) => {
     if (p.planType !== 'recurring') return false
-    // Prefer unlimited recurring (no meter) for the upgrade-out-of-gate
-    // CTA — that's the "switch plan, stop metering" branch.
     return !p.meterRef
   })
   return match ?? null
@@ -645,13 +671,6 @@ function formatUpgradeLabel(plan: UpgradeCandidatePlan): string {
   return `Upgrade to ${name}`
 }
 
-/**
- * Wraps `<McpUsageView>` with the "Unlimited — no limits on this
- * plan" empty state defined in the shell's visibility rules. When the
- * customer is on a recurring plan without a meter, we skip the meter
- * primitive (which assumes a numeric limit) and render a confirmation
- * card instead.
- */
 function UnlimitedAwareUsageView({
   View,
   classNames,

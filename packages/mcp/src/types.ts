@@ -119,9 +119,17 @@ export interface PaywallToolResult {
  * Which view a SolvaPay MCP server knows how to bootstrap via the
  * corresponding `open_*` tool.
  */
-export type SolvaPayMcpViewKind = 'checkout' | 'account' | 'topup' | 'activate' | 'paywall' | 'usage'
+export type SolvaPayMcpViewKind =
+  | 'about'
+  | 'checkout'
+  | 'account'
+  | 'topup'
+  | 'activate'
+  | 'paywall'
+  | 'usage'
 
 export const SOLVAPAY_MCP_VIEW_KINDS = [
+  'about',
   'checkout',
   'account',
   'topup',

@@ -64,11 +64,24 @@ export {
   buildSolvaPayRequest,
   defaultGetCustomerRef,
   enrichPurchase,
+  narratedToolResult,
+  parseMode,
   previewJson,
   toolErrorResult,
   toolResult,
 } from './helpers'
-export type { BuildSolvaPayRequestOptions } from './helpers'
+export type { BuildSolvaPayRequestOptions, SolvaPayToolMode } from './helpers'
+
+// ---- Narrators (per-tool text-mode renderers) ----
+export {
+  NARRATORS,
+  narrateManageAccount,
+  narrateUpgrade,
+  narrateTopup,
+  narrateCheckUsage,
+  narrateActivatePlan,
+} from './narrate'
+export type { IntentTool, NarratorOutput } from './narrate'
 
 // ---- Paywall envelope builders ----
 export { buildPaywallUiMeta } from './paywall-meta'

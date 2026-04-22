@@ -27,10 +27,13 @@ import { z } from 'zod'
 import {
   buildSolvaPayRequest,
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
+  narratedToolResult,
+  parseMode,
   previewJson,
   toolErrorResult,
   toolResult,
 } from './helpers'
+import type { IntentTool } from './narrate'
 import {
   createBuildBootstrapPayload,
   type BuildBootstrapPayloadFn,
@@ -238,10 +241,27 @@ export function buildSolvaPayDescriptors(
       name,
       title,
       description,
-      inputSchema: {},
+      // Every intent tool accepts an optional `mode` so users /
+      // agents on any host can opt into text-only responses (or
+      // suppress the narrated markdown when they know the host is
+      // rendering the UI iframe). Default `'auto'` emits both.
+      inputSchema: { mode: z.enum(['ui', 'text', 'auto']).optional() },
       meta: toolMeta,
       handler: async (args, extra) =>
-        trace(name, args, extra, async () => toolResult(await buildBootstrapPayload(view, extra))),
+        trace(name, args, extra, async () => {
+          const mode = parseMode(args.mode)
+          const data = await buildBootstrapPayload(view, extra)
+          // `manage_account` on a cold-start customer (no active
+          // purchase) routes the UI to the About tab, where the
+          // narration + CTA cards are more useful than an empty
+          // Account body. Returning customers still land on Account.
+          if (view === 'account') {
+            const hasActivePurchase =
+              (data.customer?.purchase?.purchases?.length ?? 0) > 0
+            if (!hasActivePurchase) data.view = 'about'
+          }
+          return narratedToolResult(name as IntentTool, data, mode, toolMeta)
+        }),
     })
   }
 
@@ -473,6 +493,7 @@ export function buildSolvaPayDescriptors(
     inputSchema: {
       productRef: z.string().optional(),
       planRef: z.string().optional(),
+      mode: z.enum(['ui', 'text', 'auto']).optional(),
     },
     meta: toolMeta,
     handler: async (args, extra) =>
@@ -480,6 +501,7 @@ export function buildSolvaPayDescriptors(
         const effectiveProduct =
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
         const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
+        const mode = parseMode(args.mode)
 
         // No plan picked yet — return the picker bootstrap (the React
         // shell opens `<McpActivateView>`; text-only hosts narrate the
@@ -496,7 +518,12 @@ export function buildSolvaPayDescriptors(
                 'The activation-picker view is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "activate" view via the `views` option.',
             })
           }
-          return toolResult(await buildBootstrapPayload('activate', extra))
+          return narratedToolResult(
+            MCP_TOOL_NAMES.activatePlan as IntentTool,
+            await buildBootstrapPayload('activate', extra),
+            mode,
+            toolMeta,
+          )
         }
 
         const auth = requireCustomerRef(extra)

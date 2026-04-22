@@ -71,7 +71,7 @@ describe('UpdatePaymentMethodButton', () => {
 
     const link = await screen.findByRole('link')
     expect(link.getAttribute('href')).toBe('https://portal.test')
-    expect(link.textContent).toBe('Update card')
+    expect(link.textContent).toContain('Update card')
     expect(link.getAttribute('data-solvapay-update-payment-method')).toBe('')
   })
 
@@ -85,7 +85,7 @@ describe('UpdatePaymentMethodButton', () => {
     )
 
     const link = await screen.findByRole('link')
-    expect(link.textContent).toBe('Change billing')
+    expect(link.textContent).toContain('Change billing')
   })
 
   it('throws a descriptive error for unimplemented modes so future callers do not silently break', () => {

@@ -86,12 +86,12 @@ function buildCtx(
 }
 
 const baseBootstrap: McpBootstrap = {
-  view: 'checkout',
+  view: 'about',
   productRef: 'prd_x',
   stripePublishableKey: null,
   returnUrl: 'https://example.test/r',
   merchant: { displayName: 'Acme', legalName: 'Acme Inc.' } as never,
-  product: { reference: 'prd_x' } as never,
+  product: { reference: 'prd_x', name: 'Acme Knowledge Base' } as never,
   plans: [],
   customer: null,
 }
@@ -112,9 +112,9 @@ function renderShell(
 }
 
 describe('computeVisibleTabs', () => {
-  it('shows only Plan when customer is absent and no plans exist', () => {
+  it('shows About and Plan by default when customer is absent and no plans exist', () => {
     const tabs = computeVisibleTabs({ ...baseBootstrap })
-    expect(tabs).toEqual(['checkout'])
+    expect(tabs).toEqual(['about', 'checkout'])
   })
 
   it('adds Account when the customer is authenticated', () => {
@@ -123,18 +123,20 @@ describe('computeVisibleTabs', () => {
       customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
     })
     expect(tabs).toContain('account')
+    expect(tabs).toContain('about')
+    expect(tabs).not.toContain('activate')
   })
 
-  it('adds Top up and Activate when plans include a usage-based plan', () => {
+  it('adds Top up when plans include a usage-based plan', () => {
     const tabs = computeVisibleTabs({
       ...baseBootstrap,
       plans: [{ reference: 'pln_ub', planType: 'usage-based' } as never],
     })
     expect(tabs).toContain('topup')
-    expect(tabs).toContain('activate')
+    expect(tabs).not.toContain('activate')
   })
 
-  it('keeps Credits visible when customer is on an unlimited (recurring, no meter) plan', () => {
+  it('About + Plan are always visible (activity strip replaces legacy empty Credits tab)', () => {
     const tabs = computeVisibleTabs({
       ...baseBootstrap,
       customer: {
@@ -153,12 +155,21 @@ describe('computeVisibleTabs', () => {
         usage: null,
       },
     })
-    expect(tabs).toContain('usage')
+    expect(tabs).toContain('about')
+    expect(tabs).toContain('checkout')
+    expect(tabs).toContain('account')
+    expect(tabs).not.toContain('usage')
+    expect(tabs).not.toContain('activate')
   })
 
   it('respects a literal tabs override', () => {
     const tabs = computeVisibleTabs({ ...baseBootstrap }, ['account', 'checkout'])
     expect(tabs).toEqual(['account', 'checkout'])
+  })
+
+  it("'all' exposes the full legacy tab set for integrators that pin it", () => {
+    const tabs = computeVisibleTabs({ ...baseBootstrap }, 'all')
+    expect(tabs).toEqual(['about', 'checkout', 'topup', 'account', 'usage', 'activate'])
   })
 })
 
@@ -167,23 +178,75 @@ describe('<McpAppShell>', () => {
     merchantCache.clear()
   })
 
-  it('renders a tab strip with role=tablist and aria-selected on the active tab', () => {
+  it('renders a tab strip with About as the first tab and aria-selected on the active tab', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
     renderShell(
       {
+        view: 'about',
         customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
         plans: [{ reference: 'pln_ub', planType: 'usage-based' } as never],
       },
       ctx,
     )
 
-    const tablist = screen.getByRole('tablist')
-    expect(tablist).toBeTruthy()
+    expect(screen.getByRole('tablist')).toBeTruthy()
+    const aboutTab = screen.getByRole('tab', { name: 'About' })
+    expect(aboutTab.getAttribute('aria-selected')).toBe('true')
     const planTab = screen.getByRole('tab', { name: 'Plan' })
-    expect(planTab.getAttribute('aria-selected')).toBe('true')
-    const accountTab = screen.getByRole('tab', { name: 'Account' })
-    expect(accountTab.getAttribute('aria-selected')).toBe('false')
+    expect(planTab.getAttribute('aria-selected')).toBe('false')
+    expect(screen.queryByRole('tab', { name: 'Activate' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Credits' })).toBeNull()
+  })
+
+  it('uses bootstrap.product.name for the shell heading', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    renderShell({}, ctx)
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading.textContent).toBe('Acme Knowledge Base')
+  })
+
+  it('falls back to merchant.displayName when the product has no name', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    renderShell(
+      {
+        product: { reference: 'prd_x' } as never,
+      },
+      ctx,
+    )
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading.textContent).toBe('Acme')
+  })
+
+  it('surfaces tab hints via title= attributes', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    renderShell(
+      {
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+      },
+      ctx,
+    )
+    const aboutTab = screen.getByRole('tab', { name: 'About' })
+    expect(aboutTab.getAttribute('title')).toMatch(/what this app does/i)
+    expect(aboutTab.getAttribute('aria-describedby')).toBe('solvapay-mcp-tab-hint-about')
+  })
+
+  it('tags each tab button with data-tour-step so the tour can anchor to them', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    renderShell(
+      {
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+      },
+      ctx,
+    )
+    const aboutTab = screen.getByRole('tab', { name: 'About' })
+    expect(aboutTab.getAttribute('data-tour-step')).toBe('about')
+    const planTab = screen.getByRole('tab', { name: 'Plan' })
+    expect(planTab.getAttribute('data-tour-step')).toBe('checkout')
   })
 
   it('hides the nav on the paywall view', () => {
@@ -211,6 +274,7 @@ describe('<McpAppShell>', () => {
     const ctx = buildCtx(config, [], 0)
     renderShell(
       {
+        view: 'about',
         customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
       },
       ctx,
@@ -222,7 +286,6 @@ describe('<McpAppShell>', () => {
       fireEvent.click(accountTab)
     })
     expect(accountTab.getAttribute('aria-selected')).toBe('true')
-    // Within the stale threshold — no refresh fired.
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
@@ -236,14 +299,12 @@ describe('<McpAppShell>', () => {
       },
       ctx,
     )
-    const planTab = screen.getByRole('tab', { name: 'Plan' })
-    planTab.focus()
+    const aboutTab = screen.getByRole('tab', { name: 'About' })
+    aboutTab.focus()
     act(() => {
-      fireEvent.keyDown(planTab, { key: 'ArrowRight' })
+      fireEvent.keyDown(aboutTab, { key: 'ArrowRight' })
     })
-    expect(document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent).toContain(
-      'Top up',
-    )
+    expect(document.activeElement?.textContent).toContain('Plan')
   })
 
   it('renders the Upgrade CTA on the paywall when a recurring plan exists', () => {
@@ -269,58 +330,12 @@ describe('<McpAppShell>', () => {
     const upgradeButton = screen.getByRole('button', { name: /Upgrade to Unlimited/ })
     expect(upgradeButton).toBeTruthy()
 
-    // Clicking it dismisses the paywall and routes to the Plan tab —
-    // the tablist re-appears now that we've escaped the gate.
     act(() => {
       fireEvent.click(upgradeButton)
     })
     expect(screen.getByRole('tablist')).toBeTruthy()
     const planTab = screen.getByRole('tab', { name: 'Plan' })
     expect(planTab.getAttribute('aria-selected')).toBe('true')
-  })
-
-  it('keeps Credits visible on an unlimited plan and renders an empty-state card', () => {
-    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
-    const unlimitedPurchase: PurchaseInfo = {
-      reference: 'pur_u',
-      productName: 'Product X',
-      status: 'active',
-      startDate: '2026-01-01T00:00:00Z',
-      amount: 10000,
-      currency: 'USD',
-      isRecurring: true,
-      planSnapshot: {
-        planType: 'recurring',
-        reference: 'pln_u',
-        name: 'Unlimited',
-        billingCycle: 'monthly',
-      },
-    }
-    const ctx = buildCtx(config, [unlimitedPurchase], 0)
-    renderShell(
-      {
-        view: 'usage',
-        customer: {
-          ref: 'cus_1',
-          purchase: {
-            customerRef: 'cus_1',
-            purchases: [
-              {
-                reference: 'pur_u',
-                planSnapshot: { planType: 'recurring' },
-              },
-            ],
-          } as never,
-          paymentMethod: null,
-          balance: null,
-          usage: null,
-        },
-      },
-      ctx,
-    )
-
-    expect(screen.getByRole('tab', { name: 'Credits' })).toBeTruthy()
-    expect(screen.getByText(/no limits on this plan/i)).toBeTruthy()
   })
 
   it('renders the Provided by SolvaPay footer when terms/privacy exist', () => {
@@ -333,7 +348,7 @@ describe('<McpAppShell>', () => {
     const ctx = buildCtx(config, [], 0)
     renderShell({}, ctx)
     expect(screen.getByText(/Provided by SolvaPay/)).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Terms' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Privacy' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Terms/ })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Privacy/ })).toBeTruthy()
   })
 })

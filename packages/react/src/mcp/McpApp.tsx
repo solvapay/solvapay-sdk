@@ -32,6 +32,10 @@ import {
 } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import {
+  McpAboutView,
+  type McpAboutViewProps,
+} from './views/McpAboutView'
+import {
   McpAccountView,
   type McpAccountViewProps,
 } from './views/McpAccountView'
@@ -84,6 +88,7 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike {
 }
 
 export interface McpAppViewOverrides {
+  about?: React.ComponentType<McpAboutViewProps>
   checkout?: React.ComponentType<McpCheckoutViewProps>
   account?: React.ComponentType<McpAccountViewProps>
   topup?: React.ComponentType<McpTopupViewProps>
@@ -125,7 +130,15 @@ export interface McpAppProps {
    * entirely and fall back to the single-view `<McpViewRouter>`
    * (useful for integrators who own their own layout).
    */
-  shell?: false | Pick<McpAppShellProps, 'tabs' | 'footer'>
+  shell?: false | Pick<McpAppShellProps, 'tabs' | 'footer' | 'slashCommands'>
+  /**
+   * Slash-command hints forwarded to `<McpAboutView>` via the shell.
+   * Typically the client-side list of prompts the server registered.
+   * Hosts without slash-command UI still see the list rendered as
+   * plain copy. When unset, the About view omits the "Quick commands"
+   * section.
+   */
+  slashCommands?: Array<{ command: string; description: string }>
 }
 
 /**
@@ -155,6 +168,7 @@ export function McpApp({
   onInitError,
   applyContext,
   shell,
+  slashCommands,
 }: McpAppProps) {
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
@@ -327,6 +341,11 @@ export function McpApp({
             {...(typeof shell === 'object' && shell && 'footer' in shell
               ? { footer: shell.footer }
               : {})}
+            slashCommands={
+              (typeof shell === 'object' && shell && 'slashCommands' in shell
+                ? shell.slashCommands
+                : undefined) ?? slashCommands
+            }
             onRefreshBootstrap={refreshBootstrap}
           />
         )}
@@ -354,6 +373,7 @@ export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterPro
   const { view, productRef, stripePublishableKey, returnUrl, paywall } = bootstrap
 
   const headerTitle: Record<McpBootstrap['view'], string> = {
+    about: (bootstrap.product as { name?: string } | undefined)?.name ?? 'About',
     checkout: 'SolvaPay',
     account: 'Your SolvaPay account',
     topup: 'Add SolvaPay credits',
@@ -362,6 +382,7 @@ export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterPro
     usage: 'Your usage',
   }
 
+  const AboutView = views?.about ?? McpAboutView
   const CheckoutView = views?.checkout ?? McpCheckoutView
   const AccountView = views?.account ?? McpAccountView
   const TopupView = views?.topup ?? McpTopupView
@@ -374,6 +395,7 @@ export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterPro
       <header className="solvapay-mcp-header">
         <h1>{headerTitle[view]}</h1>
       </header>
+      {view === 'about' && <AboutView bootstrap={bootstrap} classNames={classNames} />}
       {view === 'checkout' && (
         <CheckoutView
           productRef={productRef}

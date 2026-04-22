@@ -16,16 +16,69 @@ from the agent.
 | `check_usage` | Show used/remaining credits, reset date | User says "how many credits", "usage", "remaining" |
 | `activate_plan` | Pick a plan from the picker, or activate a specific `planRef` | User says "activate", or the agent needs to enumerate plans |
 
+All five intent tools now accept an optional `mode: 'ui' | 'text' | 'auto'`
+argument:
+
+- `'auto'` (default) — emit both the UI-resource ref on `_meta.ui` and
+  the narrated markdown text. Host decides which to render.
+- `'text'` — strip the UI-resource ref so UI-capable hosts render text
+  only. Useful when the user says "just summarise it in chat".
+- `'ui'` — replace the narrated markdown with a short placeholder so
+  the transcript stays clean on UI-rendering hosts.
+
 Each returns a `BootstrapPayload` with:
 
-- `view` — which screen to mount (`checkout` / `account` / `topup` /
-  `usage` / `activate`).
+- `view` — which screen to mount (`about` / `checkout` / `account` /
+  `topup` / `usage` / `activate`). `manage_account` routes cold-start
+  customers (no active purchase) to `'about'` so they land on the
+  product description + CTA cards instead of an empty Account body.
 - `productRef`, `stripePublishableKey`, `returnUrl` — provisioning for
   the embedded Stripe Elements.
 - `merchant`, `product`, `plans`, `customer` — seeded data so the
   iframe never re-fetches.
 - `paywall` — populated only when the response is a gate response
   (`view: "paywall"`).
+
+## Shell surface (what the UI renders)
+
+Four tabs render by default (About / Plan / Top up / Account). The
+legacy "Credits" and "Activate" tabs are folded away — Credits lives
+inside Account; the Activate picker is contextual inside Plan (free /
+trial / usage-based cards activate inline, paid cards mount Stripe
+Elements).
+
+- **About** — product description (`product.name`, `product.description`,
+  `product.imageUrl`), a "Your activity" strip for returning customers
+  (four variants: PAYG balance, recurring-unlimited renew date,
+  recurring-metered usage bar, free usage bar), two contextual CTA
+  cards ("Choose a plan" / "Start free" / "Try without subscribing"),
+  and the slash-command hint list.
+- **Plan** — picker for cold-start customers; Current plan summary
+  with per-variant affordances for returning customers (resolved via
+  `resolvePlanActions`).
+- **Top up** — three-step flow with shared `BackLink` primitive
+  (Amount → Payment → Success; `← Back to my account` on each step).
+- **Account** — balance card, usage meter (when present), Current
+  plan + Manage billing ↗ + seller details.
+
+A dismissible first-run tour (gated by
+`localStorage['solvapay-mcp-tour-seen']`) anchors popovers to the
+three core tabs on first launch; a `?` button in the header replays
+it.
+
+## Host capability matrix
+
+Which host renders what — important so integrators know which mode to
+test against.
+
+| Host | UI iframe | Text | `ui://` resource | Notes |
+| --- | --- | --- | --- | --- |
+| **Claude Desktop** | ✓ | ✓ (collapsed) | ✓ | Default rendering for the SolvaPay MCP Apps we ship. |
+| **Claude Code CLI** | — | ✓ | ignored | Text-only; `**bold**` + `` `code` `` render via ANSI. |
+| **Cursor IDE** | ✓ | ✓ | ✓ | Renders UI iframes as of recent builds; falls back cleanly. |
+| **ChatGPT MCP connectors** | ✓ | ✓ | via Apps SDK | No slash-command UI; About view lists commands as plain copy. |
+| **`basic-host`** | ✓ | ✓ | ✓ | Dev harness; echoes both. |
+| **Programmatic (n8n, agents)** | — | ✓ | ignored | Agents parse `structuredContent`; narrated text is secondary. |
 
 ## Demo data tools (LLM-callable, paywall-gated)
 

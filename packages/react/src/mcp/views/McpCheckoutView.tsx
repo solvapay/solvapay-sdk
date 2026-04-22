@@ -18,11 +18,14 @@
 
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CurrentPlanCard } from '../../components/CurrentPlanCard'
+import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useTransport } from '../../hooks/useTransport'
 import { usePurchase } from '../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
+import { ActivationFlow } from '../../primitives/ActivationFlow'
 import { PaymentForm } from '../../primitives/PaymentForm'
 import { PlanSelector, usePlanSelector } from '../../primitives/PlanSelector'
+import { resolveActivationStrategy, resolvePlanActions, type PlanLike } from '../plan-actions'
 import { useStripeProbe } from '../useStripeProbe'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -42,6 +45,13 @@ export interface McpCheckoutViewProps {
   publishableKey?: string | null
   returnUrl: string
   onPurchaseSuccess?: () => void
+  /**
+   * Called when the picker branches into a `topup-first` flow
+   * (usage-based plans) and the user clicks through. The shell wires
+   * this to a tab switch so the amount picker and Stripe mount in the
+   * dedicated Top up tab instead of nesting two checkouts.
+   */
+  onRequestTopup?: () => void
   classNames?: McpViewClassNames
   children?: React.ReactNode
 }
@@ -51,6 +61,7 @@ export function McpCheckoutView({
   publishableKey = null,
   returnUrl,
   onPurchaseSuccess,
+  onRequestTopup,
   classNames,
   children,
 }: McpCheckoutViewProps) {
@@ -71,6 +82,7 @@ export function McpCheckoutView({
         productRef={productRef}
         returnUrl={returnUrl}
         onPurchaseSuccess={onPurchaseSuccess}
+        onRequestTopup={onRequestTopup}
         cx={cx}
       >
         {children}
@@ -165,10 +177,14 @@ const HostedLinkButton = memo(function HostedLinkButton({
         href={state.href}
         target="_blank"
         rel="noopener noreferrer"
+        aria-label={`${readyLabel} (opens in a new tab)`}
         onClick={() => onLaunch?.(state.href)}
       >
         <button type="button" className={cx.button}>
           {readyLabel}
+          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
+            {' '}↗
+          </span>
         </button>
       </a>
     )
@@ -218,10 +234,14 @@ const AwaitingBody = memo(function AwaitingBody({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
+        aria-label="Reopen checkout (opens in a new tab)"
         onClick={() => onReopen()}
       >
         <button type="button" className={cx.button}>
           Reopen checkout
+          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
+            {' '}↗
+          </span>
         </button>
       </a>
       <button type="button" className={cx.linkButton} onClick={onCancel}>
@@ -231,14 +251,65 @@ const AwaitingBody = memo(function AwaitingBody({
   )
 })
 
-const ManageBody = memo(function ManageBody({ cx }: { cx: Cx }) {
+/**
+ * `ManageBody` lives inside a `PlanSelector.Root` in both the
+ * embedded and hosted branches so it can read `plans.length` via
+ * `usePlanSelector()` (for `resolvePlanActions`) without re-fetching
+ * or threading counts through props. The picker UI itself stays
+ * hidden in the active-purchase branch; only the data load matters.
+ */
+const ManageBody = memo(function ManageBody({
+  cx,
+  onRequestTopup,
+}: {
+  cx: Cx
+  onRequestTopup?: () => void
+}) {
+  const { activePurchase } = usePurchase()
+  const { plans } = usePlanSelector()
+  const planCount = plans.length
+  const paidPlanCount = plans.filter((p) => {
+    const planType = (p as unknown as PlanLike).planType
+    const price = (p as unknown as PlanLike).price ?? 0
+    return planType !== 'free' && price > 0
+  }).length
+
+  const actions = resolvePlanActions({
+    purchase: {
+      planSnapshot: activePurchase?.planSnapshot as PlanLike | null | undefined,
+      // Treat any existing purchase with a paid amount as card-on-file —
+      // the portal session will reflect the real payment-method state.
+      hasPaymentMethod: Boolean(activePurchase?.amount && activePurchase.amount > 0),
+    },
+    planCount,
+    paidPlanCount,
+  })
+
   return (
     <>
       <CurrentPlanCard />
-      <p className={cx.muted}>
-        Update your card or cancel your plan above. Plan switching is coming soon — for now,
-        cancel and re-subscribe to change tier.
-      </p>
+      <div className="solvapay-mcp-plan-actions">
+        {actions.topUp && onRequestTopup ? (
+          <button type="button" className={cx.button} onClick={onRequestTopup}>
+            Top up
+          </button>
+        ) : null}
+        {actions.upgrade ? (
+          <p className={cx.muted}>Upgrade to a paid plan from the picker above.</p>
+        ) : null}
+        {actions.changePlan ? (
+          <p className={cx.muted}>Pick another card above to change plan.</p>
+        ) : null}
+        {actions.managePortal ? (
+          <LaunchCustomerPortalButton
+            className={cx.button}
+            loadingClassName={cx.button}
+            errorClassName={cx.button}
+          >
+            Manage billing
+          </LaunchCustomerPortalButton>
+        ) : null}
+      </div>
     </>
   )
 })
@@ -473,7 +544,14 @@ function HostedCheckout({
     }
 
     if (hasPaidPurchase && activeProductName) {
-      return <ManageBody cx={cx} />
+      // `PlanSelector.Root` wraps ManageBody so `usePlanSelector`
+      // can read plan counts without re-fetching. The picker UI
+      // itself stays unrendered here — we only want the data load.
+      return (
+        <PlanSelector.Root productRef={productRef}>
+          <ManageBody cx={cx} />
+        </PlanSelector.Root>
+      )
     }
 
     if (shouldShowCancelledNotice && cancelledProductName) {
@@ -526,64 +604,30 @@ function HostedCheckout({
 }
 
 /**
- * Gates `<PaymentForm.Root>` behind `PlanSelector`'s selection state.
- *
- * Mounting `PaymentForm.Root` immediately (before `usePlans` has loaded)
- * would fire its init `useEffect` with `effectivePlanRef = undefined`,
- * sending `useCheckout` into the `resolvePlanRef` path — which throws
- * "has N active plans but none is marked as default" on products without
- * a default. Waiting for `selectedPlanRef` (populated by
- * `autoSelectFirstPaid` once plans resolve) skips that path entirely.
- *
- * The `key={selectedPlanRef}` forces a fresh `PaymentForm.Root` instance
- * when the user picks a different card, so `useCheckout` reinitialises
- * the PaymentIntent against the new plan instead of keeping the old
- * `clientSecret`.
- */
-function PaymentFormGate({
-  productRef,
-  returnUrl,
-  onSuccess,
-  children,
-}: {
-  productRef: string
-  returnUrl: string
-  onSuccess?: () => void
-  children: React.ReactNode
-}) {
-  const { selectedPlanRef } = usePlanSelector()
-  if (!selectedPlanRef) return null
-  return (
-    <PaymentForm.Root
-      key={selectedPlanRef}
-      planRef={selectedPlanRef}
-      productRef={productRef}
-      returnUrl={returnUrl}
-      requireTermsAcceptance={false}
-      onSuccess={onSuccess}
-    >
-      {children}
-    </PaymentForm.Root>
-  )
-}
-
-/**
  * Embedded checkout body — only rendered when the Stripe probe reports
  * `'ready'`. Reuses the SDK's `<PaymentForm>` compound primitive so card
  * inputs mount inline as a nested `js.stripe.com` iframe (allowed by the
  * declared CSP `frameDomains`). Post-purchase management stays hosted —
  * the customer portal isn't embeddable today.
+ *
+ * Per-card activation branching (the Plan+Activate merge): the
+ * `PlanActivationDispatcher` inspects the selected plan's shape and
+ * mounts the right sub-flow. Free / trial / zero-priced → inline
+ * `ActivationFlow`. Usage-based → prompt the user to top up first
+ * (routed via `onRequestTopup`). Paid recurring → `PaymentFormGate`.
  */
 function EmbeddedCheckout({
   productRef,
   returnUrl,
   onPurchaseSuccess,
+  onRequestTopup,
   cx,
   children,
 }: {
   productRef: string
   returnUrl: string
   onPurchaseSuccess?: () => void
+  onRequestTopup?: () => void
   cx: Cx
   children?: React.ReactNode
 }) {
@@ -604,12 +648,18 @@ function EmbeddedCheckout({
   return (
     <div className={cx.card} data-refreshing={isRefetching ? 'true' : undefined}>
       {showManage ? (
-        <ManageBody cx={cx} />
+        <PlanSelector.Root productRef={productRef}>
+          <ManageBody cx={cx} onRequestTopup={onRequestTopup} />
+        </PlanSelector.Root>
       ) : (
         <>
           <h2 className={cx.heading}>
-            {showRepurchase ? 'Renew your plan' : 'Complete your purchase'}
+            {showRepurchase ? 'Renew your plan' : 'Pick your plan'}
           </h2>
+          <p className={cx.muted}>
+            Free and trial plans activate instantly. Paid plans collect payment here;
+            usage-based plans start with a top-up.
+          </p>
           <PlanSelector.Root productRef={productRef} className="solvapay-plan-selector">
             <PlanSelector.Grid className="solvapay-plan-selector-grid">
               <PlanSelector.Card className="solvapay-plan-selector-card">
@@ -621,22 +671,119 @@ function EmbeddedCheckout({
             </PlanSelector.Grid>
             <PlanSelector.Loading className="solvapay-plan-selector-loading" />
             <PlanSelector.Error className="solvapay-plan-selector-error" />
-            <PaymentFormGate
+            <PlanActivationDispatcher
               productRef={productRef}
               returnUrl={returnUrl}
-              onSuccess={onPurchaseSuccess}
-            >
-              <PaymentForm.Summary />
-              <PaymentForm.Loading />
-              <PaymentForm.PaymentElement />
-              <PaymentForm.Error />
-              <PaymentForm.MandateText />
-              <PaymentForm.SubmitButton className={cx.button} />
-            </PaymentFormGate>
+              onPurchaseSuccess={onPurchaseSuccess}
+              onRequestTopup={onRequestTopup}
+              cx={cx}
+            />
           </PlanSelector.Root>
         </>
       )}
       {children}
     </div>
+  )
+}
+
+/**
+ * Reads the selected plan from `usePlanSelector()` and mounts the
+ * right sub-flow per `resolveActivationStrategy(plan)`:
+ *  - `activate` (free / trial / zero-priced) → inline `ActivationFlow`
+ *    with summary + ActivateButton.
+ *  - `topup-first` (usage-based) → explain + route to the Top up tab
+ *    via `onRequestTopup`. We don't mount the AmountPicker here to
+ *    keep the two flows non-nested; the dedicated Top up tab owns
+ *    that surface.
+ *  - `paid-checkout` (recurring, price > 0) → `PaymentFormGate` with
+ *    inline Stripe Elements, same as before.
+ */
+function PlanActivationDispatcher({
+  productRef,
+  returnUrl,
+  onPurchaseSuccess,
+  onRequestTopup,
+  cx,
+}: {
+  productRef: string
+  returnUrl: string
+  onPurchaseSuccess?: () => void
+  onRequestTopup?: () => void
+  cx: Cx
+}) {
+  const { selectedPlan, selectedPlanRef } = usePlanSelector()
+  if (!selectedPlan || !selectedPlanRef) return null
+
+  const strategy = resolveActivationStrategy(selectedPlan as unknown as PlanLike)
+
+  if (strategy === 'activate') {
+    return (
+      <ActivationFlow.Root
+        key={selectedPlanRef}
+        productRef={productRef}
+        planRef={selectedPlanRef}
+        className={cx.activationFlow}
+        onSuccess={() => onPurchaseSuccess?.()}
+      >
+        <ActivationFlow.Loading>
+          <p className={cx.muted}>Loading plan…</p>
+        </ActivationFlow.Loading>
+
+        <ActivationFlow.Summary>
+          <p className={cx.muted}>
+            No payment is collected up front — just confirm to activate.
+          </p>
+        </ActivationFlow.Summary>
+        <ActivationFlow.ActivateButton className={cx.button} />
+
+        <ActivationFlow.Retrying>
+          <p className={cx.muted}>Finishing activation…</p>
+        </ActivationFlow.Retrying>
+
+        <ActivationFlow.Activated>
+          <p>{"Plan activated. You're all set."}</p>
+        </ActivationFlow.Activated>
+
+        <ActivationFlow.Error className={cx.error} />
+      </ActivationFlow.Root>
+    )
+  }
+
+  if (strategy === 'topup-first') {
+    return (
+      <div className="solvapay-mcp-plan-topup-prompt">
+        <p className={cx.muted}>
+          This plan meters usage. Add credits first, then we&apos;ll activate the plan on
+          your next paywalled call.
+        </p>
+        <button
+          type="button"
+          className={cx.button}
+          onClick={onRequestTopup}
+          disabled={!onRequestTopup}
+        >
+          Add credits & start
+        </button>
+      </div>
+    )
+  }
+
+  // strategy === 'paid-checkout'
+  return (
+    <PaymentForm.Root
+      key={selectedPlanRef}
+      planRef={selectedPlanRef}
+      productRef={productRef}
+      returnUrl={returnUrl}
+      requireTermsAcceptance={false}
+      onSuccess={onPurchaseSuccess}
+    >
+      <PaymentForm.Summary />
+      <PaymentForm.Loading />
+      <PaymentForm.PaymentElement />
+      <PaymentForm.Error />
+      <PaymentForm.MandateText />
+      <PaymentForm.SubmitButton className={cx.button} />
+    </PaymentForm.Root>
   )
 }

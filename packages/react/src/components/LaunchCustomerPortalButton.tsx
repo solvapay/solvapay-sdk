@@ -94,12 +94,15 @@ export const LaunchCustomerPortalButton = forwardRef<
   }, [transport])
 
   if (state.status === 'ready') {
+    const label = children ?? copy.customerPortal.launchButton
+    const labelText = typeof label === 'string' ? label : copy.customerPortal.launchButton
     const readyProps = {
       href: state.href,
       target: '_blank' as const,
       rel: 'noopener noreferrer',
       'data-solvapay-launch-customer-portal': '',
       'data-state': 'ready' as const,
+      'aria-label': `${labelText} (opens in a new tab)`,
       onClick: composeEventHandlers(onClick, () => {
         onLaunch?.(state.href)
       }),
@@ -109,13 +112,16 @@ export const LaunchCustomerPortalButton = forwardRef<
       return (
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         <Slot ref={forwardedRef as any} {...(readyProps as Record<string, unknown>)}>
-          {children ?? copy.customerPortal.launchButton}
+          {label}
         </Slot>
       )
     }
     return (
       <a ref={forwardedRef} {...readyProps}>
-        {children ?? copy.customerPortal.launchButton}
+        {label}
+        <span className="solvapay-mcp-external-glyph" aria-hidden="true">
+          {' '}↗
+        </span>
       </a>
     )
   }

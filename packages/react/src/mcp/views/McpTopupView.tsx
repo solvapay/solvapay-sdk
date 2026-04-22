@@ -1,22 +1,27 @@
 'use client'
 
 /**
- * `<McpTopupView>` — the "add credits" screen surfaced by the `open_topup`
+ * `<McpTopupView>` — the "add credits" screen surfaced by the `topup`
  * MCP tool.
+ *
+ * Three-step flow with shared back-nav:
+ *  1. `<AmountPicker emit="minor">` — quick-pick pills + custom input.
+ *     Has a `← Back to my account` BackLink when `onBack` is wired.
+ *  2. `TopupForm.Root` — mounts only once the amount is committed so
+ *     we don't create a Stripe PaymentIntent per keystroke. Has a
+ *     `← Change amount` BackLink + the outer `Back to my account`.
+ *  3. Success state — "Credits added" + `[ Add more credits ]` +
+ *     `Manage billing ↗`, same `Back to my account` back-link.
  *
  * Gated behind `useStripeProbe` with the same fallback logic as
  * `<McpCheckoutView>`: if the host sandbox's CSP refuses to load
- * `js.stripe.com` the embedded `PaymentElement` can't render, so we drop
- * back to the hosted customer portal.
+ * `js.stripe.com` the embedded `PaymentElement` can't render, so we
+ * drop back to the hosted customer portal.
  *
- * UX is a two-step confirm:
- *   1. `<AmountPicker emit="minor">` — quick-pick pills + custom input.
- *      `Confirm` runs `validate()` and emits the amount in minor units.
- *   2. `TopupForm.Root` — mounts only once the amount is committed so we
- *      don't create a Stripe PaymentIntent per keystroke.
- *
- * "Change amount" unmounts the form and returns to step 1 — safe because
- * the previous PI just expires unused (Stripe auto-cancels after 24h).
+ * When called from the paywall's secondary "Top up" button, the shell
+ * doesn't have an Account tab to route back to (the paywall is a
+ * take-over); the shell passes `onBack={undefined}` and the view
+ * skips the outer back-link.
  */
 
 import React, { useState } from 'react'
@@ -31,10 +36,9 @@ import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { TopupForm } from '../../primitives/TopupForm'
 import { toMajorUnits } from '../../utils/format'
 import { useStripeProbe } from '../useStripeProbe'
+import { BackLink } from './BackLink'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
-// Safety net only — `useMerchant().merchant.defaultCurrency` is the source of
-// truth. Falls back to USD if the merchant fetch is pending or fails.
 const FALLBACK_TOPUP_CURRENCY = 'USD'
 
 function formatCurrency(amount: number, currency: string): string {
@@ -53,6 +57,12 @@ export interface McpTopupViewProps {
    * in minor units (respects zero-decimal currencies — yen not yen×100).
    */
   onTopupSuccess?: (amountMinor: number) => void
+  /**
+   * Called when the user picks "Back to my account" at any step.
+   * Wired by the shell to switch tabs. `undefined` (the paywall
+   * branch) hides the outer back-link.
+   */
+  onBack?: () => void
   classNames?: McpViewClassNames
 }
 
@@ -60,6 +70,7 @@ export function McpTopupView({
   publishableKey = null,
   returnUrl,
   onTopupSuccess,
+  onBack,
   classNames,
 }: McpTopupViewProps) {
   const cx = resolveMcpClassNames(classNames)
@@ -74,7 +85,7 @@ export function McpTopupView({
     )
   }
 
-  if (probe === 'blocked') return <HostedTopupFallback cx={cx} />
+  if (probe === 'blocked') return <HostedTopupFallback cx={cx} onBack={onBack} />
 
   const currency = merchant?.defaultCurrency?.toUpperCase() ?? FALLBACK_TOPUP_CURRENCY
 
@@ -83,6 +94,7 @@ export function McpTopupView({
       returnUrl={returnUrl}
       currency={currency}
       onTopupSuccess={onTopupSuccess}
+      onBack={onBack}
       cx={cx}
     />
   )
@@ -94,11 +106,13 @@ function EmbeddedTopup({
   returnUrl,
   currency,
   onTopupSuccess,
+  onBack,
   cx,
 }: {
   returnUrl: string
   currency: string
   onTopupSuccess?: (amountMinor: number) => void
+  onBack?: () => void
   cx: Cx
 }) {
   const [committedAmountMinor, setCommittedAmountMinor] = useState<number | null>(null)
@@ -109,6 +123,7 @@ function EmbeddedTopup({
     const displayAmount = formatCurrency(toMajorUnits(justPaidMinor, currency), currency)
     return (
       <div className={cx.card}>
+        {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
         <div className={cx.balanceRow}>
           <h2 className={cx.heading}>Credits added</h2>
           <BalanceBadge />
@@ -136,6 +151,7 @@ function EmbeddedTopup({
     const displayAmount = formatCurrency(toMajorUnits(committedAmountMinor, currency), currency)
     return (
       <div className={cx.card}>
+        {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
         <div className={cx.balanceRow}>
           <h2 className={cx.heading}>Pay with card</h2>
           <BalanceBadge />
@@ -147,9 +163,6 @@ function EmbeddedTopup({
           returnUrl={returnUrl}
           className={cx.topupForm}
           onSuccess={() => {
-            // Optimistically bump the local balance so `<BalanceBadge>` in
-            // the success panel reflects the top-up immediately — the
-            // webhook-driven refetch will reconcile shortly after.
             adjustBalance(committedAmountMinor * (creditsPerMinorUnit ?? 100))
             setJustPaidMinor(committedAmountMinor)
             onTopupSuccess?.(committedAmountMinor)
@@ -161,19 +174,17 @@ function EmbeddedTopup({
           <TopupForm.Error className={cx.error} />
           <TopupForm.SubmitButton className={cx.button} />
         </TopupForm.Root>
-        <button
-          type="button"
-          className={cx.linkButton}
+        <BackLink
+          label="Change amount"
           onClick={() => setCommittedAmountMinor(null)}
-        >
-          Change amount
-        </button>
+        />
       </div>
     )
   }
 
   return (
     <div className={cx.card}>
+      {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
       <div className={cx.balanceRow}>
         <h2 className={cx.heading}>Add credits</h2>
         <BalanceBadge />
@@ -192,10 +203,6 @@ function EmbeddedTopup({
   )
 }
 
-/**
- * Renders the currency-aware quick-pick presets. Reads `quickAmounts` from
- * the picker context so presets stay in sync with the merchant currency.
- */
 function QuickAmountOptions({
   className,
   optionClassName,
@@ -213,14 +220,10 @@ function QuickAmountOptions({
   )
 }
 
-/**
- * Probe-blocked fallback. Stripe Elements can't mount inside this host
- * sandbox, so we route the customer to the hosted portal where they can
- * complete a top-up the old-fashioned way.
- */
-function HostedTopupFallback({ cx }: { cx: Cx }) {
+function HostedTopupFallback({ cx, onBack }: { cx: Cx; onBack?: () => void }) {
   return (
     <div className={cx.card}>
+      {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
       <h2 className={cx.heading}>Add credits</h2>
       <p className={cx.muted}>
         {

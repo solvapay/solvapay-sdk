@@ -362,7 +362,7 @@ describe('PaymentForm paid-branch polling (MCP checkout flicker fix)', () => {
     expect(screen.queryByTestId('err')?.textContent ?? '').toBe('')
   })
 
-  it('surfaces paymentProcessingTimeout error and re-enables the button after the 10s ceiling when hasPaidPurchase never flips', async () => {
+  it('surfaces paymentConfirmationDelayed error and re-enables the button after the 10s ceiling when hasPaidPurchase never flips', async () => {
     const onError = vi.fn()
     render(<PaidHarness onError={onError} />)
 
@@ -378,13 +378,13 @@ describe('PaymentForm paid-branch polling (MCP checkout flicker fix)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('err').textContent).toBe(
-        enCopy.errors.paymentProcessingTimeout,
+        enCopy.errors.paymentConfirmationDelayed,
       )
     })
     expect(button.getAttribute('data-state')).toBe('idle')
     expect(onError).toHaveBeenCalledWith(expect.any(Error))
     expect(onError.mock.calls[0][0].message).toBe(
-      enCopy.errors.paymentProcessingTimeout,
+      enCopy.errors.paymentConfirmationDelayed,
     )
     // At least a handful of refetches were attempted before the ceiling hit.
     expect(paidHarnessRef.current?.refetchCalls() ?? 0).toBeGreaterThanOrEqual(3)
