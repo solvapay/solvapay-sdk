@@ -28,7 +28,6 @@ import { seedMcpCaches } from './cache-seed'
 import {
   McpAppShell,
   type McpAppShellProps,
-  type McpTabKind,
 } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import {

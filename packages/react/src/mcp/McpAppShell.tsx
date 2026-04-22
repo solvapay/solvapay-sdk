@@ -179,7 +179,6 @@ export function McpAppShell({
   slashCommands,
   onRefreshBootstrap,
 }: McpAppShellProps) {
-  const cx = resolveMcpClassNames(classNames)
   const visibleTabs = useMemo(() => computeVisibleTabs(bootstrap, tabs), [bootstrap, tabs])
   const { merchant } = useMerchant()
   const [paywallDismissed, setPaywallDismissed] = useState(false)
@@ -210,20 +209,27 @@ export function McpAppShell({
     return visibleTabs[0] ?? 'checkout'
   }, [bootstrap.view, visibleTabs, isPaywall])
 
-  const [activeTab, setActiveTab] = useState<McpTabKind>(initialTab)
-  const lastRefreshedAtRef = useRef<number>(Date.now())
+  const [selectedTab, setSelectedTab] = useState<McpTabKind>(initialTab)
+  // Derive the active tab during render so a no-longer-visible selection
+  // snaps to the first visible tab without a setState-in-effect cascade
+  // (see https://react.dev/learn/you-might-not-need-an-effect).
+  const activeTab: McpTabKind = visibleTabs.includes(selectedTab)
+    ? selectedTab
+    : (visibleTabs[0] ?? 'checkout')
+  // Initialised in a mount effect (below) rather than at render time —
+  // `Date.now()` is impure and the React compiler/linter forbids it in
+  // render bodies (including `useRef` initialisers).
+  const lastRefreshedAtRef = useRef<number>(0)
   const [tourForceOpen, setTourForceOpen] = useState(0)
 
   useEffect(() => {
-    if (!visibleTabs.includes(activeTab) && visibleTabs.length > 0) {
-      setActiveTab(visibleTabs[0])
-    }
-  }, [visibleTabs, activeTab])
+    lastRefreshedAtRef.current = Date.now()
+  }, [])
 
   const handleSelect = useCallback(
     (next: McpTabKind) => {
       if (next === activeTab) return
-      setActiveTab(next)
+      setSelectedTab(next)
       const now = Date.now()
       if (onRefreshBootstrap && now - lastRefreshedAtRef.current > STALE_THRESHOLD_MS) {
         lastRefreshedAtRef.current = now
@@ -263,25 +269,27 @@ export function McpAppShell({
 
       <div className="solvapay-mcp-shell-layout">
         <div className="solvapay-mcp-shell-body">
-          {isPaywall
-            ? renderPaywall({
-                bootstrap,
-                views,
-                classNames,
-                onUpgradeRequested: () => {
-                  setPaywallDismissed(true)
-                  setActiveTab('checkout')
-                },
-              })
-            : renderTab({
-                tab: activeTab,
-                bootstrap,
-                views,
-                classNames,
-                slashCommands,
-                onSelect: handleSelect,
-                suppressDetailCards: isShellSidebarEligible,
-              })}
+          {isPaywall ? (
+            <ShellPaywallContent
+              bootstrap={bootstrap}
+              views={views}
+              classNames={classNames}
+              onUpgradeRequested={() => {
+                setPaywallDismissed(true)
+                setSelectedTab('checkout')
+              }}
+            />
+          ) : (
+            <ShellTabContent
+              tab={activeTab}
+              bootstrap={bootstrap}
+              views={views}
+              classNames={classNames}
+              slashCommands={slashCommands}
+              onSelect={handleSelect}
+              suppressDetailCards={isShellSidebarEligible}
+            />
+          )}
         </div>
 
         {!isPaywall && isShellSidebarEligible ? (
@@ -519,7 +527,11 @@ type RenderTabArgs = {
   suppressDetailCards?: boolean
 }
 
-function renderTab({
+// Rendered as a JSX component (`<ShellTabContent … />`) rather than a
+// plain helper function so React compiler / `react-hooks/refs` treats
+// callback props attached to the returned tree as event handlers and
+// doesn't flag them as "ref read during render".
+function ShellTabContent({
   tab,
   bootstrap,
   views,
@@ -603,7 +615,7 @@ function renderTab({
   }
 }
 
-function renderPaywall({
+function ShellPaywallContent({
   bootstrap,
   views,
   classNames,

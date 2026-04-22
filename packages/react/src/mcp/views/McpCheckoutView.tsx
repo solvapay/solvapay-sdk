@@ -585,6 +585,7 @@ function HostedCheckout({
     checkout,
     beginAwaiting,
     cx,
+    productRef,
   ])
 
   if (loading) {

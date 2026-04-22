@@ -111,12 +111,19 @@ export function McpFirstRunTour({
     return steps.filter((s) => document.querySelector(`[data-tour-step="${s.anchor}"]`))
   }, [steps])
 
-  useEffect(() => {
-    if (!open) return
-    if (stepIndex >= visibleSteps.length) {
+  const step = visibleSteps[stepIndex]
+
+  // Completion + advancement are driven by explicit user events
+  // (Enter / Space / the "Done" button) rather than an effect that
+  // chases `stepIndex >= visibleSteps.length`, which would be a
+  // classic setState-in-effect cascade.
+  const advance = useCallback(() => {
+    if (stepIndex + 1 >= visibleSteps.length) {
       close('completed')
+    } else {
+      setStepIndex(stepIndex + 1)
     }
-  }, [open, stepIndex, visibleSteps.length, close])
+  }, [stepIndex, visibleSteps.length, close])
 
   useEffect(() => {
     if (!open) return
@@ -126,23 +133,37 @@ export function McpFirstRunTour({
         close('dismissed')
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()
-        setStepIndex((i) => i + 1)
+        advance()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, close])
+  }, [open, close, advance])
 
-  const step = visibleSteps[stepIndex]
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
 
+  // Measure the anchor from the DOM — this is the one place setState
+  // in a layout effect is the canonical pattern (useSyncExternalStore
+  // would require a MutationObserver subscription for every tab
+  // anchor, which is more complex than this transient three-step
+  // tour warrants). The functional-updater comparison below lets
+  // React bail out when the measured rect hasn't moved, keeping the
+  // "no cascading renders" invariant the lint rule guards.
   useLayoutEffect(() => {
-    if (!open || !step) {
-      setAnchorRect(null)
-      return
-    }
+    if (!open || !step) return
     const el = document.querySelector(`[data-tour-step="${step.anchor}"]`)
-    if (el) setAnchorRect(el.getBoundingClientRect())
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- DOM measurement; React bails out when rect is unchanged.
+    setAnchorRect((prev) =>
+      prev &&
+      prev.top === rect.top &&
+      prev.left === rect.left &&
+      prev.width === rect.width &&
+      prev.height === rect.height
+        ? prev
+        : rect,
+    )
   }, [open, step])
 
   useEffect(() => {
@@ -192,11 +213,7 @@ export function McpFirstRunTour({
           <button
             type="button"
             className="solvapay-mcp-tour-next"
-            onClick={() =>
-              stepIndex + 1 >= visibleSteps.length
-                ? close('completed')
-                : setStepIndex(stepIndex + 1)
-            }
+            onClick={advance}
           >
             {stepIndex + 1 >= visibleSteps.length ? 'Done' : 'Next'}
           </button>
