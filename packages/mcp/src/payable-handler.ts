@@ -6,19 +6,34 @@
  * in `structuredContent` so the React shell can render the paywall
  * view without a follow-up tool call.
  *
+ * V1 also constructs the `ResponseContext` merchant handlers receive
+ * as their second argument, unwraps `ctx.respond(...)` envelopes,
+ * overlays merchant `options.text` / `options.nudge`, and flushes
+ * queued `ctx.emit(...)` blocks into the terminal response.
+ *
  * Every SolvaPay MCP adapter (`@solvapay/mcp-sdk`, future `mcp-lite` /
  * `fastmcp` adapters) wraps this in its framework-specific
  * `registerTool` / `registerAppTool` call.
  */
 
-import type { PaywallStructuredContent, SolvaPay } from '@solvapay/server'
+import type {
+  LimitResponseWithPlan,
+  PaywallStructuredContent,
+  ProtectHandlerContext,
+  SolvaPay,
+} from '@solvapay/server'
 import { isPaywallStructuredContent } from '@solvapay/server'
 import { buildPaywallUiMeta } from './paywall-meta'
 import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
+import { buildResponseContext } from './response-context'
+import { isResponseResult } from './response-envelope'
 import type {
   BootstrapPayload,
   McpToolExtra,
+  NudgeSpec,
   PaywallToolResult,
+  ResponseContext,
+  ResponseResult,
   SolvaPayCallToolResult,
 } from './types'
 
@@ -43,28 +58,76 @@ export interface BuildPayableHandlerContext {
 }
 
 /**
+ * Accepts both the new `(args, ctx) => ResponseResult | TData` shape
+ * and the legacy `(args, extra?) => TData` shape. `buildPayableHandler`
+ * detects the return type at runtime via `isResponseResult` and
+ * unwraps accordingly.
+ */
+type MerchantHandler<TArgs, TResult> = (
+  args: TArgs,
+  // Second arg is either a `ResponseContext` (new) or `McpToolExtra`
+  // (legacy). Typed as union; merchants declare whichever they need.
+  extraOrCtx?: ResponseContext | McpToolExtra,
+) => Promise<ResponseResult<TResult> | TResult>
+
+/**
  * Build a paywall-protected MCP tool handler. Returned function is a
  * `(args, extra) => Promise<SolvaPayCallToolResult>` that any MCP
  * adapter can register directly.
  *
  * The handler:
- *  1. Routes the call through `solvaPay.payable({ product }).mcp(handler)`.
- *  2. Detects paywall results via `isPaywallStructuredContent`.
- *  3. Rewrites `structuredContent` as a full `BootstrapPayload` with
+ *  1. Builds a `ResponseContext` from the pre-check `LimitResponseWithPlan`
+ *     and passes it as the second arg to the merchant handler.
+ *  2. Routes the call through `solvaPay.payable({ product }).mcp(wrappedBusinessLogic)`.
+ *  3. Detects paywall results via `isPaywallStructuredContent`.
+ *  4. Rewrites `structuredContent` as a full `BootstrapPayload` with
  *     `view: 'paywall'` + the original gate content on `paywall`
  *     (when `buildBootstrap` is provided — otherwise leaves the raw
  *     gate content intact for backwards compatibility).
- *  4. Stamps `_meta.ui = { resourceUri }` so the host knows which UI
+ *  5. Stamps `_meta.ui = { resourceUri }` so the host knows which UI
  *     resource to open.
+ *  6. On success, if the merchant returned a `ResponseResult` envelope
+ *     via `ctx.respond(...)`, applies `options.text` / `options.nudge`
+ *     overlays and flushes `ctx.emit(...)` blocks into `content[]`.
+ *  7. Silently ignores `options.units` (V1 billing stays at one credit
+ *     per call; V1.1 will thread it into `trackUsage`).
  */
 export function buildPayableHandler<TArgs extends Record<string, unknown>, TResult>(
   solvaPay: SolvaPay,
   ctx: BuildPayableHandlerContext,
-  handler: (args: TArgs, extra?: McpToolExtra) => Promise<TResult>,
+  handler: MerchantHandler<TArgs, TResult>,
 ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult> {
   const { product, resourceUri, buildBootstrap, getCustomerRef } = ctx
+
+  // The business logic passed to `.mcp(...)` is called by
+  // `paywall.protect` with `(args, handlerContext)`. We close over
+  // `solvaPay` + `product` to construct the merchant-facing
+  // `ResponseContext` and invoke the merchant handler.
+  const wrappedBusinessLogic = async (
+    args: Record<string, unknown>,
+    handlerContext?: ProtectHandlerContext,
+  ): Promise<ResponseResult<unknown> | unknown> => {
+    const limits: LimitResponseWithPlan | null = handlerContext?.limits ?? null
+    const customerRef = handlerContext?.customerRef ?? ''
+
+    const { ctx: responseCtx } = buildResponseContext({
+      customerRef,
+      limits,
+      product,
+      solvaPay,
+    })
+
+    // Invoke the merchant handler. Cast is safe: both the new
+    // `(args, ctx)` and legacy `(args, extra?)` signatures accept the
+    // same first positional arg shape; the second arg varies by handler
+    // flavour but merchants only access the one they declared.
+    return handler(args as TArgs, responseCtx)
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const protectedHandler = solvaPay.payable({ product, getCustomerRef }).mcp(handler as any)
+  const protectedHandler = solvaPay
+    .payable({ product, getCustomerRef })
+    .mcp(wrappedBusinessLogic as any)
 
   return async (
     args: Record<string, unknown>,
@@ -74,6 +137,9 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
       | PaywallToolResult
       | SolvaPayCallToolResult
 
+    // ——————————————————————————————————————————————————————————————
+    // Paywall branch — unchanged from pre-ctx behaviour.
+    // ——————————————————————————————————————————————————————————————
     if (result.isError && isPaywallStructuredContent(result.structuredContent)) {
       const existingMeta =
         typeof (result as PaywallToolResult)._meta === 'object' &&
@@ -97,8 +163,114 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
         },
       }
     }
+
+    // ——————————————————————————————————————————————————————————————
+    // Success branch — detect `ResponseResult` envelope and unwrap.
+    // ——————————————————————————————————————————————————————————————
+    //
+    // `McpAdapter.formatResponse` wrapped the merchant return into
+    // `{ content: [{ text: JSON.stringify(merchantReturn) }], structuredContent: merchantReturn }`.
+    // When the merchant called `ctx.respond(data, options)` the
+    // `merchantReturn` is a `ResponseResult` envelope; otherwise it's
+    // raw merchant data (backwards-compatible).
+    if (isResponseResult(result.structuredContent)) {
+      return unwrapResponseEnvelope(
+        result as SolvaPayCallToolResult,
+        result.structuredContent as ResponseResult<unknown>,
+        resourceUri,
+        buildBootstrap,
+        extra,
+      )
+    }
+
     return result as SolvaPayCallToolResult
   }
+}
+
+/**
+ * Apply `options.text` / `options.nudge` overlays and flush queued
+ * `ctx.emit(...)` blocks into the terminal response. Called only when
+ * the merchant returned a `ResponseResult` envelope.
+ *
+ * When `options.nudge` is present, rewrites `structuredContent` into a
+ * full `BootstrapPayload` with `view: 'nudge'` (mirroring the
+ * paywall-branch pattern) so the React shell opens `McpNudgeView`
+ * and renders the merchant `data` alongside `McpUpsellStrip`.
+ */
+async function unwrapResponseEnvelope(
+  adapterResult: SolvaPayCallToolResult,
+  envelope: ResponseResult<unknown>,
+  resourceUri: string,
+  buildBootstrap: BuildBootstrapPayloadFn | undefined,
+  extra: McpToolExtra | undefined,
+): Promise<SolvaPayCallToolResult> {
+  const { data, options, emittedBlocks } = envelope
+  const textOverride = options?.text
+  const nudge = options?.nudge
+
+  // `content[0].text` — narrator override via `options.text`, otherwise
+  // the existing JSON-serialised merchant data. V1.1 may introduce a
+  // merchant-data narrator; V1 keeps the current behaviour.
+  const primaryText =
+    typeof textOverride === 'string' ? textOverride : JSON.stringify(data)
+
+  const content: SolvaPayCallToolResult['content'] = [
+    ...((emittedBlocks ?? []) as SolvaPayCallToolResult['content']),
+    { type: 'text', text: primaryText },
+  ]
+
+  // `options.units` is intentionally ignored — V1 billing stays at one
+  // credit per call. V1.1: thread `options.units` into `trackUsage` at
+  // `paywall.ts`'s success-path invocation site (blocked on backend +
+  // product work per ctx-respond-v1 spec).
+
+  const existingMeta =
+    typeof adapterResult._meta === 'object' && adapterResult._meta !== null
+      ? (adapterResult._meta as Record<string, unknown>)
+      : {}
+
+  if (nudge) {
+    // Mirror the paywall branch: when a bootstrap builder is wired,
+    // embed the full `BootstrapPayload` so the React shell can render
+    // `view: 'nudge'` without a follow-up tool call.
+    const structuredContent = buildBootstrap
+      ? ({
+          ...((await buildBootstrap('nudge', extra)) as unknown as Record<string, unknown>),
+          nudge,
+          data,
+        } as Record<string, unknown>)
+      : (data as Record<string, unknown>)
+
+    return {
+      ...adapterResult,
+      content,
+      structuredContent,
+      _meta: {
+        ...existingMeta,
+        ...buildNudgeUiMeta({ resourceUri, nudge }),
+      },
+    }
+  }
+
+  return {
+    ...adapterResult,
+    content,
+    structuredContent: data as Record<string, unknown>,
+    ...(Object.keys(existingMeta).length > 0 ? { _meta: existingMeta } : {}),
+  }
+}
+
+/**
+ * Stamp `_meta.ui = { resourceUri, nudge }` on success responses
+ * carrying an upsell nudge. Mirrors `buildPaywallUiMeta` — the shell
+ * opens the same UI resource and reads `nudge` off structured content
+ * or `_meta.ui` to render `McpUpsellStrip` (V1.1 may converge on a
+ * single canonical location).
+ */
+function buildNudgeUiMeta(input: { resourceUri: string; nudge: NudgeSpec }): {
+  ui: { resourceUri: string; nudge: NudgeSpec }
+} {
+  return { ui: { resourceUri: input.resourceUri, nudge: input.nudge } }
 }
 
 // Keep the `BootstrapPayload` type in the symbol table of this module so

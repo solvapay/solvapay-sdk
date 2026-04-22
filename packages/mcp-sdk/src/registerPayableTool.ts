@@ -16,6 +16,7 @@ import {
   buildPayableHandler,
   type BuildBootstrapPayloadFn,
   type McpToolExtra,
+  type PayableHandler,
   type SolvaPayToolAnnotations,
 } from '@solvapay/mcp'
 import type { SolvaPay } from '@solvapay/server'
@@ -39,13 +40,23 @@ export interface RegisterPayableToolOptions<InputSchema extends ZodRawShapeCompa
   /**
    * The business logic that runs once the caller is within limits.
    *
-   * Return any JSON-serialisable value — it is wrapped by the MCP
-   * adapter's `formatResponse` into `{ content: [...text...],
-   * structuredContent }`. Throwing anything other than `PaywallError`
-   * surfaces as a tool-level error via `formatError`.
+   * Two shapes are supported:
+   *  - **New (preferred):** `async (args, ctx) => ctx.respond(data, options?)`.
+   *    Returns a `ResponseResult` envelope from `ctx.respond(...)`;
+   *    `ctx.customer` / `ctx.product` / `ctx.gate(...)` / reserved
+   *    streaming stubs are available.
+   *  - **Legacy (still supported):** `async (args, extra?) => data`.
+   *    Returns any JSON-serialisable value; the MCP adapter's
+   *    `formatResponse` wraps it into
+   *    `{ content: [...text...], structuredContent }`.
+   *
+   * Throwing anything other than `PaywallError` surfaces as a
+   * tool-level error via `formatError`.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handler: (args: any, extra?: McpToolExtra) => Promise<any>
+  handler:
+    | PayableHandler<any, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | ((args: any, extra?: McpToolExtra) => Promise<any>)
   /**
    * Builds the full `BootstrapPayload` embedded on paywall results so
    * the React shell renders the paywall view directly from the gate
@@ -99,10 +110,17 @@ export function registerPayableTool<InputSchema extends ZodRawShapeCompat | AnyS
     annotations,
   } = options
 
+  // Cast is safe: `buildPayableHandler` accepts a union of the legacy
+  // `(args, extra?)` handler and the new `(args, ctx)` handler; at
+  // runtime it passes a `ResponseContext` as the second arg, so
+  // merchant handlers that declared `extra?: McpToolExtra` simply
+  // receive an object whose structure they ignore. The double `unknown`
+  // hop silences the variance complaint between the registerPayableTool
+  // public contract and the narrower internal handler type.
   const protectedHandler = buildPayableHandler(
     solvaPay,
     { product, resourceUri, buildBootstrap, getCustomerRef },
-    handler,
+    handler as unknown as Parameters<typeof buildPayableHandler>[2],
   )
 
   const toolMeta = {

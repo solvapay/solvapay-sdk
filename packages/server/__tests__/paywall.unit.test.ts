@@ -233,6 +233,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           limit: '10',
           auth: { customer_ref: 'cus_http_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -287,6 +288,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           limit: '5',
           auth: { customer_ref: 'cus_next_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -306,6 +308,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           id: '123',
           auth: { customer_ref: 'cus_demo_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -365,6 +368,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           input: 'test',
           auth: { customer_ref: 'cus_mcp_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -396,6 +400,79 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       await mcpHandler({})
 
       expect(mockApiClient.trackUsageCalls[0].customerRef).toContain('adapter_level')
+    })
+  })
+
+  describe('ProtectHandlerContext — ctx.respond plumbing', () => {
+    it('passes { customerRef, limits } to the handler on cache-miss', async () => {
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'ctx-test' })
+      const mcpHandler = payable.mcp(handler)
+
+      await mcpHandler(
+        { input: 'test' },
+        { authInfo: { extra: { customer_ref: 'ctx_user' } } },
+      )
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      const [, handlerContext] = handler.mock.calls[0]
+      expect(handlerContext).toMatchObject({
+        customerRef: expect.stringContaining('ctx_user'),
+        limits: expect.objectContaining({
+          withinLimits: true,
+          remaining: expect.any(Number),
+        }),
+      })
+    })
+
+    it('keeps `limits` populated on cache-hit within the TTL window', async () => {
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'ctx-cache-test' })
+      const mcpHandler = payable.mcp(handler)
+
+      await mcpHandler(
+        { a: 1 },
+        { authInfo: { extra: { customer_ref: 'cache_user' } } },
+      )
+      await mcpHandler(
+        { a: 2 },
+        { authInfo: { extra: { customer_ref: 'cache_user' } } },
+      )
+
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+      expect(handler).toHaveBeenCalledTimes(2)
+      const [, ctxFirst] = handler.mock.calls[0]
+      const [, ctxSecond] = handler.mock.calls[1]
+      expect(ctxFirst.limits).toBeTruthy()
+      expect(ctxSecond.limits).toBeTruthy()
+      expect(ctxSecond.limits.withinLimits).toBe(true)
+    })
+
+    it('forwards `extra` bag as `handlerContext.extra`', async () => {
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'ctx-extra-test' })
+      const mcpHandler = payable.mcp(handler)
+
+      const extra = { authInfo: { extra: { customer_ref: 'extra_user' }, token: 'tkn' } }
+      await mcpHandler({ hello: 'world' }, extra)
+
+      const [, handlerContext] = handler.mock.calls[0]
+      expect(handlerContext.extra).toEqual(expect.objectContaining({ authInfo: expect.any(Object) }))
+    })
+
+    it('supports legacy one-arg handlers (backwards compatible)', async () => {
+      const legacyHandler = vi.fn(async (args: any) => ({ args }))
+      const payable = solvaPay.payable({ product: 'legacy-test' })
+      const mcpHandler = payable.mcp(legacyHandler)
+
+      const result = await mcpHandler(
+        { foo: 'bar' },
+        { authInfo: { extra: { customer_ref: 'legacy_user' } } },
+      )
+
+      expect(legacyHandler).toHaveBeenCalledTimes(1)
+      expect(result).toHaveProperty('content')
     })
   })
 
@@ -433,6 +510,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           auth: { customer_ref: 'cus_jwt_user_123' },
         }),
+        expect.anything(),
       )
     })
 
@@ -455,6 +533,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           auth: { customer_ref: 'cus_jwt_user_123' },
         }),
+        expect.anything(),
       )
     })
 
@@ -472,6 +551,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           auth: { customer_ref: 'cus_demo_user' },
         }),
+        expect.anything(),
       )
     })
   })

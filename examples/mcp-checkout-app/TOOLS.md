@@ -1,6 +1,6 @@
 # `mcp-checkout-app` — tools cheat-sheet
 
-The server registers 12 SolvaPay tools + (optionally) 2 demo data
+The server registers 12 SolvaPay tools + (optionally) 3 demo data
 tools. Grouped by audience below: what the model sees in `tools/list`
 is in the first two tables; the UI-only tools are tagged
 `_meta.audience: 'ui'` so hosts that honour the field can hide them
@@ -89,10 +89,40 @@ Enabled when `DEMO_TOOLS !== 'false'` — see
 | --- | --- | --- |
 | `search_knowledge` | Returns 3 deterministic stub snippets for a query | Exercise the paywall from `basic-host` — each call consumes 1 credit |
 | `get_market_quote` | Returns a deterministic fake market quote | Second tool so you can show the paywall firing on something other than `search_knowledge` |
+| `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the V1 `ctx.respond()` / nudge flow — inline upsell strip on the success response |
 
-Both are wrapped with `solvaPay.payable().mcp()` via `registerPayable`
-so the credit balance decrements per call, and the paywall bootstrap
-auto-opens when credits hit zero.
+All three are wrapped with `solvaPay.payable().mcp()` via
+`registerPayable` so the credit balance decrements per call, and the
+paywall bootstrap auto-opens when credits hit zero.
+
+`query_sales_trends` uses the new `(args, ctx) => ctx.respond(data, options?)`
+handler shape to demonstrate the V1 API:
+
+- `ctx.customer.balance` — cached snapshot (≤10s stale) of the
+  pre-check `LimitResponseWithPlan`; read to decide whether to attach
+  a nudge.
+- `ctx.respond(data, { nudge })` — return data with an inline upsell
+  strip that the shell renders above the tool result.
+- `options.units` — reserved for V1.1 variable-unit billing. V1
+  silently ignores the field; V1.1 threads it into `trackUsage`.
+
+Legacy one-arg handlers (`async (args) => data`) keep working
+indefinitely — `search_knowledge` and `get_market_quote` use that
+shape as a reference.
+
+### Reserved `ctx` surface (V1 no-op / V1.1 live)
+
+These are typed in V1 so merchants can write forward-compatible code;
+implementations land in V1.1 weeks after V1.
+
+- `ctx.emit(block)` — V1 queues, flushes into `content[]` at the
+  terminal `respond()`. V1.1: real SSE emission.
+- `ctx.progress({ percent, message })` / `ctx.progressRaw({ ... })` —
+  V1 no-op. V1.1: `notifications/progress`.
+- `ctx.signal: AbortSignal` — V1 always unaborted. V1.1: wired to
+  transport cancellation.
+- `options.units` — V1 ignored (billing stays at one credit per call).
+  V1.1 applies variable-unit billing.
 
 ## UI-only state-change tools (tagged `_meta.audience: 'ui'`)
 
@@ -123,6 +153,7 @@ their descriptions.
 | `/activate_plan` | `{ planRef? }` | "What plans can I activate?" / "Activate `planRef`" |
 | `/search_knowledge` (demo) | `{ query? }` | "Search the knowledge base for `query`" |
 | `/get_market_quote` (demo) | `{ symbol? }` | "Get the current market quote for `symbol`" |
+| `/query_sales_trends` (demo) | `{ range? }` | "Query sales trends for `range`" — triggers a `low-balance` nudge when credits are low |
 
 ## Docs resource
 

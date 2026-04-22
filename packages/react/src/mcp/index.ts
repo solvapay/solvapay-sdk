@@ -104,5 +104,11 @@ export type { McpPaywallViewProps } from './views/McpPaywallView'
 export { McpUsageView } from './views/McpUsageView'
 export type { McpUsageViewProps } from './views/McpUsageView'
 
+export { McpNudgeView } from './views/McpNudgeView'
+export type { McpNudgeViewProps } from './views/McpNudgeView'
+
+export { McpUpsellStrip } from './components/McpUpsellStrip'
+export type { McpUpsellStripProps } from './components/McpUpsellStrip'
+
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'

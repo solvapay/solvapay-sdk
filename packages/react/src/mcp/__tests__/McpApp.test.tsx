@@ -97,6 +97,34 @@ describe('<McpApp>', () => {
     expect(onInitError.mock.calls[0][0].message).toBe('customer_ref missing')
   })
 
+  it('routes to the nudge view when bootstrap carries view: "nudge"', async () => {
+    const app = makeApp({
+      // Any tool name; the structured content view field forces the
+      // resolution to `nudge` via `requestedView = structured.view ?? view`.
+      toolName: 'manage_account',
+      structuredContent: {
+        view: 'nudge',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+        nudge: { kind: 'low-balance', message: 'credits running low' },
+        data: { rows: [1, 2, 3] },
+      },
+    })
+    const NudgeStub = vi.fn(() => <div data-testid="nudge-stub">stubbed nudge</div>)
+    render(<McpApp app={app} views={{ nudge: NudgeStub }} />)
+    await screen.findByTestId('nudge-stub')
+    expect(NudgeStub).toHaveBeenCalled()
+    const firstCall = NudgeStub.mock.calls[0] as unknown as [
+      { bootstrap: { view: string; nudge?: { kind: string }; data?: unknown } },
+    ]
+    expect(firstCall[0].bootstrap.view).toBe('nudge')
+    expect(firstCall[0].bootstrap.nudge).toEqual({
+      kind: 'low-balance',
+      message: 'credits running low',
+    })
+    expect(firstCall[0].bootstrap.data).toEqual({ rows: [1, 2, 3] })
+  })
+
   it('passes classNames through to overridden views', async () => {
     const app = makeApp({
       toolName: 'manage_account',

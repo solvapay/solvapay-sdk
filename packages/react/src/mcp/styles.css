@@ -713,3 +713,91 @@ body {
 .solvapay-mcp-tour-replay:hover {
   color: var(--color-text-primary, #101828);
 }
+
+/* --- McpUpsellStrip / McpNudgeView --- */
+
+.solvapay-mcp-upsell-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-primary, #e4e7ec);
+  background: var(--color-background-secondary, #f9fafb);
+  color: var(--color-text-primary, #101828);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.solvapay-mcp-upsell-strip--low-balance,
+.solvapay-mcp-upsell-strip--approaching-limit {
+  border-color: var(--color-border-warning, #fedf89);
+  background: var(--color-background-warning-subtle, #fffaeb);
+}
+
+.solvapay-mcp-upsell-strip--cycle-ending {
+  border-color: var(--color-border-brand, #d6bbfb);
+  background: var(--color-background-brand-subtle, #f9f5ff);
+}
+
+.solvapay-mcp-upsell-strip-message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.solvapay-mcp-upsell-strip-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.solvapay-mcp-upsell-strip-cta {
+  background: var(--color-background-primary, #ffffff);
+  border: 1px solid var(--color-border-primary, #d0d5dd);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: inherit;
+}
+
+.solvapay-mcp-upsell-strip-cta:hover {
+  background: var(--color-background-primary-hover, #f4ebff);
+}
+
+.solvapay-mcp-upsell-strip-dismiss {
+  background: transparent;
+  border: none;
+  width: 20px;
+  height: 20px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-secondary, #475467);
+}
+
+.solvapay-mcp-upsell-strip-dismiss:hover {
+  color: var(--color-text-primary, #101828);
+}
+
+.solvapay-mcp-nudge-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.solvapay-mcp-nudge-data {
+  margin: 0;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--color-background-secondary, #f9fafb);
+  color: var(--color-text-primary, #101828);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

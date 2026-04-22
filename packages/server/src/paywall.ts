@@ -119,7 +119,49 @@ interface LimitsCacheEntry {
   checkoutUrl?: string
   meterName?: string
   timestamp: number
+  /**
+   * Full `LimitResponseWithPlan` returned from the pre-check. Cached so
+   * `ctx.customer` (balance / remaining / plan) stays populated on
+   * cache hits within the TTL window — the spec's 10s-stale contract.
+   */
+  limits: LimitResponseWithPlan
 }
+
+/**
+ * Handler-scoped context passed as the optional second positional
+ * argument to handlers registered via `paywall.protect(...)`.
+ *
+ * Backwards-compatible: existing one-arg handlers `(args) => ...`
+ * ignore the second argument and continue to work.
+ *
+ * Consumed by `@solvapay/mcp`'s `buildPayableHandler` to construct the
+ * `ResponseContext` merchant tools receive as their second argument.
+ */
+export interface ProtectHandlerContext {
+  /** Resolved backend customer ref (`cus_...`). */
+  customerRef: string
+  /**
+   * The `LimitResponseWithPlan` consulted at pre-check time. Sourced
+   * from either the fresh `checkLimits` call on cache-miss or the
+   * cached entry on cache-hit. `null` only when the paywall is
+   * operating in a degraded mode that couldn't produce a limit
+   * response (defensive; normal flow always populates this).
+   */
+  limits: LimitResponseWithPlan | null
+  /**
+   * Transport-level extra passed through adapter chains (e.g. the MCP
+   * adapter's `extra` bag holding `authInfo`). Opaque to `protect()`
+   * itself; forwarded verbatim so adapter-aware handlers can use it.
+   */
+  extra?: unknown
+}
+
+/**
+ * Internal marker field the adapter layer uses to forward its `extra`
+ * bag through `protectedHandler(args)` without widening the public
+ * `PaywallArgs` type. Stripped before the fresh `checkLimits` call.
+ */
+const EXTRA_FORWARD_KEY = '__solvapayExtra' as const
 
 /**
  * Universal SolvaPay Protection - One API for everything
@@ -158,10 +200,16 @@ export class SolvaPayPaywall {
 
   /**
    * Core protection method - works for both MCP and HTTP
+   *
+   * The `handler` may optionally declare a second positional argument
+   * of type `ProtectHandlerContext` to receive the resolved customer
+   * ref, the pre-check `LimitResponseWithPlan`, and an opaque `extra`
+   * bag threaded through from the adapter layer. One-arg handlers
+   * ignore the second argument and continue to work unchanged.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async protect<TArgs extends PaywallArgs, TResult = any>(
-    handler: (args: TArgs) => Promise<TResult>,
+    handler: (args: TArgs, handlerContext?: ProtectHandlerContext) => Promise<TResult>,
     metadata: PaywallMetadata = {},
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
@@ -207,6 +255,9 @@ export class SolvaPayPaywall {
         if (hasFreshCachedLimits) {
           checkoutUrl = cachedLimits.checkoutUrl
           resolvedMeterName = cachedLimits.meterName
+          // Surface the cached `LimitResponseWithPlan` so the downstream
+          // `ProtectHandlerContext` carries balance/plan even on cache hits.
+          lastLimitsCheck = cachedLimits.limits
 
           if (cachedLimits.remaining > 0) {
             cachedLimits.remaining--
@@ -251,6 +302,7 @@ export class SolvaPayPaywall {
               checkoutUrl,
               meterName: resolvedMeterName,
               timestamp: now,
+              limits: limitsCheck,
             })
           }
         }
@@ -290,7 +342,16 @@ export class SolvaPayPaywall {
           })
         }
 
-        const result = await handler(args)
+        // Build the optional second-arg context. Existing one-arg
+        // handlers ignore it; `@solvapay/mcp`'s `buildPayableHandler`
+        // uses it to construct the merchant-facing `ResponseContext`.
+        const forwardedExtra = (args as unknown as Record<string, unknown>)[EXTRA_FORWARD_KEY]
+        const handlerContext: ProtectHandlerContext = {
+          customerRef: backendCustomerRef,
+          limits: lastLimitsCheck ?? null,
+          ...(forwardedExtra !== undefined ? { extra: forwardedExtra } : {}),
+        }
+        const result = await handler(args, handlerContext)
 
         const latencyMs = Date.now() - startTime
         this.trackUsage(

@@ -67,6 +67,10 @@ import {
   McpUsageView,
   type McpUsageViewProps,
 } from './views/McpUsageView'
+import {
+  McpNudgeView,
+  type McpNudgeViewProps,
+} from './views/McpNudgeView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 
 export { MCP_TAB_HINTS } from './tab-metadata'
@@ -184,6 +188,9 @@ export function McpAppShell({
   const [paywallDismissed, setPaywallDismissed] = useState(false)
 
   const isPaywall = bootstrap.view === 'paywall' && !paywallDismissed
+  // Nudge view has the same "no tab strip, render bespoke content"
+  // shape as the paywall — handled alongside it in the render tree.
+  const isNudge = bootstrap.view === 'nudge'
 
   // Treat the incoming `bootstrap.view` as the *initial* tab; tab
   // changes after that mutate local state only. The server may route
@@ -258,7 +265,7 @@ export function McpAppShell({
         onReplayTour={isPaywall ? undefined : () => setTourForceOpen((n) => n + 1)}
       />
 
-      {!isPaywall && visibleTabs.length > 1 ? (
+      {!isPaywall && !isNudge && visibleTabs.length > 1 ? (
         <McpTabBar
           tabs={visibleTabs}
           active={activeTab}
@@ -279,6 +286,17 @@ export function McpAppShell({
                 setSelectedTab('checkout')
               }}
             />
+          ) : isNudge ? (
+            <ShellNudgeContent
+              bootstrap={bootstrap}
+              views={views}
+              classNames={classNames}
+              onUpgradeRequested={() => {
+                // Nudge CTA opens the checkout tab in the same shell,
+                // mirroring the paywall "Upgrade" flow.
+                setSelectedTab('checkout')
+              }}
+            />
           ) : (
             <ShellTabContent
               tab={activeTab}
@@ -292,7 +310,7 @@ export function McpAppShell({
           )}
         </div>
 
-        {!isPaywall && isShellSidebarEligible ? (
+        {!isPaywall && !isNudge && isShellSidebarEligible ? (
           <aside className="solvapay-mcp-shell-sidebar" aria-label="Your account context">
             <McpSellerDetailsCard classNames={classNames} />
             <McpCustomerDetailsCard
@@ -303,9 +321,11 @@ export function McpAppShell({
         ) : null}
       </div>
 
-      {!isPaywall && showFooter ? <ShellFooter classNames={classNames} merchant={merchant} /> : null}
+      {!isPaywall && !isNudge && showFooter ? (
+        <ShellFooter classNames={classNames} merchant={merchant} />
+      ) : null}
 
-      {!isPaywall ? (
+      {!isPaywall && !isNudge ? (
         <McpFirstRunTour
           key={tourForceOpen}
           forceOpen={tourForceOpen > 0}
@@ -613,6 +633,27 @@ function ShellTabContent({
     default:
       return null
   }
+}
+
+function ShellNudgeContent({
+  bootstrap,
+  views,
+  classNames,
+  onUpgradeRequested,
+}: {
+  bootstrap: McpBootstrap
+  views?: McpAppViewOverrides
+  classNames?: McpViewClassNames
+  onUpgradeRequested: () => void
+}) {
+  const NudgeView = (views?.nudge ?? McpNudgeView) as React.ComponentType<McpNudgeViewProps>
+  return (
+    <NudgeView
+      bootstrap={bootstrap}
+      onCta={onUpgradeRequested}
+      classNames={classNames}
+    />
+  )
 }
 
 function ShellPaywallContent({

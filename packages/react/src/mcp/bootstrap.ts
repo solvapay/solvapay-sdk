@@ -13,6 +13,7 @@ import type {
   BootstrapPayload,
   BootstrapPlan,
   BootstrapProduct,
+  NudgeSpec,
   SolvaPayMcpViewKind,
 } from '@solvapay/mcp'
 import { TOOL_FOR_VIEW, VIEW_FOR_TOOL } from '@solvapay/mcp'
@@ -43,6 +44,17 @@ export interface McpBootstrap {
    * doesn't have to re-fetch it. Only populated for `view: 'paywall'`.
    */
   paywall?: PaywallStructuredContent
+  /**
+   * Upsell strip spec attached when `view: 'nudge'`. `McpNudgeView`
+   * renders `McpUpsellStrip` using this.
+   */
+  nudge?: NudgeSpec
+  /**
+   * Merchant tool result data embedded alongside a nudge so the shell
+   * can preview it without a follow-up tool call. Only populated when
+   * `view: 'nudge'`.
+   */
+  data?: unknown
   /** Product-scoped snapshot — always present. */
   merchant: BootstrapMerchant
   product: BootstrapProduct
@@ -151,6 +163,17 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
   // `structuredContent`, so `requestedView === 'paywall'` always comes
   // with `paywall` populated — no account-view fallback needed.
   const resolvedView: SolvaPayMcpViewKind = requestedView
+  // Nudge view — `buildPayableHandler` stamps `nudge` + `data` on the
+  // bootstrap payload when a successful tool response carried
+  // `options.nudge`. Forward both so `McpNudgeView` can render the
+  // upsell strip alongside the merchant's tool result.
+  const nudgeSpec = (structured as { nudge?: unknown } | undefined)?.nudge
+  const nudge =
+    requestedView === 'nudge' && isNudgeSpec(nudgeSpec) ? (nudgeSpec as NudgeSpec) : undefined
+  const data =
+    requestedView === 'nudge'
+      ? (structured as { data?: unknown } | undefined)?.data
+      : undefined
   return {
     view: resolvedView,
     productRef: ref,
@@ -161,6 +184,17 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     plans: Array.isArray(structured?.plans) ? (structured.plans as BootstrapPlan[]) : [],
     customer: (structured?.customer ?? null) as BootstrapCustomer | null,
     ...(paywall ? { paywall } : {}),
+    ...(nudge ? { nudge } : {}),
+    ...(data !== undefined ? { data } : {}),
   }
+}
+
+function isNudgeSpec(value: unknown): value is NudgeSpec {
+  if (typeof value !== 'object' || value === null) return false
+  const kind = (value as { kind?: unknown }).kind
+  return (
+    typeof kind === 'string' &&
+    (kind === 'low-balance' || kind === 'cycle-ending' || kind === 'approaching-limit')
+  )
 }
 

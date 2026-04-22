@@ -208,20 +208,57 @@ configured for the provider's environment, or the
 
 ## Trying the paywall
 
-The example registers two paywalled demo data tools
+The example registers three paywalled demo data tools
 ([`src/demo-tools.ts`](src/demo-tools.ts)) so you can click through the full
 story — call a business tool → hit the gate → resolve in the iframe →
 retry — without hand-rolling a gated tool.
 
 | Tool | Purpose |
 | --- | --- |
-| `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. |
-| `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. |
+| `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. Uses the legacy one-arg handler signature. |
+| `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. Also legacy one-arg. |
+| `query_sales_trends` | Returns deterministic sales rows for a date range and attaches a **`low-balance` nudge** to the success response when the customer is running low on credits. Exercises the V1 `ctx.respond()` API — the two-arg `(args, ctx)` handler signature. |
 
-Both are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false` when
-you copy this example to your own repo — the demo tools and their
-slash-command prompts (`/search_knowledge`, `/get_market_quote`) disappear
-and your copy becomes a clean template.
+All three are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false`
+when you copy this example to your own repo — the demo tools and their
+slash-command prompts (`/search_knowledge`, `/get_market_quote`,
+`/query_sales_trends`) disappear and your copy becomes a clean template.
+
+### `ctx.respond()` and upsell nudges
+
+`query_sales_trends` shows the new V1 handler surface end-to-end:
+
+```ts
+handler: async ({ range }, ctx) => {
+  const results = buildDeterministicRows(range)
+  if (ctx.customer.balance < 1000) {
+    return ctx.respond(
+      { range, results },
+      {
+        units: results.length, // reserved for V1.1 — V1 ignores this
+        nudge: { kind: 'low-balance', message: 'Running low on credits' },
+      },
+    )
+  }
+  return ctx.respond({ range, results }, { units: results.length })
+}
+```
+
+- `ctx.customer` — cached snapshot of the pre-check `LimitResponseWithPlan`;
+  values are ≤10s stale after mutations. Call `ctx.customer.fresh()`
+  for a round-trip when freshness matters.
+- `ctx.respond(data, options?)` — returns a branded envelope. V1
+  supports `text` (content[0].text override) and `nudge` (inline
+  upsell strip). Reserved: `units` (V1.1 variable-unit billing — V1
+  silently ignores the field for forward-compatible handler code).
+- `ctx.gate(reason?)` — sugar over `throw new PaywallError(reason)`
+  when merchant-side rules need to force the paywall.
+- Reserved stubs: `ctx.emit(block)` (V1 queues, V1.1 SSE emits),
+  `ctx.progress(...)` / `ctx.progressRaw(...)` (V1 no-op), `ctx.signal`
+  (V1 unaborted).
+
+**Backwards compatibility:** one-arg `async (args) => data` handlers
+keep working indefinitely — no refactor required.
 
 ### End-to-end recipe
 

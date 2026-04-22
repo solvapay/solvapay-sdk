@@ -111,6 +111,7 @@ export function verifyWebhook({
 
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
+export type { ProtectHandlerContext } from './paywall'
 export { isPaywallStructuredContent } from './types/paywall'
 
 // Export virtual tools for MCP server monetization
@@ -125,6 +126,7 @@ export type {
   LimitActivationBalance,
   LimitActivationProduct,
   LimitPlanSummary,
+  LimitResponseWithPlan,
   SolvaPayClient,
   PayableOptions,
   HttpAdapterOptions,

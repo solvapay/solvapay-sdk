@@ -118,6 +118,10 @@ export interface PaywallToolResult {
 /**
  * Which view a SolvaPay MCP server knows how to bootstrap via the
  * corresponding `open_*` tool.
+ *
+ * The `'nudge'` view is opened implicitly when a successful paywalled
+ * tool response carries `options.nudge`; it renders the merchant's
+ * `data` alongside an inline upsell strip.
  */
 export type SolvaPayMcpViewKind =
   | 'about'
@@ -127,6 +131,7 @@ export type SolvaPayMcpViewKind =
   | 'activate'
   | 'paywall'
   | 'usage'
+  | 'nudge'
 
 export const SOLVAPAY_MCP_VIEW_KINDS = [
   'about',
@@ -136,6 +141,7 @@ export const SOLVAPAY_MCP_VIEW_KINDS = [
   'activate',
   'paywall',
   'usage',
+  'nudge',
 ] as const satisfies readonly SolvaPayMcpViewKind[]
 
 /**
@@ -169,6 +175,17 @@ export interface BootstrapPayload {
   returnUrl: string
   /** Only set for the `open_paywall` branch. */
   paywall?: SolvaPayMcpPaywallContent
+  /**
+   * Upsell strip spec attached when `view: 'nudge'`. Rendered above
+   * the merchant tool result by `McpNudgeView`.
+   */
+  nudge?: NudgeSpec
+  /**
+   * Merchant tool result data embedded alongside a nudge so the shell
+   * can surface it without a follow-up tool call. Only set when
+   * `view: 'nudge'`.
+   */
+  data?: unknown
   merchant: BootstrapMerchant
   product: BootstrapProduct
   plans: BootstrapPlan[]
@@ -335,3 +352,194 @@ export const OPEN_TOOL_FOR_VIEW = TOOL_FOR_VIEW
  * @deprecated Use `VIEW_FOR_TOOL`.
  */
 export const VIEW_FOR_OPEN_TOOL = VIEW_FOR_TOOL
+
+// ============================================================================
+// `ctx.respond()` V1 API — see spec for semantics.
+// ============================================================================
+
+/**
+ * Inline upsell strip attached to a successful tool response. Rendered
+ * below the tool result by the host; dismissible, non-blocking.
+ *
+ * V1 ships three default kinds, each with a default CTA that opens the
+ * `upgrade` intent tool. `kind: 'custom'` is reserved for V1.1.
+ */
+export interface NudgeSpec {
+  kind: 'low-balance' | 'cycle-ending' | 'approaching-limit'
+  message: string
+}
+
+/**
+ * Intermediate content block emitted via `ctx.emit(block)`. Structural
+ * subset of `SolvaPayCallToolResult.content` entries — text, image, or
+ * resource.
+ */
+export type ContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; data: string; mimeType: string }
+  | { type: 'resource'; resource: Record<string, unknown> }
+
+/**
+ * Options for `ctx.respond(data, options?)`.
+ *
+ * `text` overrides the SDK's default narrator output for this response.
+ * `nudge` attaches an inline upsell strip.
+ * `units` is reserved for V1.1 variable-unit billing; V1 silently
+ * ignores the field (billing stays at one credit per tool call).
+ */
+export interface ResponseOptions {
+  /** Override `content[0].text` with merchant-supplied text. */
+  text?: string
+  /** Inline upsell strip rendered below the tool result. */
+  nudge?: NudgeSpec
+  /**
+   * [V1.1] Units to bill for this call. Defaults to 1. Must be >= 0.
+   *
+   * V1 behaviour: field is accepted for forward compatibility but
+   * silently ignored. Billing stays fixed at one credit per tool call.
+   * V1.1 behaviour: threaded into `trackUsage` and applied by the backend.
+   */
+  units?: number
+}
+
+/**
+ * Branded envelope returned by `ctx.respond(data, options?)`. The brand
+ * symbol is module-private — merchants never construct `ResponseResult`
+ * values directly. `buildPayableHandler` unwraps the envelope into a
+ * `SolvaPayCallToolResult` before shipping.
+ */
+export interface ResponseResult<TData = unknown> {
+  /**
+   * Opaque brand marker — typed as `true` so the envelope is
+   * structurally distinguishable from raw merchant data even without
+   * the runtime symbol.
+   */
+  readonly __solvapayResponse: true
+  readonly data: TData
+  readonly options?: ResponseOptions
+  /**
+   * Content blocks queued via `ctx.emit(block)` before the terminal
+   * `respond()` call. V1 flushes these into `content[]` at respond
+   * time; V1.1 emits them over SSE.
+   */
+  readonly emittedBlocks?: ContentBlock[]
+}
+
+/**
+ * Cached snapshot of customer state at handler invocation.
+ *
+ * Populated from the existing `LimitResponse` returned by
+ * `payable().mcp()`'s pre-check — zero additional fetch cost.
+ *
+ * IMPORTANT: values here may be up to 10 seconds stale after mutations
+ * (topup, plan change, cancel) within the same process. For fresh
+ * state, call `.fresh()`.
+ */
+export interface CustomerSnapshot {
+  /** Backend customer ref (`cus_...`). */
+  readonly ref: string
+  /** Credit balance in mils. 0 when the backend didn't surface a balance. */
+  readonly balance: number
+  /** Remaining usage units before hitting the limit. `null` when unlimited. */
+  readonly remaining: number | null
+  /** Whether the customer is within their usage limits at snapshot time. */
+  readonly withinLimits: boolean
+  /**
+   * Active plan on the purchase. `null` when the customer has no
+   * active purchase or is on a free plan.
+   */
+  readonly plan: BootstrapPlan | null
+
+  /**
+   * Force a fresh fetch bypassing the 10s limits cache.
+   * Returns a new snapshot; does NOT mutate the current one.
+   */
+  fresh(): Promise<CustomerSnapshot>
+}
+
+/**
+ * Handler context passed as the second positional argument to merchant
+ * `registerPayable` handlers opting into the V1 `ctx` API.
+ *
+ * V1 surface: `customer`, `product`, `respond`, `gate`.
+ * Reserved (V1.1): `emit`, `progress`, `progressRaw`, `signal` — types
+ * ship in V1 so merchants can write forward-compatible code.
+ */
+export interface ResponseContext {
+  /**
+   * Customer snapshot at handler invocation. See `CustomerSnapshot`
+   * for staleness semantics.
+   */
+  customer: CustomerSnapshot
+
+  /** Read-only product configuration from the bootstrap payload. */
+  product: BootstrapProduct
+
+  /** Build a response. Two forms, both valid. */
+  respond<TData>(data: TData): ResponseResult<TData>
+  respond<TData>(data: TData, options: ResponseOptions): ResponseResult<TData>
+
+  /**
+   * Explicitly trigger a paywall response. Sugar over
+   * `throw new PaywallError(reason)`. Handler execution stops.
+   *
+   * Rare — normally the SDK fires the paywall automatically via
+   * `payable().mcp()` pre-check.
+   */
+  gate(reason?: string): never
+
+  // ——————————————————————————————————————————————————————————————
+  // Reserved API surface — types ship in V1, implementations in V1.1.
+  // ——————————————————————————————————————————————————————————————
+
+  /**
+   * [V1.1] Emit an intermediate content block.
+   *
+   * V1 behaviour: queued and flushed at the terminal `respond()`. No SSE.
+   * V1.1 behaviour: emits immediately over Streamable HTTP + SSE.
+   *
+   * Reserved so merchants can write forward-compatible streaming code
+   * today.
+   */
+  emit(block: ContentBlock): Promise<void>
+
+  /**
+   * [V1.1] Emit a progress notification with a percent.
+   *
+   * V1 behaviour: no-op.
+   * V1.1 behaviour: sends `notifications/progress` if the client
+   * supplied a `progressToken`; no-op otherwise.
+   */
+  progress(options: { percent: number; message?: string }): Promise<void>
+
+  /**
+   * [V1.1] Emit a progress notification with non-percent units.
+   *
+   * V1 behaviour: no-op.
+   * V1.1 behaviour: sends `notifications/progress` with raw
+   * progress/total.
+   */
+  progressRaw(options: { progress: number; total?: number; message?: string }): Promise<void>
+
+  /**
+   * [V1.1] AbortSignal that fires when the client cancels the tool call.
+   *
+   * V1 behaviour: always an unaborted signal.
+   * V1.1 behaviour: wired to the underlying transport cancellation.
+   *
+   * Merchants pass this to their upstream fetch/LLM/image-gen calls to
+   * cancel expensive operations when the client goes away.
+   */
+  signal: AbortSignal
+}
+
+/**
+ * Merchant handler signature for `registerPayable`. Accepts the new
+ * `(args, ctx)` shape and the legacy `(args, extra?)` shape; a handler
+ * that returns raw data (backwards-compatible) or a `ResponseResult`
+ * envelope (via `ctx.respond(...)`) both work.
+ */
+export type PayableHandler<TArgs = Record<string, unknown>, TData = unknown> = (
+  args: TArgs,
+  ctx: ResponseContext,
+) => Promise<ResponseResult<TData> | TData>

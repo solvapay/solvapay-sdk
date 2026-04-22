@@ -58,6 +58,10 @@ import {
   McpUsageView,
   type McpUsageViewProps,
 } from './views/McpUsageView'
+import {
+  McpNudgeView,
+  type McpNudgeViewProps,
+} from './views/McpNudgeView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 
 /**
@@ -94,6 +98,7 @@ export interface McpAppViewOverrides {
   activate?: React.ComponentType<McpActivateViewProps>
   paywall?: React.ComponentType<McpPaywallViewProps>
   usage?: React.ComponentType<McpUsageViewProps>
+  nudge?: React.ComponentType<McpNudgeViewProps>
 }
 
 export interface McpAppProps {
@@ -379,6 +384,7 @@ export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterPro
     activate: 'Activate your plan',
     paywall: 'Unlock access',
     usage: 'Your usage',
+    nudge: (bootstrap.product as { name?: string } | undefined)?.name ?? 'Tool result',
   }
 
   const AboutView = views?.about ?? McpAboutView
@@ -388,6 +394,7 @@ export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterPro
   const ActivateView = views?.activate ?? McpActivateView
   const PaywallView = views?.paywall ?? McpPaywallView
   const UsageView = views?.usage ?? McpUsageView
+  const NudgeView = views?.nudge ?? McpNudgeView
 
   return (
     <>
@@ -423,6 +430,7 @@ export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterPro
         />
       )}
       {view === 'usage' && <UsageView classNames={classNames} />}
+      {view === 'nudge' && <NudgeView bootstrap={bootstrap} classNames={classNames} />}
     </>
   )
 }

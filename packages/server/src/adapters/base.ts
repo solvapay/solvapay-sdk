@@ -9,6 +9,14 @@ import type { SolvaPayPaywall } from '../paywall'
 import type { PaywallArgs, PaywallMetadata } from '../types'
 
 /**
+ * Internal key used to forward the framework-specific `extra` bag from
+ * `createAdapterHandler` down through `paywall.protect()` into the
+ * handler's optional `ProtectHandlerContext.extra`. Kept local to
+ * avoid widening the public `PaywallArgs` type.
+ */
+const EXTRA_FORWARD_KEY = '__solvapayExtra' as const
+
+/**
  * Base adapter interface that all framework adapters implement
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,8 +121,22 @@ export async function createAdapterHandler<TContext, TResult>(
 
       args.auth = { customer_ref: backendRef }
 
-      const result = await protectedHandler(args)
-      return adapter.formatResponse(result, context)
+      // Forward the framework-specific `extra` bag through the paywall
+      // so `ProtectHandlerContext.extra` is populated for handlers that
+      // declare the optional second arg. Scrubbed before returning so
+      // downstream observers see a clean `args` object.
+      if (extra !== undefined) {
+        ;(args as Record<string, unknown>)[EXTRA_FORWARD_KEY] = extra
+      }
+
+      try {
+        const result = await protectedHandler(args)
+        return adapter.formatResponse(result, context)
+      } finally {
+        if (EXTRA_FORWARD_KEY in args) {
+          delete (args as Record<string, unknown>)[EXTRA_FORWARD_KEY]
+        }
+      }
     } catch (error) {
       return adapter.formatError(error as Error, context)
     }

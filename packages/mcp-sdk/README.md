@@ -35,7 +35,12 @@ const server = createSolvaPayMcpServer({
     registerPayable('create_video', {
       schema: { prompt: z.string() },
       description: 'Generate a short video from a text prompt.',
-      handler: async ({ prompt }) => ({ videoUrl: await generateVideo(prompt) }),
+      handler: async ({ prompt }, ctx) => {
+        const videoUrl = await generateVideo(prompt)
+        // `ctx.respond` is the V1 shape — returns raw data plus
+        // optional `text` override and inline upsell `nudge`.
+        return ctx.respond({ videoUrl })
+      },
     })
   },
 })
@@ -45,6 +50,46 @@ One call wires the full SolvaPay transport surface (`check_purchase`,
 `create_payment_intent`, `process_payment`, `open_checkout`, etc.), the
 UI resource with the Stripe CSP baseline, and any integrator-defined
 tools via `additionalTools`.
+
+## Handler signature
+
+`registerPayable` accepts two handler shapes. Both are first-class —
+one-arg legacy handlers keep working indefinitely; the two-arg form is
+preferred for new code.
+
+```ts
+// New (preferred): receive a ResponseContext as the second arg.
+handler: async ({ prompt }, ctx) => {
+  const video = await generate(prompt)
+  // Attach an upsell nudge when the customer is low on credits.
+  if (ctx.customer.balance < 500) {
+    return ctx.respond({ videoUrl: video.url }, {
+      nudge: { kind: 'low-balance', message: 'Running low on credits' },
+    })
+  }
+  return ctx.respond({ videoUrl: video.url })
+}
+
+// Legacy (still supported): return raw data. The SDK wraps it the
+// same way ctx.respond() would.
+handler: async ({ prompt }) => ({ videoUrl: await generate(prompt) })
+```
+
+The [`ctx.respond()` V1 spec](../../docs/spec/ctx-respond-v1.md) has the
+full surface. The TL;DR:
+
+- `ctx.customer` — cached customer snapshot (≤10s stale). Read
+  `balance` / `remaining` / `plan` to branch on usage; call
+  `ctx.customer.fresh()` for a fresh fetch when staleness matters.
+- `ctx.respond(data, options?)` — returns a branded envelope. `options`
+  carries `text` (override `content[0].text`), `nudge` (inline upsell
+  strip), and the reserved `units` (V1.1 variable-unit billing — V1
+  silently ignores).
+- `ctx.gate(reason?)` — throws a `PaywallError` to force the paywall
+  response. Sugar over `throw new PaywallError(...)`.
+- `ctx.emit(block)` / `ctx.progress(...)` / `ctx.signal` — reserved
+  surface. V1 queues (emit) or no-ops (progress / signal); V1.1 wires
+  them to SSE and transport cancellation without code changes.
 
 ## What's in the box
 
