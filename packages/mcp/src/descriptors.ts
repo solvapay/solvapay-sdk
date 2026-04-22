@@ -36,13 +36,21 @@ import {
   type BuildBootstrapPayloadFn,
 } from './bootstrap-payload'
 import { mergeCsp } from './csp'
+import {
+  SOLVAPAY_OVERVIEW_MARKDOWN,
+  SOLVAPAY_OVERVIEW_MIME_TYPE,
+  SOLVAPAY_OVERVIEW_URI,
+} from './resources/overview'
 import { MCP_TOOL_NAMES } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS, TOOL_FOR_VIEW } from './types'
 import type {
   McpToolExtra,
   SolvaPayCallToolResult,
+  SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
   SolvaPayMcpViewKind,
+  SolvaPayPromptDescriptor,
+  SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
   SolvaPayToolDescriptor,
 } from './types'
@@ -101,6 +109,20 @@ export interface BuildSolvaPayDescriptorsOptions {
 export interface SolvaPayDescriptorBundle {
   tools: SolvaPayToolDescriptor[]
   resource: SolvaPayResourceDescriptor
+  /**
+   * Five slash-command prompts — one per intent tool — that hosts with
+   * prompt support (Claude Desktop, Cursor, etc.) surface as
+   * `/upgrade`, `/manage_account`, `/topup`, `/check_usage`, and
+   * `/activate_plan`. Hosts without prompt support silently ignore the
+   * list — registration is purely additive.
+   */
+  prompts: SolvaPayPromptDescriptor[]
+  /**
+   * Narrated docs resources — agent-facing "read me first" content
+   * served over `docs://solvapay/*`. Lives alongside the UI resource so
+   * agents can `resources/read` before trying a tool.
+   */
+  docsResources: SolvaPayDocsResourceDescriptor[]
   /**
    * Parallelised fetch of merchant + product + plans + (optional)
    * customer snapshot that backs every `open_*` tool. Exposed so the
@@ -226,17 +248,17 @@ export function buildSolvaPayDescriptors(
   pushIntentTool(
     'checkout',
     'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout view; on text-only hosts the response carries a markdown summary with a checkout URL the user can click.',
+    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), check_usage (usage snapshot), topup (add credits).',
   )
   pushIntentTool(
     'account',
     'Manage account',
-    'Show or manage the current customer\'s SolvaPay account: plan, balance, payment method, cancel/reactivate controls. UI hosts open the embedded account view; text-only hosts get a markdown summary.',
+    "Show or manage the current customer's SolvaPay account: plan, balance, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), check_usage (usage snapshot), topup (add credits).",
   )
   pushIntentTool(
     'topup',
     'Top up credits',
-    'Add SolvaPay credits for the current customer. UI hosts open the embedded top-up flow; text-only hosts get a markdown summary with a top-up URL.',
+    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance), check_usage (usage snapshot), upgrade (switch to a recurring plan).',
   )
   // `activate_plan` is registered below (transport section) as a
   // dual-audience tool that handles both the picker bootstrap (no
@@ -245,7 +267,7 @@ export function buildSolvaPayDescriptors(
   pushIntentTool(
     'usage',
     'Check usage',
-    'Show the current customer\'s usage snapshot (used, remaining, reset date) for the active usage-based plan. UI hosts open the embedded usage view; text-only hosts get a markdown summary.',
+    "Show the current customer's usage snapshot (used, remaining, reset date) for the active usage-based plan. On UI hosts this opens the embedded usage view; on text hosts returns a markdown summary. Also available: topup (add credits), upgrade (switch to an unlimited plan), manage_account (full account view).",
   )
 
   // Paywall responses now carry the full BootstrapPayload in their
@@ -447,7 +469,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.activatePlan,
     title: 'Activate plan',
     description:
-      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link (text-only hosts) or open the embedded checkout (UI hosts). Without a `planRef`: returns the available plans so the customer can pick one — UI hosts render the embedded picker, text-only hosts see the plans list in the markdown summary.',
+      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan), topup (add credits), check_usage (usage snapshot).',
     inputSchema: {
       productRef: z.string().optional(),
       planRef: z.string().optional(),
@@ -506,5 +528,109 @@ export function buildSolvaPayDescriptors(
         },
   }
 
-  return { tools, resource, buildBootstrapPayload }
+  const prompts = buildSolvaPayPrompts({ enabledViews })
+
+  const docsResources: SolvaPayDocsResourceDescriptor[] = [
+    {
+      uri: SOLVAPAY_OVERVIEW_URI,
+      name: 'SolvaPay MCP — overview',
+      title: 'SolvaPay overview',
+      description:
+        'Agent-facing "start here" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.',
+      mimeType: SOLVAPAY_OVERVIEW_MIME_TYPE,
+      readBody: () => SOLVAPAY_OVERVIEW_MARKDOWN,
+    },
+  ]
+
+  return { tools, resource, prompts, docsResources, buildBootstrapPayload }
+}
+
+/**
+ * Build the framework-neutral slash-command prompt descriptors for the
+ * five SolvaPay intent tools. Exposed standalone so adapters that don't
+ * want the full descriptor bundle (or want to register prompts on an
+ * already-built server) can still pick them up.
+ *
+ * Each prompt is intentionally one `user` message that mirrors how a
+ * human would invoke the intent — this makes slash-commands feel like
+ * natural shortcuts, and keeps the prompts compatible with text hosts
+ * that don't expose the MCP UI shell.
+ */
+export function buildSolvaPayPrompts(
+  options: { enabledViews?: Set<SolvaPayMcpViewKind> } = {},
+): SolvaPayPromptDescriptor[] {
+  const enabled =
+    options.enabledViews ?? new Set<SolvaPayMcpViewKind>(DEFAULT_VIEWS)
+
+  const prompts: SolvaPayPromptDescriptor[] = []
+
+  const userMessage = (text: string): SolvaPayPromptResult => ({
+    messages: [{ role: 'user', content: { type: 'text', text } }],
+  })
+
+  if (enabled.has('checkout')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.upgrade,
+      title: 'Upgrade plan',
+      description: 'Start or change a paid plan for the current customer.',
+      argsSchema: { planRef: z.string().optional() },
+      handler: async ({ planRef }) =>
+        userMessage(
+          typeof planRef === 'string' && planRef
+            ? `Activate plan ${planRef} for me.`
+            : 'Show me the upgrade options for my SolvaPay account.',
+        ),
+    })
+  }
+
+  if (enabled.has('account')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.manageAccount,
+      title: 'Manage account',
+      description:
+        'Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer.',
+      handler: async () => userMessage('Show me my SolvaPay account.'),
+    })
+  }
+
+  if (enabled.has('topup')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.topup,
+      title: 'Top up credits',
+      description: 'Add SolvaPay credits to the current customer.',
+      argsSchema: { amount: z.string().optional() },
+      handler: async ({ amount }) =>
+        userMessage(
+          typeof amount === 'string' && amount
+            ? `Top up my SolvaPay credits by ${amount}.`
+            : 'I want to top up my SolvaPay credits.',
+        ),
+    })
+  }
+
+  if (enabled.has('usage')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.checkUsage,
+      title: 'Check usage',
+      description: 'Show the usage snapshot for the current usage-based plan.',
+      handler: async () => userMessage('How much SolvaPay credit have I used?'),
+    })
+  }
+
+  if (enabled.has('activate')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.activatePlan,
+      title: 'Activate plan',
+      description: 'Pick a plan to activate, or activate a specific plan by ref.',
+      argsSchema: { planRef: z.string().optional() },
+      handler: async ({ planRef }) =>
+        userMessage(
+          typeof planRef === 'string' && planRef
+            ? `Activate plan ${planRef} on my SolvaPay account.`
+            : 'What plans can I activate on my SolvaPay account?',
+        ),
+    })
+  }
+
+  return prompts
 }

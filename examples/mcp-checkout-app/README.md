@@ -10,6 +10,18 @@ primitive. On non-compliant hosts (today: Claude, which hardcodes
 detects the block via a runtime probe and falls back to launching
 **SolvaPay hosted checkout** in a new browser tab.
 
+## Choosing the right example
+
+Three MCP examples ship in this repo. Start here if your product has a
+full self-serve surface (plans, credit balance, top-up, usage); hop to
+a sibling if you need less:
+
+| Example | What it shows | Use when |
+| --- | --- | --- |
+| `examples/mcp-checkout-app` | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall |
+| `examples/mcp-oauth-bridge` | Paywall-only, no UI, virtual tools only | You just need to gate a text-only tool behind SolvaPay usage limits |
+| `examples/mcp-time-app` | Virtual tools + minimal UI, showcases the gate response | You want the smallest possible paywalled MCP server |
+
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
 12-tool surface: 5 intent tools (`upgrade`, `manage_account`, `topup`,
 `check_usage`, `activate_plan`) plus 7 UI-only state-change tools
@@ -70,6 +82,44 @@ fires `refreshBootstrap()` (which calls `manage_account` under the
 hood) and flips the card to **Manage purchase**.
 
 ## Flow
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant H as Host (basic-host)
+  participant S as mcp-checkout-app server
+  participant SP as SolvaPay backend
+
+  U->>H: Select MCP App tool
+  H->>S: tools/call upgrade (intent tool)
+  S->>SP: parallel fetch merchant / product / plans / customer
+  SP-->>S: snapshots
+  S-->>H: BootstrapPayload (structuredContent) + UI resource URI
+  H->>S: resources/read ui://mcp-checkout-app/mcp-app.html
+  S-->>H: HTML + _meta.ui.csp
+  H-->>U: iframe mounts
+  U->>H: (React McpApp renders — provider seeded, probe runs)
+  Note over U,H: Tab nav is local state; no further tool call on switch
+```
+
+Mutation path — e.g. user pays inside the iframe:
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant S as mcp-checkout-app server
+  participant SP as SolvaPay backend
+
+  U->>S: tools/call create_payment_intent
+  S-->>U: clientSecret + accountId
+  U->>U: Stripe.js confirmPayment (nested iframe)
+  U->>S: tools/call process_payment
+  S->>SP: confirm purchase
+  SP-->>S: purchase created
+  S-->>U: ok
+  U->>S: refreshBootstrap() → tools/call upgrade
+  S-->>U: fresh BootstrapPayload (new purchase visible)
+```
 
 1. Host loads `ui://mcp-checkout-app/mcp-app.html`. The resource
    registration declares `_meta.ui.csp` with Stripe's required
@@ -155,6 +205,73 @@ so `useStripeProbe` has a syntactically valid pk to pass to
 configured for the provider's environment, or the
 `/sdk/platform-config` call fails for any reason, the payload carries
 `null` and every host falls back to the hosted-button branch.
+
+## Trying the paywall
+
+The example registers two paywalled demo data tools
+([`src/demo-tools.ts`](src/demo-tools.ts)) so you can click through the full
+story — call a business tool → hit the gate → resolve in the iframe →
+retry — without hand-rolling a gated tool.
+
+| Tool | Purpose |
+| --- | --- |
+| `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. |
+| `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. |
+
+Both are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false` when
+you copy this example to your own repo — the demo tools and their
+slash-command prompts (`/search_knowledge`, `/get_market_quote`) disappear
+and your copy becomes a clean template.
+
+### End-to-end recipe
+
+1. Configure a usage-based plan on your product in the SolvaPay admin.
+2. Start the example (`pnpm --filter @example/mcp-checkout-app dev`) and
+   point `basic-host` at `http://localhost:3006/mcp`.
+3. Activate the usage-based plan via `/activate_plan` (the picker opens
+   in the embedded UI; free or topup-required activation lands
+   instantly).
+4. Call `/search_knowledge query: "hi"` N times. Each call decrements
+   the customer's credit balance by 1 unit.
+5. When credits hit zero, the next call returns a **paywall gate**. The
+   host opens the UI resource on `view: 'paywall'` — `McpPaywallView`
+   renders the reason + top-up CTA (and, once Phase 4 ships, an
+   additional "Upgrade to <plan>" CTA so the user can switch to a
+   recurring plan instead of topping up).
+6. Top up in the iframe. `refreshBootstrap()` fires and seeds the new
+   balance into the provider caches.
+7. Retry `/search_knowledge` — now succeeds.
+
+### Gate → iframe → topup → retry sequence
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant H as Host (basic-host)
+  participant S as mcp-checkout-app
+  participant SP as SolvaPay backend
+
+  U->>H: /search_knowledge query:"hi"
+  H->>S: tools/call search_knowledge
+  S->>SP: payable.checkLimits
+  SP-->>S: withinLimits=false
+  S-->>H: paywall bootstrap (structuredContent + _meta.ui)
+  H-->>U: iframe opens on view=paywall
+
+  U->>H: click "Top up $10"
+  H->>S: create_topup_payment_intent
+  S-->>H: clientSecret
+  Note over U,S: Stripe Elements inside iframe
+  H->>S: process_payment
+  S->>SP: credit balance
+  S-->>H: refreshBootstrap (re-seed caches)
+
+  U->>H: /search_knowledge query:"hi" (retry)
+  H->>S: tools/call search_knowledge
+  S->>SP: payable.checkLimits
+  SP-->>S: withinLimits=true
+  S-->>H: { results: [...] }
+```
 
 ## Known boundaries
 

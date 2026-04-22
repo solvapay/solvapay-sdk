@@ -11,6 +11,27 @@ export const solvapayProductRef = process.env.SOLVAPAY_PRODUCT_REF || ''
  */
 export const solvapayApiOrigin = new URL(solvapayApiBaseUrl).origin
 
+/**
+ * Extra origins the iframe is allowed to load *resources* (img / style
+ * / font) from. Merged into the CSP's `resource_domains`.
+ *
+ * Typical values in local dev:
+ *   MCP_ASSET_ORIGINS=http://localhost:6274,http://localhost:3001
+ *
+ * The backend admin serves provider-uploaded logos over
+ * `http://localhost:<port>/ui/files/download/...` in dev, so the
+ * merchant logo from `BootstrapPayload.merchant.logoUrl` would be
+ * blocked by the CSP's default (Stripe-only) `img-src` without this
+ * opt-in.
+ *
+ * Leave unset in production — the default CSP is tight on purpose so
+ * you don't accidentally widen it beyond Stripe.
+ */
+export const mcpAssetOrigins = (process.env.MCP_ASSET_ORIGINS ?? '')
+  .split(',')
+  .map((entry) => entry.trim())
+  .filter(Boolean)
+
 if (!process.env.SOLVAPAY_SECRET_KEY) {
   throw new Error('SOLVAPAY_SECRET_KEY is required for mcp-checkout-app')
 }

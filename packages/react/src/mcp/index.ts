@@ -41,11 +41,20 @@ export type {
   McpViewRouterProps,
 } from './McpApp'
 
+export { McpAppShell, MCP_TAB_ORDER, computeVisibleTabs } from './McpAppShell'
+export type { McpAppShellProps, McpTabKind } from './McpAppShell'
+
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 
 export { McpAccountView } from './views/McpAccountView'
 export type { McpAccountViewProps } from './views/McpAccountView'
+
+export { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
+export type {
+  McpCustomerDetailsCardProps,
+  McpSellerDetailsCardProps,
+} from './views/detail-cards'
 
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'

@@ -49,9 +49,12 @@ export type {
   McpToolExtra,
   PaywallToolResult,
   SolvaPayCallToolResult,
+  SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
   SolvaPayMcpPaywallContent,
   SolvaPayMcpViewKind,
+  SolvaPayPromptDescriptor,
+  SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
   SolvaPayToolDescriptor,
 } from './types'
@@ -78,11 +81,17 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export { buildSolvaPayDescriptors } from './descriptors'
+export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
 export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,
 } from './descriptors'
+
+export {
+  SOLVAPAY_OVERVIEW_MARKDOWN,
+  SOLVAPAY_OVERVIEW_MIME_TYPE,
+  SOLVAPAY_OVERVIEW_URI,
+} from './resources/overview'
 
 export { createBuildBootstrapPayload } from './bootstrap-payload'
 export type {

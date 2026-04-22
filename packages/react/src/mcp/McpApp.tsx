@@ -25,6 +25,11 @@ import {
   type McpAppBootstrapLike,
 } from './bootstrap'
 import { seedMcpCaches } from './cache-seed'
+import {
+  McpAppShell,
+  type McpAppShellProps,
+  type McpTabKind,
+} from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import {
   McpAccountView,
@@ -114,6 +119,13 @@ export interface McpAppProps {
    * `@modelcontextprotocol/ext-apps` — host-context primitives live there.
    */
   applyContext?: (ctx: McpUiHostContextLike | undefined) => void
+  /**
+   * Shell-level overrides forwarded to `<McpAppShell>` — pin the tab
+   * list, toggle the footer. Set to `false` to opt out of the shell
+   * entirely and fall back to the single-view `<McpViewRouter>`
+   * (useful for integrators who own their own layout).
+   */
+  shell?: false | Pick<McpAppShellProps, 'tabs' | 'footer'>
 }
 
 /**
@@ -142,6 +154,7 @@ export function McpApp({
   classNames,
   onInitError,
   applyContext,
+  shell,
 }: McpAppProps) {
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
@@ -258,6 +271,17 @@ export function McpApp({
     seededInitialRef.current = initial
   }
 
+  // Kept above the conditional returns so hook order is stable across
+  // loading → ready transitions.
+  const refreshBootstrap = useMemo(
+    () => async () => {
+      const fresh = await fetchMcpBootstrap(app)
+      const next = bootstrapToInitial(fresh)
+      seedMcpCaches(next, providerConfig)
+    },
+    [app, providerConfig],
+  )
+
   if (initError) {
     return (
       <main className="solvapay-mcp-main">
@@ -279,16 +303,27 @@ export function McpApp({
     )
   }
 
+  const effectiveBootstrap = productRefOverride
+    ? { ...bootstrap, productRef: productRefOverride }
+    : bootstrap
+
   return (
     <SolvaPayProvider config={providerConfig}>
       <main className="solvapay-mcp-main">
-        <McpViewRouter
-          bootstrap={
-            productRefOverride ? { ...bootstrap, productRef: productRefOverride } : bootstrap
-          }
-          views={views}
-          classNames={classNames}
-        />
+        {shell === false ? (
+          <McpViewRouter bootstrap={effectiveBootstrap} views={views} classNames={classNames} />
+        ) : (
+          <McpAppShell
+            bootstrap={effectiveBootstrap}
+            views={views}
+            classNames={classNames}
+            tabs={shell?.tabs ?? 'auto'}
+            {...(typeof shell === 'object' && shell && 'footer' in shell
+              ? { footer: shell.footer }
+              : {})}
+            onRefreshBootstrap={refreshBootstrap}
+          />
+        )}
       </main>
     </SolvaPayProvider>
   )

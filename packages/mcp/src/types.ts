@@ -207,6 +207,59 @@ export interface SolvaPayResourceDescriptor {
 }
 
 /**
+ * Docs-style resource descriptor — a static markdown / text blob the
+ * agent can `resources/read` for narrated context (e.g. the
+ * `docs://solvapay/overview.md` "start here" guide). Kept separate from
+ * `SolvaPayResourceDescriptor` because it has no CSP metadata and its
+ * body is plain text, not the UI shell HTML.
+ */
+export interface SolvaPayDocsResourceDescriptor {
+  /** Stable URI — typically `docs://solvapay/<slug>.md`. */
+  uri: string
+  /** Human-readable name surfaced in `resources/list`. */
+  name: string
+  /** Optional short title for host UIs that distinguish it from `name`. */
+  title?: string
+  /** Short one-liner surfaced in `resources/list` metadata. */
+  description: string
+  /** MIME type, typically `text/markdown` or `text/plain`. */
+  mimeType: string
+  /** Returns the body — sync or async. */
+  readBody: () => string | Promise<string>
+}
+
+/**
+ * One MCP prompt — rendered as `/<name>` in hosts with slash-command
+ * support. Kept framework-neutral so every adapter (`mcp-sdk`,
+ * `mcp-lite`, `fastmcp`) can map it to their own `registerPrompt`
+ * shape.
+ *
+ * `argsSchema` matches the zod raw-shape shape the official SDK's
+ * `registerPrompt` accepts — a plain object of `z.*` fields. Adapters
+ * without zod-shape prompts can still call each field's `parse()`
+ * themselves.
+ */
+export interface SolvaPayPromptDescriptor {
+  name: string
+  title?: string
+  description: string
+  argsSchema?: Record<string, ZodTypeAny>
+  handler: (args: Record<string, unknown>) => SolvaPayPromptResult | Promise<SolvaPayPromptResult>
+}
+
+/**
+ * Minimal `GetPromptResult` shape — structural subset of the official
+ * SDK's type so adapters can forward it without importing
+ * `@modelcontextprotocol/sdk/types.js`.
+ */
+export interface SolvaPayPromptResult {
+  messages: Array<{
+    role: 'user' | 'assistant'
+    content: { type: 'text'; text: string }
+  }>
+}
+
+/**
  * View → intent-tool map, derived from `MCP_TOOL_NAMES` so a new view
  * requires exactly one edit across the entire ecosystem.
  *

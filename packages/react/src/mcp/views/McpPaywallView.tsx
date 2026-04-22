@@ -29,6 +29,20 @@ export interface McpPaywallViewProps {
   classNames?: McpViewClassNames
   /** Consumers typically pass a function that dismisses the view after resolution. */
   onResolved?: () => void
+  /**
+   * Secondary "Upgrade to <plan> — <price>" CTA rendered below the
+   * paywall's primary (top-up) flow. When set, the paywall view
+   * exposes two routes out of the gate — stay on usage-based by
+   * topping up, or switch to a recurring plan.
+   *
+   * `onClick` fires with the plan the shell derived from
+   * `bootstrap.plans` (first recurring, non-usage-based plan);
+   * consumers typically open `<McpCheckoutView>` for that plan.
+   */
+  upgradeCta?: {
+    label: string
+    onClick: () => void
+  }
 }
 
 export function McpPaywallView({
@@ -37,6 +51,7 @@ export function McpPaywallView({
   returnUrl,
   classNames,
   onResolved,
+  upgradeCta,
 }: McpPaywallViewProps) {
   const cx = resolveMcpClassNames(classNames)
   const copy = useCopy()
@@ -78,6 +93,17 @@ export function McpPaywallView({
         ) : (
           <PaywallNotice.HostedCheckoutLink />
         )}
+
+        {upgradeCta ? (
+          <button
+            type="button"
+            className={`${cx.button} solvapay-mcp-paywall-upgrade-cta`.trim()}
+            data-variant="secondary"
+            onClick={upgradeCta.onClick}
+          >
+            {upgradeCta.label}
+          </button>
+        ) : null}
 
         <PaywallNotice.Retry />
       </PaywallNotice.Root>

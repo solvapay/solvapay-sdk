@@ -107,4 +107,59 @@ describe('createSolvaPayMcpServer', () => {
     expect(ctx.resourceUri).toBe('ui://test/view.html')
     expect(typeof ctx.registerPayable).toBe('function')
   })
+
+  it('registers the five slash-command prompts by default', () => {
+    const { server } = buildTestServer()
+    // @ts-expect-error — private registry used for coverage only
+    const promptNames = Object.keys(server._registeredPrompts ?? {})
+    expect(promptNames.sort()).toEqual(
+      [
+        MCP_TOOL_NAMES.activatePlan,
+        MCP_TOOL_NAMES.checkUsage,
+        MCP_TOOL_NAMES.manageAccount,
+        MCP_TOOL_NAMES.topup,
+        MCP_TOOL_NAMES.upgrade,
+      ].sort(),
+    )
+  })
+
+  it('opts out of prompts when registerPrompts: false', () => {
+    const { server } = buildTestServer({ registerPrompts: false })
+    // @ts-expect-error — private registry used for coverage only
+    const promptNames = Object.keys(server._registeredPrompts ?? {})
+    expect(promptNames).toEqual([])
+  })
+
+  it('only registers prompts for enabled views', () => {
+    const { server } = buildTestServer({ views: ['checkout', 'account'] })
+    // @ts-expect-error — private registry used for coverage only
+    const promptNames = Object.keys(server._registeredPrompts ?? {})
+    expect(promptNames.sort()).toEqual(
+      [MCP_TOOL_NAMES.manageAccount, MCP_TOOL_NAMES.upgrade].sort(),
+    )
+  })
+
+  it('registers the docs overview resource by default', () => {
+    const { server } = buildTestServer()
+    // @ts-expect-error — private registry used for coverage only
+    const resourceUris = Object.keys(server._registeredResources ?? {})
+    expect(resourceUris).toContain('docs://solvapay/overview.md')
+  })
+
+  it('opts out of the docs resource when registerDocsResources: false', () => {
+    const { server } = buildTestServer({ registerDocsResources: false })
+    // @ts-expect-error — private registry used for coverage only
+    const resourceUris = Object.keys(server._registeredResources ?? {})
+    expect(resourceUris).not.toContain('docs://solvapay/overview.md')
+  })
+
+  it('mentions sibling intent tools in the upgrade description', () => {
+    const { server } = buildTestServer()
+    // @ts-expect-error — private registry used for coverage only
+    const registered = server._registeredTools ?? {}
+    const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+    expect(upgrade?.description).toContain('Also available')
+    expect(upgrade?.description).toContain('manage_account')
+    expect(upgrade?.description).toContain('activate_plan')
+  })
 })

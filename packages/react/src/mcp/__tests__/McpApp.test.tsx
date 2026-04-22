@@ -45,12 +45,14 @@ describe('<McpApp>', () => {
       structuredContent: {
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
+        customer: { ref: 'cus_1' },
       },
     })
     const AccountStub = vi.fn(() => <div data-testid="account-stub">stubbed account</div>)
     render(<McpApp app={app} views={{ account: AccountStub }} />)
     await screen.findByTestId('account-stub')
-    expect(screen.getByText('Your SolvaPay account')).toBeTruthy()
+    // Shell renders the "My account" identity heading (below the logo).
+    expect(screen.getByText('My account')).toBeTruthy()
     expect(AccountStub).toHaveBeenCalled()
   })
 
@@ -60,6 +62,10 @@ describe('<McpApp>', () => {
       structuredContent: {
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
+        customer: { ref: 'cus_1' },
+        // Usage-based plan present so the shell's visibility rule keeps
+        // the Top up tab in the strip.
+        plans: [{ reference: 'pln_ub', planType: 'usage-based' }],
       },
     })
     const TopupStub = vi.fn(() => <div data-testid="topup-stub">stubbed topup</div>)
@@ -97,6 +103,7 @@ describe('<McpApp>', () => {
       structuredContent: {
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
+        customer: { ref: 'cus_1' },
       },
     })
     const received: Array<{ classNames?: { card?: string } }> = []
