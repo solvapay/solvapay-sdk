@@ -64,6 +64,14 @@ export interface McpAppShellProps {
    * MCP app after backgrounding it. Errors are swallowed (soft signal).
    */
   onRefreshBootstrap?: () => void | Promise<void>
+  /**
+   * Ask the host to unmount the MCP app. Wired by `<McpApp>` to
+   * `app.requestTeardown()`. The checkout view uses this for its
+   * `"Back to chat"` success CTA and the `"Stay on Free"` dismiss
+   * link. `undefined` hides those affordances so integrators that own
+   * their own mount can opt out.
+   */
+  onClose?: () => void
 }
 
 /**
@@ -99,6 +107,7 @@ export function McpAppShell({
   classNames,
   footer,
   onRefreshBootstrap,
+  onClose,
 }: McpAppShellProps) {
   const { merchant } = useMerchant()
   const [paywallDismissed, setPaywallDismissed] = useState(false)
@@ -106,11 +115,25 @@ export function McpAppShell({
   // the rendered surface to `checkout` without waiting for a host
   // re-invocation. Everything else locks on `bootstrap.view`.
   const [overrideView, setOverrideView] = useState<McpViewKind | null>(null)
+  // Sticks once the customer clicks through the paywall takeover so
+  // the checkout view can show the "Upgrade to continue" banner and
+  // the "Stay on Free" dismiss link. Remains false when the checkout
+  // view is reached via `McpAccountView`'s "Change plan" affordance —
+  // satisfying the §6 invariant "one flag, one visual, no heuristics."
+  const [cameFromPaywall, setCameFromPaywall] = useState(false)
+
+  // Initial entry via `bootstrap.view === 'paywall'` counts as
+  // paywall-origin even before the explicit CTA click, so the flag
+  // reflects the same semantics whether the host opens the checkout
+  // directly with a paywall payload or the customer clicks through
+  // the paywall takeover first.
+  const initialFromPaywall = bootstrap.view === 'paywall'
 
   const resolvedView = resolveSurface(bootstrap.view)
   const isPaywall = resolvedView === 'paywall' && !paywallDismissed
   const effectiveView: McpViewKind = overrideView ?? (isPaywall ? 'paywall' : resolvedView)
   const isChrome = effectiveView !== 'paywall' && effectiveView !== 'nudge'
+  const fromPaywall = cameFromPaywall || initialFromPaywall
 
   // Refresh the bootstrap once on mount if the caller wired it. The
   // tabbed shell used to do this on every tab switch; with a single
@@ -137,10 +160,20 @@ export function McpAppShell({
 
   const handlePaywallUpgrade = () => {
     setPaywallDismissed(true)
+    setCameFromPaywall(true)
     setOverrideView('checkout')
   }
 
   const handleNudgeCta = () => {
+    setOverrideView('checkout')
+  }
+
+  const handleChangePlan = () => {
+    // Change-plan from the account view is *not* a paywall flow —
+    // clear the flag so the checkout view renders without the banner
+    // or the "Stay on Free" dismiss. If `cameFromPaywall` was already
+    // false (the usual case), this is a no-op.
+    setCameFromPaywall(false)
     setOverrideView('checkout')
   }
 
@@ -160,9 +193,13 @@ export function McpAppShell({
             views={views}
             classNames={classNames}
             suppressDetailCards={isShellSidebarEligible}
+            fromPaywall={fromPaywall}
             onSurfaceChange={setOverrideView}
             onPaywallUpgrade={handlePaywallUpgrade}
             onNudgeCta={handleNudgeCta}
+            onChangePlan={handleChangePlan}
+            onRefreshBootstrap={onRefreshBootstrap}
+            onClose={onClose}
           />
         </div>
 
@@ -296,6 +333,13 @@ export interface McpViewRouterProps {
   /** Whether the shell already renders the customer/seller cards in a sidebar. */
   suppressDetailCards?: boolean
   /**
+   * True when the checkout view was reached via the paywall takeover
+   * (or the shell mounted with `bootstrap.view === 'paywall'`). Drives
+   * the "Upgrade to continue" banner and `"Stay on Free"` dismiss link
+   * inside `McpCheckoutView`.
+   */
+  fromPaywall?: boolean
+  /**
    * Called when a surface asks to swap to another surface in-session
    * (only used by the paywall-dismiss and nudge-CTA handlers). The
    * shell wires this to its `overrideView` state.
@@ -308,6 +352,23 @@ export interface McpViewRouterProps {
   onPaywallUpgrade?: () => void
   /** Nudge-specific CTA handler; defaults to `onSurfaceChange?.('checkout')`. */
   onNudgeCta?: () => void
+  /**
+   * Invoked when the account view's "Change plan" affordance fires.
+   * Clears the `fromPaywall` flag before swapping to `'checkout'` so
+   * the banner doesn't render in the change-plan flow.
+   */
+  onChangePlan?: () => void
+  /**
+   * Forwarded to `McpCheckoutView`'s `"Back to chat"` success CTA so
+   * the shell can reseed its caches before the host unmounts.
+   */
+  onRefreshBootstrap?: () => void | Promise<void>
+  /**
+   * Forwarded to `McpCheckoutView`'s `"Back to chat"` and
+   * `"Stay on Free"` affordances. Wired by `<McpApp>` to
+   * `app.requestTeardown()`.
+   */
+  onClose?: () => void
 }
 
 /**
@@ -322,9 +383,13 @@ export function McpViewRouter({
   views,
   classNames,
   suppressDetailCards,
+  fromPaywall,
   onSurfaceChange,
   onPaywallUpgrade,
   onNudgeCta,
+  onChangePlan,
+  onRefreshBootstrap,
+  onClose,
 }: McpViewRouterProps): React.ReactNode {
   const { productRef, stripePublishableKey, returnUrl, paywall } = bootstrap
   const CheckoutView = (views?.checkout ?? McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
@@ -336,6 +401,7 @@ export function McpViewRouter({
   const goCheckout = onSurfaceChange ? () => onSurfaceChange('checkout') : undefined
   const goTopup = onSurfaceChange ? () => onSurfaceChange('topup') : undefined
   const goAccount = onSurfaceChange ? () => onSurfaceChange('account') : undefined
+  const changePlan = onChangePlan ?? goCheckout
   const nudgeCta = onNudgeCta ?? goCheckout
   const paywallUpgrade = onPaywallUpgrade ?? goCheckout
 
@@ -347,7 +413,12 @@ export function McpViewRouter({
           publishableKey={stripePublishableKey}
           returnUrl={returnUrl}
           classNames={classNames}
+          fromPaywall={fromPaywall}
+          paywallKind={paywall?.kind}
+          plans={bootstrap.plans}
           onRequestTopup={goTopup}
+          onRefreshBootstrap={onRefreshBootstrap}
+          onClose={onClose}
         />
       )
     case 'account':
@@ -355,7 +426,7 @@ export function McpViewRouter({
         <AccountView
           classNames={classNames}
           onTopup={goTopup}
-          onChangePlan={goCheckout}
+          onChangePlan={changePlan}
           hideDetailCards={suppressDetailCards}
         />
       )

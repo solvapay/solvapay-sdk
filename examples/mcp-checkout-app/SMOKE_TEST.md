@@ -2,20 +2,29 @@
 
 One reproducible scenario that exercises every layer of the MCP App
 (tools, UI shell, prompts, docs resource, demo paywalled tools) and
-shows usage-based + unlimited plans side-by-side in a single session.
+walks the paid-plan activation UX end-to-end: **Free quota → paywall
+→ plan selection → PAYG top-up or recurring subscription → success →
+"Back to chat"**.
 
 ## Product setup (one-time)
 
-In the SolvaPay admin, create **one product with two plans**:
+In the SolvaPay admin, create **one product with three plans** so the
+activation flow is reachable without admin-side balance zeroing:
 
-- **Starter — Pay as you go** · `planType: usage-based` · no monthly
-  fee · e.g. $0.01 / query (1 credit per unit) · customer tops up
-  before first use.
-- **Unlimited — Monthly** · `planType: recurring`, no meter · $100 /
-  month · cancellable.
+- **Free** · `type: free` / `requiresPayment: false` · quota of ~50
+  calls / month · auto-activated on sign-in. This is the ambient
+  default — customers start here and never see the activation
+  surface while they're under quota.
+- **Pay as you go** · `type: usage-based` · `$0.01 / query`
+  (1 credit per unit) · no monthly fee. Featured as the
+  `recommended` card on the activation surface.
+- **Pro** · `type: recurring` · `$18 / month` · 2 000 credits
+  included · no meter. Auto-renews.
 
-The two-plan shape is the minimum configuration that demonstrates
-both metered and unlimited behaviour in a single iframe session.
+The three-plan shape exercises both activation branches from the
+paid-plan-activation brief: PAYG (`plan → amount → payment → success`)
+and Recurring (`plan → payment → success`). The Free plan is filtered
+out of the plan-selection surface — it shows paid options only.
 
 ## Prerequisites
 
@@ -34,147 +43,138 @@ pnpm --filter @example/mcp-checkout-app dev
 basic-host --mcp-url http://localhost:3006/mcp
 ```
 
-## The 10-step walkthrough
+## The walkthrough
 
-Each step pins a specific behaviour.
+Each step pins a specific behaviour of the three-surface framework
+(account · checkout · paywall) and the paid-plan activation
+state machine.
 
-### 0. First-run tour
+### 1. Cold start — Free plan active
 
-On first launch (`localStorage['solvapay-mcp-tour-seen']` unset), a
-3-step popover tour fires, anchoring to the About / Plan / Account
-tabs. Skip / Next / Done dismiss it; the flag persists across
-sessions. A `?` button in the shell header replays it at any time.
-
-### 1. Cold start
-
-User opens the MCP App in `basic-host`. No purchase yet.
+Fresh customer opens the MCP App in `basic-host`.
 
 **Expect**:
 
 - Shell header shows the **product name** (`bootstrap.product.name`)
   as `<h1>`; the merchant logo + display name sit above as the
   brand marker.
-- Tab strip renders `About · Plan` by default. The `Top up` tab
-  joins when a usage-based plan exists on the product; `Account`
-  joins once the customer authenticates.
-- Active tab is **About**: product description + two contextual CTA
-  cards (`Choose a plan` / `Try without subscribing` or `Start free`)
-  + slash-command hint list.
+- `bootstrap.view === 'account'` by default → `<McpAccountView>`
+  renders: current-plan card showing `Free`, balance / usage row,
+  `See plans` link to upgrade.
 - Text-only hosts (Claude Code, basic-host stdout) see the narrated
   markdown summary instead of the UI iframe — same data, different
   render.
 - Footer shows `Terms ↗ · Privacy ↗ · Provided by SolvaPay` (if the
-  merchant has URLs configured) — trailing `↗` glyph marks links
-  that open in a new tab.
-- Sidebar on wide iframes: Seller details + Your details (credit
-  balance row not present yet).
+  merchant has URLs configured).
 
-### 2. Activate the Starter plan (merged Plan tab)
+### 2. First paywalled calls under Free quota
 
-Click the **Plan** tab → select "Starter — Pay as you go" card. The
-picker inspects `planType` and branches via `resolveActivationStrategy`:
-- Free / trial / zero-priced cards → inline `ActivationFlow` summary +
-  Activate button.
-- Usage-based cards → `Add credits & start` button that routes to the
-  Top up tab (no nested amount picker).
-- Paid recurring cards → `PaymentForm` + Stripe Elements inline.
-
-The standalone **Activate** tab is gone; the picker lives inside Plan
-and is contextual. The legacy `McpActivateView` component stays
-exported as a `views.activate` override for integrators who want the
-old surface.
-
-### 3. Top up $10 (three-step flow with back-nav)
-
-Stripe Elements mounts inside the iframe (`create_topup_payment_intent`
-→ confirm → `process_payment`).
+Type `/search_knowledge query: "hi"` a few times.
 
 **Expect**:
 
-- Each step exposes a `← Back to my account` link (BackLink primitive)
-  above the body; the Payment step also shows `← Change amount`.
-- Balance updates to 1000 credits.
-- The former Credits tab is folded into **Account**: the Balance card
-  + usage meter render inline there.
+- Each call runs silently — tool returns deterministic stub snippets.
+- Usage counter ticks up; `activePurchase.limit` (50) caps the month.
+- No iframe opens. The tool feels free because the handler runs and
+  only the Free-plan quota drains.
 
-### 4. First paywalled call
+### 3. Exhaust Free quota → paywall fires
 
-Type `/search_knowledge query: "hi"`.
-
-**Expect** *(Phase 1 tool + Phase 2 prompt)*:
-
-- Stub snippets returned in the host's transcript.
-- Balance decrements to 999. Refresh the Credits tab to see it, or
-  check the sidebar row.
-
-### 5. Drain credits
-
-Call `/search_knowledge` until balance hits 0. (Admin can also
-zero-out the balance for speed.)
+Call `/search_knowledge` until the counter hits 50. The next call
+returns a gate.
 
 **Expect**:
 
-- Credits tab renders `0 credits remaining`.
-- The last call completes normally.
+- Host opens the iframe on `view: 'paywall'`. `<McpPaywallView>`
+  renders with the `payment_required` copy ("quota exhausted") plus
+  the `Upgrade to <plan>` secondary CTA derived from `bootstrap.plans`.
+- Chrome suppressed: no sidebar, no footer.
 
-### 6. Paywall fires
+### 4. Click through to activation
 
-Next `/search_knowledge` invocation returns the gate.
-
-**Expect** *(Phase 1 gate response, Phase 4 paywall render)*:
-
-- Host opens the iframe on `view: 'paywall'`.
-- `McpPaywallView` renders **two CTAs**:
-  - `[ Top up $10 ]` — the primary top-up flow.
-  - `[ Upgrade to Unlimited — $100/mo ]` — secondary, derived from
-    `bootstrap.plans` (first recurring, non-usage-based plan).
-- Tab strip and footer hidden.
-
-### 7. Upgrade to Unlimited
-
-Click the upgrade CTA.
-
-**Expect** *(Phase 4 state-machine transition)*:
-
-- Paywall dismisses locally, shell routes to Plan tab.
-- `<McpCheckoutView>` renders — Stripe Elements for the Unlimited
-  plan.
-- Complete payment → `process_payment` → `refreshBootstrap()`.
-- Plan tab shows `Current plan: Unlimited — $100/mo`.
-
-### 8. Verify unlimited
-
-Type `/search_knowledge` again.
+Click the `Upgrade to —` CTA.
 
 **Expect**:
 
-- Tool returns snippets without gating.
-- About's "Your activity" strip switches to the unlimited variant
-  (`<plan> — no limits on this plan` + billing cycle).
-- Account tab's plan card shows `Unlimited` + `Manage billing ↗`.
+- `McpAppShell` flips `paywallDismissed=true`, sets
+  `cameFromPaywall=true`, and swaps the body to `<McpCheckoutView>`
+  at `step: 'plan'`.
+- Amber `Upgrade to continue` banner renders at the top — the
+  customer came from the paywall, so the flag is on.
+- Plan cards render in the order `Pay as you go` → `Pro` (PAYG first,
+  then recurring ascending). **No Free card** — it's filtered out.
+- PAYG is auto-selected with the `recommended` badge.
+- CTA at the bottom reads `Continue with Pay as you go`. Clicking a
+  Recurring card flips the CTA to `Continue with Pro — $18/mo`.
+- `Stay on Free` text link sits below the CTA. Clicking it calls
+  `app.requestTeardown()` — the iframe closes and the customer
+  stays on Free (the triggering call stays failed, but future
+  within-quota calls continue to work).
 
-### 9. Sidebar stability check
+### 5a. PAYG branch — activate → top up → confirm
 
-Tab through About / Plan / Top up on a **wide** iframe (>=900px).
+Select **Pay as you go** and click `Continue with Pay as you go`.
 
-**Expect** *(Phase 5)*:
+**Expect** *(step transitions: plan → amount → payment → success)*:
 
-- Seller details + Your details stay mounted across every tab.
-- Account does not appear as a tab at this width — its content lives
-  in the sidebar.
-- Resize to narrow (<900px): Account re-appears in the tab strip,
-  sidebar hides, and the same two cards render inside the Account
-  tab body (phase 3 enrichment).
+- `step: 'amount'`. BackLink reads `← Back`. Three preset credit
+  tiers render (500 / 2 000 / 10 000), with `popular` on the 2 000
+  tier. Custom input is available.
+- Tap a preset → CTA label updates to `Continue — $18.00`.
+- Click Continue. SDK fires `activate_plan({ planRef: <payg> })`,
+  then `step: 'payment'`. BackLink reads `← Change amount`. The
+  order summary + Stripe Elements render inline; a
+  `Save card for future top-ups` checkbox sits below.
+- Complete the card. SDK fires `create_topup_payment_intent` then
+  `process_payment`. `step: 'success'`.
+- Success surface: green check, `Credits added` heading, receipt
+  grid (Amount / Credits / Plan / Rate), `Back to chat` CTA.
+- Click `Back to chat`. SDK fires `onRefreshBootstrap()` then
+  `app.requestTeardown()`. The host unmounts the iframe; the chat
+  re-invokes the original `/search_knowledge` call and it runs
+  silently.
 
-### 10. Replay the tour
+### 5b. Recurring branch — pay → confirm
 
-Click the `?` button in the shell header.
+Alternative path: select **Pro** in step 4 instead of PAYG.
+
+**Expect** *(step transitions: plan → payment → success)*:
+
+- Click `Continue with Pro — $18/mo`. SDK skips the amount picker
+  and jumps straight to `step: 'payment'`.
+- BackLink reads `← Change plan`. Order summary shows
+  `Pro · monthly` and `2 000 credits included`. No Save-card
+  checkbox (the card is required to maintain the subscription).
+- Terms line under the Stripe Elements: _"By subscribing, you agree
+  Pro renews at $18/month until you cancel."_
+- Click `Subscribe — $18.00 / monthly`. SDK fires
+  `create_payment_intent` (subscription flag) then `process_payment`.
+- Success surface: green check, `Pro active` heading, receipt grid
+  (Plan / Credits / Charged today / Next renewal), a muted
+  `Manage from /manage_account` pointer (not a CTA), and `Back to
+  chat`.
+- `Back to chat` → refresh + teardown as in 5a.
+
+### 6. Change-plan re-entry — no banner
+
+After activation, type `/manage_account` → `See plans` on the current-
+plan card.
 
 **Expect**:
 
-- `resetTourDismissal()` clears the `localStorage` flag.
-- The 3-step popover overlay re-fires starting on the About tab.
-- Skip / Next / Done dismiss the tour and re-persist the flag.
+- Shell flips to `<McpCheckoutView>`, but `cameFromPaywall=false` so
+  the amber banner is **absent** and the `Stay on Free` link is
+  hidden. One flag, one visual — same surface, different framing.
+
+### 7. Sidebar stability check
+
+Open the app on a **wide** iframe (>=900px) from the account view.
+
+**Expect**:
+
+- Seller details + Your details persistent in the right-hand
+  sidebar. Resize to narrow (<900px): sidebar hides, the detail
+  cards inline into the account body.
 
 ### Narrated text fallback (any step, text-only host)
 
@@ -192,16 +192,26 @@ Run any intent tool from Claude Code or the basic-host stdout mode
 
 ## What this surfaces that unit tests don't
 
-- Step 2–3: `activate_plan → topup_required → topup → bootstrap
-  refresh` produces the right cache seed without a full remount.
-- Step 5–6: paywall gate response shape reaches the iframe cleanly
-  (the one genuinely cross-package flow).
-- Step 7: plan switch mid-session (usage-based → unlimited) correctly
-  swaps the visible tabs and the sidebar content.
-- Step 8: unlimited-plan customers bypass the gate cleanly (the
-  inverse of step 6 — one call going through, on the same tool).
-- Step 9: the responsive sidebar is truly persistent and doesn't
-  re-layout on tab switches.
+- Step 3: paywall gate response shape reaches the iframe cleanly
+  (the one genuinely cross-package flow — server `PaywallError`
+  serializes through `structuredContent` onto the bootstrap payload
+  and the shell takes over the surface on `view: 'paywall'`).
+- Step 4: `cameFromPaywall` signal stays on across the paywall →
+  checkout surface swap and off on the `McpAccountView` →
+  checkout swap — without that, the banner and `Stay on Free` link
+  would either never show or always show (both wrong).
+- Step 5a: `activate_plan` fires **before** `create_topup_payment_intent`
+  so the active plan is PAYG by the time the topup lands — not the
+  other way around. Previously the SDK ran activation lazily via
+  `ActivationFlow` and relied on the server's `topup_required`
+  response to re-sequence the flow; the brief's replacement wires
+  the ordering explicitly.
+- Step 5a/5b: `app.requestTeardown()` gets called on `Back to chat`
+  after `onRefreshBootstrap` finishes, so the host sees a fresh
+  bootstrap before unmounting.
+- Step 6: change-plan re-entry renders the same surface with the
+  banner suppressed — verifies the one-flag invariant from the
+  brief's §6.
 
 ## Optional automation
 

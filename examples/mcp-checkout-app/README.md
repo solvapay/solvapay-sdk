@@ -262,22 +262,41 @@ keep working indefinitely — no refactor required.
 
 ### End-to-end recipe
 
-1. Configure a usage-based plan on your product in the SolvaPay admin.
+1. Configure **three plans** on your product in the SolvaPay admin:
+   **Free** (auto-active, ~50 calls / month quota), **Pay as you go**
+   (`type: usage-based`, e.g. $0.01 / call), and a **Recurring** plan
+   (e.g. $18 / month with included credits). The Free plan makes the
+   paywall reachable by exhausting the free quota instead of by admin
+   balance-zeroing; the two paid plans exercise the brief's PAYG and
+   Recurring activation branches.
 2. Start the example (`pnpm --filter @example/mcp-checkout-app dev`) and
    point `basic-host` at `http://localhost:3006/mcp`.
-3. Activate the usage-based plan via `/activate_plan` (the picker opens
-   in the embedded UI; free or topup-required activation lands
-   instantly).
-4. Call `/search_knowledge query: "hi"` N times. Each call decrements
-   the customer's credit balance by 1 unit.
-5. When credits hit zero, the next call returns a **paywall gate**. The
-   host opens the UI resource on `view: 'paywall'` — `McpPaywallView`
-   renders the reason + top-up CTA (and, once Phase 4 ships, an
-   additional "Upgrade to <plan>" CTA so the user can switch to a
-   recurring plan instead of topping up).
-6. Top up in the iframe. `refreshBootstrap()` fires and seeds the new
-   balance into the provider caches.
-7. Retry `/search_knowledge` — now succeeds.
+3. Customer is on Free by default. Call `/search_knowledge query: "hi"`
+   N times; each call drains the free quota.
+4. When the Free quota exhausts, the next call returns a **paywall gate**.
+   The host opens the UI resource on `view: 'paywall'` — `McpPaywallView`
+   renders the reason + an `Upgrade to <plan>` CTA.
+5. Click the upgrade CTA. `McpAppShell` flips to `<McpCheckoutView>`
+   with `cameFromPaywall=true`. The amber "Upgrade to continue" banner
+   shows; plan cards render **paid plans only** (no Free card), with
+   PAYG featured as `recommended` and the CTA label tracking the
+   selected plan.
+6. **PAYG branch:** pick Pay as you go → `Continue with Pay as you go`
+   → amount picker (presets 500 / 2 000 / 10 000 credits, `popular` on
+   2 000) → Continue → SDK fires `activate_plan` then opens the
+   payment step with inline Stripe Elements → `Pay $18.00` →
+   `process_payment` → success surface with receipt grid →
+   `Back to chat` calls `onRefreshBootstrap` then
+   `app.requestTeardown()`.
+7. **Recurring branch:** pick Pro → `Continue with Pro — $18/mo`
+   (skips amount picker) → payment step with order summary + terms
+   line → `Subscribe — $18.00 / monthly` → `create_payment_intent`
+   (subscription flag) + `process_payment` → success surface with
+   next-renewal row + `Manage from /manage_account` pointer →
+   `Back to chat`.
+8. `Stay on Free` text link at the bottom of the plan step dismisses
+   the iframe without activating anything — the triggering call
+   stays failed, future within-quota calls keep working.
 
 ### Gate → iframe → topup → retry sequence
 

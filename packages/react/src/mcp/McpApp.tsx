@@ -60,6 +60,14 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike {
   onhostcontextchanged?: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onteardown?: any
+  /**
+   * Fire-and-forget request asking the host to unmount the app. When
+   * approved, the host sends `ui/resource-teardown` back via
+   * `onteardown`. Exposed by the real `@modelcontextprotocol/ext-apps`
+   * `App` class — kept optional in the structural type so tests and
+   * minimal adapters don't have to stub it.
+   */
+  requestTeardown?: () => Promise<void> | void
 }
 
 export interface McpAppViewOverrides {
@@ -99,6 +107,14 @@ export interface McpAppProps {
    * `@modelcontextprotocol/ext-apps` — host-context primitives live there.
    */
   applyContext?: (ctx: McpUiHostContextLike | undefined) => void
+  /**
+   * Override for the shell's "close this app" handler. Defaults to
+   * `() => app.requestTeardown()`, which asks the host to unmount the
+   * iframe (see `@modelcontextprotocol/ext-apps` `App.requestTeardown`).
+   * Used by the checkout view's `"Back to chat"` and `"Stay on Free"`
+   * affordances; passing `undefined` hides those affordances.
+   */
+  onClose?: () => void
 }
 
 /**
@@ -128,6 +144,7 @@ export function McpApp({
   footer,
   onInitError,
   applyContext,
+  onClose,
 }: McpAppProps) {
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
@@ -261,6 +278,21 @@ export function McpApp({
     [app, providerConfig],
   )
 
+  // Default `onClose` asks the host to unmount via
+  // `app.requestTeardown()`. Kept pointer-stable so the shell doesn't
+  // remount its dismiss handlers on every parent render. Declared
+  // above the conditional returns so React sees the same hook order
+  // across loading / ready transitions.
+  const defaultOnClose = useMemo(
+    () => () => {
+      void Promise.resolve(app.requestTeardown?.()).catch(() => {
+        /* best-effort — host may deny. */
+      })
+    },
+    [app],
+  )
+  const effectiveOnClose = onClose ?? defaultOnClose
+
   if (initError) {
     return (
       <main className="solvapay-mcp-main">
@@ -295,6 +327,7 @@ export function McpApp({
           classNames={classNames}
           {...(footer !== undefined ? { footer } : {})}
           onRefreshBootstrap={refreshBootstrap}
+          onClose={effectiveOnClose}
         />
       </main>
     </SolvaPayProvider>

@@ -9,6 +9,7 @@ function makeApp(opts: {
   isError?: boolean
   text?: string
   connectFails?: boolean
+  requestTeardown?: () => void | Promise<void>
 }): McpAppFull {
   return {
     callServerTool: vi.fn().mockResolvedValue({
@@ -23,6 +24,7 @@ function makeApp(opts: {
       : vi.fn().mockResolvedValue(undefined),
     onhostcontextchanged: undefined,
     onteardown: undefined,
+    requestTeardown: opts.requestTeardown ?? vi.fn().mockResolvedValue(undefined),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
 }
@@ -123,6 +125,63 @@ describe('<McpApp>', () => {
       message: 'credits running low',
     })
     expect(firstCall[0].bootstrap.data).toEqual({ rows: [1, 2, 3] })
+  })
+
+  it('default onClose routes to app.requestTeardown', async () => {
+    const requestTeardown = vi.fn().mockResolvedValue(undefined)
+    const app = makeApp({
+      toolName: 'upgrade',
+      structuredContent: {
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+        customer: { ref: 'cus_1' },
+      },
+      requestTeardown,
+    })
+    const received: Array<{ onClose?: () => void }> = []
+    const CheckoutStub = (props: { onClose?: () => void }) => {
+      received.push(props)
+      return (
+        <button type="button" data-testid="checkout-close" onClick={props.onClose}>
+          close
+        </button>
+      )
+    }
+    render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    const closeBtn = await screen.findByTestId('checkout-close')
+    await waitFor(() => {
+      expect(received[0]?.onClose).toBeTypeOf('function')
+    })
+    closeBtn.click()
+    await waitFor(() => {
+      expect(requestTeardown).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('accepts an `onClose` override that replaces the default teardown', async () => {
+    const requestTeardown = vi.fn().mockResolvedValue(undefined)
+    const app = makeApp({
+      toolName: 'upgrade',
+      structuredContent: {
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+        customer: { ref: 'cus_1' },
+      },
+      requestTeardown,
+    })
+    const onClose = vi.fn()
+    const CheckoutStub = (props: { onClose?: () => void }) => (
+      <button type="button" data-testid="checkout-close" onClick={props.onClose}>
+        close
+      </button>
+    )
+    render(
+      <McpApp app={app} onClose={onClose} views={{ checkout: CheckoutStub }} />,
+    )
+    const closeBtn = await screen.findByTestId('checkout-close')
+    closeBtn.click()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(requestTeardown).not.toHaveBeenCalled()
   })
 
   it('passes classNames through to overridden views', async () => {

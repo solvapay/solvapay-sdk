@@ -373,4 +373,92 @@ describe('<McpAppShell>', () => {
     )
     expect(container.querySelector('[data-tour-step]')).toBeNull()
   })
+
+  it('passes `fromPaywall` to the checkout view after the paywall CTA fires', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const Checkout = vi.fn(
+      (props: { fromPaywall?: boolean }) => (
+        <div data-testid="checkout-stub" data-from-paywall={String(props.fromPaywall)} />
+      ),
+    )
+    renderShell(
+      {
+        view: 'paywall',
+        plans: [
+          {
+            reference: 'pln_u',
+            planType: 'recurring',
+            name: 'Unlimited',
+            price: 10000,
+            currency: 'USD',
+            billingCycle: 'monthly',
+          } as never,
+        ],
+        paywall: {
+          kind: 'payment_required',
+          message: 'Out of credits',
+          product: { reference: 'prd_x', name: 'X', description: '', displayName: 'X' },
+          checkoutUrl: 'https://example.test/pay',
+          plans: [],
+        } as never,
+      },
+      ctx,
+      { views: { checkout: Checkout } },
+    )
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Upgrade to Unlimited/ }))
+    })
+
+    const stub = screen.getByTestId('checkout-stub')
+    expect(stub.getAttribute('data-from-paywall')).toBe('true')
+  })
+
+  it('change-plan from the account view leaves `fromPaywall` false', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const Account = vi.fn((props: { onChangePlan?: () => void }) => (
+      <div>
+        <button type="button" data-testid="change-plan" onClick={props.onChangePlan}>
+          See plans
+        </button>
+      </div>
+    ))
+    const Checkout = vi.fn((props: { fromPaywall?: boolean }) => (
+      <div data-testid="checkout-stub" data-from-paywall={String(props.fromPaywall)} />
+    ))
+    renderShell(
+      {
+        view: 'account',
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+      },
+      ctx,
+      { views: { account: Account, checkout: Checkout } },
+    )
+    act(() => {
+      fireEvent.click(screen.getByTestId('change-plan'))
+    })
+    const stub = screen.getByTestId('checkout-stub')
+    expect(stub.getAttribute('data-from-paywall')).toBe('false')
+  })
+
+  it('forwards `onClose` to the checkout view', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const onClose = vi.fn()
+    const Checkout = vi.fn((props: { onClose?: () => void }) => (
+      <button type="button" data-testid="checkout-close" onClick={props.onClose}>
+        close
+      </button>
+    ))
+    renderShell({ view: 'checkout' }, ctx, {
+      views: { checkout: Checkout },
+      onClose,
+    })
+    act(() => {
+      fireEvent.click(screen.getByTestId('checkout-close'))
+    })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })
