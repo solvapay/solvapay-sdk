@@ -5,7 +5,12 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { createMcpOAuthBridge } from '@solvapay/mcp'
 import { createServer } from './server'
-import { mcpPublicBaseUrl, solvapayApiBaseUrl, solvapayProductRef } from './config'
+import {
+  mcpAssetOrigins,
+  mcpPublicBaseUrl,
+  solvapayApiBaseUrl,
+  solvapayProductRef,
+} from './config'
 
 type JsonRpcId = string | number | null
 type SessionEntry = {
@@ -119,5 +124,11 @@ app.listen(port, host, () => {
     publicBaseUrl: mcpPublicBaseUrl,
     apiBaseUrl: solvapayApiBaseUrl,
     productRef: solvapayProductRef,
+    // Surface the dev-only asset origins so it's obvious from the
+    // startup log whether `MCP_ASSET_ORIGINS` landed in the process
+    // env. If a merchant logo is CSP-blocked at `http://localhost:...`
+    // and this array is empty, the .env wasn't reloaded — nodemon
+    // doesn't watch `.env` unless it's in the `--watch` list.
+    mcpAssetOrigins,
   })
 })
