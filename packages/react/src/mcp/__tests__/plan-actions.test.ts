@@ -3,8 +3,6 @@ import {
   resolvePlanShape,
   resolveActivationStrategy,
   resolvePlanActions,
-  resolveAboutCtaCard2,
-  resolveAboutCtaCard1,
   resolveActivityStrip,
   type PlanLike,
 } from '../plan-actions'
@@ -89,51 +87,6 @@ describe('resolvePlanActions', () => {
   it('changePlan hidden when no other plans exist', () => {
     const actions = resolvePlanActions({ purchase: unlimitedPurchase, planCount: 1, paidPlanCount: 1 })
     expect(actions.changePlan).toBe(false)
-  })
-})
-
-describe('resolveAboutCtaCard1', () => {
-  it('returning customers see Change plan', () => {
-    expect(resolveAboutCtaCard1(true)).toBe('change-plan')
-    expect(resolveAboutCtaCard1(false)).toBe('choose-plan')
-  })
-})
-
-describe('resolveAboutCtaCard2', () => {
-  it('free plan available → start-free', () => {
-    expect(
-      resolveAboutCtaCard2({
-        hasActivePurchase: false,
-        plans: [{ planType: 'free' }, { planType: 'recurring', price: 10000 }],
-      }),
-    ).toBe('start-free')
-  })
-
-  it('usage-based plan available → try-payg', () => {
-    expect(
-      resolveAboutCtaCard2({
-        hasActivePurchase: false,
-        plans: [{ planType: 'usage-based' }, { planType: 'recurring', price: 10000 }],
-      }),
-    ).toBe('try-payg')
-  })
-
-  it('only paid recurring → none', () => {
-    expect(
-      resolveAboutCtaCard2({
-        hasActivePurchase: false,
-        plans: [{ planType: 'recurring', price: 10000 }],
-      }),
-    ).toBe('none')
-  })
-
-  it('returning customers see none (activity strip takes over)', () => {
-    expect(
-      resolveAboutCtaCard2({
-        hasActivePurchase: true,
-        plans: [{ planType: 'free' }],
-      }),
-    ).toBe('none')
   })
 })
 

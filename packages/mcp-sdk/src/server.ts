@@ -61,10 +61,10 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
    */
   additionalTools?: (ctx: AdditionalToolsContext) => void
   /**
-   * Register the five slash-command prompts (`/upgrade`,
-   * `/manage_account`, `/topup`, `/check_usage`, `/activate_plan`) built
-   * from the descriptor bundle. Defaults to `true` — the prompts are
-   * additive and silently ignored by hosts without prompt support.
+   * Register the slash-command prompts (`/upgrade`, `/manage_account`,
+   * `/topup`, `/activate_plan`) built from the descriptor bundle.
+   * Defaults to `true` — the prompts are additive and silently ignored
+   * by hosts without prompt support.
    */
   registerPrompts?: boolean
   /**

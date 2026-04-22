@@ -86,7 +86,6 @@ export {
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
-  narrateCheckUsage,
   narrateActivatePlan,
 } from './narrate'
 export type { IntentTool, NarratorOutput } from './narrate'

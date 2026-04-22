@@ -25,12 +25,11 @@ with clickable URLs for text-only hosts.
 - **Upgrade** — start or change a paid plan. \`/upgrade\` opens the embedded
   checkout (Stripe Elements inline) on UI hosts and returns a hosted-checkout
   URL on text hosts.
-- **Manage account** — current plan, balance, payment method, cancel or
-  reactivate auto-renewal. \`/manage_account\`.
+- **Manage account** — current plan, balance, usage, payment method, cancel
+  or reactivate auto-renewal. Credits + usage are folded inline into the
+  account view. \`/manage_account\`.
 - **Top up credits** — add SolvaPay credits for usage-based plans.
   \`/topup\`.
-- **Check usage** — used / remaining / reset date for the active usage-based
-  plan. \`/check_usage\`.
 - **Activate plan** — pick a plan from the list or activate a specific plan
   by \`planRef\`. Free plans activate immediately, usage-based plans activate
   when balance covers the configured usage, paid plans return the embedded

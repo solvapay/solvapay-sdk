@@ -27,6 +27,7 @@ import { PaymentForm } from '../../primitives/PaymentForm'
 import { PlanSelector, usePlanSelector } from '../../primitives/PlanSelector'
 import { resolveActivationStrategy, resolvePlanActions, type PlanLike } from '../plan-actions'
 import { useStripeProbe } from '../useStripeProbe'
+import { BackLink } from './BackLink'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 // Keep polling fast enough that the UI feels responsive after the user
@@ -712,79 +713,90 @@ function PlanActivationDispatcher({
   onRequestTopup?: () => void
   cx: Cx
 }) {
-  const { selectedPlan, selectedPlanRef } = usePlanSelector()
+  const { selectedPlan, selectedPlanRef, clearSelection } = usePlanSelector()
   if (!selectedPlan || !selectedPlanRef) return null
 
   const strategy = resolveActivationStrategy(selectedPlan as unknown as PlanLike)
+  const changePlan = <BackLink label="Change plan" onClick={clearSelection} />
+
 
   if (strategy === 'activate') {
     return (
-      <ActivationFlow.Root
-        key={selectedPlanRef}
-        productRef={productRef}
-        planRef={selectedPlanRef}
-        className={cx.activationFlow}
-        onSuccess={() => onPurchaseSuccess?.()}
-      >
-        <ActivationFlow.Loading>
-          <p className={cx.muted}>Loading plan…</p>
-        </ActivationFlow.Loading>
+      <>
+        {changePlan}
+        <ActivationFlow.Root
+          key={selectedPlanRef}
+          productRef={productRef}
+          planRef={selectedPlanRef}
+          className={cx.activationFlow}
+          onSuccess={() => onPurchaseSuccess?.()}
+        >
+          <ActivationFlow.Loading>
+            <p className={cx.muted}>Loading plan…</p>
+          </ActivationFlow.Loading>
 
-        <ActivationFlow.Summary>
-          <p className={cx.muted}>
-            No payment is collected up front — just confirm to activate.
-          </p>
-        </ActivationFlow.Summary>
-        <ActivationFlow.ActivateButton className={cx.button} />
+          <ActivationFlow.Summary>
+            <p className={cx.muted}>
+              No payment is collected up front — just confirm to activate.
+            </p>
+          </ActivationFlow.Summary>
+          <ActivationFlow.ActivateButton className={cx.button} />
 
-        <ActivationFlow.Retrying>
-          <p className={cx.muted}>Finishing activation…</p>
-        </ActivationFlow.Retrying>
+          <ActivationFlow.Retrying>
+            <p className={cx.muted}>Finishing activation…</p>
+          </ActivationFlow.Retrying>
 
-        <ActivationFlow.Activated>
-          <p>{"Plan activated. You're all set."}</p>
-        </ActivationFlow.Activated>
+          <ActivationFlow.Activated>
+            <p>{"Plan activated. You're all set."}</p>
+          </ActivationFlow.Activated>
 
-        <ActivationFlow.Error className={cx.error} />
-      </ActivationFlow.Root>
+          <ActivationFlow.Error className={cx.error} />
+        </ActivationFlow.Root>
+      </>
     )
   }
 
   if (strategy === 'topup-first') {
     return (
-      <div className="solvapay-mcp-plan-topup-prompt">
-        <p className={cx.muted}>
-          This plan meters usage. Add credits first, then we&apos;ll activate the plan on
-          your next paywalled call.
-        </p>
-        <button
-          type="button"
-          className={cx.button}
-          onClick={onRequestTopup}
-          disabled={!onRequestTopup}
-        >
-          Add credits & start
-        </button>
-      </div>
+      <>
+        {changePlan}
+        <div className="solvapay-mcp-plan-topup-prompt">
+          <p className={cx.muted}>
+            This plan meters usage. Add credits first, then we&apos;ll activate the plan on
+            your next paywalled call.
+          </p>
+          <button
+            type="button"
+            className={cx.button}
+            onClick={onRequestTopup}
+            disabled={!onRequestTopup}
+          >
+            Add credits & start
+          </button>
+        </div>
+      </>
     )
   }
 
   // strategy === 'paid-checkout'
   return (
-    <PaymentForm.Root
-      key={selectedPlanRef}
-      planRef={selectedPlanRef}
-      productRef={productRef}
-      returnUrl={returnUrl}
-      requireTermsAcceptance={false}
-      onSuccess={onPurchaseSuccess}
-    >
-      <PaymentForm.Summary />
-      <PaymentForm.Loading />
-      <PaymentForm.PaymentElement />
-      <PaymentForm.Error />
-      <PaymentForm.MandateText />
-      <PaymentForm.SubmitButton className={cx.button} />
-    </PaymentForm.Root>
+    <>
+      {changePlan}
+      <PaymentForm.Root
+        key={selectedPlanRef}
+        planRef={selectedPlanRef}
+        productRef={productRef}
+        returnUrl={returnUrl}
+        requireTermsAcceptance={false}
+        onSuccess={onPurchaseSuccess}
+      >
+        <PaymentForm.Summary />
+        <PaymentForm.Loading />
+        <PaymentForm.PaymentElement />
+        <PaymentForm.Error />
+        <PaymentForm.MandateText />
+        <PaymentForm.SubmitButton className={cx.button} />
+      </PaymentForm.Root>
+    </>
   )
 }

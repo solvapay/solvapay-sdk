@@ -116,31 +116,33 @@ export interface PaywallToolResult {
 }
 
 /**
- * Which view a SolvaPay MCP server knows how to bootstrap via the
- * corresponding `open_*` tool.
+ * Which view a SolvaPay MCP server knows how to bootstrap.
  *
- * The `'nudge'` view is opened implicitly when a successful paywalled
- * tool response carries `options.nudge`; it renders the merchant's
- * `data` alongside an inline upsell strip.
+ * Four kinds map to an intent `open_*`-style tool: `checkout`,
+ * `account`, `topup`, and `nudge` (opened implicitly when a successful
+ * paywalled tool response carries `options.nudge`). `paywall` has no
+ * dedicated tool — the gate response inlines the bootstrap payload on
+ * its `structuredContent`, and the React shell takes over the surface
+ * when it sees `view: 'paywall'`.
+ *
+ * The legacy `'about'`, `'activate'`, and `'usage'` surfaces were
+ * dropped with the three-mode refactor — About is now served by tool
+ * descriptions + docs resources, Activate merged into checkout's
+ * `PlanActivationDispatcher`, and Usage folds inline into the account
+ * view.
  */
 export type SolvaPayMcpViewKind =
-  | 'about'
   | 'checkout'
   | 'account'
   | 'topup'
-  | 'activate'
   | 'paywall'
-  | 'usage'
   | 'nudge'
 
 export const SOLVAPAY_MCP_VIEW_KINDS = [
-  'about',
   'checkout',
   'account',
   'topup',
-  'activate',
   'paywall',
-  'usage',
   'nudge',
 ] as const satisfies readonly SolvaPayMcpViewKind[]
 
@@ -326,8 +328,6 @@ export const TOOL_FOR_VIEW = {
   checkout: 'upgrade',
   account: 'manage_account',
   topup: 'topup',
-  activate: 'activate_plan',
-  usage: 'check_usage',
 } as const satisfies Partial<
   Record<SolvaPayMcpViewKind, (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]>
 >

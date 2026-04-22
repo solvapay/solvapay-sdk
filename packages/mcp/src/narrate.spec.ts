@@ -3,7 +3,6 @@ import {
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
-  narrateCheckUsage,
   narrateActivatePlan,
 } from './narrate'
 import { narratedToolResult, parseMode } from './helpers'
@@ -107,49 +106,6 @@ describe('narrateTopup', () => {
     expect(text).toContain('**Top up — Acme Knowledge Base**')
     expect(text).toContain('Balance: 865,500 credits')
     expect(text).toContain('Top-up presets:')
-  })
-})
-
-describe('narrateCheckUsage', () => {
-  it('PAYG shows balance', () => {
-    const { text } = narrateCheckUsage(
-      basePayload({
-        customer: {
-          ref: 'cus_1',
-          purchase: {
-            customerRef: 'cus_1',
-            purchases: [
-              { planSnapshot: { name: 'Starter', planType: 'usage-based', price: 1, currency: 'USD' } },
-            ],
-          } as never,
-          paymentMethod: null,
-          balance: { credits: 500, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
-          usage: null,
-        } as never,
-      }),
-    )
-    expect(text).toContain('**Usage — Acme Knowledge Base**')
-    expect(text).toContain('Balance: 500 credits')
-    expect(text).toContain('Plan: Starter')
-  })
-
-  it('metered recurring shows used/limit', () => {
-    const { text } = narrateCheckUsage(
-      basePayload({
-        customer: {
-          ref: 'cus_1',
-          purchase: {
-            customerRef: 'cus_1',
-            purchases: [{ planSnapshot: { name: 'Pro', planType: 'recurring' } }],
-          } as never,
-          paymentMethod: null,
-          balance: null,
-          usage: { used: 342, limit: 500, resetsAt: '2026-05-01T00:00:00Z' } as never,
-        } as never,
-      }),
-    )
-    expect(text).toContain('342 / 500 used')
-    expect(text).toContain('resets May')
   })
 })
 

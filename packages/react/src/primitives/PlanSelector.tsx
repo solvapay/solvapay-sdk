@@ -48,6 +48,11 @@ type PlanSelectorContextValue = {
   isFree: (ref: string) => boolean
   isPopular: (ref: string) => boolean
   select: (ref: string) => void
+  /**
+   * Clear the current selection so no plan is selected. Pins
+   * `userHasSelected` true so auto-selection doesn't reassert.
+   */
+  clearSelection: () => void
 }
 
 const PlanSelectorContext = createContext<PlanSelectorContextValue | null>(null)
@@ -120,7 +125,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
     [fetcher, _config],
   )
 
-  const { plans, selectedPlan, selectPlan, loading, error } = usePlans({
+  const { plans, selectedPlan, selectPlan, setSelectedPlanIndex, loading, error } = usePlans({
     productRef,
     fetcher: effectiveFetcher,
     filter,
@@ -163,6 +168,14 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
     [plans, selectPlan, onSelect],
   )
 
+  // Clearing the selection pins `userHasSelected` true inside
+  // `usePlans`, so auto-selection can't reassert on the next render.
+  // Callers use this to back out of a mid-flow step (e.g. the
+  // `← Change plan` link on `McpCheckoutView`).
+  const clearSelection = useCallback(() => {
+    setSelectedPlanIndex(-1)
+  }, [setSelectedPlanIndex])
+
   const selectedPlanRef = selectedPlan?.reference ?? null
 
   const ctx = useMemo<PlanSelectorContextValue>(
@@ -178,6 +191,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isFree,
       isPopular,
       select,
+      clearSelection,
     }),
     [
       plans,
@@ -191,6 +205,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isFree,
       isPopular,
       select,
+      clearSelection,
     ],
   )
 

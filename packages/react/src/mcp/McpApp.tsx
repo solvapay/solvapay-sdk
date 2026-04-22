@@ -9,11 +9,13 @@
  *   2. apply host theme / fonts / style variables / safe-area insets
  *   3. `fetchMcpBootstrap(app)` → view + productRef + publishableKey + returnUrl
  *   4. mount `<SolvaPayProvider transport=createMcpAppAdapter(app)>`
- *   5. route `<McpViewRouter>` → `<McpCheckoutView>` / `<McpAccountView>` / …
+ *   5. mount `<McpAppShell>`, which routes `bootstrap.view` into the
+ *      exported `<McpViewRouter>`.
  *
  * Integrators who want to own the `SolvaPayProvider` mount (e.g. to merge
  * copy bundles, layer additional context) can bypass `<McpApp>` and use
- * `<McpViewRouter>` + the per-view primitives directly.
+ * `<McpAppShell>` directly, or `<McpViewRouter>` + the per-view primitives
+ * for fully custom layouts.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
@@ -25,43 +27,13 @@ import {
   type McpAppBootstrapLike,
 } from './bootstrap'
 import { seedMcpCaches } from './cache-seed'
-import {
-  McpAppShell,
-  type McpAppShellProps,
-} from './McpAppShell'
+import { McpAppShell } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
-import {
-  McpAboutView,
-  type McpAboutViewProps,
-} from './views/McpAboutView'
-import {
-  McpAccountView,
-  type McpAccountViewProps,
-} from './views/McpAccountView'
-import {
-  McpActivateView,
-  type McpActivateViewProps,
-} from './views/McpActivateView'
-import {
-  McpCheckoutView,
-  type McpCheckoutViewProps,
-} from './views/McpCheckoutView'
-import {
-  McpPaywallView,
-  type McpPaywallViewProps,
-} from './views/McpPaywallView'
-import {
-  McpTopupView,
-  type McpTopupViewProps,
-} from './views/McpTopupView'
-import {
-  McpUsageView,
-  type McpUsageViewProps,
-} from './views/McpUsageView'
-import {
-  McpNudgeView,
-  type McpNudgeViewProps,
-} from './views/McpNudgeView'
+import type { McpAccountViewProps } from './views/McpAccountView'
+import type { McpCheckoutViewProps } from './views/McpCheckoutView'
+import type { McpPaywallViewProps } from './views/McpPaywallView'
+import type { McpTopupViewProps } from './views/McpTopupView'
+import type { McpNudgeViewProps } from './views/McpNudgeView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 
 /**
@@ -91,13 +63,10 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike {
 }
 
 export interface McpAppViewOverrides {
-  about?: React.ComponentType<McpAboutViewProps>
   checkout?: React.ComponentType<McpCheckoutViewProps>
   account?: React.ComponentType<McpAccountViewProps>
   topup?: React.ComponentType<McpTopupViewProps>
-  activate?: React.ComponentType<McpActivateViewProps>
   paywall?: React.ComponentType<McpPaywallViewProps>
-  usage?: React.ComponentType<McpUsageViewProps>
   nudge?: React.ComponentType<McpNudgeViewProps>
 }
 
@@ -113,6 +82,8 @@ export interface McpAppProps {
   views?: McpAppViewOverrides
   /** Per-slot className overrides — forwarded to every built-in view. */
   classNames?: McpViewClassNames
+  /** Override the shell-level footer visibility heuristic. */
+  footer?: boolean
   /**
    * Called with the bootstrap error if `app.connect()` or the `open_*`
    * tool call fails. Consumers typically log it; the default UI already
@@ -128,21 +99,6 @@ export interface McpAppProps {
    * `@modelcontextprotocol/ext-apps` — host-context primitives live there.
    */
   applyContext?: (ctx: McpUiHostContextLike | undefined) => void
-  /**
-   * Shell-level overrides forwarded to `<McpAppShell>` — pin the tab
-   * list, toggle the footer. Set to `false` to opt out of the shell
-   * entirely and fall back to the single-view `<McpViewRouter>`
-   * (useful for integrators who own their own layout).
-   */
-  shell?: false | Pick<McpAppShellProps, 'tabs' | 'footer' | 'slashCommands'>
-  /**
-   * Slash-command hints forwarded to `<McpAboutView>` via the shell.
-   * Typically the client-side list of prompts the server registered.
-   * Hosts without slash-command UI still see the list rendered as
-   * plain copy. When unset, the About view omits the "Quick commands"
-   * section.
-   */
-  slashCommands?: Array<{ command: string; description: string }>
 }
 
 /**
@@ -169,10 +125,9 @@ export function McpApp({
   productRef: productRefOverride,
   views,
   classNames,
+  footer,
   onInitError,
   applyContext,
-  shell,
-  slashCommands,
 }: McpAppProps) {
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
@@ -291,11 +246,11 @@ export function McpApp({
 
   // Kept above the conditional returns so hook order is stable across
   // loading → ready transitions. Besides re-seeding the module-level
-  // hook caches, we must also update the `bootstrap` state because
-  // `effectiveBootstrap` → `McpAppShell` → `computeVisibleTabs` reads
-  // from it: without `setBootstrap`, a refresh that reveals new
-  // capabilities (e.g. a freshly-topped-up balance that should
-  // surface the Credits tab) would leave the tab strip stale.
+  // hook caches, we must also update the `bootstrap` state because the
+  // shell reads `bootstrap.view` + `bootstrap.customer` to pick the
+  // surface and sidebar state: without `setBootstrap`, a refresh that
+  // reveals new capabilities (e.g. a freshly-topped-up balance) would
+  // leave the shell stale.
   const refreshBootstrap = useMemo(
     () => async () => {
       const fresh = await fetchMcpBootstrap(app)
@@ -334,103 +289,20 @@ export function McpApp({
   return (
     <SolvaPayProvider config={providerConfig}>
       <main className="solvapay-mcp-main">
-        {shell === false ? (
-          <McpViewRouter bootstrap={effectiveBootstrap} views={views} classNames={classNames} />
-        ) : (
-          <McpAppShell
-            bootstrap={effectiveBootstrap}
-            views={views}
-            classNames={classNames}
-            tabs={shell?.tabs ?? 'auto'}
-            {...(typeof shell === 'object' && shell && 'footer' in shell
-              ? { footer: shell.footer }
-              : {})}
-            slashCommands={
-              (typeof shell === 'object' && shell && 'slashCommands' in shell
-                ? shell.slashCommands
-                : undefined) ?? slashCommands
-            }
-            onRefreshBootstrap={refreshBootstrap}
-          />
-        )}
+        <McpAppShell
+          bootstrap={effectiveBootstrap}
+          views={views}
+          classNames={classNames}
+          {...(footer !== undefined ? { footer } : {})}
+          onRefreshBootstrap={refreshBootstrap}
+        />
       </main>
     </SolvaPayProvider>
   )
 }
 
-export interface McpViewRouterProps {
-  bootstrap: McpBootstrap
-  views?: McpAppViewOverrides
-  classNames?: McpViewClassNames
-}
-
-/**
- * Dispatches on `bootstrap.view` to render the matching per-view primitive.
- *
- * Exported separately so integrators who want to own the
- * `<SolvaPayProvider>` mount (e.g. to merge copy bundles or compose
- * additional providers) can still get routing for free.
- */
-export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterProps) {
-  // Note: `classNames` is intentionally forwarded as-is to each view —
-  // `resolveMcpClassNames` runs inside them, not here.
-  const { view, productRef, stripePublishableKey, returnUrl, paywall } = bootstrap
-
-  const headerTitle: Record<McpBootstrap['view'], string> = {
-    about: (bootstrap.product as { name?: string } | undefined)?.name ?? 'About',
-    checkout: 'SolvaPay',
-    account: 'Your SolvaPay account',
-    topup: 'Add SolvaPay credits',
-    activate: 'Activate your plan',
-    paywall: 'Unlock access',
-    usage: 'Your usage',
-    nudge: (bootstrap.product as { name?: string } | undefined)?.name ?? 'Tool result',
-  }
-
-  const AboutView = views?.about ?? McpAboutView
-  const CheckoutView = views?.checkout ?? McpCheckoutView
-  const AccountView = views?.account ?? McpAccountView
-  const TopupView = views?.topup ?? McpTopupView
-  const ActivateView = views?.activate ?? McpActivateView
-  const PaywallView = views?.paywall ?? McpPaywallView
-  const UsageView = views?.usage ?? McpUsageView
-  const NudgeView = views?.nudge ?? McpNudgeView
-
-  return (
-    <>
-      <header className="solvapay-mcp-header">
-        <h1>{headerTitle[view]}</h1>
-      </header>
-      {view === 'about' && <AboutView bootstrap={bootstrap} classNames={classNames} />}
-      {view === 'checkout' && (
-        <CheckoutView
-          productRef={productRef}
-          publishableKey={stripePublishableKey}
-          returnUrl={returnUrl}
-          classNames={classNames}
-        />
-      )}
-      {view === 'account' && <AccountView classNames={classNames} />}
-      {view === 'topup' && (
-        <TopupView
-          publishableKey={stripePublishableKey}
-          returnUrl={returnUrl}
-          classNames={classNames}
-        />
-      )}
-      {view === 'activate' && (
-        <ActivateView productRef={productRef} classNames={classNames} />
-      )}
-      {view === 'paywall' && paywall && (
-        <PaywallView
-          content={paywall}
-          publishableKey={stripePublishableKey}
-          returnUrl={returnUrl}
-          classNames={classNames}
-        />
-      )}
-      {view === 'usage' && <UsageView classNames={classNames} />}
-      {view === 'nudge' && <NudgeView bootstrap={bootstrap} classNames={classNames} />}
-    </>
-  )
-}
+// Re-export `McpViewRouter` and its props type for advanced integrators
+// that want dispatch without the full shell (merged from the removed
+// duplicate router in this file).
+export { McpViewRouter } from './McpAppShell'
+export type { McpViewRouterProps } from './McpAppShell'

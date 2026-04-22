@@ -74,10 +74,8 @@ const solvapayTool = (
  */
 const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> = {
   account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  usage: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
   topup: solvapayTool({ destructiveHint: true }),
   checkout: solvapayTool({ destructiveHint: true }),
-  activate: solvapayTool({}),
 }
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
@@ -135,11 +133,10 @@ export interface SolvaPayDescriptorBundle {
   tools: SolvaPayToolDescriptor[]
   resource: SolvaPayResourceDescriptor
   /**
-   * Five slash-command prompts — one per intent tool — that hosts with
-   * prompt support (Claude Desktop, Cursor, etc.) surface as
-   * `/upgrade`, `/manage_account`, `/topup`, `/check_usage`, and
-   * `/activate_plan`. Hosts without prompt support silently ignore the
-   * list — registration is purely additive.
+   * Slash-command prompts that hosts with prompt support (Claude
+   * Desktop, Cursor, etc.) surface as `/upgrade`, `/manage_account`,
+   * `/topup`, and `/activate_plan`. Hosts without prompt support
+   * silently ignore the list — registration is purely additive.
    */
   prompts: SolvaPayPromptDescriptor[]
   /**
@@ -274,15 +271,6 @@ export function buildSolvaPayDescriptors(
         trace(name, args, extra, async () => {
           const mode = parseMode(args.mode)
           const data = await buildBootstrapPayload(view, extra)
-          // `manage_account` on a cold-start customer (no active
-          // purchase) routes the UI to the About tab, where the
-          // narration + CTA cards are more useful than an empty
-          // Account body. Returning customers still land on Account.
-          if (view === 'account') {
-            const hasActivePurchase =
-              (data.customer?.purchase?.purchases?.length ?? 0) > 0
-            if (!hasActivePurchase) data.view = 'about'
-          }
           return narratedToolResult(name as IntentTool, data, mode, toolMeta)
         }),
     })
@@ -291,27 +279,24 @@ export function buildSolvaPayDescriptors(
   pushIntentTool(
     'checkout',
     'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), check_usage (usage snapshot), topup (add credits).',
+    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).',
   )
   pushIntentTool(
     'account',
     'Manage account',
-    "Show or manage the current customer's SolvaPay account: plan, balance, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), check_usage (usage snapshot), topup (add credits).",
+    "Show or manage the current customer's SolvaPay account: plan, balance, usage, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), topup (add credits).",
   )
   pushIntentTool(
     'topup',
     'Top up credits',
-    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance), check_usage (usage snapshot), upgrade (switch to a recurring plan).',
+    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).',
   )
   // `activate_plan` is registered below (transport section) as a
   // dual-audience tool that handles both the picker bootstrap (no
   // planRef) and smart activation (planRef provided), replacing the
-  // legacy `open_plan_activation` intent.
-  pushIntentTool(
-    'usage',
-    'Check usage',
-    "Show the current customer's usage snapshot (used, remaining, reset date) for the active usage-based plan. On UI hosts this opens the embedded usage view; on text hosts returns a markdown summary. Also available: topup (add credits), upgrade (switch to an unlimited plan), manage_account (full account view).",
-  )
+  // legacy `open_plan_activation` intent. The picker bootstrap now
+  // surfaces inside the `checkout` view (the tabbed shell and its
+  // dedicated activate surface are gone).
 
   // Paywall responses now carry the full BootstrapPayload in their
   // `structuredContent` (see `@solvapay/mcp/paywallToolResult`), so
@@ -519,7 +504,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.activatePlan,
     title: 'Activate plan',
     description:
-      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan), topup (add credits), check_usage (usage snapshot).',
+      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits).',
     inputSchema: {
       productRef: z.string().optional(),
       planRef: z.string().optional(),
@@ -534,24 +519,25 @@ export function buildSolvaPayDescriptors(
         const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
         const mode = parseMode(args.mode)
 
-        // No plan picked yet — return the picker bootstrap (the React
-        // shell opens `<McpActivateView>`; text-only hosts narrate the
-        // markdown summary listing the available plans). Respect the
-        // `views` filter so consumers that restrict the surface (e.g.
-        // `views: ['checkout']`) don't accidentally expose the
-        // activation picker as an alternate entry point.
+        // No plan picked yet — return the picker bootstrap with
+        // `view: 'checkout'` so the React shell opens the checkout
+        // surface's embedded plan picker (the merged Activate/Plan
+        // surface). Text-only hosts narrate the markdown summary
+        // listing the available plans. Respect the `views` filter so
+        // consumers that disable checkout don't accidentally expose the
+        // picker as an alternate entry point.
         if (!planRef) {
-          if (!enabledViews.has('activate')) {
+          if (!enabledViews.has('checkout')) {
             return toolErrorResult({
               error: 'activate_plan requires a planRef on this server',
               status: 400,
               details:
-                'The activation-picker view is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "activate" view via the `views` option.',
+                'The checkout view (where the plan picker lives) is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "checkout" view via the `views` option.',
             })
           }
           return narratedToolResult(
             MCP_TOOL_NAMES.activatePlan as IntentTool,
-            await buildBootstrapPayload('activate', extra),
+            await buildBootstrapPayload('checkout', extra),
             mode,
             toolMeta,
           )
@@ -666,16 +652,11 @@ export function buildSolvaPayPrompts(
     })
   }
 
-  if (enabled.has('usage')) {
-    prompts.push({
-      name: MCP_TOOL_NAMES.checkUsage,
-      title: 'Check usage',
-      description: 'Show the usage snapshot for the current usage-based plan.',
-      handler: async () => userMessage('How much SolvaPay credit have I used?'),
-    })
-  }
-
-  if (enabled.has('activate')) {
+  // `activate_plan` gets a prompt whenever the checkout view is enabled
+  // (the picker bootstrap lives there now). When checkout is disabled
+  // the prompt is pointless — `activate_plan` without a planRef would
+  // just error.
+  if (enabled.has('checkout')) {
     prompts.push({
       name: MCP_TOOL_NAMES.activatePlan,
       title: 'Activate plan',

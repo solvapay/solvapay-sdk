@@ -41,24 +41,15 @@ export type {
   McpViewRouterProps,
 } from './McpApp'
 
-export { McpAppShell, MCP_TAB_ORDER, MCP_TAB_HINTS, computeVisibleTabs } from './McpAppShell'
-export type { McpAppShellProps, McpTabKind } from './McpAppShell'
+export { McpAppShell } from './McpAppShell'
+export type { McpAppShellProps } from './McpAppShell'
 
-export {
-  McpFirstRunTour,
-  TourReplayButton,
-  DEFAULT_TOUR_STEPS,
-  hasSeenTour,
-  resetTourDismissal,
-} from './McpFirstRunTour'
-export type { McpFirstRunTourProps, TourStep } from './McpFirstRunTour'
+export type { McpViewKind, McpTabKind } from './view-kind'
 
 export {
   resolvePlanShape,
   resolveActivationStrategy,
   resolvePlanActions,
-  resolveAboutCtaCard1,
-  resolveAboutCtaCard2,
   resolveActivityStrip,
 } from './plan-actions'
 export type {
@@ -66,16 +57,10 @@ export type {
   ActivationStrategy,
   PlanActions,
   PlanActionsInput,
-  AboutCtaCard1,
-  AboutCtaCard2,
-  AboutCta2Input,
   ActivityStripKind,
   PlanLike,
   PurchaseSnapshotLike,
 } from './plan-actions'
-
-export { McpAboutView } from './views/McpAboutView'
-export type { McpAboutViewProps } from './views/McpAboutView'
 
 export { BackLink } from './views/BackLink'
 export type { BackLinkProps } from './views/BackLink'
@@ -95,14 +80,8 @@ export type {
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
 
-export { McpActivateView } from './views/McpActivateView'
-export type { McpActivateViewProps } from './views/McpActivateView'
-
 export { McpPaywallView } from './views/McpPaywallView'
 export type { McpPaywallViewProps } from './views/McpPaywallView'
-
-export { McpUsageView } from './views/McpUsageView'
-export type { McpUsageViewProps } from './views/McpUsageView'
 
 export { McpNudgeView } from './views/McpNudgeView'
 export type { McpNudgeViewProps } from './views/McpNudgeView'

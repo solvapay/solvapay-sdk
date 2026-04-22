@@ -22,7 +22,7 @@ export interface NarratorOutput {
   links?: Array<{ uri: string; name: string }>
 }
 
-export type IntentTool = 'upgrade' | 'manage_account' | 'topup' | 'check_usage' | 'activate_plan'
+export type IntentTool = 'upgrade' | 'manage_account' | 'topup' | 'activate_plan'
 
 interface PlanShape {
   name?: string
@@ -168,7 +168,7 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
     const bal = balanceRow(customer)
     if (bal) lines.push(bal)
     lines.push('')
-    lines.push(commandsLine(['topup', 'upgrade', 'check_usage']))
+    lines.push(commandsLine(['topup', 'upgrade']))
   }
 
   const links: NarratorOutput['links'] = []
@@ -206,38 +206,7 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
     .join(' · ')
   if (presets) lines.push(`Top-up presets: ${presets}`)
   lines.push('')
-  lines.push(commandsLine(['check_usage', 'manage_account']))
-  return { text: lines.join('\n') }
-}
-
-export function narrateCheckUsage(data: BootstrapPayload): NarratorOutput {
-  const lines: string[] = []
-  lines.push(`**Usage — ${productName(data)}**`)
-  lines.push('')
-  const customer = data.customer as CustomerShape | null
-  const active = activePurchase(customer)
-  const usage = customer?.usage
-
-  if (usage && typeof usage.used === 'number' && typeof usage.limit === 'number') {
-    const reset = formatDate(usage.resetsAt ?? null)
-    const line = `${usage.used} / ${usage.limit} used${reset ? ` this cycle · resets ${reset}` : ''}`
-    lines.push(line)
-  } else {
-    const bal = balanceRow(customer)
-    if (bal) lines.push(bal)
-  }
-
-  if (active?.planSnapshot) {
-    const plan = active.planSnapshot
-    const price = formatMoney(plan.price, plan.currency)
-    const cycle = plan.billingCycle ? `/${plan.billingCycle}` : ''
-    const parts = [plan.name ?? 'Plan']
-    if (price && plan.planType !== 'free') parts.push(`${price}${cycle}`)
-    lines.push(`Plan: ${parts.join(' · ')}`)
-  }
-
-  lines.push('')
-  lines.push(commandsLine(['topup', 'upgrade']))
+  lines.push(commandsLine(['manage_account']))
   return { text: lines.join('\n') }
 }
 
@@ -261,6 +230,5 @@ export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorO
   upgrade: narrateUpgrade,
   manage_account: narrateManageAccount,
   topup: narrateTopup,
-  check_usage: narrateCheckUsage,
   activate_plan: narrateActivatePlan,
 }

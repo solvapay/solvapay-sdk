@@ -82,11 +82,13 @@ describe('createSolvaPayMcpServer', () => {
       MCP_TOOL_NAMES.upgrade,
       MCP_TOOL_NAMES.manageAccount,
       MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.checkUsage,
     ]
     for (const name of expected) {
       expect(toolNames).toContain(name)
     }
+    // `check_usage` was removed when credits + usage folded into the
+    // account view.
+    expect(toolNames).not.toContain('check_usage')
   })
 
   it('gates intent tools on the views option', () => {
@@ -96,7 +98,6 @@ describe('createSolvaPayMcpServer', () => {
     expect(toolNames).toContain(MCP_TOOL_NAMES.upgrade)
     expect(toolNames).not.toContain(MCP_TOOL_NAMES.manageAccount)
     expect(toolNames).not.toContain('open_paywall')
-    expect(toolNames).not.toContain(MCP_TOOL_NAMES.checkUsage)
   })
 
   it('invokes the additionalTools hook with a bound registerPayable', () => {
@@ -109,14 +110,13 @@ describe('createSolvaPayMcpServer', () => {
     expect(typeof ctx.registerPayable).toBe('function')
   })
 
-  it('registers the five slash-command prompts by default', () => {
+  it('registers the slash-command prompts by default', () => {
     const { server } = buildTestServer()
     // @ts-expect-error — private registry used for coverage only
     const promptNames = Object.keys(server._registeredPrompts ?? {})
     expect(promptNames.sort()).toEqual(
       [
         MCP_TOOL_NAMES.activatePlan,
-        MCP_TOOL_NAMES.checkUsage,
         MCP_TOOL_NAMES.manageAccount,
         MCP_TOOL_NAMES.topup,
         MCP_TOOL_NAMES.upgrade,
@@ -135,8 +135,14 @@ describe('createSolvaPayMcpServer', () => {
     const { server } = buildTestServer({ views: ['checkout', 'account'] })
     // @ts-expect-error — private registry used for coverage only
     const promptNames = Object.keys(server._registeredPrompts ?? {})
+    // `/activate_plan` is wired to the checkout view (it opens the
+    // embedded plan picker when called without a planRef).
     expect(promptNames.sort()).toEqual(
-      [MCP_TOOL_NAMES.manageAccount, MCP_TOOL_NAMES.upgrade].sort(),
+      [
+        MCP_TOOL_NAMES.activatePlan,
+        MCP_TOOL_NAMES.manageAccount,
+        MCP_TOOL_NAMES.upgrade,
+      ].sort(),
     )
   })
 

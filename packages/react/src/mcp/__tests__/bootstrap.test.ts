@@ -66,7 +66,7 @@ describe('fetchMcpBootstrap', () => {
     expect(result.stripePublishableKey).toBeNull()
   })
 
-  it('maps activate_plan to the activate view', async () => {
+  it('falls back to checkout when the host invoked activate_plan (the picker now lives in checkout)', async () => {
     const app = mockApp({
       toolName: 'activate_plan',
       structuredContent: {
@@ -76,7 +76,7 @@ describe('fetchMcpBootstrap', () => {
     })
 
     const result = await fetchMcpBootstrap(app)
-    expect(result.view).toBe('activate')
+    expect(result.view).toBe('checkout')
   })
 
   it('throws when the tool response has no productRef', async () => {

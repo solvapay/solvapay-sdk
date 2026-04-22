@@ -126,48 +126,9 @@ export function resolvePlanActions({ purchase, planCount, paidPlanCount }: PlanA
 }
 
 /**
- * Contextual CTA card 2 on the About view.
- *
- * Evaluated first-match-wins per the plan:
- *  - `start-free` when a free plan exists and the customer hasn't
- *    taken it.
- *  - `try-payg` when a usage-based plan exists.
- *  - `none` otherwise — card hidden.
- *
- * Returning customers (active purchase) see `none` — the activity
- * strip replaces the CTAs once the customer is past the cold-start
- * moment.
- */
-export type AboutCtaCard2 = 'start-free' | 'try-payg' | 'none'
-
-export interface AboutCta2Input {
-  hasActivePurchase: boolean
-  plans: PlanLike[]
-}
-
-export function resolveAboutCtaCard2({ hasActivePurchase, plans }: AboutCta2Input): AboutCtaCard2 {
-  if (hasActivePurchase) return 'none'
-  const hasFree = plans.some((p) => resolvePlanShape(p) === 'free')
-  if (hasFree) return 'start-free'
-  const hasUsage = plans.some((p) => resolvePlanShape(p) === 'usage-based')
-  if (hasUsage) return 'try-payg'
-  return 'none'
-}
-
-/**
- * About card 1 label — narrows to "Change plan" for returning
- * customers.
- */
-export type AboutCtaCard1 = 'choose-plan' | 'change-plan'
-
-export function resolveAboutCtaCard1(hasActivePurchase: boolean): AboutCtaCard1 {
-  return hasActivePurchase ? 'change-plan' : 'choose-plan'
-}
-
-/**
- * "Your activity" strip variant shown at the top of About for
- * returning customers. Hidden when the customer has no active
- * purchase.
+ * "Your activity" strip variant shown at the top of a surface when a
+ * returning customer has an active purchase. Hidden when the customer
+ * has no active purchase.
  */
 export type ActivityStripKind =
   | 'none'
