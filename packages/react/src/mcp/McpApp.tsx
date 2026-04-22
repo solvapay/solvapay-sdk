@@ -272,12 +272,18 @@ export function McpApp({
   }
 
   // Kept above the conditional returns so hook order is stable across
-  // loading → ready transitions.
+  // loading → ready transitions. Besides re-seeding the module-level
+  // hook caches, we must also update the `bootstrap` state because
+  // `effectiveBootstrap` → `McpAppShell` → `computeVisibleTabs` reads
+  // from it: without `setBootstrap`, a refresh that reveals new
+  // capabilities (e.g. a freshly-topped-up balance that should
+  // surface the Credits tab) would leave the tab strip stale.
   const refreshBootstrap = useMemo(
     () => async () => {
       const fresh = await fetchMcpBootstrap(app)
       const next = bootstrapToInitial(fresh)
       seedMcpCaches(next, providerConfig)
+      setBootstrap(fresh)
     },
     [app, providerConfig],
   )

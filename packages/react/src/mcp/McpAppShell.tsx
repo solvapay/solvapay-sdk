@@ -243,8 +243,11 @@ export function McpAppShell({
     [activeTab, onRefreshBootstrap],
   )
 
-  const showFooter =
-    footer ?? Boolean(merchant?.termsUrl || merchant?.privacyUrl || merchant?.supportUrl)
+  // Footer renders `Terms · Privacy · Provided by SolvaPay` — hidden
+  // entirely when the merchant has no terms/privacy URLs so we don't
+  // show an empty strip. `supportUrl` lives in `McpSellerDetailsCard`
+  // now, not the footer, so it doesn't participate in this decision.
+  const showFooter = footer ?? Boolean(merchant?.termsUrl || merchant?.privacyUrl)
 
   // The responsive sidebar is driven by CSS — at `xl` and above the
   // `.solvapay-mcp-shell-layout` grid gives the aside its own column;
