@@ -14,38 +14,31 @@
 import {
   activatePlanCore,
   cancelPurchaseCore,
-  checkPurchaseCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
-  getCustomerBalanceCore,
-  getMerchantCore,
-  getPaymentMethodCore,
-  getProductCore,
-  getUsageCore,
   isErrorResult,
-  listPlansCore,
   processPaymentIntentCore,
   reactivatePurchaseCore,
-  syncCustomerCore,
-  type PaywallStructuredContent,
   type SolvaPay,
 } from '@solvapay/server'
 import { z } from 'zod'
 import {
   buildSolvaPayRequest,
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
-  enrichPurchase,
   previewJson,
   toolErrorResult,
   toolResult,
 } from './helpers'
+import {
+  createBuildBootstrapPayload,
+  type BuildBootstrapPayloadFn,
+} from './bootstrap-payload'
 import { mergeCsp } from './csp'
 import { MCP_TOOL_NAMES } from './tool-names'
-import { OPEN_TOOL_FOR_VIEW, SOLVAPAY_MCP_VIEW_KINDS } from './types'
+import { SOLVAPAY_MCP_VIEW_KINDS, TOOL_FOR_VIEW } from './types'
 import type {
-  BootstrapPayload,
   McpToolExtra,
   SolvaPayCallToolResult,
   SolvaPayMcpCsp,
@@ -108,6 +101,13 @@ export interface BuildSolvaPayDescriptorsOptions {
 export interface SolvaPayDescriptorBundle {
   tools: SolvaPayToolDescriptor[]
   resource: SolvaPayResourceDescriptor
+  /**
+   * Parallelised fetch of merchant + product + plans + (optional)
+   * customer snapshot that backs every `open_*` tool. Exposed so the
+   * paywall envelope (`paywallToolResult`, `buildPayableHandler`) can
+   * embed the full payload in its `structuredContent`.
+   */
+  buildBootstrapPayload: BuildBootstrapPayloadFn
 }
 
 /**
@@ -145,17 +145,23 @@ export function buildSolvaPayDescriptors(
   }
 
   const toolMeta = { ui: { resourceUri } }
+  // State-change tools that need a server round-trip from inside the
+  // embedded UI but offer no LLM-facing use. Hosts that honour
+  // `_meta.audience` can hide these from the model; hosts that don't,
+  // still see them but are steered away by the description prefix.
+  const uiToolMeta = { ...toolMeta, audience: 'ui' as const }
   const enabledViews = new Set<SolvaPayMcpViewKind>(views)
   const tools: SolvaPayToolDescriptor[] = []
+
+  const UI_ONLY_PREFIX =
+    'UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. '
 
   const buildRequest = (
     extra: McpToolExtra | undefined,
     init: { method?: string; query?: Record<string, string | undefined>; body?: unknown } = {},
   ) => buildSolvaPayRequest(extra, { ...init, getCustomerRef })
 
-  const requireCustomerRef = (
-    extra: McpToolExtra | undefined,
-  ): SolvaPayCallToolResult | string => {
+  const requireCustomerRef = (extra: McpToolExtra | undefined): SolvaPayCallToolResult | string => {
     const ref = getCustomerRef(extra)
     if (!ref) {
       return toolErrorResult({
@@ -192,33 +198,20 @@ export function buildSolvaPayDescriptors(
 
   // ------- bootstrap / open_* tools -------
 
-  const fetchPublishableKey = async (): Promise<string | null> => {
-    try {
-      const platform = await solvaPay.apiClient.getPlatformConfig?.()
-      return platform?.stripePublishableKey ?? null
-    } catch {
-      return null
-    }
-  }
+  const buildBootstrapPayload: BuildBootstrapPayloadFn = createBuildBootstrapPayload({
+    solvaPay,
+    productRef,
+    publicBaseUrl,
+    getCustomerRef,
+  })
 
-  const buildBootstrapPayload = async (
-    view: SolvaPayMcpViewKind,
-    extras: { paywall?: PaywallStructuredContent } = {},
-  ): Promise<BootstrapPayload> => {
-    const stripePublishableKey = await fetchPublishableKey()
-    const payload: BootstrapPayload = {
-      view,
-      productRef,
-      stripePublishableKey,
-      returnUrl: publicBaseUrl,
-    }
-    if (extras.paywall) payload.paywall = extras.paywall
-    return payload
-  }
-
-  const pushOpenTool = (view: SolvaPayMcpViewKind, title: string, description: string) => {
+  const pushIntentTool = (
+    view: keyof typeof TOOL_FOR_VIEW,
+    title: string,
+    description: string,
+  ) => {
     if (!enabledViews.has(view)) return
-    const name = OPEN_TOOL_FOR_VIEW[view]
+    const name = TOOL_FOR_VIEW[view]
     tools.push({
       name,
       title,
@@ -226,120 +219,51 @@ export function buildSolvaPayDescriptors(
       inputSchema: {},
       meta: toolMeta,
       handler: async (args, extra) =>
-        trace(name, args, extra, async () => toolResult(await buildBootstrapPayload(view))),
+        trace(name, args, extra, async () => toolResult(await buildBootstrapPayload(view, extra))),
     })
   }
 
-  pushOpenTool(
+  pushIntentTool(
     'checkout',
-    'Open checkout',
-    'Open the SolvaPay checkout UI inside the host. Use when the customer needs to purchase or upgrade a plan.',
+    'Upgrade plan',
+    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout view; on text-only hosts the response carries a markdown summary with a checkout URL the user can click.',
   )
-  pushOpenTool(
+  pushIntentTool(
     'account',
-    'Open account',
-    'Open the SolvaPay account dashboard inside the host: current plan, balance, payment method, cancel/reactivate controls, and a portal launcher.',
+    'Manage account',
+    'Show or manage the current customer\'s SolvaPay account: plan, balance, payment method, cancel/reactivate controls. UI hosts open the embedded account view; text-only hosts get a markdown summary.',
   )
-  pushOpenTool(
+  pushIntentTool(
     'topup',
-    'Open top up',
-    'Open the SolvaPay top-up flow inside the host so the customer can add usage credits without leaving the conversation.',
+    'Top up credits',
+    'Add SolvaPay credits for the current customer. UI hosts open the embedded top-up flow; text-only hosts get a markdown summary with a top-up URL.',
   )
-  pushOpenTool(
-    'activate',
-    'Open plan activation',
-    'Open the SolvaPay activation flow inside the host for free, trial, or usage-based plans that do not require an upfront payment.',
-  )
-  pushOpenTool(
+  // `activate_plan` is registered below (transport section) as a
+  // dual-audience tool that handles both the picker bootstrap (no
+  // planRef) and smart activation (planRef provided), replacing the
+  // legacy `open_plan_activation` intent.
+  pushIntentTool(
     'usage',
-    'Open usage',
-    'Open the SolvaPay usage dashboard inside the host so the customer can see their current quota, overage, and reset date.',
+    'Check usage',
+    'Show the current customer\'s usage snapshot (used, remaining, reset date) for the active usage-based plan. UI hosts open the embedded usage view; text-only hosts get a markdown summary.',
   )
 
-  if (enabledViews.has('paywall')) {
-    tools.push({
-      name: MCP_TOOL_NAMES.openPaywall,
-      title: 'Open paywall',
-      description:
-        'Open the SolvaPay paywall view so the customer can resolve a payment- or activation-required gate inside the host. Input: `{ content?: PaywallStructuredContent }` — pass the structured content returned from a failed paywall-protected tool call. Omitting `content` yields a bootstrap payload without paywall details (the React shell falls back to the account view in that case).',
-      // `content` is optional on the wire so the React client's
-      // `fetchMcpBootstrap` can re-invoke `open_paywall` at app startup
-      // without access to the host's original call args. When content is
-      // missing, the server returns a bootstrap payload without the
-      // `paywall` field and the client falls back to a neutral view.
-      inputSchema: {
-        content: z
-          .object({
-            kind: z.enum(['payment_required', 'activation_required']),
-          })
-          .passthrough()
-          .optional(),
-      },
-      meta: toolMeta,
-      handler: async (args, extra) =>
-        trace(MCP_TOOL_NAMES.openPaywall, args, extra, async () => {
-          const raw = args.content
-          const content: PaywallStructuredContent | undefined =
-            raw && typeof raw === 'object' && 'kind' in raw
-              ? (raw as PaywallStructuredContent)
-              : undefined
-          return toolResult(
-            await buildBootstrapPayload('paywall', content ? { paywall: content } : {}),
-          )
-        }),
-    })
-  }
+  // Paywall responses now carry the full BootstrapPayload in their
+  // `structuredContent` (see `@solvapay/mcp/paywallToolResult`), so
+  // there is no dedicated `open_paywall` tool for the host to re-invoke.
 
   // ------- transport tools -------
 
   tools.push({
-    name: MCP_TOOL_NAMES.syncCustomer,
-    description: 'Ensure the authenticated MCP user exists as a SolvaPay customer.',
-    inputSchema: {},
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.syncCustomer, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-        const result = await syncCustomerCore(buildRequest(extra), { solvaPay })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult({ customerRef: result })
-      }),
-  })
-
-  tools.push({
-    name: MCP_TOOL_NAMES.checkPurchase,
-    description: [
-      'Fetch the active purchase for the authenticated customer.',
-      'For any human-readable price, prefer `priceDisplay` (customer-facing,',
-      'e.g. "SEK 500.00") or `planSnapshot.priceDisplay`. Raw `amount` is',
-      'always USD cents and `originalAmount` is minor units of `currency`',
-      '— do not present them as whole-currency values.',
-    ].join(' '),
-    inputSchema: {},
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.checkPurchase, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-        const result = await checkPurchaseCore(buildRequest(extra), { solvaPay })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult({
-          ...result,
-          purchases: result.purchases.map(p => enrichPurchase(p as Record<string, unknown>)),
-        })
-      }),
-  })
-
-  tools.push({
     name: MCP_TOOL_NAMES.createCheckoutSession,
     description:
+      UI_ONLY_PREFIX +
       'Create a SolvaPay hosted checkout session and return its URL. The UI opens this URL in a new tab when Stripe Elements is blocked by the host sandbox.',
     inputSchema: {
       planRef: z.string().optional(),
       productRef: z.string().optional(),
     },
-    meta: toolMeta,
+    meta: uiToolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCheckoutSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -360,30 +284,15 @@ export function buildSolvaPayDescriptors(
   })
 
   tools.push({
-    name: MCP_TOOL_NAMES.getPaymentMethod,
-    description:
-      "Return the customer's default card brand / last4 / expiry so the UI can render a \"Visa •••• 4242\" line. Returns { kind: 'none' } when no card is on file.",
-    inputSchema: {},
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.getPaymentMethod, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-        const result = await getPaymentMethodCore(buildRequest(extra), { solvaPay })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  tools.push({
     name: MCP_TOOL_NAMES.createPayment,
     description:
+      UI_ONLY_PREFIX +
       'Create a Stripe payment intent for the authenticated customer to purchase a plan. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI.',
     inputSchema: {
       planRef: z.string(),
       productRef: z.string(),
     },
-    meta: toolMeta,
+    meta: uiToolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -406,20 +315,20 @@ export function buildSolvaPayDescriptors(
   tools.push({
     name: MCP_TOOL_NAMES.processPayment,
     description:
+      UI_ONLY_PREFIX +
       'Process a Stripe payment intent after client-side confirmation and create the SolvaPay purchase. Call after confirmPayment resolves to short-circuit webhook latency.',
     inputSchema: {
       paymentIntentId: z.string(),
       productRef: z.string(),
       planRef: z.string().optional(),
     },
-    meta: toolMeta,
+    meta: uiToolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.processPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 
-        const paymentIntentId =
-          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const paymentIntentId = typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
         const effectiveProduct =
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
         const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
@@ -435,70 +344,19 @@ export function buildSolvaPayDescriptors(
   })
 
   tools.push({
-    name: MCP_TOOL_NAMES.listPlans,
-    description:
-      'List the active plans for a product. Used by the embedded checkout to resolve a plan reference when only productRef is known.',
-    inputSchema: { productRef: z.string().optional() },
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.listPlans, args, extra, async () => {
-        const effectiveProduct =
-          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
-        const result = await listPlansCore(
-          buildRequest(extra, { query: { productRef: effectiveProduct } }),
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  tools.push({
-    name: MCP_TOOL_NAMES.getProduct,
-    description: 'Fetch a single product by reference.',
-    inputSchema: { productRef: z.string().optional() },
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.getProduct, args, extra, async () => {
-        const effectiveProduct =
-          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
-        const result = await getProductCore(
-          buildRequest(extra, { query: { productRef: effectiveProduct } }),
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  tools.push({
-    name: MCP_TOOL_NAMES.getMerchant,
-    description:
-      'Return the merchant identity (name, legal name, support contact) used by mandate text and trust signals.',
-    inputSchema: {},
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.getMerchant, args, extra, async () => {
-        const result = await getMerchantCore(buildRequest(extra), { solvaPay })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  tools.push({
     name: MCP_TOOL_NAMES.createCustomerSession,
     description:
+      UI_ONLY_PREFIX +
       'Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.',
     inputSchema: {},
-    meta: toolMeta,
+    meta: uiToolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCustomerSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
-        const result = await createCustomerSessionCore(
-          buildRequest(extra, { method: 'POST' }),
-          { solvaPay },
-        )
+        const result = await createCustomerSessionCore(buildRequest(extra, { method: 'POST' }), {
+          solvaPay,
+        })
         if (isErrorResult(result)) return toolErrorResult(result)
         return toolResult(result)
       }),
@@ -507,13 +365,14 @@ export function buildSolvaPayDescriptors(
   tools.push({
     name: MCP_TOOL_NAMES.createTopupPayment,
     description:
+      UI_ONLY_PREFIX +
       'Create a Stripe payment intent for a credit top-up. Credits are recorded by the SolvaPay webhook after confirmation.',
     inputSchema: {
       amount: z.number().int().positive(),
       currency: z.string(),
       description: z.string().optional(),
     },
-    meta: toolMeta,
+    meta: uiToolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createTopupPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -534,46 +393,15 @@ export function buildSolvaPayDescriptors(
   })
 
   tools.push({
-    name: MCP_TOOL_NAMES.getBalance,
-    description:
-      "Return the authenticated customer's credit balance and display-currency metadata.",
-    inputSchema: {},
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.getBalance, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-        const result = await getCustomerBalanceCore(buildRequest(extra), { solvaPay })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  tools.push({
-    name: MCP_TOOL_NAMES.getUsage,
-    description:
-      "Return the authenticated customer's usage snapshot (used / remaining / percent) for the active usage-based plan.",
-    inputSchema: {},
-    meta: toolMeta,
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.getUsage, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-        const result = await getUsageCore(buildRequest(extra), { solvaPay })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  tools.push({
     name: MCP_TOOL_NAMES.cancelRenewal,
     description:
+      UI_ONLY_PREFIX +
       'Cancel the auto-renewal on an active purchase. Backend keeps access until the current period ends.',
     inputSchema: {
       purchaseRef: z.string(),
       reason: z.string().optional(),
     },
-    meta: toolMeta,
+    meta: uiToolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.cancelRenewal, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -595,9 +423,10 @@ export function buildSolvaPayDescriptors(
   tools.push({
     name: MCP_TOOL_NAMES.reactivateRenewal,
     description:
+      UI_ONLY_PREFIX +
       "Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
     inputSchema: { purchaseRef: z.string() },
-    meta: toolMeta,
+    meta: uiToolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.reactivateRenewal, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -616,21 +445,40 @@ export function buildSolvaPayDescriptors(
 
   tools.push({
     name: MCP_TOOL_NAMES.activatePlan,
+    title: 'Activate plan',
     description:
-      'Activate a zero-priced, trial, or usage-based plan without collecting payment up-front. For paid plans, use create_payment_intent + process_payment instead.',
+      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link (text-only hosts) or open the embedded checkout (UI hosts). Without a `planRef`: returns the available plans so the customer can pick one — UI hosts render the embedded picker, text-only hosts see the plans list in the markdown summary.',
     inputSchema: {
       productRef: z.string().optional(),
-      planRef: z.string(),
+      planRef: z.string().optional(),
     },
     meta: toolMeta,
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.activatePlan, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
         const effectiveProduct =
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
-        const planRef = typeof args.planRef === 'string' ? args.planRef : ''
+        const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
+
+        // No plan picked yet — return the picker bootstrap (the React
+        // shell opens `<McpActivateView>`; text-only hosts narrate the
+        // markdown summary listing the available plans). Respect the
+        // `views` filter so consumers that restrict the surface (e.g.
+        // `views: ['checkout']`) don't accidentally expose the
+        // activation picker as an alternate entry point.
+        if (!planRef) {
+          if (!enabledViews.has('activate')) {
+            return toolErrorResult({
+              error: 'activate_plan requires a planRef on this server',
+              status: 400,
+              details:
+                'The activation-picker view is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "activate" view via the `views` option.',
+            })
+          }
+          return toolResult(await buildBootstrapPayload('activate', extra))
+        }
+
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
 
         const result = await activatePlanCore(
           buildRequest(extra, { method: 'POST' }),
@@ -658,5 +506,5 @@ export function buildSolvaPayDescriptors(
         },
   }
 
-  return { tools, resource }
+  return { tools, resource, buildBootstrapPayload }
 }

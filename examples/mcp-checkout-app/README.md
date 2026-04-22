@@ -10,13 +10,16 @@ primitive. On non-compliant hosts (today: Claude, which hardcodes
 detects the block via a runtime probe and falls back to launching
 **SolvaPay hosted checkout** in a new browser tab.
 
-The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the tool set
-needed by both paths — hosted
-(`open_checkout`, `sync_customer`, `check_purchase`,
-`create_checkout_session`, `create_customer_session`,
-`get_payment_method`) plus the data-access tools the embedded form
-consumes (`create_payment_intent`, `process_payment_intent`,
-`list_plans`, `get_product`, `get_merchant`).
+The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
+12-tool surface: 5 intent tools (`upgrade`, `manage_account`, `topup`,
+`check_usage`, `activate_plan`) plus 7 UI-only state-change tools
+(`create_checkout_session`, `create_customer_session`,
+`create_payment_intent`, `process_payment`,
+`create_topup_payment_intent`, `cancel_renewal`, `reactivate_renewal`).
+Product-scoped data (merchant, product, plans) and the customer
+snapshot (purchase, payment method, balance, usage) ride on the
+`BootstrapPayload` every intent tool returns, so the embedded form
+never fires per-view read calls.
 
 Earlier iterations gave up on the embedded path because older host
 versions blocked `js.stripe.com` unconditionally — see
@@ -63,7 +66,8 @@ Stripe Elements; enter the test card `4242 4242 4242 4242` and pay
 without leaving the host. On Claude the probe detects that
 `js.stripe.com` cannot iframe and the UI falls back to an **Upgrade**
 button that opens hosted checkout in a new tab — returning to the host
-refetches `check_purchase` and flips the card to **Manage purchase**.
+fires `refreshBootstrap()` (which calls `manage_account` under the
+hood) and flips the card to **Manage purchase**.
 
 ## Flow
 
@@ -73,51 +77,59 @@ refetches `check_purchase` and flips the card to **Manage purchase**.
    implement the spec propagate these to the iframe's CSP.
 2. The bundle renders `<McpApp app={app} />` from
    [`@solvapay/react/mcp`](../../packages/react/src/mcp). `McpApp` runs
-   `app.connect()`, calls the matching `open_*` tool, mounts
-   `<SolvaPayProvider config={{ transport, fetch }}>`, and routes to the
-   correct `<Mcp*View>` primitive. `transport = createMcpAppAdapter(app)`
-   tunnels every provider data-access call through `app.callServerTool`;
-   the `fetch` prop (`createMcpFetch(transport)`) reroutes the two SDK
-   hooks that still go through HTTP (`usePlan`'s `/api/list-plans`,
-   `useProduct`/`useMerchant`'s `/api/get-product` and `/api/merchant`)
-   into the same tool calls.
-3. On mount the UI calls `open_checkout`. The tool fetches SolvaPay's
-   platform Stripe pk from the backend (`GET /sdk/platform-config`,
-   resolved sandbox/live against the authenticated provider) and
-   returns `{ productRef, stripePublishableKey }`. A `useStripeProbe`
-   hook races `loadStripe(publishableKey)` against a 3 s timeout to
-   classify the host as `'ready'` (embedded), `'blocked'` (fallback) or
-   `'loading'` (spinner). If `/sdk/platform-config` is unreachable or
-   the key is unconfigured the tool returns `null` and the hosted
-   fallback renders.
+   `app.connect()`, calls the matching intent tool (`upgrade`,
+   `manage_account`, `topup`, `check_usage`, or `activate_plan`), seeds
+   the provider's module caches via `seedMcpCaches(initial, config)`,
+   and mounts `<SolvaPayProvider config={{ transport, initial }}>` so
+   every hook reads from the snapshot without a first-mount fetch.
+   `transport = createMcpAppAdapter(app)` only tunnels the 7 UI-only
+   state-change tools — read tools (`check_purchase`, `get_merchant`,
+   etc.) no longer exist; their data arrives on the `BootstrapPayload`.
+3. On mount the UI calls `upgrade`. The intent tool parallel-loads
+   merchant, product, plans, and (when authenticated) the full
+   customer snapshot, plus SolvaPay's platform Stripe pk from
+   `GET /sdk/platform-config`. A `useStripeProbe` hook races
+   `loadStripe(publishableKey)` against a 3 s timeout to classify the
+   host as `'ready'` (embedded), `'blocked'` (fallback) or `'loading'`
+   (spinner). If `/sdk/platform-config` is unreachable or the key is
+   unconfigured the tool returns `null` and the hosted fallback
+   renders.
 4. **Embedded branch (`probe === 'ready'`):** renders the SDK's
    `<PaymentForm.Root>` compound (`Summary` / `PaymentElement` /
    `Error` / `MandateText` / `SubmitButton`). Card entry happens in a
    nested `js.stripe.com` iframe; confirmation goes through
    `create_payment_intent` → Stripe.js `confirmPayment` →
-   `process_payment_intent`. Post-purchase the card switches to
-   `<CurrentPlanCard>`.
+   `process_payment`. Post-purchase the shell calls
+   `refreshBootstrap()` and the card switches to `<CurrentPlanCard>`.
 5. **Hosted branch (`probe === 'blocked'`):** the original hosted-button
    experience — `create_checkout_session` populates an
    `<a target="_blank">` anchor, the user completes payment in a new
-   tab, and `focus`/`visibilitychange` listeners refetch
-   `check_purchase` to auto-flip to **Manage purchase**.
+   tab, and `focus`/`visibilitychange` listeners fire
+   `refreshBootstrap()` to flip to **Manage purchase**.
 
 ## Tools
 
+**Intent tools (LLM-callable, dual-audience):**
+
 | Tool | Purpose |
 | --- | --- |
-| `open_checkout` | Returns `{ productRef, stripePublishableKey }` so the UI can pick a product and probe Stripe Elements |
-| `sync_customer` | Ensures the authenticated MCP user exists as a SolvaPay customer |
-| `check_purchase` | Fetches the active purchase for the authenticated customer |
+| `upgrade` | Returns the `BootstrapPayload` (merchant, product, plans, customer snapshot, stripePublishableKey) so the UI can probe Stripe Elements and render the checkout view |
+| `manage_account` | Returns the bootstrap for the account dashboard (current plan, balance, payment method, cancel/reactivate controls, portal launcher) |
+| `topup` | Returns the bootstrap for the top-up flow |
+| `check_usage` | Returns the bootstrap for the usage dashboard (used / remaining / reset date) |
+| `activate_plan` | With `planRef`: activates a free/usage-based plan or returns a checkout URL for paid plans. Without `planRef`: returns the picker bootstrap |
+
+**UI-only state-change tools (tagged `_meta.audience: 'ui'`):**
+
+| Tool | Purpose |
+| --- | --- |
 | `create_checkout_session` | Returns `{ sessionId, checkoutUrl }` for the SolvaPay hosted checkout (used by the fallback branch) |
 | `create_customer_session` | Returns `{ sessionId, customerUrl }` for the SolvaPay customer portal |
-| `get_payment_method` | Returns `{ kind: 'card', brand, last4, expMonth, expYear }` or `{ kind: 'none' }` for the `<CurrentPlanCard>` payment line |
 | `create_payment_intent` | Creates the PaymentIntent consumed by the embedded branch's `<PaymentForm>` |
-| `process_payment_intent` | Records the Stripe-side confirmation after `confirmPayment` resolves |
-| `list_plans` | Returns the plans the embedded `<PaymentForm>` lists for the product |
-| `get_product` | Product metadata (name, image, plan refs) for the summary card |
-| `get_merchant` | Merchant display data for the summary card |
+| `process_payment` | Records the Stripe-side confirmation after `confirmPayment` resolves |
+| `create_topup_payment_intent` | Creates the PaymentIntent consumed by the top-up flow |
+| `cancel_renewal` | Cancels auto-renewal on an active purchase |
+| `reactivate_renewal` | Undoes a pending cancellation |
 
 `returnUrl` on `create_checkout_session` is intentionally unset — there
 is no meaningful URL to return to inside an MCP host iframe, so the
@@ -125,7 +137,7 @@ SolvaPay backend default is used.
 
 ### A note on `stripePublishableKey`
 
-The publishable key `open_checkout` returns is **SolvaPay's platform
+The publishable key every intent tool returns is **SolvaPay's platform
 key**, sourced from the SolvaPay backend via `GET /sdk/platform-config`
 (resolved sandbox/live against the authenticated provider's
 environment). It is not the connected merchant's own pk. SolvaPay uses
@@ -133,14 +145,15 @@ Stripe Connect direct charges, so the browser-side pattern everywhere
 in the SDK is `loadStripe(platformPk, { stripeAccount: connectedAccountId })`
 — the merchant's own publishable key is never touched.
 
-The key is forwarded via `open_checkout` purely so `useStripeProbe`
-has a syntactically valid pk to pass to `loadStripe()` when testing
-whether the host's CSP `frameDomains` lets `js.stripe.com` mount.
-The real payment flow re-fetches the same pk (plus the `accountId`
-the probe never sees) from `create_payment_intent`, so the probe
-value is never fed into `confirmPayment`. If the backend doesn't have
-a platform pk configured for the provider's environment, or the
-`/sdk/platform-config` call fails for any reason, the tool returns
+The key is forwarded on `BootstrapPayload.stripePublishableKey` purely
+so `useStripeProbe` has a syntactically valid pk to pass to
+`loadStripe()` when testing whether the host's CSP `frameDomains` lets
+`js.stripe.com` mount. The real payment flow re-fetches the same pk
+(plus the `accountId` the probe never sees) from
+`create_payment_intent`, so the probe value is never fed into
+`confirmPayment`. If the backend doesn't have a platform pk
+configured for the provider's environment, or the
+`/sdk/platform-config` call fails for any reason, the payload carries
 `null` and every host falls back to the hosted-button branch.
 
 ## Known boundaries
@@ -148,9 +161,8 @@ a platform pk configured for the provider's environment, or the
 - Plan switching (`change_plan`) and inline card-update
   (`create_setup_intent`) are in flight as follow-ups — see
   [`sdk_plan_management_phase2_6e40d833.plan.md`](../../.cursor/plans/sdk_plan_management_phase2_6e40d833.plan.md)
-  for the deferred scope. `create_topup_payment_intent`,
-  `customer_balance`, `activate_plan`, `cancel_renewal`,
-  `reactivate_renewal`, and `track_usage` are roadmap.
+  for the deferred scope. `track_usage` is roadmap; every other
+  state-change tool is already registered (see the Tools table above).
 - Auth comes exclusively from `createMcpOAuthBridge` → `customer_ref`
   on `extra.authInfo`. There is no client-side auth adapter.
 - Post-purchase account management (update card / cancel) stays on the

@@ -12,7 +12,11 @@ import { registerAppTool } from '@modelcontextprotocol/ext-apps/server'
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { AnySchema, ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import { buildPayableHandler, type McpToolExtra } from '@solvapay/mcp'
+import {
+  buildPayableHandler,
+  type BuildBootstrapPayloadFn,
+  type McpToolExtra,
+} from '@solvapay/mcp'
 import type { SolvaPay } from '@solvapay/server'
 
 export interface RegisterPayableToolOptions<InputSchema extends ZodRawShapeCompat | AnySchema> {
@@ -42,11 +46,12 @@ export interface RegisterPayableToolOptions<InputSchema extends ZodRawShapeCompa
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: (args: any, extra?: McpToolExtra) => Promise<any>
   /**
-   * Name of the bootstrap tool that renders the paywall (defaults to
-   * `'open_paywall'`). Attached to `_meta.ui.toolName` on paywall
-   * results.
+   * Builds the full `BootstrapPayload` embedded on paywall results so
+   * the React shell renders the paywall view directly from the gate
+   * response. Wire from
+   * `buildSolvaPayDescriptors(...).buildBootstrapPayload`.
    */
-  paywallToolName?: string
+  buildBootstrap?: BuildBootstrapPayloadFn
   /**
    * Override customer-ref extraction. Defaults to the MCP adapter's
    * behavior (reads `extra.authInfo.extra.customer_ref`).
@@ -79,14 +84,14 @@ export function registerPayableTool<InputSchema extends ZodRawShapeCompat | AnyS
     title,
     description,
     handler,
-    paywallToolName,
+    buildBootstrap,
     getCustomerRef,
     meta,
   } = options
 
   const protectedHandler = buildPayableHandler(
     solvaPay,
-    { product, resourceUri, paywallToolName, getCustomerRef },
+    { product, resourceUri, buildBootstrap, getCustomerRef },
     handler,
   )
 

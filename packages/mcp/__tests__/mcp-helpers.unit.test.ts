@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { PaywallError, isPaywallStructuredContent } from '@solvapay/server'
 import {
   buildSolvaPayRequest,
@@ -48,35 +48,48 @@ describe('isPaywallStructuredContent', () => {
 })
 
 describe('paywallToolResult', () => {
-  it('attaches _meta.ui with the resourceUri and default toolName', () => {
+  it('attaches _meta.ui with the resourceUri and mirrors the gate structuredContent by default', async () => {
     const err = new PaywallError('Payment required', {
       kind: 'payment_required',
       product: 'prd_foo',
       checkoutUrl: 'https://example.com/checkout',
       message: 'Purchase required',
     })
-    const result = paywallToolResult(err, { resourceUri: 'ui://my-app/mcp-app.html' })
+    const result = await paywallToolResult(err, { resourceUri: 'ui://my-app/mcp-app.html' })
     expect(result.isError).toBe(true)
     expect(result.structuredContent).toEqual(err.structuredContent)
-    expect(result._meta).toEqual({
-      ui: { resourceUri: 'ui://my-app/mcp-app.html', toolName: 'open_paywall' },
-    })
+    expect(result._meta).toEqual({ ui: { resourceUri: 'ui://my-app/mcp-app.html' } })
   })
 
-  it('respects a custom toolName', () => {
+  it('embeds the full BootstrapPayload when buildBootstrap is provided', async () => {
     const err = new PaywallError('Activation required', {
       kind: 'activation_required',
       product: 'prd_bar',
       checkoutUrl: '',
       message: 'Activate',
     })
-    const result = paywallToolResult(err, {
+    const bootstrap = {
+      view: 'paywall' as const,
+      productRef: 'prd_bar',
+      stripePublishableKey: null,
+      returnUrl: 'https://app.example',
+      merchant: { displayName: 'Acme' },
+      product: { reference: 'prd_bar' },
+      plans: [],
+      customer: null,
+      paywall: err.structuredContent,
+    }
+    const buildBootstrap = vi.fn().mockResolvedValue(bootstrap)
+    const result = await paywallToolResult(err, {
       resourceUri: 'ui://app/view.html',
-      toolName: 'open_custom_paywall',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      buildBootstrap: buildBootstrap as any,
     })
-    expect(result._meta).toEqual({
-      ui: { resourceUri: 'ui://app/view.html', toolName: 'open_custom_paywall' },
+    expect(buildBootstrap).toHaveBeenCalledWith('paywall', undefined, {
+      paywall: err.structuredContent,
     })
+    expect(result.structuredContent).toEqual(bootstrap)
+    expect(result._meta).toEqual({ ui: { resourceUri: 'ui://app/view.html' } })
   })
 })
 

@@ -18,15 +18,14 @@ import { PlanSelector } from './PlanSelector'
 import { ActivationFlow } from './ActivationFlow'
 import { usePlan } from '../hooks/usePlan'
 import { usePlans } from '../hooks/usePlans'
+import { defaultListPlans } from '../transport/list-plans'
 import { useCopy } from '../hooks/useCopy'
 import { SolvaPayContext } from '../SolvaPayProvider'
-import { buildRequestHeaders } from '../utils/headers'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import type {
   CheckoutResult,
   Plan,
   PrefillCustomer,
-  SolvaPayConfig,
 } from '../types'
 
 export type CheckoutLayoutSize = 'chat' | 'mobile' | 'desktop' | 'auto'
@@ -209,24 +208,6 @@ export const CheckoutLayout: React.FC<CheckoutLayoutProps> = ({
       )}
     </div>
   )
-}
-
-async function defaultListPlans(
-  productRef: string,
-  config: SolvaPayConfig | undefined,
-): Promise<Plan[]> {
-  const base = config?.api?.listPlans || '/api/list-plans'
-  const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-  const fetchFn = config?.fetch || fetch
-  const { headers } = await buildRequestHeaders(config)
-  const res = await fetchFn(url, { method: 'GET', headers })
-  if (!res.ok) {
-    const error = new Error(`Failed to fetch plans: ${res.statusText || res.status}`)
-    config?.onError?.(error, 'listPlans')
-    throw error
-  }
-  const data = (await res.json()) as { plans?: Plan[] }
-  return data.plans ?? []
 }
 
 /**

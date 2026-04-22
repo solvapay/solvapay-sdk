@@ -20,8 +20,13 @@ function cacheKeyFor(config: SolvaPayConfig | undefined): string {
   return createTransportCacheKey(config, config?.api?.getMerchant || '/api/merchant')
 }
 
-async function fetchMerchant(config: SolvaPayConfig | undefined): Promise<Merchant> {
+async function fetchMerchant(config: SolvaPayConfig | undefined): Promise<Merchant | null> {
   const transport = config?.transport ?? createHttpTransport(config)
+  // MCP adapters omit `getMerchant` — the data arrives on `BootstrapPayload`
+  // and `seedMcpCaches` populates `merchantCache` before the hook mounts.
+  // Returning null here lets the hook fall back to whatever the cache
+  // already holds (seeded value) without flagging an error.
+  if (!transport.getMerchant) return null
   return transport.getMerchant()
 }
 
@@ -76,8 +81,28 @@ export function useMerchant(): UseMerchantReturn {
         setLoading(true)
         setError(null)
         const promise = fetchMerchant(_config)
-        merchantCache.set(key, { merchant: null, promise, timestamp: now })
+        // Preserve the seeded merchant (if any) on the in-flight entry
+        // so concurrent `useMerchant` consumers still render the cached
+        // value while the fetch is in progress.
+        merchantCache.set(key, {
+          merchant: cached?.merchant ?? null,
+          promise: promise as Promise<Merchant>,
+          timestamp: now,
+        })
         const m = await promise
+        // Transports without `getMerchant` (MCP adapter) return null;
+        // restore the seeded entry so the TTL doesn't evict it on next
+        // access — matches the "accept in-session staleness" policy.
+        if (m === null) {
+          merchantCache.set(key, {
+            merchant: cached?.merchant ?? null,
+            promise: null,
+            timestamp: cached?.timestamp ?? now,
+          })
+          setMerchant(cached?.merchant ?? null)
+          setLoading(false)
+          return
+        }
         merchantCache.set(key, { merchant: m, promise: null, timestamp: now })
         setMerchant(m)
       } catch (err) {

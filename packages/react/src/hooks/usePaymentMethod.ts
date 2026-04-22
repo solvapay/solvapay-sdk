@@ -26,8 +26,11 @@ function cacheKeyFor(config: SolvaPayConfig | undefined): string {
 
 async function fetchPaymentMethod(
   config: SolvaPayConfig | undefined,
-): Promise<PaymentMethodInfo> {
+): Promise<PaymentMethodInfo | null> {
   const transport = config?.transport ?? createHttpTransport(config)
+  // MCP adapters omit `getPaymentMethod`; the value arrives on the
+  // bootstrap and `seedMcpCaches` seeds `paymentMethodCache`.
+  if (!transport.getPaymentMethod) return null
   return transport.getPaymentMethod()
 }
 
@@ -96,8 +99,27 @@ export function usePaymentMethod(): UsePaymentMethodReturn {
         setLoading(true)
         setError(null)
         const promise = fetchPaymentMethod(_config)
-        paymentMethodCache.set(key, { paymentMethod: null, promise, timestamp: now })
+        // Preserve the seeded payment method (if any) on the in-flight
+        // entry so concurrent consumers render the cached value while
+        // the fetch is in progress.
+        paymentMethodCache.set(key, {
+          paymentMethod: cached?.paymentMethod ?? null,
+          promise: promise as Promise<PaymentMethodInfo>,
+          timestamp: now,
+        })
         const pm = await promise
+        // Transports without `getPaymentMethod` (MCP adapter) return
+        // null; restore the seeded entry so the TTL doesn't evict it.
+        if (pm === null) {
+          paymentMethodCache.set(key, {
+            paymentMethod: cached?.paymentMethod ?? null,
+            promise: null,
+            timestamp: cached?.timestamp ?? now,
+          })
+          setPaymentMethod(cached?.paymentMethod ?? null)
+          setLoading(false)
+          return
+        }
         paymentMethodCache.set(key, { paymentMethod: pm, promise: null, timestamp: now })
         setPaymentMethod(pm)
       } catch (err) {

@@ -39,9 +39,9 @@ describe('<McpApp>', () => {
     expect(screen.getByText('Loading…')).toBeTruthy()
   })
 
-  it('routes to the account view when the host invokes open_account', async () => {
+  it('routes to the account view when the host invokes manage_account', async () => {
     const app = makeApp({
-      toolName: 'open_account',
+      toolName: 'manage_account',
       structuredContent: {
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
@@ -54,9 +54,9 @@ describe('<McpApp>', () => {
     expect(AccountStub).toHaveBeenCalled()
   })
 
-  it('routes to the topup view when the host invokes open_topup', async () => {
+  it('routes to the topup view when the host invokes topup', async () => {
     const app = makeApp({
-      toolName: 'open_topup',
+      toolName: 'topup',
       structuredContent: {
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
@@ -93,7 +93,7 @@ describe('<McpApp>', () => {
 
   it('passes classNames through to overridden views', async () => {
     const app = makeApp({
-      toolName: 'open_account',
+      toolName: 'manage_account',
       structuredContent: {
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',

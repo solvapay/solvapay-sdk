@@ -24,15 +24,15 @@ import React, {
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { usePlans } from '../hooks/usePlans'
+import { defaultListPlans } from '../transport/list-plans'
 import { usePurchase } from '../hooks/usePurchase'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
 import { interpolate } from '../i18n/interpolate'
 import { PlanSelectionProvider } from '../components/PlanSelectionContext'
-import { buildRequestHeaders } from '../utils/headers'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProductRefError, MissingProviderError } from '../utils/errors'
-import type { Plan, SolvaPayConfig } from '../types'
+import type { Plan } from '../types'
 
 type CardState = 'idle' | 'selected' | 'current' | 'disabled'
 
@@ -78,24 +78,6 @@ function useCardContext(part: string): CardContextValue {
     throw new Error(`PlanSelector.${part} must be rendered inside <PlanSelector.Card>.`)
   }
   return ctx
-}
-
-async function defaultListPlans(
-  productRef: string,
-  config: SolvaPayConfig | undefined,
-): Promise<Plan[]> {
-  const base = config?.api?.listPlans || '/api/list-plans'
-  const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-  const fetchFn = config?.fetch || fetch
-  const { headers } = await buildRequestHeaders(config)
-  const res = await fetchFn(url, { method: 'GET', headers })
-  if (!res.ok) {
-    const error = new Error(`Failed to fetch plans: ${res.statusText || res.status}`)
-    config?.onError?.(error, 'listPlans')
-    throw error
-  }
-  const data = (await res.json()) as { plans?: Plan[] }
-  return data.plans ?? []
 }
 
 type RootProps = {

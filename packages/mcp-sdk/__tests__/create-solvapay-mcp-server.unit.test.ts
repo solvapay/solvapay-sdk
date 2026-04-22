@@ -70,42 +70,32 @@ describe('createSolvaPayMcpServer', () => {
     // @ts-expect-error — accessing private _registeredTools for test coverage
     const toolNames = Object.keys(server._registeredTools ?? {})
     const expected = [
-      MCP_TOOL_NAMES.checkPurchase,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
       MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.getBalance,
       MCP_TOOL_NAMES.cancelRenewal,
       MCP_TOOL_NAMES.reactivateRenewal,
       MCP_TOOL_NAMES.activatePlan,
       MCP_TOOL_NAMES.createCheckoutSession,
       MCP_TOOL_NAMES.createCustomerSession,
-      MCP_TOOL_NAMES.getMerchant,
-      MCP_TOOL_NAMES.getProduct,
-      MCP_TOOL_NAMES.listPlans,
-      MCP_TOOL_NAMES.getPaymentMethod,
-      MCP_TOOL_NAMES.getUsage,
-      MCP_TOOL_NAMES.syncCustomer,
-      MCP_TOOL_NAMES.openCheckout,
-      MCP_TOOL_NAMES.openAccount,
-      MCP_TOOL_NAMES.openTopup,
-      MCP_TOOL_NAMES.openPlanActivation,
-      MCP_TOOL_NAMES.openPaywall,
-      MCP_TOOL_NAMES.openUsage,
+      MCP_TOOL_NAMES.upgrade,
+      MCP_TOOL_NAMES.manageAccount,
+      MCP_TOOL_NAMES.topup,
+      MCP_TOOL_NAMES.checkUsage,
     ]
     for (const name of expected) {
       expect(toolNames).toContain(name)
     }
   })
 
-  it('gates open_* tools on the views option', () => {
+  it('gates intent tools on the views option', () => {
     const { server } = buildTestServer({ views: ['checkout'] })
     // @ts-expect-error — accessing private _registeredTools for test coverage
     const toolNames = Object.keys(server._registeredTools ?? {})
-    expect(toolNames).toContain(MCP_TOOL_NAMES.openCheckout)
-    expect(toolNames).not.toContain(MCP_TOOL_NAMES.openAccount)
-    expect(toolNames).not.toContain(MCP_TOOL_NAMES.openPaywall)
-    expect(toolNames).not.toContain(MCP_TOOL_NAMES.openUsage)
+    expect(toolNames).toContain(MCP_TOOL_NAMES.upgrade)
+    expect(toolNames).not.toContain(MCP_TOOL_NAMES.manageAccount)
+    expect(toolNames).not.toContain('open_paywall')
+    expect(toolNames).not.toContain(MCP_TOOL_NAMES.checkUsage)
   })
 
   it('invokes the additionalTools hook with a bound registerPayable', () => {

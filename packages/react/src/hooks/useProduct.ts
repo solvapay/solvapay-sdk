@@ -26,8 +26,11 @@ function cacheKeyFor(config: SolvaPayConfig | undefined, productRef: string): st
 async function fetchProduct(
   productRef: string,
   config: SolvaPayConfig | undefined,
-): Promise<Product> {
+): Promise<Product | null> {
   const transport = config?.transport ?? createHttpTransport(config)
+  // MCP adapters omit `getProduct` — the product snapshot arrives on
+  // `BootstrapPayload` and `seedMcpCaches` populates `productCache`.
+  if (!transport.getProduct) return null
   return transport.getProduct(productRef)
 }
 
@@ -89,8 +92,28 @@ export function useProduct(productRef: string | undefined): UseProductReturn {
         setLoading(true)
         setError(null)
         const promise = fetchProduct(productRef, _config)
-        productCache.set(key, { product: null, promise, timestamp: now })
+        // Preserve the seeded product (if any) on the in-flight entry
+        // so concurrent consumers render the cached value while the
+        // fetch is in progress.
+        productCache.set(key, {
+          product: cached?.product ?? null,
+          promise: promise as Promise<Product>,
+          timestamp: now,
+        })
         const p = await promise
+        // Transports without `getProduct` (MCP adapter) return null;
+        // restore the seeded entry so the TTL doesn't evict it on next
+        // access.
+        if (p === null) {
+          productCache.set(key, {
+            product: cached?.product ?? null,
+            promise: null,
+            timestamp: cached?.timestamp ?? now,
+          })
+          setProduct(cached?.product ?? null)
+          setLoading(false)
+          return
+        }
         productCache.set(key, { product: p, promise: null, timestamp: now })
         setProduct(p)
       } catch (err) {

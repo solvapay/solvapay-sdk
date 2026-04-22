@@ -21,10 +21,11 @@ import { SolvaPayProvider } from '../SolvaPayProvider'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {
   fetchMcpBootstrap,
-  createMcpFetch,
   type McpBootstrap,
   type McpAppBootstrapLike,
 } from './bootstrap'
+import { seedMcpCaches } from './cache-seed'
+import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import {
   McpAccountView,
   type McpAccountViewProps,
@@ -115,6 +116,25 @@ export interface McpAppProps {
   applyContext?: (ctx: McpUiHostContextLike | undefined) => void
 }
 
+/**
+ * Pure mapper from the wire `McpBootstrap` (what `fetchMcpBootstrap`
+ * returns) to the provider-shaped `SolvaPayProviderInitial`. Hoisted
+ * out of the component so the reference is stable across renders and
+ * safe to close over from `useMemo` / `useCallback`.
+ */
+function bootstrapToInitial(bs: McpBootstrap): SolvaPayProviderInitial {
+  return {
+    customerRef: bs.customer?.ref ?? null,
+    purchase: bs.customer?.purchase ?? null,
+    paymentMethod: bs.customer?.paymentMethod ?? null,
+    balance: bs.customer?.balance ?? null,
+    usage: bs.customer?.usage ?? null,
+    merchant: bs.merchant as unknown as Merchant,
+    product: bs.product as unknown as Product,
+    plans: bs.plans as unknown as Plan[],
+  }
+}
+
 export function McpApp({
   app,
   productRef: productRefOverride,
@@ -180,28 +200,63 @@ export function McpApp({
   }, [app])
 
   const transport = useMemo(() => createMcpAppAdapter(app), [app])
-  const mcpFetch = useMemo(() => createMcpFetch(transport), [transport])
+
+  const initial: SolvaPayProviderInitial | undefined = useMemo(
+    () => (bootstrap ? bootstrapToInitial(bootstrap) : undefined),
+    [bootstrap],
+  )
 
   const providerConfig = useMemo(
-    () => ({
-      // `SolvaPayProvider` short-circuits its fetch pipeline when there's
-      // no auth token, which means our `checkPurchase` override would
-      // never run. In the MCP App the real identity lives server-side on
-      // the OAuth bridge's `customer_ref`, so we just need to tell the
-      // provider "yes, you're authenticated". Returning a sentinel token
-      // is enough to flip `isAuthenticated` true and unlock the refetch
-      // path.
-      auth: {
-        adapter: {
-          getToken: async () => 'mcp-session',
-          getUserId: async () => null,
+    () => {
+      // Build the resolved config first so every `seedMcpCaches` call
+      // (first render + post-refresh) runs against the same object the
+      // hooks later read via `configRef.current` — otherwise
+      // `createTransportCacheKey` could in principle compute a
+      // different key at refresh-time than at mount-time.
+      const resolved: SolvaPayConfig = {
+        // `SolvaPayProvider` short-circuits its fetch pipeline when there's
+        // no auth token, which means our `checkPurchase` override would
+        // never run. In the MCP App the real identity lives server-side on
+        // the OAuth bridge's `customer_ref`, so we just need to tell the
+        // provider "yes, you're authenticated". Returning a sentinel token
+        // is enough to flip `isAuthenticated` true and unlock the refetch
+        // path.
+        auth: {
+          adapter: {
+            getToken: async () => 'mcp-session',
+            getUserId: async () => initial?.customerRef ?? null,
+          },
         },
-      },
-      transport,
-      fetch: mcpFetch,
-    }),
-    [transport, mcpFetch],
+        transport,
+        initial,
+        refreshInitial: async (): Promise<SolvaPayProviderInitial | null> => {
+          // Re-fetch the bootstrap payload by replaying the host-invoked
+          // intent tool (`fetchMcpBootstrap` infers it from host context —
+          // defaulting to `upgrade` when none is present). Re-seeds the
+          // module caches so every hook sees the refreshed snapshot.
+          const fresh = await fetchMcpBootstrap(app)
+          const next = bootstrapToInitial(fresh)
+          seedMcpCaches(next, resolved)
+          return next
+        },
+      }
+      return resolved
+    },
+    [transport, initial, app],
   )
+
+  // Seed the module-level hook caches synchronously during render,
+  // before any child mounts. Children (`useMerchant` / `useProduct` /
+  // `usePlans` / `usePaymentMethod`) read the caches in their
+  // `useState` initializers, and React runs child effects *after*
+  // children render — so deferring to `useEffect` would miss the
+  // initial read. A ref guard keeps the seed a one-shot per
+  // `initial` change even under strict-mode double rendering.
+  const seededInitialRef = useRef<SolvaPayProviderInitial | null>(null)
+  if (initial && seededInitialRef.current !== initial) {
+    seedMcpCaches(initial, providerConfig)
+    seededInitialRef.current = initial
+  }
 
   if (initError) {
     return (

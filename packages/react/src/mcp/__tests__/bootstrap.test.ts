@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fetchMcpBootstrap, createMcpFetch } from '../bootstrap'
+import { fetchMcpBootstrap } from '../bootstrap'
 import type { McpAppBootstrapLike } from '../bootstrap'
-import type { SolvaPayTransport } from '../../transport/types'
 
 function mockApp(opts: {
   toolName?: string
@@ -21,7 +20,7 @@ function mockApp(opts: {
 }
 
 describe('fetchMcpBootstrap', () => {
-  it('routes to open_checkout by default and returns the bootstrap payload', async () => {
+  it('routes to upgrade by default and returns the bootstrap payload', async () => {
     const app = mockApp({
       structuredContent: {
         productRef: 'prod_123',
@@ -33,7 +32,7 @@ describe('fetchMcpBootstrap', () => {
     const result = await fetchMcpBootstrap(app)
 
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: 'open_checkout',
+      name: 'upgrade',
       arguments: {},
     })
     expect(result).toEqual({
@@ -41,12 +40,16 @@ describe('fetchMcpBootstrap', () => {
       productRef: 'prod_123',
       stripePublishableKey: 'pk_test_abc',
       returnUrl: 'https://example.test/return',
+      merchant: {},
+      product: { reference: 'prod_123' },
+      plans: [],
+      customer: null,
     })
   })
 
   it('infers view from host toolInfo.tool.name', async () => {
     const app = mockApp({
-      toolName: 'open_topup',
+      toolName: 'topup',
       structuredContent: {
         productRef: 'prod_123',
         returnUrl: 'https://example.test/return',
@@ -56,16 +59,16 @@ describe('fetchMcpBootstrap', () => {
     const result = await fetchMcpBootstrap(app)
 
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: 'open_topup',
+      name: 'topup',
       arguments: {},
     })
     expect(result.view).toBe('topup')
     expect(result.stripePublishableKey).toBeNull()
   })
 
-  it('maps open_plan_activation to the activate view', async () => {
+  it('maps activate_plan to the activate view', async () => {
     const app = mockApp({
-      toolName: 'open_plan_activation',
+      toolName: 'activate_plan',
       structuredContent: {
         productRef: 'prod_123',
         returnUrl: 'https://example.test/return',
@@ -95,6 +98,31 @@ describe('fetchMcpBootstrap', () => {
     await expect(fetchMcpBootstrap(app)).rejects.toThrow(/valid http\(s\) returnUrl/)
   })
 
+  it('forwards enriched merchant/product/plans/customer from structuredContent', async () => {
+    const app = mockApp({
+      structuredContent: {
+        productRef: 'prod_123',
+        stripePublishableKey: 'pk_test_abc',
+        returnUrl: 'https://example.test/return',
+        merchant: { displayName: 'Acme', legalName: 'Acme Inc' },
+        product: { reference: 'prod_123', name: 'Widget' },
+        plans: [{ reference: 'pln_basic' }],
+        customer: {
+          ref: 'cus_42',
+          purchase: { customerRef: 'cus_42', purchases: [] },
+          paymentMethod: { kind: 'none' },
+          balance: null,
+          usage: null,
+        },
+      },
+    })
+    const result = await fetchMcpBootstrap(app)
+    expect(result.merchant).toMatchObject({ displayName: 'Acme' })
+    expect(result.product).toMatchObject({ name: 'Widget' })
+    expect(result.plans).toHaveLength(1)
+    expect(result.customer?.ref).toBe('cus_42')
+  })
+
   it('propagates tool errors with the server text message', async () => {
     const app = mockApp({
       isError: true,
@@ -105,84 +133,3 @@ describe('fetchMcpBootstrap', () => {
   })
 })
 
-function mockTransport(overrides: Partial<SolvaPayTransport> = {}): SolvaPayTransport {
-  return {
-    checkPurchase: vi.fn(),
-    createPayment: vi.fn(),
-    processPayment: vi.fn(),
-    createTopupPayment: vi.fn(),
-    getBalance: vi.fn(),
-    cancelRenewal: vi.fn(),
-    reactivateRenewal: vi.fn(),
-    activatePlan: vi.fn(),
-    createCheckoutSession: vi.fn(),
-    createCustomerSession: vi.fn(),
-    getMerchant: vi.fn(),
-    getProduct: vi.fn(),
-    listPlans: vi.fn(),
-    getPaymentMethod: vi.fn(),
-    ...overrides,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any
-}
-
-describe('createMcpFetch', () => {
-  it('routes /api/list-plans through transport.listPlans', async () => {
-    const plans = [{ reference: 'plan_a' }]
-    const transport = mockTransport({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      listPlans: vi.fn().mockResolvedValue(plans as any),
-    })
-
-    const fetchImpl = createMcpFetch(transport)
-    const res = await fetchImpl('/api/list-plans?productRef=prod_123')
-    const body = await res.json()
-
-    expect(transport.listPlans).toHaveBeenCalledWith('prod_123')
-    expect(res.status).toBe(200)
-    expect(body).toEqual({ plans, productRef: 'prod_123' })
-  })
-
-  it('returns 400 when /api/list-plans is missing productRef', async () => {
-    const transport = mockTransport()
-    const res = await createMcpFetch(transport)('/api/list-plans')
-    expect(res.status).toBe(400)
-  })
-
-  it('routes /api/get-product through transport.getProduct', async () => {
-    const product = { reference: 'prod_123', name: 'Widget' }
-    const transport = mockTransport({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      getProduct: vi.fn().mockResolvedValue(product as any),
-    })
-    const res = await createMcpFetch(transport)('/api/get-product?productRef=prod_123')
-    expect(await res.json()).toEqual(product)
-    expect(transport.getProduct).toHaveBeenCalledWith('prod_123')
-  })
-
-  it('routes /api/merchant through transport.getMerchant', async () => {
-    const merchant = { defaultCurrency: 'USD' }
-    const transport = mockTransport({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      getMerchant: vi.fn().mockResolvedValue(merchant as any),
-    })
-    const res = await createMcpFetch(transport)('/api/merchant')
-    expect(await res.json()).toEqual(merchant)
-  })
-
-  it('returns 501 for unrouted paths', async () => {
-    const transport = mockTransport()
-    const res = await createMcpFetch(transport)('/api/unknown')
-    expect(res.status).toBe(501)
-  })
-
-  it('returns 500 when the transport throws', async () => {
-    const transport = mockTransport({
-      getMerchant: vi.fn().mockRejectedValue(new Error('boom')),
-    })
-    const res = await createMcpFetch(transport)('/api/merchant')
-    expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toBe('boom')
-  })
-})
