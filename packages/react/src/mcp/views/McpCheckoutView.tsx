@@ -41,11 +41,11 @@ import type { PaymentIntent } from '@stripe/stripe-js'
 import { useTransport } from '../../hooks/useTransport'
 import { usePurchase } from '../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
-import { AmountPicker } from '../../primitives/AmountPicker'
+import { AmountPicker, useAmountPicker } from '../../primitives/AmountPicker'
 import { PaymentForm } from '../../primitives/PaymentForm'
 import { PlanSelector, usePlanSelector } from '../../primitives/PlanSelector'
 import { TopupForm } from '../../primitives/TopupForm'
-import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
+import { formatPrice } from '../../utils/format'
 import { useStripeProbe } from '../useStripeProbe'
 import { BackLink } from './BackLink'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
@@ -666,15 +666,6 @@ const AmountStep = memo(function AmountStep({
   cx: Cx
 }) {
   const currency = (plan.currency ?? 'USD').toUpperCase()
-  // Preset credits counts per the brief's wireframe (500 / 2 000 / 10 000);
-  // converted to the currency's major units using the plan's credits-per-unit.
-  // The AmountPicker primitive exposes its values in major currency
-  // units, so we pass majors here.
-  const creditsPerUnit = plan.creditsPerUnit ?? 1
-  const presetMajor = useMemo(
-    () => [500, 2_000, 10_000].map((credits) => credits / creditsPerUnit),
-    [creditsPerUnit],
-  )
 
   const [stagedAmountMinor, setStagedAmountMinor] = useState<number | null>(null)
 
@@ -691,11 +682,10 @@ const AmountStep = memo(function AmountStep({
         className={cx.amountPicker}
         onChange={(value) => setStagedAmountMinor(value)}
       >
-        <PresetAmountRow presetMajor={presetMajor} currency={currency} cx={cx} />
+        <PresetAmountRow cx={cx} />
         <AmountPicker.Custom className={cx.amountCustom} placeholder="or custom amount" />
         <AmountPicker.Confirm
           className={cx.button}
-          disabled={isActivating}
           onConfirm={(amountMinor) => {
             void onContinue(amountMinor)
           }}
@@ -717,25 +707,20 @@ const AmountStep = memo(function AmountStep({
   )
 })
 
-function PresetAmountRow({
-  presetMajor,
-  currency,
-  cx,
-}: {
-  presetMajor: number[]
-  currency: string
-  cx: Cx
-}) {
-  const popularIndex = 1 // 2 000 credits — per the brief's wireframe.
+function PresetAmountRow({ cx }: { cx: Cx }) {
+  const { quickAmounts, currencySymbol } = useAmountPicker()
+  // Recommended preset: the second option (index 1) when available —
+  // matches the pre-refactor wireframe's "middle chip" treatment.
+  const popularIndex = Math.min(1, quickAmounts.length - 1)
   return (
     <div className={cx.amountOptions}>
-      {presetMajor.map((major, i) => (
+      {quickAmounts.map((amount, i) => (
         <AmountPicker.Option
-          key={major}
-          amount={major}
+          key={amount}
+          amount={amount}
           className={cx.amountOption}
           data-popular={i === popularIndex ? '' : undefined}
-          aria-label={`${formatPrice(Math.round(major * getMinorUnitsPerMajor(currency)), currency, { locale: 'en-US' })}${i === popularIndex ? ' (popular)' : ''}`}
+          aria-label={`${currencySymbol}${amount.toLocaleString()}${i === popularIndex ? ' (popular)' : ''}`}
         />
       ))}
     </div>

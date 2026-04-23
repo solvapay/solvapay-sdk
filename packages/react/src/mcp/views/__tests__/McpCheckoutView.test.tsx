@@ -585,3 +585,84 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
+
+// ------------------------------------------------------------------
+// CSS hooks — guard the markup classes/attributes that the MCP
+// stylesheet hangs rules off. A silent rename here = unstyled view,
+// so pin the critical selectors with explicit assertions.
+// ------------------------------------------------------------------
+
+describe('<McpCheckoutView> — CSS hooks', () => {
+  async function advanceToAmountStep() {
+    const utils = renderView({ fromPaywall: true })
+    await waitFor(() =>
+      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+    )
+    act(() => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+      )
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+    return utils
+  }
+
+  async function advanceToPaygPayment() {
+    const utils = await advanceToAmountStep()
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('or custom amount'), {
+        target: { value: '18' },
+      })
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await waitFor(() => screen.getByTestId('topup-form-stub'))
+    return utils
+  }
+
+  async function advanceToPaygSuccess() {
+    const utils = await advanceToPaygPayment()
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('topup-form-submit'))
+    })
+    await waitFor(() => screen.getByText(/Credits added/))
+    return utils
+  }
+
+  it('AmountStep renders exactly 4 preset chips (currency-aware quick amounts)', async () => {
+    const { container } = await advanceToAmountStep()
+    const options = container.querySelectorAll('.solvapay-mcp-amount-option')
+    expect(options).toHaveLength(4)
+  })
+
+  it('AmountStep marks the recommended preset with data-popular', async () => {
+    const { container } = await advanceToAmountStep()
+    const popular = container.querySelectorAll(
+      '.solvapay-mcp-amount-option[data-popular]',
+    )
+    expect(popular).toHaveLength(1)
+  })
+
+  it('PaygPaymentStep renders order-summary + save-card CSS hooks', async () => {
+    const { container } = await advanceToPaygPayment()
+    expect(
+      container.querySelector('.solvapay-mcp-checkout-order-summary'),
+    ).toBeTruthy()
+    expect(
+      container.querySelectorAll('.solvapay-mcp-checkout-order-summary-row').length,
+    ).toBeGreaterThan(0)
+    expect(container.querySelector('.solvapay-mcp-checkout-save-card')).toBeTruthy()
+  })
+
+  it('PAYG SuccessStep renders success-check + receipt CSS hooks', async () => {
+    const { container } = await advanceToPaygSuccess()
+    expect(
+      container.querySelector('.solvapay-mcp-checkout-success-check'),
+    ).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-checkout-receipt')).toBeTruthy()
+    expect(
+      container.querySelectorAll('.solvapay-mcp-checkout-receipt-row').length,
+    ).toBeGreaterThan(0)
+  })
+})

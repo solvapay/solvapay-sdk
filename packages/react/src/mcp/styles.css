@@ -90,6 +90,24 @@ body {
   font-weight: 600;
 }
 
+/* Step headings inside a card (PlanStep, AmountStep, PaygPaymentStep,
+ * RecurringPaymentStep, SuccessStep) sit under the shell's 20px `h1`,
+ * so bump them a touch for a readable hierarchy without jumping into
+ * the shell title's territory. */
+.solvapay-mcp-card > .solvapay-mcp-heading,
+.solvapay-mcp-card .solvapay-mcp-balance-row > .solvapay-mcp-heading {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+/* Keep BackLinks from sitting flush against the next heading — the
+ * old `McpTopupView` breathed thanks to the card's 16px gap, but the
+ * BackLink also has its own 8px bottom margin from the primitive; we
+ * tighten it slightly so the step headline anchors the card. */
+.solvapay-mcp-card > .solvapay-mcp-back-link {
+  margin-bottom: 4px;
+}
+
 .solvapay-mcp-muted {
   margin: 0;
   color: var(--color-text-secondary, #475569);
@@ -231,6 +249,17 @@ body {
   transition:
     background-color 120ms ease,
     border-color 120ms ease;
+}
+
+/* Recommended chip: a subtly heavier border on the default state. No
+ * color — stays within the pre-refactor black/white/gray palette. The
+ * selected state below still wins and fills the chip with the accent. */
+.solvapay-mcp-amount-option[data-popular]:not([data-state='selected']) {
+  border-color: var(--color-text-primary, #0f172a);
+}
+
+.solvapay-mcp-amount-option:hover:not([data-state='selected']):not(:disabled) {
+  background: var(--color-background-subtle, #f9fafb);
 }
 
 .solvapay-mcp-amount-option[data-state='selected'] {
@@ -800,4 +829,142 @@ body {
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* --- Checkout view (activation state machine) ---
+ *
+ * Styles for the two-branch <McpCheckoutView>: PlanStep → AmountStep →
+ * PaygPaymentStep / RecurringPaymentStep → SuccessStep. Palette is
+ * strictly the same monochrome family as the rest of the MCP shell —
+ * white surfaces, secondary-border greys, subtle-bg fills, primary
+ * slate ink, secondary slate for muted copy. No warning tints, no
+ * success halo — `.solvapay-mcp-error` is the only chromatic note and
+ * it stays untouched for a11y semantics. */
+
+.solvapay-mcp-checkout-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--border-radius-md, 8px);
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  background: var(--color-background-subtle, #f9fafb);
+}
+
+.solvapay-mcp-checkout-banner-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.solvapay-mcp-checkout-banner-message {
+  font-size: 13px;
+}
+
+.solvapay-mcp-checkout-dismiss {
+  align-self: center;
+}
+
+.solvapay-mcp-checkout-order-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--border-radius-md, 8px);
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  background: var(--color-background-subtle, #f9fafb);
+}
+
+.solvapay-mcp-checkout-order-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.solvapay-mcp-checkout-save-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #475569);
+  cursor: pointer;
+}
+
+.solvapay-mcp-checkout-save-card input[type='checkbox'] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.solvapay-mcp-checkout-terms {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.solvapay-mcp-checkout-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--border-radius-md, 8px);
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  background: var(--color-background-subtle, #f9fafb);
+}
+
+.solvapay-mcp-checkout-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.solvapay-mcp-checkout-receipt-row dt {
+  margin: 0;
+  color: var(--color-text-secondary, #475569);
+}
+
+.solvapay-mcp-checkout-receipt-row dd {
+  margin: 0;
+  color: var(--color-text-primary, #0f172a);
+  font-weight: 500;
+}
+
+/* Flat checkmark — no green halo. The glyph alone signals success,
+ * consistent with the monochrome card aesthetic. */
+.solvapay-mcp-checkout-success-check {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  background: var(--color-background-primary, #ffffff);
+  color: var(--color-text-primary, #0f172a);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.solvapay-mcp-checkout-manage-pointer {
+  margin: 0;
+  font-size: 12px;
+}
+
+.solvapay-mcp-checkout-manage-pointer code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-background-subtle, #f9fafb);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 12px;
+  color: var(--color-text-primary, #0f172a);
 }
