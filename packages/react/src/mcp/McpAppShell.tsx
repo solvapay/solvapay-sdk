@@ -32,6 +32,7 @@ import {
   McpAccountView,
   type McpAccountViewProps,
 } from './views/McpAccountView'
+import { useHostLocale } from './useHostLocale'
 import { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
 import {
   McpCheckoutView,
@@ -392,6 +393,7 @@ export function McpViewRouter({
   onClose,
 }: McpViewRouterProps): React.ReactNode {
   const { productRef, stripePublishableKey, returnUrl, paywall } = bootstrap
+  const locale = useHostLocale()
   const CheckoutView = (views?.checkout ?? McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
@@ -444,7 +446,7 @@ export function McpViewRouter({
       const upgradeCandidate = findRecurringPlan(bootstrap.plans)
       const upgradeCta =
         upgradeCandidate && paywallUpgrade
-          ? { label: formatUpgradeLabel(upgradeCandidate), onClick: paywallUpgrade }
+          ? { label: formatUpgradeLabel(upgradeCandidate, locale), onClick: paywallUpgrade }
           : undefined
       return (
         <PaywallView
@@ -490,10 +492,10 @@ function findRecurringPlan(plans: McpBootstrap['plans']): UpgradeCandidatePlan |
   return match ?? null
 }
 
-function formatUpgradeLabel(plan: UpgradeCandidatePlan): string {
+function formatUpgradeLabel(plan: UpgradeCandidatePlan, locale?: string): string {
   const name = plan.name ?? 'Unlimited'
   if (typeof plan.price === 'number' && plan.price > 0 && plan.currency) {
-    const amount = Intl.NumberFormat('en-US', {
+    const amount = Intl.NumberFormat(locale, {
       style: 'currency',
       currency: plan.currency.toUpperCase(),
       maximumFractionDigits: 0,

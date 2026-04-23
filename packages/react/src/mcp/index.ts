@@ -27,7 +27,23 @@ export type { McpToolName } from '@solvapay/mcp'
 export { useStripeProbe } from './useStripeProbe'
 export type { StripeProbeState } from './useStripeProbe'
 
-export { fetchMcpBootstrap } from './bootstrap'
+export { useHostLocale } from './useHostLocale'
+
+export { useMcpToolResult } from './hooks/useMcpToolResult'
+export type { McpToolResult } from './hooks/useMcpToolResult'
+
+export { McpBridgeProvider, useMcpBridge } from './bridge'
+export type {
+  McpBridgeAppLike,
+  McpBridgeProviderProps,
+  McpBridgeValue,
+  McpMessageOnSuccess,
+  McpSuccessEvent,
+  NotifyModelContextParams,
+  SendMessageParams,
+} from './bridge'
+
+export { fetchMcpBootstrap, parseBootstrapFromToolResult } from './bootstrap'
 export type { McpBootstrap, McpView, McpAppBootstrapLike } from './bootstrap'
 
 export { seedMcpCaches } from './cache-seed'

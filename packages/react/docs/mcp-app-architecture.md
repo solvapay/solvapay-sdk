@@ -137,3 +137,36 @@ more than it simplifies. A separate follow-up
 **Rollback.** Every change is additive — reverting the commits restores the
 previous example layout without breaking any consumer API. The seam-fix
 props are new additions (not signature changes), so revert is clean.
+
+## Escape hatch — raw `structuredContent` via `useMcpToolResult`
+
+Integrators who don't mount `<McpApp>` or `<McpAppShell>` (e.g. they are
+composing a fully custom widget on top of `createMcpAppAdapter`) can still
+observe the host's `ui/notifications/tool-result` stream with the public
+`useMcpToolResult` hook:
+
+```tsx
+import { App } from '@modelcontextprotocol/ext-apps'
+import { useMcpToolResult } from '@solvapay/react/mcp'
+
+function MyCustomWidget({ app }: { app: App }) {
+  const { structuredContent, content, toolName } =
+    useMcpToolResult<{ orderId: string }>(app)
+
+  if (!structuredContent) return <p>Waiting for a tool result…</p>
+  return (
+    <section>
+      <h2>{toolName}</h2>
+      <pre>{JSON.stringify(structuredContent, null, 2)}</pre>
+    </section>
+  )
+}
+```
+
+The hook subscribes via `app.addEventListener('toolresult', …)` when
+available and falls back to the legacy DOM-style `ontoolresult` setter;
+internally it uses `useSyncExternalStore` so concurrent renders always
+observe a coherent snapshot. Error notifications are filtered out — the
+consumer pairs the hook with whatever error UI they want driven off the
+adapter promise.
+

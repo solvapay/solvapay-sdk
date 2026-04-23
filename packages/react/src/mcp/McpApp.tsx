@@ -20,9 +20,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SolvaPayProvider } from '../SolvaPayProvider'
+import { VIEW_FOR_TOOL } from '@solvapay/mcp'
+import { McpBridgeProvider, type McpBridgeAppLike, type McpMessageOnSuccess } from './bridge'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {
   fetchMcpBootstrap,
+  parseBootstrapFromToolResult,
+  type CallToolResultLike,
   type McpBootstrap,
   type McpAppBootstrapLike,
 } from './bootstrap'
@@ -52,7 +56,7 @@ export type McpUiHostContextLike = any
  * forcing consumers to match our stricter internal typing. Any object
  * satisfying these call signatures works (handy for tests).
  */
-export interface McpAppFull extends McpAppBootstrapLike, McpAppLike {
+export interface McpAppFull extends McpAppBootstrapLike, McpAppLike, McpBridgeAppLike {
   connect: () => Promise<void>
   // Real `App` uses `((ctx: McpUiHostContext) => void) | undefined` here;
   // we keep the type intentionally loose so callers don't fight variance.
@@ -60,6 +64,20 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike {
   onhostcontextchanged?: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onteardown?: any
+  /**
+   * Composable event subscription exposed by
+   * `@modelcontextprotocol/ext-apps` `App` (via `ProtocolWithEvents`).
+   * `<McpApp>` uses this to subscribe to `toolresult` so it can re-route
+   * when the host re-invokes an intent tool against a mounted widget.
+   * Kept optional so minimal test adapters can omit it — the code falls
+   * back to the legacy `ontoolresult` setter.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  addEventListener?: (evt: string, handler: (params: any) => void) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  removeEventListener?: (evt: string, handler: (params: any) => void) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ontoolresult?: any
   /**
    * Fire-and-forget request asking the host to unmount the app. When
    * approved, the host sends `ui/resource-teardown` back via
@@ -115,6 +133,14 @@ export interface McpAppProps {
    * affordances; passing `undefined` hides those affordances.
    */
   onClose?: () => void
+  /**
+   * Phase 5 — override the user-visible follow-up copy posted to the
+   * chat after a committed success (topup completed, plan activated).
+   * Return `null` to suppress a specific event; omit the prop entirely
+   * to use the SDK defaults. Hosts that don't support `ui/message`
+   * silently no-op regardless.
+   */
+  messageOnSuccess?: McpMessageOnSuccess
 }
 
 /**
@@ -136,6 +162,21 @@ function bootstrapToInitial(bs: McpBootstrap): SolvaPayProviderInitial {
   }
 }
 
+/**
+ * Shape of the `ui/notifications/tool-result` params we care about.
+ * Intentionally loose — the real `McpUiToolResultNotification['params']`
+ * is structurally compatible.
+ */
+interface ToolResultNotificationParams {
+  isError?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  content?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  structuredContent?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _meta?: any
+}
+
 export function McpApp({
   app,
   productRef: productRefOverride,
@@ -145,10 +186,16 @@ export function McpApp({
   onInitError,
   applyContext,
   onClose,
+  messageOnSuccess,
 }: McpAppProps) {
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
+  // Counter tracking client-initiated bootstrap fetches (mount +
+  // `refreshBootstrap`). The tool-result subscription consults it so
+  // it doesn't double-apply the same payload a fetch is about to
+  // deliver via its own `setBootstrap`.
+  const pendingBootstrapFetchRef = useRef(0)
 
   // Capture `applyContext` / `onInitError` in refs so the persistent
   // `onhostcontextchanged` handler and the bootstrap effect always see
@@ -183,6 +230,61 @@ export function McpApp({
     }
     app.onteardown = async () => ({})
 
+    // Phase 3 — subscribe to `ui/notifications/tool-result` so the
+    // shell re-routes when the host re-invokes one of our intent tools
+    // against the already-mounted widget (no iframe remount). We
+    // ignore transport-tool results (`create_payment_intent`,
+    // `process_payment`, `activate_plan`, …) because those are already
+    // awaited via the adapter promise; re-applying them to
+    // `bootstrap` would double-apply state.
+    const onToolResult = (params: ToolResultNotificationParams) => {
+      if (cancelled) return
+      if (params?.isError) return
+      const toolName = app.getHostContext?.()?.toolInfo?.tool?.name
+      if (!toolName) return
+      // Intent tools = values of `TOOL_FOR_VIEW` (`upgrade`,
+      // `manage_account`, `topup`). `VIEW_FOR_TOOL` inverts that map;
+      // anything not in it is treated as a transport tool and ignored.
+      const resolvedView = VIEW_FOR_TOOL[toolName]
+      if (!resolvedView) return
+      // Dedupe: skip notifications that land during an in-flight
+      // bootstrap fetch we initiated — the fetch's own `setBootstrap`
+      // already applies the same structuredContent.
+      if (pendingBootstrapFetchRef.current) return
+      try {
+        const fresh = parseBootstrapFromToolResult(
+          params as unknown as CallToolResultLike,
+          toolName,
+          resolvedView,
+        )
+        setBootstrap(fresh)
+      } catch (err) {
+        // A malformed notification shouldn't clobber the mounted shell;
+        // surface it as a soft warning and keep the last-good bootstrap.
+        if (typeof console !== 'undefined') {
+          console.warn('[solvapay] ignoring malformed tool-result notification:', err)
+        }
+      }
+    }
+
+    let unsubscribe: (() => void) | undefined
+    if (typeof app.addEventListener === 'function') {
+      app.addEventListener('toolresult', onToolResult)
+      unsubscribe = () => {
+        app.removeEventListener?.('toolresult', onToolResult)
+      }
+    } else {
+      // Fallback for hosts / mocks exposing only the legacy DOM-style
+      // setter. We save the prior handler and restore on cleanup to
+      // avoid clobbering an outer composition.
+      const prior = app.ontoolresult
+      app.ontoolresult = onToolResult
+      unsubscribe = () => {
+        if (app.ontoolresult === onToolResult) app.ontoolresult = prior
+      }
+    }
+
+    pendingBootstrapFetchRef.current += 1
     ;(async () => {
       try {
         await app.connect()
@@ -194,11 +296,14 @@ export function McpApp({
         const message = err instanceof Error ? err.message : 'Failed to initialize SolvaPay'
         setInitError(message)
         onInitErrorRef.current?.(err instanceof Error ? err : new Error(message))
+      } finally {
+        pendingBootstrapFetchRef.current = Math.max(0, pendingBootstrapFetchRef.current - 1)
       }
     })()
 
     return () => {
       cancelled = true
+      unsubscribe?.()
     }
   }, [app])
 
@@ -270,10 +375,15 @@ export function McpApp({
   // leave the shell stale.
   const refreshBootstrap = useMemo(
     () => async () => {
-      const fresh = await fetchMcpBootstrap(app)
-      const next = bootstrapToInitial(fresh)
-      seedMcpCaches(next, providerConfig)
-      setBootstrap(fresh)
+      pendingBootstrapFetchRef.current += 1
+      try {
+        const fresh = await fetchMcpBootstrap(app)
+        const next = bootstrapToInitial(fresh)
+        seedMcpCaches(next, providerConfig)
+        setBootstrap(fresh)
+      } finally {
+        pendingBootstrapFetchRef.current = Math.max(0, pendingBootstrapFetchRef.current - 1)
+      }
     },
     [app, providerConfig],
   )
@@ -320,16 +430,18 @@ export function McpApp({
 
   return (
     <SolvaPayProvider config={providerConfig}>
-      <main className="solvapay-mcp-main">
-        <McpAppShell
-          bootstrap={effectiveBootstrap}
-          views={views}
-          classNames={classNames}
-          {...(footer !== undefined ? { footer } : {})}
-          onRefreshBootstrap={refreshBootstrap}
-          onClose={effectiveOnClose}
-        />
-      </main>
+      <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
+        <main className="solvapay-mcp-main">
+          <McpAppShell
+            bootstrap={effectiveBootstrap}
+            views={views}
+            classNames={classNames}
+            {...(footer !== undefined ? { footer } : {})}
+            onRefreshBootstrap={refreshBootstrap}
+            onClose={effectiveOnClose}
+          />
+        </main>
+      </McpBridgeProvider>
     </SolvaPayProvider>
   )
 }

@@ -88,7 +88,7 @@ export interface McpHostContextLike {
   [key: string]: unknown
 }
 
-interface CallToolResultLike {
+export interface CallToolResultLike {
   isError?: boolean
   structuredContent?: unknown
   content?: Array<{ type: string; text?: string }>
@@ -126,6 +126,22 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     name: toolName,
     arguments: {},
   })) as CallToolResultLike
+  return parseBootstrapFromToolResult(result, toolName, view)
+}
+
+/**
+ * Parse a raw `CallToolResult`-shaped payload into an `McpBootstrap`.
+ *
+ * Shared between `fetchMcpBootstrap` (client-initiated) and the live
+ * `ui/notifications/tool-result` subscription (`<McpApp>` Phase 3).
+ * Throws on missing product ref / invalid return URL so callers can
+ * surface the error to `onInitError` instead of half-applying state.
+ */
+export function parseBootstrapFromToolResult(
+  result: CallToolResultLike,
+  toolName: string,
+  fallbackView: SolvaPayMcpViewKind,
+): McpBootstrap {
   if (result.isError) {
     const first = result.content?.[0]
     const message =
@@ -154,19 +170,12 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     )
   }
   const key = structured?.stripePublishableKey ?? null
-  const requestedView = structured?.view ?? view
+  const requestedView = structured?.view ?? fallbackView
   const paywall =
     requestedView === 'paywall' && isPaywallStructuredContent(structured?.paywall)
       ? structured.paywall
       : undefined
-  // Paywall responses now carry the full bootstrap payload inline on
-  // `structuredContent`, so `requestedView === 'paywall'` always comes
-  // with `paywall` populated — no account-view fallback needed.
   const resolvedView: SolvaPayMcpViewKind = requestedView
-  // Nudge view — `buildPayableHandler` stamps `nudge` + `data` on the
-  // bootstrap payload when a successful tool response carried
-  // `options.nudge`. Forward both so `McpNudgeView` can render the
-  // upsell strip alongside the merchant's tool result.
   const nudgeSpec = (structured as { nudge?: unknown } | undefined)?.nudge
   const nudge =
     requestedView === 'nudge' && isNudgeSpec(nudgeSpec) ? (nudgeSpec as NudgeSpec) : undefined

@@ -46,6 +46,8 @@ import { PaymentForm } from '../../primitives/PaymentForm'
 import { PlanSelector, usePlanSelector } from '../../primitives/PlanSelector'
 import { TopupForm } from '../../primitives/TopupForm'
 import { formatPrice } from '../../utils/format'
+import { useMcpBridge } from '../bridge'
+import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
 import { BackLink } from './BackLink'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
@@ -344,6 +346,8 @@ function CheckoutStateMachine(props: StateMachineProps) {
 
   const { selectedPlan, selectedPlanRef, plans } = usePlanSelector()
   const transport = useTransport()
+  const locale = useHostLocale()
+  const { notifyModelContext, notifySuccess } = useMcpBridge()
 
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
   const branch: 'payg' | 'recurring' | null = selectedPlanShape
@@ -352,16 +356,29 @@ function CheckoutStateMachine(props: StateMachineProps) {
       : 'recurring'
     : null
 
-  // Transition: plan → (amount or payment)
+  // Transition: plan → (amount or payment). Emits
+  // `ui/update-model-context` so the model sees the committed plan
+  // selection before the customer finishes paying — Phase 1 of the
+  // MCP Apps bridge alignment plan.
   const onPlanContinue = useCallback(() => {
     if (!selectedPlanShape || !selectedPlanRef) return
     setActivationError(null)
+    void notifyModelContext({
+      text: `User selected ${selectedPlanShape.name ?? 'a plan'}.`,
+    })
     if (branch === 'payg') {
       setStep('amount')
       return
     }
     setStep('payment')
-  }, [branch, selectedPlanRef, selectedPlanShape, setActivationError, setStep])
+  }, [
+    branch,
+    notifyModelContext,
+    selectedPlanRef,
+    selectedPlanShape,
+    setActivationError,
+    setStep,
+  ])
 
   // Transition: amount → payment. Fires `activate_plan` first so the
   // customer's active plan is PAYG by the time the topup intent is
@@ -405,11 +422,29 @@ function CheckoutStateMachine(props: StateMachineProps) {
       currency,
       creditsAdded,
       plan: selectedPlanShape,
-      rateLabel: formatPaygRate(selectedPlanShape),
+      rateLabel: formatPaygRate(selectedPlanShape, locale),
     })
     setStep('success')
+    void notifyModelContext({
+      text: `Activated ${selectedPlanShape.name ?? 'plan'} with ${formatPrice(
+        selectedAmountMinor,
+        currency,
+        { locale },
+      )} in credits.`,
+    })
+    // Phase 5 — user-visible follow-up for topup+activation success.
+    void notifySuccess({ kind: 'topup', amountMinor: selectedAmountMinor, currency })
     onPurchaseSuccess?.()
-  }, [onPurchaseSuccess, selectedAmountMinor, selectedPlanShape, setStep, setSuccessMeta])
+  }, [
+    locale,
+    notifyModelContext,
+    notifySuccess,
+    onPurchaseSuccess,
+    selectedAmountMinor,
+    selectedPlanShape,
+    setStep,
+    setSuccessMeta,
+  ])
 
   // Transition: payment → success (Recurring branch).
   const onRecurringPaymentSuccess = useCallback(
@@ -425,9 +460,23 @@ function CheckoutStateMachine(props: StateMachineProps) {
         nextRenewalLabel: null, // server-provided — surfaced as null until wired.
       })
       setStep('success')
+      void notifyModelContext({
+        text: `Activated ${selectedPlanShape.name ?? 'plan'}.`,
+      })
+      void notifySuccess({
+        kind: 'plan-activated',
+        planName: selectedPlanShape.name ?? null,
+      })
       onPurchaseSuccess?.()
     },
-    [onPurchaseSuccess, selectedPlanShape, setStep, setSuccessMeta],
+    [
+      notifyModelContext,
+      notifySuccess,
+      onPurchaseSuccess,
+      selectedPlanShape,
+      setStep,
+      setSuccessMeta,
+    ],
   )
 
   // BackLink handlers.
@@ -570,8 +619,9 @@ const PlanStep = memo(function PlanStep({
   cx: Cx
 }) {
   const { selectedPlan, selectedPlanRef } = usePlanSelector()
+  const locale = useHostLocale()
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
-  const ctaLabel = formatContinueLabel(selectedPlanShape)
+  const ctaLabel = formatContinueLabel(selectedPlanShape, locale)
 
   return (
     <>
@@ -666,6 +716,7 @@ const AmountStep = memo(function AmountStep({
   cx: Cx
 }) {
   const currency = (plan.currency ?? 'USD').toUpperCase()
+  const locale = useHostLocale()
 
   const [stagedAmountMinor, setStagedAmountMinor] = useState<number | null>(null)
 
@@ -693,7 +744,7 @@ const AmountStep = memo(function AmountStep({
           {isActivating
             ? 'Activating…'
             : stagedAmountMinor
-              ? `Continue — ${formatPrice(stagedAmountMinor, currency, { locale: 'en-US' })}`
+              ? `Continue — ${formatPrice(stagedAmountMinor, currency, { locale })}`
               : 'Continue'}
         </AmountPicker.Confirm>
       </AmountPicker.Root>
@@ -747,6 +798,7 @@ const PaygPaymentStep = memo(function PaygPaymentStep({
   cx: Cx
 }) {
   const currency = (plan.currency ?? 'USD').toUpperCase()
+  const locale = useHostLocale()
   const creditsPerUnit = plan.creditsPerUnit ?? 1
   const creditsAdded = Math.round(amountMinor * creditsPerUnit)
 
@@ -758,8 +810,8 @@ const PaygPaymentStep = memo(function PaygPaymentStep({
 
       <div className="solvapay-mcp-checkout-order-summary" data-variant="payg">
         <div className="solvapay-mcp-checkout-order-summary-row">
-          <span className={cx.muted}>{creditsAdded.toLocaleString()} credits</span>
-          <span>{formatPrice(amountMinor, currency, { locale: 'en-US' })}</span>
+          <span className={cx.muted}>{creditsAdded.toLocaleString(locale)} credits</span>
+          <span>{formatPrice(amountMinor, currency, { locale })}</span>
         </div>
         <div className="solvapay-mcp-checkout-order-summary-row">
           <span className={cx.muted}>One-time</span>
@@ -787,7 +839,7 @@ const PaygPaymentStep = memo(function PaygPaymentStep({
         </label>
 
         <TopupForm.SubmitButton className={cx.button}>
-          Pay {formatPrice(amountMinor, currency, { locale: 'en-US' })}
+          Pay {formatPrice(amountMinor, currency, { locale })}
         </TopupForm.SubmitButton>
       </TopupForm.Root>
     </>
@@ -816,6 +868,7 @@ const RecurringPaymentStep = memo(function RecurringPaymentStep({
   cx: Cx
 }) {
   const currency = (plan.currency ?? 'USD').toUpperCase()
+  const locale = useHostLocale()
   const amountMinor = plan.price ?? 0
   const cycle = plan.billingCycle ?? 'monthly'
   const credits = inferIncludedCredits(plan)
@@ -832,11 +885,11 @@ const RecurringPaymentStep = memo(function RecurringPaymentStep({
           <span className={cx.muted}>
             {planName} · {cycle}
           </span>
-          <span>{formatPrice(amountMinor, currency, { locale: 'en-US' })}/{shortCycle(cycle)}</span>
+          <span>{formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}</span>
         </div>
         {credits > 0 ? (
           <div className="solvapay-mcp-checkout-order-summary-row">
-            <span className={cx.muted}>{credits.toLocaleString()} credits included</span>
+            <span className={cx.muted}>{credits.toLocaleString(locale)} credits included</span>
           </div>
         ) : null}
       </div>
@@ -855,11 +908,11 @@ const RecurringPaymentStep = memo(function RecurringPaymentStep({
 
         <p className={`${cx.muted} solvapay-mcp-checkout-terms`.trim()}>
           By subscribing, you agree {planName} renews at{' '}
-          {formatPrice(amountMinor, currency, { locale: 'en-US' })}/{cycle} until you cancel.
+          {formatPrice(amountMinor, currency, { locale })}/{cycle} until you cancel.
         </p>
 
         <PaymentForm.SubmitButton className={cx.button}>
-          Subscribe — {formatPrice(amountMinor, currency, { locale: 'en-US' })} / {cycle}
+          Subscribe — {formatPrice(amountMinor, currency, { locale })} / {cycle}
         </PaymentForm.SubmitButton>
       </PaymentForm.Root>
     </>
@@ -879,6 +932,7 @@ const SuccessStep = memo(function SuccessStep({
   onBackToChat: () => Promise<void>
   cx: Cx
 }) {
+  const locale = useHostLocale()
   if (meta.branch === 'payg') {
     return (
       <>
@@ -891,11 +945,11 @@ const SuccessStep = memo(function SuccessStep({
         <dl className="solvapay-mcp-checkout-receipt" data-variant="payg">
           <div className="solvapay-mcp-checkout-receipt-row">
             <dt>Amount</dt>
-            <dd>{formatPrice(meta.amountMinor, meta.currency, { locale: 'en-US' })}</dd>
+            <dd>{formatPrice(meta.amountMinor, meta.currency, { locale })}</dd>
           </div>
           <div className="solvapay-mcp-checkout-receipt-row">
             <dt>Credits</dt>
-            <dd>+{meta.creditsAdded.toLocaleString()}</dd>
+            <dd>+{meta.creditsAdded.toLocaleString(locale)}</dd>
           </div>
           <div className="solvapay-mcp-checkout-receipt-row">
             <dt>Plan</dt>
@@ -937,12 +991,12 @@ const SuccessStep = memo(function SuccessStep({
         {meta.creditsIncluded > 0 ? (
           <div className="solvapay-mcp-checkout-receipt-row">
             <dt>Credits</dt>
-            <dd>+{meta.creditsIncluded.toLocaleString()}</dd>
+            <dd>+{meta.creditsIncluded.toLocaleString(locale)}</dd>
           </div>
         ) : null}
         <div className="solvapay-mcp-checkout-receipt-row">
           <dt>Charged today</dt>
-          <dd>{formatPrice(meta.chargedTodayMinor, meta.currency, { locale: 'en-US' })}</dd>
+          <dd>{formatPrice(meta.chargedTodayMinor, meta.currency, { locale })}</dd>
         </div>
         {meta.nextRenewalLabel ? (
           <div className="solvapay-mcp-checkout-receipt-row">
@@ -995,24 +1049,24 @@ function planSortByPaygFirstThenAsc(a: Plan, b: Plan): number {
   return (a.price ?? 0) - (b.price ?? 0)
 }
 
-function formatContinueLabel(plan: BootstrapPlanLike | null): string {
+function formatContinueLabel(plan: BootstrapPlanLike | null, locale?: string): string {
   if (!plan) return 'Continue'
   if (isPayg(plan)) {
     return `Continue with ${plan.name ?? 'Pay as you go'}`
   }
   const currency = (plan.currency ?? 'USD').toUpperCase()
-  const priceLabel = formatPrice(plan.price ?? 0, currency, { locale: 'en-US' })
+  const priceLabel = formatPrice(plan.price ?? 0, currency, { locale })
   const cycle = plan.billingCycle ? `/${shortCycle(plan.billingCycle)}` : ''
   return `Continue with ${plan.name ?? 'Plan'} — ${priceLabel}${cycle}`
 }
 
-function formatPaygRate(plan: BootstrapPlanLike): string {
+function formatPaygRate(plan: BootstrapPlanLike, locale?: string): string {
   const currency = (plan.currency ?? 'USD').toUpperCase()
   const creditsPerUnit = plan.creditsPerUnit ?? 1
   // One currency unit per credit at the plan's rate. Minor-unit
   // representation: 1 credit = 1 / creditsPerUnit of a minor unit.
   const perCreditMinor = Math.max(1, Math.round(1 / creditsPerUnit))
-  return `${formatPrice(perCreditMinor, currency, { locale: 'en-US' })} / call`
+  return `${formatPrice(perCreditMinor, currency, { locale })} / call`
 }
 
 function inferIncludedCredits(plan: BootstrapPlanLike): number {

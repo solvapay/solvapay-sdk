@@ -15,6 +15,7 @@ import React from 'react'
 import { useBalance } from '../../hooks/useBalance'
 import { useCustomer } from '../../hooks/useCustomer'
 import { useMerchant } from '../../hooks/useMerchant'
+import { useHostLocale } from '../useHostLocale'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 export interface McpCustomerDetailsCardProps {
@@ -74,6 +75,7 @@ export function McpCustomerDetailsCard({
   const cx = resolveMcpClassNames(classNames)
   const { name, email, customerRef, loading } = useCustomer()
   const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const locale = useHostLocale()
 
   if (loading && !customerRef) {
     return (
@@ -128,12 +130,12 @@ export function McpCustomerDetailsCard({
               ) : null}
             </div>
             <span className="solvapay-mcp-detail-value">
-              {Intl.NumberFormat('en-US').format(credits ?? 0)} credits
+              {Intl.NumberFormat(locale).format(credits ?? 0)} credits
             </span>
             {approxValue !== null ? (
               <span className={`solvapay-mcp-detail-value-mono ${cx.muted}`.trim()}>
                 ~
-                {Intl.NumberFormat('en-US', {
+                {Intl.NumberFormat(locale, {
                   style: 'currency',
                   currency: (displayCurrency ?? 'USD').toUpperCase(),
                   maximumFractionDigits: 2,

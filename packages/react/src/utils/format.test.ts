@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatPrice, getMinorUnitsPerMajor, toMajorUnits } from './format'
+import { formatDate, formatPrice, getMinorUnitsPerMajor, toMajorUnits } from './format'
 
 describe('formatPrice', () => {
   describe('basic formatting', () => {
@@ -81,6 +81,44 @@ describe('toMajorUnits', () => {
   it('is case-insensitive on the currency code', () => {
     expect(toMajorUnits(1000, 'JPY')).toBe(1000)
     expect(toMajorUnits(1000, 'Usd')).toBe(10)
+  })
+})
+
+describe('formatDate', () => {
+  const iso = '2024-03-15T00:00:00Z'
+
+  it('formats an ISO string using the provided locale (medium style)', () => {
+    // en-US medium style: "Mar 15, 2024"
+    const out = formatDate(iso, 'en-US')
+    expect(out).toContain('2024')
+    expect(out).toMatch(/Mar/)
+  })
+
+  it('renders differently across locales', () => {
+    const us = formatDate(iso, 'en-US')
+    const jp = formatDate(iso, 'ja-JP')
+    expect(us).not.toBe(jp)
+  })
+
+  it('accepts a Date instance', () => {
+    const out = formatDate(new Date(iso), 'en-US')
+    expect(out).toContain('2024')
+  })
+
+  it('returns null for nullish inputs', () => {
+    expect(formatDate(undefined, 'en-US')).toBeNull()
+    expect(formatDate(null, 'en-US')).toBeNull()
+    expect(formatDate('', 'en-US')).toBeNull()
+  })
+
+  it('returns null for invalid date inputs', () => {
+    expect(formatDate('not-a-date', 'en-US')).toBeNull()
+  })
+
+  it('honours a custom dateStyle option', () => {
+    const medium = formatDate(iso, 'en-US', { dateStyle: 'medium' })
+    const long = formatDate(iso, 'en-US', { dateStyle: 'long' })
+    expect(medium).not.toBe(long)
   })
 })
 

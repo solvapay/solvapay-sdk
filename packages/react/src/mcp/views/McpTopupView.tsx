@@ -35,15 +35,17 @@ import {
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { TopupForm } from '../../primitives/TopupForm'
 import { toMajorUnits } from '../../utils/format'
+import { useMcpBridge } from '../bridge'
+import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
 import { BackLink } from './BackLink'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
 
-function formatCurrency(amount: number, currency: string): string {
+function formatCurrency(amount: number, currency: string, locale?: string): string {
   try {
-    return new Intl.NumberFormat('en', { style: 'currency', currency }).format(amount)
+    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount)
   } catch {
     return `${currency} ${amount.toFixed(2)}`
   }
@@ -118,9 +120,11 @@ function EmbeddedTopup({
   const [committedAmountMinor, setCommittedAmountMinor] = useState<number | null>(null)
   const [justPaidMinor, setJustPaidMinor] = useState<number | null>(null)
   const { adjustBalance, creditsPerMinorUnit } = useBalance()
+  const locale = useHostLocale()
+  const { notifyModelContext, notifySuccess } = useMcpBridge()
 
   if (justPaidMinor != null) {
-    const displayAmount = formatCurrency(toMajorUnits(justPaidMinor, currency), currency)
+    const displayAmount = formatCurrency(toMajorUnits(justPaidMinor, currency), currency, locale)
     return (
       <div className={cx.card}>
         {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
@@ -148,7 +152,7 @@ function EmbeddedTopup({
   }
 
   if (committedAmountMinor != null && committedAmountMinor > 0) {
-    const displayAmount = formatCurrency(toMajorUnits(committedAmountMinor, currency), currency)
+    const displayAmount = formatCurrency(toMajorUnits(committedAmountMinor, currency), currency, locale)
     return (
       <div className={cx.card}>
         {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
@@ -165,6 +169,19 @@ function EmbeddedTopup({
           onSuccess={() => {
             adjustBalance(committedAmountMinor * (creditsPerMinorUnit ?? 100))
             setJustPaidMinor(committedAmountMinor)
+            void notifyModelContext({
+              text: `Topup of ${formatCurrency(
+                toMajorUnits(committedAmountMinor, currency),
+                currency,
+                locale,
+              )} succeeded.`,
+            })
+            // Phase 5 — user-visible follow-up on a committed topup.
+            void notifySuccess({
+              kind: 'topup',
+              amountMinor: committedAmountMinor,
+              currency,
+            })
             onTopupSuccess?.(committedAmountMinor)
             setCommittedAmountMinor(null)
           }}
@@ -194,7 +211,19 @@ function EmbeddedTopup({
         <AmountPicker.Custom className={cx.amountCustom} />
         <AmountPicker.Confirm
           className={cx.button}
-          onConfirm={amountMinor => setCommittedAmountMinor(amountMinor)}
+          onConfirm={amountMinor => {
+            setCommittedAmountMinor(amountMinor)
+            // Phase 1 — committed topup amount. Give the model the
+            // pending transaction context before the Stripe confirm
+            // completes so it can reason about an in-progress purchase.
+            void notifyModelContext({
+              text: `User confirmed topup of ${formatCurrency(
+                toMajorUnits(amountMinor, currency),
+                currency,
+                locale,
+              )}.`,
+            })
+          }}
         >
           Continue
         </AmountPicker.Confirm>
