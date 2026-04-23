@@ -15,6 +15,7 @@ import React from 'react'
 import { useBalance } from '../../hooks/useBalance'
 import { useCustomer } from '../../hooks/useCustomer'
 import { useMerchant } from '../../hooks/useMerchant'
+import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
 import { useHostLocale } from '../useHostLocale'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -135,11 +136,11 @@ export function McpCustomerDetailsCard({
             {approxValue !== null ? (
               <span className={`solvapay-mcp-detail-value-mono ${cx.muted}`.trim()}>
                 ~
-                {Intl.NumberFormat(locale, {
-                  style: 'currency',
-                  currency: (displayCurrency ?? 'USD').toUpperCase(),
-                  maximumFractionDigits: 2,
-                }).format(approxValue)}
+                {formatPrice(
+                  Math.round(approxValue * getMinorUnitsPerMajor(displayCurrency ?? 'USD')),
+                  displayCurrency ?? 'USD',
+                  { locale, free: '' },
+                )}
               </span>
             ) : null}
           </div>

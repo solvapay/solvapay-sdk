@@ -74,7 +74,10 @@ export function formatPrice(
     return free
   }
 
-  const fractionDigits = getFractionDigits(currency)
+  const naturalFractionDigits = getFractionDigits(currency)
+  const minorPerMajor = getMinorUnitsPerMajor(currency)
+  const isWhole = amountMinor % minorPerMajor === 0
+  const fractionDigits = isWhole ? 0 : naturalFractionDigits
   const major = toMajorUnits(amountMinor, currency)
 
   const formatter = new Intl.NumberFormat(locale, {

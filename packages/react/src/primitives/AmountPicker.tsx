@@ -30,7 +30,7 @@ import { useCopy } from '../hooks/useCopy'
 import { interpolate } from '../i18n/interpolate'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
-import { getMinorUnitsPerMajor } from '../utils/format'
+import { formatPrice, getMinorUnitsPerMajor } from '../utils/format'
 import type { UseTopupAmountSelectorReturn } from '../types'
 
 type OptionState = 'idle' | 'selected' | 'disabled'
@@ -182,27 +182,23 @@ const Option = forwardRef<HTMLButtonElement, OptionProps>(function AmountPickerO
     ...rest,
   } satisfies React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
 
+  const defaultLabel = formatPrice(
+    amount * getMinorUnitsPerMajor(ctx.currency),
+    ctx.currency,
+    { free: '' },
+  )
+
   if (asChild) {
     return (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
-        {children ?? (
-          <>
-            {ctx.currencySymbol}
-            {amount.toLocaleString()}
-          </>
-        )}
+        {children ?? defaultLabel}
       </Slot>
     )
   }
   return (
     <button ref={forwardedRef} type="button" {...commonProps}>
-      {children ?? (
-        <>
-          {ctx.currencySymbol}
-          {amount.toLocaleString()}
-        </>
-      )}
+      {children ?? defaultLabel}
     </button>
   )
 })

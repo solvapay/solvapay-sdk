@@ -32,6 +32,7 @@ import {
   McpAccountView,
   type McpAccountViewProps,
 } from './views/McpAccountView'
+import { formatPrice } from '../utils/format'
 import { useHostLocale } from './useHostLocale'
 import { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
 import {
@@ -509,11 +510,7 @@ function findRecurringPlan(plans: McpBootstrap['plans']): UpgradeCandidatePlan |
 function formatUpgradeLabel(plan: UpgradeCandidatePlan, locale?: string): string {
   const name = plan.name ?? 'Unlimited'
   if (typeof plan.price === 'number' && plan.price > 0 && plan.currency) {
-    const amount = Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: plan.currency.toUpperCase(),
-      maximumFractionDigits: 0,
-    }).format(plan.price / 100)
+    const amount = formatPrice(plan.price, plan.currency, { locale })
     const cycle = plan.billingCycle ? `/${plan.billingCycle.slice(0, 2)}` : ''
     return `Upgrade to ${name} — ${amount}${cycle}`
   }

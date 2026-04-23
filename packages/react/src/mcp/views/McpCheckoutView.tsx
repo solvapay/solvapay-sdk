@@ -45,7 +45,7 @@ import { AmountPicker, useAmountPicker } from '../../primitives/AmountPicker'
 import { PaymentForm } from '../../primitives/PaymentForm'
 import { PlanSelector, usePlanSelector } from '../../primitives/PlanSelector'
 import { TopupForm } from '../../primitives/TopupForm'
-import { formatPrice } from '../../utils/format'
+import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
 import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
@@ -760,21 +760,28 @@ const AmountStep = memo(function AmountStep({
 })
 
 function PresetAmountRow({ cx }: { cx: Cx }) {
-  const { quickAmounts, currencySymbol } = useAmountPicker()
+  const { quickAmounts, currency } = useAmountPicker()
+  const locale = useHostLocale()
   // Recommended preset: the second option (index 1) when available —
   // matches the pre-refactor wireframe's "middle chip" treatment.
   const popularIndex = Math.min(1, quickAmounts.length - 1)
   return (
     <div className={cx.amountOptions}>
-      {quickAmounts.map((amount, i) => (
-        <AmountPicker.Option
-          key={amount}
-          amount={amount}
-          className={cx.amountOption}
-          data-popular={i === popularIndex ? '' : undefined}
-          aria-label={`${currencySymbol}${amount.toLocaleString()}${i === popularIndex ? ' (popular)' : ''}`}
-        />
-      ))}
+      {quickAmounts.map((amount, i) => {
+        const label = formatPrice(amount * getMinorUnitsPerMajor(currency), currency, {
+          locale,
+          free: '',
+        })
+        return (
+          <AmountPicker.Option
+            key={amount}
+            amount={amount}
+            className={cx.amountOption}
+            data-popular={i === popularIndex ? '' : undefined}
+            aria-label={`${label}${i === popularIndex ? ' (popular)' : ''}`}
+          />
+        )
+      })}
     </div>
   )
 }

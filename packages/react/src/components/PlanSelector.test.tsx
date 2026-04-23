@@ -67,7 +67,7 @@ describe('PlanSelector (default-tree shim)', () => {
     expect(screen.getByText('Monthly')).toBeTruthy()
     expect(screen.getByText('Yearly')).toBeTruthy()
     expect(screen.getByText('$19.99')).toBeTruthy()
-    expect(screen.getByText('$199.00')).toBeTruthy()
+    expect(screen.getByText('$199')).toBeTruthy()
     expect(screen.getByText('/month')).toBeTruthy()
   })
 
@@ -139,7 +139,7 @@ describe('PlanSelector (default-tree shim)', () => {
         </ShimPlanSelector>
       </SolvaPayProvider>,
     )
-    await waitFor(() => expect(screen.getByText('$199.00 / year')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('$199 / year')).toBeTruthy())
   })
 })
 

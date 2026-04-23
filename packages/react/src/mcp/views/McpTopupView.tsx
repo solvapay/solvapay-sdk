@@ -34,7 +34,7 @@ import {
 } from '../../primitives/AmountPicker'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { TopupForm } from '../../primitives/TopupForm'
-import { toMajorUnits } from '../../utils/format'
+import { formatPrice } from '../../utils/format'
 import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
@@ -42,14 +42,6 @@ import { BackLink } from './BackLink'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
-
-function formatCurrency(amount: number, currency: string, locale?: string): string {
-  try {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount)
-  } catch {
-    return `${currency} ${amount.toFixed(2)}`
-  }
-}
 
 export interface McpTopupViewProps {
   publishableKey?: string | null
@@ -124,7 +116,7 @@ function EmbeddedTopup({
   const { notifyModelContext, notifySuccess } = useMcpBridge()
 
   if (justPaidMinor != null) {
-    const displayAmount = formatCurrency(toMajorUnits(justPaidMinor, currency), currency, locale)
+    const displayAmount = formatPrice(justPaidMinor, currency, { locale, free: '' })
     return (
       <div className={cx.card}>
         {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
@@ -152,7 +144,7 @@ function EmbeddedTopup({
   }
 
   if (committedAmountMinor != null && committedAmountMinor > 0) {
-    const displayAmount = formatCurrency(toMajorUnits(committedAmountMinor, currency), currency, locale)
+    const displayAmount = formatPrice(committedAmountMinor, currency, { locale, free: '' })
     return (
       <div className={cx.card}>
         {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
@@ -170,11 +162,10 @@ function EmbeddedTopup({
             adjustBalance(committedAmountMinor * (creditsPerMinorUnit ?? 100))
             setJustPaidMinor(committedAmountMinor)
             void notifyModelContext({
-              text: `Topup of ${formatCurrency(
-                toMajorUnits(committedAmountMinor, currency),
-                currency,
+              text: `Topup of ${formatPrice(committedAmountMinor, currency, {
                 locale,
-              )} succeeded.`,
+                free: '',
+              })} succeeded.`,
             })
             // Phase 5 — user-visible follow-up on a committed topup.
             void notifySuccess({
@@ -217,11 +208,10 @@ function EmbeddedTopup({
             // pending transaction context before the Stripe confirm
             // completes so it can reason about an in-progress purchase.
             void notifyModelContext({
-              text: `User confirmed topup of ${formatCurrency(
-                toMajorUnits(amountMinor, currency),
-                currency,
+              text: `User confirmed topup of ${formatPrice(amountMinor, currency, {
                 locale,
-              )}.`,
+                free: '',
+              })}.`,
             })
           }}
         >

@@ -89,7 +89,7 @@ describe('MandateText primitive', () => {
     await waitFor(() => {
       const node = screen.getByTestId('mandate')
       expect(node.getAttribute('data-variant')).toBe('topup')
-      expect(node.textContent).toContain('$5.00')
+      expect(node.textContent).toContain('$5')
       expect(node.textContent).toContain('Acme Inc.')
     })
   })
