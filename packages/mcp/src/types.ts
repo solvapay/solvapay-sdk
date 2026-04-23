@@ -240,6 +240,49 @@ export interface SolvaPayToolAnnotations {
 }
 
 /**
+ * Brand-icon descriptor — mirrors the MCP spec's per-tool / per-resource
+ * `icons[]` element so hosts can swap the default globe / placeholder
+ * in the chrome strip for the merchant's own mark.
+ *
+ * Shape tracks the zod schema exposed by `@modelcontextprotocol/ext-apps`
+ * (see `app.d.ts` icon definitions). Newer MCP SDKs may surface `icons`
+ * as a top-level Tool field; until then we advertise them via
+ * `_meta.ui.icons` where ext-apps-aware hosts can discover them.
+ */
+export interface SolvaPayToolIcon {
+  /** Absolute URL or `data:` URI for the icon asset. */
+  src: string
+  /** MIME type, e.g. `'image/png'` / `'image/svg+xml'`. */
+  mimeType?: string
+  /** Size hints, e.g. `['512x512']`. */
+  sizes?: string[]
+  /** Render only under the given host theme (defaults to both). */
+  theme?: 'light' | 'dark'
+}
+
+/**
+ * Merchant branding that hosts / iframes can use to replace the
+ * generic SolvaPay identity with the merchant's own mark. Pre-fetched
+ * by the integrator at server startup (e.g. via `getMerchantCore`) so
+ * `createSolvaPayMcpServer` stays synchronous.
+ */
+export interface SolvaPayMerchantBranding {
+  /** Display name used as the MCP `Implementation.name`. */
+  brandName?: string
+  /**
+   * Absolute URL to a square logomark (recommended 512×512 PNG or SVG).
+   * Preferred input for MCP host-chrome icon slots.
+   */
+  iconUrl?: string
+  /**
+   * Absolute URL to a landscape logo. Used as a fallback when
+   * `iconUrl` isn't available — hosts that can only render a square
+   * mark may letterbox it.
+   */
+  logoUrl?: string
+}
+
+/**
  * Framework-neutral tool descriptor. Adapters translate this to their
  * own registration API (`registerAppTool` on the official SDK,
  * `tool.define` on mcp-lite, etc.).
@@ -260,6 +303,14 @@ export interface SolvaPayToolDescriptor {
    * verbatim; adapters that don't silently ignore them.
    */
   annotations?: SolvaPayToolAnnotations
+  /**
+   * Brand icons surfaced on `tools/list`. Adapters include these on
+   * the tool advertisement so hosts can replace the default globe /
+   * placeholder in their chrome strip with the merchant's mark.
+   * Derived from `SolvaPayMerchantBranding` when the descriptor is
+   * built.
+   */
+  icons?: SolvaPayToolIcon[]
   handler: (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult>
 }
 

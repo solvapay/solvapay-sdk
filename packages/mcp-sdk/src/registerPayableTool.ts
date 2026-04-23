@@ -31,6 +31,7 @@ import {
   type McpToolExtra,
   type PayableHandler,
   type SolvaPayToolAnnotations,
+  type SolvaPayToolIcon,
 } from '@solvapay/mcp'
 import type { SolvaPay } from '@solvapay/server'
 
@@ -131,6 +132,15 @@ export interface RegisterPayableToolOptions<
    * `annotations: { readOnlyHint: false, destructiveHint: true }`.
    */
   annotations?: SolvaPayToolAnnotations
+  /**
+   * Brand icons surfaced on `tools/list`. Hosts that read tool
+   * metadata for the chrome strip (ChatGPT, Claude Desktop) swap the
+   * default placeholder for this asset. Pass a square logomark for
+   * best results. Merchants typically share one `icons[]` across
+   * every tool — consider a single branding source at the server
+   * level.
+   */
+  icons?: SolvaPayToolIcon[]
 }
 
 /**
@@ -156,6 +166,7 @@ export function registerPayableTool<
     getCustomerRef,
     meta,
     annotations,
+    icons,
   } = options
 
   const protectedHandler = buildPayableHandler(
@@ -171,7 +182,14 @@ export function registerPayableTool<
   // would make hosts like MCPJam auto-open on every routine successful
   // call. Merchants who want always-open can pass
   // `meta: { ui: { resourceUri } }` explicitly.
-  const toolMeta = meta ?? {}
+  // Brand icons are merged into `_meta.ui.icons` so ext-apps-aware
+  // hosts pick up the merchant mark for the chrome strip.
+  const baseMeta = meta ?? {}
+  const baseUi = (baseMeta.ui as Record<string, unknown> | undefined) ?? {}
+  const toolMeta =
+    icons && icons.length > 0
+      ? { ...baseMeta, ui: { ...baseUi, icons } }
+      : baseMeta
 
   // Sensible default: paywalled data tools are most often read-only
   // queries (search, fetch, quote). State-mutating merchant tools
@@ -196,6 +214,7 @@ export function registerPayableTool<
       ...(schema !== undefined ? { inputSchema: schema } : {}),
       _meta: toolMeta,
       annotations: effectiveAnnotations,
+      ...(icons !== undefined && icons.length > 0 ? { icons } : {}),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>

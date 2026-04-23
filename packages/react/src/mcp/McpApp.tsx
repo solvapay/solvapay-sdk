@@ -381,6 +381,37 @@ export function McpApp({
     [bootstrap],
   )
 
+  // Surface the merchant's square icon (or landscape logo as fallback)
+  // as the iframe's `<link rel="icon">`. Some MCP hosts pick the iframe
+  // favicon up for their chrome strip, and dev-mode browsers (MCP
+  // Inspector, local HTML previews) show it in the tab — a low-effort
+  // secondary channel that complements the `tool.icons` advertisement
+  // already wired through `createSolvaPayMcpServer`. Runs in the
+  // browser only; silent no-op under SSR.
+  const iconUrl = bootstrap?.merchant
+    ? ((bootstrap.merchant as { iconUrl?: string; logoUrl?: string }).iconUrl ??
+      (bootstrap.merchant as { logoUrl?: string }).logoUrl ??
+      null)
+    : null
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (!iconUrl) return
+    const MANAGED_ATTR = 'data-solvapay-favicon'
+    const existing = document.head.querySelector<HTMLLinkElement>(
+      `link[${MANAGED_ATTR}]`,
+    )
+    const link = existing ?? document.createElement('link')
+    link.setAttribute(MANAGED_ATTR, '')
+    link.rel = 'icon'
+    link.href = iconUrl
+    if (!existing) document.head.appendChild(link)
+    return () => {
+      // Leave the tag in place across bootstrap updates so the tab
+      // favicon doesn't flicker — the next render's effect will update
+      // `href` in-place. Only clean up on unmount.
+    }
+  }, [iconUrl])
+
   const providerConfig = useMemo(
     () => {
       // Build the resolved config first so every `seedMcpCaches` call

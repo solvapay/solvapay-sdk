@@ -64,10 +64,15 @@ body {
 }
 
 .solvapay-mcp-card {
+  /* Compact pass: shrunk inner padding (24→16 top/bottom) and gap
+   * (16→12) so the card reads as a single dense unit once the host
+   * chrome has already claimed the identity row. The account view
+   * has two of these stacked — the old spacing left too much air
+   * between "Your plan" and "Manage billing". */
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 16px 20px;
   border-radius: var(--border-radius-lg, 12px);
   border: 1px solid var(--color-border-secondary, #e2e8f0);
   background: var(--color-background-primary, #ffffff);
@@ -313,55 +318,22 @@ body {
  * The UsageMeter primitive already ships default styles in
  * @solvapay/react/styles.css — the MCP view only adds view-level spacing. */
 
-/* Shell chrome — header, tab nav, footer */
+/* Shell chrome — tab nav, footer
+ *
+ * Identity chrome (logo + brand name + product heading) was moved to
+ * the MCP host strip. The host shows the app icon and active tool
+ * name, so re-painting the same identity inside the iframe would be
+ * double-branding. The only in-iframe chrome left is the footer's
+ * terms/privacy links and `Provided by SolvaPay` byline.
+ */
 
 .solvapay-mcp-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.solvapay-mcp-shell-header {
+  /* Tighter vertical rhythm now that the in-iframe brand header is
+   * gone and the footer is the only chrome. 12px keeps the plan card
+   * close to the viewport edge without feeling cramped. */
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.solvapay-mcp-shell-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.solvapay-mcp-shell-logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  border-radius: 6px;
-}
-
-.solvapay-mcp-shell-logo-initials {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--color-background-secondary, #f1f5f9);
-  color: var(--color-text-primary, #0f172a);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.solvapay-mcp-shell-brand-name {
-  font-size: 14px;
-  color: var(--color-text-primary, #0f172a);
-  font-weight: 500;
-}
-
-.solvapay-mcp-shell-title {
-  font-size: 20px;
-  font-weight: 600;
 }
 
 .solvapay-mcp-tablist {

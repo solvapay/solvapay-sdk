@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { createMcpOAuthBridge } from '@solvapay/mcp'
-import { createServer } from './server'
+import type { SolvaPayMerchantBranding } from '@solvapay/mcp'
+import { createServer, fetchBranding } from './server'
 import {
   mcpAssetOrigins,
   mcpPublicBaseUrl,
@@ -18,6 +19,14 @@ type SessionEntry = {
 }
 
 const sessions: Record<string, SessionEntry> = {}
+
+// Fetched once at startup and reused across every MCP `initialize`
+// handshake. Cached so we don't re-hit `GET /v1/sdk/merchant` on every
+// new session — branding rarely changes and the trade-off favours a
+// snappy handshake. A long-running deployment can fail over to an
+// empty branding snapshot via `process.emitWarning` if the prefetch
+// errored.
+let cachedBranding: SolvaPayMerchantBranding | undefined
 
 const app = express()
 app.use(express.json())
@@ -53,7 +62,7 @@ app.post('/mcp', async (req: Request, res: Response) => {
   }
 
   if (!transport && isInitializeRequest(req.body)) {
-    const server = createServer()
+    const server = createServer(cachedBranding)
 
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
@@ -117,6 +126,26 @@ app.delete('/mcp', async (req: Request, res: Response) => {
 
 const port = parseInt(process.env.MCP_PORT || '3006', 10)
 const host = process.env.MCP_HOST || 'localhost'
+
+// Warm the branding cache before accepting traffic so the very first
+// `initialize` handshake carries merchant identity (brand name on the
+// Implementation + iconUrl on tools/list) instead of the generic
+// SolvaPay fallback. Failure is silent — the server still boots with
+// the default identity.
+fetchBranding()
+  .then((branding) => {
+    cachedBranding = branding
+    if (branding) {
+      console.error('[mcp-checkout-app] branding', {
+        brandName: branding.brandName,
+        iconUrl: branding.iconUrl,
+        logoUrl: branding.logoUrl,
+      })
+    }
+  })
+  .catch(() => {
+    /* ignore — server boots with default identity. */
+  })
 
 app.listen(port, host, () => {
   console.error(`MCP checkout app listening on http://${host}:${port}`)

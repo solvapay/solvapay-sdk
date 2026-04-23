@@ -261,6 +261,90 @@ describe('createSolvaPayMcpServer', () => {
       expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
     })
 
+    it('stamps _meta.ui.icons on every intent tool when branding is provided', () => {
+      const { server } = buildTestServer({
+        branding: {
+          brandName: 'Acme',
+          iconUrl: 'https://cdn.acme.test/icon.png',
+          logoUrl: 'https://cdn.acme.test/logo.png',
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const manageAccount = registered[MCP_TOOL_NAMES.manageAccount]
+      const ui = (
+        manageAccount?._meta as
+          | { ui?: { icons?: Array<{ src: string }> } }
+          | undefined
+      )?.ui
+      expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
+    })
+
+    it('falls back to logoUrl when branding omits iconUrl', () => {
+      const { server } = buildTestServer({
+        branding: {
+          brandName: 'Acme',
+          logoUrl: 'https://cdn.acme.test/logo.png',
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const ui = (
+        upgrade?._meta as
+          | { ui?: { icons?: Array<{ src: string }> } }
+          | undefined
+      )?.ui
+      expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/logo.png')
+    })
+
+    it('uses branding.brandName as the MCP Implementation name', () => {
+      const { server } = buildTestServer({
+        branding: {
+          brandName: 'Acme',
+          iconUrl: 'https://cdn.acme.test/icon.png',
+        },
+      })
+      // McpServer exposes the underlying Server via `.server`, which
+      // stores the implementation info passed to its constructor.
+      // Access via `_serverInfo` since there's no public getter.
+      // @ts-expect-error — private state used for coverage only
+      const info = server.server?._serverInfo ?? server.server?.['_serverInfo']
+      expect(info?.name).toBe('Acme')
+    })
+
+    it('explicit serverName wins over branding.brandName', () => {
+      const { server } = buildTestServer({
+        serverName: 'acme-protocol-id',
+        branding: { brandName: 'Acme' },
+      })
+      // @ts-expect-error — private state used for coverage only
+      const info = server.server?._serverInfo ?? server.server?.['_serverInfo']
+      expect(info?.name).toBe('acme-protocol-id')
+    })
+
+    it('forwards icons into _meta.ui.icons on registerPayable', () => {
+      const { server } = buildTestServer({
+        additionalTools: ({ registerPayable }) => {
+          registerPayable('search_branded', {
+            title: 'Branded search',
+            schema: { query: z.string() },
+            icons: [{ src: 'https://cdn.acme.test/icon.png', sizes: ['512x512'] }],
+            handler: async () => ({ ok: true }),
+          })
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const branded = registered['search_branded']
+      const ui = (
+        branded?._meta as
+          | { ui?: { icons?: Array<{ src: string }> } }
+          | undefined
+      )?.ui
+      expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
+    })
+
     it('respects an explicit opt-in descriptor-level UI link on payable tools', () => {
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable, resourceUri }) => {

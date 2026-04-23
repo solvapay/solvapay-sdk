@@ -52,12 +52,32 @@ import type {
   SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
   SolvaPayMcpViewKind,
+  SolvaPayMerchantBranding,
   SolvaPayPromptDescriptor,
   SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
   SolvaPayToolAnnotations,
   SolvaPayToolDescriptor,
+  SolvaPayToolIcon,
 } from './types'
+
+/**
+ * Project `SolvaPayMerchantBranding` into an `icons[]` array suitable
+ * for the `SolvaPayToolDescriptor` / MCP host chrome. Prefers the
+ * square `iconUrl` (expected shape for avatar slots); falls back to
+ * the landscape `logoUrl` with a note that hosts may need to
+ * letterbox. Returns `undefined` when neither asset is set.
+ */
+function deriveIcons(branding: SolvaPayMerchantBranding | undefined): SolvaPayToolIcon[] | undefined {
+  if (!branding) return undefined
+  const assets: SolvaPayToolIcon[] = []
+  if (branding.iconUrl) {
+    assets.push({ src: branding.iconUrl, sizes: ['any', '512x512'] })
+  } else if (branding.logoUrl) {
+    assets.push({ src: branding.logoUrl })
+  }
+  return assets.length > 0 ? assets : undefined
+}
 
 /**
  * All SolvaPay tools talk to the SolvaPay backend, so `openWorldHint`
@@ -127,6 +147,15 @@ export interface BuildSolvaPayDescriptorsOptions {
     result: SolvaPayCallToolResult,
     meta: { durationMs: number },
   ) => void
+  /**
+   * Merchant branding used to personalise the MCP host chrome — when
+   * provided, every emitted tool descriptor carries an `icons[]` the
+   * adapter surfaces on `tools/list` so hosts can replace the default
+   * globe / placeholder with the merchant's mark. Prefer fetching the
+   * SDK merchant payload at server startup (`getMerchantCore` exposes
+   * `iconUrl` / `logoUrl` / `displayName`) and passing the result in.
+   */
+  branding?: SolvaPayMerchantBranding
 }
 
 export interface SolvaPayDescriptorBundle {
@@ -174,7 +203,9 @@ export function buildSolvaPayDescriptors(
     getCustomerRef = defaultGetCustomerRefHelper,
     onToolCall,
     onToolResult,
+    branding,
   } = options
+  const toolIcons = deriveIcons(branding)
 
   if (!/^https?:\/\//i.test(publicBaseUrl)) {
     throw new Error(
@@ -196,6 +227,13 @@ export function buildSolvaPayDescriptors(
   const uiToolMeta = { ...toolMeta, audience: 'ui' as const }
   const enabledViews = new Set<SolvaPayMcpViewKind>(views)
   const tools: SolvaPayToolDescriptor[] = []
+
+  // Push a tool into the emitted list, augmented with the shared
+  // brand-icon set so every advertised tool carries the same merchant
+  // mark in `tools/list`.
+  const pushTool = (descriptor: SolvaPayToolDescriptor): void => {
+    tools.push(toolIcons ? { ...descriptor, icons: toolIcons } : descriptor)
+  }
 
   const UI_ONLY_PREFIX =
     'UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. '
@@ -256,7 +294,7 @@ export function buildSolvaPayDescriptors(
   ) => {
     if (!enabledViews.has(view)) return
     const name = TOOL_FOR_VIEW[view]
-    tools.push({
+    pushTool({
       name,
       title,
       description,
@@ -310,7 +348,7 @@ export function buildSolvaPayDescriptors(
 
   // ------- transport tools -------
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createCheckoutSession,
     description:
       UI_ONLY_PREFIX +
@@ -340,7 +378,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createPayment,
     description:
       UI_ONLY_PREFIX +
@@ -370,7 +408,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.processPayment,
     description:
       UI_ONLY_PREFIX +
@@ -402,7 +440,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createCustomerSession,
     description:
       UI_ONLY_PREFIX +
@@ -422,7 +460,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createTopupPayment,
     description:
       UI_ONLY_PREFIX +
@@ -453,7 +491,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.cancelRenewal,
     description:
       UI_ONLY_PREFIX +
@@ -482,7 +520,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.reactivateRenewal,
     description:
       UI_ONLY_PREFIX +
@@ -506,7 +544,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.activatePlan,
     title: 'Activate plan',
     description:

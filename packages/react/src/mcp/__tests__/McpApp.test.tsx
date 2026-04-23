@@ -53,8 +53,6 @@ describe('<McpApp>', () => {
     const AccountStub = vi.fn(() => <div data-testid="account-stub">stubbed account</div>)
     render(<McpApp app={app} views={{ account: AccountStub }} />)
     await screen.findByTestId('account-stub')
-    // Shell renders the "My account" identity heading (below the logo).
-    expect(screen.getByText('My account')).toBeTruthy()
     expect(AccountStub).toHaveBeenCalled()
   })
 

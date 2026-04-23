@@ -60,11 +60,13 @@ export type {
   SolvaPayMcpCsp,
   SolvaPayMcpPaywallContent,
   SolvaPayMcpViewKind,
+  SolvaPayMerchantBranding,
   SolvaPayPromptDescriptor,
   SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
   SolvaPayToolAnnotations,
   SolvaPayToolDescriptor,
+  SolvaPayToolIcon,
 } from './types'
 
 // ---- Core helpers ----

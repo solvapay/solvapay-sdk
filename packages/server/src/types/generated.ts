@@ -704,6 +704,11 @@ export interface components {
              * @example https://cdn.acme.com/logo.png
              */
             logoUrl?: string;
+            /**
+             * Absolute URL to the square app icon / logomark. Consumed by MCP host chromes, mobile avatar slots, and any surface where the landscape `logoUrl` would need letterboxing.
+             * @example https://cdn.acme.com/icon.png
+             */
+            iconUrl?: string;
         };
         SdkPlatformConfigResponseDto: {
             /**

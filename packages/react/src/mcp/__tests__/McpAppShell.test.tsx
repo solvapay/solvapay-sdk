@@ -242,25 +242,23 @@ describe('<McpAppShell>', () => {
     expect(screen.getByLabelText('Your account context')).toBeTruthy()
   })
 
-  it('uses bootstrap.product.name for the shell heading', () => {
-    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+  it('does not render an in-iframe brand header — identity lives in host chrome', () => {
+    const config = seedMerchant({
+      displayName: 'Acme',
+      legalName: 'Acme Inc.',
+      logoUrl: 'https://acme.test/logo.png',
+    })
     const ctx = buildCtx(config, [], 0)
-    renderShell({}, ctx)
-    const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading.textContent).toBe('Acme Knowledge Base')
-  })
-
-  it('falls back to merchant.displayName when the product has no name', () => {
-    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
-    const ctx = buildCtx(config, [], 0)
-    renderShell(
-      {
-        product: { reference: 'prd_x' } as never,
-      },
-      ctx,
-    )
-    const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading.textContent).toBe('Acme')
+    const { container } = renderShell({}, ctx)
+    // The shell must not emit the redundant brand row / h1 title that
+    // duplicated the MCP host chrome's app icon + tool-name strip.
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-header')).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-brand')).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-logo')).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-logo-initials')).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-brand-name')).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-title')).toBeNull()
   })
 
   it('paywall view takes over — no sidebar, no footer', () => {

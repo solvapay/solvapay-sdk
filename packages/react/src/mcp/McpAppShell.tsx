@@ -165,10 +165,6 @@ export function McpAppShell({
   const showFooter = footer ?? Boolean(merchant?.termsUrl || merchant?.privacyUrl)
   const isShellSidebarEligible = isChrome && bootstrap.customer !== null
 
-  // Product-driven title; the merchant/brand marker stays above it.
-  const productName =
-    (bootstrap.product as { name?: string } | undefined)?.name ?? null
-
   const handlePaywallUpgrade = () => {
     setPaywallDismissed(true)
     setCameFromPaywall(true)
@@ -190,12 +186,6 @@ export function McpAppShell({
 
   return (
     <div className="solvapay-mcp-shell" data-paywall={isPaywall ? 'true' : undefined}>
-      <ShellHeader
-        merchant={merchant}
-        productName={productName}
-        classNames={classNames}
-      />
-
       <div className="solvapay-mcp-shell-layout">
         <div className="solvapay-mcp-shell-body">
           <McpViewRouter
@@ -229,53 +219,6 @@ export function McpAppShell({
         <ShellFooter classNames={classNames} merchant={merchant} />
       ) : null}
     </div>
-  )
-}
-
-function ShellHeader({
-  merchant,
-  productName,
-  classNames,
-}: {
-  merchant: ReturnType<typeof useMerchant>['merchant']
-  productName: string | null
-  classNames?: McpViewClassNames
-}) {
-  const cx = resolveMcpClassNames(classNames)
-  const displayName = merchant?.displayName ?? null
-  const logoUrl = merchant?.logoUrl ?? null
-  const initials = displayName
-    ? displayName
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]!.toUpperCase())
-        .join('')
-    : 'SP'
-
-  // Fallback chain: product.name → merchant.displayName → 'My account'.
-  const headingText = productName ?? displayName ?? 'My account'
-
-  return (
-    <header className="solvapay-mcp-shell-header">
-      <div className="solvapay-mcp-shell-brand">
-        {logoUrl ? (
-          <img
-            className="solvapay-mcp-shell-logo"
-            src={logoUrl}
-            alt={displayName ?? 'Merchant logo'}
-          />
-        ) : (
-          <span className="solvapay-mcp-shell-logo-initials" aria-hidden="true">
-            {initials}
-          </span>
-        )}
-        {displayName ? (
-          <span className="solvapay-mcp-shell-brand-name">{displayName}</span>
-        ) : null}
-      </div>
-      <h1 className={`${cx.heading} solvapay-mcp-shell-title`.trim()}>{headingText}</h1>
-    </header>
   )
 }
 
