@@ -12,9 +12,25 @@ reuse the same contract.
 ## Install
 
 ```bash
-pnpm add @solvapay/mcp-sdk @solvapay/mcp @solvapay/server \
+pnpm add @solvapay/mcp-sdk @solvapay/server \
   @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps zod
 ```
+
+## Importing
+
+Everything you need for a paywalled tool lives in this package:
+
+```ts
+import {
+  createSolvaPayMcpServer,
+  registerPayableTool,
+  type ResponseContext,
+  type NudgeSpec,
+} from '@solvapay/mcp-sdk'
+```
+
+Reach into `@solvapay/mcp` directly only if you're writing a framework
+adapter (`mcp-lite`, `fastmcp`, raw JSON-RPC).
 
 ## Quick start
 
@@ -37,8 +53,6 @@ const server = createSolvaPayMcpServer({
       description: 'Generate a short video from a text prompt.',
       handler: async ({ prompt }, ctx) => {
         const videoUrl = await generateVideo(prompt)
-        // `ctx.respond` is the V1 shape — returns raw data plus
-        // optional `text` override and inline upsell `nudge`.
         return ctx.respond({ videoUrl })
       },
     })
@@ -51,14 +65,13 @@ One call wires the full SolvaPay transport surface (`check_purchase`,
 UI resource with the Stripe CSP baseline, and any integrator-defined
 tools via `additionalTools`.
 
-## Handler signature
+## Handler contract
 
-`registerPayable` accepts two handler shapes. Both are first-class —
-one-arg legacy handlers keep working indefinitely; the two-arg form is
-preferred for new code.
+`registerPayable` handlers receive parsed `args` (inferred from
+`schema` when provided) and a `ResponseContext`. They must return the
+branded envelope produced by `ctx.respond(data, options?)`.
 
 ```ts
-// New (preferred): receive a ResponseContext as the second arg.
 handler: async ({ prompt }, ctx) => {
   const video = await generate(prompt)
   // Attach an upsell nudge when the customer is low on credits.
@@ -69,10 +82,6 @@ handler: async ({ prompt }, ctx) => {
   }
   return ctx.respond({ videoUrl: video.url })
 }
-
-// Legacy (still supported): return raw data. The SDK wraps it the
-// same way ctx.respond() would.
-handler: async ({ prompt }) => ({ videoUrl: await generate(prompt) })
 ```
 
 The [`ctx.respond()` V1 spec](../../docs/spec/ctx-respond-v1.md) has the

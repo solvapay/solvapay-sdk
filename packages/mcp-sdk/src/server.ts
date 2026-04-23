@@ -15,6 +15,10 @@ import {
   RESOURCE_MIME_TYPE,
 } from '@modelcontextprotocol/ext-apps/server'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type {
+  AnySchema,
+  ZodRawShapeCompat,
+} from '@modelcontextprotocol/sdk/server/zod-compat.js'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import {
   buildSolvaPayDescriptors,
@@ -41,11 +45,17 @@ export interface AdditionalToolsContext {
   /**
    * `registerPayableTool` bound with `solvaPay` + `resourceUri` already
    * provided, and `product` defaulting to the server's `productRef`.
+   *
+   * Zod `schema` flows through to the handler's `args` parameter so
+   * merchants get inferred arg types without a second declaration.
    */
-  registerPayable: <InputSchema extends Parameters<typeof registerPayableTool>[2]['schema']>(
+  registerPayable: <
+    InputSchema extends ZodRawShapeCompat | AnySchema | undefined = undefined,
+    TData = unknown,
+  >(
     name: string,
     options: Omit<
-      RegisterPayableToolOptions<NonNullable<InputSchema>>,
+      RegisterPayableToolOptions<InputSchema, TData>,
       'solvaPay' | 'resourceUri' | 'product'
     > & {
       product?: string

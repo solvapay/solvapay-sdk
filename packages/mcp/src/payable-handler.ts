@@ -6,9 +6,10 @@
  * in `structuredContent` so the React shell can render the paywall
  * view without a follow-up tool call.
  *
- * V1 also constructs the `ResponseContext` merchant handlers receive
- * as their second argument, unwraps `ctx.respond(...)` envelopes,
- * overlays merchant `options.text` / `options.nudge`, and flushes
+ * Merchant handlers receive a `ResponseContext` as their second
+ * argument and return the `ResponseResult` envelope produced by
+ * `ctx.respond(data, options?)`. `buildPayableHandler` unwraps the
+ * envelope — overlaying `options.text` / `options.nudge` and flushing
  * queued `ctx.emit(...)` blocks into the terminal response.
  *
  * Every SolvaPay MCP adapter (`@solvapay/mcp-sdk`, future `mcp-lite` /
@@ -26,7 +27,7 @@ import { isPaywallStructuredContent } from '@solvapay/server'
 import { buildPaywallUiMeta } from './paywall-meta'
 import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { buildResponseContext } from './response-context'
-import { isResponseResult } from './response-envelope'
+import { assertResponseResult } from './response-envelope'
 import type {
   BootstrapPayload,
   McpToolExtra,
@@ -58,17 +59,14 @@ export interface BuildPayableHandlerContext {
 }
 
 /**
- * Accepts both the new `(args, ctx) => ResponseResult | TData` shape
- * and the legacy `(args, extra?) => TData` shape. `buildPayableHandler`
- * detects the return type at runtime via `isResponseResult` and
- * unwraps accordingly.
+ * Merchant handler contract: `(args, ctx) => ctx.respond(data, options?)`.
+ * `buildPayableHandler` unwraps the returned `ResponseResult` envelope
+ * into the adapter-facing `SolvaPayCallToolResult`.
  */
 type MerchantHandler<TArgs, TResult> = (
   args: TArgs,
-  // Second arg is either a `ResponseContext` (new) or `McpToolExtra`
-  // (legacy). Typed as union; merchants declare whichever they need.
-  extraOrCtx?: ResponseContext | McpToolExtra,
-) => Promise<ResponseResult<TResult> | TResult>
+  ctx: ResponseContext,
+) => Promise<ResponseResult<TResult>>
 
 /**
  * Build a paywall-protected MCP tool handler. Returned function is a
@@ -83,12 +81,13 @@ type MerchantHandler<TArgs, TResult> = (
  *  4. Rewrites `structuredContent` as a full `BootstrapPayload` with
  *     `view: 'paywall'` + the original gate content on `paywall`
  *     (when `buildBootstrap` is provided — otherwise leaves the raw
- *     gate content intact for backwards compatibility).
+ *     gate content intact).
  *  5. Stamps `_meta.ui = { resourceUri }` so the host knows which UI
  *     resource to open.
- *  6. On success, if the merchant returned a `ResponseResult` envelope
- *     via `ctx.respond(...)`, applies `options.text` / `options.nudge`
- *     overlays and flushes `ctx.emit(...)` blocks into `content[]`.
+ *  6. Unwraps the merchant's `ResponseResult` envelope into the
+ *     terminal `SolvaPayCallToolResult`: applies `options.text` /
+ *     `options.nudge` overlays and flushes `ctx.emit(...)` blocks into
+ *     `content[]`.
  *  7. Silently ignores `options.units` (V1 billing stays at one credit
  *     per call; V1.1 will thread it into `trackUsage`).
  */
@@ -106,7 +105,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
   const wrappedBusinessLogic = async (
     args: Record<string, unknown>,
     handlerContext?: ProtectHandlerContext,
-  ): Promise<ResponseResult<unknown> | unknown> => {
+  ): Promise<ResponseResult<TResult>> => {
     const limits: LimitResponseWithPlan | null = handlerContext?.limits ?? null
     const customerRef = handlerContext?.customerRef ?? ''
 
@@ -117,10 +116,6 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
       solvaPay,
     })
 
-    // Invoke the merchant handler. Cast is safe: both the new
-    // `(args, ctx)` and legacy `(args, extra?)` signatures accept the
-    // same first positional arg shape; the second arg varies by handler
-    // flavour but merchants only access the one they declared.
     return handler(args as TArgs, responseCtx)
   }
 
@@ -138,7 +133,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
       | SolvaPayCallToolResult
 
     // ——————————————————————————————————————————————————————————————
-    // Paywall branch — unchanged from pre-ctx behaviour.
+    // Paywall branch.
     // ——————————————————————————————————————————————————————————————
     if (result.isError && isPaywallStructuredContent(result.structuredContent)) {
       const existingMeta =
@@ -165,25 +160,30 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     }
 
     // ——————————————————————————————————————————————————————————————
-    // Success branch — detect `ResponseResult` envelope and unwrap.
+    // Error branch — non-paywall errors (thrown `Error`, formatError
+    // output) pass through untouched. `structuredContent` here is the
+    // adapter's error payload, not a `ResponseResult` envelope.
     // ——————————————————————————————————————————————————————————————
-    //
-    // `McpAdapter.formatResponse` wrapped the merchant return into
-    // `{ content: [{ text: JSON.stringify(merchantReturn) }], structuredContent: merchantReturn }`.
-    // When the merchant called `ctx.respond(data, options)` the
-    // `merchantReturn` is a `ResponseResult` envelope; otherwise it's
-    // raw merchant data (backwards-compatible).
-    if (isResponseResult(result.structuredContent)) {
-      return unwrapResponseEnvelope(
-        result as SolvaPayCallToolResult,
-        result.structuredContent as ResponseResult<unknown>,
-        resourceUri,
-        buildBootstrap,
-        extra,
-      )
+    if (result.isError) {
+      return result as SolvaPayCallToolResult
     }
 
-    return result as SolvaPayCallToolResult
+    // ——————————————————————————————————————————————————————————————
+    // Success branch — unwrap the `ResponseResult` envelope.
+    // ——————————————————————————————————————————————————————————————
+    //
+    // `assertResponseResult` enforces the invariant that merchants
+    // returned via `ctx.respond(...)`. If a handler bypassed the
+    // TypeScript contract and returned a raw value, the assertion
+    // throws a merchant-actionable error pointing at the fix.
+    const envelope = assertResponseResult(result.structuredContent)
+    return unwrapResponseEnvelope(
+      result as SolvaPayCallToolResult,
+      envelope,
+      resourceUri,
+      buildBootstrap,
+      extra,
+    )
   }
 }
 

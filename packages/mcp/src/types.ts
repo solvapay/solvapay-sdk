@@ -546,12 +546,17 @@ export interface ResponseContext {
 }
 
 /**
- * Merchant handler signature for `registerPayable`. Accepts the new
- * `(args, ctx)` shape and the legacy `(args, extra?)` shape; a handler
- * that returns raw data (backwards-compatible) or a `ResponseResult`
- * envelope (via `ctx.respond(...)`) both work.
+ * Merchant handler signature for `registerPayable`. Receives the
+ * parsed input `args` (typed from the tool's `schema` when provided)
+ * and a `ResponseContext` with `ctx.respond(...)`, `ctx.customer`,
+ * `ctx.gate(...)`, and the reserved streaming surface (`ctx.emit`,
+ * `ctx.progress`, `ctx.signal`).
+ *
+ * Must return the branded envelope produced by `ctx.respond(data, options?)`.
+ * Returning a raw value is a type error at compile time and throws a
+ * merchant-actionable error at runtime.
  */
 export type PayableHandler<TArgs = Record<string, unknown>, TData = unknown> = (
   args: TArgs,
   ctx: ResponseContext,
-) => Promise<ResponseResult<TData> | TData>
+) => Promise<ResponseResult<TData>>

@@ -407,21 +407,29 @@ describe('buildPayableHandler — ctx.respond V1', () => {
     })
   })
 
-  describe('backwards compatibility', () => {
-    it('legacy one-arg handlers still work', async () => {
+  describe('ctx.respond invariant', () => {
+    it('throws a merchant-actionable error when a handler returns a raw value', async () => {
       const client = makeMockClient()
       const solvaPay = makeSolvaPay(client)
+
+      // Bypass the TS contract to simulate a plain-JS merchant (or a
+      // handler that slipped past `any` / `@ts-ignore`).
+      const rawHandler = (async () => ({ raw: true })) as unknown as Parameters<
+        typeof buildPayableHandler
+      >[2]
 
       const handler = buildPayableHandler(
         solvaPay,
         { product: 'prd_test', resourceUri: 'ui://test/view.html' },
-        async (args: Record<string, unknown>) => ({
-          hello: args.hello,
-        }),
+        rawHandler,
       )
 
-      const result = (await handler({ hello: 'world' }, mcpExtra())) as SolvaPayCallToolResult
-      expect(result.structuredContent).toEqual({ hello: 'world' })
+      await expect(handler({}, mcpExtra())).rejects.toThrow(
+        /registerPayable handler returned a raw value/,
+      )
+      await expect(handler({}, mcpExtra())).rejects.toThrow(
+        /ctx\.respond\(data, options\?\)/,
+      )
     })
   })
 

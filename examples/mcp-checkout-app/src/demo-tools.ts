@@ -16,7 +16,6 @@
 
 import { z } from 'zod'
 import type { AdditionalToolsContext } from '@solvapay/mcp-sdk'
-import type { ResponseContext } from '@solvapay/mcp'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 interface McpServerWithPrompts {
@@ -55,14 +54,15 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
     // default to `{ readOnlyHint: true, openWorldHint: true }` — the
     // same 80% case most paywalled data tools land on.
     annotations: { readOnlyHint: true, idempotentHint: true },
-    handler: async ({ query }: { query: string }) => ({
-      query,
-      results: [
-        { id: 'stub-1', title: `Why ${query} matters`, snippet: `Lorem ipsum about ${query}.` },
-        { id: 'stub-2', title: `Getting started with ${query}`, snippet: 'Dolor sit amet.' },
-        { id: 'stub-3', title: `${query} in depth`, snippet: 'Consectetur adipiscing elit.' },
-      ],
-    }),
+    handler: async ({ query }, ctx) =>
+      ctx.respond({
+        query,
+        results: [
+          { id: 'stub-1', title: `Why ${query} matters`, snippet: `Lorem ipsum about ${query}.` },
+          { id: 'stub-2', title: `Getting started with ${query}`, snippet: 'Dolor sit amet.' },
+          { id: 'stub-3', title: `${query} in depth`, snippet: 'Consectetur adipiscing elit.' },
+        ],
+      }),
   })
 
   registerPayable('get_market_quote', {
@@ -71,25 +71,22 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
       'Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as `search_knowledge`: one unit of usage per call, and the gate response opens the embedded top-up iframe. Use `/get_market_quote` to try the paywall on a second tool.',
     schema: { symbol: z.string().min(1).max(8) },
     annotations: { readOnlyHint: true, idempotentHint: true },
-    handler: async ({ symbol }: { symbol: string }) => {
+    handler: async ({ symbol }, ctx) => {
       const upper = symbol.toUpperCase()
-      return {
+      return ctx.respond({
         symbol: upper,
         price: 123.45,
         currency: 'USD',
         asOf: '2026-01-01T00:00:00.000Z',
-      }
+      })
     },
   })
 
-  // Third demo tool exercises the V1 `ctx.respond()` surface — the
-  // hero flow for the ctx-respond-v1 spec.
+  // Third demo tool exercises the nudge branch of `ctx.respond()`:
   //
-  // Two paths:
-  //  1. Mode 1 (silent) when the customer has comfortable balance.
-  //  2. Mode 2 (nudge) when the customer is close to running out;
-  //     attaches a `low-balance` upsell strip to the successful
-  //     response.
+  //  1. Silent when the customer has comfortable balance.
+  //  2. Nudge when the customer is close to running out; attaches a
+  //     `low-balance` upsell strip to the successful response.
   //
   // Also includes `options.units` to demonstrate forward-compatible
   // handler code. V1 silently ignores the field; V1.1 will thread it
@@ -100,10 +97,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
       'Demo data tool that exercises the `ctx.respond()` API: returns deterministic sales rows for a date range and, when the customer is low on credits, attaches a `low-balance` upsell nudge to the success response. Use `/query_sales_trends` to try the nudge flow.',
     schema: { range: z.string().min(1) },
     annotations: { readOnlyHint: true, idempotentHint: true },
-    handler: async (
-      { range }: { range: string },
-      ctx: ResponseContext,
-    ) => {
+    handler: async ({ range }, ctx) => {
       const results = buildDeterministicRows(range)
 
       // Balance threshold is deliberately chatty so the demo can cross

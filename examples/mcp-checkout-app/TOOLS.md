@@ -96,14 +96,14 @@ Enabled when `DEMO_TOOLS !== 'false'` — see
 | --- | --- | --- |
 | `search_knowledge` | Returns 3 deterministic stub snippets for a query | Exercise the paywall from `basic-host` — each call consumes 1 credit |
 | `get_market_quote` | Returns a deterministic fake market quote | Second tool so you can show the paywall firing on something other than `search_knowledge` |
-| `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the V1 `ctx.respond()` / nudge flow — inline upsell strip on the success response |
+| `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response |
 
 All three are wrapped with `solvaPay.payable().mcp()` via
 `registerPayable` so the credit balance decrements per call, and the
 paywall bootstrap auto-opens when credits hit zero.
 
-`query_sales_trends` uses the new `(args, ctx) => ctx.respond(data, options?)`
-handler shape to demonstrate the V1 API:
+All three use the `(args, ctx) => ctx.respond(data, options?)` handler
+contract. `query_sales_trends` exercises the nudge branch:
 
 - `ctx.customer.balance` — cached snapshot (≤10s stale) of the
   pre-check `LimitResponseWithPlan`; read to decide whether to attach
@@ -112,10 +112,6 @@ handler shape to demonstrate the V1 API:
   strip that the shell renders above the tool result.
 - `options.units` — reserved for V1.1 variable-unit billing. V1
   silently ignores the field; V1.1 threads it into `trackUsage`.
-
-Legacy one-arg handlers (`async (args) => data`) keep working
-indefinitely — `search_knowledge` and `get_market_quote` use that
-shape as a reference.
 
 ### Reserved `ctx` surface (V1 no-op / V1.1 live)
 

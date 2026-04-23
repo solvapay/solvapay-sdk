@@ -215,9 +215,9 @@ retry — without hand-rolling a gated tool.
 
 | Tool | Purpose |
 | --- | --- |
-| `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. Uses the legacy one-arg handler signature. |
-| `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. Also legacy one-arg. |
-| `query_sales_trends` | Returns deterministic sales rows for a date range and attaches a **`low-balance` nudge** to the success response when the customer is running low on credits. Exercises the V1 `ctx.respond()` API — the two-arg `(args, ctx)` handler signature. |
+| `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. |
+| `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. |
+| `query_sales_trends` | Returns deterministic sales rows for a date range and attaches a **`low-balance` nudge** to the success response when the customer is running low on credits. Exercises the nudge branch of `ctx.respond()`. |
 
 All three are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false`
 when you copy this example to your own repo — the demo tools and their
@@ -226,7 +226,7 @@ slash-command prompts (`/search_knowledge`, `/get_market_quote`,
 
 ### `ctx.respond()` and upsell nudges
 
-`query_sales_trends` shows the new V1 handler surface end-to-end:
+`query_sales_trends` shows the handler surface end-to-end:
 
 ```ts
 handler: async ({ range }, ctx) => {
@@ -256,9 +256,6 @@ handler: async ({ range }, ctx) => {
 - Reserved stubs: `ctx.emit(block)` (V1 queues, V1.1 SSE emits),
   `ctx.progress(...)` / `ctx.progressRaw(...)` (V1 no-op), `ctx.signal`
   (V1 unaborted).
-
-**Backwards compatibility:** one-arg `async (args) => data` handlers
-keep working indefinitely — no refactor required.
 
 ### End-to-end recipe
 
