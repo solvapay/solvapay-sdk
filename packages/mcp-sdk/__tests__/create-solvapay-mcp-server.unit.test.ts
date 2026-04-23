@@ -232,4 +232,51 @@ describe('createSolvaPayMcpServer', () => {
       })
     })
   })
+
+  describe('tool _meta.ui descriptor', () => {
+    it('does not auto-stamp _meta.ui.resourceUri on merchant payable tools', () => {
+      const { server } = buildTestServer({
+        additionalTools: ({ registerPayable }) => {
+          registerPayable('search_knowledge', {
+            title: 'Search (test)',
+            schema: { query: z.string() },
+            handler: async () => ({ ok: true }),
+          })
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const payable = registered['search_knowledge']
+      const ui = (payable?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
+      // Merchant payable tools don't carry a descriptor-level UI link by
+      // default — the MCP App iframe opens only when `buildPayableHandler`
+      // stamps `_meta.ui` on a paywall or nudge *result*.
+      expect(ui?.resourceUri).toBeUndefined()
+      // SolvaPay intent tools keep their descriptor-level UI link — users
+      // who invoke `/upgrade` explicitly expect the iframe.
+      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const upgradeUi = (
+        upgrade?._meta as { ui?: { resourceUri?: string } } | undefined
+      )?.ui
+      expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
+    })
+
+    it('respects an explicit opt-in descriptor-level UI link on payable tools', () => {
+      const { server } = buildTestServer({
+        additionalTools: ({ registerPayable, resourceUri }) => {
+          registerPayable('always_open', {
+            title: 'Always open (test)',
+            schema: { query: z.string() },
+            meta: { ui: { resourceUri } },
+            handler: async () => ({ ok: true }),
+          })
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const alwaysOpen = registered['always_open']
+      const ui = (alwaysOpen?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
+      expect(ui?.resourceUri).toBe('ui://test/view.html')
+    })
+  })
 })

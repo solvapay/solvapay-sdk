@@ -96,7 +96,7 @@ full surface. The TL;DR:
 | Export | Use when |
 |---|---|
 | `createSolvaPayMcpServer(opts)` | You want the batteries-included `McpServer` with every SolvaPay tool registered |
-| `registerPayableTool(server, name, opts)` | You want to add a paywall-protected tool with auto-attached `_meta.ui` to an existing `McpServer` |
+| `registerPayableTool(server, name, opts)` | You want to add a paywall-protected tool to an existing `McpServer`. `_meta.ui` is attached per-result on paywall and nudge responses only, so the iframe opens only when there's something to show. |
 
 ## Peer dependencies
 

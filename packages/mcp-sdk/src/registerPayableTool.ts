@@ -1,8 +1,16 @@
 /**
  * `registerPayableTool(server, name, options)` — one-liner for registering
  * a paywall-protected MCP tool on the official `@modelcontextprotocol/sdk`
- * `McpServer`, with `_meta.ui` auto-attached on paywall results so MCP
- * hosts know which UI resource + bootstrap tool to open.
+ * `McpServer`.
+ *
+ * The MCP App iframe opens only when there's something to show: paywall
+ * gate responses and `ctx.respond(..., { nudge })` successes. Both cases
+ * stamp `_meta.ui` on the tool **result** from inside
+ * `buildPayableHandler`. The descriptor-level `_meta.ui.resourceUri` is
+ * intentionally left unset so hosts that key off the tool advertisement
+ * (e.g. MCPJam) don't auto-open the iframe for every routine successful
+ * call. Merchants who want the opposite — always-open behaviour — can
+ * opt in explicitly via `meta: { ui: { resourceUri } }`.
  *
  * Mirrors the positional-`name` shape of `registerAppTool` to keep the
  * convention consistent across the ecosystem.
@@ -73,9 +81,20 @@ export interface RegisterPayableToolOptions<InputSchema extends ZodRawShapeCompa
     extra?: McpToolExtra,
   ) => string | Promise<string>
   /**
-   * Additional `_meta` to merge onto the tool registration envelope
-   * (e.g. custom host flags). `_meta.ui.resourceUri` is always set from
-   * `resourceUri` and cannot be overridden here.
+   * Additional `_meta` merged onto the tool **descriptor** (the tool
+   * advertisement returned by `tools/list`). Pass-through — nothing is
+   * injected by `registerPayableTool` itself.
+   *
+   * By default the descriptor carries no `_meta.ui` link, so hosts that
+   * auto-open an iframe based on tool advertisement (MCPJam, etc.)
+   * won't open the MCP App on routine successful calls. The per-call
+   * `_meta.ui` that `buildPayableHandler` stamps on paywall and
+   * `ctx.respond(..., { nudge })` results is sufficient to trigger
+   * opens only when there's actually something to show.
+   *
+   * To restore always-open behaviour (e.g. to render a persistent
+   * balance strip alongside every call) pass
+   * `meta: { ui: { resourceUri } }` explicitly.
    */
   meta?: Record<string, unknown>
   /**
@@ -123,13 +142,14 @@ export function registerPayableTool<InputSchema extends ZodRawShapeCompat | AnyS
     handler as unknown as Parameters<typeof buildPayableHandler>[2],
   )
 
-  const toolMeta = {
-    ...(meta ?? {}),
-    ui: {
-      resourceUri,
-      ...(meta && typeof meta === 'object' && 'ui' in meta ? (meta.ui as object) : {}),
-    },
-  }
+  // Pass merchant `_meta` through verbatim. We intentionally do NOT
+  // inject `ui.resourceUri` here — the per-call `_meta.ui` that
+  // `buildPayableHandler` stamps on paywall and nudge results is what
+  // drives host iframe opens, and injecting it at the descriptor level
+  // would make hosts like MCPJam auto-open on every routine successful
+  // call. Merchants who want always-open can pass
+  // `meta: { ui: { resourceUri } }` explicitly.
+  const toolMeta = meta ?? {}
 
   // Sensible default: paywalled data tools are most often read-only
   // queries (search, fetch, quote). State-mutating merchant tools
