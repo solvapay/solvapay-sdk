@@ -117,24 +117,79 @@ describe('<McpApp> — live tool-result subscription', () => {
     render(<McpApp app={app} views={{ account: AccountStub, topup: TopupStub }} />)
     await screen.findByTestId('account-stub')
 
-    // Transport tool fires a result — host-context tool name is a
-    // transport tool; the shell must NOT re-route.
-    hostContext.toolInfo.tool.name = 'create_payment_intent'
+    // Every SolvaPay transport tool should be filtered by the
+    // `SOLVAPAY_TRANSPORT_TOOL_NAMES` denylist — notifications for
+    // these resolve via the `callServerTool` adapter promise, and
+    // re-applying them would double-apply state.
+    const TRANSPORT_TOOLS = [
+      'create_payment_intent',
+      'process_payment',
+      'create_topup_payment_intent',
+      'cancel_renewal',
+      'reactivate_renewal',
+      'activate_plan',
+      'create_checkout_session',
+      'create_customer_session',
+    ]
+
+    for (const transportTool of TRANSPORT_TOOLS) {
+      hostContext.toolInfo.tool.name = transportTool
+      await act(async () => {
+        fireToolResult({
+          structuredContent: {
+            view: 'topup',
+            productRef: 'prod_1',
+            returnUrl: 'https://example.test/r',
+          },
+        })
+      })
+    }
+
+    // 50ms grace; no re-route should happen for any of them.
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByTestId('topup-stub')).toBeNull()
+    expect(screen.queryByTestId('account-stub')).toBeTruthy()
+  })
+
+  it('re-routes when a paywalled merchant tool fires a nudge notification mid-session', async () => {
+    // Merchant data tools (not in VIEW_FOR_TOOL, not in the transport
+    // denylist) must re-route when their notification carries a
+    // recognisable `structuredContent.view`. This is the live-flow
+    // analogue of the mount-time data-tool entry path.
+    const { app, hostContext, fireToolResult } = makeEventfulApp({
+      initialToolName: 'upgrade',
+      initialStructured: {
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+        customer: { ref: 'cus_1' },
+      },
+    })
+
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">checkout</div>)
+    const NudgeStub = vi.fn(() => <div data-testid="nudge-stub">nudge</div>)
+
+    render(<McpApp app={app} views={{ checkout: CheckoutStub, nudge: NudgeStub }} />)
+    await screen.findByTestId('checkout-stub')
+
+    hostContext.toolInfo.tool.name = 'query_sales_trends'
 
     await act(async () => {
       fireToolResult({
         structuredContent: {
-          view: 'topup',
+          view: 'nudge',
           productRef: 'prod_1',
           returnUrl: 'https://example.test/r',
+          customer: { ref: 'cus_1' },
+          plans: [{ reference: 'pln_ub', planType: 'usage-based' }],
+          nudge: { kind: 'low-balance', message: 'top up' },
+          data: { ok: true },
         },
       })
     })
 
-    // 100ms grace; no re-route should happen.
-    await new Promise((r) => setTimeout(r, 50))
-    expect(screen.queryByTestId('topup-stub')).toBeNull()
-    expect(screen.queryByTestId('account-stub')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.queryByTestId('nudge-stub')).toBeTruthy()
+    })
   })
 
   it('ignores error tool-result notifications', async () => {

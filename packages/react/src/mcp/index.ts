@@ -43,8 +43,23 @@ export type {
   SendMessageParams,
 } from './bridge'
 
-export { fetchMcpBootstrap, parseBootstrapFromToolResult } from './bootstrap'
-export type { McpBootstrap, McpView, McpAppBootstrapLike } from './bootstrap'
+export {
+  classifyHostEntry,
+  fetchMcpBootstrap,
+  isTransportToolName,
+  parseBootstrapFromToolResult,
+  SOLVAPAY_TRANSPORT_TOOL_NAMES,
+  waitForInitialToolResult,
+} from './bootstrap'
+export type {
+  AppToolResultEvents,
+  HostEntryClassification,
+  McpAppBootstrapLike,
+  McpBootstrap,
+  McpView,
+  WaitForInitialToolResultOptions,
+  WaitForInitialToolResultResult,
+} from './bootstrap'
 
 export { seedMcpCaches } from './cache-seed'
 

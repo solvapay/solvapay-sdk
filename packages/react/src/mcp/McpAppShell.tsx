@@ -51,6 +51,7 @@ import {
   type McpNudgeViewProps,
 } from './views/McpNudgeView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
+import { ExternalLinkGlyph } from '../components/ExternalLinkGlyph'
 
 export interface McpAppShellProps {
   bootstrap: McpBootstrap
@@ -142,15 +143,24 @@ export function McpAppShell({
   // re-opening the iframe after backgrounding it sees fresh data.
   // A ref guard keeps it to one call per `onRefreshBootstrap` identity
   // (protects against strict-mode double-mount).
+  //
+  // Skip for paywall / nudge surfaces: those views are driven by the
+  // originating tool result (the server stamps `view: 'paywall'` /
+  // `view: 'nudge'` on the merchant tool's response). `refreshInitial`
+  // re-calls the `upgrade` intent tool and would return
+  // `view: 'checkout'`, clobbering the gate/strip the user just saw.
+  // The fresh intent snapshot is re-fetched the next time the user
+  // commits an action (upgrade click, topup, etc.).
   const refreshedRef = useRef(false)
   useEffect(() => {
     if (!onRefreshBootstrap) return
     if (refreshedRef.current) return
+    if (bootstrap.view === 'paywall' || bootstrap.view === 'nudge') return
     refreshedRef.current = true
     void Promise.resolve(onRefreshBootstrap()).catch(() => {
       /* best-effort. */
     })
-  }, [onRefreshBootstrap])
+  }, [onRefreshBootstrap, bootstrap.view])
 
   const showFooter = footer ?? Boolean(merchant?.termsUrl || merchant?.privacyUrl)
   const isShellSidebarEligible = isChrome && bootstrap.customer !== null
@@ -299,9 +309,7 @@ function ShellFooter({
           aria-label="Terms (opens in a new tab)"
         >
           Terms
-          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
-            {' '}↗
-          </span>
+          <ExternalLinkGlyph />
         </a>
       ) : null}
       {termsUrl && privacyUrl ? <span aria-hidden="true"> · </span> : null}
@@ -314,9 +322,7 @@ function ShellFooter({
           aria-label="Privacy (opens in a new tab)"
         >
           Privacy
-          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
-            {' '}↗
-          </span>
+          <ExternalLinkGlyph />
         </a>
       ) : null}
       <span aria-hidden="true"> · </span>

@@ -52,6 +52,7 @@ import { useStripeProbe } from '../useStripeProbe'
 import { BackLink } from './BackLink'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 import type { Plan } from '../../types'
+import { ExternalLinkGlyph } from '../../components/ExternalLinkGlyph'
 
 // Keep polling fast enough that the UI feels responsive after the user
 // completes payment in the other tab, but not so fast that we hammer the
@@ -1173,9 +1174,7 @@ const HostedLinkButton = memo(function HostedLinkButton({
       >
         <button type="button" className={cx.button}>
           {readyLabel}
-          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
-            {' '}↗
-          </span>
+          <ExternalLinkGlyph />
         </button>
       </a>
     )
@@ -1230,9 +1229,7 @@ const AwaitingBody = memo(function AwaitingBody({
       >
         <button type="button" className={cx.button}>
           Reopen checkout
-          <span className="solvapay-mcp-external-glyph" aria-hidden="true">
-            {' '}↗
-          </span>
+          <ExternalLinkGlyph />
         </button>
       </a>
       <button type="button" className={cx.linkButton} onClick={onCancel}>

@@ -34,6 +34,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 - **Do not build an About surface.** Product description lives in tool descriptions, Claude's text response, and the `docs://solvapay/overview.md` resource. Not in an iframe.
 - **The UI is a mode, not a primary.** `McpAppShell` is an internal composition. What's exported as primary is intent-specific surfaces.
 - **One surface, one job.** No nested navigation. No multi-step wizards except where genuinely unavoidable (card entry, top-up amount selection). If a surface needs tabs to fit its content, the content is too broad.
+- **Route on `structuredContent.view`, not tool name.** `<McpApp>` resolves the surface from the server-stamped `view` discriminator (`paywall` / `nudge` / `checkout` / `account` / `topup`) on any tool result — intent tool, merchant data tool (`search_knowledge`, `query_sales_trends`), whatever. Data tools that return `_meta.ui.resourceUri` render their gate/strip directly from the originating `ui/notifications/tool-result`; re-calling the paywalled tool would consume another unit of usage, and re-calling `upgrade` would clobber the gate view with a fresh checkout. `McpAppShell` also suppresses its mount-refresh for `paywall` / `nudge` surfaces for the same reason.
 
 ### Text-mode
 

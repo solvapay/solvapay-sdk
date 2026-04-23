@@ -648,6 +648,8 @@ body {
   opacity: 0.75;
   font-size: 0.9em;
   letter-spacing: 0.02em;
+  vertical-align: -0.1em;
+  margin-left: 0.35em;
 }
 
 /* ---- Plan actions row ---- */

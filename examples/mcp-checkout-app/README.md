@@ -257,6 +257,46 @@ handler: async ({ range }, ctx) => {
   `ctx.progress(...)` / `ctx.progressRaw(...)` (V1 no-op), `ctx.signal`
   (V1 unaborted).
 
+### Data-tool iframe entry — how paywall / nudge reach the widget
+
+When a paywalled merchant tool (e.g. `search_knowledge`) returns a gate
+or nudge response, `buildPayableHandler` stamps `_meta.ui.resourceUri`
+and rewrites `structuredContent` with `view: 'paywall'` (gate) or
+`view: 'nudge'` (strip) plus the full `BootstrapPayload`. The MCP host
+(MCPJam, ChatGPT Apps, Claude Desktop) opens the iframe *from that
+tool result* and forwards the payload to the mounted widget via
+`ui/notifications/tool-result`. `<McpApp>` does **not** re-call the
+merchant tool for bootstrap — doing so would consume another unit of
+usage, and the `upgrade` intent fallback would return a checkout
+payload that clobbers the gate / strip the user just saw.
+
+Concretely, the widget's mount branches on `classifyHostEntry(app)`:
+
+- **intent entry** (`toolInfo.tool.name ∈ { upgrade, manage_account,
+  topup }`): call the matching intent tool via `fetchMcpBootstrap`.
+  Same behaviour as before.
+- **data entry** (merchant-registered tool, e.g. `search_knowledge`):
+  wait up to 2s for the originating `ui/notifications/tool-result` and
+  consume its `structuredContent` directly via
+  `parseBootstrapFromToolResult`. No `callServerTool` round-trip. If
+  the host fails to deliver the initial notification within the
+  timeout, `<McpApp>` surfaces an `onInitError` naming the fix ("host
+  must forward the originating tool result to the mounted iframe").
+- **transport entry** (payments / sessions / renewal / activation):
+  treated as unknown — rare but safe fallback to `upgrade`.
+
+`McpAppShell` skips its mount-refresh when `bootstrap.view` is
+`paywall` or `nudge` for the same reason: the gate / strip came from
+an authoritative tool result and should not race a fresh `upgrade`
+fetch. The refresh fires again the next time the customer commits an
+action (plan select, topup confirmation, etc.).
+
+Integrators who own their own widget mount on top of
+`createMcpAppAdapter` can replicate this flow with
+`waitForInitialToolResult(app, { timeoutMs })` — a one-shot helper
+exported from `@solvapay/react/mcp` that subscribes, parses, and
+unsubscribes.
+
 ### End-to-end recipe
 
 1. Configure **three plans** on your product in the SolvaPay admin:

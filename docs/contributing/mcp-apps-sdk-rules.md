@@ -26,6 +26,8 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 - **Do not build an About surface.** Product description lives in tool descriptions, Claude's text response, and the `docs://solvapay/overview.md` resource. Not in an iframe.
 - **The UI is a mode, not a primary.** `McpAppShell` is an internal composition. What's exported as primary is intent-specific surfaces.
 - **One surface, one job.** No nested navigation. No multi-step wizards except where genuinely unavoidable (card entry, top-up amount selection). If a surface needs tabs to fit its content, the content is too broad.
+- **The widget routes on `structuredContent.view`, not tool name.** `<McpApp>` / `<McpAppShell>` pick the surface from the `view` discriminator the server stamps on every tool result, not from `toolInfo.tool.name`. This is load-bearing for paywall/nudge: when a merchant data tool (e.g. `search_knowledge`) returns the gate/strip, the host opens the iframe *from that tool's result* — the widget consumes the initial `ui/notifications/tool-result` and renders paywall/nudge directly, without re-calling an intent tool. Re-calling would (a) consume another unit of usage on the paywalled tool or (b) clobber the gate view with a fresh `checkout`. The only tool-name-driven decision left in `<McpApp>` is the intent-tool shortcut: `upgrade` / `manage_account` / `topup` iframe entries may call their matching tool up front as a bootstrap optimisation.
+- **Refresh is for intent surfaces, not gates.** `McpAppShell` skips its mount-refresh when `bootstrap.view` is `paywall` or `nudge`. The server's gate response is the authoritative snapshot for those surfaces; refreshing via `upgrade` would race and replace the gate with a checkout view.
 
 ### Text-mode
 

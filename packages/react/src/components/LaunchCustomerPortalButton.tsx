@@ -17,6 +17,7 @@ import { useTransport } from '../hooks/useTransport'
 import { useCopy } from '../hooks/useCopy'
 import { composeEventHandlers } from '../primitives/composeEventHandlers'
 import { Slot } from '../primitives/slot'
+import { ExternalLinkGlyph } from './ExternalLinkGlyph'
 
 type UrlState =
   | { status: 'loading' }
@@ -119,9 +120,7 @@ export const LaunchCustomerPortalButton = forwardRef<
     return (
       <a ref={forwardedRef} {...readyProps}>
         {label}
-        <span className="solvapay-mcp-external-glyph" aria-hidden="true">
-          {' '}↗
-        </span>
+        <ExternalLinkGlyph />
       </a>
     )
   }
