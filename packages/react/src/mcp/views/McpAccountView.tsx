@@ -129,7 +129,7 @@ export function McpAccountView({
         </CancelledPlanNotice.Root>
 
         {!hasAnyPlan && hasCredits && (
-          <div>
+          <div className={cx.stack}>
             <h2 className={cx.heading}>{"You're on pay-as-you-go credits"}</h2>
             <p className={cx.muted}>
               Top up to keep going, or choose a plan from the Plan tab for predictable
@@ -144,7 +144,7 @@ export function McpAccountView({
         )}
 
         {!hasAnyPlan && !hasCredits && (
-          <div>
+          <div className={cx.stack}>
             <h2 className={cx.heading}>{"You don't have an active plan"}</h2>
             <p className={cx.muted}>
               Pick a plan — free, pay-as-you-go, or paid — from the Plan tab.

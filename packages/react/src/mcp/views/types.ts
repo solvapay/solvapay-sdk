@@ -8,6 +8,7 @@
  */
 export interface McpViewClassNames {
   card?: string
+  stack?: string
   heading?: string
   muted?: string
   button?: string
@@ -26,6 +27,7 @@ export interface McpViewClassNames {
 
 export const DEFAULT_MCP_CLASS_NAMES: Required<McpViewClassNames> = {
   card: 'solvapay-mcp-card',
+  stack: 'solvapay-mcp-stack',
   heading: 'solvapay-mcp-heading',
   muted: 'solvapay-mcp-muted',
   button: 'solvapay-mcp-button',
