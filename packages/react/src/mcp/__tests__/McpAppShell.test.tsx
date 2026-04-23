@@ -263,6 +263,30 @@ describe('<McpAppShell>', () => {
     expect(h1.textContent).toBe('Acme Knowledge Base')
   })
 
+  it('renders the product description as a tagline below the product heading', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const { container } = renderShell(
+      {
+        product: {
+          reference: 'prd_x',
+          name: 'Acme Knowledge Base',
+          description: 'Retrieval-augmented answers for your docs.',
+        } as never,
+      },
+      ctx,
+    )
+    const tagline = container.querySelector('.solvapay-mcp-shell-tagline')
+    expect(tagline?.textContent).toBe('Retrieval-augmented answers for your docs.')
+  })
+
+  it('omits the tagline when the product has no description', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const { container } = renderShell({}, ctx)
+    expect(container.querySelector('.solvapay-mcp-shell-tagline')).toBeNull()
+  })
+
   it('falls back to initials when the merchant has no logoUrl', () => {
     const config = seedMerchant({ displayName: 'Acme Corp', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)

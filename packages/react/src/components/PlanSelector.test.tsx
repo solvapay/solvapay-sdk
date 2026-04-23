@@ -261,4 +261,100 @@ describe('PlanSelector primitive', () => {
     ).toThrow(MissingProductRefError)
     spy.mockRestore()
   })
+
+  it('CardPrice renders a per-call rate for usage-based (PAYG) plans', async () => {
+    const payg: Plan = {
+      reference: 'pln_payg',
+      name: 'Pay as you go',
+      price: 0,
+      currency: 'usd',
+      type: 'usage-based',
+      creditsPerUnit: 1,
+    }
+    seed([payg])
+    render(
+      <SolvaPayProvider config={{}}>
+        <PlanSelector.Root productRef="prd_x">
+          <PlanSelector.Grid>
+            <PlanSelector.Card>
+              <PlanSelector.CardName />
+              <PlanSelector.CardPrice />
+              <PlanSelector.CardInterval />
+            </PlanSelector.Card>
+          </PlanSelector.Grid>
+        </PlanSelector.Root>
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('$0.01 / call')).toBeTruthy())
+    // PAYG plans shouldn't render a cycle suffix — that's a per-call rate,
+    // not a per-cycle charge.
+    expect(screen.queryByText('/month')).toBeNull()
+    expect(screen.queryByText('/year')).toBeNull()
+  })
+
+  it('CardInterval falls back to billingCycle when interval is not set', async () => {
+    const bootstrapShape: Plan = {
+      reference: 'pln_boot_monthly',
+      name: 'Pro',
+      price: 50000,
+      currency: 'sek',
+      type: 'recurring',
+      // No `interval` — bootstrap plans only populate `billingCycle`.
+      billingCycle: 'monthly',
+    }
+    seed([bootstrapShape])
+    render(
+      <SolvaPayProvider config={{}}>
+        <PlanSelector.Root productRef="prd_x">
+          <PlanSelector.Grid>
+            <PlanSelector.Card>
+              <PlanSelector.CardName />
+              <PlanSelector.CardPrice />
+              <PlanSelector.CardInterval />
+            </PlanSelector.Card>
+          </PlanSelector.Grid>
+        </PlanSelector.Root>
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('/month')).toBeTruthy())
+  })
+
+  it('CardName falls back to a type-derived label when plan.name is empty', async () => {
+    const nameless: Plan = {
+      reference: 'pln_no_name',
+      price: 1800,
+      currency: 'usd',
+      type: 'recurring',
+      interval: 'month',
+    }
+    const namelessPayg: Plan = {
+      reference: 'pln_no_name_payg',
+      price: 0,
+      currency: 'usd',
+      type: 'usage-based',
+      creditsPerUnit: 1,
+    }
+    const namelessFree: Plan = {
+      reference: 'pln_no_name_free',
+      price: 0,
+      currency: 'usd',
+      type: 'recurring',
+      requiresPayment: false,
+    }
+    seed([nameless, namelessPayg, namelessFree])
+    render(
+      <SolvaPayProvider config={{}}>
+        <PlanSelector.Root productRef="prd_x">
+          <PlanSelector.Grid>
+            <PlanSelector.Card>
+              <PlanSelector.CardName />
+            </PlanSelector.Card>
+          </PlanSelector.Grid>
+        </PlanSelector.Root>
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('Plan')).toBeTruthy())
+    expect(screen.getByText('Pay as you go')).toBeTruthy()
+    expect(screen.getByText('Free')).toBeTruthy()
+  })
 })

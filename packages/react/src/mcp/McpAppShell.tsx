@@ -176,6 +176,8 @@ export function McpAppShell({
   // that don't.
   const productName =
     (bootstrap.product as { name?: string } | undefined)?.name ?? null
+  const productDescription =
+    (bootstrap.product as { description?: string } | undefined)?.description ?? null
 
   const handlePaywallUpgrade = () => {
     setPaywallDismissed(true)
@@ -202,6 +204,7 @@ export function McpAppShell({
         <ShellHeader
           merchant={merchant}
           productName={productName}
+          productDescription={productDescription}
           classNames={classNames}
         />
       ) : null}
@@ -245,10 +248,12 @@ export function McpAppShell({
 function ShellHeader({
   merchant,
   productName,
+  productDescription,
   classNames,
 }: {
   merchant: ReturnType<typeof useMerchant>['merchant']
   productName: string | null
+  productDescription: string | null
   classNames?: McpViewClassNames
 }) {
   const cx = resolveMcpClassNames(classNames)
@@ -264,6 +269,13 @@ function ShellHeader({
     : 'SP'
 
   const headingText = productName ?? displayName ?? 'My account'
+  // Only show the description when we actually resolved a product
+  // heading — falling back to the merchant name and then tacking on
+  // a product description that belongs to a different title would
+  // mislead, so the tagline is tied to the product identity it
+  // describes.
+  const tagline =
+    productName && productDescription ? productDescription.trim() : null
 
   return (
     <header className="solvapay-mcp-shell-header">
@@ -284,6 +296,9 @@ function ShellHeader({
         ) : null}
       </div>
       <h1 className={`${cx.heading} solvapay-mcp-shell-title`.trim()}>{headingText}</h1>
+      {tagline ? (
+        <p className="solvapay-mcp-shell-tagline">{tagline}</p>
+      ) : null}
     </header>
   )
 }

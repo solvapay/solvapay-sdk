@@ -388,6 +388,13 @@ body {
   font-weight: 600;
 }
 
+.solvapay-mcp-shell-tagline {
+  margin: -6px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #475569);
+}
+
 .solvapay-mcp-tablist {
   display: flex;
   gap: 4px;

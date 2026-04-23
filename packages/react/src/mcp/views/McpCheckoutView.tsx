@@ -232,7 +232,12 @@ function EmbeddedCheckout({
   cx: Cx
   children?: React.ReactNode
 }) {
-  const { loading, isRefetching } = usePurchase()
+  const { loading, isRefetching, activePurchase } = usePurchase()
+
+  // Keep the customer's current plan in the grid even when it's Free
+  // so the picker doubles as a "here's what you have now" summary.
+  // The grid marks it `data-state=current` and disables selection.
+  const currentPlanRef = activePurchase?.planSnapshot?.reference ?? null
 
   // Memoised sort + popular resolution over the bootstrap plans so
   // `PlanSelector` gets a stable reference and the PAYG card renders
@@ -245,6 +250,15 @@ function EmbeddedCheckout({
     const payg = paidPlans.find((p) => isPayg(p))
     return payg?.reference
   }, [paidPlans])
+
+  // Filter keeps every paid plan and additionally lets the currently
+  // active plan through even when it's Free — the grid renders it
+  // disabled with a `Current` badge rather than hiding it outright.
+  const planFilter = useMemo(
+    () => (plan: Plan) =>
+      plan.requiresPayment !== false || plan.reference === currentPlanRef,
+    [currentPlanRef],
+  )
 
   const [step, setStep] = useState<Step>('plan')
   const [selectedAmountMinor, setSelectedAmountMinor] = useState<number | null>(null)
@@ -264,11 +278,13 @@ function EmbeddedCheckout({
     <div className={cx.card} data-refreshing={isRefetching ? 'true' : undefined}>
       <PlanSelector.Root
         productRef={productRef}
-        // Strip the Free plan — activation surface shows paid plans only.
-        filter={planFilterPaid}
+        // Paid plans + the current plan (even if Free) so the picker
+        // also surfaces "you're on X today" as a disabled card.
+        filter={planFilter}
         // PAYG first, then recurring ascending by price.
         sortBy={planSortByPaygFirstThenAsc}
         popularPlanRef={paygPlanRef}
+        currentPlanRef={currentPlanRef}
         // Don't auto-select on recurring-only shapes; the brief's
         // wireframe shows a neutral initial state with a
         // "Continue with …" CTA that only lights up once a plan is
@@ -890,9 +906,7 @@ const RecurringPaymentStep = memo(function RecurringPaymentStep({
 
       <div className="solvapay-mcp-checkout-order-summary" data-variant="recurring">
         <div className="solvapay-mcp-checkout-order-summary-row">
-          <span className={cx.muted}>
-            {planName} · {cycle}
-          </span>
+          <span className={cx.muted}>{planName}</span>
           <span>{formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}</span>
         </div>
         {credits > 0 ? (
@@ -915,12 +929,12 @@ const RecurringPaymentStep = memo(function RecurringPaymentStep({
         <PaymentForm.Error className={cx.error} />
 
         <p className={`${cx.muted} solvapay-mcp-checkout-terms`.trim()}>
-          By subscribing, you agree {planName} renews at{' '}
-          {formatPrice(amountMinor, currency, { locale })}/{cycle} until you cancel.
+          By subscribing, you agree {planName} renews {cycle} at{' '}
+          {formatPrice(amountMinor, currency, { locale })} until you cancel.
         </p>
 
         <PaymentForm.SubmitButton className={cx.button}>
-          Subscribe — {formatPrice(amountMinor, currency, { locale })} / {cycle}
+          Subscribe — {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
         </PaymentForm.SubmitButton>
       </PaymentForm.Root>
     </>
@@ -1040,13 +1054,6 @@ function isPayg(plan: BootstrapPlanLike | null | undefined): boolean {
   if (!plan) return false
   const type = plan.planType ?? plan.type
   return type === 'usage-based' || type === 'hybrid'
-}
-
-function planFilterPaid(plan: Plan): boolean {
-  // `requiresPayment === false` marks a Free plan in the server
-  // schema; we exclude those from the activation surface (per the
-  // brief's §3 — no Free card).
-  return plan.requiresPayment !== false
 }
 
 function planSortByPaygFirstThenAsc(a: Plan, b: Plan): number {

@@ -296,7 +296,7 @@ describe('<McpCheckoutView> — plan step', () => {
     expect(screen.queryByText(/Stay on Free/)).toBeNull()
   })
 
-  it('hides the Free plan card on the selection surface', async () => {
+  it('hides the Free plan card on the selection surface when no purchase is active', async () => {
     renderView({ fromPaywall: true })
     await waitFor(() => {
       // PAYG + Pro render by name
@@ -305,6 +305,68 @@ describe('<McpCheckoutView> — plan step', () => {
     })
     // "Free" would appear as the card name; ensure it's absent.
     expect(screen.queryByText(/^Free$/)).toBeNull()
+  })
+
+  it('shows the current plan as a disabled card with a Current badge — including when it is Free', async () => {
+    // Spin up the view with an active Free purchase so the grid has
+    // a `currentPlanRef` pointing at the Free plan.
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const activeFreePurchase = {
+      reference: 'pur_free',
+      productName: 'Test',
+      status: 'active',
+      startDate: new Date().toISOString(),
+      amount: 0,
+      planSnapshot: { reference: 'pln_free', name: 'Free', planType: 'free' },
+    } as unknown as PurchaseInfo
+    const ctx = buildCtx(config, [activeFreePurchase])
+    plansCache.set(productRef, {
+      plans: [freePlan, paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    render(
+      <SolvaPayContext.Provider value={ctx}>
+        <McpCheckoutView
+          productRef={productRef}
+          publishableKey="pk_test"
+          returnUrl="https://example.test/r"
+          plans={bootstrapPlans}
+          fromPaywall
+        />
+      </SolvaPayContext.Provider>,
+    )
+
+    // The Free card renders with the Current badge + is disabled.
+    // Locate it via the unique Current badge rather than the name,
+    // which collides with the `Free` price label on the same card.
+    await waitFor(() => {
+      expect(screen.getByText('Current')).toBeTruthy()
+    })
+    const freeCard = screen
+      .getByText('Current')
+      .closest('[data-solvapay-plan-selector-card]') as HTMLButtonElement
+    expect(freeCard).toBeTruthy()
+    expect(freeCard.getAttribute('data-state')).toBe('current')
+    expect(freeCard.getAttribute('aria-disabled')).toBe('true')
+    expect(freeCard.disabled).toBe(true)
+    expect(freeCard.getAttribute('data-free')).toBe('')
+
+    // PAYG card stays clickable; its selection doesn't leak into the
+    // Free card.
+    const paygCard = screen
+      .getByText('Pay as you go')
+      .closest('[data-solvapay-plan-selector-card]') as HTMLButtonElement
+    expect(paygCard.getAttribute('data-state')).toBe('selected')
+
+    // Clicking the Free card is a no-op — the continue CTA tracks PAYG.
+    act(() => {
+      fireEvent.click(freeCard)
+    })
+    expect(
+      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+    ).toBeTruthy()
   })
 
   it("CTA label tracks the selected plan", async () => {
