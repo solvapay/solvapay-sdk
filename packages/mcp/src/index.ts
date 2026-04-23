@@ -87,6 +87,8 @@ export {
   narrateUpgrade,
   narrateTopup,
   narrateActivatePlan,
+  uiPlaceholder,
+  balanceSummary,
 } from './narrate'
 export type { IntentTool, NarratorOutput } from './narrate'
 

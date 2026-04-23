@@ -60,11 +60,23 @@ export interface BootstrapCustomer {
  * `CallToolResult` that every framework produces. Kept local to avoid
  * coupling to `@modelcontextprotocol/sdk/types.js` type churn.
  */
+/**
+ * Routing hint surfaced on individual content blocks. Mirrors the MCP
+ * `Annotations.audience` field — hosts that honour it (ChatGPT Apps,
+ * Claude Desktop) hide `['assistant']`-tagged blocks from the user pane
+ * while still feeding them to the model. Hosts that don't honour it
+ * (e.g. MCP Inspector) render every block verbatim.
+ */
+export interface SolvaPayContentAnnotations {
+  audience?: Array<'user' | 'assistant'>
+  priority?: number
+}
+
 export interface SolvaPayCallToolResult {
   content: Array<
-    | { type: 'text'; text: string }
-    | { type: 'image'; data: string; mimeType: string }
-    | { type: 'resource'; resource: Record<string, unknown> }
+    | { type: 'text'; text: string; annotations?: SolvaPayContentAnnotations }
+    | { type: 'image'; data: string; mimeType: string; annotations?: SolvaPayContentAnnotations }
+    | { type: 'resource'; resource: Record<string, unknown>; annotations?: SolvaPayContentAnnotations }
   >
   structuredContent?: Record<string, unknown>
   isError?: boolean

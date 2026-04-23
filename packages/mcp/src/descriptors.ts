@@ -276,20 +276,26 @@ export function buildSolvaPayDescriptors(
     })
   }
 
+  const MODE_HINT =
+    " By default renders the UI iframe with a one-line placeholder; pass `mode: 'text'` for a markdown-only summary on CLI / text-only hosts, or `mode: 'auto'` to include both."
+
   pushIntentTool(
     'checkout',
     'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).',
+    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
+      MODE_HINT,
   )
   pushIntentTool(
     'account',
     'Manage account',
-    "Show or manage the current customer's SolvaPay account: plan, balance, usage, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), topup (add credits).",
+    "Show or manage the current customer's SolvaPay account: plan, balance, usage, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), topup (add credits)." +
+      MODE_HINT,
   )
   pushIntentTool(
     'topup',
     'Top up credits',
-    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).',
+    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
+      MODE_HINT,
   )
   // `activate_plan` is registered below (transport section) as a
   // dual-audience tool that handles both the picker bootstrap (no
@@ -504,7 +510,8 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.activatePlan,
     title: 'Activate plan',
     description:
-      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits).',
+      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits).' +
+      MODE_HINT,
     inputSchema: {
       productRef: z.string().optional(),
       planRef: z.string().optional(),

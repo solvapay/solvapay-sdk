@@ -8,7 +8,7 @@
  */
 
 import type { BootstrapPayload, McpToolExtra, SolvaPayCallToolResult } from './types'
-import { NARRATORS, type IntentTool } from './narrate'
+import { NARRATORS, uiPlaceholder, type IntentTool } from './narrate'
 
 /**
  * ISO 4217 currencies where the "minor unit" equals the major unit.
@@ -175,31 +175,38 @@ export function toolResult(data: unknown): SolvaPayCallToolResult {
  * Requested rendering mode per-call. Passed through the `mode` input
  * arg of every intent tool.
  *
- * - `'auto'` (default) — emit both the UI resource ref on `_meta.ui`
- *   and the narrated markdown text. Host picks.
- * - `'text'` — strip the UI resource ref so UI-capable hosts also
- *   render text-only for this call.
- * - `'ui'` — replace the narrated markdown with a short placeholder
- *   so the chat transcript stays tidy on UI-rendering hosts.
+ * - `'ui'` (default) — emit a one-line placeholder in `content[0]`
+ *   alongside the UI resource ref on `_meta.ui`. Keeps UI-rendering
+ *   hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) tidy — the
+ *   iframe already carries the rich detail. Agents get the full
+ *   `BootstrapPayload` on `structuredContent` for grounding.
+ * - `'text'` — strip the UI resource ref and emit the full narrated
+ *   markdown so CLI / text-only hosts get a human summary.
+ * - `'auto'` — emit both the narrated markdown and the UI resource
+ *   ref. The narrated block is annotated with `audience: ['assistant']`
+ *   so audience-aware hosts pass it to the model without showing it in
+ *   the user pane.
  */
 export type SolvaPayToolMode = 'ui' | 'text' | 'auto'
 
 export function parseMode(raw: unknown): SolvaPayToolMode {
   if (raw === 'ui' || raw === 'text' || raw === 'auto') return raw
-  return 'auto'
+  return 'ui'
 }
 
 /**
  * Build a `SolvaPayCallToolResult` that respects the requested `mode`:
  *
- *  - `auto`/`text` — narrated markdown in `content[0]`, plus
- *    `resource_link` blocks for external URLs the narrator provides.
- *    `structuredContent` is always the raw bootstrap payload so agents
- *    parsing JSON see the source of truth.
- *  - `text` also strips `_meta.ui.*` so UI-capable hosts render the
- *    text content only.
- *  - `ui` replaces the narrated markdown with a short placeholder
- *    (still non-empty — MCP requires at least one content block).
+ *  - `ui` (default) emits a one-line placeholder in `content[0]` and
+ *    keeps `_meta.ui.*` so UI-rendering hosts open the iframe without
+ *    a noisy narration beneath it. `structuredContent` still carries
+ *    the raw bootstrap payload so agents have full grounding.
+ *  - `text` emits the full narrated markdown (plus any
+ *    `resource_link` blocks) and strips `_meta.ui.*` so UI-capable
+ *    hosts render text-only for this call.
+ *  - `auto` emits both. The narrated text block is annotated with
+ *    `audience: ['assistant']` so audience-aware hosts still hide it
+ *    from the user pane while feeding it to the model.
  *
  * The narrator is picked by the `tool` name; unknown tools fall back
  * to the JSON dump that `toolResult` produces today.
@@ -207,7 +214,7 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
 export function narratedToolResult(
   tool: IntentTool | string,
   data: BootstrapPayload,
-  mode: SolvaPayToolMode = 'auto',
+  mode: SolvaPayToolMode = 'ui',
   baseMeta: Record<string, unknown> | undefined = undefined,
 ): SolvaPayCallToolResult {
   const narrator = (NARRATORS as Record<string, (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }>)[tool]
@@ -221,24 +228,35 @@ export function narratedToolResult(
   }
 
   const { text, links } = narrator(data)
-  const productName =
-    (data.product as { name?: string } | undefined)?.name ?? 'this app'
+
+  const narratedBlock: SolvaPayCallToolResult['content'][number] = {
+    type: 'text',
+    text,
+    annotations: { audience: ['assistant'] },
+  }
+
+  const resourceLinkBlocks = ((links ?? []).map((l) => ({
+    type: 'resource_link',
+    uri: l.uri,
+    name: l.name,
+    annotations: { audience: ['user'] },
+    // `resource_link` isn't in the structural content union we use for
+    // `SolvaPayCallToolResult`, but the official SDK accepts it — we
+    // cast at the boundary to keep the local type narrow while still
+    // shipping the enrichment.
+  })) as unknown as SolvaPayCallToolResult['content'])
+
+  const placeholderBlock: SolvaPayCallToolResult['content'][number] = {
+    type: 'text',
+    text: uiPlaceholder(tool as IntentTool, data),
+  }
 
   const content: SolvaPayCallToolResult['content'] =
     mode === 'ui'
-      ? [{ type: 'text', text: `Opening your ${productName} account…` }]
-      : [
-          { type: 'text', text },
-          // `resource_link` isn't in the structural content union we
-          // use for `SolvaPayCallToolResult`, but the official SDK
-          // accepts it — we cast at the boundary to keep the local
-          // type narrow while still shipping the enrichment.
-          ...((links ?? []).map((l) => ({
-            type: 'resource_link',
-            uri: l.uri,
-            name: l.name,
-          })) as unknown as SolvaPayCallToolResult['content']),
-        ]
+      ? [placeholderBlock]
+      : mode === 'text'
+        ? [narratedBlock, ...resourceLinkBlocks]
+        : [narratedBlock, ...resourceLinkBlocks]
 
   const meta =
     mode === 'text' && baseMeta && 'ui' in baseMeta

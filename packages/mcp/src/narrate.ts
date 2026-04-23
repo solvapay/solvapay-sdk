@@ -84,6 +84,17 @@ function productName(data: BootstrapPayload): string {
   return typeof name === 'string' && name ? name : 'SolvaPay'
 }
 
+/**
+ * Human-readable balance summary used by the `'ui'` mode placeholder.
+ * Returns `null` when no balance is available so the caller can skip
+ * the segment entirely.
+ */
+export function balanceSummary(customer: CustomerShape | null | undefined): string | null {
+  const row = balanceRow(customer)
+  if (!row) return null
+  return row.replace(/^Balance:\s*/, '')
+}
+
 function balanceRow(customer: CustomerShape | null | undefined): string | null {
   if (!customer?.balance) return null
   const credits = customer.balance.credits ?? 0
@@ -231,4 +242,30 @@ export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorO
   manage_account: narrateManageAccount,
   topup: narrateTopup,
   activate_plan: narrateActivatePlan,
+}
+
+const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
+  topup: (p) => `Opened ${p} top-up.`,
+  upgrade: (p) => `Opened ${p} upgrade.`,
+  manage_account: (p) => `Opened your ${p} account.`,
+  activate_plan: (p) => `Opened ${p} plan picker.`,
+}
+
+/**
+ * One-line placeholder shown on UI-rendering hosts when the intent
+ * tool runs in `mode: 'ui'`. Gives the agent minimal grounding (what
+ * surface opened + balance when available) without flooding the user
+ * pane with the full narrated markdown that the iframe already covers.
+ */
+export function uiPlaceholder(
+  tool: IntentTool,
+  data: BootstrapPayload,
+): string {
+  const name = productName(data)
+  const opened = UI_OPENED_VERB[tool](name)
+  const balance = balanceSummary(data.customer as CustomerShape | null)
+  const parts = [opened]
+  if (balance) parts.push(`Balance: ${balance}.`)
+  parts.push("Pass `mode: 'text'` for a markdown summary.")
+  return parts.join(' ')
 }

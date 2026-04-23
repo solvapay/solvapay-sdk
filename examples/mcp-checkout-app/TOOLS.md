@@ -16,15 +16,22 @@ from the agent.
 | `check_usage` | Show used/remaining credits, reset date | User says "how many credits", "usage", "remaining" |
 | `activate_plan` | Pick a plan from the picker, or activate a specific `planRef` | User says "activate", or the agent needs to enumerate plans |
 
-All five intent tools now accept an optional `mode: 'ui' | 'text' | 'auto'`
+All five intent tools accept an optional `mode: 'ui' | 'text' | 'auto'`
 argument:
 
-- `'auto'` (default) — emit both the UI-resource ref on `_meta.ui` and
-  the narrated markdown text. Host decides which to render.
-- `'text'` — strip the UI-resource ref so UI-capable hosts render text
-  only. Useful when the user says "just summarise it in chat".
-- `'ui'` — replace the narrated markdown with a short placeholder so
-  the transcript stays clean on UI-rendering hosts.
+- `'ui'` (default) — emit the UI-resource ref on `_meta.ui` plus a
+  one-line placeholder in `content[0]` (e.g. `"Opened your {product}
+  account. Balance: 865,500 credits (~SEK 802.48). Pass mode:'text' for
+  a markdown summary."`). Keeps UI-rendering hosts (MCP Inspector,
+  ChatGPT Apps, Claude Desktop) tidy — the iframe already carries the
+  rich detail. `structuredContent` still holds the full
+  `BootstrapPayload` so agents have full grounding.
+- `'text'` — strip `_meta.ui` and emit the full narrated markdown.
+  Useful for CLI / text-only hosts, or when the user says "just
+  summarise it in chat".
+- `'auto'` — emit both. The narrated text block is annotated with
+  `audience: ['assistant']` so audience-aware hosts still hide it from
+  the user pane while feeding it to the model.
 
 Each returns a `BootstrapPayload` with:
 
