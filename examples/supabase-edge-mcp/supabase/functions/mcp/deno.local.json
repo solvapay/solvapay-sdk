@@ -1,4 +1,5 @@
 {
+  "nodeModulesDir": "auto",
   "imports": {
     "@solvapay/mcp": "../../../../../packages/mcp/dist/index.js",
     "@solvapay/mcp-core": "../../../../../packages/mcp-core/dist/index.js",
