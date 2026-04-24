@@ -6,14 +6,17 @@
     "jsx": "react-jsx"
   },
   "include": [
+    "packages/core/src/**/*",
     "packages/server/src/**/*",
+    "packages/fetch/src/**/*",
+    "packages/mcp-core/src/**/*",
     "packages/mcp/src/**/*",
-    "packages/mcp-sdk/src/**/*",
+    "packages/mcp-express/src/**/*",
+    "packages/mcp-fetch/src/**/*",
     "packages/react/src/**/*",
-    "packages/next/src/**/*",
-    "packages/auth/src/**/*",
     "packages/react-supabase/src/**/*",
-    "packages/core/src/**/*"
+    "packages/next/src/**/*",
+    "packages/auth/src/**/*"
   ],
   "exclude": [
     "**/__tests__/**",
