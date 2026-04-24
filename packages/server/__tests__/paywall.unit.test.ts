@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createSolvaPay, PaywallError } from '../src'
+import { SolvaPayPaywall } from '../src/paywall'
 import type { SolvaPayClient } from '../src/types'
 
 // Mock API client for testing
@@ -861,6 +862,86 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       })
 
       consoleErrorSpy.mockRestore()
+    })
+  })
+
+  describe('SolvaPayPaywall.decide()', () => {
+    let paywall: SolvaPayPaywall
+
+    beforeEach(() => {
+      // `createSolvaPay` doesn't expose the underlying paywall instance
+      // on the public surface; drive `decide()` against a fresh instance
+      // sharing the same mock client so we exercise the real caching +
+      // ensureCustomer behaviour rather than a stub.
+      paywall = new SolvaPayPaywall(mockApiClient)
+    })
+
+    it('returns an allow decision with limits + customerRef when within limits', async () => {
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'decide_ok' } },
+        { product: 'decide-product' },
+      )
+      expect(decision.outcome).toBe('allow')
+      if (decision.outcome !== 'allow') throw new Error('unreachable')
+      expect(decision.customerRef).toBe('cus_decide_ok')
+      expect(decision.limits.withinLimits).toBe(true)
+      expect(decision.args).toEqual({ auth: { customer_ref: 'decide_ok' } })
+      // `allow` outcomes do NOT emit a trackUsage event from decide() —
+      // the caller (protect/adapter) is responsible for tracking the
+      // handler's success/fail outcome once it runs.
+      expect(mockApiClient.trackUsageCalls).toHaveLength(0)
+    })
+
+    it('returns a payment_required gate when limits are exhausted', async () => {
+      mockApiClient.shouldBlock = true
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'decide_blocked' } },
+        { product: 'decide-blocked-product' },
+      )
+      expect(decision.outcome).toBe('gate')
+      if (decision.outcome !== 'gate') throw new Error('unreachable')
+      expect(decision.gate.kind).toBe('payment_required')
+      expect(decision.gate.product).toBe('decide-blocked-product')
+      expect(decision.gate.checkoutUrl).toBe('https://example.com/checkout')
+      expect(decision.gate.message).toMatch(/Pick a plan/i)
+      expect(decision.customerRef).toBe('cus_decide_blocked')
+      // decide() emits the paywall-outcome usage event so observability
+      // matches the legacy throw-based path.
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+      expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
+    })
+
+    it('returns an activation_required gate when the plan is pending activation', async () => {
+      const plans = [{ reference: 'pln_usage', name: 'Usage' }]
+      const balance = { available: 0, currency: 'USD' }
+      mockApiClient.checkLimits = vi.fn().mockResolvedValue({
+        withinLimits: false,
+        remaining: 0,
+        plan: 'usage',
+        activationRequired: true,
+        plans,
+        balance,
+        confirmationUrl: 'https://pay.example.com/confirm',
+        checkoutUrl: 'https://pay.example.com/checkout',
+      })
+
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'decide_activate' } },
+        { product: 'decide-activate-product' },
+      )
+
+      expect(decision.outcome).toBe('gate')
+      if (decision.outcome !== 'gate') throw new Error('unreachable')
+      expect(decision.gate.kind).toBe('activation_required')
+      if (decision.gate.kind !== 'activation_required') throw new Error('unreachable')
+      expect(decision.gate.product).toBe('decide-activate-product')
+      expect(decision.gate.plans).toEqual(plans)
+      expect(decision.gate.balance).toEqual(balance)
+      expect(decision.gate.confirmationUrl).toBe('https://pay.example.com/confirm')
+      // confirmationUrl takes precedence over checkoutUrl when present.
+      expect(decision.gate.checkoutUrl).toBe('https://pay.example.com/confirm')
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+      expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
     })
   })
 })

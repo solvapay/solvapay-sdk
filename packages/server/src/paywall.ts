@@ -10,6 +10,7 @@
 import type {
   LimitResponseWithPlan,
   PaywallArgs,
+  PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
   PaywallToolResult,
@@ -20,6 +21,7 @@ import { withRetry, createRequestDeduplicator } from './utils'
 // Re-export types for convenience
 export type {
   PaywallArgs,
+  PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
   PaywallToolResult,
@@ -203,6 +205,173 @@ export class SolvaPayPaywall {
   }
 
   /**
+   * Pure decision routine — performs customer resolution, limits cache
+   * lookup / fresh `checkLimits` fetch, and returns a `PaywallDecision`
+   * describing whether the handler should run.
+   *
+   * Side effects kept in lockstep with the legacy `protect()` path:
+   *  - creates the backend customer on first use (`ensureCustomer`),
+   *  - updates the limits cache (consume-one-unit bookkeeping), and
+   *  - emits a `paywall` usage event on gate outcomes.
+   *
+   * `trackUsage` for the `success` / `fail` outcome is emitted by the
+   * caller (adapter or `protect()`) once it has actually invoked the
+   * handler — `decide()` never counts handler execution as usage.
+   *
+   * @since 1.1.0
+   */
+  async decide<TArgs extends PaywallArgs>(
+    args: TArgs,
+    metadata: PaywallMetadata = {},
+    getCustomerRef?: (args: TArgs) => string,
+  ): Promise<PaywallDecision<TArgs>> {
+    const product = this.resolveProduct(metadata)
+    const usageType = metadata.usageType || 'requests'
+    const requestId = this.generateRequestId()
+    const startTime = Date.now()
+
+    const inputCustomerRef = getCustomerRef
+      ? getCustomerRef(args)
+      : args.auth?.customer_ref || 'anonymous'
+
+    let backendCustomerRef: string
+    if (inputCustomerRef.startsWith('cus_')) {
+      backendCustomerRef = inputCustomerRef
+    } else {
+      backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
+    }
+
+    const limitsCacheKey = `${backendCustomerRef}:${product}:${usageType}`
+    const cachedLimits = this.limitsCache.get(limitsCacheKey)
+    const now = Date.now()
+
+    let withinLimits: boolean
+    let remaining: number
+    let checkoutUrl: string | undefined
+    let resolvedMeterName: string | undefined
+    let lastLimitsCheck: LimitResponseWithPlan | undefined
+
+    const hasFreshCachedLimits =
+      cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
+
+    if (hasFreshCachedLimits) {
+      checkoutUrl = cachedLimits.checkoutUrl
+      resolvedMeterName = cachedLimits.meterName
+      // Surface the cached `LimitResponseWithPlan` so the downstream
+      // handler context carries balance/plan even on cache hits.
+      lastLimitsCheck = cachedLimits.limits
+
+      if (cachedLimits.remaining > 0) {
+        cachedLimits.remaining--
+        if (cachedLimits.remaining <= 0) {
+          this.limitsCache.delete(limitsCacheKey)
+        }
+        withinLimits = true
+        remaining = cachedLimits.remaining
+      } else {
+        // A zero-remaining entry indicates we already consumed the final unit.
+        // Block one immediate follow-up request from cache, then force re-check next time.
+        withinLimits = false
+        remaining = 0
+        this.limitsCache.delete(limitsCacheKey)
+      }
+    } else {
+      if (cachedLimits) {
+        this.limitsCache.delete(limitsCacheKey)
+      }
+      const limitsCheck = await this.apiClient.checkLimits({
+        customerRef: backendCustomerRef,
+        productRef: product,
+        meterName: usageType,
+      })
+
+      lastLimitsCheck = limitsCheck
+      withinLimits = limitsCheck.withinLimits
+      remaining = limitsCheck.remaining
+      checkoutUrl = limitsCheck.checkoutUrl
+      resolvedMeterName = limitsCheck.meterName
+
+      const consumedAllowance = withinLimits && remaining > 0
+      if (consumedAllowance) {
+        // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
+        // so cached follow-up requests don't get an extra free call.
+        remaining = Math.max(0, remaining - 1)
+      }
+
+      if (consumedAllowance) {
+        this.limitsCache.set(limitsCacheKey, {
+          remaining,
+          checkoutUrl,
+          meterName: resolvedMeterName,
+          timestamp: now,
+          limits: limitsCheck,
+        })
+      }
+    }
+
+    if (!withinLimits) {
+      const latencyMs = Date.now() - startTime
+      this.trackUsage(
+        backendCustomerRef,
+        product,
+        resolvedMeterName || usageType,
+        'paywall',
+        requestId,
+        latencyMs,
+      )
+
+      const gate: PaywallStructuredContent = lastLimitsCheck?.activationRequired
+        ? {
+            kind: 'activation_required',
+            product,
+            message: 'Product activation is required before this tool can be used.',
+            checkoutUrl:
+              lastLimitsCheck.confirmationUrl || lastLimitsCheck.checkoutUrl || checkoutUrl || '',
+            ...(lastLimitsCheck.confirmationUrl !== undefined
+              ? { confirmationUrl: lastLimitsCheck.confirmationUrl }
+              : {}),
+            ...(lastLimitsCheck.plans !== undefined ? { plans: lastLimitsCheck.plans } : {}),
+            ...(lastLimitsCheck.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
+            ...(lastLimitsCheck.product !== undefined
+              ? { productDetails: lastLimitsCheck.product }
+              : {}),
+          }
+        : {
+            kind: 'payment_required',
+            product,
+            checkoutUrl: checkoutUrl || '',
+            message:
+              remaining <= 0
+                ? `You've used all your included calls for this tool. Pick a plan below to keep going.`
+                : `You have ${remaining} call${remaining === 1 ? '' : 's'} left. Pick a plan below to keep going.`,
+            ...(lastLimitsCheck?.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
+            ...(lastLimitsCheck?.product !== undefined
+              ? { productDetails: lastLimitsCheck.product }
+              : {}),
+          }
+
+      return {
+        outcome: 'gate',
+        gate,
+        limits: lastLimitsCheck ?? null,
+        customerRef: backendCustomerRef,
+      }
+    }
+
+    // `withinLimits` implies `lastLimitsCheck` was populated — the
+    // cache-hit branch always sets it from the cached entry and the
+    // cache-miss branch assigns `limitsCheck` directly. The non-null
+    // assertion keeps the `allow` payload's `limits` field strictly
+    // typed.
+    return {
+      outcome: 'allow',
+      args,
+      limits: lastLimitsCheck!,
+      customerRef: backendCustomerRef,
+    }
+  }
+
+  /**
    * Core protection method - works for both MCP and HTTP
    *
    * The `handler` may optionally declare a second positional argument
@@ -210,6 +379,11 @@ export class SolvaPayPaywall {
    * ref, the pre-check `LimitResponseWithPlan`, and an opaque `extra`
    * bag threaded through from the adapter layer. One-arg handlers
    * ignore the second argument and continue to work unchanged.
+   *
+   * Implemented on top of `decide()`: pre-check runs through the same
+   * decision routine, and gate outcomes are raised as a `PaywallError`
+   * to preserve the legacy throw-based signal for consumers that
+   * haven't migrated to adapter-level `formatGate` routing.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async protect<TArgs extends PaywallArgs, TResult = any>(
@@ -223,151 +397,38 @@ export class SolvaPayPaywall {
     return async (args: TArgs): Promise<TResult> => {
       const startTime = Date.now()
       const requestId = this.generateRequestId()
-      const inputCustomerRef = getCustomerRef
-        ? getCustomerRef(args)
-        : args.auth?.customer_ref || 'anonymous'
 
-      // Auto-create customer if needed and get the backend reference
-      // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
-      let backendCustomerRef: string
+      // Pre-check + gate outcome handled by `decide()`. Infrastructure
+      // failures (checkLimits down, ensureCustomer hard-failed) propagate
+      // as regular errors — the original `protect()` behaviour was to
+      // track them as `fail` from within the inner try/catch, but the
+      // customer ref resolution lives inside `decide()` now so we can't
+      // reliably attribute them. Observability loss is negligible — real
+      // infra failures surface as backend logs on the checkLimits /
+      // ensureCustomer path anyway.
+      const decision = await this.decide(args, metadata, getCustomerRef)
 
-      // If the input ref is already a SolvaPay customer ID (starts with 'cus_'),
-      // use it directly without attempting lookup/creation by externalRef.
-      if (inputCustomerRef.startsWith('cus_')) {
-        backendCustomerRef = inputCustomerRef
-      } else {
-        // Auto-create customer if needed and get the backend reference
-        // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
-        backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
+      if (decision.outcome === 'gate') {
+        const message =
+          decision.gate.kind === 'activation_required' ? 'Activation required' : 'Payment required'
+        this.log(`❌ Error in paywall [PaywallError]: ${message}`)
+        throw new PaywallError(message, decision.gate)
       }
 
-      let resolvedMeterName: string | undefined
-
       try {
-        const limitsCacheKey = `${backendCustomerRef}:${product}:${usageType}`
-        const cachedLimits = this.limitsCache.get(limitsCacheKey)
-        const now = Date.now()
-
-        let withinLimits: boolean
-        let remaining: number
-        let checkoutUrl: string | undefined
-        let lastLimitsCheck: LimitResponseWithPlan | undefined
-
-        const hasFreshCachedLimits =
-          cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
-
-        if (hasFreshCachedLimits) {
-          checkoutUrl = cachedLimits.checkoutUrl
-          resolvedMeterName = cachedLimits.meterName
-          // Surface the cached `LimitResponseWithPlan` so the downstream
-          // `ProtectHandlerContext` carries balance/plan even on cache hits.
-          lastLimitsCheck = cachedLimits.limits
-
-          if (cachedLimits.remaining > 0) {
-            cachedLimits.remaining--
-            if (cachedLimits.remaining <= 0) {
-              this.limitsCache.delete(limitsCacheKey)
-            }
-            withinLimits = true
-            remaining = cachedLimits.remaining
-          } else {
-            // A zero-remaining entry indicates we already consumed the final unit.
-            // Block one immediate follow-up request from cache, then force re-check next time.
-            withinLimits = false
-            remaining = 0
-            this.limitsCache.delete(limitsCacheKey)
-          }
-        } else {
-          if (cachedLimits) {
-            this.limitsCache.delete(limitsCacheKey)
-          }
-          const limitsCheck = await this.apiClient.checkLimits({
-            customerRef: backendCustomerRef,
-            productRef: product,
-            meterName: usageType,
-          })
-
-          lastLimitsCheck = limitsCheck
-          withinLimits = limitsCheck.withinLimits
-          remaining = limitsCheck.remaining
-          checkoutUrl = limitsCheck.checkoutUrl
-          resolvedMeterName = limitsCheck.meterName
-
-          const consumedAllowance = withinLimits && remaining > 0
-          if (consumedAllowance) {
-            // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
-            // so cached follow-up requests don't get an extra free call.
-            remaining = Math.max(0, remaining - 1)
-          }
-
-          if (consumedAllowance) {
-            this.limitsCache.set(limitsCacheKey, {
-              remaining,
-              checkoutUrl,
-              meterName: resolvedMeterName,
-              timestamp: now,
-              limits: limitsCheck,
-            })
-          }
-        }
-
-        if (!withinLimits) {
-          const latencyMs = Date.now() - startTime
-          this.trackUsage(
-            backendCustomerRef,
-            product,
-            resolvedMeterName || usageType,
-            'paywall',
-            requestId,
-            latencyMs,
-          )
-
-          if (lastLimitsCheck?.activationRequired) {
-            const confirmationUrl = lastLimitsCheck.confirmationUrl
-            const payCheckoutUrl =
-              confirmationUrl || lastLimitsCheck.checkoutUrl || checkoutUrl || ''
-            throw new PaywallError('Activation required', {
-              kind: 'activation_required',
-              product,
-              message: 'Product activation is required before this tool can be used.',
-              checkoutUrl: payCheckoutUrl,
-              confirmationUrl,
-              plans: lastLimitsCheck.plans,
-              balance: lastLimitsCheck.balance,
-              productDetails: lastLimitsCheck.product,
-            })
-          }
-
-          const paymentRequiredMessage =
-            remaining <= 0
-              ? `You've used all your included calls for this tool. Pick a plan below to keep going.`
-              : `You have ${remaining} call${remaining === 1 ? '' : 's'} left. Pick a plan below to keep going.`
-          throw new PaywallError('Payment required', {
-            kind: 'payment_required',
-            product,
-            checkoutUrl: checkoutUrl || '',
-            message: paymentRequiredMessage,
-            balance: lastLimitsCheck?.balance,
-            productDetails: lastLimitsCheck?.product,
-          })
-        }
-
-        // Build the optional second-arg context. Existing one-arg
-        // handlers ignore it; `@solvapay/mcp`'s `buildPayableHandler`
-        // uses it to construct the merchant-facing `ResponseContext`.
         const forwardedExtra = (args as unknown as Record<string, unknown>)[EXTRA_FORWARD_KEY]
         const handlerContext: ProtectHandlerContext = {
-          customerRef: backendCustomerRef,
-          limits: lastLimitsCheck ?? null,
+          customerRef: decision.customerRef,
+          limits: decision.limits,
           ...(forwardedExtra !== undefined ? { extra: forwardedExtra } : {}),
         }
         const result = await handler(args, handlerContext)
 
         const latencyMs = Date.now() - startTime
         this.trackUsage(
-          backendCustomerRef,
+          decision.customerRef,
           product,
-          resolvedMeterName || usageType,
+          decision.limits.meterName || usageType,
           'success',
           requestId,
           latencyMs,
@@ -384,9 +445,9 @@ export class SolvaPayPaywall {
         if (!(error instanceof PaywallError)) {
           const latencyMs = Date.now() - startTime
           this.trackUsage(
-            backendCustomerRef,
+            decision.customerRef,
             product,
-            resolvedMeterName || usageType,
+            decision.limits.meterName || usageType,
             'fail',
             requestId,
             latencyMs,

@@ -132,6 +132,7 @@ export type {
   HttpAdapterOptions,
   NextAdapterOptions,
   PaywallArgs,
+  PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
   RetryOptions,

@@ -32,6 +32,7 @@ export type {
   LimitActivationProduct,
   LimitPlanSummary,
   PaywallArgs,
+  PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
   PaywallToolResult,
