@@ -298,6 +298,19 @@ body {
   gap: 12px;
 }
 
+/* Center the `TopupForm.Loading` / `PaymentForm.Loading` spinner
+ * inside MCP checkout surfaces. The primitive-layer styles stay
+ * layout-neutral so web integrators can place the spinner wherever
+ * they want; the MCP view always wants it centered above the
+ * submit button. */
+.solvapay-mcp-topup-form [data-solvapay-topup-form-loading],
+.solvapay-mcp-card [data-solvapay-payment-form-loading] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 0;
+}
+
 /* Activation view */
 
 .solvapay-mcp-activation-flow {
@@ -654,10 +667,14 @@ body {
   appearance: none;
   background: none;
   border: none;
-  padding: 4px 0;
-  margin: 0 0 8px 0;
+  /* Horizontal padding gives hover/tap area around the label; the
+   * negative margin keeps the visible arrow flush with the card's
+   * content edge so it doesn't look inset. */
+  padding: 4px 8px;
+  margin: 0 -8px 8px -8px;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   color: var(--color-text-secondary, #475467);
   font-size: 13px;
   cursor: pointer;

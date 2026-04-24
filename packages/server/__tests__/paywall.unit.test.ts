@@ -140,6 +140,25 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
     })
 
+    it('produces an actionable payment_required message (no raw "Remaining: 0")', async () => {
+      mockApiClient.shouldBlock = true
+      const handler = vi.fn()
+      const payable = solvaPay.payable({ product: 'test' })
+      const protectedHandler = await payable.function(handler)
+
+      let captured: PaywallError | null = null
+      try {
+        await protectedHandler({ auth: { customer_ref: 'blocked_user' } })
+      } catch (err) {
+        captured = err as PaywallError
+      }
+      expect(captured).toBeInstanceOf(PaywallError)
+      const sc = captured!.structuredContent
+      expect(sc.kind).toBe('payment_required')
+      expect(sc.message).not.toMatch(/Remaining:\s*0/)
+      expect(sc.message).toMatch(/Pick a plan/i)
+    })
+
     it('should throw PaywallError with activation_required when checkLimits returns activationRequired', async () => {
       const plans = [{ reference: 'pln_usage', name: 'Usage' }]
       const balance = { available: 0, currency: 'USD' }

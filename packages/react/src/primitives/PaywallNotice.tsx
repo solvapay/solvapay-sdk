@@ -11,7 +11,14 @@
  *  - `ProductContext`   — when `content.productDetails?.name`
  *  - `Balance`          — `activation_required` with `content.balance`
  *  - `Plans`            — `activation_required` with `content.plans`
- *  - `EmbeddedCheckout` — mounts `<PlanSelector>` + `<PaymentForm>`
+ *  - `EmbeddedCheckout` — mounts `<PlanSelector>` + a plan gate that
+ *                         branches on plan type (PAYG → `AmountPicker`
+ *                         + `TopupForm` inline; recurring →
+ *                         `PaymentForm`). This is the minimal
+ *                         primitive-layer variant for non-MCP web
+ *                         integrators; MCP hosts use the fuller
+ *                         stepped flow from
+ *                         `@solvapay/react/mcp` → `McpPaywallView`.
  *  - `HostedCheckoutLink` — anchor to `content.checkoutUrl` (CSP-blocked hosts)
  *  - `Retry`            — calls `onResolved` once `usePaywallResolver.resolved`
  *
@@ -24,14 +31,19 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useState,
 } from 'react'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { Slot } from './slot'
 import { PlanSelector, usePlanSelector } from './PlanSelector'
 import { PaymentForm } from './PaymentForm'
+import { AmountPicker } from './AmountPicker'
+import { TopupForm } from './TopupForm'
 import { useCopy } from '../hooks/useCopy'
 import { usePaywallResolver } from '../hooks/usePaywallResolver'
 import { interpolate } from '../i18n/interpolate'
+import { isPaygPlan } from '../utils/isPayg'
+import type { Plan } from '../types'
 
 export interface PaywallNoticeClassNames {
   root?: string
@@ -147,7 +159,9 @@ const Message = forwardRef<HTMLParagraphElement, LeafProps>(function PaywallNoti
   forwardedRef,
 ) {
   const ctx = usePaywallNoticeCtx('Message')
+  const copy = useCopy()
   const Comp = asChild ? Slot : 'p'
+  const defaultText = resolvePaywallMessage(ctx.content, copy.paywall)
   return (
     <Comp
       ref={forwardedRef}
@@ -155,10 +169,44 @@ const Message = forwardRef<HTMLParagraphElement, LeafProps>(function PaywallNoti
       className={className ?? ctx.classNames.message}
       {...rest}
     >
-      {children ?? ctx.content.message}
+      {children ?? defaultText}
     </Comp>
   )
 })
+
+/**
+ * Picks a client-side message when the paywall carries enough structured
+ * data to build one — specifically a `payment_required` kind with a
+ * `balance` attached. Falls back to the server-provided `message` string
+ * (which older servers produce) so we stay back-compat.
+ */
+function resolvePaywallMessage(
+  content: PaywallStructuredContent,
+  paywallCopy: {
+    paymentRequiredMessage: string
+    paymentRequiredMessageRemaining: string
+    paymentRequiredProductSuffix: string
+  },
+): string {
+  if (content.kind !== 'payment_required') {
+    return content.message
+  }
+  const balance = content.balance
+  if (!balance) return content.message
+  const productName = content.productDetails?.name
+  const forProduct = productName
+    ? interpolate(paywallCopy.paymentRequiredProductSuffix, { product: productName })
+    : ''
+  const remaining = balance.remainingUnits ?? 0
+  if (remaining <= 0) {
+    return interpolate(paywallCopy.paymentRequiredMessage, { forProduct })
+  }
+  return interpolate(paywallCopy.paymentRequiredMessageRemaining, {
+    remaining: String(remaining),
+    pluralSuffix: remaining === 1 ? '' : 's',
+    forProduct,
+  })
+}
 
 const ProductContext = forwardRef<HTMLDivElement, LeafProps>(function PaywallNoticeProductContext(
   { asChild, children, className, ...rest },
@@ -189,8 +237,8 @@ const Balance = forwardRef<HTMLDivElement, LeafProps>(function PaywallNoticeBala
 ) {
   const ctx = usePaywallNoticeCtx('Balance')
   const copy = useCopy()
-  if (ctx.content.kind !== 'activation_required' || !ctx.content.balance) return null
   const balance = ctx.content.balance
+  if (ctx.content.kind !== 'activation_required' || !balance) return null
   const label = interpolate(copy.paywall.balanceLine, {
     available: String(balance.remainingUnits ?? 0),
     required: String(balance.creditsPerUnit ?? 1),
@@ -221,7 +269,7 @@ function Plans({ className, children }: PlansProps) {
   const defaultClass = className ?? ctx.classNames.plans ?? 'solvapay-paywall-plans'
   return (
     <div data-solvapay-paywall-plans="" className={defaultClass}>
-      <PlanSelector.Root productRef={ctx.content.product}>
+      <PlanSelector.Root productRef={ctx.content.product} filter={hidesFreePlan}>
         {children ?? (
           <>
             <PlanSelector.Grid>
@@ -239,6 +287,18 @@ function Plans({ className, children }: PlansProps) {
       </PlanSelector.Root>
     </div>
   )
+}
+
+/**
+ * Hides the Free plan from the paywall's plan grid. The paywall only
+ * appears once the user is out of free quota, so rendering a disabled
+ * Free card adds noise without aiding the decision. The checkout view
+ * uses a similar filter that *does* keep Free when it's the active plan
+ * (to show "here's what you have now"); the paywall has no equivalent
+ * need so we strip it unconditionally.
+ */
+function hidesFreePlan(plan: Plan): boolean {
+  return plan.requiresPayment !== false
 }
 
 const HostedCheckoutLink = forwardRef<
@@ -286,7 +346,7 @@ function EmbeddedCheckout({
     className ?? ctx.classNames.embeddedCheckout ?? 'solvapay-paywall-embedded-checkout'
   return (
     <div data-solvapay-paywall-embedded-checkout="" className={defaultClass}>
-      <PlanSelector.Root productRef={ctx.content.product}>
+      <PlanSelector.Root productRef={ctx.content.product} filter={hidesFreePlan}>
         <PlanSelector.Grid>
           <PlanSelector.Card>
             <PlanSelector.CardBadge />
@@ -297,19 +357,118 @@ function EmbeddedCheckout({
         </PlanSelector.Grid>
         <PlanSelector.Loading />
         <PlanSelector.Error />
-        <PaywallPaymentFormGate productRef={ctx.content.product} returnUrl={returnUrl}>
-          {children ?? (
-            <>
-              <PaymentForm.Summary />
-              <PaymentForm.Loading />
-              <PaymentForm.PaymentElement />
-              <PaymentForm.Error />
-              <PaymentForm.MandateText />
-              <PaymentForm.SubmitButton />
-            </>
-          )}
-        </PaywallPaymentFormGate>
+        <PaywallSelectedPlanGate productRef={ctx.content.product} returnUrl={returnUrl}>
+          {children}
+        </PaywallSelectedPlanGate>
       </PlanSelector.Root>
+    </div>
+  )
+}
+
+/**
+ * Switches the post-plan-selection surface based on the selected plan's
+ * type. Usage-based / hybrid plans mount an `AmountPicker` → `TopupForm`
+ * sequence (a one-shot top-up). Recurring plans keep the `PaymentForm`
+ * subscribe flow.
+ *
+ * The `children` override, when provided, is forwarded to the recurring
+ * `PaymentForm` only — PAYG has its own dedicated default layout since
+ * its composition (`AmountPicker`, then `TopupForm`) differs
+ * structurally from `PaymentForm`'s.
+ *
+ * @internal Minimal inline variant for primitive-level consumers. MCP
+ * hosts use the stepped state machine in
+ * `packages/react/src/mcp/views/checkout/` instead, which inserts an
+ * explicit `Continue` button between plan selection and the amount
+ * picker so those actions never coexist on one surface.
+ */
+function PaywallSelectedPlanGate({
+  productRef,
+  returnUrl,
+  children,
+}: {
+  productRef: string
+  returnUrl: string
+  children?: React.ReactNode
+}) {
+  const { selectedPlan, selectedPlanRef } = usePlanSelector()
+  if (!selectedPlanRef || !selectedPlan) return null
+  if (isPaygPlan(selectedPlan)) {
+    return (
+      <PaywallPaygGate
+        key={selectedPlanRef}
+        plan={selectedPlan}
+        returnUrl={returnUrl}
+      />
+    )
+  }
+  return (
+    <PaywallPaymentFormGate productRef={productRef} returnUrl={returnUrl}>
+      {children ?? (
+        <>
+          <PaymentForm.Summary />
+          <PaymentForm.Loading />
+          <PaymentForm.PaymentElement />
+          <PaymentForm.Error />
+          <PaymentForm.MandateText />
+          <PaymentForm.SubmitButton />
+        </>
+      )}
+    </PaywallPaymentFormGate>
+  )
+}
+
+/**
+ * PAYG branch: pick an amount first, then mount the `TopupForm`. A
+ * `Change amount` link lets the customer back out to the amount step
+ * without losing their plan selection.
+ */
+function PaywallPaygGate({
+  plan,
+  returnUrl,
+}: {
+  plan: Plan
+  returnUrl: string
+}) {
+  const ctx = usePaywallNoticeCtx('EmbeddedCheckout')
+  const currency = (plan.currency ?? 'USD').toUpperCase()
+  const [amountMinor, setAmountMinor] = useState<number | null>(null)
+
+  if (amountMinor == null) {
+    return (
+      <div data-solvapay-paywall-payg-amount="">
+        <AmountPicker.Root currency={currency} emit="minor">
+          <AmountPicker.Custom />
+          <AmountPicker.Confirm onConfirm={minor => setAmountMinor(minor)}>
+            Continue
+          </AmountPicker.Confirm>
+        </AmountPicker.Root>
+      </div>
+    )
+  }
+
+  return (
+    <div data-solvapay-paywall-payg-topup="">
+      <button
+        type="button"
+        data-solvapay-paywall-payg-change-amount=""
+        onClick={() => setAmountMinor(null)}
+      >
+        Change amount
+      </button>
+      <TopupForm.Root
+        amount={amountMinor}
+        currency={currency}
+        returnUrl={returnUrl}
+        onSuccess={() => {
+          void ctx.refetch()
+        }}
+      >
+        <TopupForm.Loading />
+        <TopupForm.PaymentElement />
+        <TopupForm.Error />
+        <TopupForm.SubmitButton />
+      </TopupForm.Root>
     </div>
   )
 }

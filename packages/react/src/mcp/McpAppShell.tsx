@@ -135,7 +135,14 @@ export function McpAppShell({
   const resolvedView = resolveSurface(bootstrap.view)
   const isPaywall = resolvedView === 'paywall' && !paywallDismissed
   const effectiveView: McpViewKind = overrideView ?? (isPaywall ? 'paywall' : resolvedView)
-  const isChrome = effectiveView !== 'paywall' && effectiveView !== 'nudge'
+  // `ShellHeader` shows the merchant brand + product name everywhere
+  // except the minimal `nudge` strip. The paywall gets it too so the
+  // surface has the same branding as the activate flow.
+  const showShellHeader = effectiveView !== 'nudge'
+  // Footer + sidebar stay suppressed on paywall (the paywall "takes
+  // over" per brief §6) and on nudge (minimal strip). Sidebar is
+  // additionally gated on `customer !== null`.
+  const isChrome = showShellHeader && effectiveView !== 'paywall'
   const fromPaywall = cameFromPaywall || initialFromPaywall
 
   // Refresh the bootstrap once on mount if the caller wired it. The
@@ -200,7 +207,7 @@ export function McpAppShell({
 
   return (
     <div className="solvapay-mcp-shell" data-paywall={isPaywall ? 'true' : undefined}>
-      {isChrome ? (
+      {showShellHeader ? (
         <ShellHeader
           merchant={merchant}
           productName={productName}
@@ -484,6 +491,7 @@ export function McpViewRouter({
           publishableKey={stripePublishableKey}
           returnUrl={returnUrl}
           classNames={classNames}
+          plans={bootstrap.plans}
           upgradeCta={upgradeCta}
         />
       )

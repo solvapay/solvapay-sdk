@@ -92,6 +92,10 @@ export function paywallErrorToClientPayload(error: PaywallError): Record<string,
     if (sc.balance !== undefined) base.balance = sc.balance
     if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
     if (sc.confirmationUrl !== undefined) base.confirmationUrl = sc.confirmationUrl
+  } else {
+    base.kind = 'payment_required'
+    if (sc.balance !== undefined) base.balance = sc.balance
+    if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
   }
   return base
 }
@@ -334,11 +338,17 @@ export class SolvaPayPaywall {
             })
           }
 
+          const paymentRequiredMessage =
+            remaining <= 0
+              ? `You've used all your included calls for this tool. Pick a plan below to keep going.`
+              : `You have ${remaining} call${remaining === 1 ? '' : 's'} left. Pick a plan below to keep going.`
           throw new PaywallError('Payment required', {
             kind: 'payment_required',
             product,
             checkoutUrl: checkoutUrl || '',
-            message: `Purchase required. Remaining: ${remaining}`,
+            message: paymentRequiredMessage,
+            balance: lastLimitsCheck?.balance,
+            productDetails: lastLimitsCheck?.product,
           })
         }
 

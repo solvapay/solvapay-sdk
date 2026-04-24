@@ -28,7 +28,7 @@ export function BackLink({ label, glyph = '←', className, onClick, ...rest }: 
       {...rest}
     >
       <span className="solvapay-mcp-back-link-glyph" aria-hidden="true">
-        {glyph}{' '}
+        {glyph}
       </span>
       {label}
     </button>

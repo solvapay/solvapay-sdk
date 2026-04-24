@@ -36,6 +36,15 @@ export type PaywallStructuredContent =
       product: string
       checkoutUrl: string
       message: string
+      /**
+       * Quota balance at the moment the paywall tripped. Optional so
+       * older server versions (pre-balance-on-payment_required) stay
+       * compatible; the React `PaywallNotice.Message` prefers this
+       * structured data over the raw `message` when available.
+       */
+      balance?: LimitActivationBalance
+      /** Rich product context from checkLimits (name, ref, provider slug/id) */
+      productDetails?: LimitActivationProduct
     }
   | {
       kind: 'activation_required'

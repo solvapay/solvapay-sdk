@@ -188,6 +188,9 @@ export interface SolvaPayCopy {
     resolvedHeading: string
     productContext: string
     balanceLine: string
+    paymentRequiredMessage: string
+    paymentRequiredMessageRemaining: string
+    paymentRequiredProductSuffix: string
     retryButton: string
     hostedCheckoutButton: string
     hostedCheckoutLoading: string

@@ -2,12 +2,25 @@
 
 /**
  * `<McpPaywallView>` — the paywall screen surfaced by the `open_paywall`
- * MCP tool. Thin shell around `<PaywallNotice>` with `solvapay-mcp-*`
- * class names and `useStripeProbe` gating.
+ * MCP tool. Thin shell that picks between embedded and hosted paths,
+ * then renders the shared checkout state machine (plan → amount →
+ * payment → success) when Stripe is reachable. The state machine is
+ * the same one `<McpCheckoutView>` uses for `activate_plan`, so the
+ * paywall's PAYG step-UX matches the rest of the SDK exactly.
  *
- * Decides "embedded vs hosted" based on the Stripe probe; all actual UX
- * lives in the `<PaywallNotice>` primitive so web-app integrators can
- * reuse it verbatim.
+ * ## Layout
+ *
+ * The paywall composes three layers, each with a single responsibility:
+ *
+ * 1. `ShellHeader` (from `McpAppShell`, above this view) owns merchant
+ *    branding + product name + description.
+ * 2. `PaywallNotice.Root` renders flat (no card) and owns the paywall
+ *    reason copy — heading, message, balance. The `root` slot uses
+ *    `cx.stack` so its children flow with a consistent gap.
+ * 3. `EmbeddedCheckout` owns the *single* step card (plan → amount →
+ *    payment → success). Its state-machine `UpgradeBanner` is
+ *    suppressed via `hideUpgradeBanner` to avoid duplicating the
+ *    reason copy that `PaywallNotice` already shows above.
  */
 
 import React from 'react'
@@ -15,6 +28,8 @@ import type { PaywallStructuredContent } from '@solvapay/server'
 import { useCopy } from '../../hooks/useCopy'
 import { PaywallNotice } from '../../primitives/PaywallNotice'
 import { useStripeProbe } from '../useStripeProbe'
+import { EmbeddedCheckout } from './checkout'
+import type { BootstrapPlanLike } from './checkout'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 export interface McpPaywallViewProps {
@@ -29,6 +44,12 @@ export interface McpPaywallViewProps {
   classNames?: McpViewClassNames
   /** Consumers typically pass a function that dismisses the view after resolution. */
   onResolved?: () => void
+  /**
+   * Product plans snapshot from `bootstrap.plans`. Threaded through to
+   * the shared `EmbeddedCheckout` so the paywall surfaces the same
+   * PAYG-first sorted grid and `popular` tag as `McpCheckoutView`.
+   */
+  plans?: readonly BootstrapPlanLike[]
   /**
    * Secondary "Upgrade to <plan> — <price>" CTA rendered below the
    * paywall's primary (top-up) flow. When set, the paywall view
@@ -51,62 +72,66 @@ export function McpPaywallView({
   returnUrl,
   classNames,
   onResolved,
+  plans,
   upgradeCta,
 }: McpPaywallViewProps) {
   const cx = resolveMcpClassNames(classNames)
   const copy = useCopy()
   const probe = useStripeProbe(publishableKey)
 
-  const showEmbeddedCheckout = probe === 'ready' && content.kind === 'payment_required'
+  const productRef = content.product
+  const embeddedReady = probe === 'ready' && Boolean(productRef)
   const isLoading = probe === 'loading'
 
   return (
-    <div className={cx.card}>
-      <PaywallNotice.Root
-        content={content}
-        onResolved={onResolved}
-        classNames={{
-          heading: cx.heading,
-          message: cx.muted,
-          productContext: cx.muted,
-          balance: cx.notice,
-          retryButton: cx.button,
-          hostedLink: cx.button,
-        }}
-      >
-        <PaywallNotice.Heading />
-        <PaywallNotice.ProductContext />
-        <PaywallNotice.Message />
-        <PaywallNotice.Balance />
+    <PaywallNotice.Root
+      content={content}
+      onResolved={onResolved}
+      classNames={{
+        // Flat flex-column stack — no outer card. `EmbeddedCheckout`
+        // provides the single card below.
+        root: cx.stack,
+        heading: cx.heading,
+        message: cx.muted,
+        balance: cx.notice,
+        hostedLink: cx.button,
+      }}
+    >
+      <PaywallNotice.Heading />
+      <PaywallNotice.Message />
+      <PaywallNotice.Balance />
 
-        {content.kind === 'activation_required' && (
-          <PaywallNotice.Plans className="solvapay-mcp-paywall-plans" />
-        )}
+      {isLoading ? (
+        <div className={cx.muted}>{copy.paywall.hostedCheckoutLoading}</div>
+      ) : embeddedReady ? (
+        <EmbeddedCheckout
+          productRef={productRef}
+          returnUrl={returnUrl}
+          fromPaywall
+          paywallKind={content.kind}
+          // PaywallNotice above already renders the heading +
+          // message for the paywall kind, so skip the inline
+          // banner to avoid duplicate "Upgrade to continue" copy.
+          hideUpgradeBanner
+          plans={plans}
+          onRefreshBootstrap={onResolved}
+          onClose={onResolved}
+          cx={cx}
+        />
+      ) : (
+        <PaywallNotice.HostedCheckoutLink />
+      )}
 
-        {isLoading ? (
-          <div className={cx.muted}>{copy.paywall.hostedCheckoutLoading}</div>
-        ) : showEmbeddedCheckout ? (
-          <PaywallNotice.EmbeddedCheckout
-            returnUrl={returnUrl}
-            className="solvapay-mcp-paywall-embedded-checkout"
-          />
-        ) : (
-          <PaywallNotice.HostedCheckoutLink />
-        )}
-
-        {upgradeCta ? (
-          <button
-            type="button"
-            className={`${cx.button} solvapay-mcp-paywall-upgrade-cta`.trim()}
-            data-variant="secondary"
-            onClick={upgradeCta.onClick}
-          >
-            {upgradeCta.label}
-          </button>
-        ) : null}
-
-        <PaywallNotice.Retry />
-      </PaywallNotice.Root>
-    </div>
+      {upgradeCta ? (
+        <button
+          type="button"
+          className={`${cx.button} solvapay-mcp-paywall-upgrade-cta`.trim()}
+          data-variant="secondary"
+          onClick={upgradeCta.onClick}
+        >
+          {upgradeCta.label}
+        </button>
+      ) : null}
+    </PaywallNotice.Root>
   )
 }

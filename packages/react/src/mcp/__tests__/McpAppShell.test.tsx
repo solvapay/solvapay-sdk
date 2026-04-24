@@ -296,7 +296,7 @@ describe('<McpAppShell>', () => {
     expect(initials?.textContent).toBe('AC')
   })
 
-  it('suppresses the in-iframe header on paywall and nudge surfaces', () => {
+  it('shows the in-iframe header on the paywall so branding + product name stay visible', () => {
     const config = seedMerchant({
       displayName: 'Acme',
       legalName: 'Acme Inc.',
@@ -313,6 +313,27 @@ describe('<McpAppShell>', () => {
           checkoutUrl: 'https://example.test/pay',
           plans: [],
         } as never,
+      },
+      ctx,
+    )
+    const header = container.querySelector('.solvapay-mcp-shell-header')
+    expect(header).not.toBeNull()
+    expect(
+      container.querySelector('.solvapay-mcp-shell-brand-name')?.textContent,
+    ).toBe('Acme')
+  })
+
+  it('suppresses the in-iframe header on nudge surfaces (minimal strip)', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const { container } = renderShell(
+      {
+        view: 'nudge',
+        nudge: {
+          kind: 'low-balance',
+          message: 'Low balance',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       },
       ctx,
     )

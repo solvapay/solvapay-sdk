@@ -205,6 +205,11 @@ export const enCopy: SolvaPayCopy = {
     resolvedHeading: 'You can continue',
     productContext: 'For {product}',
     balanceLine: 'You have {available} credits, need {required}.',
+    paymentRequiredMessage:
+      "You've used all your included calls{forProduct}. Choose a plan below to keep going.",
+    paymentRequiredMessageRemaining:
+      'Only {remaining} call{pluralSuffix} left{forProduct}. Choose a plan below to keep going.',
+    paymentRequiredProductSuffix: ' for {product}',
     retryButton: 'Continue',
     hostedCheckoutButton: 'Open checkout',
     hostedCheckoutLoading: 'Loading checkout…',
