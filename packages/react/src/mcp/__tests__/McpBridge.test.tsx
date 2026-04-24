@@ -192,10 +192,13 @@ function renderBridgeWith(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   messageOnSuccess: (evt: any) => string | null,
 ): { result: { current: BridgeValue } } {
-  const result: { current: BridgeValue } = { current: null as unknown as BridgeValue }
+  const resultRef: { current: BridgeValue } = { current: null as unknown as BridgeValue }
   const Capture = () => {
     const bridge = useMcpBridge()
-    result.current = bridge
+    // Test helper: synchronously expose the bridge to the test body.
+    // Using useEffect would defer capture past the assertions.
+    // eslint-disable-next-line react-hooks/immutability
+    resultRef.current = bridge
     return null
   }
   render(
@@ -203,7 +206,7 @@ function renderBridgeWith(
       <Capture />
     </McpBridgeProvider>,
   )
-  return { result }
+  return { result: resultRef }
 }
 
 // ------------------------------------------------------------------
@@ -216,10 +219,13 @@ type BridgeValue = ReturnType<typeof useMcpBridge>
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function renderBridge(app: any): { result: { current: BridgeValue } } {
-  const result: { current: BridgeValue } = { current: null as unknown as BridgeValue }
+  const resultRef: { current: BridgeValue } = { current: null as unknown as BridgeValue }
   const Capture = () => {
     const bridge = useMcpBridge()
-    result.current = bridge
+    // Test helper: synchronously expose the bridge to the test body.
+    // Using useEffect would defer capture past the assertions.
+    // eslint-disable-next-line react-hooks/immutability
+    resultRef.current = bridge
     return null
   }
   render(
@@ -227,5 +233,5 @@ function renderBridge(app: any): { result: { current: BridgeValue } } {
       <Capture />
     </McpBridgeProvider>,
   )
-  return { result }
+  return { result: resultRef }
 }
