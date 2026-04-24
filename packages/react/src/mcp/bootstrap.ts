@@ -15,21 +15,21 @@ import type {
   BootstrapProduct,
   NudgeSpec,
   SolvaPayMcpViewKind,
-} from '@solvapay/mcp'
-import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL } from '@solvapay/mcp'
+} from '@solvapay/mcp-core'
+import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL } from '@solvapay/mcp-core'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { isPaywallStructuredContent } from '@solvapay/server'
 import type { McpAppLike } from './adapter'
 
 /**
- * @deprecated Use `SolvaPayMcpViewKind` from `@solvapay/mcp` directly.
+ * @deprecated Use `SolvaPayMcpViewKind` from `@solvapay/mcp-core` directly.
  * Kept as a type alias so existing consumers don't break.
  */
 export type McpView = SolvaPayMcpViewKind
 
 /**
  * Bootstrap payload returned from `fetchMcpBootstrap`. Structurally
- * compatible with `BootstrapPayload` from `@solvapay/mcp` but narrows
+ * compatible with `BootstrapPayload` from `@solvapay/mcp-core` but narrows
  * `paywall` to the server-owned `PaywallStructuredContent` union so
  * the client-side views can discriminate on `kind`.
  */
@@ -102,7 +102,7 @@ export interface CallToolResultLike {
  *
  * Derived from `MCP_TOOL_NAMES` minus the intent tools in
  * `TOOL_FOR_VIEW`, so adding a new transport tool requires exactly one
- * edit (in `@solvapay/mcp/tool-names`).
+ * edit (in `@solvapay/mcp-core/tool-names`).
  */
 export const SOLVAPAY_TRANSPORT_TOOL_NAMES: ReadonlySet<string> = new Set(
   (Object.values(MCP_TOOL_NAMES) as string[]).filter(

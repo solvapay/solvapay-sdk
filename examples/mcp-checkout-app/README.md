@@ -12,15 +12,16 @@ detects the block via a runtime probe and falls back to launching
 
 ## Choosing the right example
 
-Three MCP examples ship in this repo. Start here if your product has a
+Four MCP examples ship in this repo. Start here if your product has a
 full self-serve surface (plans, credit balance, top-up, usage); hop to
 a sibling if you need less:
 
-| Example | What it shows | Use when |
-| --- | --- | --- |
-| `examples/mcp-checkout-app` | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall |
-| `examples/mcp-oauth-bridge` | Paywall-only, no UI, virtual tools only | You just need to gate a text-only tool behind SolvaPay usage limits |
-| `examples/mcp-time-app` | Virtual tools + minimal UI, showcases the gate response | You want the smallest possible paywalled MCP server |
+| Example                        | Runtime           | What it shows                                                        | Use when                                                                                           |
+| ------------------------------ | ----------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `examples/mcp-checkout-app`    | Node + Express    | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall                  |
+| `examples/supabase-edge-mcp`   | Deno (Supabase)   | Same full toolbox as `mcp-checkout-app`, deployed to Supabase Edge   | You want the complete story running at the network edge with `createSolvaPayMcpFetchHandler`       |
+| `examples/mcp-oauth-bridge`    | Node + Express    | Paywall-only, no UI, virtual tools only                              | You just need to gate a text-only tool behind SolvaPay usage limits                                |
+| `examples/mcp-time-app`        | Node + Express    | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                                |
 
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
 12-tool surface: 5 intent tools (`upgrade`, `manage_account`, `topup`,
@@ -239,12 +240,12 @@ The five demo tools showcase both paths SolvaPay hosts in one place:
   it with `/predict_price_chart NVDA 10` or `/predict_direction NVDA
   10`. The descriptor still advertises `_meta.ui.resourceUri` at the
   `tools/list` layer via `registerPayable`
-  ([`registerPayableTool.ts`](../../packages/mcp-sdk/src/registerPayableTool.ts))
+  ([`registerPayableTool.ts`](../../packages/mcp/src/registerPayableTool.ts))
   so paywall responses open the SolvaPay widget on descriptor-reading
   hosts when the customer runs out; `buildPayableHandler` stamps the
   same metadata at the **result** level on gate responses for hosts
   that key off tool-call results
-  ([`payable-handler.ts`](../../packages/mcp/src/payable-handler.ts)).
+  ([`payable-handler.ts`](../../packages/mcp-core/src/payable-handler.ts)).
   Use this path when the host can render the data better than you
   can.
 - **Widget-embedded data (`query_sales_trends` + the

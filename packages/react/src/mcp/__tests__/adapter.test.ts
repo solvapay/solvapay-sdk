@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createMcpAppAdapter } from '../adapter'
-import { MCP_TOOL_NAMES } from '@solvapay/mcp'
+import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 
 interface CallRecord {
   name: string

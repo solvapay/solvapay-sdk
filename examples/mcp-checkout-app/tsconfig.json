@@ -12,7 +12,8 @@
     "paths": {
       "@solvapay/core": ["../../packages/core/src/index.ts"],
       "@solvapay/mcp": ["../../packages/mcp/src/index.ts"],
-      "@solvapay/mcp-sdk": ["../../packages/mcp-sdk/src/index.ts"],
+      "@solvapay/mcp-core": ["../../packages/mcp-core/src/index.ts"],
+      "@solvapay/mcp-express": ["../../packages/mcp-express/src/index.ts"],
       "@solvapay/server": ["../../packages/server/src/index.ts"],
       "@solvapay/react": ["../../packages/react/dist/index.d.ts"]
     },

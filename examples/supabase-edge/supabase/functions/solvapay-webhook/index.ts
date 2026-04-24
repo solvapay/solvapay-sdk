@@ -1,4 +1,4 @@
-import { solvapayWebhook } from '@solvapay/supabase'
+import { solvapayWebhook } from '@solvapay/fetch'
 
 Deno.serve(solvapayWebhook({
   secret: Deno.env.get('SOLVAPAY_WEBHOOK_SECRET')!,

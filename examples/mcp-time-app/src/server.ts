@@ -5,7 +5,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { payable, paywallEnabled, solvaPay, solvapayProductRef } from './config'
-import type { McpToolExtra } from '@solvapay/mcp'
+import type { McpToolExtra } from '@solvapay/mcp-core'
 import { jsonSchemaToZodRawShape } from '@solvapay/server'
 
 const DIST_DIR = import.meta.filename.endsWith('.ts')

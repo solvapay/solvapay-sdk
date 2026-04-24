@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import * as edgeEntry from '../src/edge'
 import * as helpers from '../src/helpers'
 
-// Regression guard: @solvapay/supabase (and any other edge-runtime adapter) imports
+// Regression guard: @solvapay/fetch (and any other edge-runtime adapter) imports
 // all *Core route helpers from the default `@solvapay/server` entry. Node resolves
 // that to `dist/index.js`, but Deno/edge-light/worker resolve it to `dist/edge.js`.
 // If `edge.ts` forgets to re-export a helper, adapters crash at boot with

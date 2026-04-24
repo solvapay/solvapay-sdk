@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "paths": {
+      "@solvapay/react/mcp": ["../../packages/react/src/mcp/index.ts"],
+      "@solvapay/react/styles.css": ["../../packages/react/src/styles.css"],
+      "@solvapay/react/mcp/styles.css": ["../../packages/react/src/mcp/styles.css"]
+    }
+  },
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["dist", "supabase/functions"]
+}

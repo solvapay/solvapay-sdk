@@ -1,6 +1,6 @@
 # Supabase Edge Functions Example
 
-Reference project showing how to use `@solvapay/supabase` to wire up SolvaPay endpoints as Supabase Edge Functions. Each function is a one-liner.
+Reference project showing how to use `@solvapay/fetch` to wire up SolvaPay endpoints as Supabase Edge Functions. Each function is a one-liner.
 
 ## Why this adapter?
 
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // supabase/functions/check-purchase/index.ts
-import { checkPurchase } from '@solvapay/supabase'
+import { checkPurchase } from '@solvapay/fetch'
 
 Deno.serve(checkPurchase)
 ```
@@ -51,7 +51,7 @@ The `supabase/functions/deno.json` maps npm packages for Deno:
 ```json
 {
   "imports": {
-    "@solvapay/supabase": "npm:@solvapay/supabase",
+    "@solvapay/fetch": "npm:@solvapay/fetch",
     "@solvapay/server": "npm:@solvapay/server",
     "@solvapay/auth": "npm:@solvapay/auth",
     "@solvapay/core": "npm:@solvapay/core"
@@ -115,7 +115,7 @@ Default: `*` (permissive, suitable for development). For production, configure a
 
 ```typescript
 // supabase/functions/check-purchase/index.ts
-import { checkPurchase, configureCors } from '@solvapay/supabase'
+import { checkPurchase, configureCors } from '@solvapay/fetch'
 
 configureCors({
   origins: ['https://myapp.com', 'http://localhost:5173'],

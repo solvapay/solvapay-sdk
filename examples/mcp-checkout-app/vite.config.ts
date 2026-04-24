@@ -48,8 +48,8 @@ export default defineConfig({
     alias: [
       { find: /^@solvapay\/core$/, replacement: `${packagesDir}/core/src/index.ts` },
       { find: /^@solvapay\/server$/, replacement: `${packagesDir}/server/src/index.ts` },
+      { find: /^@solvapay\/mcp-core$/, replacement: `${packagesDir}/mcp-core/src/index.ts` },
       { find: /^@solvapay\/mcp$/, replacement: `${packagesDir}/mcp/src/index.ts` },
-      { find: /^@solvapay\/mcp-sdk$/, replacement: `${packagesDir}/mcp-sdk/src/index.ts` },
       { find: /^@solvapay\/react$/, replacement: `${packagesDir}/react/src/index.tsx` },
       { find: /^@solvapay\/react\/mcp$/, replacement: `${packagesDir}/react/src/mcp/index.ts` },
       { find: /^@solvapay\/react\/primitives$/, replacement: `${packagesDir}/react/src/primitives/index.ts` },

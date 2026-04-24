@@ -1,3 +1,3 @@
-import { getProduct } from '@solvapay/supabase'
+import { getProduct } from '@solvapay/fetch'
 
 Deno.serve(getProduct)

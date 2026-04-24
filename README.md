@@ -46,8 +46,8 @@ npm install @solvapay/react-supabase @supabase/supabase-js
 # For Next.js integration
 npm install @solvapay/next
 
-# For Supabase Edge Functions
-npm install @solvapay/supabase
+# For Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers / Bun)
+npm install @solvapay/fetch
 
 # For authentication adapters
 npm install @solvapay/auth
@@ -63,7 +63,7 @@ The SDK consists of **8 published packages**:
 - **`@solvapay/react-supabase`** - Supabase auth adapter for React Provider
 - **`@solvapay/auth`** - Authentication adapters and utilities for extracting user IDs from requests
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
-- **`@solvapay/supabase`** - Supabase Edge Functions adapter (one-liner handlers)
+- **`@solvapay/fetch`** - Fetch-first adapter for Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel Functions). Renamed from `@solvapay/supabase` — API surface is unchanged.
 - **`solvapay`** - CLI for auth bootstrap (`npx solvapay init`)
 
 See [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for contributor
@@ -199,11 +199,11 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Supabase Edge Functions** using `@solvapay/supabase` (one-liner per endpoint):
+**Supabase Edge Functions** using `@solvapay/fetch` (one-liner per endpoint):
 
 ```typescript
 // supabase/functions/check-purchase/index.ts
-import { checkPurchase } from '@solvapay/supabase'
+import { checkPurchase } from '@solvapay/fetch'
 
 Deno.serve(checkPurchase)
 ```
@@ -340,7 +340,7 @@ cd examples/hosted-checkout-demo && pnpm dev
 
 ### [supabase-edge](./examples/supabase-edge)
 
-Supabase Edge Functions with `@solvapay/supabase` adapter:
+Supabase Edge Functions with `@solvapay/fetch` adapter:
 
 - One-liner per Edge Function (10 endpoints)
 - CORS utility with configurable origins
@@ -401,25 +401,52 @@ pnpm build
 pnpm test
 ```
 
-### Branching & Publishing
+### Branching, Changesets & Publishing
 
-- **`dev`** - Main development branch for daily work
-- **`main`** - Production branch that triggers automated npm publishing
+The monorepo uses [**Changesets**](https://github.com/changesets/changesets) for independent, per-package versioning. Packages move on their own semver tracks — you'll see legitimately mixed lockfiles like `@solvapay/core@1.0.7` next to `@solvapay/mcp@0.1.0`.
 
-When you push to `main`, a new patch version is automatically published. For minor/major versions:
+**Branches**
+
+- **`dev`** — primary development branch. Every push auto-publishes a
+  snapshot to the `@preview` npm dist-tag via
+  [`.github/workflows/publish-preview.yml`](./.github/workflows/publish-preview.yml).
+- **`main`** — stable release branch. Every push either (a) opens or updates
+  a "Version Packages" PR enumerating accumulated changesets, or — when
+  that PR merges — (b) publishes bumped packages to the `@latest` npm
+  dist-tag and creates matching git tags via
+  [`.github/workflows/publish.yml`](./.github/workflows/publish.yml).
+
+**Workflow per PR**
+
+1. Make your code change on a feature branch off `dev`.
+2. Run `pnpm changeset` and pick the right bump level (patch / minor / major) for every affected package. Commit the generated `.changeset/*.md`.
+3. Open a PR to `dev`. On merge, a preview snapshot ships.
+4. When ready for a stable release, merge `dev` → `main`. The "Version Packages" PR accumulates every changeset since the last release; merging it publishes.
+
+**Pre-publish gates** (run by both workflows):
+
+- `pnpm test` — full monorepo test suite.
+- `pnpm build:packages` — every publishable package builds to `dist/`.
+- `pnpm validate:fetch-runtime` — asserts `@solvapay/fetch` and
+  `@solvapay/mcp-fetch` load cleanly in a bare Web-standards environment
+  and don't leak forbidden Node built-ins. Blocks publish on any
+  regression in the Web-standards runtime surface.
+
+**Installing preview vs stable**
 
 ```bash
-pnpm version:bump:minor  # 0.1.x → 0.2.0
-pnpm version:bump:major  # 0.x.x → 1.0.0
+pnpm add @solvapay/core           # stable / @latest
+pnpm add @solvapay/core@preview   # latest snapshot from `dev`
+pnpm add @solvapay/core@1.0.7     # exact pin
 ```
 
-See [`docs/publishing.md`](./docs/publishing.md) for complete publishing workflow and [`CONTRIBUTING.md`](./CONTRIBUTING.md) for development guidelines.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full development workflow.
 
 ## Documentation
 
 - **[Architecture](./docs/contributing/architecture.md)** - Package design and structure
 - **[Contributing](./CONTRIBUTING.md)** - Development guidelines
-- **[Publishing](./docs/publishing.md)** - Publishing and release process
+- **[Changesets config](./.changeset/README.md)** - How to write a changeset
 
 ## Security
 

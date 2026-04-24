@@ -5,11 +5,12 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
+      "@solvapay/mcp-core": ["../mcp-core/src"],
       "@solvapay/server": ["../server/src"],
       "@solvapay/core": ["../core/src"]
     }
   },
   "include": ["src"],
   "exclude": ["__tests__", "**/*.test.ts"],
-  "references": [{ "path": "../core" }]
+  "references": [{ "path": "../core" }, { "path": "../mcp-core" }]
 }

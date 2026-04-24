@@ -1,21 +1,20 @@
 /**
- * `@solvapay/mcp` — framework-neutral MCP contracts for the SolvaPay
- * SDK. Provides tool names, result shape, paywall meta envelope, CSP
- * defaults, bootstrap payload, OAuth bridge, JWT helpers, and the
- * descriptor + payable handler builders that every SolvaPay MCP
- * adapter (`@solvapay/mcp-sdk`, future `mcp-lite` / `fastmcp`
- * adapters) maps onto its own registration API.
+ * `@solvapay/mcp` — official `@modelcontextprotocol/sdk` +
+ * `@modelcontextprotocol/ext-apps` adapter for the SolvaPay MCP
+ * toolbox.
  *
- * This package is the single source of truth for shapes that cross the
- * server↔client boundary (bootstrap payload, tool names, view map). It
- * has no runtime dependency on `@modelcontextprotocol/sdk` or
- * `@modelcontextprotocol/ext-apps` — that's what `@solvapay/mcp-sdk`
- * adds on top.
+ * This is the only SolvaPay package that imports
+ * `@modelcontextprotocol/*`. Everything else (tool names, descriptors,
+ * paywall meta, OAuth discovery JSON, JWT helpers) lives in
+ * `@solvapay/mcp-core` and can be reused by alternative adapters
+ * (`fastmcp`, raw JSON-RPC, …). Runtime-specific OAuth middleware
+ * lives in `@solvapay/mcp-express` (Node req/res/next) and
+ * `@solvapay/mcp-fetch` (Web-standards `Request`/`Response`).
  *
- * @example Build the descriptor bundle and hand it to an adapter:
+ * @example
  * ```ts
- * import { buildSolvaPayDescriptors } from '@solvapay/mcp'
- * import { createSolvaPayMcpServer } from '@solvapay/mcp-sdk'
+ * import { createSolvaPayMcpServer } from '@solvapay/mcp'
+ * import { z } from 'zod'
  *
  * const server = createSolvaPayMcpServer({
  *   solvaPay,
@@ -23,137 +22,36 @@
  *   resourceUri: 'ui://my-app/mcp-app.html',
  *   htmlPath: '/dist/mcp-app.html',
  *   publicBaseUrl: 'https://my-app.example.com',
+ *   additionalTools: ({ registerPayable }) => {
+ *     registerPayable('create_video', {
+ *       schema: { prompt: z.string() },
+ *       handler: async ({ prompt }, ctx) =>
+ *         ctx.respond({ videoUrl: await generateVideo(prompt) }),
+ *     })
+ *   },
  * })
  * ```
  */
 
-// ---- Tool name contract (shared with @solvapay/react/mcp) ----
-export { MCP_TOOL_NAMES } from './tool-names'
-export type { McpToolName } from './tool-names'
-
-// ---- Neutral types ----
-export {
-  OPEN_TOOL_FOR_VIEW,
-  SOLVAPAY_MCP_VIEW_KINDS,
-  TOOL_FOR_VIEW,
-  VIEW_FOR_OPEN_TOOL,
-  VIEW_FOR_TOOL,
-} from './types'
+export { createSolvaPayMcpServer } from './server'
 export type {
-  BootstrapCustomer,
-  BootstrapMerchant,
-  BootstrapPayload,
-  BootstrapPlan,
-  BootstrapProduct,
+  AdditionalToolsContext,
+  CreateSolvaPayMcpServerOptions,
+} from './server'
+
+export { registerPayableTool } from './registerPayableTool'
+export type { RegisterPayableToolOptions } from './registerPayableTool'
+
+// ---- Merchant-facing types re-exported from @solvapay/mcp-core ----
+// Everything a merchant needs to type a `registerPayable` handler for the
+// 90% path. Avoids forcing a second install of `@solvapay/mcp-core` just
+// to annotate `ctx` or hand-author a `NudgeSpec` / `ContentBlock`.
+export type {
   ContentBlock,
   CustomerSnapshot,
-  McpAdapterOptions,
-  McpToolExtra,
   NudgeSpec,
   PayableHandler,
-  PaywallToolResult,
   ResponseContext,
   ResponseOptions,
   ResponseResult,
-  SolvaPayCallToolResult,
-  SolvaPayDocsResourceDescriptor,
-  SolvaPayMcpCsp,
-  SolvaPayMcpPaywallContent,
-  SolvaPayMcpViewKind,
-  SolvaPayMerchantBranding,
-  SolvaPayPromptDescriptor,
-  SolvaPayPromptResult,
-  SolvaPayResourceDescriptor,
-  SolvaPayToolAnnotations,
-  SolvaPayToolDescriptor,
-  SolvaPayToolIcon,
-} from './types'
-
-// ---- Core helpers ----
-export {
-  buildSolvaPayRequest,
-  defaultGetCustomerRef,
-  enrichPurchase,
-  narratedToolResult,
-  parseMode,
-  previewJson,
-  toolErrorResult,
-  toolResult,
-} from './helpers'
-export type { BuildSolvaPayRequestOptions, SolvaPayToolMode } from './helpers'
-
-// ---- Narrators (per-tool text-mode renderers) ----
-export {
-  NARRATORS,
-  narrateManageAccount,
-  narrateUpgrade,
-  narrateTopup,
-  narrateActivatePlan,
-  uiPlaceholder,
-  balanceSummary,
-} from './narrate'
-export type { IntentTool, NarratorOutput } from './narrate'
-
-// ---- Paywall envelope builders ----
-export { buildPaywallUiMeta } from './paywall-meta'
-export type { PaywallUiMeta, PaywallUiMetaInput } from './paywall-meta'
-
-export { paywallToolResult } from './paywallToolResult'
-export type { PaywallToolResultContext } from './paywallToolResult'
-
-// ---- CSP baseline ----
-export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
-
-// ---- Descriptor + payable builders ----
-export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
-export type {
-  BuildSolvaPayDescriptorsOptions,
-  SolvaPayDescriptorBundle,
-} from './descriptors'
-
-export {
-  SOLVAPAY_OVERVIEW_MARKDOWN,
-  SOLVAPAY_OVERVIEW_MIME_TYPE,
-  SOLVAPAY_OVERVIEW_URI,
-} from './resources/overview'
-
-export { createBuildBootstrapPayload } from './bootstrap-payload'
-export type {
-  BuildBootstrapPayloadFn,
-  CreateBuildBootstrapPayloadOptions,
-} from './bootstrap-payload'
-
-export { buildPayableHandler } from './payable-handler'
-export type { BuildPayableHandlerContext } from './payable-handler'
-
-// ---- OAuth + bearer helpers ----
-export { buildAuthInfoFromBearer } from './auth-bridge'
-export type { BuildAuthInfoFromBearerOptions } from './auth-bridge'
-
-export {
-  createMcpOAuthBridge,
-  createOAuthAuthorizeHandler,
-  createOAuthRegisterHandler,
-  createOAuthRevokeHandler,
-  createOAuthTokenHandler,
-  getOAuthAuthorizationServerResponse,
-  getOAuthProtectedResourceResponse,
-} from './oauth-bridge'
-export type {
-  McpOAuthBridgeOptions,
-  OAuthAuthorizationServerOptions,
-  OAuthAuthorizeHandlerOptions,
-  OAuthBridgePaths,
-  OAuthRegisterHandlerOptions,
-  OAuthRevokeHandlerOptions,
-  OAuthTokenHandlerOptions,
-} from './oauth-bridge'
-
-export {
-  McpBearerAuthError,
-  decodeJwtPayload,
-  extractBearerToken,
-  getCustomerRefFromBearerAuthHeader,
-  getCustomerRefFromJwtPayload,
-} from './bearer'
-export type { McpBearerCustomerRefOptions } from './bearer'
+} from '@solvapay/mcp-core'

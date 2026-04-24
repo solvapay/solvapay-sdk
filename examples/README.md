@@ -79,7 +79,7 @@ The application will start on `http://localhost:3000`
 
 A reference project demonstrating:
 
-- One-liner Supabase Edge Functions using `@solvapay/supabase`
+- One-liner Supabase Edge Functions using `@solvapay/fetch`
 - All 10 payment/purchase endpoints as 2-line files
 - Deno import map for npm packages
 - CORS configuration for production
@@ -128,6 +128,30 @@ pnpm install
 cp .env.example .env
 pnpm dev
 ```
+
+### Supabase Edge MCP (`supabase-edge-mcp`)
+
+A full SolvaPay MCP server running on **Supabase Edge Functions**. Ships
+the same paywalled demo toolbox as `mcp-checkout-app`, but over
+`createSolvaPayMcpFetchHandler` (Web-standards `Request`/`Response`)
+instead of Express. The canonical Deno consumer for
+`@solvapay/mcp-fetch` — its `deno check` run is wired as a required CI
+gate before every `mcp-fetch` snapshot publish.
+
+```bash
+cd examples/supabase-edge-mcp
+pnpm install
+pnpm build                       # bundle mcp-app.html + copy into ./supabase/functions/mcp/
+supabase secrets set \
+  SOLVAPAY_SECRET_KEY=sk_live_... \
+  SOLVAPAY_PRODUCT_REF=prod_... \
+  MCP_PUBLIC_BASE_URL=https://<your-project-ref>.supabase.co/functions/v1/mcp
+pnpm deploy                      # supabase functions deploy mcp
+```
+
+See [`supabase-edge-mcp/README.md`](./supabase-edge-mcp/README.md) for
+full setup, the two-import-map trick for local dev vs. production, and
+the Deno type-check gate details.
 
 The Express example requires environment variables for configuration:
 
@@ -187,13 +211,21 @@ PORT=3001
    pnpm dev
    ```
 
-3. **Supabase Edge Functions example:**
-   The `supabase-edge` example uses Deno and runs via the Supabase CLI instead of `pnpm dev`:
+3. **Supabase Edge Functions examples:**
+   `supabase-edge` (one-liner `@solvapay/fetch` endpoints) and
+   `supabase-edge-mcp` (full MCP server via `@solvapay/mcp-fetch`) both
+   use Deno and run via the Supabase CLI instead of `pnpm dev`:
 
    ```bash
+   # One-liner SolvaPay endpoints
    cd examples/supabase-edge
    supabase start
    supabase functions serve
+
+   # Full SolvaPay MCP server on Supabase Edge
+   cd examples/supabase-edge-mcp
+   pnpm build          # bundle the iframe UI into ./supabase/functions/mcp/
+   supabase functions serve mcp --import-map supabase/functions/mcp/deno.local.json
    ```
 
 4. **Watch for changes:**

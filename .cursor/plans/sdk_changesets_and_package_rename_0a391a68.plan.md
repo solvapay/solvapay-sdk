@@ -3,44 +3,44 @@ name: SDK changesets migration + package rename
 overview: One atomic SDK refactor PR migrates the monorepo to changesets-driven independent versioning, renames MCP packages (`@solvapay/mcp` → `@solvapay/mcp-core`, `@solvapay/mcp-sdk` → `@solvapay/mcp`), hard-renames `@solvapay/supabase` → `@solvapay/fetch` (runtime-accurate name covering Deno/Supabase Edge/CF Workers/Bun/Next edge/Vercel Functions), and adds two new packages (`@solvapay/mcp-express` for Node middleware, `@solvapay/mcp-fetch` for Web-standards runtimes with a turnkey handler). A follow-up PR ships `examples/supabase-edge-mcp/` + docs cleanup. No `mcp-lite` anywhere. MCP names are free (verified on npm); `@solvapay/supabase` has 11 published versions but gets a clean break — hard rename + announced migration, no deprecation shim.
 todos:
   - id: pr1-changesets-config
-    content: "PR1: add @changesets/cli + changesets/action@v1, seed .changeset/config.json (linked: [] for independent versioning, updateInternalDependencies: patch, access: public, ignore @example/* and internal-only packages). Delete scripts/version-bump.ts + scripts/version-bump-preview.ts + scripts/sync-versions-from-tags.ts + related root package.json scripts."
-    status: pending
+    content: 'PR1: add @changesets/cli + changesets/action@v1, seed .changeset/config.json (linked: [] for independent versioning, updateInternalDependencies: patch, access: public, ignore @example/* and internal-only packages). Delete scripts/version-bump.ts + scripts/version-bump-preview.ts + scripts/sync-versions-from-tags.ts + related root package.json scripts.'
+    status: completed
   - id: pr1-workflows
-    content: "PR1: rewrite .github/workflows/publish-preview.yml to snapshot mode (push to `dev` \u2192 pnpm changeset version --snapshot preview + pnpm changeset publish --tag preview --no-git-tag). Rewrite publish.yml to use changesets/action@v1 Version Packages PR flow. Add PR template nudging for a changeset. Update README to document the @preview dist-tag consumer flow."
-    status: pending
+    content: 'PR1: rewrite .github/workflows/publish-preview.yml to snapshot mode (push to `dev` → pnpm changeset version --snapshot preview + pnpm changeset publish --tag preview --no-git-tag). Rewrite publish.yml to use changesets/action@v1 Version Packages PR flow. Add PR template nudging for a changeset. Update README to document the @preview dist-tag consumer flow.'
+    status: completed
   - id: pr1-rename-core
     content: "PR1: git mv packages/mcp packages/mcp-core; set name to @solvapay/mcp-core; remove the Node OAuth middleware (moves to mcp-express). Keep pure JSON builders getOAuthProtectedResourceResponse / getOAuthAuthorizationServerResponse since they're framework-neutral."
-    status: pending
+    status: completed
   - id: pr1-rename-sdk
-    content: "PR1: git mv packages/mcp-sdk packages/mcp; set name to @solvapay/mcp; bump dep/peer to reference @solvapay/mcp-core. Keep createSolvaPayMcpServer + registerPayableTool as the happy path."
-    status: pending
+    content: 'PR1: git mv packages/mcp-sdk packages/mcp; set name to @solvapay/mcp; bump dep/peer to reference @solvapay/mcp-core. Keep createSolvaPayMcpServer + registerPayableTool as the happy path.'
+    status: completed
   - id: pr1-mcp-express
     content: "PR1: scaffold packages/mcp-express with the lifted Node (req,res,next) OAuth middleware. Peer deps on @solvapay/mcp-core. Port existing oauth-bridge.spec.ts verbatim plus negative assertion expect(JSON.stringify(doc)).not.toContain('product_ref')."
-    status: pending
+    status: completed
   - id: pr1-mcp-fetch
-    content: "PR1: scaffold packages/mcp-fetch with fetch-first OAuth handlers (protectedResource, authorizationServer, register, authorize, token, revoke \u2014 each (req: Request) => Promise<Response | null>), native-scheme CORS preflight, 401 WWW-Authenticate helper, resolveBearer helper. Turnkey createSolvaPayMcpFetchHandler({ server, publicBaseUrl, apiBaseUrl, productRef, mcpPath? }) composes OAuth + WebStandardStreamableHTTPServerTransport + server into (req: Request) => Promise<Response>. Byte-for-byte token/revoke body passthrough. Tests: RFC 8414 \u00a73.3 self-consistency, body with + and %20 survives, native-scheme CORS only mirrors cursor/vscode/vscode-webview/claude origins."
-    status: pending
+    content: 'PR1: scaffold packages/mcp-fetch with fetch-first OAuth handlers (protectedResource, authorizationServer, register, authorize, token, revoke — each (req: Request) => Promise<Response | null>), native-scheme CORS preflight, 401 WWW-Authenticate helper, resolveBearer helper. Turnkey createSolvaPayMcpFetchHandler({ server, publicBaseUrl, apiBaseUrl, productRef, mcpPath? }) composes OAuth + WebStandardStreamableHTTPServerTransport + server into (req: Request) => Promise<Response>. Byte-for-byte token/revoke body passthrough. Tests: RFC 8414 §3.3 self-consistency, body with + and %20 survives, native-scheme CORS only mirrors cursor/vscode/vscode-webview/claude origins.'
+    status: completed
   - id: pr1-rename-fetch
-    content: "PR1: git mv packages/supabase packages/fetch; set name to @solvapay/fetch; bump version to 1.0.0 (fresh start under the new name). Hard rename, no shim. Update examples/supabase-edge/ imports + README to use @solvapay/fetch. Update docs/guides that reference @solvapay/supabase."
-    status: pending
+    content: 'PR1: git mv packages/supabase packages/fetch; set name to @solvapay/fetch; bump version to 1.0.0 (fresh start under the new name). Hard rename, no shim. Update examples/supabase-edge/ imports + README to use @solvapay/fetch. Update docs/guides that reference @solvapay/supabase.'
+    status: completed
   - id: pr1-update-consumers
-    content: "PR1: update every workspace consumer's imports in one sweep: @solvapay/react peer switches from @solvapay/mcp \u2192 @solvapay/mcp-core; examples/mcp-checkout-app and examples/mcp-oauth-bridge switch their @solvapay/mcp-sdk imports to @solvapay/mcp and their OAuth bridge imports from @solvapay/mcp to @solvapay/mcp-express; examples/supabase-edge/ and docs switch @solvapay/supabase \u2192 @solvapay/fetch."
-    status: pending
+    content: "PR1: update every workspace consumer's imports in one sweep: @solvapay/react peer switches from @solvapay/mcp → @solvapay/mcp-core; examples/mcp-checkout-app and examples/mcp-oauth-bridge switch their @solvapay/mcp-sdk imports to @solvapay/mcp and their OAuth bridge imports from @solvapay/mcp to @solvapay/mcp-express; examples/supabase-edge/ and docs switch @solvapay/supabase → @solvapay/fetch."
+    status: completed
   - id: pr1-changesets-content
-    content: "PR1: write the inaugural changesets. Starting versions: @solvapay/mcp-core 0.1.0, @solvapay/mcp 0.1.0, @solvapay/mcp-express 0.1.0, @solvapay/mcp-fetch 0.1.0 (pre-1.0 signals API-still-stabilising while the MCP ecosystem moves fast). @solvapay/fetch debuts at 1.0.0 (continuity with @solvapay/supabase@1.0.1 code maturity). @solvapay/react patch (peer rename only). Other packages get no changeset. CHANGELOG for @solvapay/fetch explicitly notes the rename from @solvapay/supabase."
-    status: pending
+    content: 'PR1: write the inaugural changesets. Starting versions: @solvapay/mcp-core 0.1.0, @solvapay/mcp 0.1.0, @solvapay/mcp-express 0.1.0, @solvapay/mcp-fetch 0.1.0 (pre-1.0 signals API-still-stabilising while the MCP ecosystem moves fast). @solvapay/fetch debuts at 1.0.0 (continuity with @solvapay/supabase@1.0.1 code maturity). @solvapay/react patch (peer rename only). Other packages get no changeset. CHANGELOG for @solvapay/fetch explicitly notes the rename from @solvapay/supabase.'
+    status: completed
   - id: pr1-validate-fetch-runtime
-    content: "PR1: add scripts/validate-fetch-runtime.ts \u2014 Node-based smoke test that imports @solvapay/mcp, @solvapay/mcp-fetch, @solvapay/mcp-core, @solvapay/mcp-express from the pnpm workspace, constructs a mock McpServer, wraps it with createSolvaPayMcpFetchHandler, spins up a local http.createServer bridging Node IncomingMessage \u2194 Web Request, and probes: GET /.well-known/oauth-protected-resource, GET /.well-known/oauth-authorization-server (asserts issuer === publicBaseUrl and no 'product_ref' in the JSON), OPTIONS /oauth/register with cursor:// origin (asserts CORS mirror), POST /mcp without bearer (asserts 401 + WWW-Authenticate). Assertion-based; fails fast. Wire into publish-preview.yml as a required step before `pnpm changeset publish` so an unbuildable @solvapay/mcp-fetch can never reach @preview."
-    status: pending
+    content: "PR1: add scripts/validate-fetch-runtime.ts — Node-based smoke test that imports @solvapay/mcp, @solvapay/mcp-fetch, @solvapay/mcp-core, @solvapay/mcp-express from the pnpm workspace, constructs a mock McpServer, wraps it with createSolvaPayMcpFetchHandler, spins up a local http.createServer bridging Node IncomingMessage ↔ Web Request, and probes: GET /.well-known/oauth-protected-resource, GET /.well-known/oauth-authorization-server (asserts issuer === publicBaseUrl and no 'product_ref' in the JSON), OPTIONS /oauth/register with cursor:// origin (asserts CORS mirror), POST /mcp without bearer (asserts 401 + WWW-Authenticate). Assertion-based; fails fast. Wire into publish-preview.yml as a required step before `pnpm changeset publish` so an unbuildable @solvapay/mcp-fetch can never reach @preview."
+    status: completed
   - id: pr2-supabase-example
     content: "PR2: scaffold examples/supabase-edge-mcp with mcp-app.tsx, vite config producing dist/mcp-app.html, build script that copies the HTML into supabase/functions/mcp/mcp-app.html, supabase/functions/mcp/index.ts using createSolvaPayMcpFetchHandler + createSolvaPayMcpServer({ readHtml: async () => Deno.readTextFile(new URL('./mcp-app.html', import.meta.url)) }), supabase/functions/deno.json npm import map, .env.example, README with deploy steps."
-    status: pending
+    status: completed
   - id: pr2-deno-smoke-validate
-    content: "PR2: add examples/supabase-edge-mcp/supabase/functions/mcp/deno.local.json mapping bare specifiers to file:../../../../packages/*/dist/index.js for local dev, keep deno.json (production) pointing at npm:@solvapay/* specifiers. Add examples/supabase-edge-mcp/package.json `validate` script that runs: (1) pnpm build:packages to ensure dist/ is fresh, (2) pnpm --filter @example/supabase-edge-mcp build for the UI bundle, (3) deno check --import-map=supabase/functions/mcp/deno.local.json supabase/functions/mcp/index.ts for type-check under real Deno, (4) optionally: supabase functions serve mcp --import-map=...local.json & curl /.well-known/oauth-authorization-server to catch Deno-specific runtime issues (node builtin leaks, import.meta.url resolution). Wire the type-check step into publish-preview.yml as a required gate \u2014 so publishing @solvapay/mcp-fetch is blocked whenever the canonical Supabase consumer can't even type-check against it."
-    status: pending
+    content: "PR2: add examples/supabase-edge-mcp/supabase/functions/mcp/deno.local.json mapping bare specifiers to file:../../../../packages/*/dist/index.js for local dev, keep deno.json (production) pointing at npm:@solvapay/* specifiers. Add examples/supabase-edge-mcp/package.json `validate` script that runs: (1) pnpm build:packages to ensure dist/ is fresh, (2) pnpm --filter @example/supabase-edge-mcp build for the UI bundle, (3) deno check --import-map=supabase/functions/mcp/deno.local.json supabase/functions/mcp/index.ts for type-check under real Deno, (4) optionally: supabase functions serve mcp --import-map=...local.json & curl /.well-known/oauth-authorization-server to catch Deno-specific runtime issues (node builtin leaks, import.meta.url resolution). Wire the type-check step into publish-preview.yml as a required gate — so publishing @solvapay/mcp-fetch is blocked whenever the canonical Supabase consumer can't even type-check against it."
+    status: completed
   - id: pr2-docs-cleanup
-    content: "PR2: remove stale mcp-lite mentions from packages/mcp-core/src/* comments, packages/mcp/* README+source, packages/server/README.md, docs/guides/mcp.mdx. Update examples/mcp-checkout-app/README.md's 'Choosing the right example' table to add the Supabase Edge row. Delete .cursor/plans/supabase-mcp_sdk_package_c319cb08.plan.md (obsolete \u2014 it targeted mcp-lite)."
-    status: pending
+    content: "PR2: remove stale mcp-lite mentions from packages/mcp-core/src/* comments, packages/mcp/* README+source, packages/server/README.md, docs/guides/mcp.mdx. Update examples/mcp-checkout-app/README.md's 'Choosing the right example' table to add the Supabase Edge row. Delete .cursor/plans/supabase-mcp_sdk_package_c319cb08.plan.md (obsolete — it targeted mcp-lite)."
+    status: completed
 isProject: false
 ---
 
@@ -124,9 +124,7 @@ import { createMcpOAuthBridge } from '@solvapay/mcp-express'
 // Deno / Supabase Edge / Cloudflare / Bun / Next edge — MCP
 import { createSolvaPayMcpServer } from '@solvapay/mcp'
 import { createSolvaPayMcpFetchHandler } from '@solvapay/mcp-fetch'
-Deno.serve(
-  createSolvaPayMcpFetchHandler({ server, publicBaseUrl, apiBaseUrl, productRef })
-)
+Deno.serve(createSolvaPayMcpFetchHandler({ server, publicBaseUrl, apiBaseUrl, productRef }))
 
 // Web-standards checkout (new name — was @solvapay/supabase)
 import { checkPurchase, createPaymentIntent } from '@solvapay/fetch'
@@ -264,8 +262,8 @@ export function createSolvaPayMcpFetchHandler(opts: {
   publicBaseUrl: string
   apiBaseUrl: string
   productRef: string
-  mcpPath?: string          // default '/mcp'
-  requireAuth?: boolean     // default true
+  mcpPath?: string // default '/mcp'
+  requireAuth?: boolean // default true
 }): (req: Request) => Promise<Response>
 ```
 
@@ -283,12 +281,12 @@ Invariants enforced by tests (mirrors [the obsolete plan's](.cursor/plans/supaba
 
 9. **Update workspace consumers.** Single sweep, internal-only:
    - [packages/react/package.json](packages/react/package.json) peer dep `@solvapay/mcp` → `@solvapay/mcp-core`.
-   - [packages/react/src/mcp/*](packages/react/src/mcp/) import rewrites.
+   - [packages/react/src/mcp/\*](packages/react/src/mcp/) import rewrites.
    - [packages/next/package.json](packages/next/package.json) if it imports from `@solvapay/mcp` anywhere.
    - [examples/mcp-checkout-app/](examples/mcp-checkout-app/): `@solvapay/mcp-sdk` → `@solvapay/mcp`; `createMcpOAuthBridge` import → `@solvapay/mcp-express`.
    - [examples/mcp-oauth-bridge/](examples/mcp-oauth-bridge/): same as above.
    - [examples/supabase-edge/](examples/supabase-edge/): `@solvapay/supabase` → `@solvapay/fetch` across every function's [deno.json](examples/supabase-edge/supabase/functions/deno.json) and `index.ts` file.
-   - Any [docs/*.mdx](docs/) references to `@solvapay/supabase`.
+   - Any [docs/\*.mdx](docs/) references to `@solvapay/supabase`.
 
 10. **Write the inaugural changesets.** One or two `.changeset/*.md` files. Note the mixed semver levels — the first release of a package with `version: "0.1.0"` in `package.json` is triggered by a `minor` changeset (changesets treats initial publish as a minor bump from `0.0.0`); `@solvapay/fetch` is already `1.0.0` in `package.json` so its initial publish needs no changeset (publishing the current version is idempotent), but we include a `patch` changeset to generate a CHANGELOG entry announcing the rename:
 
@@ -304,6 +302,7 @@ Invariants enforced by tests (mirrors [the obsolete plan's](.cursor/plans/supaba
 
 Introduce independent-versioned MCP packages (all debut at 0.1.0 — pre-1.0
 signals API still stabilising while the MCP ecosystem evolves):
+
 - @solvapay/mcp-core (framework-neutral contracts)
 - @solvapay/mcp (official @modelcontextprotocol/sdk adapter, happy path)
 - @solvapay/mcp-express (Node req/res/next OAuth bridge)
@@ -322,14 +321,14 @@ match the rename (no API surface change for consumers).
 
 Starting version table:
 
-| Package | Starts at | Why |
-| --- | --- | --- |
-| `@solvapay/mcp-core` | `0.1.0` | Net-new on npm, underlying MCP ecosystem still moving fast |
-| `@solvapay/mcp` | `0.1.0` | Same |
-| `@solvapay/mcp-express` | `0.1.0` | Same |
-| `@solvapay/mcp-fetch` | `0.1.0` | Brand new, turnkey handler shape likely to iterate |
-| `@solvapay/fetch` | `1.0.0` | Code is what `@solvapay/supabase@1.0.1` ships — downgrading would erase battle-testing signal |
-| `@solvapay/react` | bump from `1.0.7`+preview | Peer change only, patch bump |
+| Package                 | Starts at                 | Why                                                                                           |
+| ----------------------- | ------------------------- | --------------------------------------------------------------------------------------------- |
+| `@solvapay/mcp-core`    | `0.1.0`                   | Net-new on npm, underlying MCP ecosystem still moving fast                                    |
+| `@solvapay/mcp`         | `0.1.0`                   | Same                                                                                          |
+| `@solvapay/mcp-express` | `0.1.0`                   | Same                                                                                          |
+| `@solvapay/mcp-fetch`   | `0.1.0`                   | Brand new, turnkey handler shape likely to iterate                                            |
+| `@solvapay/fetch`       | `1.0.0`                   | Code is what `@solvapay/supabase@1.0.1` ships — downgrading would erase battle-testing signal |
+| `@solvapay/react`       | bump from `1.0.7`+preview | Peer change only, patch bump                                                                  |
 
 Consumers end up with a legitimately mixed lockfile — that's the independent-versioning contract:
 
@@ -365,6 +364,7 @@ Promoting any `0.x` package to `1.0.0` later is a normal `major` changeset — n
 ### Preview release mechanics after PR1
 
 On push to `dev`:
+
 1. CI runs `pnpm changeset version --snapshot preview` — generates `0.0.0-preview-<timestamp>-<sha>` versions on every package with a pending changeset (plus internal dependents).
 2. CI runs `pnpm changeset publish --tag preview --no-git-tag`.
 3. `@preview` dist-tag updates for each affected package. Other packages keep their existing `1.0.8-preview.11`.
@@ -433,9 +433,7 @@ const server = createSolvaPayMcpServer({
   additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
 })
 
-Deno.serve(
-  createSolvaPayMcpFetchHandler({ server, publicBaseUrl, apiBaseUrl, productRef })
-)
+Deno.serve(createSolvaPayMcpFetchHandler({ server, publicBaseUrl, apiBaseUrl, productRef }))
 ```
 
 Relies on the edge-neutral `readHtml` branch wired in what will be `packages/mcp-core/src/descriptors.ts` (currently [packages/mcp/src/descriptors.ts:611-617](packages/mcp/src/descriptors.ts#L611-L617)) — no `node:fs/promises` dynamic import fires on Deno.

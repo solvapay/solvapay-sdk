@@ -20,8 +20,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SolvaPayProvider } from '../SolvaPayProvider'
-import type { SolvaPayMcpViewKind } from '@solvapay/mcp'
-import { VIEW_FOR_TOOL } from '@solvapay/mcp'
+import type { SolvaPayMcpViewKind } from '@solvapay/mcp-core'
+import { VIEW_FOR_TOOL } from '@solvapay/mcp-core'
 import { McpBridgeProvider, type McpBridgeAppLike, type McpMessageOnSuccess } from './bridge'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {

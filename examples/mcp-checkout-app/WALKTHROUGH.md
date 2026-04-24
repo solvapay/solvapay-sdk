@@ -40,7 +40,7 @@ return createSolvaPayMcpServer({
 })
 ```
 
-What that line hides (from `@solvapay/mcp-sdk`):
+What that line hides (from `@solvapay/mcp`):
 
 - **12 tools registered** — 5 intent tools (`upgrade`, `manage_account`,
   `topup`, `check_usage`, `activate_plan`), 7 UI-only state-change
@@ -98,7 +98,7 @@ What that line hides (from `@solvapay/react/mcp`):
 Two example-local paywalled data tools (`search_knowledge`,
 `get_market_quote`) plus matching slash-command prompts. Registered
 via `additionalTools({ registerPayable, server })` — consumes the
-public `@solvapay/mcp-sdk` API the way a third-party integrator would.
+public `@solvapay/mcp` API the way a third-party integrator would.
 Gated behind `DEMO_TOOLS` env var.
 
 ## `probe.mjs`

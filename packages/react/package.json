@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/react",
-  "version": "1.0.8-preview.10",
+  "version": "1.0.9",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -52,12 +52,12 @@
     "directory": "packages/react"
   },
   "peerDependencies": {
-    "@solvapay/mcp": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
     "react": "^18.2.0 || ^19.0.0",
     "react-dom": "^18.2.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
-    "@solvapay/mcp": {
+    "@solvapay/mcp-core": {
       "optional": true
     }
   },
@@ -76,7 +76,7 @@
     "lint:fix": "eslint src --config ../../eslint.config.react.mjs --fix"
   },
   "devDependencies": {
-    "@solvapay/mcp": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:*",
     "@testing-library/dom": "^10.4.1",

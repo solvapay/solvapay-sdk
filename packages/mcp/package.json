@@ -1,6 +1,7 @@
 {
   "name": "@solvapay/mcp",
-  "version": "1.0.8-preview.10",
+  "version": "0.1.0",
+  "description": "Official @modelcontextprotocol/sdk + @modelcontextprotocol/ext-apps adapter for the SolvaPay MCP toolbox (createSolvaPayMcpServer, registerPayableTool).",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -38,21 +39,23 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
-    "@solvapay/core": "workspace:*"
+    "@solvapay/mcp-core": "workspace:*"
   },
   "peerDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/sdk": "^1.28.0",
     "@solvapay/server": "workspace:*",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
-    "@solvapay/server": {
-      "optional": true
-    },
     "zod": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:^",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
