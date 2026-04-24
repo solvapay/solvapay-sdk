@@ -372,6 +372,74 @@ export class SolvaPayPaywall {
   }
 
   /**
+   * Execute the handler for an already-obtained `allow` decision and
+   * emit the post-handler `trackUsage('success' | 'fail', ...)` event.
+   *
+   * Exposed for adapter integration — the adapter layer drives the
+   * paywall through `decide()` + `runAllow()` so `formatGate` can own
+   * gate outcomes without routing through `PaywallError`. `protect()`
+   * continues to offer the self-contained throw-based surface for
+   * legacy consumers.
+   *
+   * `runAllow` intentionally does NOT re-throw `PaywallError` — if a
+   * handler calls `ctx.gate(reason)` and throws from deep code, the
+   * adapter catches that at the `formatGate` boundary instead.
+   *
+   * @since 1.1.0
+   */
+  async runAllow<TArgs extends PaywallArgs, TResult>(
+    decision: Extract<PaywallDecision<TArgs>, { outcome: 'allow' }>,
+    handler: (args: TArgs, handlerContext?: ProtectHandlerContext) => Promise<TResult>,
+    metadata: PaywallMetadata,
+    args: TArgs,
+  ): Promise<TResult> {
+    const product = this.resolveProduct(metadata)
+    const usageType = metadata.usageType || 'requests'
+    const requestId = this.generateRequestId()
+    const startTime = Date.now()
+
+    const forwardedExtra = (args as unknown as Record<string, unknown>)[EXTRA_FORWARD_KEY]
+    const handlerContext: ProtectHandlerContext = {
+      customerRef: decision.customerRef,
+      limits: decision.limits,
+      ...(forwardedExtra !== undefined ? { extra: forwardedExtra } : {}),
+    }
+
+    try {
+      const result = await handler(args, handlerContext)
+      const latencyMs = Date.now() - startTime
+      this.trackUsage(
+        decision.customerRef,
+        product,
+        decision.limits.meterName || usageType,
+        'success',
+        requestId,
+        latencyMs,
+      )
+      return result
+    } catch (error) {
+      if (error instanceof Error) {
+        const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error'
+        this.log(`❌ Error in paywall [${errorType}]: ${error.message}`)
+      } else {
+        this.log(`❌ Error in paywall:`, error)
+      }
+      if (!(error instanceof PaywallError)) {
+        const latencyMs = Date.now() - startTime
+        this.trackUsage(
+          decision.customerRef,
+          product,
+          decision.limits.meterName || usageType,
+          'fail',
+          requestId,
+          latencyMs,
+        )
+      }
+      throw error
+    }
+  }
+
+  /**
    * Core protection method - works for both MCP and HTTP
    *
    * The `handler` may optionally declare a second positional argument
@@ -391,13 +459,7 @@ export class SolvaPayPaywall {
     metadata: PaywallMetadata = {},
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<(args: TArgs) => Promise<TResult>> {
-    const product = this.resolveProduct(metadata)
-    const usageType = metadata.usageType || 'requests'
-
     return async (args: TArgs): Promise<TResult> => {
-      const startTime = Date.now()
-      const requestId = this.generateRequestId()
-
       // Pre-check + gate outcome handled by `decide()`. Infrastructure
       // failures (checkLimits down, ensureCustomer hard-failed) propagate
       // as regular errors — the original `protect()` behaviour was to
@@ -415,46 +477,7 @@ export class SolvaPayPaywall {
         throw new PaywallError(message, decision.gate)
       }
 
-      try {
-        const forwardedExtra = (args as unknown as Record<string, unknown>)[EXTRA_FORWARD_KEY]
-        const handlerContext: ProtectHandlerContext = {
-          customerRef: decision.customerRef,
-          limits: decision.limits,
-          ...(forwardedExtra !== undefined ? { extra: forwardedExtra } : {}),
-        }
-        const result = await handler(args, handlerContext)
-
-        const latencyMs = Date.now() - startTime
-        this.trackUsage(
-          decision.customerRef,
-          product,
-          decision.limits.meterName || usageType,
-          'success',
-          requestId,
-          latencyMs,
-        )
-
-        return result
-      } catch (error) {
-        if (error instanceof Error) {
-          const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error'
-          this.log(`❌ Error in paywall [${errorType}]: ${error.message}`)
-        } else {
-          this.log(`❌ Error in paywall:`, error)
-        }
-        if (!(error instanceof PaywallError)) {
-          const latencyMs = Date.now() - startTime
-          this.trackUsage(
-            decision.customerRef,
-            product,
-            decision.limits.meterName || usageType,
-            'fail',
-            requestId,
-            latencyMs,
-          )
-        }
-        throw error
-      }
+      return this.runAllow(decision, handler, metadata, args)
     }
   }
 

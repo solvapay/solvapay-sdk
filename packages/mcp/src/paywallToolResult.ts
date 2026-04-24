@@ -5,7 +5,8 @@
  * wholesale.
  */
 
-import type { PaywallError, PaywallStructuredContent } from '@solvapay/server'
+import type { PaywallStructuredContent } from '@solvapay/server'
+import { PaywallError } from '@solvapay/server'
 import { buildPaywallUiMeta } from './paywall-meta'
 import type {
   BootstrapPayload,
@@ -29,34 +30,52 @@ export interface PaywallToolResultContext {
 }
 
 /**
- * Convert a `PaywallError` into a `PaywallToolResult` carrying a full
- * `BootstrapPayload` (so the React shell can render the paywall view
- * immediately) and the `_meta.ui` envelope telling the host which
- * resource to open.
+ * Convert a paywall gate (either a `PaywallError` or the underlying
+ * `PaywallStructuredContent` returned by `paywall.decide()`) into a
+ * `PaywallToolResult` carrying a full `BootstrapPayload` (so the
+ * React shell can render the paywall view immediately) and the
+ * `_meta.ui` envelope telling the host which resource to open.
  *
- * @example
+ * Prefer the gate-first form when you already have a
+ * `PaywallDecision` in hand:
+ *
  * ```ts
- * registerAppTool(server, 'create_video', schema, async (args, extra) => {
- *   try {
- *     return await solvaPay.payable({ product }).mcp(handler)(args, extra)
- *   } catch (err) {
- *     if (err instanceof PaywallError) {
- *       return paywallToolResult(err, {
- *         resourceUri: 'ui://my-app/mcp-app.html',
- *         buildBootstrap,
- *         extra,
- *       })
- *     }
- *     throw err
+ * const decision = await solvaPay.paywall.decide(args, { product })
+ * if (decision.outcome === 'gate') {
+ *   return paywallToolResult(decision.gate, {
+ *     resourceUri: 'ui://my-app/mcp-app.html',
+ *     buildBootstrap,
+ *     extra,
+ *   })
+ * }
+ * ```
+ *
+ * The legacy `PaywallError`-first form continues to work for custom
+ * adapters that still `try/catch`:
+ *
+ * ```ts
+ * try {
+ *   return await solvaPay.payable({ product }).mcp(handler)(args, extra)
+ * } catch (err) {
+ *   if (err instanceof PaywallError) {
+ *     return paywallToolResult(err, {
+ *       resourceUri: 'ui://my-app/mcp-app.html',
+ *       buildBootstrap,
+ *       extra,
+ *     })
  *   }
- * })
+ *   throw err
+ * }
  * ```
  */
 export async function paywallToolResult(
-  err: PaywallError,
+  errOrGate: PaywallError | PaywallStructuredContent,
   ctx: PaywallToolResultContext,
 ): Promise<PaywallToolResult> {
-  const paywallContent = err.structuredContent as PaywallStructuredContent
+  const paywallContent: PaywallStructuredContent =
+    errOrGate instanceof PaywallError ? errOrGate.structuredContent : errOrGate
+  const narrationText =
+    errOrGate instanceof PaywallError ? errOrGate.message : paywallContent.message
 
   let structuredContent: Record<string, unknown>
   if (ctx.buildBootstrap) {
@@ -69,8 +88,15 @@ export async function paywallToolResult(
   }
 
   return {
-    isError: true,
-    content: [{ type: 'text', text: err.message }],
+    // Deliberately `false`: paywall is a user-actionable gate, not a
+    // tool failure. Hosts short-circuit on `isError: true` and render
+    // the error text instead of opening the UI resource advertised by
+    // `_meta.ui`, which meant the paywall widget never appeared on
+    // MCPJam / Claude Desktop / ChatGPT Apps. The `structuredContent`
+    // and `content[0].text` still carry the gate reason so the LLM
+    // can narrate it, while `_meta.ui` triggers the widget.
+    isError: false,
+    content: [{ type: 'text', text: narrationText }],
     structuredContent,
     _meta: buildPaywallUiMeta({ resourceUri: ctx.resourceUri }),
   }

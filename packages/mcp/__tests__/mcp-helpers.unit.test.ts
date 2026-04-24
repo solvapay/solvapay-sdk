@@ -56,8 +56,26 @@ describe('paywallToolResult', () => {
       message: 'Purchase required',
     })
     const result = await paywallToolResult(err, { resourceUri: 'ui://my-app/mcp-app.html' })
-    expect(result.isError).toBe(true)
+    // Paywall is a user-actionable gate, not a tool failure. Hosts
+    // short-circuit `isError: true` and never open the widget; the
+    // `structuredContent` + `content[0].text` carry the gate reason
+    // for LLM narration.
+    expect(result.isError).toBe(false)
     expect(result.structuredContent).toEqual(err.structuredContent)
+    expect(result._meta).toEqual({ ui: { resourceUri: 'ui://my-app/mcp-app.html' } })
+  })
+
+  it('accepts a PaywallStructuredContent gate directly (decide() form)', async () => {
+    const gate = {
+      kind: 'payment_required' as const,
+      product: 'prd_foo',
+      checkoutUrl: 'https://example.com/checkout',
+      message: 'Purchase required',
+    }
+    const result = await paywallToolResult(gate, { resourceUri: 'ui://my-app/mcp-app.html' })
+    expect(result.isError).toBe(false)
+    expect(result.structuredContent).toEqual(gate)
+    expect(result.content).toEqual([{ type: 'text', text: gate.message }])
     expect(result._meta).toEqual({ ui: { resourceUri: 'ui://my-app/mcp-app.html' } })
   })
 

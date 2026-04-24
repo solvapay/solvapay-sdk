@@ -135,7 +135,16 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     // ——————————————————————————————————————————————————————————————
     // Paywall branch.
     // ——————————————————————————————————————————————————————————————
-    if (result.isError && isPaywallStructuredContent(result.structuredContent)) {
+    //
+    // `McpAdapter.formatGate` already delivers the clean shape
+    // (`isError:false`, `content[0].text = gate.message`,
+    // `structuredContent = gate`). `buildPayableHandler` adds the
+    // MCP-specific bits the `@solvapay/server` layer can't know:
+    // the full `BootstrapPayload` riding on `structuredContent` so
+    // the React shell mounts the paywall view directly, and the
+    // `_meta.ui.resourceUri` envelope telling the host which UI
+    // resource to open.
+    if (isPaywallStructuredContent(result.structuredContent)) {
       const existingMeta =
         typeof (result as PaywallToolResult)._meta === 'object' &&
         (result as PaywallToolResult)._meta !== null
@@ -151,6 +160,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
 
       return {
         ...(result as SolvaPayCallToolResult),
+        isError: false,
         structuredContent,
         _meta: {
           ...existingMeta,

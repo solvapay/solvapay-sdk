@@ -289,10 +289,24 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       )
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
-      expect(result.isError).toBe(true)
+      // Paywall tool results are *not* flagged as errors — a gate is
+      // a user-actionable UI trigger, not a tool failure. Hosts
+      // short-circuit `isError: true` and never open the widget.
+      expect(result.isError).toBe(false)
       const sc = result.structuredContent as Record<string, unknown>
       expect(sc.kind).toBe('payment_required')
       expect(sc.message).toBe('custom reason')
+
+      // `content[0].text` is a plain-string narration sourced from
+      // the gate's human message — no `{ success: false, error:
+      // "Payment required" }` JSON blob, which some MCP hosts
+      // (MCPJam) treat as a failure signal and use to suppress
+      // opening `_meta.ui.resourceUri`.
+      const firstBlock = result.content[0] as { type: string; text: string }
+      expect(firstBlock.type).toBe('text')
+      expect(firstBlock.text).toBe('custom reason')
+      expect(firstBlock.text).not.toMatch(/success/i)
+      expect(firstBlock.text).not.toMatch(/"error"/i)
 
       const trackUsageCalls = client.__trackUsageCalls
       expect(trackUsageCalls.some(c => c.outcome === 'fail')).toBe(false)
@@ -316,10 +330,13 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       )
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
-      expect(result.isError).toBe(true)
+      expect(result.isError).toBe(false)
       expect((result.structuredContent as Record<string, unknown>).kind).toBe(
         'payment_required',
       )
+      const firstBlock = result.content[0] as { type: string; text: string }
+      expect(firstBlock.text).toBe('manual')
+      expect(firstBlock.text).not.toMatch(/success/i)
     })
   })
 
@@ -464,10 +481,25 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       )
 
       const result = (await handler({}, mcpExtra('gate_user'))) as SolvaPayCallToolResult
-      expect(result.isError).toBe(true)
+      // Paywall results are intentionally not flagged as errors so
+      // hosts open the `_meta.ui` widget instead of short-circuiting
+      // on the error path.
+      expect(result.isError).toBe(false)
       expect(buildBootstrap).toHaveBeenCalledTimes(1)
       expect((result.structuredContent as Record<string, unknown>).view).toBe('paywall')
       expect(result._meta).toEqual({ ui: { resourceUri: 'ui://test/view.html' } })
+
+      // Content block is a plain-string narration — no `{ success:
+      // false, error: "Payment required" }` JSON that hosts could
+      // misinterpret as a tool failure. The paywall pre-check
+      // builds a human message like "You've used all your
+      // included calls..." which rides through as-is.
+      const firstBlock = result.content[0] as { type: string; text: string }
+      expect(firstBlock.type).toBe('text')
+      expect(typeof firstBlock.text).toBe('string')
+      expect(firstBlock.text).not.toMatch(/success/i)
+      expect(firstBlock.text).not.toMatch(/"error"/i)
+      expect(firstBlock.text.length).toBeGreaterThan(0)
     })
   })
 })

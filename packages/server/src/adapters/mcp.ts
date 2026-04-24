@@ -6,8 +6,12 @@
 
 import type { Adapter } from './base'
 import { AdapterUtils } from './base'
-import type { McpAdapterOptions, McpToolExtra, PaywallToolResult } from '../types'
-import { PaywallError, paywallErrorToClientPayload } from '../paywall'
+import type {
+  McpAdapterOptions,
+  McpToolExtra,
+  PaywallStructuredContent,
+  PaywallToolResult,
+} from '../types'
 
 /**
  * MCP context (plain args object)
@@ -73,20 +77,28 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
     return response
   }
 
-  formatError(error: Error, _context: McpContext): PaywallToolResult {
-    if (error instanceof PaywallError) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(paywallErrorToClientPayload(error), null, 2),
-          },
-        ],
-        isError: true,
-        structuredContent: error.structuredContent,
-      }
+  /**
+   * Emit a plain-narration paywall response — `content[0].text` carries
+   * the gate's human message (LLM-actionable), `structuredContent`
+   * carries the machine-readable gate payload, and `isError` stays
+   * `false` per the MCP spec's own `isError` definition (paywall is
+   * not a self-correctable tool execution error; it is a user-facing
+   * control transfer to the UI).
+   *
+   * Hosts that read widget metadata from `tools/list` or tool-result
+   * `_meta.ui` open the paywall iframe on top of this response;
+   * `buildPayableHandler` stamps the `_meta.ui.resourceUri` envelope
+   * before returning.
+   */
+  formatGate(gate: PaywallStructuredContent, _context: McpContext): PaywallToolResult {
+    return {
+      content: [{ type: 'text', text: gate.message }],
+      isError: false,
+      structuredContent: gate,
     }
+  }
 
+  formatError(error: Error, _context: McpContext): PaywallToolResult {
     return {
       content: [
         {
