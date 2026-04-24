@@ -1,0 +1,90 @@
+# SolvaPay MCP Apps SDK — rules
+
+Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp`, `packages/mcp-sdk`, `packages/react/mcp`, or `examples/mcp-checkout-app`.
+
+## North Star
+
+**The merchant's data is the hero. Commerce defers to it.**
+
+Every design decision should serve this. When in doubt, ask: does this make the merchant's tool feel more native to Claude/ChatGPT, or less? If less, don't ship it.
+
+## The three modes
+
+Every SolvaPay response is in one of three modes. Know which before writing code.
+
+1. **Silent.** Merchant's tool returned data. No iframe, no card, no upsell. Just the data. This is 90% of calls for a paying user.
+2. **Nudge.** Data returned *and* something is worth flagging (low balance, cycle ending, approaching limit). Small inline strip. Dismissible. Never blocks.
+3. **Gate.** Data could *not* be returned. User is out of credits or needs to upgrade. SDK takes over the surface. Focused, terminal, collapses after.
+
+If you're building a UI surface that doesn't match one of these three, stop and escalate.
+
+## Rules
+
+### Commerce UI
+
+- **Do not add tabs to the MCP shell.** The four-tab shell is deprecated. Each intent (`/manage_account`, `/topup`, `/upgrade`) opens a single-purpose surface and returns to chat when done.
+- **Do not build an About surface.** Product description lives in tool descriptions, Claude's text response, and the `docs://solvapay/overview.md` resource. Not in an iframe.
+- **The UI is a mode, not a primary.** `McpAppShell` is an internal composition. What's exported as primary is intent-specific surfaces.
+- **One surface, one job.** No nested navigation. No multi-step wizards except where genuinely unavoidable (card entry, top-up amount selection). If a surface needs tabs to fit its content, the content is too broad.
+- **The widget routes on `structuredContent.view`, not tool name.** `<McpApp>` / `<McpAppShell>` pick the surface from the `view` discriminator the server stamps on every tool result, not from `toolInfo.tool.name`. This is load-bearing for paywall/nudge: when a merchant data tool (e.g. `search_knowledge`) returns the gate/strip, the host opens the iframe *from that tool's result* — the widget consumes the initial `ui/notifications/tool-result` and renders paywall/nudge directly, without re-calling an intent tool. Re-calling would (a) consume another unit of usage on the paywalled tool or (b) clobber the gate view with a fresh `checkout`. The only tool-name-driven decision left in `<McpApp>` is the intent-tool shortcut: `upgrade` / `manage_account` / `topup` iframe entries may call their matching tool up front as a bootstrap optimisation.
+- **Refresh is for intent surfaces, not gates.** `McpAppShell` skips its mount-refresh when `bootstrap.view` is `paywall` or `nudge`. The server's gate response is the authoritative snapshot for those surfaces; refreshing via `upgrade` would race and replace the gate with a checkout view.
+
+### Text-mode
+
+- **UI is the default for intent tools; text is opt-in per call.** `narratedToolResult` ships a one-line placeholder in `content[0]` under the default `mode: 'ui'`. The full narrated markdown is behind `mode: 'text'` for CLI / text-only hosts, or `mode: 'auto'` when the caller wants both. This keeps UI-rendering hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) from double-marking the surface the iframe already carries.
+- **Agent grounding lives on `structuredContent`, not `content[0]`.** The full `BootstrapPayload` rides on `structuredContent` under every mode, so agents parsing JSON are never starved of context — even when the placeholder text is only one line.
+- **Narrated blocks are annotated `audience: ['assistant']` in `'text'` and `'auto'` modes.** Audience-aware hosts hide them from the user pane while still feeding them to the model. Inspector ignores the hint; default `'ui'` mode already keeps Inspector clean.
+- **UI fires only when the interaction genuinely needs pixels.** Listing plans, checking usage, confirming a cancel: prefer `mode: 'text'`. Selecting a payment method, entering card details, comparing plans before paying: default `'ui'` is correct.
+
+### Merchant API
+
+- **The merchant writes `registerPayable`, not components.** The 90% path is a business-logic handler. If a merchant has to touch a view to ship a paid tool, the SDK has failed.
+- **The handler context carries customer state.** Balance, tier, usage, plan shape. Merchants make their own judgments about when to nudge, without building a component.
+- **Paywall is automatic.** The merchant never imports a paywall view, never wires a `_meta.ui.resourceUri`, never constructs a bootstrap payload. The SDK does all of it.
+- **Response envelope is context-aware.** Merchants call `ctx.respond(data)` or `ctx.respond(data).withNudge(...)`. They do not return plain objects that the SDK has to guess about.
+
+### Pricing stance
+
+- **Usage-based is the opinionated default.** The example server ships with usage-based pricing. The admin MCP suggests usage-based for new products. The checkout UI features usage-based when both are offered.
+- **Recurring is supported but not featured.** It exists for merchants whose customers want predictable budgets.
+- **Free tier is a first-class option, not an afterthought.** It should be the easiest to activate, not a footnote.
+
+### Package boundaries
+
+- **`@solvapay/mcp` has zero `@modelcontextprotocol/*` runtime dependencies.** This invariant is load-bearing. Do not violate it.
+- **`@solvapay/mcp-sdk` is the only package that imports the official MCP SDK.** If you need MCP types elsewhere, re-export through `@solvapay/mcp` as structural aliases.
+- **`@solvapay/react/mcp` is a subpath export.** Merchants using SolvaPay for non-MCP React surfaces do not pay the ext-apps peer dep cost.
+- **Do not ship a `@solvapay/sdk` umbrella package.** Three-package imports are fine. An umbrella adds maintenance without clarity.
+
+### Spec compliance
+
+- **Every tool has annotations.** `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` are required. Not optional. Default for `registerPayable` is `{ readOnlyHint: true, openWorldHint: true }`.
+- **Every UI resource uses `mimeType: RESOURCE_MIME_TYPE`.** Never hardcode the string. Import from `@modelcontextprotocol/ext-apps/server`.
+- **`_meta.ui.resourceUri` is wired by the SDK, not the merchant — but only when there's something to show.** `buildPayableHandler` stamps `_meta.ui` on **tool results** for paywall (gate) and `ctx.respond(..., { nudge })` (nudge) responses. The descriptor-level `_meta.ui` on payable tools is intentionally left unset so hosts don't auto-open the iframe on silent successes. SolvaPay intent tools (`/upgrade`, `/manage_account`, `/topup`) keep descriptor-level `_meta.ui.resourceUri` because calling them is the user's explicit intent to open the UI.
+- **Stripe.js is loaded from `js.stripe.com/v3` at runtime.** Never bundled. The CSP baseline allows this origin.
+
+### Developer experience
+
+- **Target: `npx solvapay init` to working paid tool in 60 seconds.** Every decision that adds a step to this path needs justification.
+- **The example server is the primary docs surface.** If a merchant copy-pastes `examples/mcp-checkout-app`, they get best practices automatically. Keep it minimal and correct.
+- **Errors point at solutions.** If a merchant forgets to mount the OAuth bridge, the error message names the fix. No cryptic 402s.
+- **Config-time validation over runtime failures.** If a required integration step is missing, `createSolvaPayMcpServer` throws at construction, not on the first paid call.
+
+### Demo
+
+- **Demo is not the SDK.** The hero demo uses the Vite-build path because "I built this UI" is a stronger engineering story. Merchants use the bundled-HTML path because it's the 60-second onboarding.
+- **Pre-render chart PNGs for the demo.** Do not rely on live chart generation during a live demo. Bulletproof > impressive.
+- **First-run tour is disabled in the demo bootstrap.** Presenter talks over the UI, not against it.
+
+## When in doubt
+
+Ask: **is this making the merchant's tool feel more native to Claude, or more like a SaaS dashboard embedded in Claude?** The first is right. The second is what you're refactoring away from.
+
+## Escape hatches
+
+Every rule above is a strong default. If you think you need to violate one:
+
+1. Write down the specific case.
+2. Check whether the case is really what the rule is pointing away from, or an edge the rule doesn't cover.
+3. If it's an edge, extend the rule; do not add an exception.
+4. If it's really a violation, write down *why* and keep the diff small enough to revert.

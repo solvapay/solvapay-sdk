@@ -1,30 +1,34 @@
 'use client'
 
 /**
- * `<McpCheckoutView>` — the checkout screen surfaced by the `open_checkout`
- * MCP tool.
+ * `<McpCheckoutView>` — the paid-plan activation surface.
  *
- * Uses `useStripeProbe` to decide between two rendering paths:
- *  - `'ready'`  → `EmbeddedCheckout` with `<PaymentForm>` mounting Stripe
- *    Elements inline.
- *  - `'blocked'`→ `HostedCheckout` polling `check_purchase` while the user
- *    completes payment in a popped-out tab.
- *  - `'loading'`→ interstitial spinner.
+ * Thin shell that wires `useStripeProbe` and forwards to the shared
+ * `<EmbeddedCheckout>` state machine (plan → amount → payment →
+ * success). When Stripe is blocked by CSP, renders the legacy hosted
+ * checkout path below instead.
  *
- * Post-purchase state (active paid purchase, cancelled-with-access, etc.)
- * is rendered identically in both paths via the same memoised body
- * components (`<ManageBody>`, `<CancelledBody>`, `<UpgradeBody>`).
+ * The full activation state machine (and all step components) lives in
+ * `./checkout/` so `<McpPaywallView>` can mount the same flow when a
+ * customer hits the paywall and Stripe is reachable.
+ *
+ * ## Rendering paths
+ *
+ * - `useStripeProbe === 'ready'`   → `<EmbeddedCheckout>` from `./checkout`.
+ * - `useStripeProbe === 'blocked'` → local `HostedCheckout` (new-tab
+ *   fallback with `check_purchase` polling).
+ * - `useStripeProbe === 'loading'` → interstitial spinner.
  */
 
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CurrentPlanCard } from '../../components/CurrentPlanCard'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTransport } from '../../hooks/useTransport'
 import { usePurchase } from '../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
-import { PaymentForm } from '../../primitives/PaymentForm'
-import { PlanSelector, usePlanSelector } from '../../primitives/PlanSelector'
 import { useStripeProbe } from '../useStripeProbe'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
+import { ExternalLinkGlyph } from '../../components/ExternalLinkGlyph'
+import { EmbeddedCheckout } from './checkout'
+import type { BootstrapPlanLike, Cx } from './checkout'
 
 // Keep polling fast enough that the UI feels responsive after the user
 // completes payment in the other tab, but not so fast that we hammer the
@@ -42,6 +46,48 @@ export interface McpCheckoutViewProps {
   publishableKey?: string | null
   returnUrl: string
   onPurchaseSuccess?: () => void
+  /**
+   * Called when the view wants to bounce the customer to the
+   * dedicated Top up surface. Unused by the new activation flow
+   * (PAYG top-ups happen inline here) but kept as a prop for
+   * backward compatibility with integrators that wired it up.
+   */
+  onRequestTopup?: () => void
+  /**
+   * True when the checkout view was reached via the paywall takeover.
+   * Drives the amber "Upgrade to continue" banner and the
+   * `"Stay on Free"` dismiss link on the plan-selection step. The
+   * brief's §6 invariant: "banner appears iff the customer hit the
+   * paywall."
+   */
+  fromPaywall?: boolean
+  /**
+   * Paywall kind surfaced from `bootstrap.paywall.kind` when
+   * `fromPaywall` is true. Selects between the two banner copies:
+   * `'payment_required'` → quota-exhausted language;
+   * `'activation_required'` → tool-needs-a-paid-plan language.
+   */
+  paywallKind?: 'payment_required' | 'activation_required'
+  /**
+   * Product plans snapshot from `bootstrap.plans`. Used to locate
+   * the PAYG plan for the `popular` / `recommended` tag and sort
+   * the plan cards (PAYG first, then recurring ascending). Falls
+   * back to `PlanSelector`'s own `usePlans` fetch when omitted.
+   */
+  plans?: readonly BootstrapPlanLike[]
+  /**
+   * Invoked at the end of a successful activation — chained before
+   * `onClose()` so the host sees a re-seeded bootstrap if it
+   * re-invokes the original tool.
+   */
+  onRefreshBootstrap?: () => void | Promise<void>
+  /**
+   * Ask the host to unmount the MCP app. Wired by `<McpApp>` to
+   * `app.requestTeardown()`. Used by `"Back to chat"` on the success
+   * surface and the `"Stay on Free"` dismiss link. When omitted,
+   * those affordances disappear.
+   */
+  onClose?: () => void
   classNames?: McpViewClassNames
   children?: React.ReactNode
 }
@@ -51,6 +97,12 @@ export function McpCheckoutView({
   publishableKey = null,
   returnUrl,
   onPurchaseSuccess,
+  onRequestTopup: _onRequestTopup,
+  fromPaywall = false,
+  paywallKind,
+  plans,
+  onRefreshBootstrap,
+  onClose,
   classNames,
   children,
 }: McpCheckoutViewProps) {
@@ -71,6 +123,11 @@ export function McpCheckoutView({
         productRef={productRef}
         returnUrl={returnUrl}
         onPurchaseSuccess={onPurchaseSuccess}
+        fromPaywall={fromPaywall}
+        paywallKind={paywallKind}
+        plans={plans}
+        onRefreshBootstrap={onRefreshBootstrap}
+        onClose={onClose}
         cx={cx}
       >
         {children}
@@ -88,7 +145,12 @@ export function McpCheckoutView({
   )
 }
 
-type Cx = ReturnType<typeof resolveMcpClassNames>
+// --------------------------------------------------------------------
+// Hosted-checkout fallback (unchanged semantics — the degraded path
+// for CSP-blocked hosts. The new activation UX lives in
+// `./checkout/EmbeddedCheckout`; this fallback keeps a single "Upgrade"
+// surface working as before.)
+// --------------------------------------------------------------------
 
 type AsyncUrlState =
   | { status: 'idle' }
@@ -103,10 +165,6 @@ function useHostedUrl(
 ): AsyncUrlState {
   const [state, setState] = useState<AsyncUrlState>({ status: 'idle' })
 
-  // `setState` inside this effect syncs a transient fetch state machine to
-  // the `enabled` / `fetcher` external inputs — there's no downstream
-  // derivation we can rearrange into render. Lint suppression is
-  // intentional.
   useEffect(() => {
     if (!enabled) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -151,7 +209,7 @@ type HostedLinkButtonProps = {
   cx: Cx
 }
 
-const HostedLinkButton = memo(function HostedLinkButton({
+const HostedLinkButton = React.memo(function HostedLinkButton({
   state,
   loadingLabel,
   readyLabel,
@@ -165,10 +223,12 @@ const HostedLinkButton = memo(function HostedLinkButton({
         href={state.href}
         target="_blank"
         rel="noopener noreferrer"
+        aria-label={`${readyLabel} (opens in a new tab)`}
         onClick={() => onLaunch?.(state.href)}
       >
         <button type="button" className={cx.button}>
           {readyLabel}
+          <ExternalLinkGlyph />
         </button>
       </a>
     )
@@ -193,7 +253,7 @@ type AwaitingBodyProps = {
   cx: Cx
 }
 
-const AwaitingBody = memo(function AwaitingBody({
+const AwaitingBody = React.memo(function AwaitingBody({
   href,
   timedOut,
   onReopen,
@@ -218,27 +278,17 @@ const AwaitingBody = memo(function AwaitingBody({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
+        aria-label="Reopen checkout (opens in a new tab)"
         onClick={() => onReopen()}
       >
         <button type="button" className={cx.button}>
           Reopen checkout
+          <ExternalLinkGlyph />
         </button>
       </a>
       <button type="button" className={cx.linkButton} onClick={onCancel}>
         {"Didn't complete? Cancel"}
       </button>
-    </>
-  )
-})
-
-const ManageBody = memo(function ManageBody({ cx }: { cx: Cx }) {
-  return (
-    <>
-      <CurrentPlanCard />
-      <p className={cx.muted}>
-        Update your card or cancel your plan above. Plan switching is coming soon — for now,
-        cancel and re-subscribe to change tier.
-      </p>
     </>
   )
 })
@@ -253,7 +303,7 @@ type CancelledBodyProps = {
   cx: Cx
 }
 
-const CancelledBody = memo(function CancelledBody({
+const CancelledBody = React.memo(function CancelledBody({
   productName,
   endDate,
   daysLeft,
@@ -301,7 +351,7 @@ type UpgradeBodyProps = {
   cx: Cx
 }
 
-const UpgradeBody = memo(function UpgradeBody({ checkout, onLaunch, cx }: UpgradeBodyProps) {
+const UpgradeBody = React.memo(function UpgradeBody({ checkout, onLaunch, cx }: UpgradeBodyProps) {
   return (
     <>
       <h2 className={cx.heading}>Upgrade your plan</h2>
@@ -325,11 +375,6 @@ const UpgradeBody = memo(function UpgradeBody({ checkout, onLaunch, cx }: Upgrad
   )
 })
 
-/**
- * Hosted-button fallback. Unchanged logic — launches SolvaPay hosted
- * checkout in a new tab, polls `check_purchase` until the purchase
- * flips active.
- */
 function HostedCheckout({
   productRef,
   onPurchaseSuccess,
@@ -350,19 +395,13 @@ function HostedCheckout({
   const [awaitingTimedOut, setAwaitingTimedOut] = useState(false)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
-  // Mirror EmbeddedCheckout's `onSuccess` semantics — fire once after the
-  // hosted-checkout poll confirms a new paid purchase. Capture in a ref so
-  // inline arrow consumers don't churn the effect deps.
+  // Mirror `EmbeddedCheckout`'s success semantics — fire once after
+  // the hosted-checkout poll confirms a new paid purchase.
   const onPurchaseSuccessRef = useRef(onPurchaseSuccess)
   useEffect(() => {
     onPurchaseSuccessRef.current = onPurchaseSuccess
   }, [onPurchaseSuccess])
 
-  // `loading` starts `false` in the provider and only flips `true` for the
-  // first fetch per cacheKey (subsequent polls report via `isRefetching`),
-  // so gating directly on `!loading` would fire `useHostedUrl` before auth
-  // detection and race `createCheckoutSession`. Flip a local latch the
-  // first time `loading` transitions back to `false`.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true)
@@ -445,7 +484,6 @@ function HostedCheckout({
     setAwaitingTimedOut(false)
   }, [])
 
-  const activeProductName = activePurchase?.productName ?? null
   const cancelledProductName = cancelledPurchase?.productName ?? null
   const cancelledEndDate = cancelledPurchase?.endDate
   const cancelledDaysLeft = useMemo(
@@ -472,10 +510,6 @@ function HostedCheckout({
       )
     }
 
-    if (hasPaidPurchase && activeProductName) {
-      return <ManageBody cx={cx} />
-    }
-
     if (shouldShowCancelledNotice && cancelledProductName) {
       return (
         <CancelledBody
@@ -497,8 +531,6 @@ function HostedCheckout({
     awaitingTimedOut,
     dismissTimeout,
     cancelAwaiting,
-    hasPaidPurchase,
-    activeProductName,
     shouldShowCancelledNotice,
     cancelledProductName,
     cancelledEndDate,
@@ -520,122 +552,6 @@ function HostedCheckout({
   return (
     <div className={cx.card} data-refreshing={isRefetching ? 'true' : undefined}>
       {inner}
-      {children}
-    </div>
-  )
-}
-
-/**
- * Gates `<PaymentForm.Root>` behind `PlanSelector`'s selection state.
- *
- * Mounting `PaymentForm.Root` immediately (before `usePlans` has loaded)
- * would fire its init `useEffect` with `effectivePlanRef = undefined`,
- * sending `useCheckout` into the `resolvePlanRef` path — which throws
- * "has N active plans but none is marked as default" on products without
- * a default. Waiting for `selectedPlanRef` (populated by
- * `autoSelectFirstPaid` once plans resolve) skips that path entirely.
- *
- * The `key={selectedPlanRef}` forces a fresh `PaymentForm.Root` instance
- * when the user picks a different card, so `useCheckout` reinitialises
- * the PaymentIntent against the new plan instead of keeping the old
- * `clientSecret`.
- */
-function PaymentFormGate({
-  productRef,
-  returnUrl,
-  onSuccess,
-  children,
-}: {
-  productRef: string
-  returnUrl: string
-  onSuccess?: () => void
-  children: React.ReactNode
-}) {
-  const { selectedPlanRef } = usePlanSelector()
-  if (!selectedPlanRef) return null
-  return (
-    <PaymentForm.Root
-      key={selectedPlanRef}
-      planRef={selectedPlanRef}
-      productRef={productRef}
-      returnUrl={returnUrl}
-      requireTermsAcceptance={false}
-      onSuccess={onSuccess}
-    >
-      {children}
-    </PaymentForm.Root>
-  )
-}
-
-/**
- * Embedded checkout body — only rendered when the Stripe probe reports
- * `'ready'`. Reuses the SDK's `<PaymentForm>` compound primitive so card
- * inputs mount inline as a nested `js.stripe.com` iframe (allowed by the
- * declared CSP `frameDomains`). Post-purchase management stays hosted —
- * the customer portal isn't embeddable today.
- */
-function EmbeddedCheckout({
-  productRef,
-  returnUrl,
-  onPurchaseSuccess,
-  cx,
-  children,
-}: {
-  productRef: string
-  returnUrl: string
-  onPurchaseSuccess?: () => void
-  cx: Cx
-  children?: React.ReactNode
-}) {
-  const { loading, isRefetching, hasPaidPurchase, activePurchase } = usePurchase()
-  const { shouldShowCancelledNotice, cancelledPurchase } = usePurchaseStatus()
-
-  if (loading) {
-    return (
-      <div className={cx.card}>
-        <p>Loading purchase…</p>
-      </div>
-    )
-  }
-
-  const showManage = hasPaidPurchase && activePurchase?.productName
-  const showRepurchase = shouldShowCancelledNotice && cancelledPurchase?.productName
-
-  return (
-    <div className={cx.card} data-refreshing={isRefetching ? 'true' : undefined}>
-      {showManage ? (
-        <ManageBody cx={cx} />
-      ) : (
-        <>
-          <h2 className={cx.heading}>
-            {showRepurchase ? 'Renew your plan' : 'Complete your purchase'}
-          </h2>
-          <PlanSelector.Root productRef={productRef} className="solvapay-plan-selector">
-            <PlanSelector.Grid className="solvapay-plan-selector-grid">
-              <PlanSelector.Card className="solvapay-plan-selector-card">
-                <PlanSelector.CardBadge className="solvapay-plan-selector-card-badge" />
-                <PlanSelector.CardName className="solvapay-plan-selector-card-name" />
-                <PlanSelector.CardPrice className="solvapay-plan-selector-card-price" />
-                <PlanSelector.CardInterval className="solvapay-plan-selector-card-interval" />
-              </PlanSelector.Card>
-            </PlanSelector.Grid>
-            <PlanSelector.Loading className="solvapay-plan-selector-loading" />
-            <PlanSelector.Error className="solvapay-plan-selector-error" />
-            <PaymentFormGate
-              productRef={productRef}
-              returnUrl={returnUrl}
-              onSuccess={onPurchaseSuccess}
-            >
-              <PaymentForm.Summary />
-              <PaymentForm.Loading />
-              <PaymentForm.PaymentElement />
-              <PaymentForm.Error />
-              <PaymentForm.MandateText />
-              <PaymentForm.SubmitButton className={cx.button} />
-            </PaymentFormGate>
-          </PlanSelector.Root>
-        </>
-      )}
       {children}
     </div>
   )

@@ -365,8 +365,35 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     fetchPurchaseRef.current = fetchPurchase
   }, [fetchPurchase])
 
+  // Forward ref for `applyInitial` — declared lower in the file but
+  // needed inside `refetchPurchase`'s MCP branch. The ref is populated
+  // by a `useEffect` below once `applyInitial` is constructed.
+  const applyInitialRef = useRef<((next: SolvaPayProviderInitial) => void) | null>(null)
+
   const refetchPurchase = useCallback(async () => {
     inFlightRef.current = null
+
+    // MCP transport has no `checkPurchase` endpoint — purchase
+    // snapshots arrive via the bootstrap tool, which we can replay
+    // through `config.refreshInitial`. Without this the MCP branch of
+    // `fetchPurchase` no-ops on `force=true`, so callers waiting for a
+    // freshly paid purchase to materialise (e.g. `<PaymentForm>`'s
+    // post-confirm polling) time out against stale provider state.
+    const refresh = configRef.current?.refreshInitial
+    const hasCheckPurchase = !!transportRef.current.checkPurchase
+    if (refresh && !hasCheckPurchase) {
+      setIsRefetching(true)
+      try {
+        const next = await refresh()
+        if (next) applyInitialRef.current?.(next)
+      } catch (err) {
+        console.error('[SolvaPayProvider] refetchPurchase (MCP) failed:', err)
+      } finally {
+        setIsRefetching(false)
+      }
+      return
+    }
+
     await fetchPurchaseRef.current(true)
   }, [])
 
@@ -400,6 +427,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     setDisplayExchangeRateValue(next.balance?.displayExchangeRate ?? null)
     balanceLoadedRef.current = !!next.balance
   }, [])
+
+  useEffect(() => {
+    applyInitialRef.current = applyInitial
+  }, [applyInitial])
 
   const refreshBootstrap = useCallback(async () => {
     // MCP mode: re-invoke the host's bootstrap producer and re-apply

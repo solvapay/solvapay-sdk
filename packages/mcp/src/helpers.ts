@@ -7,7 +7,8 @@
  * `Request` construction, and tool-result wrapping.
  */
 
-import type { McpToolExtra, SolvaPayCallToolResult } from './types'
+import type { BootstrapPayload, McpToolExtra, SolvaPayCallToolResult } from './types'
+import { NARRATORS, uiPlaceholder, type IntentTool } from './narrate'
 
 /**
  * ISO 4217 currencies where the "minor unit" equals the major unit.
@@ -167,6 +168,105 @@ export function toolResult(data: unknown): SolvaPayCallToolResult {
   return {
     content: [{ type: 'text', text: JSON.stringify(data) }],
     structuredContent: data as Record<string, unknown>,
+  }
+}
+
+/**
+ * Requested rendering mode per-call. Passed through the `mode` input
+ * arg of every intent tool.
+ *
+ * - `'ui'` (default) — emit a one-line placeholder in `content[0]`
+ *   alongside the UI resource ref on `_meta.ui`. Keeps UI-rendering
+ *   hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) tidy — the
+ *   iframe already carries the rich detail. Agents get the full
+ *   `BootstrapPayload` on `structuredContent` for grounding.
+ * - `'text'` — strip the UI resource ref and emit the full narrated
+ *   markdown so CLI / text-only hosts get a human summary.
+ * - `'auto'` — emit both the narrated markdown and the UI resource
+ *   ref. The narrated block is annotated with `audience: ['assistant']`
+ *   so audience-aware hosts pass it to the model without showing it in
+ *   the user pane.
+ */
+export type SolvaPayToolMode = 'ui' | 'text' | 'auto'
+
+export function parseMode(raw: unknown): SolvaPayToolMode {
+  if (raw === 'ui' || raw === 'text' || raw === 'auto') return raw
+  return 'ui'
+}
+
+/**
+ * Build a `SolvaPayCallToolResult` that respects the requested `mode`:
+ *
+ *  - `ui` (default) emits a one-line placeholder in `content[0]` and
+ *    keeps `_meta.ui.*` so UI-rendering hosts open the iframe without
+ *    a noisy narration beneath it. `structuredContent` still carries
+ *    the raw bootstrap payload so agents have full grounding.
+ *  - `text` emits the full narrated markdown (plus any
+ *    `resource_link` blocks) and strips `_meta.ui.*` so UI-capable
+ *    hosts render text-only for this call.
+ *  - `auto` emits both. The narrated text block is annotated with
+ *    `audience: ['assistant']` so audience-aware hosts still hide it
+ *    from the user pane while feeding it to the model.
+ *
+ * The narrator is picked by the `tool` name; unknown tools fall back
+ * to the JSON dump that `toolResult` produces today.
+ */
+export function narratedToolResult(
+  tool: IntentTool | string,
+  data: BootstrapPayload,
+  mode: SolvaPayToolMode = 'ui',
+  baseMeta: Record<string, unknown> | undefined = undefined,
+): SolvaPayCallToolResult {
+  const narrator = (NARRATORS as Record<string, (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }>)[tool]
+  if (!narrator) {
+    const fallback = toolResult(data)
+    if (mode === 'text' && baseMeta && 'ui' in baseMeta) {
+      const { ui: _ui, ...rest } = baseMeta as Record<string, unknown>
+      return { ...fallback, _meta: rest }
+    }
+    return baseMeta ? { ...fallback, _meta: baseMeta } : fallback
+  }
+
+  const { text, links } = narrator(data)
+
+  const narratedBlock: SolvaPayCallToolResult['content'][number] = {
+    type: 'text',
+    text,
+    annotations: { audience: ['assistant'] },
+  }
+
+  const resourceLinkBlocks = ((links ?? []).map((l) => ({
+    type: 'resource_link',
+    uri: l.uri,
+    name: l.name,
+    annotations: { audience: ['user'] },
+    // `resource_link` isn't in the structural content union we use for
+    // `SolvaPayCallToolResult`, but the official SDK accepts it — we
+    // cast at the boundary to keep the local type narrow while still
+    // shipping the enrichment.
+  })) as unknown as SolvaPayCallToolResult['content'])
+
+  const placeholderBlock: SolvaPayCallToolResult['content'][number] = {
+    type: 'text',
+    text: uiPlaceholder(tool as IntentTool, data),
+  }
+
+  const content: SolvaPayCallToolResult['content'] =
+    mode === 'ui'
+      ? [placeholderBlock]
+      : mode === 'text'
+        ? [narratedBlock, ...resourceLinkBlocks]
+        : [narratedBlock, ...resourceLinkBlocks]
+
+  const meta =
+    mode === 'text' && baseMeta && 'ui' in baseMeta
+      ? Object.fromEntries(Object.entries(baseMeta).filter(([k]) => k !== 'ui'))
+      : baseMeta
+
+  return {
+    content,
+    structuredContent: data as unknown as Record<string, unknown>,
+    ...(meta ? { _meta: meta } : {}),
   }
 }
 

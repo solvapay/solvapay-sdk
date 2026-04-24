@@ -174,4 +174,64 @@ describe('SolvaPayProvider hydration from config.initial', () => {
     expect(transport.checkPurchase).not.toHaveBeenCalled()
     expect(getCtx().balance.credits).toBe(999)
   })
+
+  it('refetchPurchase replays refreshInitial in MCP mode so consumers observe fresh purchase state', async () => {
+    // Regression: without this routing, `refetchPurchase()` is a no-op
+    // on MCP transports (no `checkPurchase`). `<PaymentForm>`'s
+    // post-confirmation polling would then time out against stale state
+    // and surface "Payment processing timed out — webhooks may not be
+    // configured" even when the webhook already completed the purchase.
+    const transport = makeTransport({ checkPurchase: undefined })
+    const refreshed = makeInitial({
+      purchase: {
+        customerRef: 'cus_42',
+        email: 'a@b.test',
+        purchases: [
+          {
+            reference: 'pur_new',
+            status: 'active',
+            productName: 'Pro',
+            productRef: 'prd_test',
+            planRef: 'pln_pro',
+            planName: 'Pro',
+            amount: 1000,
+            currency: 'USD',
+            startDate: new Date().toISOString(),
+            planSnapshot: { reference: 'pln_pro', name: 'Pro' },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any,
+        ],
+      },
+    })
+    const refreshInitial = vi.fn().mockResolvedValue(refreshed)
+    const config: SolvaPayConfig = {
+      transport,
+      initial: makeInitial(),
+      refreshInitial,
+    }
+
+    let snapshot: unknown
+    render(
+      <SolvaPayProvider config={config}>
+        <Probe onValue={v => (snapshot = v)} />
+      </SolvaPayProvider>,
+    )
+
+    await waitFor(() => expect(snapshot).toBeTruthy())
+    const getCtx = () =>
+      snapshot as {
+        refetchPurchase: () => Promise<void>
+        purchase: { hasPaidPurchase: boolean }
+      }
+
+    expect(getCtx().purchase.hasPaidPurchase).toBe(false)
+
+    await act(async () => {
+      await getCtx().refetchPurchase()
+    })
+
+    expect(refreshInitial).toHaveBeenCalledTimes(1)
+    expect(transport.checkPurchase).toBeUndefined()
+    expect(getCtx().purchase.hasPaidPurchase).toBe(true)
+  })
 })

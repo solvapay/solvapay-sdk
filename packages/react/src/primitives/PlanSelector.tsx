@@ -48,6 +48,11 @@ type PlanSelectorContextValue = {
   isFree: (ref: string) => boolean
   isPopular: (ref: string) => boolean
   select: (ref: string) => void
+  /**
+   * Clear the current selection so no plan is selected. Pins
+   * `userHasSelected` true so auto-selection doesn't reassert.
+   */
+  clearSelection: () => void
 }
 
 const PlanSelectorContext = createContext<PlanSelectorContextValue | null>(null)
@@ -120,7 +125,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
     [fetcher, _config],
   )
 
-  const { plans, selectedPlan, selectPlan, loading, error } = usePlans({
+  const { plans, selectedPlan, selectPlan, setSelectedPlanIndex, loading, error } = usePlans({
     productRef,
     fetcher: effectiveFetcher,
     filter,
@@ -163,6 +168,14 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
     [plans, selectPlan, onSelect],
   )
 
+  // Clearing the selection pins `userHasSelected` true inside
+  // `usePlans`, so auto-selection can't reassert on the next render.
+  // Callers use this to back out of a mid-flow step (e.g. the
+  // `← Change plan` link on `McpCheckoutView`).
+  const clearSelection = useCallback(() => {
+    setSelectedPlanIndex(-1)
+  }, [setSelectedPlanIndex])
+
   const selectedPlanRef = selectedPlan?.reference ?? null
 
   const ctx = useMemo<PlanSelectorContextValue>(
@@ -178,6 +191,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isFree,
       isPopular,
       select,
+      clearSelection,
     }),
     [
       plans,
@@ -191,6 +205,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isFree,
       isPopular,
       select,
+      clearSelection,
     ],
   )
 
@@ -322,11 +337,22 @@ const CardName = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelectorCar
   forwardedRef,
 ) {
   const card = useCardContext('CardName')
-  if (!card.plan.name) return null
+  // Plans configured without an explicit `name` would previously
+  // collapse the card into a nameless price. Fall back to a
+  // type-derived label so every card has a title.
+  const fallback = card.plan.requiresPayment === false
+    ? 'Free'
+    : card.plan.type === 'usage-based'
+      ? 'Pay as you go'
+      : card.plan.type === 'recurring'
+        ? 'Plan'
+        : null
+  const label = card.plan.name ?? fallback
+  if (!label && children == null) return null
   const Comp = asChild ? Slot : 'span'
   return (
     <Comp ref={forwardedRef} data-solvapay-plan-selector-card-name="" {...rest}>
-      {children ?? card.plan.name}
+      {children ?? label}
     </Comp>
   )
 })
@@ -340,14 +366,28 @@ const CardPrice = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelectorCa
   const copy = useCopy()
   const formatted = useMemo(() => {
     if (card.isFree) return copy.planSelector.freeBadge
+    // PAYG plans price per call, not per cycle. Derive the rate from
+    // `creditsPerUnit` (credits per minor unit) — mirrors the helper
+    // in `McpCheckoutView`'s `formatPaygRate` so both surfaces agree.
+    if (card.plan.type === 'usage-based') {
+      const creditsPerUnit = card.plan.creditsPerUnit ?? 1
+      const perCallMinor = Math.max(1, Math.round(1 / creditsPerUnit))
+      const rate = formatPrice(perCallMinor, card.plan.currency ?? 'usd', {
+        locale,
+        free: '',
+      })
+      return `${rate} / call`
+    }
     return formatPrice(card.plan.price ?? 0, card.plan.currency ?? 'usd', {
       locale,
       free: copy.interval.free,
     })
   }, [
     card.isFree,
+    card.plan.type,
     card.plan.price,
     card.plan.currency,
+    card.plan.creditsPerUnit,
     locale,
     copy.planSelector.freeBadge,
     copy.interval.free,
@@ -366,8 +406,16 @@ const CardInterval = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelecto
 ) {
   const card = useCardContext('CardInterval')
   const copy = useCopy()
-  if (card.isFree || !card.plan.interval) return null
-  const text = interpolate(copy.planSelector.perIntervalShort, { interval: card.plan.interval })
+  // PAYG plans are priced per-call, not per-cycle — the rate suffix
+  // lives on `CardPrice` ("$0.01 / call") and a cycle label would be
+  // misleading here.
+  if (card.isFree || card.plan.type === 'usage-based') return null
+  // Bootstrap-shaped plans only populate `billingCycle`; legacy plans
+  // fetched via the list-plans API populate `interval`. Support both
+  // so the card renders a cycle suffix regardless of source.
+  const rawInterval = card.plan.interval ?? normalizeBillingCycle(card.plan.billingCycle)
+  if (!rawInterval) return null
+  const text = interpolate(copy.planSelector.perIntervalShort, { interval: rawInterval })
   const Comp = asChild ? Slot : 'span'
   return (
     <Comp ref={forwardedRef} data-solvapay-plan-selector-card-interval="" {...rest}>
@@ -375,6 +423,22 @@ const CardInterval = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelecto
     </Comp>
   )
 })
+
+/**
+ * Normalize a `billingCycle` string (e.g. `'monthly'`, `'yearly'`) to
+ * the bare interval noun (`'month'`, `'year'`) so `perIntervalShort`
+ * renders `/month` instead of `/monthly`. Matches the long-form
+ * interval shape already used by plans fetched from `list-plans`.
+ */
+function normalizeBillingCycle(cycle: string | null | undefined): string | null {
+  if (!cycle) return null
+  const lc = cycle.toLowerCase()
+  if (lc === 'monthly' || lc === 'month') return 'month'
+  if (lc === 'yearly' || lc === 'annually' || lc === 'annual' || lc === 'year') return 'year'
+  if (lc === 'weekly' || lc === 'week') return 'week'
+  if (lc === 'daily' || lc === 'day') return 'day'
+  return cycle
+}
 
 type BadgeProps = LeafProps & { 'data-variant'?: 'current' | 'popular' }
 

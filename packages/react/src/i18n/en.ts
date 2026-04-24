@@ -192,6 +192,8 @@ export const enCopy: SolvaPayCopy = {
       'Payment requires additional authentication. Please complete the verification.',
     paymentProcessingTimeout:
       'Payment processing timed out — webhooks may not be configured',
+    paymentConfirmationDelayed:
+      'Payment succeeded but confirmation is taking longer than usual. Refresh in a moment to see your purchase.',
     paymentStatusPrefix: 'Payment status: {status}',
     paywallInvalidContent: 'Paywall content is missing or malformed.',
     usageLoadFailed: 'Failed to load usage',
@@ -203,6 +205,11 @@ export const enCopy: SolvaPayCopy = {
     resolvedHeading: 'You can continue',
     productContext: 'For {product}',
     balanceLine: 'You have {available} credits, need {required}.',
+    paymentRequiredMessage:
+      "You've used all your included calls{forProduct}. Choose a plan below to keep going.",
+    paymentRequiredMessageRemaining:
+      'Only {remaining} call{pluralSuffix} left{forProduct}. Choose a plan below to keep going.',
+    paymentRequiredProductSuffix: ' for {product}',
     retryButton: 'Continue',
     hostedCheckoutButton: 'Open checkout',
     hostedCheckoutLoading: 'Loading checkout…',

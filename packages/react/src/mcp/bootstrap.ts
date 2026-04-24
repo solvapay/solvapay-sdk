@@ -13,9 +13,10 @@ import type {
   BootstrapPayload,
   BootstrapPlan,
   BootstrapProduct,
+  NudgeSpec,
   SolvaPayMcpViewKind,
 } from '@solvapay/mcp'
-import { TOOL_FOR_VIEW, VIEW_FOR_TOOL } from '@solvapay/mcp'
+import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL } from '@solvapay/mcp'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { isPaywallStructuredContent } from '@solvapay/server'
 import type { McpAppLike } from './adapter'
@@ -43,6 +44,17 @@ export interface McpBootstrap {
    * doesn't have to re-fetch it. Only populated for `view: 'paywall'`.
    */
   paywall?: PaywallStructuredContent
+  /**
+   * Upsell strip spec attached when `view: 'nudge'`. `McpNudgeView`
+   * renders `McpUpsellStrip` using this.
+   */
+  nudge?: NudgeSpec
+  /**
+   * Merchant tool result data embedded alongside a nudge so the shell
+   * can preview it without a follow-up tool call. Only populated when
+   * `view: 'nudge'`.
+   */
+  data?: unknown
   /** Product-scoped snapshot — always present. */
   merchant: BootstrapMerchant
   product: BootstrapProduct
@@ -76,28 +88,97 @@ export interface McpHostContextLike {
   [key: string]: unknown
 }
 
-interface CallToolResultLike {
+export interface CallToolResultLike {
   isError?: boolean
   structuredContent?: unknown
   content?: Array<{ type: string; text?: string }>
 }
 
 /**
- * Infer which `open_*` tool the host invoked so the client router knows
- * which view to mount. MCP Apps surface the launching tool via
- * `app.getHostContext()?.toolInfo?.tool.name`; falls back to `checkout`
- * when the context is unavailable (older hosts, direct resource opens).
+ * Names of the SolvaPay transport tools whose results resolve through
+ * the adapter promise returned by `callServerTool(...)`. `ui/notifications/
+ * tool-result` payloads for these tools are already awaited by the
+ * caller, so `<McpApp>` ignores them to avoid double-applying state.
+ *
+ * Derived from `MCP_TOOL_NAMES` minus the intent tools in
+ * `TOOL_FOR_VIEW`, so adding a new transport tool requires exactly one
+ * edit (in `@solvapay/mcp/tool-names`).
  */
-function inferViewFromHost(app: McpAppBootstrapLike): keyof typeof TOOL_FOR_VIEW {
-  const name = app.getHostContext()?.toolInfo?.tool?.name
-  if (name && VIEW_FOR_TOOL[name]) {
-    const view = VIEW_FOR_TOOL[name]
-    // Only dispatch views that still have a matching intent tool —
-    // `paywall` is handled by the gate response, not a dedicated tool.
-    if (view in TOOL_FOR_VIEW) {
-      return view as keyof typeof TOOL_FOR_VIEW
+export const SOLVAPAY_TRANSPORT_TOOL_NAMES: ReadonlySet<string> = new Set(
+  (Object.values(MCP_TOOL_NAMES) as string[]).filter(
+    (name) => !(name in VIEW_FOR_TOOL),
+  ),
+)
+
+/**
+ * True when `name` is one of SolvaPay's transport tools (payments,
+ * sessions, renewal, activation). `<McpApp>` uses this to gate its live
+ * `toolresult` subscription — transport tool notifications are ignored
+ * because the `callServerTool` adapter promise already carries the
+ * authoritative result.
+ */
+export function isTransportToolName(name: string): boolean {
+  return SOLVAPAY_TRANSPORT_TOOL_NAMES.has(name)
+}
+
+/**
+ * Classification of the host-invoked tool that opened the widget iframe.
+ * Drives `<McpApp>`'s mount branching:
+ *
+ *  - `intent`  — one of `upgrade` / `manage_account` / `topup`. Call
+ *                the corresponding tool via `fetchMcpBootstrap`.
+ *  - `data`    — a merchant-registered paywalled tool (e.g.
+ *                `search_knowledge`). The host opened the widget from
+ *                its paywall/nudge result; wait for the initial
+ *                `ui/notifications/tool-result` instead of re-calling
+ *                the tool (which would consume another unit).
+ *  - `other`   — no tool info, or a SolvaPay transport tool as the
+ *                iframe entry point (rare). Fall back to the `upgrade`
+ *                intent tool for a fresh snapshot.
+ */
+export type HostEntryClassification =
+  | { kind: 'intent'; toolName: string; view: keyof typeof TOOL_FOR_VIEW }
+  | { kind: 'data'; toolName: string }
+  | { kind: 'other'; toolName?: string }
+
+/**
+ * Classify the host-invoked tool that opened the iframe. Reads
+ * `app.getHostContext()?.toolInfo?.tool?.name` and consults the
+ * `VIEW_FOR_TOOL` / `SOLVAPAY_TRANSPORT_TOOL_NAMES` tables.
+ *
+ * Exported so integrators who own their `<McpApp>` mount (or who build
+ * fully custom widgets) can branch the same way.
+ */
+export function classifyHostEntry(app: McpAppBootstrapLike): HostEntryClassification {
+  const toolName = app.getHostContext()?.toolInfo?.tool?.name
+  if (!toolName) return { kind: 'other' }
+  const view = VIEW_FOR_TOOL[toolName]
+  if (view && view in TOOL_FOR_VIEW) {
+    return {
+      kind: 'intent',
+      toolName,
+      view: view as keyof typeof TOOL_FOR_VIEW,
     }
   }
+  if (isTransportToolName(toolName)) return { kind: 'other', toolName }
+  return { kind: 'data', toolName }
+}
+
+/**
+ * Infer which intent tool to call for a fresh bootstrap. Returns the
+ * matching intent `view` when the host's launching tool is one of
+ * `upgrade` / `manage_account` / `topup`, else `'checkout'` (re-fetches
+ * via `upgrade`).
+ *
+ * Used by `fetchMcpBootstrap` for both the initial intent-tool mount
+ * path and `refreshBootstrap`. For data-tool iframe entries,
+ * `<McpApp>` skips `fetchMcpBootstrap` entirely and waits on the
+ * initial tool-result notification — re-calling the paywalled merchant
+ * tool would consume another unit of usage.
+ */
+function inferViewFromHost(app: McpAppBootstrapLike): keyof typeof TOOL_FOR_VIEW {
+  const classification = classifyHostEntry(app)
+  if (classification.kind === 'intent') return classification.view
   return 'checkout'
 }
 
@@ -106,6 +187,12 @@ function inferViewFromHost(app: McpAppBootstrapLike): keyof typeof TOOL_FOR_VIEW
  * host's invocation context. Returns the bootstrap payload every view
  * needs (product ref, publishable key, return url) along with the view
  * discriminator so the top-level router can pick the right screen.
+ *
+ * Used for intent-tool iframe entries and for `refreshInitial` after a
+ * committed action (purchase, topup, etc.). Data-tool iframe entries
+ * (paywall/nudge) bypass this helper; `<McpApp>` consumes the initial
+ * `ui/notifications/tool-result` directly via
+ * `parseBootstrapFromToolResult` so the merchant tool is not re-called.
  */
 export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBootstrap> {
   const view = inferViewFromHost(app)
@@ -114,7 +201,36 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     name: toolName,
     arguments: {},
   })) as CallToolResultLike
-  if (result.isError) {
+  return parseBootstrapFromToolResult(result, toolName, view)
+}
+
+/**
+ * Parse a raw `CallToolResult`-shaped payload into an `McpBootstrap`.
+ *
+ * Shared between `fetchMcpBootstrap` (client-initiated) and the live
+ * `ui/notifications/tool-result` subscription (`<McpApp>` Phase 3).
+ * Throws on missing product ref / invalid return URL so callers can
+ * surface the error to `onInitError` instead of half-applying state.
+ */
+export function parseBootstrapFromToolResult(
+  result: CallToolResultLike,
+  toolName: string,
+  fallbackView: SolvaPayMcpViewKind,
+): McpBootstrap {
+  const structured = result.structuredContent as
+    | (Partial<BootstrapPayload> & { view?: McpView; paywall?: unknown })
+    | undefined
+  // Paywall + nudge responses ship with `isError: false` now —
+  // `buildPayableHandler` deliberately clears the error flag so hosts
+  // open the `_meta.ui` widget instead of short-circuiting on the
+  // error path. The old behaviour (paywall + isError:true) is still
+  // accepted here so older servers keep working; only treat `isError`
+  // as a real failure when we can't recognise the embedded bootstrap.
+  const hasBootstrapShape =
+    structured !== undefined &&
+    typeof structured === 'object' &&
+    typeof structured.productRef === 'string'
+  if (result.isError && !hasBootstrapShape) {
     const first = result.content?.[0]
     const message =
       first && 'text' in first && typeof first.text === 'string'
@@ -122,9 +238,6 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
         : `${toolName} failed`
     throw new Error(message)
   }
-  const structured = result.structuredContent as
-    | (Partial<BootstrapPayload> & { view?: McpView; paywall?: unknown })
-    | undefined
   const ref = structured?.productRef
   if (!ref) throw new Error(`${toolName} did not return a productRef`)
   // Stripe's confirmPayment validator requires `return_url` to be an http(s)
@@ -142,15 +255,19 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     )
   }
   const key = structured?.stripePublishableKey ?? null
-  const requestedView = structured?.view ?? view
+  const requestedView = structured?.view ?? fallbackView
   const paywall =
     requestedView === 'paywall' && isPaywallStructuredContent(structured?.paywall)
       ? structured.paywall
       : undefined
-  // Paywall responses now carry the full bootstrap payload inline on
-  // `structuredContent`, so `requestedView === 'paywall'` always comes
-  // with `paywall` populated — no account-view fallback needed.
   const resolvedView: SolvaPayMcpViewKind = requestedView
+  const nudgeSpec = (structured as { nudge?: unknown } | undefined)?.nudge
+  const nudge =
+    requestedView === 'nudge' && isNudgeSpec(nudgeSpec) ? (nudgeSpec as NudgeSpec) : undefined
+  const data =
+    requestedView === 'nudge'
+      ? (structured as { data?: unknown } | undefined)?.data
+      : undefined
   return {
     view: resolvedView,
     productRef: ref,
@@ -161,6 +278,164 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
     plans: Array.isArray(structured?.plans) ? (structured.plans as BootstrapPlan[]) : [],
     customer: (structured?.customer ?? null) as BootstrapCustomer | null,
     ...(paywall ? { paywall } : {}),
+    ...(nudge ? { nudge } : {}),
+    ...(data !== undefined ? { data } : {}),
   }
+}
+
+function isNudgeSpec(value: unknown): value is NudgeSpec {
+  if (typeof value !== 'object' || value === null) return false
+  const kind = (value as { kind?: unknown }).kind
+  return (
+    typeof kind === 'string' &&
+    (kind === 'low-balance' || kind === 'cycle-ending' || kind === 'approaching-limit')
+  )
+}
+
+/**
+ * Shape of the `ui/notifications/tool-result` params we care about.
+ * Loose on purpose — `McpUiToolResultNotification['params']` is
+ * structurally compatible.
+ */
+interface ToolResultNotificationParams {
+  isError?: boolean
+  content?: Array<{ type: string; text?: string }>
+  structuredContent?: unknown
+  _meta?: unknown
+}
+
+type ToolResultListener = (params: ToolResultNotificationParams) => void
+
+/**
+ * Subset of `@modelcontextprotocol/ext-apps` `App` events that
+ * `waitForInitialToolResult` subscribes to. Mirrors the contract in
+ * `hooks/useMcpToolResult.ts` so either entry point works with
+ * composable `addEventListener` hosts or legacy `ontoolresult` mocks.
+ */
+export interface AppToolResultEvents {
+  addEventListener?: (evt: string, handler: ToolResultListener) => void
+  removeEventListener?: (evt: string, handler: ToolResultListener) => void
+  ontoolresult?: ToolResultListener | undefined
+}
+
+export interface WaitForInitialToolResultOptions {
+  /**
+   * How long to wait (ms) for the first non-error, non-transport
+   * `toolresult` notification before giving up. Defaults to 2000ms —
+   * the host is expected to fire the initial notification immediately
+   * after `ui/initialize`, so 2s is a generous budget.
+   */
+  timeoutMs?: number
+  /**
+   * Optional signal to cancel the wait (e.g. component unmount). When
+   * aborted, the returned promise resolves with `timedOut: true`.
+   */
+  signal?: AbortSignal
+  /**
+   * Fallback `view` passed to `parseBootstrapFromToolResult` when the
+   * incoming payload doesn't carry a `structuredContent.view`. Defaults
+   * to `'paywall'` since data-tool entries are paywall/nudge by
+   * construction.
+   */
+  fallbackView?: SolvaPayMcpViewKind
+}
+
+export type WaitForInitialToolResultResult =
+  | {
+      timedOut: false
+      bootstrap: McpBootstrap
+      toolName: string | null
+      params: ToolResultNotificationParams
+    }
+  | { timedOut: true; bootstrap: null; toolName: null; params: null }
+
+/**
+ * One-shot helper: subscribes to `toolresult`, resolves with the first
+ * non-error, non-transport payload parsed into an `McpBootstrap`, and
+ * unsubscribes.
+ *
+ * Intended for integrators who mount their own shell on top of
+ * `createMcpAppAdapter` and need the same "consume the initial
+ * tool-result payload" semantics `<McpApp>` uses internally. Subscribe
+ * **before** calling `app.connect()` to avoid missing the initial
+ * notification the host fires after `ui/initialize`.
+ *
+ * Parse errors are surfaced via the returned promise's rejection; a
+ * timeout resolves with `timedOut: true` rather than throwing.
+ */
+export function waitForInitialToolResult(
+  app: McpAppBootstrapLike & AppToolResultEvents,
+  options: WaitForInitialToolResultOptions = {},
+): Promise<WaitForInitialToolResultResult> {
+  const { timeoutMs = 2000, signal, fallbackView = 'paywall' } = options
+
+  return new Promise<WaitForInitialToolResultResult>((resolve, reject) => {
+    let settled = false
+    let cleanup: (() => void) | undefined
+
+    // Forward-declared so `finish` can clear it; initialised below via
+    // `setTimeout` once the subscription is wired up.
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const finish = (outcome: WaitForInitialToolResultResult) => {
+      if (settled) return
+      settled = true
+      if (timer !== null) clearTimeout(timer)
+      cleanup?.()
+      resolve(outcome)
+    }
+
+    const handler: ToolResultListener = (params) => {
+      if (settled) return
+      const toolName = app.getHostContext()?.toolInfo?.tool?.name ?? null
+      if (toolName && isTransportToolName(toolName)) return
+      try {
+        // `parseBootstrapFromToolResult` accepts paywall responses
+        // (`isError: true` + embedded `BootstrapPayload`) and only
+        // throws for genuinely malformed/errored payloads.
+        const bootstrap = parseBootstrapFromToolResult(
+          params as unknown as CallToolResultLike,
+          toolName ?? '(unknown)',
+          fallbackView,
+        )
+        finish({ timedOut: false, bootstrap, toolName, params })
+      } catch (err) {
+        if (settled) return
+        settled = true
+        if (timer !== null) clearTimeout(timer)
+        cleanup?.()
+        reject(err instanceof Error ? err : new Error(String(err)))
+      }
+    }
+
+    if (typeof app.addEventListener === 'function') {
+      app.addEventListener('toolresult', handler)
+      cleanup = () => app.removeEventListener?.('toolresult', handler)
+    } else {
+      const prior = app.ontoolresult
+      app.ontoolresult = handler
+      cleanup = () => {
+        if (app.ontoolresult === handler) app.ontoolresult = prior
+      }
+    }
+
+    timer = setTimeout(() => {
+      finish({ timedOut: true, bootstrap: null, toolName: null, params: null })
+    }, timeoutMs)
+
+    if (signal) {
+      if (signal.aborted) {
+        finish({ timedOut: true, bootstrap: null, toolName: null, params: null })
+        return
+      }
+      signal.addEventListener(
+        'abort',
+        () => {
+          finish({ timedOut: true, bootstrap: null, toolName: null, params: null })
+        },
+        { once: true },
+      )
+    }
+  })
 }
 

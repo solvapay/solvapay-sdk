@@ -45,15 +45,28 @@ export type {
   BootstrapPayload,
   BootstrapPlan,
   BootstrapProduct,
+  ContentBlock,
+  CustomerSnapshot,
   McpAdapterOptions,
   McpToolExtra,
+  NudgeSpec,
+  PayableHandler,
   PaywallToolResult,
+  ResponseContext,
+  ResponseOptions,
+  ResponseResult,
   SolvaPayCallToolResult,
+  SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
   SolvaPayMcpPaywallContent,
   SolvaPayMcpViewKind,
+  SolvaPayMerchantBranding,
+  SolvaPayPromptDescriptor,
+  SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
+  SolvaPayToolAnnotations,
   SolvaPayToolDescriptor,
+  SolvaPayToolIcon,
 } from './types'
 
 // ---- Core helpers ----
@@ -61,11 +74,25 @@ export {
   buildSolvaPayRequest,
   defaultGetCustomerRef,
   enrichPurchase,
+  narratedToolResult,
+  parseMode,
   previewJson,
   toolErrorResult,
   toolResult,
 } from './helpers'
-export type { BuildSolvaPayRequestOptions } from './helpers'
+export type { BuildSolvaPayRequestOptions, SolvaPayToolMode } from './helpers'
+
+// ---- Narrators (per-tool text-mode renderers) ----
+export {
+  NARRATORS,
+  narrateManageAccount,
+  narrateUpgrade,
+  narrateTopup,
+  narrateActivatePlan,
+  uiPlaceholder,
+  balanceSummary,
+} from './narrate'
+export type { IntentTool, NarratorOutput } from './narrate'
 
 // ---- Paywall envelope builders ----
 export { buildPaywallUiMeta } from './paywall-meta'
@@ -78,11 +105,17 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export { buildSolvaPayDescriptors } from './descriptors'
+export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
 export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,
 } from './descriptors'
+
+export {
+  SOLVAPAY_OVERVIEW_MARKDOWN,
+  SOLVAPAY_OVERVIEW_MIME_TYPE,
+  SOLVAPAY_OVERVIEW_URI,
+} from './resources/overview'
 
 export { createBuildBootstrapPayload } from './bootstrap-payload'
 export type {

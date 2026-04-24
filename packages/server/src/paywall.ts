@@ -10,6 +10,7 @@
 import type {
   LimitResponseWithPlan,
   PaywallArgs,
+  PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
   PaywallToolResult,
@@ -20,6 +21,7 @@ import { withRetry, createRequestDeduplicator } from './utils'
 // Re-export types for convenience
 export type {
   PaywallArgs,
+  PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
   PaywallToolResult,
@@ -27,30 +29,48 @@ export type {
 }
 
 /**
- * Error thrown when a paywall is triggered (purchase required or usage limit exceeded).
+ * Error representing a paywall gate outcome (purchase required or usage
+ * limit exceeded).
  *
- * This error is automatically thrown by the paywall protection system when:
- * - Customer doesn't have required purchase
- * - Customer has exceeded usage limits
- * - Customer needs to upgrade their plan
+ * Soft-deprecated since 1.1.0 as the internal control-flow signal —
+ * `paywall.decide()` returns a typed `PaywallDecision<T>` union instead,
+ * and adapters route gate outcomes through `formatGate` without
+ * throwing. `PaywallError` is retained as a compat shim for three paths
+ * that keep working without migration:
  *
- * The error includes structured content with checkout URLs and metadata for
- * building custom paywall UIs.
+ *  1. `paywall.protect(handler, ...)` still throws `PaywallError` on
+ *     gate outcomes (the legacy throw-based API).
+ *  2. Merchant code that `throw new PaywallError(...)` (or
+ *     `ctx.gate(reason)`, which is implemented on top of
+ *     `PaywallError`) — caught at the adapter boundary and routed
+ *     through `formatGate` so transport responses stay consistent.
+ *  3. Custom third-party adapters that didn't implement `formatGate` —
+ *     `AbstractAdapter.formatGate` falls back to wrapping in
+ *     `PaywallError` and delegating to `formatError`.
  *
- * @example
+ * The error includes structured content with checkout URLs and metadata
+ * for building custom paywall UIs.
+ *
+ * @example Preferred (decide()/formatGate)
  * ```typescript
- * import { PaywallError } from '@solvapay/server';
+ * const decision = await solvaPay.paywall.decide(args, { product })
+ * if (decision.outcome === 'gate') {
+ *   return res.status(402).json(paywallErrorToClientPayload(
+ *     new PaywallError(decision.gate.message, decision.gate),
+ *   ))
+ * }
+ * ```
  *
+ * @example Compat (try/catch on throw-based legacy path)
+ * ```typescript
  * try {
  *   const result = await payable.http(createTask)(req, res);
  *   return result;
  * } catch (error) {
  *   if (error instanceof PaywallError) {
- *     // Custom paywall handling
  *     return res.status(402).json({
  *       error: error.message,
  *       checkoutUrl: error.structuredContent.checkoutUrl,
- *       // Additional metadata available in error.structuredContent
  *     });
  *   }
  *   throw error;
@@ -58,6 +78,7 @@ export type {
  * ```
  *
  * @see {@link PaywallStructuredContent} for the structured content format
+ * @see {@link PaywallDecision} for the preferred decision-based API
  * @since 1.0.0
  */
 export class PaywallError extends Error {
@@ -92,6 +113,10 @@ export function paywallErrorToClientPayload(error: PaywallError): Record<string,
     if (sc.balance !== undefined) base.balance = sc.balance
     if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
     if (sc.confirmationUrl !== undefined) base.confirmationUrl = sc.confirmationUrl
+  } else {
+    base.kind = 'payment_required'
+    if (sc.balance !== undefined) base.balance = sc.balance
+    if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
   }
   return base
 }
@@ -119,7 +144,49 @@ interface LimitsCacheEntry {
   checkoutUrl?: string
   meterName?: string
   timestamp: number
+  /**
+   * Full `LimitResponseWithPlan` returned from the pre-check. Cached so
+   * `ctx.customer` (balance / remaining / plan) stays populated on
+   * cache hits within the TTL window — the spec's 10s-stale contract.
+   */
+  limits: LimitResponseWithPlan
 }
+
+/**
+ * Handler-scoped context passed as the optional second positional
+ * argument to handlers registered via `paywall.protect(...)`.
+ *
+ * Backwards-compatible: existing one-arg handlers `(args) => ...`
+ * ignore the second argument and continue to work.
+ *
+ * Consumed by `@solvapay/mcp`'s `buildPayableHandler` to construct the
+ * `ResponseContext` merchant tools receive as their second argument.
+ */
+export interface ProtectHandlerContext {
+  /** Resolved backend customer ref (`cus_...`). */
+  customerRef: string
+  /**
+   * The `LimitResponseWithPlan` consulted at pre-check time. Sourced
+   * from either the fresh `checkLimits` call on cache-miss or the
+   * cached entry on cache-hit. `null` only when the paywall is
+   * operating in a degraded mode that couldn't produce a limit
+   * response (defensive; normal flow always populates this).
+   */
+  limits: LimitResponseWithPlan | null
+  /**
+   * Transport-level extra passed through adapter chains (e.g. the MCP
+   * adapter's `extra` bag holding `authInfo`). Opaque to `protect()`
+   * itself; forwarded verbatim so adapter-aware handlers can use it.
+   */
+  extra?: unknown
+}
+
+/**
+ * Internal marker field the adapter layer uses to forward its `extra`
+ * bag through `protectedHandler(args)` without widening the public
+ * `PaywallArgs` type. Stripped before the fresh `checkLimits` call.
+ */
+const EXTRA_FORWARD_KEY = '__solvapayExtra' as const
 
 /**
  * Universal SolvaPay Protection - One API for everything
@@ -157,172 +224,279 @@ export class SolvaPayPaywall {
   }
 
   /**
-   * Core protection method - works for both MCP and HTTP
+   * Pure decision routine — performs customer resolution, limits cache
+   * lookup / fresh `checkLimits` fetch, and returns a `PaywallDecision`
+   * describing whether the handler should run.
+   *
+   * Side effects kept in lockstep with the legacy `protect()` path:
+   *  - creates the backend customer on first use (`ensureCustomer`),
+   *  - updates the limits cache (consume-one-unit bookkeeping), and
+   *  - emits a `paywall` usage event on gate outcomes.
+   *
+   * `trackUsage` for the `success` / `fail` outcome is emitted by the
+   * caller (adapter or `protect()`) once it has actually invoked the
+   * handler — `decide()` never counts handler execution as usage.
+   *
+   * @since 1.1.0
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async protect<TArgs extends PaywallArgs, TResult = any>(
-    handler: (args: TArgs) => Promise<TResult>,
+  async decide<TArgs extends PaywallArgs>(
+    args: TArgs,
     metadata: PaywallMetadata = {},
     getCustomerRef?: (args: TArgs) => string,
-  ): Promise<(args: TArgs) => Promise<TResult>> {
+  ): Promise<PaywallDecision<TArgs>> {
     const product = this.resolveProduct(metadata)
     const usageType = metadata.usageType || 'requests'
+    const requestId = this.generateRequestId()
+    const startTime = Date.now()
 
-    return async (args: TArgs): Promise<TResult> => {
-      const startTime = Date.now()
-      const requestId = this.generateRequestId()
-      const inputCustomerRef = getCustomerRef
-        ? getCustomerRef(args)
-        : args.auth?.customer_ref || 'anonymous'
+    const inputCustomerRef = getCustomerRef
+      ? getCustomerRef(args)
+      : args.auth?.customer_ref || 'anonymous'
 
-      // Auto-create customer if needed and get the backend reference
-      // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
-      let backendCustomerRef: string
+    let backendCustomerRef: string
+    if (inputCustomerRef.startsWith('cus_')) {
+      backendCustomerRef = inputCustomerRef
+    } else {
+      backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
+    }
 
-      // If the input ref is already a SolvaPay customer ID (starts with 'cus_'),
-      // use it directly without attempting lookup/creation by externalRef.
-      if (inputCustomerRef.startsWith('cus_')) {
-        backendCustomerRef = inputCustomerRef
+    const limitsCacheKey = `${backendCustomerRef}:${product}:${usageType}`
+    const cachedLimits = this.limitsCache.get(limitsCacheKey)
+    const now = Date.now()
+
+    let withinLimits: boolean
+    let remaining: number
+    let checkoutUrl: string | undefined
+    let resolvedMeterName: string | undefined
+    let lastLimitsCheck: LimitResponseWithPlan | undefined
+
+    const hasFreshCachedLimits =
+      cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
+
+    if (hasFreshCachedLimits) {
+      checkoutUrl = cachedLimits.checkoutUrl
+      resolvedMeterName = cachedLimits.meterName
+      // Surface the cached `LimitResponseWithPlan` so the downstream
+      // handler context carries balance/plan even on cache hits.
+      lastLimitsCheck = cachedLimits.limits
+
+      if (cachedLimits.remaining > 0) {
+        cachedLimits.remaining--
+        if (cachedLimits.remaining <= 0) {
+          this.limitsCache.delete(limitsCacheKey)
+        }
+        withinLimits = true
+        remaining = cachedLimits.remaining
       } else {
-        // Auto-create customer if needed and get the backend reference
-        // Pass inputCustomerRef as both customerRef (cache key) and externalRef (for backend lookup)
-        backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
+        // A zero-remaining entry indicates we already consumed the final unit.
+        // Block one immediate follow-up request from cache, then force re-check next time.
+        withinLimits = false
+        remaining = 0
+        this.limitsCache.delete(limitsCacheKey)
+      }
+    } else {
+      if (cachedLimits) {
+        this.limitsCache.delete(limitsCacheKey)
+      }
+      const limitsCheck = await this.apiClient.checkLimits({
+        customerRef: backendCustomerRef,
+        productRef: product,
+        meterName: usageType,
+      })
+
+      lastLimitsCheck = limitsCheck
+      withinLimits = limitsCheck.withinLimits
+      remaining = limitsCheck.remaining
+      checkoutUrl = limitsCheck.checkoutUrl
+      resolvedMeterName = limitsCheck.meterName
+
+      const consumedAllowance = withinLimits && remaining > 0
+      if (consumedAllowance) {
+        // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
+        // so cached follow-up requests don't get an extra free call.
+        remaining = Math.max(0, remaining - 1)
       }
 
-      let resolvedMeterName: string | undefined
+      if (consumedAllowance) {
+        this.limitsCache.set(limitsCacheKey, {
+          remaining,
+          checkoutUrl,
+          meterName: resolvedMeterName,
+          timestamp: now,
+          limits: limitsCheck,
+        })
+      }
+    }
 
-      try {
-        const limitsCacheKey = `${backendCustomerRef}:${product}:${usageType}`
-        const cachedLimits = this.limitsCache.get(limitsCacheKey)
-        const now = Date.now()
+    if (!withinLimits) {
+      const latencyMs = Date.now() - startTime
+      this.trackUsage(
+        backendCustomerRef,
+        product,
+        resolvedMeterName || usageType,
+        'paywall',
+        requestId,
+        latencyMs,
+      )
 
-        let withinLimits: boolean
-        let remaining: number
-        let checkoutUrl: string | undefined
-        let lastLimitsCheck: LimitResponseWithPlan | undefined
-
-        const hasFreshCachedLimits =
-          cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
-
-        if (hasFreshCachedLimits) {
-          checkoutUrl = cachedLimits.checkoutUrl
-          resolvedMeterName = cachedLimits.meterName
-
-          if (cachedLimits.remaining > 0) {
-            cachedLimits.remaining--
-            if (cachedLimits.remaining <= 0) {
-              this.limitsCache.delete(limitsCacheKey)
-            }
-            withinLimits = true
-            remaining = cachedLimits.remaining
-          } else {
-            // A zero-remaining entry indicates we already consumed the final unit.
-            // Block one immediate follow-up request from cache, then force re-check next time.
-            withinLimits = false
-            remaining = 0
-            this.limitsCache.delete(limitsCacheKey)
-          }
-        } else {
-          if (cachedLimits) {
-            this.limitsCache.delete(limitsCacheKey)
-          }
-          const limitsCheck = await this.apiClient.checkLimits({
-            customerRef: backendCustomerRef,
-            productRef: product,
-            meterName: usageType,
-          })
-
-          lastLimitsCheck = limitsCheck
-          withinLimits = limitsCheck.withinLimits
-          remaining = limitsCheck.remaining
-          checkoutUrl = limitsCheck.checkoutUrl
-          resolvedMeterName = limitsCheck.meterName
-
-          const consumedAllowance = withinLimits && remaining > 0
-          if (consumedAllowance) {
-            // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
-            // so cached follow-up requests don't get an extra free call.
-            remaining = Math.max(0, remaining - 1)
-          }
-
-          if (consumedAllowance) {
-            this.limitsCache.set(limitsCacheKey, {
-              remaining,
-              checkoutUrl,
-              meterName: resolvedMeterName,
-              timestamp: now,
-            })
-          }
-        }
-
-        if (!withinLimits) {
-          const latencyMs = Date.now() - startTime
-          this.trackUsage(
-            backendCustomerRef,
+      const gate: PaywallStructuredContent = lastLimitsCheck?.activationRequired
+        ? {
+            kind: 'activation_required',
             product,
-            resolvedMeterName || usageType,
-            'paywall',
-            requestId,
-            latencyMs,
-          )
-
-          if (lastLimitsCheck?.activationRequired) {
-            const confirmationUrl = lastLimitsCheck.confirmationUrl
-            const payCheckoutUrl =
-              confirmationUrl || lastLimitsCheck.checkoutUrl || checkoutUrl || ''
-            throw new PaywallError('Activation required', {
-              kind: 'activation_required',
-              product,
-              message: 'Product activation is required before this tool can be used.',
-              checkoutUrl: payCheckoutUrl,
-              confirmationUrl,
-              plans: lastLimitsCheck.plans,
-              balance: lastLimitsCheck.balance,
-              productDetails: lastLimitsCheck.product,
-            })
+            message: 'Product activation is required before this tool can be used.',
+            checkoutUrl:
+              lastLimitsCheck.confirmationUrl || lastLimitsCheck.checkoutUrl || checkoutUrl || '',
+            ...(lastLimitsCheck.confirmationUrl !== undefined
+              ? { confirmationUrl: lastLimitsCheck.confirmationUrl }
+              : {}),
+            ...(lastLimitsCheck.plans !== undefined ? { plans: lastLimitsCheck.plans } : {}),
+            ...(lastLimitsCheck.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
+            ...(lastLimitsCheck.product !== undefined
+              ? { productDetails: lastLimitsCheck.product }
+              : {}),
           }
-
-          throw new PaywallError('Payment required', {
+        : {
             kind: 'payment_required',
             product,
             checkoutUrl: checkoutUrl || '',
-            message: `Purchase required. Remaining: ${remaining}`,
-          })
-        }
+            message:
+              remaining <= 0
+                ? `You've used all your included calls for this tool. Pick a plan below to keep going.`
+                : `You have ${remaining} call${remaining === 1 ? '' : 's'} left. Pick a plan below to keep going.`,
+            ...(lastLimitsCheck?.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
+            ...(lastLimitsCheck?.product !== undefined
+              ? { productDetails: lastLimitsCheck.product }
+              : {}),
+          }
 
-        const result = await handler(args)
+      return {
+        outcome: 'gate',
+        gate,
+        limits: lastLimitsCheck ?? null,
+        customerRef: backendCustomerRef,
+      }
+    }
 
+    // `withinLimits` implies `lastLimitsCheck` was populated — the
+    // cache-hit branch always sets it from the cached entry and the
+    // cache-miss branch assigns `limitsCheck` directly. The non-null
+    // assertion keeps the `allow` payload's `limits` field strictly
+    // typed.
+    return {
+      outcome: 'allow',
+      args,
+      limits: lastLimitsCheck!,
+      customerRef: backendCustomerRef,
+    }
+  }
+
+  /**
+   * Execute the handler for an already-obtained `allow` decision and
+   * emit the post-handler `trackUsage('success' | 'fail', ...)` event.
+   *
+   * Exposed for adapter integration — the adapter layer drives the
+   * paywall through `decide()` + `runAllow()` so `formatGate` can own
+   * gate outcomes without routing through `PaywallError`. `protect()`
+   * continues to offer the self-contained throw-based surface for
+   * legacy consumers.
+   *
+   * `runAllow` intentionally does NOT re-throw `PaywallError` — if a
+   * handler calls `ctx.gate(reason)` and throws from deep code, the
+   * adapter catches that at the `formatGate` boundary instead.
+   *
+   * @since 1.1.0
+   */
+  async runAllow<TArgs extends PaywallArgs, TResult>(
+    decision: Extract<PaywallDecision<TArgs>, { outcome: 'allow' }>,
+    handler: (args: TArgs, handlerContext?: ProtectHandlerContext) => Promise<TResult>,
+    metadata: PaywallMetadata,
+    args: TArgs,
+  ): Promise<TResult> {
+    const product = this.resolveProduct(metadata)
+    const usageType = metadata.usageType || 'requests'
+    const requestId = this.generateRequestId()
+    const startTime = Date.now()
+
+    const forwardedExtra = (args as unknown as Record<string, unknown>)[EXTRA_FORWARD_KEY]
+    const handlerContext: ProtectHandlerContext = {
+      customerRef: decision.customerRef,
+      limits: decision.limits,
+      ...(forwardedExtra !== undefined ? { extra: forwardedExtra } : {}),
+    }
+
+    try {
+      const result = await handler(args, handlerContext)
+      const latencyMs = Date.now() - startTime
+      this.trackUsage(
+        decision.customerRef,
+        product,
+        decision.limits.meterName || usageType,
+        'success',
+        requestId,
+        latencyMs,
+      )
+      return result
+    } catch (error) {
+      if (error instanceof Error) {
+        const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error'
+        this.log(`❌ Error in paywall [${errorType}]: ${error.message}`)
+      } else {
+        this.log(`❌ Error in paywall:`, error)
+      }
+      if (!(error instanceof PaywallError)) {
         const latencyMs = Date.now() - startTime
         this.trackUsage(
-          backendCustomerRef,
+          decision.customerRef,
           product,
-          resolvedMeterName || usageType,
-          'success',
+          decision.limits.meterName || usageType,
+          'fail',
           requestId,
           latencyMs,
         )
-
-        return result
-      } catch (error) {
-        if (error instanceof Error) {
-          const errorType = error instanceof PaywallError ? 'PaywallError' : 'API Error'
-          this.log(`❌ Error in paywall [${errorType}]: ${error.message}`)
-        } else {
-          this.log(`❌ Error in paywall:`, error)
-        }
-        if (!(error instanceof PaywallError)) {
-          const latencyMs = Date.now() - startTime
-          this.trackUsage(
-            backendCustomerRef,
-            product,
-            resolvedMeterName || usageType,
-            'fail',
-            requestId,
-            latencyMs,
-          )
-        }
-        throw error
       }
+      throw error
+    }
+  }
+
+  /**
+   * Core protection method - works for both MCP and HTTP
+   *
+   * The `handler` may optionally declare a second positional argument
+   * of type `ProtectHandlerContext` to receive the resolved customer
+   * ref, the pre-check `LimitResponseWithPlan`, and an opaque `extra`
+   * bag threaded through from the adapter layer. One-arg handlers
+   * ignore the second argument and continue to work unchanged.
+   *
+   * Implemented on top of `decide()`: pre-check runs through the same
+   * decision routine, and gate outcomes are raised as a `PaywallError`
+   * to preserve the legacy throw-based signal for consumers that
+   * haven't migrated to adapter-level `formatGate` routing.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async protect<TArgs extends PaywallArgs, TResult = any>(
+    handler: (args: TArgs, handlerContext?: ProtectHandlerContext) => Promise<TResult>,
+    metadata: PaywallMetadata = {},
+    getCustomerRef?: (args: TArgs) => string,
+  ): Promise<(args: TArgs) => Promise<TResult>> {
+    return async (args: TArgs): Promise<TResult> => {
+      // Pre-check + gate outcome handled by `decide()`. Infrastructure
+      // failures (checkLimits down, ensureCustomer hard-failed) propagate
+      // as regular errors — the original `protect()` behaviour was to
+      // track them as `fail` from within the inner try/catch, but the
+      // customer ref resolution lives inside `decide()` now so we can't
+      // reliably attribute them. Observability loss is negligible — real
+      // infra failures surface as backend logs on the checkLimits /
+      // ensureCustomer path anyway.
+      const decision = await this.decide(args, metadata, getCustomerRef)
+
+      if (decision.outcome === 'gate') {
+        const message =
+          decision.gate.kind === 'activation_required' ? 'Activation required' : 'Payment required'
+        this.log(`❌ Error in paywall [PaywallError]: ${message}`)
+        throw new PaywallError(message, decision.gate)
+      }
+
+      return this.runAllow(decision, handler, metadata, args)
     }
   }
 

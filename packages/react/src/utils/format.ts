@@ -74,7 +74,10 @@ export function formatPrice(
     return free
   }
 
-  const fractionDigits = getFractionDigits(currency)
+  const naturalFractionDigits = getFractionDigits(currency)
+  const minorPerMajor = getMinorUnitsPerMajor(currency)
+  const isWhole = amountMinor % minorPerMajor === 0
+  const fractionDigits = isWhole ? 0 : naturalFractionDigits
   const major = toMajorUnits(amountMinor, currency)
 
   const formatter = new Intl.NumberFormat(locale, {
@@ -91,4 +94,27 @@ export function formatPrice(
   const suffix =
     intervalCount > 1 ? `${intervalCount} ${interval}s` : interval
   return `${formatted} / ${suffix}`
+}
+
+/**
+ * Locale-aware date formatter. Thin wrapper over `Intl.DateTimeFormat`
+ * so MCP views can share one call pattern for renewal / usage-reset
+ * dates instead of each view hand-rolling `toLocaleDateString`.
+ *
+ * Returns `null` for nullish, empty, or invalid inputs so callers can
+ * conditionally render without an extra guard.
+ *
+ * Defaults to `{ dateStyle: 'medium' }` to match the spec-recommended
+ * "short but readable" rendering (`Mar 15, 2024`). Pass a different
+ * `dateStyle` / options bag to override.
+ */
+export function formatDate(
+  value: Date | string | null | undefined,
+  locale?: string,
+  opts: Intl.DateTimeFormatOptions = { dateStyle: 'medium' },
+): string | null {
+  if (value === null || value === undefined || value === '') return null
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat(locale, opts).format(date)
 }

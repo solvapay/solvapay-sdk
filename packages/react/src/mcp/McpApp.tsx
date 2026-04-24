@@ -9,47 +9,38 @@
  *   2. apply host theme / fonts / style variables / safe-area insets
  *   3. `fetchMcpBootstrap(app)` → view + productRef + publishableKey + returnUrl
  *   4. mount `<SolvaPayProvider transport=createMcpAppAdapter(app)>`
- *   5. route `<McpViewRouter>` → `<McpCheckoutView>` / `<McpAccountView>` / …
+ *   5. mount `<McpAppShell>`, which routes `bootstrap.view` into the
+ *      exported `<McpViewRouter>`.
  *
  * Integrators who want to own the `SolvaPayProvider` mount (e.g. to merge
  * copy bundles, layer additional context) can bypass `<McpApp>` and use
- * `<McpViewRouter>` + the per-view primitives directly.
+ * `<McpAppShell>` directly, or `<McpViewRouter>` + the per-view primitives
+ * for fully custom layouts.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SolvaPayProvider } from '../SolvaPayProvider'
+import type { SolvaPayMcpViewKind } from '@solvapay/mcp'
+import { VIEW_FOR_TOOL } from '@solvapay/mcp'
+import { McpBridgeProvider, type McpBridgeAppLike, type McpMessageOnSuccess } from './bridge'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {
+  classifyHostEntry,
   fetchMcpBootstrap,
+  isTransportToolName,
+  parseBootstrapFromToolResult,
+  type CallToolResultLike,
   type McpBootstrap,
   type McpAppBootstrapLike,
 } from './bootstrap'
 import { seedMcpCaches } from './cache-seed'
+import { McpAppShell } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
-import {
-  McpAccountView,
-  type McpAccountViewProps,
-} from './views/McpAccountView'
-import {
-  McpActivateView,
-  type McpActivateViewProps,
-} from './views/McpActivateView'
-import {
-  McpCheckoutView,
-  type McpCheckoutViewProps,
-} from './views/McpCheckoutView'
-import {
-  McpPaywallView,
-  type McpPaywallViewProps,
-} from './views/McpPaywallView'
-import {
-  McpTopupView,
-  type McpTopupViewProps,
-} from './views/McpTopupView'
-import {
-  McpUsageView,
-  type McpUsageViewProps,
-} from './views/McpUsageView'
+import type { McpAccountViewProps } from './views/McpAccountView'
+import type { McpCheckoutViewProps } from './views/McpCheckoutView'
+import type { McpPaywallViewProps } from './views/McpPaywallView'
+import type { McpTopupViewProps } from './views/McpTopupView'
+import type { McpNudgeViewProps } from './views/McpNudgeView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 
 /**
@@ -68,7 +59,7 @@ export type McpUiHostContextLike = any
  * forcing consumers to match our stricter internal typing. Any object
  * satisfying these call signatures works (handy for tests).
  */
-export interface McpAppFull extends McpAppBootstrapLike, McpAppLike {
+export interface McpAppFull extends McpAppBootstrapLike, McpAppLike, McpBridgeAppLike {
   connect: () => Promise<void>
   // Real `App` uses `((ctx: McpUiHostContext) => void) | undefined` here;
   // we keep the type intentionally loose so callers don't fight variance.
@@ -76,15 +67,36 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike {
   onhostcontextchanged?: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onteardown?: any
+  /**
+   * Composable event subscription exposed by
+   * `@modelcontextprotocol/ext-apps` `App` (via `ProtocolWithEvents`).
+   * `<McpApp>` uses this to subscribe to `toolresult` so it can re-route
+   * when the host re-invokes an intent tool against a mounted widget.
+   * Kept optional so minimal test adapters can omit it — the code falls
+   * back to the legacy `ontoolresult` setter.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  addEventListener?: (evt: string, handler: (params: any) => void) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  removeEventListener?: (evt: string, handler: (params: any) => void) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ontoolresult?: any
+  /**
+   * Fire-and-forget request asking the host to unmount the app. When
+   * approved, the host sends `ui/resource-teardown` back via
+   * `onteardown`. Exposed by the real `@modelcontextprotocol/ext-apps`
+   * `App` class — kept optional in the structural type so tests and
+   * minimal adapters don't have to stub it.
+   */
+  requestTeardown?: () => Promise<void> | void
 }
 
 export interface McpAppViewOverrides {
   checkout?: React.ComponentType<McpCheckoutViewProps>
   account?: React.ComponentType<McpAccountViewProps>
   topup?: React.ComponentType<McpTopupViewProps>
-  activate?: React.ComponentType<McpActivateViewProps>
   paywall?: React.ComponentType<McpPaywallViewProps>
-  usage?: React.ComponentType<McpUsageViewProps>
+  nudge?: React.ComponentType<McpNudgeViewProps>
 }
 
 export interface McpAppProps {
@@ -99,6 +111,8 @@ export interface McpAppProps {
   views?: McpAppViewOverrides
   /** Per-slot className overrides — forwarded to every built-in view. */
   classNames?: McpViewClassNames
+  /** Override the shell-level footer visibility heuristic. */
+  footer?: boolean
   /**
    * Called with the bootstrap error if `app.connect()` or the `open_*`
    * tool call fails. Consumers typically log it; the default UI already
@@ -114,6 +128,22 @@ export interface McpAppProps {
    * `@modelcontextprotocol/ext-apps` — host-context primitives live there.
    */
   applyContext?: (ctx: McpUiHostContextLike | undefined) => void
+  /**
+   * Override for the shell's "close this app" handler. Defaults to
+   * `() => app.requestTeardown()`, which asks the host to unmount the
+   * iframe (see `@modelcontextprotocol/ext-apps` `App.requestTeardown`).
+   * Used by the checkout view's `"Back to chat"` and `"Stay on Free"`
+   * affordances; passing `undefined` hides those affordances.
+   */
+  onClose?: () => void
+  /**
+   * Phase 5 — override the user-visible follow-up copy posted to the
+   * chat after a committed success (topup completed, plan activated).
+   * Return `null` to suppress a specific event; omit the prop entirely
+   * to use the SDK defaults. Hosts that don't support `ui/message`
+   * silently no-op regardless.
+   */
+  messageOnSuccess?: McpMessageOnSuccess
 }
 
 /**
@@ -135,17 +165,40 @@ function bootstrapToInitial(bs: McpBootstrap): SolvaPayProviderInitial {
   }
 }
 
+/**
+ * Shape of the `ui/notifications/tool-result` params we care about.
+ * Intentionally loose — the real `McpUiToolResultNotification['params']`
+ * is structurally compatible.
+ */
+interface ToolResultNotificationParams {
+  isError?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  content?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  structuredContent?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _meta?: any
+}
+
 export function McpApp({
   app,
   productRef: productRefOverride,
   views,
   classNames,
+  footer,
   onInitError,
   applyContext,
+  onClose,
+  messageOnSuccess,
 }: McpAppProps) {
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
+  // Counter tracking client-initiated bootstrap fetches (mount +
+  // `refreshBootstrap`). The tool-result subscription consults it so
+  // it doesn't double-apply the same payload a fetch is about to
+  // deliver via its own `setBootstrap`.
+  const pendingBootstrapFetchRef = useRef(0)
 
   // Capture `applyContext` / `onInitError` in refs so the persistent
   // `onhostcontextchanged` handler and the bootstrap effect always see
@@ -172,20 +225,151 @@ export function McpApp({
 
     // `@modelcontextprotocol/ext-apps` `App` exposes lifecycle hooks as
     // property setters — mutating the `app` prop is intentional and part
-    // of the documented integration contract. The react-hooks immutability
-    // rule can't infer that distinction; disable at the mutation site.
-    // eslint-disable-next-line react-hooks/immutability
+    // of the documented integration contract.
     app.onhostcontextchanged = (ctx: McpUiHostContextLike) => {
       applyContextRef.current?.(ctx)
     }
     app.onteardown = async () => ({})
 
+    // Deferred promise resolved by the first non-error, non-transport
+    // `toolresult` notification. The data-tool mount path awaits this
+    // instead of re-calling the merchant tool (which would consume
+    // another unit of usage). Intent-tool / fallback paths race it
+    // too — whichever settles first wins.
+    let resolveFirstNotification: (() => void) | undefined
+    const firstNotificationApplied = new Promise<void>((r) => {
+      resolveFirstNotification = r
+    })
+
+    // Subscribe to `ui/notifications/tool-result` for two purposes:
+    //
+    //  1. Phase 3 — re-route when the host re-invokes an intent tool
+    //     against the already-mounted widget (no iframe remount).
+    //  2. Data-tool iframe entry — when the host opens the widget
+    //     because a paywalled merchant tool (e.g. `search_knowledge`)
+    //     returned `_meta.ui.resourceUri`, the widget consumes the
+    //     original tool result here rather than re-fetching an intent
+    //     tool.
+    //
+    // Transport tool results (`create_payment_intent`, `process_payment`,
+    // `activate_plan`, …) are awaited via the `callServerTool` adapter
+    // promise already; re-applying them to `bootstrap` would double-apply
+    // state.
+    const onToolResult = (params: ToolResultNotificationParams) => {
+      if (cancelled) return
+      const toolName = app.getHostContext?.()?.toolInfo?.tool?.name ?? null
+      if (toolName && isTransportToolName(toolName)) return
+      // Dedupe: skip notifications that land during an in-flight
+      // client-initiated bootstrap fetch — the fetch's own `setBootstrap`
+      // already applies the same structuredContent. We still resolve
+      // `firstNotificationApplied` so the data-tool wait path sees the
+      // notification even when it's for an intent-tool echo.
+      if (pendingBootstrapFetchRef.current) {
+        resolveFirstNotification?.()
+        return
+      }
+      try {
+        // Route on `structuredContent.view` (set by the server's
+        // `buildPayableHandler` / bootstrap builders). Tool name only
+        // matters as a fallback when the server omitted `view` — which
+        // shouldn't happen, but keeps the parse robust. `paywall` is the
+        // sensible default for data-tool entries (they're gate/nudge by
+        // construction).
+        //
+        // `parseBootstrapFromToolResult` handles the paywall's
+        // `isError: true` semantic by recognising the embedded
+        // `BootstrapPayload` shape; genuine errors (no structured
+        // content) throw and are swallowed below.
+        const intentView = toolName ? VIEW_FOR_TOOL[toolName] : undefined
+        const fallbackView: SolvaPayMcpViewKind = intentView ?? 'paywall'
+        const fresh = parseBootstrapFromToolResult(
+          params as unknown as CallToolResultLike,
+          toolName ?? '(unknown tool)',
+          fallbackView,
+        )
+        setBootstrap(fresh)
+        resolveFirstNotification?.()
+      } catch (err) {
+        // A malformed notification shouldn't clobber the mounted shell;
+        // surface it as a soft warning and keep the last-good bootstrap.
+        if (typeof console !== 'undefined') {
+          console.warn('[solvapay] ignoring malformed tool-result notification:', err)
+        }
+      }
+    }
+
+    let unsubscribe: (() => void) | undefined
+    if (typeof app.addEventListener === 'function') {
+      app.addEventListener('toolresult', onToolResult)
+      unsubscribe = () => {
+        app.removeEventListener?.('toolresult', onToolResult)
+      }
+    } else {
+      // Fallback for hosts / mocks exposing only the legacy DOM-style
+      // setter. We save the prior handler and restore on cleanup to
+      // avoid clobbering an outer composition.
+      const prior = app.ontoolresult
+      app.ontoolresult = onToolResult
+      unsubscribe = () => {
+        if (app.ontoolresult === onToolResult) app.ontoolresult = prior
+      }
+    }
+
     ;(async () => {
       try {
         await app.connect()
+        if (cancelled) return
         applyContextRef.current?.(app.getHostContext())
-        const result = await fetchMcpBootstrap(app)
-        if (!cancelled) setBootstrap(result)
+
+        const classification = classifyHostEntry(app)
+
+        if (classification.kind === 'data') {
+          // Data-tool entry: the host opened the iframe from a
+          // paywalled merchant tool result. Wait for the original
+          // tool-result payload instead of calling a new tool.
+          const timeoutMs = 2000
+          const timedOut = await Promise.race([
+            firstNotificationApplied.then(() => false as const),
+            new Promise<true>((r) => setTimeout(() => r(true), timeoutMs)),
+          ])
+          if (cancelled) return
+          if (timedOut) {
+            // The host opened the iframe speculatively (MCP Apps
+            // hosts like Claude open the registered UI resource for
+            // every tool call on the server regardless of per-tool
+            // `_meta.ui`), but no bootstrap payload ever arrived.
+            // Either the tool's success payload is host-rendered
+            // data (oracle-style tools that return numeric
+            // `structuredContent`) or the host didn't forward the
+            // originating `ui/notifications/tool-result` — in both
+            // cases there's nothing for us to render. Ask the host
+            // to unmount silently so the user sees the host's own
+            // rendering of the tool result instead of our error
+            // surface. Same fire-and-forget pattern as the shell's
+            // default onClose below.
+            void Promise.resolve(app.requestTeardown?.()).catch(() => {
+              /* best-effort — host may deny teardown. */
+            })
+            return
+          }
+          // The notification handler has already applied the bootstrap.
+          return
+        }
+
+        // Intent tool or fallback (unknown / transport entry): call
+        // the matching intent tool via `fetchMcpBootstrap`. The
+        // `pendingBootstrapFetchRef` gate suppresses the echo
+        // notification while this in-flight fetch applies state.
+        pendingBootstrapFetchRef.current += 1
+        try {
+          const result = await fetchMcpBootstrap(app)
+          if (!cancelled) setBootstrap(result)
+        } finally {
+          pendingBootstrapFetchRef.current = Math.max(
+            0,
+            pendingBootstrapFetchRef.current - 1,
+          )
+        }
       } catch (err) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : 'Failed to initialize SolvaPay'
@@ -196,6 +380,7 @@ export function McpApp({
 
     return () => {
       cancelled = true
+      unsubscribe?.()
     }
   }, [app])
 
@@ -205,6 +390,37 @@ export function McpApp({
     () => (bootstrap ? bootstrapToInitial(bootstrap) : undefined),
     [bootstrap],
   )
+
+  // Surface the merchant's square icon (or landscape logo as fallback)
+  // as the iframe's `<link rel="icon">`. Some MCP hosts pick the iframe
+  // favicon up for their chrome strip, and dev-mode browsers (MCP
+  // Inspector, local HTML previews) show it in the tab — a low-effort
+  // secondary channel that complements the `tool.icons` advertisement
+  // already wired through `createSolvaPayMcpServer`. Runs in the
+  // browser only; silent no-op under SSR.
+  const iconUrl = bootstrap?.merchant
+    ? ((bootstrap.merchant as { iconUrl?: string; logoUrl?: string }).iconUrl ??
+      (bootstrap.merchant as { logoUrl?: string }).logoUrl ??
+      null)
+    : null
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (!iconUrl) return
+    const MANAGED_ATTR = 'data-solvapay-favicon'
+    const existing = document.head.querySelector<HTMLLinkElement>(
+      `link[${MANAGED_ATTR}]`,
+    )
+    const link = existing ?? document.createElement('link')
+    link.setAttribute(MANAGED_ATTR, '')
+    link.rel = 'icon'
+    link.href = iconUrl
+    if (!existing) document.head.appendChild(link)
+    return () => {
+      // Leave the tag in place across bootstrap updates so the tab
+      // favicon doesn't flicker — the next render's effect will update
+      // `href` in-place. Only clean up on unmount.
+    }
+  }, [iconUrl])
 
   const providerConfig = useMemo(
     () => {
@@ -258,6 +474,43 @@ export function McpApp({
     seededInitialRef.current = initial
   }
 
+  // Kept above the conditional returns so hook order is stable across
+  // loading → ready transitions. Besides re-seeding the module-level
+  // hook caches, we must also update the `bootstrap` state because the
+  // shell reads `bootstrap.view` + `bootstrap.customer` to pick the
+  // surface and sidebar state: without `setBootstrap`, a refresh that
+  // reveals new capabilities (e.g. a freshly-topped-up balance) would
+  // leave the shell stale.
+  const refreshBootstrap = useMemo(
+    () => async () => {
+      pendingBootstrapFetchRef.current += 1
+      try {
+        const fresh = await fetchMcpBootstrap(app)
+        const next = bootstrapToInitial(fresh)
+        seedMcpCaches(next, providerConfig)
+        setBootstrap(fresh)
+      } finally {
+        pendingBootstrapFetchRef.current = Math.max(0, pendingBootstrapFetchRef.current - 1)
+      }
+    },
+    [app, providerConfig],
+  )
+
+  // Default `onClose` asks the host to unmount via
+  // `app.requestTeardown()`. Kept pointer-stable so the shell doesn't
+  // remount its dismiss handlers on every parent render. Declared
+  // above the conditional returns so React sees the same hook order
+  // across loading / ready transitions.
+  const defaultOnClose = useMemo(
+    () => () => {
+      void Promise.resolve(app.requestTeardown?.()).catch(() => {
+        /* best-effort — host may deny. */
+      })
+    },
+    [app],
+  )
+  const effectiveOnClose = onClose ?? defaultOnClose
+
   if (initError) {
     return (
       <main className="solvapay-mcp-main">
@@ -279,88 +532,30 @@ export function McpApp({
     )
   }
 
+  const effectiveBootstrap = productRefOverride
+    ? { ...bootstrap, productRef: productRefOverride }
+    : bootstrap
+
   return (
     <SolvaPayProvider config={providerConfig}>
-      <main className="solvapay-mcp-main">
-        <McpViewRouter
-          bootstrap={
-            productRefOverride ? { ...bootstrap, productRef: productRefOverride } : bootstrap
-          }
-          views={views}
-          classNames={classNames}
-        />
-      </main>
+      <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
+        <main className="solvapay-mcp-main">
+          <McpAppShell
+            bootstrap={effectiveBootstrap}
+            views={views}
+            classNames={classNames}
+            {...(footer !== undefined ? { footer } : {})}
+            onRefreshBootstrap={refreshBootstrap}
+            onClose={effectiveOnClose}
+          />
+        </main>
+      </McpBridgeProvider>
     </SolvaPayProvider>
   )
 }
 
-export interface McpViewRouterProps {
-  bootstrap: McpBootstrap
-  views?: McpAppViewOverrides
-  classNames?: McpViewClassNames
-}
-
-/**
- * Dispatches on `bootstrap.view` to render the matching per-view primitive.
- *
- * Exported separately so integrators who want to own the
- * `<SolvaPayProvider>` mount (e.g. to merge copy bundles or compose
- * additional providers) can still get routing for free.
- */
-export function McpViewRouter({ bootstrap, views, classNames }: McpViewRouterProps) {
-  // Note: `classNames` is intentionally forwarded as-is to each view —
-  // `resolveMcpClassNames` runs inside them, not here.
-  const { view, productRef, stripePublishableKey, returnUrl, paywall } = bootstrap
-
-  const headerTitle: Record<McpBootstrap['view'], string> = {
-    checkout: 'SolvaPay',
-    account: 'Your SolvaPay account',
-    topup: 'Add SolvaPay credits',
-    activate: 'Activate your plan',
-    paywall: 'Unlock access',
-    usage: 'Your usage',
-  }
-
-  const CheckoutView = views?.checkout ?? McpCheckoutView
-  const AccountView = views?.account ?? McpAccountView
-  const TopupView = views?.topup ?? McpTopupView
-  const ActivateView = views?.activate ?? McpActivateView
-  const PaywallView = views?.paywall ?? McpPaywallView
-  const UsageView = views?.usage ?? McpUsageView
-
-  return (
-    <>
-      <header className="solvapay-mcp-header">
-        <h1>{headerTitle[view]}</h1>
-      </header>
-      {view === 'checkout' && (
-        <CheckoutView
-          productRef={productRef}
-          publishableKey={stripePublishableKey}
-          returnUrl={returnUrl}
-          classNames={classNames}
-        />
-      )}
-      {view === 'account' && <AccountView classNames={classNames} />}
-      {view === 'topup' && (
-        <TopupView
-          publishableKey={stripePublishableKey}
-          returnUrl={returnUrl}
-          classNames={classNames}
-        />
-      )}
-      {view === 'activate' && (
-        <ActivateView productRef={productRef} classNames={classNames} />
-      )}
-      {view === 'paywall' && paywall && (
-        <PaywallView
-          content={paywall}
-          publishableKey={stripePublishableKey}
-          returnUrl={returnUrl}
-          classNames={classNames}
-        />
-      )}
-      {view === 'usage' && <UsageView classNames={classNames} />}
-    </>
-  )
-}
+// Re-export `McpViewRouter` and its props type for advanced integrators
+// that want dispatch without the full shell (merged from the removed
+// duplicate router in this file).
+export { McpViewRouter } from './McpAppShell'
+export type { McpViewRouterProps } from './McpAppShell'

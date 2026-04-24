@@ -17,7 +17,6 @@ export const MCP_TOOL_NAMES = {
   upgrade: 'upgrade',
   manageAccount: 'manage_account',
   topup: 'topup',
-  checkUsage: 'check_usage',
 } as const
 
 export type McpToolName = (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]

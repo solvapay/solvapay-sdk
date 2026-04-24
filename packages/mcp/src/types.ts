@@ -60,11 +60,23 @@ export interface BootstrapCustomer {
  * `CallToolResult` that every framework produces. Kept local to avoid
  * coupling to `@modelcontextprotocol/sdk/types.js` type churn.
  */
+/**
+ * Routing hint surfaced on individual content blocks. Mirrors the MCP
+ * `Annotations.audience` field — hosts that honour it (ChatGPT Apps,
+ * Claude Desktop) hide `['assistant']`-tagged blocks from the user pane
+ * while still feeding them to the model. Hosts that don't honour it
+ * (e.g. MCP Inspector) render every block verbatim.
+ */
+export interface SolvaPayContentAnnotations {
+  audience?: Array<'user' | 'assistant'>
+  priority?: number
+}
+
 export interface SolvaPayCallToolResult {
   content: Array<
-    | { type: 'text'; text: string }
-    | { type: 'image'; data: string; mimeType: string }
-    | { type: 'resource'; resource: Record<string, unknown> }
+    | { type: 'text'; text: string; annotations?: SolvaPayContentAnnotations }
+    | { type: 'image'; data: string; mimeType: string; annotations?: SolvaPayContentAnnotations }
+    | { type: 'resource'; resource: Record<string, unknown>; annotations?: SolvaPayContentAnnotations }
   >
   structuredContent?: Record<string, unknown>
   isError?: boolean
@@ -116,18 +128,34 @@ export interface PaywallToolResult {
 }
 
 /**
- * Which view a SolvaPay MCP server knows how to bootstrap via the
- * corresponding `open_*` tool.
+ * Which view a SolvaPay MCP server knows how to bootstrap.
+ *
+ * Four kinds map to an intent `open_*`-style tool: `checkout`,
+ * `account`, `topup`, and `nudge` (opened implicitly when a successful
+ * paywalled tool response carries `options.nudge`). `paywall` has no
+ * dedicated tool — the gate response inlines the bootstrap payload on
+ * its `structuredContent`, and the React shell takes over the surface
+ * when it sees `view: 'paywall'`.
+ *
+ * The legacy `'about'`, `'activate'`, and `'usage'` surfaces were
+ * dropped with the three-mode refactor — About is now served by tool
+ * descriptions + docs resources, Activate merged into checkout's
+ * `PlanActivationDispatcher`, and Usage folds inline into the account
+ * view.
  */
-export type SolvaPayMcpViewKind = 'checkout' | 'account' | 'topup' | 'activate' | 'paywall' | 'usage'
+export type SolvaPayMcpViewKind =
+  | 'checkout'
+  | 'account'
+  | 'topup'
+  | 'paywall'
+  | 'nudge'
 
 export const SOLVAPAY_MCP_VIEW_KINDS = [
   'checkout',
   'account',
   'topup',
-  'activate',
   'paywall',
-  'usage',
+  'nudge',
 ] as const satisfies readonly SolvaPayMcpViewKind[]
 
 /**
@@ -161,6 +189,17 @@ export interface BootstrapPayload {
   returnUrl: string
   /** Only set for the `open_paywall` branch. */
   paywall?: SolvaPayMcpPaywallContent
+  /**
+   * Upsell strip spec attached when `view: 'nudge'`. Rendered above
+   * the merchant tool result by `McpNudgeView`.
+   */
+  nudge?: NudgeSpec
+  /**
+   * Merchant tool result data embedded alongside a nudge so the shell
+   * can surface it without a follow-up tool call. Only set when
+   * `view: 'nudge'`.
+   */
+  data?: unknown
   merchant: BootstrapMerchant
   product: BootstrapProduct
   plans: BootstrapPlan[]
@@ -178,6 +217,72 @@ export interface SolvaPayMcpCsp {
 }
 
 /**
+ * MCP tool annotations — hints to hosts about the tool's behaviour.
+ * Structural subset of the official spec's `ToolAnnotations` so hosts
+ * can surface confirmation prompts (destructive actions) and filter
+ * tools appropriately (read-only vs. mutating).
+ *
+ * See https://modelcontextprotocol.io/specification for the full
+ * semantics. Hosts on pre-annotations SDK versions ignore the field
+ * without error — the wire shape is additive.
+ */
+export interface SolvaPayToolAnnotations {
+  /** Human-readable title override (prefer the descriptor's `title`). */
+  title?: string
+  /** Tool only retrieves data — no side effects on SolvaPay state. */
+  readOnlyHint?: boolean
+  /** Tool has destructive / non-reversible side effects (charges, cancellations). */
+  destructiveHint?: boolean
+  /** Repeated calls with the same args produce the same effect. */
+  idempotentHint?: boolean
+  /** Tool interacts with external systems (true for every SolvaPay tool). */
+  openWorldHint?: boolean
+}
+
+/**
+ * Brand-icon descriptor — mirrors the MCP spec's per-tool / per-resource
+ * `icons[]` element so hosts can swap the default globe / placeholder
+ * in the chrome strip for the merchant's own mark.
+ *
+ * Shape tracks the zod schema exposed by `@modelcontextprotocol/ext-apps`
+ * (see `app.d.ts` icon definitions). Newer MCP SDKs may surface `icons`
+ * as a top-level Tool field; until then we advertise them via
+ * `_meta.ui.icons` where ext-apps-aware hosts can discover them.
+ */
+export interface SolvaPayToolIcon {
+  /** Absolute URL or `data:` URI for the icon asset. */
+  src: string
+  /** MIME type, e.g. `'image/png'` / `'image/svg+xml'`. */
+  mimeType?: string
+  /** Size hints, e.g. `['512x512']`. */
+  sizes?: string[]
+  /** Render only under the given host theme (defaults to both). */
+  theme?: 'light' | 'dark'
+}
+
+/**
+ * Merchant branding that hosts / iframes can use to replace the
+ * generic SolvaPay identity with the merchant's own mark. Pre-fetched
+ * by the integrator at server startup (e.g. via `getMerchantCore`) so
+ * `createSolvaPayMcpServer` stays synchronous.
+ */
+export interface SolvaPayMerchantBranding {
+  /** Display name used as the MCP `Implementation.name`. */
+  brandName?: string
+  /**
+   * Absolute URL to a square logomark (recommended 512×512 PNG or SVG).
+   * Preferred input for MCP host-chrome icon slots.
+   */
+  iconUrl?: string
+  /**
+   * Absolute URL to a landscape logo. Used as a fallback when
+   * `iconUrl` isn't available — hosts that can only render a square
+   * mark may letterbox it.
+   */
+  logoUrl?: string
+}
+
+/**
  * Framework-neutral tool descriptor. Adapters translate this to their
  * own registration API (`registerAppTool` on the official SDK,
  * `tool.define` on mcp-lite, etc.).
@@ -192,6 +297,20 @@ export interface SolvaPayToolDescriptor {
    */
   inputSchema: Record<string, ZodTypeAny>
   meta?: Record<string, unknown>
+  /**
+   * Portable MCP tool annotations surfaced on `tools/list`. Adapters
+   * that support the upstream `ToolAnnotations` field forward these
+   * verbatim; adapters that don't silently ignore them.
+   */
+  annotations?: SolvaPayToolAnnotations
+  /**
+   * Brand icons surfaced on `tools/list`. Adapters include these on
+   * the tool advertisement so hosts can replace the default globe /
+   * placeholder in their chrome strip with the merchant's mark.
+   * Derived from `SolvaPayMerchantBranding` when the descriptor is
+   * built.
+   */
+  icons?: SolvaPayToolIcon[]
   handler: (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult>
 }
 
@@ -207,6 +326,59 @@ export interface SolvaPayResourceDescriptor {
 }
 
 /**
+ * Docs-style resource descriptor — a static markdown / text blob the
+ * agent can `resources/read` for narrated context (e.g. the
+ * `docs://solvapay/overview.md` "start here" guide). Kept separate from
+ * `SolvaPayResourceDescriptor` because it has no CSP metadata and its
+ * body is plain text, not the UI shell HTML.
+ */
+export interface SolvaPayDocsResourceDescriptor {
+  /** Stable URI — typically `docs://solvapay/<slug>.md`. */
+  uri: string
+  /** Human-readable name surfaced in `resources/list`. */
+  name: string
+  /** Optional short title for host UIs that distinguish it from `name`. */
+  title?: string
+  /** Short one-liner surfaced in `resources/list` metadata. */
+  description: string
+  /** MIME type, typically `text/markdown` or `text/plain`. */
+  mimeType: string
+  /** Returns the body — sync or async. */
+  readBody: () => string | Promise<string>
+}
+
+/**
+ * One MCP prompt — rendered as `/<name>` in hosts with slash-command
+ * support. Kept framework-neutral so every adapter (`mcp-sdk`,
+ * `mcp-lite`, `fastmcp`) can map it to their own `registerPrompt`
+ * shape.
+ *
+ * `argsSchema` matches the zod raw-shape shape the official SDK's
+ * `registerPrompt` accepts — a plain object of `z.*` fields. Adapters
+ * without zod-shape prompts can still call each field's `parse()`
+ * themselves.
+ */
+export interface SolvaPayPromptDescriptor {
+  name: string
+  title?: string
+  description: string
+  argsSchema?: Record<string, ZodTypeAny>
+  handler: (args: Record<string, unknown>) => SolvaPayPromptResult | Promise<SolvaPayPromptResult>
+}
+
+/**
+ * Minimal `GetPromptResult` shape — structural subset of the official
+ * SDK's type so adapters can forward it without importing
+ * `@modelcontextprotocol/sdk/types.js`.
+ */
+export interface SolvaPayPromptResult {
+  messages: Array<{
+    role: 'user' | 'assistant'
+    content: { type: 'text'; text: string }
+  }>
+}
+
+/**
  * View → intent-tool map, derived from `MCP_TOOL_NAMES` so a new view
  * requires exactly one edit across the entire ecosystem.
  *
@@ -219,8 +391,6 @@ export const TOOL_FOR_VIEW = {
   checkout: 'upgrade',
   account: 'manage_account',
   topup: 'topup',
-  activate: 'activate_plan',
-  usage: 'check_usage',
 } as const satisfies Partial<
   Record<SolvaPayMcpViewKind, (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]>
 >
@@ -245,3 +415,206 @@ export const OPEN_TOOL_FOR_VIEW = TOOL_FOR_VIEW
  * @deprecated Use `VIEW_FOR_TOOL`.
  */
 export const VIEW_FOR_OPEN_TOOL = VIEW_FOR_TOOL
+
+// ============================================================================
+// `ctx.respond()` V1 API — see spec for semantics.
+// ============================================================================
+
+/**
+ * Inline upsell strip attached to a successful tool response. Rendered
+ * below the tool result by the host; dismissible, non-blocking.
+ *
+ * V1 ships three default kinds, each with a default CTA that opens the
+ * `upgrade` intent tool. `kind: 'custom'` is reserved for V1.1.
+ */
+export interface NudgeSpec {
+  kind: 'low-balance' | 'cycle-ending' | 'approaching-limit'
+  message: string
+}
+
+/**
+ * Intermediate content block emitted via `ctx.emit(block)`. Structural
+ * subset of `SolvaPayCallToolResult.content` entries — text, image, or
+ * resource.
+ */
+export type ContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; data: string; mimeType: string }
+  | { type: 'resource'; resource: Record<string, unknown> }
+
+/**
+ * Options for `ctx.respond(data, options?)`.
+ *
+ * `text` overrides the SDK's default narrator output for this response.
+ * `nudge` attaches an inline upsell strip.
+ * `units` is reserved for V1.1 variable-unit billing; V1 silently
+ * ignores the field (billing stays at one credit per tool call).
+ */
+export interface ResponseOptions {
+  /** Override `content[0].text` with merchant-supplied text. */
+  text?: string
+  /** Inline upsell strip rendered below the tool result. */
+  nudge?: NudgeSpec
+  /**
+   * [V1.1] Units to bill for this call. Defaults to 1. Must be >= 0.
+   *
+   * V1 behaviour: field is accepted for forward compatibility but
+   * silently ignored. Billing stays fixed at one credit per tool call.
+   * V1.1 behaviour: threaded into `trackUsage` and applied by the backend.
+   */
+  units?: number
+}
+
+/**
+ * Branded envelope returned by `ctx.respond(data, options?)`. The brand
+ * symbol is module-private — merchants never construct `ResponseResult`
+ * values directly. `buildPayableHandler` unwraps the envelope into a
+ * `SolvaPayCallToolResult` before shipping.
+ */
+export interface ResponseResult<TData = unknown> {
+  /**
+   * Opaque brand marker — typed as `true` so the envelope is
+   * structurally distinguishable from raw merchant data even without
+   * the runtime symbol.
+   */
+  readonly __solvapayResponse: true
+  readonly data: TData
+  readonly options?: ResponseOptions
+  /**
+   * Content blocks queued via `ctx.emit(block)` before the terminal
+   * `respond()` call. V1 flushes these into `content[]` at respond
+   * time; V1.1 emits them over SSE.
+   */
+  readonly emittedBlocks?: ContentBlock[]
+}
+
+/**
+ * Cached snapshot of customer state at handler invocation.
+ *
+ * Populated from the existing `LimitResponse` returned by
+ * `payable().mcp()`'s pre-check — zero additional fetch cost.
+ *
+ * IMPORTANT: values here may be up to 10 seconds stale after mutations
+ * (topup, plan change, cancel) within the same process. For fresh
+ * state, call `.fresh()`.
+ */
+export interface CustomerSnapshot {
+  /** Backend customer ref (`cus_...`). */
+  readonly ref: string
+  /** Credit balance in mils. 0 when the backend didn't surface a balance. */
+  readonly balance: number
+  /** Remaining usage units before hitting the limit. `null` when unlimited. */
+  readonly remaining: number | null
+  /** Whether the customer is within their usage limits at snapshot time. */
+  readonly withinLimits: boolean
+  /**
+   * Active plan on the purchase. `null` when the customer has no
+   * active purchase or is on a free plan.
+   */
+  readonly plan: BootstrapPlan | null
+
+  /**
+   * Force a fresh fetch bypassing the 10s limits cache.
+   * Returns a new snapshot; does NOT mutate the current one.
+   */
+  fresh(): Promise<CustomerSnapshot>
+}
+
+/**
+ * Handler context passed as the second positional argument to merchant
+ * `registerPayable` handlers opting into the V1 `ctx` API.
+ *
+ * V1 surface: `customer`, `product`, `respond`, `gate`.
+ * Reserved (V1.1): `emit`, `progress`, `progressRaw`, `signal` — types
+ * ship in V1 so merchants can write forward-compatible code.
+ */
+export interface ResponseContext {
+  /**
+   * Customer snapshot at handler invocation. See `CustomerSnapshot`
+   * for staleness semantics.
+   */
+  customer: CustomerSnapshot
+
+  /** Read-only product configuration from the bootstrap payload. */
+  product: BootstrapProduct
+
+  /** Build a response. Two forms, both valid. */
+  respond<TData>(data: TData): ResponseResult<TData>
+  respond<TData>(data: TData, options: ResponseOptions): ResponseResult<TData>
+
+  /**
+   * Explicitly trigger a paywall response. Handler execution stops
+   * and the adapter routes the gate through `formatGate` — the MCP
+   * transport emits a clean narration + `structuredContent` payload
+   * with `isError: false`, same shape as a pre-check gate outcome.
+   *
+   * Implemented as `throw new PaywallError(reason)` for the compat
+   * window; the adapter's catch block at the boundary unwraps it
+   * and delivers the transport response. Merchants who catch the
+   * error themselves can still rely on `instanceof PaywallError`.
+   *
+   * Rare — normally the SDK fires the paywall automatically via
+   * `payable().mcp()` pre-check.
+   */
+  gate(reason?: string): never
+
+  // ——————————————————————————————————————————————————————————————
+  // Reserved API surface — types ship in V1, implementations in V1.1.
+  // ——————————————————————————————————————————————————————————————
+
+  /**
+   * [V1.1] Emit an intermediate content block.
+   *
+   * V1 behaviour: queued and flushed at the terminal `respond()`. No SSE.
+   * V1.1 behaviour: emits immediately over Streamable HTTP + SSE.
+   *
+   * Reserved so merchants can write forward-compatible streaming code
+   * today.
+   */
+  emit(block: ContentBlock): Promise<void>
+
+  /**
+   * [V1.1] Emit a progress notification with a percent.
+   *
+   * V1 behaviour: no-op.
+   * V1.1 behaviour: sends `notifications/progress` if the client
+   * supplied a `progressToken`; no-op otherwise.
+   */
+  progress(options: { percent: number; message?: string }): Promise<void>
+
+  /**
+   * [V1.1] Emit a progress notification with non-percent units.
+   *
+   * V1 behaviour: no-op.
+   * V1.1 behaviour: sends `notifications/progress` with raw
+   * progress/total.
+   */
+  progressRaw(options: { progress: number; total?: number; message?: string }): Promise<void>
+
+  /**
+   * [V1.1] AbortSignal that fires when the client cancels the tool call.
+   *
+   * V1 behaviour: always an unaborted signal.
+   * V1.1 behaviour: wired to the underlying transport cancellation.
+   *
+   * Merchants pass this to their upstream fetch/LLM/image-gen calls to
+   * cancel expensive operations when the client goes away.
+   */
+  signal: AbortSignal
+}
+
+/**
+ * Merchant handler signature for `registerPayable`. Receives the
+ * parsed input `args` (typed from the tool's `schema` when provided)
+ * and a `ResponseContext` with `ctx.respond(...)`, `ctx.customer`,
+ * `ctx.gate(...)`, and the reserved streaming surface (`ctx.emit`,
+ * `ctx.progress`, `ctx.signal`).
+ *
+ * Must return the branded envelope produced by `ctx.respond(data, options?)`.
+ * Returning a raw value is a type error at compile time and throws a
+ * merchant-actionable error at runtime.
+ */
+export type PayableHandler<TArgs = Record<string, unknown>, TData = unknown> = (
+  args: TArgs,
+  ctx: ResponseContext,
+) => Promise<ResponseResult<TData>>

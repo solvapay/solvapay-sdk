@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatPrice, getMinorUnitsPerMajor, toMajorUnits } from './format'
+import { formatDate, formatPrice, getMinorUnitsPerMajor, toMajorUnits } from './format'
 
 describe('formatPrice', () => {
   describe('basic formatting', () => {
@@ -14,13 +14,33 @@ describe('formatPrice', () => {
       expect(out.toLowerCase()).toContain('kr')
     })
 
-    it('formats GBP', () => {
-      expect(formatPrice(500, 'gbp', { locale: 'en-GB' })).toBe('£5.00')
+    it('formats GBP whole amount without trailing zeros', () => {
+      expect(formatPrice(500, 'gbp', { locale: 'en-GB' })).toBe('£5')
+    })
+
+    it('trims trailing zeros on whole SEK amounts', () => {
+      // Intl inserts NBSP between the currency code and the number.
+      expect(formatPrice(10000, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe(
+        'SEK 100',
+      )
+    })
+
+    it('keeps two decimals on fractional SEK amounts', () => {
+      expect(formatPrice(10050, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe(
+        'SEK 100.50',
+      )
+    })
+
+    it('renders sv-SE SEK whole amount without decimals', () => {
+      const out = formatPrice(10000, 'sek', { locale: 'sv-SE' })
+      expect(out).toContain('100')
+      expect(out).not.toContain(',00')
+      expect(out.toLowerCase()).toContain('kr')
     })
 
     it('handles case-insensitive currency codes', () => {
-      expect(formatPrice(1000, 'USD')).toBe('$10.00')
-      expect(formatPrice(1000, 'Usd')).toBe('$10.00')
+      expect(formatPrice(1000, 'USD')).toBe('$10')
+      expect(formatPrice(1000, 'Usd')).toBe('$10')
     })
   })
 
@@ -42,7 +62,7 @@ describe('formatPrice', () => {
     })
 
     it('returns empty string when free="" (disabled)', () => {
-      expect(formatPrice(0, 'usd', { free: '' })).toBe('$0.00')
+      expect(formatPrice(0, 'usd', { free: '' })).toBe('$0')
     })
   })
 
@@ -53,12 +73,12 @@ describe('formatPrice', () => {
 
     it('appends "/ 3 months" when intervalCount > 1', () => {
       expect(formatPrice(2500, 'usd', { interval: 'month', intervalCount: 3 })).toBe(
-        '$25.00 / 3 months',
+        '$25 / 3 months',
       )
     })
 
     it('appends "/ year" for year interval', () => {
-      expect(formatPrice(9900, 'usd', { interval: 'year' })).toBe('$99.00 / year')
+      expect(formatPrice(9900, 'usd', { interval: 'year' })).toBe('$99 / year')
     })
 
     it('does not append interval when amount is zero and rendered as Free', () => {
@@ -81,6 +101,44 @@ describe('toMajorUnits', () => {
   it('is case-insensitive on the currency code', () => {
     expect(toMajorUnits(1000, 'JPY')).toBe(1000)
     expect(toMajorUnits(1000, 'Usd')).toBe(10)
+  })
+})
+
+describe('formatDate', () => {
+  const iso = '2024-03-15T00:00:00Z'
+
+  it('formats an ISO string using the provided locale (medium style)', () => {
+    // en-US medium style: "Mar 15, 2024"
+    const out = formatDate(iso, 'en-US')
+    expect(out).toContain('2024')
+    expect(out).toMatch(/Mar/)
+  })
+
+  it('renders differently across locales', () => {
+    const us = formatDate(iso, 'en-US')
+    const jp = formatDate(iso, 'ja-JP')
+    expect(us).not.toBe(jp)
+  })
+
+  it('accepts a Date instance', () => {
+    const out = formatDate(new Date(iso), 'en-US')
+    expect(out).toContain('2024')
+  })
+
+  it('returns null for nullish inputs', () => {
+    expect(formatDate(undefined, 'en-US')).toBeNull()
+    expect(formatDate(null, 'en-US')).toBeNull()
+    expect(formatDate('', 'en-US')).toBeNull()
+  })
+
+  it('returns null for invalid date inputs', () => {
+    expect(formatDate('not-a-date', 'en-US')).toBeNull()
+  })
+
+  it('honours a custom dateStyle option', () => {
+    const medium = formatDate(iso, 'en-US', { dateStyle: 'medium' })
+    const long = formatDate(iso, 'en-US', { dateStyle: 'long' })
+    expect(medium).not.toBe(long)
   })
 })
 

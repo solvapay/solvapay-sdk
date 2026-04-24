@@ -27,25 +27,76 @@ import { z } from 'zod'
 import {
   buildSolvaPayRequest,
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
+  narratedToolResult,
+  parseMode,
   previewJson,
   toolErrorResult,
   toolResult,
 } from './helpers'
+import type { IntentTool } from './narrate'
 import {
   createBuildBootstrapPayload,
   type BuildBootstrapPayloadFn,
 } from './bootstrap-payload'
 import { mergeCsp } from './csp'
+import {
+  SOLVAPAY_OVERVIEW_MARKDOWN,
+  SOLVAPAY_OVERVIEW_MIME_TYPE,
+  SOLVAPAY_OVERVIEW_URI,
+} from './resources/overview'
 import { MCP_TOOL_NAMES } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS, TOOL_FOR_VIEW } from './types'
 import type {
   McpToolExtra,
   SolvaPayCallToolResult,
+  SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
   SolvaPayMcpViewKind,
+  SolvaPayMerchantBranding,
+  SolvaPayPromptDescriptor,
+  SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
+  SolvaPayToolAnnotations,
   SolvaPayToolDescriptor,
+  SolvaPayToolIcon,
 } from './types'
+
+/**
+ * Project `SolvaPayMerchantBranding` into an `icons[]` array suitable
+ * for the `SolvaPayToolDescriptor` / MCP host chrome. Prefers the
+ * square `iconUrl` (expected shape for avatar slots); falls back to
+ * the landscape `logoUrl` with a note that hosts may need to
+ * letterbox. Returns `undefined` when neither asset is set.
+ */
+function deriveIcons(branding: SolvaPayMerchantBranding | undefined): SolvaPayToolIcon[] | undefined {
+  if (!branding) return undefined
+  const assets: SolvaPayToolIcon[] = []
+  if (branding.iconUrl) {
+    assets.push({ src: branding.iconUrl, sizes: ['any', '512x512'] })
+  } else if (branding.logoUrl) {
+    assets.push({ src: branding.logoUrl })
+  }
+  return assets.length > 0 ? assets : undefined
+}
+
+/**
+ * All SolvaPay tools talk to the SolvaPay backend, so `openWorldHint`
+ * is universal. This helper stamps it on every annotation set and keeps
+ * each call site focused on the read/destructive/idempotent decision.
+ */
+const solvapayTool = (
+  hints: Omit<SolvaPayToolAnnotations, 'openWorldHint'>,
+): SolvaPayToolAnnotations => ({ openWorldHint: true, ...hints })
+
+/**
+ * Per-view annotation map for the intent tools registered via
+ * `pushIntentTool`. Keep aligned with `TOOL_FOR_VIEW`.
+ */
+const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> = {
+  account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+  topup: solvapayTool({ destructiveHint: true }),
+  checkout: solvapayTool({ destructiveHint: true }),
+}
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
 
@@ -96,11 +147,33 @@ export interface BuildSolvaPayDescriptorsOptions {
     result: SolvaPayCallToolResult,
     meta: { durationMs: number },
   ) => void
+  /**
+   * Merchant branding used to personalise the MCP host chrome — when
+   * provided, every emitted tool descriptor carries an `icons[]` the
+   * adapter surfaces on `tools/list` so hosts can replace the default
+   * globe / placeholder with the merchant's mark. Prefer fetching the
+   * SDK merchant payload at server startup (`getMerchantCore` exposes
+   * `iconUrl` / `logoUrl` / `displayName`) and passing the result in.
+   */
+  branding?: SolvaPayMerchantBranding
 }
 
 export interface SolvaPayDescriptorBundle {
   tools: SolvaPayToolDescriptor[]
   resource: SolvaPayResourceDescriptor
+  /**
+   * Slash-command prompts that hosts with prompt support (Claude
+   * Desktop, Cursor, etc.) surface as `/upgrade`, `/manage_account`,
+   * `/topup`, and `/activate_plan`. Hosts without prompt support
+   * silently ignore the list — registration is purely additive.
+   */
+  prompts: SolvaPayPromptDescriptor[]
+  /**
+   * Narrated docs resources — agent-facing "read me first" content
+   * served over `docs://solvapay/*`. Lives alongside the UI resource so
+   * agents can `resources/read` before trying a tool.
+   */
+  docsResources: SolvaPayDocsResourceDescriptor[]
   /**
    * Parallelised fetch of merchant + product + plans + (optional)
    * customer snapshot that backs every `open_*` tool. Exposed so the
@@ -130,7 +203,9 @@ export function buildSolvaPayDescriptors(
     getCustomerRef = defaultGetCustomerRefHelper,
     onToolCall,
     onToolResult,
+    branding,
   } = options
+  const toolIcons = deriveIcons(branding)
 
   if (!/^https?:\/\//i.test(publicBaseUrl)) {
     throw new Error(
@@ -152,6 +227,13 @@ export function buildSolvaPayDescriptors(
   const uiToolMeta = { ...toolMeta, audience: 'ui' as const }
   const enabledViews = new Set<SolvaPayMcpViewKind>(views)
   const tools: SolvaPayToolDescriptor[] = []
+
+  // Push a tool into the emitted list, augmented with the shared
+  // brand-icon set so every advertised tool carries the same merchant
+  // mark in `tools/list`.
+  const pushTool = (descriptor: SolvaPayToolDescriptor): void => {
+    tools.push(toolIcons ? { ...descriptor, icons: toolIcons } : descriptor)
+  }
 
   const UI_ONLY_PREFIX =
     'UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. '
@@ -212,41 +294,53 @@ export function buildSolvaPayDescriptors(
   ) => {
     if (!enabledViews.has(view)) return
     const name = TOOL_FOR_VIEW[view]
-    tools.push({
+    pushTool({
       name,
       title,
       description,
-      inputSchema: {},
+      // Every intent tool accepts an optional `mode` so users /
+      // agents on any host can opt into text-only responses (or
+      // suppress the narrated markdown when they know the host is
+      // rendering the UI iframe). Default `'auto'` emits both.
+      inputSchema: { mode: z.enum(['ui', 'text', 'auto']).optional() },
       meta: toolMeta,
+      annotations: INTENT_TOOL_ANNOTATIONS[view],
       handler: async (args, extra) =>
-        trace(name, args, extra, async () => toolResult(await buildBootstrapPayload(view, extra))),
+        trace(name, args, extra, async () => {
+          const mode = parseMode(args.mode)
+          const data = await buildBootstrapPayload(view, extra)
+          return narratedToolResult(name as IntentTool, data, mode, toolMeta)
+        }),
     })
   }
+
+  const MODE_HINT =
+    " By default renders the UI iframe with a one-line placeholder; pass `mode: 'text'` for a markdown-only summary on CLI / text-only hosts, or `mode: 'auto'` to include both."
 
   pushIntentTool(
     'checkout',
     'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout view; on text-only hosts the response carries a markdown summary with a checkout URL the user can click.',
+    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
+      MODE_HINT,
   )
   pushIntentTool(
     'account',
     'Manage account',
-    'Show or manage the current customer\'s SolvaPay account: plan, balance, payment method, cancel/reactivate controls. UI hosts open the embedded account view; text-only hosts get a markdown summary.',
+    "Show or manage the current customer's SolvaPay account: plan, balance, usage, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), topup (add credits)." +
+      MODE_HINT,
   )
   pushIntentTool(
     'topup',
     'Top up credits',
-    'Add SolvaPay credits for the current customer. UI hosts open the embedded top-up flow; text-only hosts get a markdown summary with a top-up URL.',
+    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
+      MODE_HINT,
   )
   // `activate_plan` is registered below (transport section) as a
   // dual-audience tool that handles both the picker bootstrap (no
   // planRef) and smart activation (planRef provided), replacing the
-  // legacy `open_plan_activation` intent.
-  pushIntentTool(
-    'usage',
-    'Check usage',
-    'Show the current customer\'s usage snapshot (used, remaining, reset date) for the active usage-based plan. UI hosts open the embedded usage view; text-only hosts get a markdown summary.',
-  )
+  // legacy `open_plan_activation` intent. The picker bootstrap now
+  // surfaces inside the `checkout` view (the tabbed shell and its
+  // dedicated activate surface are gone).
 
   // Paywall responses now carry the full BootstrapPayload in their
   // `structuredContent` (see `@solvapay/mcp/paywallToolResult`), so
@@ -254,7 +348,7 @@ export function buildSolvaPayDescriptors(
 
   // ------- transport tools -------
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createCheckoutSession,
     description:
       UI_ONLY_PREFIX +
@@ -264,6 +358,7 @@ export function buildSolvaPayDescriptors(
       productRef: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCheckoutSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -283,7 +378,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createPayment,
     description:
       UI_ONLY_PREFIX +
@@ -293,6 +388,7 @@ export function buildSolvaPayDescriptors(
       productRef: z.string(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -312,7 +408,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.processPayment,
     description:
       UI_ONLY_PREFIX +
@@ -323,6 +419,7 @@ export function buildSolvaPayDescriptors(
       planRef: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({ destructiveHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.processPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -343,13 +440,14 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createCustomerSession,
     description:
       UI_ONLY_PREFIX +
       'Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.',
     inputSchema: {},
     meta: uiToolMeta,
+    annotations: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCustomerSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -362,7 +460,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.createTopupPayment,
     description:
       UI_ONLY_PREFIX +
@@ -373,6 +471,7 @@ export function buildSolvaPayDescriptors(
       description: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createTopupPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -392,7 +491,7 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.cancelRenewal,
     description:
       UI_ONLY_PREFIX +
@@ -402,6 +501,7 @@ export function buildSolvaPayDescriptors(
       reason: z.string().optional(),
     },
     meta: uiToolMeta,
+    annotations: solvapayTool({ destructiveHint: true, idempotentHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.cancelRenewal, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -420,13 +520,14 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.reactivateRenewal,
     description:
       UI_ONLY_PREFIX +
       "Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
     inputSchema: { purchaseRef: z.string() },
     meta: uiToolMeta,
+    annotations: solvapayTool({ idempotentHint: true }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.reactivateRenewal, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -443,38 +544,48 @@ export function buildSolvaPayDescriptors(
       }),
   })
 
-  tools.push({
+  pushTool({
     name: MCP_TOOL_NAMES.activatePlan,
     title: 'Activate plan',
     description:
-      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link (text-only hosts) or open the embedded checkout (UI hosts). Without a `planRef`: returns the available plans so the customer can pick one — UI hosts render the embedded picker, text-only hosts see the plans list in the markdown summary.',
+      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits).' +
+      MODE_HINT,
     inputSchema: {
       productRef: z.string().optional(),
       planRef: z.string().optional(),
+      mode: z.enum(['ui', 'text', 'auto']).optional(),
     },
     meta: toolMeta,
+    annotations: solvapayTool({}),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.activatePlan, args, extra, async () => {
         const effectiveProduct =
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
         const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
+        const mode = parseMode(args.mode)
 
-        // No plan picked yet — return the picker bootstrap (the React
-        // shell opens `<McpActivateView>`; text-only hosts narrate the
-        // markdown summary listing the available plans). Respect the
-        // `views` filter so consumers that restrict the surface (e.g.
-        // `views: ['checkout']`) don't accidentally expose the
-        // activation picker as an alternate entry point.
+        // No plan picked yet — return the picker bootstrap with
+        // `view: 'checkout'` so the React shell opens the checkout
+        // surface's embedded plan picker (the merged Activate/Plan
+        // surface). Text-only hosts narrate the markdown summary
+        // listing the available plans. Respect the `views` filter so
+        // consumers that disable checkout don't accidentally expose the
+        // picker as an alternate entry point.
         if (!planRef) {
-          if (!enabledViews.has('activate')) {
+          if (!enabledViews.has('checkout')) {
             return toolErrorResult({
               error: 'activate_plan requires a planRef on this server',
               status: 400,
               details:
-                'The activation-picker view is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "activate" view via the `views` option.',
+                'The checkout view (where the plan picker lives) is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "checkout" view via the `views` option.',
             })
           }
-          return toolResult(await buildBootstrapPayload('activate', extra))
+          return narratedToolResult(
+            MCP_TOOL_NAMES.activatePlan as IntentTool,
+            await buildBootstrapPayload('checkout', extra),
+            mode,
+            toolMeta,
+          )
         }
 
         const auth = requireCustomerRef(extra)
@@ -506,5 +617,104 @@ export function buildSolvaPayDescriptors(
         },
   }
 
-  return { tools, resource, buildBootstrapPayload }
+  const prompts = buildSolvaPayPrompts({ enabledViews })
+
+  const docsResources: SolvaPayDocsResourceDescriptor[] = [
+    {
+      uri: SOLVAPAY_OVERVIEW_URI,
+      name: 'SolvaPay MCP — overview',
+      title: 'SolvaPay overview',
+      description:
+        'Agent-facing "start here" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.',
+      mimeType: SOLVAPAY_OVERVIEW_MIME_TYPE,
+      readBody: () => SOLVAPAY_OVERVIEW_MARKDOWN,
+    },
+  ]
+
+  return { tools, resource, prompts, docsResources, buildBootstrapPayload }
+}
+
+/**
+ * Build the framework-neutral slash-command prompt descriptors for the
+ * five SolvaPay intent tools. Exposed standalone so adapters that don't
+ * want the full descriptor bundle (or want to register prompts on an
+ * already-built server) can still pick them up.
+ *
+ * Each prompt is intentionally one `user` message that mirrors how a
+ * human would invoke the intent — this makes slash-commands feel like
+ * natural shortcuts, and keeps the prompts compatible with text hosts
+ * that don't expose the MCP UI shell.
+ */
+export function buildSolvaPayPrompts(
+  options: { enabledViews?: Set<SolvaPayMcpViewKind> } = {},
+): SolvaPayPromptDescriptor[] {
+  const enabled =
+    options.enabledViews ?? new Set<SolvaPayMcpViewKind>(DEFAULT_VIEWS)
+
+  const prompts: SolvaPayPromptDescriptor[] = []
+
+  const userMessage = (text: string): SolvaPayPromptResult => ({
+    messages: [{ role: 'user', content: { type: 'text', text } }],
+  })
+
+  if (enabled.has('checkout')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.upgrade,
+      title: 'Upgrade plan',
+      description: 'Start or change a paid plan for the current customer.',
+      argsSchema: { planRef: z.string().optional() },
+      handler: async ({ planRef }) =>
+        userMessage(
+          typeof planRef === 'string' && planRef
+            ? `Activate plan ${planRef} for me.`
+            : 'Show me the upgrade options for my SolvaPay account.',
+        ),
+    })
+  }
+
+  if (enabled.has('account')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.manageAccount,
+      title: 'Manage account',
+      description:
+        'Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer.',
+      handler: async () => userMessage('Show me my SolvaPay account.'),
+    })
+  }
+
+  if (enabled.has('topup')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.topup,
+      title: 'Top up credits',
+      description: 'Add SolvaPay credits to the current customer.',
+      argsSchema: { amount: z.string().optional() },
+      handler: async ({ amount }) =>
+        userMessage(
+          typeof amount === 'string' && amount
+            ? `Top up my SolvaPay credits by ${amount}.`
+            : 'I want to top up my SolvaPay credits.',
+        ),
+    })
+  }
+
+  // `activate_plan` gets a prompt whenever the checkout view is enabled
+  // (the picker bootstrap lives there now). When checkout is disabled
+  // the prompt is pointless — `activate_plan` without a planRef would
+  // just error.
+  if (enabled.has('checkout')) {
+    prompts.push({
+      name: MCP_TOOL_NAMES.activatePlan,
+      title: 'Activate plan',
+      description: 'Pick a plan to activate, or activate a specific plan by ref.',
+      argsSchema: { planRef: z.string().optional() },
+      handler: async ({ planRef }) =>
+        userMessage(
+          typeof planRef === 'string' && planRef
+            ? `Activate plan ${planRef} on my SolvaPay account.`
+            : 'What plans can I activate on my SolvaPay account?',
+        ),
+    })
+  }
+
+  return prompts
 }

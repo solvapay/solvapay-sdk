@@ -12,6 +12,7 @@
  * @example
  * ```ts
  * import { createSolvaPayMcpServer } from '@solvapay/mcp-sdk'
+ * import { z } from 'zod'
  *
  * const server = createSolvaPayMcpServer({
  *   solvaPay,
@@ -21,8 +22,9 @@
  *   publicBaseUrl: 'https://my-app.example.com',
  *   additionalTools: ({ registerPayable }) => {
  *     registerPayable('create_video', {
- *       schema: z.object({ prompt: z.string() }),
- *       handler: async ({ prompt }) => ({ videoUrl: await generateVideo(prompt) }),
+ *       schema: { prompt: z.string() },
+ *       handler: async ({ prompt }, ctx) =>
+ *         ctx.respond({ videoUrl: await generateVideo(prompt) }),
  *     })
  *   },
  * })
@@ -37,3 +39,17 @@ export type {
 
 export { registerPayableTool } from './registerPayableTool'
 export type { RegisterPayableToolOptions } from './registerPayableTool'
+
+// ---- Merchant-facing types re-exported from @solvapay/mcp ----
+// Everything a merchant needs to type a `registerPayable` handler for the
+// 90% path. Avoids forcing a second install of `@solvapay/mcp` just to
+// annotate `ctx` or hand-author a `NudgeSpec` / `ContentBlock`.
+export type {
+  ContentBlock,
+  CustomerSnapshot,
+  NudgeSpec,
+  PayableHandler,
+  ResponseContext,
+  ResponseOptions,
+  ResponseResult,
+} from '@solvapay/mcp'

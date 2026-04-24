@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useCopy } from './useCopy'
 import { interpolate } from '../i18n/interpolate'
+import { formatPrice, getMinorUnitsPerMajor } from '../utils/format'
 import type { UseTopupAmountSelectorOptions, UseTopupAmountSelectorReturn } from '../types'
 
 function getQuickAmounts(currency: string): number[] {
@@ -102,7 +103,9 @@ export function useTopupAmountSelector(
     if (resolvedAmount < minAmount) {
       setError(
         interpolate(copy.topup.minAmount, {
-          amount: `${currencySymbol}${minAmount}`,
+          amount: formatPrice(minAmount * getMinorUnitsPerMajor(currency), currency, {
+            free: '',
+          }),
         }),
       )
       return false
@@ -110,14 +113,16 @@ export function useTopupAmountSelector(
     if (resolvedAmount > maxAmount) {
       setError(
         interpolate(copy.topup.maxAmount, {
-          amount: `${currencySymbol}${maxAmount.toLocaleString()}`,
+          amount: formatPrice(maxAmount * getMinorUnitsPerMajor(currency), currency, {
+            free: '',
+          }),
         }),
       )
       return false
     }
     setError(null)
     return true
-  }, [resolvedAmount, minAmount, maxAmount, currencySymbol, copy])
+  }, [resolvedAmount, minAmount, maxAmount, currency, copy])
 
   const reset = useCallback(() => {
     setSelectedAmount(null)

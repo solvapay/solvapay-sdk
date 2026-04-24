@@ -79,7 +79,6 @@ describe('buildSolvaPayDescriptors', () => {
       [
         MCP_TOOL_NAMES.activatePlan,
         MCP_TOOL_NAMES.cancelRenewal,
-        MCP_TOOL_NAMES.checkUsage,
         MCP_TOOL_NAMES.createCheckoutSession,
         MCP_TOOL_NAMES.createCustomerSession,
         MCP_TOOL_NAMES.createPayment,
@@ -105,7 +104,6 @@ describe('buildSolvaPayDescriptors', () => {
       MCP_TOOL_NAMES.upgrade,
       MCP_TOOL_NAMES.manageAccount,
       MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.checkUsage,
       MCP_TOOL_NAMES.activatePlan,
     ]
     for (const name of intentTools) {
@@ -164,6 +162,10 @@ describe('buildSolvaPayDescriptors', () => {
       'open_topup',
       'open_usage',
       'open_plan_activation',
+      // SDK refactor — tabbed shell deleted; usage folds into account,
+      // about is served by tool descriptions + docs resources.
+      'check_usage',
+      'open_about',
     ]) {
       expect(names).not.toContain(removed)
     }
@@ -291,21 +293,21 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(sc.plans).toEqual([])
   })
 
-  it('activate_plan without planRef returns the picker bootstrap (view: activate)', async () => {
+  it('activate_plan without planRef returns the picker bootstrap (view: checkout)', async () => {
     const result = await invokeOpen(MCP_TOOL_NAMES.activatePlan, {}, undefined)
     const sc = result.structuredContent as Record<string, unknown>
-    expect(sc.view).toBe('activate')
+    expect(sc.view).toBe('checkout')
     expect(sc.plans).toBeTruthy()
   })
 
-  it('activate_plan without planRef errors when activate view is disabled', async () => {
+  it('activate_plan without planRef errors when checkout view is disabled', async () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),
       productRef: 'prd_test',
       resourceUri: 'ui://test/view.html',
       readHtml: async () => '<html></html>',
       publicBaseUrl: 'https://example.com',
-      views: ['checkout'],
+      views: ['account'],
     })
     const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
     const result = await activate.handler({}, {})

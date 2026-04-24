@@ -1,11 +1,15 @@
 /**
  * MCP checkout app client entrypoint.
  *
- * Everything view-related (bootstrap, provider setup, view router, the four
- * `<Mcp*View>` primitives, and default styles) now lives in
- * `@solvapay/react/mcp`. This file only wires up the host-context helpers
- * from `@modelcontextprotocol/ext-apps`, constructs the `App`, and renders
- * `<McpApp>`.
+ * Everything view-related (bootstrap, provider setup, surface router,
+ * the `<Mcp*View>` primitives, the shell, BackLink primitive, and
+ * default styles) lives in `@solvapay/react/mcp`. This file only wires
+ * up the host-context helpers from `@modelcontextprotocol/ext-apps`,
+ * constructs the `App`, and renders `<McpApp>`.
+ *
+ * All of these components (shell, views, plan-actions helpers,
+ * narrator) live in the SDK so the hosted MCP Pay solution can mount
+ * the same surface on an HTTP page instead of inside the iframe.
  */
 
 import { createRoot } from 'react-dom/client'

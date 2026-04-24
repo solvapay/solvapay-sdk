@@ -27,8 +27,39 @@ export type { McpToolName } from '@solvapay/mcp'
 export { useStripeProbe } from './useStripeProbe'
 export type { StripeProbeState } from './useStripeProbe'
 
-export { fetchMcpBootstrap } from './bootstrap'
-export type { McpBootstrap, McpView, McpAppBootstrapLike } from './bootstrap'
+export { useHostLocale } from './useHostLocale'
+
+export { useMcpToolResult } from './hooks/useMcpToolResult'
+export type { McpToolResult } from './hooks/useMcpToolResult'
+
+export { McpBridgeProvider, useMcpBridge } from './bridge'
+export type {
+  McpBridgeAppLike,
+  McpBridgeProviderProps,
+  McpBridgeValue,
+  McpMessageOnSuccess,
+  McpSuccessEvent,
+  NotifyModelContextParams,
+  SendMessageParams,
+} from './bridge'
+
+export {
+  classifyHostEntry,
+  fetchMcpBootstrap,
+  isTransportToolName,
+  parseBootstrapFromToolResult,
+  SOLVAPAY_TRANSPORT_TOOL_NAMES,
+  waitForInitialToolResult,
+} from './bootstrap'
+export type {
+  AppToolResultEvents,
+  HostEntryClassification,
+  McpAppBootstrapLike,
+  McpBootstrap,
+  McpView,
+  WaitForInitialToolResultOptions,
+  WaitForInitialToolResultResult,
+} from './bootstrap'
 
 export { seedMcpCaches } from './cache-seed'
 
@@ -41,23 +72,53 @@ export type {
   McpViewRouterProps,
 } from './McpApp'
 
+export { McpAppShell } from './McpAppShell'
+export type { McpAppShellProps } from './McpAppShell'
+
+export type { McpViewKind, McpTabKind } from './view-kind'
+
+export {
+  resolvePlanShape,
+  resolveActivationStrategy,
+  resolvePlanActions,
+  resolveActivityStrip,
+} from './plan-actions'
+export type {
+  PlanShape,
+  ActivationStrategy,
+  PlanActions,
+  PlanActionsInput,
+  ActivityStripKind,
+  PlanLike,
+  PurchaseSnapshotLike,
+} from './plan-actions'
+
+export { BackLink } from './views/BackLink'
+export type { BackLinkProps } from './views/BackLink'
+
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 
 export { McpAccountView } from './views/McpAccountView'
 export type { McpAccountViewProps } from './views/McpAccountView'
 
+export { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
+export type {
+  McpCustomerDetailsCardProps,
+  McpSellerDetailsCardProps,
+} from './views/detail-cards'
+
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
-
-export { McpActivateView } from './views/McpActivateView'
-export type { McpActivateViewProps } from './views/McpActivateView'
 
 export { McpPaywallView } from './views/McpPaywallView'
 export type { McpPaywallViewProps } from './views/McpPaywallView'
 
-export { McpUsageView } from './views/McpUsageView'
-export type { McpUsageViewProps } from './views/McpUsageView'
+export { McpNudgeView } from './views/McpNudgeView'
+export type { McpNudgeViewProps } from './views/McpNudgeView'
+
+export { McpUpsellStrip } from './components/McpUpsellStrip'
+export type { McpUpsellStripProps } from './components/McpUpsellStrip'
 
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'

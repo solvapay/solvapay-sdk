@@ -348,7 +348,8 @@ import {
   McpCheckoutView,
   McpAccountView,
   McpTopupView,
-  McpActivateView,
+  McpPaywallView,
+  McpNudgeView,
   McpViewRouter,
   useStripeProbe,
 } from '@solvapay/react/mcp'
@@ -356,7 +357,7 @@ import {
 
 Every view accepts a `classNames?: McpViewClassNames` partial. Props are
 typed per-view (`McpCheckoutViewProps`, `McpAccountViewProps`,
-`McpTopupViewProps`, `McpActivateViewProps`).
+`McpTopupViewProps`, `McpPaywallViewProps`, `McpNudgeViewProps`).
 
 ### Architecture ADR
 

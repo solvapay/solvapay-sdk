@@ -423,10 +423,16 @@ const PaidInner: React.FC<{
       }
 
       if (!hasPaidPurchaseRef.current) {
-        const timeoutMsg = copy.errors.paymentProcessingTimeout
-        setError(timeoutMsg)
+        // The backend already confirmed the payment (reconcileResult.status
+        // === 'success') — this ceiling only fires when our local purchase
+        // snapshot hasn't caught up yet. Use the softer "confirmation
+        // delayed" copy instead of the harder "webhooks may not be
+        // configured" message, which would blame configuration that is
+        // demonstrably working.
+        const confirmationMsg = copy.errors.paymentConfirmationDelayed
+        setError(confirmationMsg)
         setIsProcessing(false)
-        onError?.(new Error(timeoutMsg))
+        onError?.(new Error(confirmationMsg))
         return
       }
 

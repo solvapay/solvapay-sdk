@@ -33,12 +33,22 @@ the lifted views don't need workarounds.
 Both compound and primitive access are first-class:
 
 - `<McpApp app={app} />` is the turnkey 5-line entrypoint for any MCP App
-  built on `@modelcontextprotocol/ext-apps`.
-- `<McpCheckoutView />`, `<McpAccountView />`, `<McpTopupView />`, and
-  `<McpActivateView />` are the composable primitives underneath. Integrators
-  who want a custom shell (their own provider mount, additional routes, a
-  bespoke layout) use them directly alongside `createMcpAppAdapter`,
-  `fetchMcpBootstrap`, and `createMcpFetch`.
+  built on `@modelcontextprotocol/ext-apps`. It mounts a `SolvaPayProvider`
+  and wraps a thin `<McpAppShell>` around `<McpViewRouter>`.
+- `<McpAppShell>` — in-iframe layout (header / sidebar / footer / paywall
+  takeover) that surface-routes by `bootstrap.view`. There is no tab strip
+  and no user-driven cross-surface navigation; the only in-session mutation
+  is the paywall / nudge CTA flip back to the checkout surface.
+- `<McpViewRouter>` — single `switch` on `McpViewKind` that resolves each
+  view from `views?.*` overrides (falling back to the built-in primitive).
+  Exported for integrators that own their own shell.
+- `<McpCheckoutView />`, `<McpAccountView />`, `<McpTopupView />`,
+  `<McpPaywallView />`, and `<McpNudgeView />` are the composable primitives
+  underneath. Integrators who want a custom shell use them directly
+  alongside `createMcpAppAdapter`, `fetchMcpBootstrap`, and `createMcpFetch`.
+- `<McpUpsellStrip>` is the inline nudge primitive. `<McpNudgeView>`
+  renders it alongside the merchant tool result; the ctx.respond follow-up
+  wires it inline on the other surfaces.
 
 There is **one implementation**: `<McpApp>` is a thin wrapper that composes
 the same per-view primitives the custom-shell path uses. That means there is
@@ -48,8 +58,27 @@ assemble the pieces yourself.
 `<McpApp>` accepts a `views?: McpAppViewOverrides` map for per-screen
 replacements (swap just `account` to ship a custom account screen) and a
 `classNames?: McpViewClassNames` partial for per-slot style overrides.
-Defaults render `solvapay-mcp-*` classes from the new opt-in
+Defaults render `solvapay-mcp-*` classes from the opt-in
 `@solvapay/react/mcp/styles.css`.
+
+### Surface routing
+
+`bootstrap.view` locks the rendered surface for the invocation's lifetime.
+The server chooses which surface by invoking the matching `open_*` intent
+tool; the host forwards that tool name as part of `McpUiHostContext`;
+`fetchMcpBootstrap` maps it to a `McpViewKind` and bakes it into the
+bootstrap payload.
+
+Legacy `'about'` / `'activate'` / `'usage'` values (from servers on older
+versions) collapse to the nearest surviving surface:
+
+- `'about'` → `checkout` (product info lives in tool descriptions + the
+  `docs://solvapay/overview.md` resource; the checkout picker is the
+  cold-start destination).
+- `'activate'` → `checkout` (the Plan + Activate tabs merged; activation
+  dispatch lives inside `PlanActivationDispatcher`).
+- `'usage'` → `account` (credits + usage fold inline into the account
+  view).
 
 ### Seam fixes — all three, up front
 
@@ -108,3 +137,36 @@ more than it simplifies. A separate follow-up
 **Rollback.** Every change is additive — reverting the commits restores the
 previous example layout without breaking any consumer API. The seam-fix
 props are new additions (not signature changes), so revert is clean.
+
+## Escape hatch — raw `structuredContent` via `useMcpToolResult`
+
+Integrators who don't mount `<McpApp>` or `<McpAppShell>` (e.g. they are
+composing a fully custom widget on top of `createMcpAppAdapter`) can still
+observe the host's `ui/notifications/tool-result` stream with the public
+`useMcpToolResult` hook:
+
+```tsx
+import { App } from '@modelcontextprotocol/ext-apps'
+import { useMcpToolResult } from '@solvapay/react/mcp'
+
+function MyCustomWidget({ app }: { app: App }) {
+  const { structuredContent, content, toolName } =
+    useMcpToolResult<{ orderId: string }>(app)
+
+  if (!structuredContent) return <p>Waiting for a tool result…</p>
+  return (
+    <section>
+      <h2>{toolName}</h2>
+      <pre>{JSON.stringify(structuredContent, null, 2)}</pre>
+    </section>
+  )
+}
+```
+
+The hook subscribes via `app.addEventListener('toolresult', …)` when
+available and falls back to the legacy DOM-style `ontoolresult` setter;
+internally it uses `useSyncExternalStore` so concurrent renders always
+observe a coherent snapshot. Error notifications are filtered out — the
+consumer pairs the hook with whatever error UI they want driven off the
+adapter promise.
+

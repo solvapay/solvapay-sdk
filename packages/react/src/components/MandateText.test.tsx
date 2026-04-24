@@ -101,7 +101,7 @@ describe('MandateText', () => {
     )
     await waitFor(() => expect(screen.getByText(/Credits are non-refundable/)).toBeTruthy())
     const node = screen.getByText(/Credits are non-refundable/)
-    expect(node.textContent).toContain('$5.00')
+    expect(node.textContent).toContain('$5')
     expect(node.textContent).toContain('Acme Inc.')
   })
 
