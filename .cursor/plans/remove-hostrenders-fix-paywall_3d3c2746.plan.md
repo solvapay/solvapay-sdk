@@ -400,5 +400,5 @@ Commit message: `refactor(server): drop internal PaywallError throws; keep as co
 ## Out of scope
 
 - Hosted MCP Pay proxy response-shape harmonisation \u2014 tracked separately.
-- `supabase-mcp` package rename and Supabase example at [.cursor/plans/supabase_mcp_example_gaps_0a391a68.plan.md](.cursor/plans/supabase_mcp_example_gaps_0a391a68.plan.md) \u2014 unrelated.
+- SDK changesets migration + package rename at [.cursor/plans/sdk_changesets_and_package_rename_0a391a68.plan.md](.cursor/plans/sdk_changesets_and_package_rename_0a391a68.plan.md) \u2014 unrelated.
 - Promoting `server._registeredTools` debug dump to a first-class `listDescriptors()` helper \u2014 future polish.

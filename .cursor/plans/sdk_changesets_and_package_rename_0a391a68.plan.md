@@ -1,5 +1,5 @@
 ---
-name: SDK MCP refactor + Supabase example
+name: SDK changesets migration + package rename
 overview: One atomic SDK refactor PR migrates the monorepo to changesets-driven independent versioning, renames MCP packages (`@solvapay/mcp` → `@solvapay/mcp-core`, `@solvapay/mcp-sdk` → `@solvapay/mcp`), hard-renames `@solvapay/supabase` → `@solvapay/fetch` (runtime-accurate name covering Deno/Supabase Edge/CF Workers/Bun/Next edge/Vercel Functions), and adds two new packages (`@solvapay/mcp-express` for Node middleware, `@solvapay/mcp-fetch` for Web-standards runtimes with a turnkey handler). A follow-up PR ships `examples/supabase-edge-mcp/` + docs cleanup. No `mcp-lite` anywhere. MCP names are free (verified on npm); `@solvapay/supabase` has 11 published versions but gets a clean break — hard rename + announced migration, no deprecation shim.
 todos:
   - id: pr1-changesets-config
