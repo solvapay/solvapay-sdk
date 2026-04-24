@@ -94,8 +94,10 @@ full surface. The TL;DR:
   carries `text` (override `content[0].text`), `nudge` (inline upsell
   strip), and the reserved `units` (V1.1 variable-unit billing — V1
   silently ignores).
-- `ctx.gate(reason?)` — throws a `PaywallError` to force the paywall
-  response. Sugar over `throw new PaywallError(...)`.
+- `ctx.gate(reason?)` — stops handler execution and routes a paywall
+  response through the adapter's `formatGate` channel. Rare — the
+  SDK normally fires the paywall automatically via `payable().mcp()`
+  pre-check.
 - `ctx.emit(block)` / `ctx.progress(...)` / `ctx.signal` — reserved
   surface. V1 queues (emit) or no-ops (progress / signal); V1.1 wires
   them to SSE and transport cancellation without code changes.

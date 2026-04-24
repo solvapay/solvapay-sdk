@@ -25,7 +25,7 @@ pnpm add @solvapay/mcp @solvapay/server
 | `MCP_TOOL_NAMES`, `McpToolName` | You're implementing a SolvaPay MCP transport tool on any framework and need the canonical tool names |
 | `buildSolvaPayDescriptors(opts)` | You're writing an MCP adapter (`mcp-lite`, `fastmcp-node`, raw JSON-RPC) and want the full SolvaPay tool surface as descriptor objects |
 | `buildPayableHandler(solvaPay, ctx, handler)` | You're hand-rolling a paywall-protected tool and need the `_meta.ui` envelope auto-attached on paywall results |
-| `paywallToolResult(err, ctx)` | You caught a `PaywallError` in a hand-rolled MCP handler and want to return it with the right `_meta.ui` |
+| `paywallToolResult(errOrGate, ctx)` | You have a `PaywallError` (legacy `try/catch`) or a `PaywallStructuredContent` gate from `paywall.decide()` and want to return it with the right `_meta.ui` + `BootstrapPayload` |
 | `buildPaywallUiMeta({ resourceUri, toolName })` | You're building the `_meta.ui` envelope yourself |
 | `SOLVAPAY_DEFAULT_CSP`, `mergeCsp(overrides)` | You're registering the SolvaPay UI resource and want the Stripe allow-list baked in |
 | `createMcpOAuthBridge(opts)` | You're hosting your own MCP server and need the `/oauth/*` + `/.well-known/*` middleware stack |

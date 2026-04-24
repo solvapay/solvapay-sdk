@@ -164,6 +164,19 @@ export function buildResponseContext(
     return makeResponseResult(data, options, emittedBlocks)
   }
 
+  /**
+   * Stop handler execution and trigger a paywall response via the
+   * adapter's `formatGate` channel. Implemented as `throw new
+   * PaywallError(...)` for the compat window — the adapter boundary
+   * unwraps the error and delivers a clean transport response
+   * (`isError: false`, narration text, `structuredContent = gate`).
+   *
+   * Soft-deprecated from `PaywallError`-as-signal semantics: merchant
+   * code that `try/catch`es `PaywallError` continues to work, but new
+   * code should prefer returning from the handler normally and let
+   * the pre-check `decide()` in `payable().mcp()` fire the gate when
+   * limits are exhausted.
+   */
   function gate(reason?: string): never {
     const message = reason ?? 'Payment required'
     const structuredContent: PaywallStructuredContent = {

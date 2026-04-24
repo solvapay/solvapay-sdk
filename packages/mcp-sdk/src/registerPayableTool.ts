@@ -80,8 +80,10 @@ export interface RegisterPayableToolOptions<
    *    carries `text` (override `content[0].text`), `nudge` (inline
    *    upsell strip), and the reserved `units` (V1.1 variable billing —
    *    V1 silently ignores).
-   *  - `ctx.gate(reason?)` — throws `PaywallError` to force the paywall
-   *    response. Sugar over `throw new PaywallError(...)`.
+   *  - `ctx.gate(reason?)` — stops handler execution and emits a
+   *    paywall response through the adapter's `formatGate` channel.
+   *    Rare — the SDK normally fires the paywall automatically via
+   *    `payable().mcp()` pre-check.
    *  - `ctx.emit(block)` / `ctx.progress(...)` / `ctx.signal` — reserved
    *    streaming surface. V1 queues (emit) or no-ops (progress / signal);
    *    V1.1 wires them to SSE and transport cancellation.

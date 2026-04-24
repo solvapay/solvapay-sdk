@@ -543,8 +543,15 @@ export interface ResponseContext {
   respond<TData>(data: TData, options: ResponseOptions): ResponseResult<TData>
 
   /**
-   * Explicitly trigger a paywall response. Sugar over
-   * `throw new PaywallError(reason)`. Handler execution stops.
+   * Explicitly trigger a paywall response. Handler execution stops
+   * and the adapter routes the gate through `formatGate` — the MCP
+   * transport emits a clean narration + `structuredContent` payload
+   * with `isError: false`, same shape as a pre-check gate outcome.
+   *
+   * Implemented as `throw new PaywallError(reason)` for the compat
+   * window; the adapter's catch block at the boundary unwraps it
+   * and delivers the transport response. Merchants who catch the
+   * error themselves can still rely on `instanceof PaywallError`.
    *
    * Rare — normally the SDK fires the paywall automatically via
    * `payable().mcp()` pre-check.

@@ -287,8 +287,10 @@ handler: async ({ range }, ctx) => {
   supports `text` (content[0].text override) and `nudge` (inline
   upsell strip). Reserved: `units` (V1.1 variable-unit billing — V1
   silently ignores the field for forward-compatible handler code).
-- `ctx.gate(reason?)` — sugar over `throw new PaywallError(reason)`
-  when merchant-side rules need to force the paywall.
+- `ctx.gate(reason?)` — stops handler execution and routes a paywall
+  response through the adapter's `formatGate` channel when
+  merchant-side rules need to force the gate. Rare — the SDK fires
+  the paywall automatically via the pre-check.
 - Reserved stubs: `ctx.emit(block)` (V1 queues, V1.1 SSE emits),
   `ctx.progress(...)` / `ctx.progressRaw(...)` (V1 no-op), `ctx.signal`
   (V1 unaborted).

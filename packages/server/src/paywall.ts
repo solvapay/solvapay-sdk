@@ -29,30 +29,48 @@ export type {
 }
 
 /**
- * Error thrown when a paywall is triggered (purchase required or usage limit exceeded).
+ * Error representing a paywall gate outcome (purchase required or usage
+ * limit exceeded).
  *
- * This error is automatically thrown by the paywall protection system when:
- * - Customer doesn't have required purchase
- * - Customer has exceeded usage limits
- * - Customer needs to upgrade their plan
+ * Soft-deprecated since 1.1.0 as the internal control-flow signal —
+ * `paywall.decide()` returns a typed `PaywallDecision<T>` union instead,
+ * and adapters route gate outcomes through `formatGate` without
+ * throwing. `PaywallError` is retained as a compat shim for three paths
+ * that keep working without migration:
  *
- * The error includes structured content with checkout URLs and metadata for
- * building custom paywall UIs.
+ *  1. `paywall.protect(handler, ...)` still throws `PaywallError` on
+ *     gate outcomes (the legacy throw-based API).
+ *  2. Merchant code that `throw new PaywallError(...)` (or
+ *     `ctx.gate(reason)`, which is implemented on top of
+ *     `PaywallError`) — caught at the adapter boundary and routed
+ *     through `formatGate` so transport responses stay consistent.
+ *  3. Custom third-party adapters that didn't implement `formatGate` —
+ *     `AbstractAdapter.formatGate` falls back to wrapping in
+ *     `PaywallError` and delegating to `formatError`.
  *
- * @example
+ * The error includes structured content with checkout URLs and metadata
+ * for building custom paywall UIs.
+ *
+ * @example Preferred (decide()/formatGate)
  * ```typescript
- * import { PaywallError } from '@solvapay/server';
+ * const decision = await solvaPay.paywall.decide(args, { product })
+ * if (decision.outcome === 'gate') {
+ *   return res.status(402).json(paywallErrorToClientPayload(
+ *     new PaywallError(decision.gate.message, decision.gate),
+ *   ))
+ * }
+ * ```
  *
+ * @example Compat (try/catch on throw-based legacy path)
+ * ```typescript
  * try {
  *   const result = await payable.http(createTask)(req, res);
  *   return result;
  * } catch (error) {
  *   if (error instanceof PaywallError) {
- *     // Custom paywall handling
  *     return res.status(402).json({
  *       error: error.message,
  *       checkoutUrl: error.structuredContent.checkoutUrl,
- *       // Additional metadata available in error.structuredContent
  *     });
  *   }
  *   throw error;
@@ -60,6 +78,7 @@ export type {
  * ```
  *
  * @see {@link PaywallStructuredContent} for the structured content format
+ * @see {@link PaywallDecision} for the preferred decision-based API
  * @since 1.0.0
  */
 export class PaywallError extends Error {
