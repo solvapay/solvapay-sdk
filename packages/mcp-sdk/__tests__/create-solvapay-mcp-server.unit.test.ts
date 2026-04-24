@@ -234,7 +234,7 @@ describe('createSolvaPayMcpServer', () => {
   })
 
   describe('tool _meta.ui descriptor', () => {
-    it('does not auto-stamp _meta.ui.resourceUri on merchant payable tools', () => {
+    it('auto-stamps _meta.ui.resourceUri on merchant payable tools', () => {
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable }) => {
           registerPayable('search_knowledge', {
@@ -248,12 +248,13 @@ describe('createSolvaPayMcpServer', () => {
       const registered = server._registeredTools ?? {}
       const payable = registered['search_knowledge']
       const ui = (payable?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
-      // Merchant payable tools don't carry a descriptor-level UI link by
-      // default — the MCP App iframe opens only when `buildPayableHandler`
-      // stamps `_meta.ui` on a paywall or nudge *result*.
-      expect(ui?.resourceUri).toBeUndefined()
-      // SolvaPay intent tools keep their descriptor-level UI link — users
-      // who invoke `/upgrade` explicitly expect the iframe.
+      // Merchant payable tools carry a descriptor-level UI link so
+      // hosts that read widget metadata from `tools/list` (MCPJam's
+      // `ResultsPanel` reads `toolMeta.ui.resourceUri` from the tool
+      // definition, not from the tool-call result) open the MCP App
+      // iframe when a paywall/nudge response lands.
+      expect(ui?.resourceUri).toBe('ui://test/view.html')
+      // SolvaPay intent tools also carry their descriptor-level UI link.
       const upgrade = registered[MCP_TOOL_NAMES.upgrade]
       const upgradeUi = (
         upgrade?._meta as { ui?: { resourceUri?: string } } | undefined
@@ -362,5 +363,6 @@ describe('createSolvaPayMcpServer', () => {
       const ui = (alwaysOpen?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
       expect(ui?.resourceUri).toBe('ui://test/view.html')
     })
+
   })
 })

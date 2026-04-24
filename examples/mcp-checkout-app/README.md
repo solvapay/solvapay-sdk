@@ -208,7 +208,7 @@ configured for the provider's environment, or the
 
 ## Trying the paywall
 
-The example registers three paywalled demo data tools
+The example registers five paywalled demo data tools
 ([`src/demo-tools.ts`](src/demo-tools.ts)) so you can click through the full
 story — call a business tool → hit the gate → resolve in the iframe →
 retry — without hand-rolling a gated tool.
@@ -218,11 +218,47 @@ retry — without hand-rolling a gated tool.
 | `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. |
 | `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. |
 | `query_sales_trends` | Returns deterministic sales rows for a date range and attaches a **`low-balance` nudge** to the success response when the customer is running low on credits. Exercises the nudge branch of `ctx.respond()`. |
+| `predict_price_chart` | Oracle demo — returns history + forecast numeric arrays with an 80% confidence band for a ticker. Renders as a **host-drawn line-chart artifact** (no widget). |
+| `predict_direction` | Oracle demo — returns an up/down verdict + confidence score `∈ [0, 1]` for a ticker over N days. Renders as a **host-drawn verdict-card artifact** (no widget). Seeded from the same model as `predict_price_chart` so the two agree for a given symbol. |
 
-All three are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false`
+All five are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false`
 when you copy this example to your own repo — the demo tools and their
 slash-command prompts (`/search_knowledge`, `/get_market_quote`,
-`/query_sales_trends`) disappear and your copy becomes a clean template.
+`/query_sales_trends`, `/predict_price_chart`, `/predict_direction`)
+disappear and your copy becomes a clean template.
+
+### Two rendering strategies in one example
+
+The five demo tools showcase both paths SolvaPay hosts in one place:
+
+- **Numeric `structuredContent` artifacts (`predict_price_chart`,
+  `predict_direction`)** — the handler calls `ctx.respond(payload)`
+  with **no** `nudge`, so `structuredContent = payload` and capable
+  MCP hosts (Claude artifacts, some MCPJam renderers) draw a line
+  chart / verdict card artifact straight off the numeric fields. Try
+  it with `/predict_price_chart NVDA 10` or `/predict_direction NVDA
+  10`. The descriptor still advertises `_meta.ui.resourceUri` at the
+  `tools/list` layer via `registerPayable`
+  ([`registerPayableTool.ts`](../../packages/mcp-sdk/src/registerPayableTool.ts))
+  so paywall responses open the SolvaPay widget on descriptor-reading
+  hosts when the customer runs out; `buildPayableHandler` stamps the
+  same metadata at the **result** level on gate responses for hosts
+  that key off tool-call results
+  ([`payable-handler.ts`](../../packages/mcp/src/payable-handler.ts)).
+  Use this path when the host can render the data better than you
+  can.
+- **Widget-embedded data (`query_sales_trends` + the
+  [`mcp_demo_market_chart`](../../.cursor/plans/mcp_demo_market_chart_962a38f2.plan.md)
+  pattern)** — the handler attaches a `nudge` envelope, which makes
+  `buildPayableHandler` rewrite `structuredContent` into a full
+  `BootstrapPayload` with `view: 'nudge'` and stamp `_meta.ui`. The
+  host opens the SolvaPay iframe, which renders the payload (with the
+  optional `DemoNudgeView` override) beside the `McpUpsellStrip`. Use
+  this path when you want branded, interactive UI next to the data.
+
+Both branches share the same `registerPayable(...)` wiring, gate,
+credit semantics, and `DEMO_TOOLS` env switch — the only difference is
+whether the handler attaches a `nudge` envelope.
 
 ### `ctx.respond()` and upsell nudges
 

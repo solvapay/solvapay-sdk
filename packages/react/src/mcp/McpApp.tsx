@@ -336,11 +336,23 @@ export function McpApp({
           ])
           if (cancelled) return
           if (timedOut) {
-            throw new Error(
-              `The host opened the SolvaPay widget from a '${classification.toolName}' tool result, ` +
-                `but no \`ui/notifications/tool-result\` arrived within ${timeoutMs}ms. ` +
-                `Check that the MCP host forwards the originating tool result to the mounted iframe.`,
-            )
+            // The host opened the iframe speculatively (MCP Apps
+            // hosts like Claude open the registered UI resource for
+            // every tool call on the server regardless of per-tool
+            // `_meta.ui`), but no bootstrap payload ever arrived.
+            // Either the tool's success payload is host-rendered
+            // data (oracle-style tools that return numeric
+            // `structuredContent`) or the host didn't forward the
+            // originating `ui/notifications/tool-result` — in both
+            // cases there's nothing for us to render. Ask the host
+            // to unmount silently so the user sees the host's own
+            // rendering of the tool result instead of our error
+            // surface. Same fire-and-forget pattern as the shell's
+            // default onClose below.
+            void Promise.resolve(app.requestTeardown?.()).catch(() => {
+              /* best-effort — host may deny teardown. */
+            })
+            return
           }
           // The notification handler has already applied the bootstrap.
           return

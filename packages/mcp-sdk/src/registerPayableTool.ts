@@ -3,14 +3,12 @@
  * a paywall-protected MCP tool on the official `@modelcontextprotocol/sdk`
  * `McpServer`.
  *
- * The MCP App iframe opens only when there's something to show: paywall
- * gate responses and `ctx.respond(..., { nudge })` successes. Both cases
- * stamp `_meta.ui` on the tool **result** from inside
- * `buildPayableHandler`. The descriptor-level `_meta.ui.resourceUri` is
- * intentionally left unset so hosts that key off the tool advertisement
- * (e.g. MCPJam) don't auto-open the iframe for every routine successful
- * call. Merchants who want the opposite — always-open behaviour — can
- * opt in explicitly via `meta: { ui: { resourceUri } }`.
+ * Always advertises `_meta.ui.resourceUri` at the descriptor level so
+ * descriptor-reading hosts (MCPJam's `ResultsPanel`, MCP App inspector)
+ * learn the widget exists and open the MCP App iframe when a paywall or
+ * nudge response lands. `buildPayableHandler` stamps the same metadata
+ * on the result envelope as a secondary signal for hosts that key off
+ * tool-call results (Claude Desktop, mcp-ui, ChatGPT Apps).
  *
  * Mirrors the positional-`name` shape of `registerAppTool` to keep the
  * convention consistent across the ecosystem.
@@ -109,19 +107,14 @@ export interface RegisterPayableToolOptions<
   ) => string | Promise<string>
   /**
    * Additional `_meta` merged onto the tool **descriptor** (the tool
-   * advertisement returned by `tools/list`). Pass-through — nothing is
-   * injected by `registerPayableTool` itself.
+   * advertisement returned by `tools/list`).
    *
-   * By default the descriptor carries no `_meta.ui` link, so hosts that
-   * auto-open an iframe based on tool advertisement (MCPJam, etc.)
-   * won't open the MCP App on routine successful calls. The per-call
-   * `_meta.ui` that `buildPayableHandler` stamps on paywall and
-   * `ctx.respond(..., { nudge })` results is sufficient to trigger
-   * opens only when there's actually something to show.
-   *
-   * To restore always-open behaviour (e.g. to render a persistent
-   * balance strip alongside every call) pass
-   * `meta: { ui: { resourceUri } }` explicitly.
+   * `registerPayableTool` always injects `ui.resourceUri` at the
+   * descriptor level so hosts that read widget metadata from
+   * `tools/list` (MCPJam's `ResultsPanel` reads
+   * `toolMeta.ui.resourceUri` from the tool definition) can open the
+   * MCP App iframe when a paywall/nudge response lands. Merchant
+   * `meta.ui.resourceUri` overrides the default if supplied.
    */
   meta?: Record<string, unknown>
   /**
@@ -175,21 +168,29 @@ export function registerPayableTool<
     handler as unknown as Parameters<typeof buildPayableHandler>[2],
   )
 
-  // Pass merchant `_meta` through verbatim. We intentionally do NOT
-  // inject `ui.resourceUri` here — the per-call `_meta.ui` that
-  // `buildPayableHandler` stamps on paywall and nudge results is what
-  // drives host iframe opens, and injecting it at the descriptor level
-  // would make hosts like MCPJam auto-open on every routine successful
-  // call. Merchants who want always-open can pass
-  // `meta: { ui: { resourceUri } }` explicitly.
+  // Inject `_meta.ui.resourceUri` at the descriptor level so hosts
+  // that read widget metadata from `tools/list` (MCPJam's
+  // `ResultsPanel` reads `toolMeta.ui.resourceUri` from the tool
+  // definition, not from the tool-call result) can discover the UI
+  // resource and open the iframe when a paywall/nudge result lands.
+  // The per-call `_meta.ui` stamped by `buildPayableHandler` on
+  // paywall/nudge responses is kept as a secondary signal for hosts
+  // that also inspect call results (mcp-ui, etc.).
+  //
+  // Merchant-supplied `meta.ui.resourceUri` still wins — explicit
+  // overrides take priority over the default.
+  //
   // Brand icons are merged into `_meta.ui.icons` so ext-apps-aware
   // hosts pick up the merchant mark for the chrome strip.
   const baseMeta = meta ?? {}
   const baseUi = (baseMeta.ui as Record<string, unknown> | undefined) ?? {}
-  const toolMeta =
-    icons && icons.length > 0
-      ? { ...baseMeta, ui: { ...baseUi, icons } }
-      : baseMeta
+  const hasIcons = icons !== undefined && icons.length > 0
+  const mergedUi: Record<string, unknown> = {
+    resourceUri,
+    ...baseUi,
+    ...(hasIcons ? { icons } : {}),
+  }
+  const toolMeta: Record<string, unknown> = { ...baseMeta, ui: mergedUi }
 
   // Sensible default: paywalled data tools are most often read-only
   // queries (search, fetch, quote). State-mutating merchant tools

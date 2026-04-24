@@ -75,7 +75,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
     new Set([solvapayApiOrigin, ...mcpAssetOrigins]),
   )
 
-  return createSolvaPayMcpServer({
+  const server = createSolvaPayMcpServer({
     solvaPay,
     productRef: solvapayProductRef,
     resourceUri: RESOURCE_URI,
@@ -99,4 +99,31 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
       }
     },
   })
+
+  if (process.env.SOLVAPAY_DEBUG === 'true') {
+    // Deliberate escape hatch into `@modelcontextprotocol/sdk`'s private
+    // `_registeredTools` bag so `SOLVAPAY_DEBUG=true` can dump the
+    // effective `tools/list` descriptor shape (`_meta.ui.resourceUri`,
+    // icons, annotations) without routing through an actual `tools/list`
+    // request. Used for diagnosing host-specific paywall/widget opens —
+    // mirrors the same private-field access pattern the mcp-sdk unit
+    // tests rely on. NOT a public helper; the MCP SDK reserves the
+    // right to rename this field, at which point this block breaks
+    // loudly (typeof undefined) and we adjust.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const registered = (server as any)._registeredTools as
+      | Record<string, { _meta?: unknown; annotations?: unknown }>
+      | undefined
+    if (registered) {
+      for (const name of Object.keys(registered)) {
+        const t = registered[name]
+        console.error(`[mcp-checkout-app] descriptor ${name}`, {
+          _meta: t._meta,
+          annotations: t.annotations,
+        })
+      }
+    }
+  }
+
+  return server
 }
