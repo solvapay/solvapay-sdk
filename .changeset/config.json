@@ -8,7 +8,7 @@
   "updateInternalDependencies": "patch",
   "snapshot": {
     "useCalculatedVersion": true,
-    "prereleaseTemplate": "preview-{commit}"
+    "prereleaseTemplate": "{tag}-{commit}"
   },
   "ignore": [
     "@example/*",
