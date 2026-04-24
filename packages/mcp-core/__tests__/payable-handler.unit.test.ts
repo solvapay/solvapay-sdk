@@ -12,7 +12,7 @@ import type {
 /**
  * Minimal mock `SolvaPayClient` with pluggable `checkLimits` / trackUsage
  * tracking. Mirrors the fixture pattern in
- * `packages/mcp-sdk/__tests__/create-solvapay-mcp-server.unit.test.ts`.
+ * `packages/mcp/__tests__/create-solvapay-mcp-server.unit.test.ts`.
  */
 interface MockClient extends SolvaPayClient {
   __trackUsageCalls: Array<Record<string, unknown>>

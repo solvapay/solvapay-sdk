@@ -1,6 +1,6 @@
 # SolvaPay MCP Apps SDK — rules
 
-Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp`, `packages/mcp-sdk`, `packages/react/mcp`, or `examples/mcp-checkout-app`.
+Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp-core`, `packages/mcp`, `packages/mcp-express`, `packages/mcp-fetch`, `packages/react/mcp`, or `examples/mcp-checkout-app` / `examples/supabase-edge-mcp`.
 
 ## North Star
 
@@ -52,7 +52,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 ### Package boundaries
 
 - **`@solvapay/mcp` has zero `@modelcontextprotocol/*` runtime dependencies.** This invariant is load-bearing. Do not violate it.
-- **`@solvapay/mcp-sdk` is the only package that imports the official MCP SDK.** If you need MCP types elsewhere, re-export through `@solvapay/mcp` as structural aliases.
+- **`@solvapay/mcp` is the only package that imports the official `@modelcontextprotocol/sdk`.** If you need MCP types elsewhere, re-export them through `@solvapay/mcp-core` as structural aliases. `@solvapay/mcp-core` is intentionally framework-neutral with zero `@modelcontextprotocol/*` runtime dep — OAuth bridge middleware lives in `@solvapay/mcp-express` (Node) and `@solvapay/mcp-fetch` (fetch-first runtimes).
 - **`@solvapay/react/mcp` is a subpath export.** Merchants using SolvaPay for non-MCP React surfaces do not pay the ext-apps peer dep cost.
 - **Do not ship a `@solvapay/sdk` umbrella package.** Three-package imports are fine. An umbrella adds maintenance without clarity.
 

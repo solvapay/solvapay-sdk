@@ -240,12 +240,12 @@ The five demo tools showcase both paths SolvaPay hosts in one place:
   it with `/predict_price_chart NVDA 10` or `/predict_direction NVDA
   10`. The descriptor still advertises `_meta.ui.resourceUri` at the
   `tools/list` layer via `registerPayable`
-  ([`registerPayableTool.ts`](../../packages/mcp-sdk/src/registerPayableTool.ts))
+  ([`registerPayableTool.ts`](../../packages/mcp/src/registerPayableTool.ts))
   so paywall responses open the SolvaPay widget on descriptor-reading
   hosts when the customer runs out; `buildPayableHandler` stamps the
   same metadata at the **result** level on gate responses for hosts
   that key off tool-call results
-  ([`payable-handler.ts`](../../packages/mcp/src/payable-handler.ts)).
+  ([`payable-handler.ts`](../../packages/mcp-core/src/payable-handler.ts)).
   Use this path when the host can render the data better than you
   can.
 - **Widget-embedded data (`query_sales_trends` + the
