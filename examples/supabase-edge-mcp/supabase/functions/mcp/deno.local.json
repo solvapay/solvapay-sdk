@@ -6,8 +6,8 @@
     "@solvapay/mcp-fetch": "../../../../../packages/mcp-fetch/dist/index.js",
     "@solvapay/server": "../../../../../packages/server/dist/index.js",
     "@solvapay/core": "../../../../../packages/core/dist/index.js",
-    "@modelcontextprotocol/sdk/": "../../../../../node_modules/@modelcontextprotocol/sdk/dist/esm/",
-    "@modelcontextprotocol/ext-apps/": "../../../../../node_modules/@modelcontextprotocol/ext-apps/dist/esm/",
-    "zod": "../../../../../node_modules/zod/index.mjs"
+    "@modelcontextprotocol/sdk/": "npm:@modelcontextprotocol/sdk@^1.29.0/",
+    "@modelcontextprotocol/ext-apps/": "npm:@modelcontextprotocol/ext-apps@^1.5.0/",
+    "zod": "npm:zod@^4.3.6"
   }
 }
