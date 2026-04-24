@@ -39,7 +39,10 @@ interface TestApp {
  * a regression (re-calling the merchant tool) shows up as a test
  * failure.
  */
-function makeDataToolEntryApp(opts: { toolName: string }): TestApp {
+function makeDataToolEntryApp(opts: {
+  toolName: string
+  requestTeardown?: () => void | Promise<void>
+}): TestApp {
   const listeners: Record<string, ToolResultHandler[]> = {}
   const hostContext = { toolInfo: { tool: { name: opts.toolName } } }
 
@@ -63,6 +66,8 @@ function makeDataToolEntryApp(opts: { toolName: string }): TestApp {
     ;(listeners[evt] ??= []).push(handler)
   })
 
+  const requestTeardown = opts.requestTeardown ?? vi.fn().mockResolvedValue(undefined)
+
   const app = {
     callServerTool,
     getHostContext: () => hostContext,
@@ -75,7 +80,7 @@ function makeDataToolEntryApp(opts: { toolName: string }): TestApp {
     }),
     onhostcontextchanged: undefined,
     onteardown: undefined,
-    requestTeardown: vi.fn().mockResolvedValue(undefined),
+    requestTeardown,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
 
@@ -217,11 +222,15 @@ describe('<McpApp> — paywall via data-tool iframe entry', () => {
     expect(firstCall[0].upgradeCta?.label).toContain('Pro')
   })
 
-  it('surfaces an init error when the host does not deliver a tool result in time', async () => {
+  it('silently tears down when the host does not deliver a tool result in time', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const onInitError = vi.fn()
+    const requestTeardown = vi.fn().mockResolvedValue(undefined)
     try {
-      const { app } = makeDataToolEntryApp({ toolName: 'search_knowledge' })
+      const { app } = makeDataToolEntryApp({
+        toolName: 'search_knowledge',
+        requestTeardown,
+      })
 
       render(<McpApp app={app} onInitError={onInitError} />)
 
@@ -232,11 +241,14 @@ describe('<McpApp> — paywall via data-tool iframe entry', () => {
       })
 
       await waitFor(() => {
-        expect(onInitError).toHaveBeenCalled()
+        expect(requestTeardown).toHaveBeenCalledTimes(1)
       })
-      const err = onInitError.mock.calls[0]![0] as Error
-      expect(err.message).toContain("'search_knowledge'")
-      expect(err.message).toContain('tool-result')
+      // Not a failure — MCP Apps hosts open the registered UI
+      // resource for every tool call on the server regardless of
+      // per-tool `_meta.ui`. When no bootstrap payload arrives the
+      // iframe simply unmounts itself so the user sees the host's
+      // own rendering of the tool result instead of an error card.
+      expect(onInitError).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }

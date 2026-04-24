@@ -220,10 +220,12 @@ export function parseBootstrapFromToolResult(
   const structured = result.structuredContent as
     | (Partial<BootstrapPayload> & { view?: McpView; paywall?: unknown })
     | undefined
-  // Paywall responses ride on `isError: true` by design —
-  // `buildPayableHandler` preserves the gate semantic so non-UI hosts
-  // treat the missing payload as an error. Only treat `isError` as a
-  // real error when we can't recognise the embedded bootstrap.
+  // Paywall + nudge responses ship with `isError: false` now —
+  // `buildPayableHandler` deliberately clears the error flag so hosts
+  // open the `_meta.ui` widget instead of short-circuiting on the
+  // error path. The old behaviour (paywall + isError:true) is still
+  // accepted here so older servers keep working; only treat `isError`
+  // as a real failure when we can't recognise the embedded bootstrap.
   const hasBootstrapShape =
     structured !== undefined &&
     typeof structured === 'object' &&
