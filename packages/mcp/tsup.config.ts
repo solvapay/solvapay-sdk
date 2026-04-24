@@ -6,5 +6,12 @@ export default defineConfig({
   dts: true,
   tsconfig: 'tsconfig.build.json',
   clean: true,
-  external: ['@solvapay/server', '@solvapay/core', 'zod'],
+  external: [
+    '@modelcontextprotocol/sdk',
+    '@modelcontextprotocol/ext-apps',
+    '@solvapay/mcp-core',
+    '@solvapay/server',
+    '@solvapay/core',
+    'zod',
+  ],
 })

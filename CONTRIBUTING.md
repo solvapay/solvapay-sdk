@@ -86,24 +86,63 @@ Before submitting a pull request, ensure:
 - [ ] Builds (`pnpm build`)
 - [ ] Tests pass (`pnpm test`)
 - [ ] Types OK (no dts errors)
+- [ ] Web-standards runtime gate passes (`pnpm validate:fetch-runtime`) — required when touching `@solvapay/fetch` or `@solvapay/mcp-fetch`
 - [ ] Docs updated when needed
 - [ ] Documentation links valid (`pnpm docs:validate-links`)
+- [ ] **Changeset committed** — run `pnpm changeset` and commit the generated `.changeset/*.md`. Skip only if the PR touches no published package.
 
 ## Commit and PR Hygiene
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat(...)`, `fix(...)`, `docs:`, `refactor(...)`, etc.
-- Small PRs with one changeset per user-visible change
-- Require code owner review per package
+- Small PRs with one changeset per user-visible change.
+- Require code owner review per package.
 
-See [`docs/publishing.md`](./docs/publishing.md) for the full publishing and branching strategy.
+## Releasing
 
-## Publishing Strategy
+The monorepo is driven by [**Changesets**](https://github.com/changesets/changesets) — packages move on independent semver tracks, and every release is a direct function of the `.changeset/*.md` files accumulated since the previous release.
 
-- **`dev`** branch -- main development branch for daily work
-- **`main`** branch -- production branch that triggers automated npm publishing
-- All publishing is handled via GitHub Actions
+### Writing a changeset
 
-See [`docs/publishing.md`](./docs/publishing.md) for complete details on versioning, publishing, and preview releases.
+```bash
+pnpm changeset
+```
+
+Pick the right bump level per affected package:
+
+| Level     | When                                                                     |
+| --------- | ------------------------------------------------------------------------ |
+| **patch** | Bug fix, internal refactor, dep-only update — no public API change       |
+| **minor** | New public API — additive and backwards-compatible                       |
+| **major** | Removed/renamed API, changed signature, behaviour break — anything that  |
+|           | would make an existing consumer's build / runtime regress after upgrade  |
+
+The changeset body is a short markdown description that ends up verbatim in each affected package's `CHANGELOG.md`. Lead with **what changed for consumers**, not implementation detail.
+
+### Branches & dist-tags
+
+- **`dev`** — primary development branch. Every merge auto-publishes a
+  preview snapshot to the `@preview` npm dist-tag
+  (`@solvapay/core@0.0.0-preview-<shortsha>`).
+- **`main`** — stable release branch. Every merge either (a) opens
+  the **"Version Packages"** PR via
+  [`changesets/action@v1`](https://github.com/changesets/action),
+  which enumerates accumulated changesets and the versions they'll
+  produce, or — when that PR merges — (b) publishes bumped packages
+  to `@latest` and creates matching git tags.
+
+See [`.github/workflows/README.md`](./.github/workflows/README.md) for the full workflow details.
+
+### Pre-publish gates
+
+Both workflows run the same gates — regressions here **block publish**:
+
+1. `pnpm test` — full monorepo test suite.
+2. `pnpm build:packages` — every publishable package builds to `dist/`.
+3. `pnpm validate:fetch-runtime` — asserts `@solvapay/fetch` and
+   `@solvapay/mcp-fetch` load cleanly in a bare Web-standards
+   environment (no `node:`-prefixed imports, no leaked Node builtins).
+
+Run them locally before opening the PR to shorten the feedback loop.
 
 ## Getting Help
 

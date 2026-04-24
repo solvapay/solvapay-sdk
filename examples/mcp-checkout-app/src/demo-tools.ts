@@ -30,7 +30,7 @@
  */
 
 import { z } from 'zod'
-import type { AdditionalToolsContext } from '@solvapay/mcp-sdk'
+import type { AdditionalToolsContext } from '@solvapay/mcp'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 interface McpServerWithPrompts {

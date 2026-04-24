@@ -1,3 +1,3 @@
-import { listPlans } from '@solvapay/supabase'
+import { listPlans } from '@solvapay/fetch'
 
 Deno.serve(listPlans)

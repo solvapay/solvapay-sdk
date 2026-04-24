@@ -12,7 +12,7 @@
  */
 
 import React, { useState } from 'react'
-import type { NudgeSpec } from '@solvapay/mcp'
+import type { NudgeSpec } from '@solvapay/mcp-core'
 
 export interface McpUpsellStripProps {
   nudge: NudgeSpec

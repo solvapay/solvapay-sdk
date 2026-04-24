@@ -1,0 +1,12 @@
+{
+  "imports": {
+    "@solvapay/mcp": "../../../../../packages/mcp/dist/index.js",
+    "@solvapay/mcp-core": "../../../../../packages/mcp-core/dist/index.js",
+    "@solvapay/mcp-fetch": "../../../../../packages/mcp-fetch/dist/index.js",
+    "@solvapay/server": "../../../../../packages/server/dist/index.js",
+    "@solvapay/core": "../../../../../packages/core/dist/index.js",
+    "@modelcontextprotocol/sdk/": "../../../../../node_modules/@modelcontextprotocol/sdk/dist/esm/",
+    "@modelcontextprotocol/ext-apps/": "../../../../../node_modules/@modelcontextprotocol/ext-apps/dist/esm/",
+    "zod": "../../../../../node_modules/zod/index.mjs"
+  }
+}

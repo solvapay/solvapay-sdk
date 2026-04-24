@@ -3,7 +3,7 @@ import express, { Request, Response } from 'express'
 import { randomUUID } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
-import { createMcpOAuthBridge } from '@solvapay/mcp'
+import { createMcpOAuthBridge } from '@solvapay/mcp-express'
 import { verifyWebhook } from '@solvapay/server'
 import { createMCPServer } from './server'
 import {

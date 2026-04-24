@@ -4,6 +4,7 @@ import { resolve } from 'path'
 export default defineConfig({
   resolve: {
     alias: {
+      '@solvapay/mcp-core': resolve(__dirname, '../mcp-core/src'),
       '@solvapay/server': resolve(__dirname, '../server/src'),
       '@solvapay/core': resolve(__dirname, '../core/src'),
     },

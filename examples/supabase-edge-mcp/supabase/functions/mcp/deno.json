@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "@modelcontextprotocol/sdk/": "npm:@modelcontextprotocol/sdk@^1.29.0/",
+    "@modelcontextprotocol/ext-apps/": "npm:@modelcontextprotocol/ext-apps@^1.5.0/",
+    "@solvapay/mcp": "npm:@solvapay/mcp",
+    "@solvapay/mcp-core": "npm:@solvapay/mcp-core",
+    "@solvapay/mcp-fetch": "npm:@solvapay/mcp-fetch",
+    "@solvapay/server": "npm:@solvapay/server",
+    "zod": "npm:zod@^4"
+  }
+}

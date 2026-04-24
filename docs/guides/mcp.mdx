@@ -14,26 +14,37 @@ description: "This guide shows you how to integrate SolvaPay SDK with Model Cont
 
 ## Installation
 
-Install the required packages:
+Install the required packages. Pick the runtime-specific OAuth bridge based on where you're deploying.
+
+### Node.js (Express, Fastify, etc.)
 
 ```bash
-npm install @solvapay/server @solvapay/mcp @solvapay/mcp-sdk \
+npm install @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-express \
   @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 # or
-pnpm add @solvapay/server @solvapay/mcp @solvapay/mcp-sdk \
+pnpm add @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-express \
   @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 # or
-yarn add @solvapay/server @solvapay/mcp @solvapay/mcp-sdk \
+yarn add @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-express \
   @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 ```
 
-Package split:
+### Web-standards runtimes (Deno, Supabase Edge, Cloudflare Workers, Bun, Next edge, Vercel Functions)
+
+```bash
+pnpm add @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-fetch \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
+```
+
+### Package split
 
 - **`@solvapay/server`** — paywall core, `createSolvaPay`, `PaywallError`, webhook verification.
-- **`@solvapay/mcp`** — framework-neutral MCP contracts: `MCP_TOOL_NAMES`, `buildSolvaPayDescriptors`, `buildPayableHandler`, `createMcpOAuthBridge`, JWT bearer helpers. No `@modelcontextprotocol/*` dependency.
-- **`@solvapay/mcp-sdk`** — official `@modelcontextprotocol/sdk` + `ext-apps` adapter. Exports `createSolvaPayMcpServer` and `registerPayableTool`. Only package that imports `@modelcontextprotocol/*`.
+- **`@solvapay/mcp-core`** — framework-neutral MCP contracts: `MCP_TOOL_NAMES`, `buildSolvaPayDescriptors`, `buildPayableHandler`, OAuth discovery JSON builders, JWT bearer helpers. No `@modelcontextprotocol/*` dependency.
+- **`@solvapay/mcp`** — official `@modelcontextprotocol/sdk` + `ext-apps` adapter. Exports `createSolvaPayMcpServer` and `registerPayableTool`. Only package that imports `@modelcontextprotocol/*`.
+- **`@solvapay/mcp-express`** — Node `(req, res, next)` OAuth bridge middleware (`createMcpOAuthBridge`).
+- **`@solvapay/mcp-fetch`** — Web-standards `(Request) => Promise<Response>` OAuth bridge + turnkey MCP handler (`createSolvaPayMcpFetchHandler`) for Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel Functions.
 
-Skip `@solvapay/mcp-sdk` + `@modelcontextprotocol/*` if you only need the OAuth bridge / bearer helpers, or if you're adapting SolvaPay onto a non-official MCP server (mcp-lite, fastmcp-node, raw JSON-RPC).
+Skip `@solvapay/mcp` + `@modelcontextprotocol/*` if you only need the OAuth bridge / bearer helpers, or if you're adapting SolvaPay onto a non-official MCP server (`fastmcp`, raw JSON-RPC).
 
 ## Basic Setup
 

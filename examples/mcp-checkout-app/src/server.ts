@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { createSolvaPayMcpServer } from '@solvapay/mcp-sdk'
-import type { SolvaPayMerchantBranding } from '@solvapay/mcp'
+import { createSolvaPayMcpServer } from '@solvapay/mcp'
+import type { SolvaPayMerchantBranding } from '@solvapay/mcp-core'
 import { getMerchantCore, isErrorResult } from '@solvapay/server'
 import {
   mcpAssetOrigins,

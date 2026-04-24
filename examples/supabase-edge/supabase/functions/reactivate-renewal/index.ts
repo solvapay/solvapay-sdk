@@ -1,3 +1,3 @@
-import { reactivateRenewal } from '@solvapay/supabase'
+import { reactivateRenewal } from '@solvapay/fetch'
 
 Deno.serve(reactivateRenewal)

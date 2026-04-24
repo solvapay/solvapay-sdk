@@ -1,71 +1,131 @@
 # @solvapay/mcp
 
-Framework-neutral MCP (Model Context Protocol) contracts for the SolvaPay SDK.
+Official `@modelcontextprotocol/sdk` + `@modelcontextprotocol/ext-apps`
+adapter for the SolvaPay MCP toolbox.
 
-This package owns the shapes that cross the SolvaPay server ↔ client ↔
-adapter boundary: tool names, descriptor builder, paywall `_meta.ui`
-envelope, Stripe CSP baseline, bootstrap payload, OAuth bridge, JWT
-bearer helpers.
+This is the only SolvaPay package that imports `@modelcontextprotocol/*`.
+Framework-neutral contracts (tool names, descriptors, paywall meta,
+OAuth discovery JSON, JWT helpers) live in
+[`@solvapay/mcp-core`](../mcp-core) so alternative adapters
+(`fastmcp`, raw JSON-RPC) can reuse the same contract. Runtime-specific
+OAuth middleware lives alongside:
 
-It does **not** depend on `@modelcontextprotocol/sdk` or
-`@modelcontextprotocol/ext-apps`. That lives in `@solvapay/mcp-sdk` —
-one of several adapter packages that can consume the same descriptor
-contract.
+- [`@solvapay/mcp-express`](../mcp-express) — Node `(req, res, next)`.
+- [`@solvapay/mcp-fetch`](../mcp-fetch) — Web standards `(req: Request) => Promise<Response>`.
 
 ## Install
 
 ```bash
-pnpm add @solvapay/mcp @solvapay/server
+pnpm add @solvapay/mcp @solvapay/server \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps zod
 ```
+
+## Importing
+
+Everything you need for a paywalled tool lives in this package:
+
+```ts
+import {
+  createSolvaPayMcpServer,
+  registerPayableTool,
+  type ResponseContext,
+  type NudgeSpec,
+} from '@solvapay/mcp'
+```
+
+Reach into `@solvapay/mcp-core` directly only if you're writing a
+framework adapter (`fastmcp`, raw JSON-RPC).
+
+## Quick start
+
+```ts
+import { createSolvaPayMcpServer } from '@solvapay/mcp'
+import { createSolvaPay } from '@solvapay/server'
+import { z } from 'zod'
+
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
+
+const server = createSolvaPayMcpServer({
+  solvaPay,
+  productRef: 'prd_video',
+  resourceUri: 'ui://my-app/mcp-app.html',
+  htmlPath: './dist/mcp-app.html',
+  publicBaseUrl: 'https://my-app.example.com',
+  additionalTools: ({ registerPayable }) => {
+    registerPayable('create_video', {
+      schema: { prompt: z.string() },
+      description: 'Generate a short video from a text prompt.',
+      handler: async ({ prompt }, ctx) => {
+        const videoUrl = await generateVideo(prompt)
+        return ctx.respond({ videoUrl })
+      },
+    })
+  },
+})
+```
+
+One call wires the full SolvaPay transport surface (`check_purchase`,
+`create_payment_intent`, `process_payment`, `open_checkout`, etc.), the
+UI resource with the Stripe CSP baseline, and any integrator-defined
+tools via `additionalTools`.
+
+## Handler contract
+
+`registerPayable` handlers receive parsed `args` (inferred from
+`schema` when provided) and a `ResponseContext`. They must return the
+branded envelope produced by `ctx.respond(data, options?)`.
+
+```ts
+handler: async ({ prompt }, ctx) => {
+  const video = await generate(prompt)
+  // Attach an upsell nudge when the customer is low on credits.
+  if (ctx.customer.balance < 500) {
+    return ctx.respond({ videoUrl: video.url }, {
+      nudge: { kind: 'low-balance', message: 'Running low on credits' },
+    })
+  }
+  return ctx.respond({ videoUrl: video.url })
+}
+```
+
+The [`ctx.respond()` V1 spec](../../docs/spec/ctx-respond-v1.md) has the
+full surface. The TL;DR:
+
+- `ctx.customer` — cached customer snapshot (≤10s stale). Read
+  `balance` / `remaining` / `plan` to branch on usage; call
+  `ctx.customer.fresh()` for a fresh fetch when staleness matters.
+- `ctx.respond(data, options?)` — returns a branded envelope. `options`
+  carries `text` (override `content[0].text`), `nudge` (inline upsell
+  strip), and the reserved `units` (V1.1 variable-unit billing — V1
+  silently ignores).
+- `ctx.gate(reason?)` — stops handler execution and routes a paywall
+  response through the adapter's `formatGate` channel. Rare — the
+  SDK normally fires the paywall automatically via `payable().mcp()`
+  pre-check.
+- `ctx.emit(block)` / `ctx.progress(...)` / `ctx.signal` — reserved
+  surface. V1 queues (emit) or no-ops (progress / signal); V1.1 wires
+  them to SSE and transport cancellation without code changes.
 
 ## What's in the box
 
 | Export | Use when |
 |---|---|
-| `MCP_TOOL_NAMES`, `McpToolName` | You're implementing a SolvaPay MCP transport tool on any framework and need the canonical tool names |
-| `buildSolvaPayDescriptors(opts)` | You're writing an MCP adapter (`mcp-lite`, `fastmcp-node`, raw JSON-RPC) and want the full SolvaPay tool surface as descriptor objects |
-| `buildPayableHandler(solvaPay, ctx, handler)` | You're hand-rolling a paywall-protected tool and need the `_meta.ui` envelope auto-attached on paywall results |
-| `paywallToolResult(errOrGate, ctx)` | You have a `PaywallError` (legacy `try/catch`) or a `PaywallStructuredContent` gate from `paywall.decide()` and want to return it with the right `_meta.ui` + `BootstrapPayload` |
-| `buildPaywallUiMeta({ resourceUri, toolName })` | You're building the `_meta.ui` envelope yourself |
-| `SOLVAPAY_DEFAULT_CSP`, `mergeCsp(overrides)` | You're registering the SolvaPay UI resource and want the Stripe allow-list baked in |
-| `createMcpOAuthBridge(opts)` | You're hosting your own MCP server and need the `/oauth/*` + `/.well-known/*` middleware stack |
-| `buildAuthInfoFromBearer(header, opts)` | You're plugging a raw `Authorization: Bearer …` header into an MCP `authInfo` envelope |
-| `McpBearerAuthError`, `extractBearerToken`, `decodeJwtPayload`, `getCustomerRefFromJwtPayload`, `getCustomerRefFromBearerAuthHeader` | Low-level JWT bearer parsing — no signature verification (validate upstream first) |
-
-## Typical usage
-
-If you're starting a new SolvaPay MCP server on the official
-`@modelcontextprotocol/sdk`, don't use this package directly — use
-`@solvapay/mcp-sdk` which wraps it with one-call ergonomics.
-
-If you're writing a new adapter (mcp-lite, fastmcp, custom JSON-RPC):
-
-```ts
-import { buildSolvaPayDescriptors } from '@solvapay/mcp'
-
-const { tools, resource } = buildSolvaPayDescriptors({
-  solvaPay,
-  productRef: 'prd_video',
-  resourceUri: 'ui://my-app/mcp-app.html',
-  readHtml: async () => readFileSync('./dist/mcp-app.html', 'utf-8'),
-  publicBaseUrl: 'https://my-app.example.com',
-})
-
-for (const tool of tools) {
-  myAdapter.registerTool(tool.name, tool)
-}
-myAdapter.registerResource(resource)
-```
+| `createSolvaPayMcpServer(opts)` | You want the batteries-included `McpServer` with every SolvaPay tool registered |
+| `registerPayableTool(server, name, opts)` | You want to add a paywall-protected tool to an existing `McpServer`. `_meta.ui` is attached per-result on paywall and nudge responses only, so the iframe opens only when there's something to show. |
 
 ## Peer dependencies
 
-| Peer | Why | Optional? |
-|---|---|---|
-| `@solvapay/server` | Runtime `*Core` helpers + `SolvaPay`, `PaywallError`, `PaywallStructuredContent` types | Yes — only consumed by `buildSolvaPayDescriptors`, `buildPayableHandler`, `paywallToolResult` |
-| `zod` | Descriptor `inputSchema` shape | Yes — descriptor consumers decide whether to use zod |
+| Peer | Why |
+|---|---|
+| `@modelcontextprotocol/sdk` | The `McpServer` this package builds and returns |
+| `@modelcontextprotocol/ext-apps` | `registerAppTool`, `registerAppResource`, the `RESOURCE_MIME_TYPE` constant |
+| `@solvapay/mcp-core` | Neutral contracts and descriptor builder |
+| `@solvapay/server` | `SolvaPay` factory + `PaywallError` runtime |
+| `zod` | Tool `inputSchema` shape (required by the ext-apps helpers) |
 
-## See also
+## Want to adapt another framework?
 
-- [`@solvapay/mcp-sdk`](../mcp-sdk) — official `@modelcontextprotocol/sdk` + `ext-apps` adapter (`createSolvaPayMcpServer`)
-- [`@solvapay/server`](../server) — core SDK (paywall, webhooks, `*Core` helpers)
-- [`@solvapay/react/mcp`](../react) — React provider + views for the MCP App UI shell
+Use [`@solvapay/mcp-core`](../mcp-core) directly. `buildSolvaPayDescriptors`
+returns a framework-neutral bundle; map it onto your framework's
+`registerTool` / `registerResource` API in ~60 lines. This package is
+itself that mapper for the official SDK.

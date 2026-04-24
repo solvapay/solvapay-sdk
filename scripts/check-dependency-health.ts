@@ -1,7 +1,6 @@
 #!/usr/bin/env tsx
 
 import { execSync, spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -22,9 +21,17 @@ const CRITICAL_LIBRARIES = ['react', 'react-dom', 'vite', 'vitest', '@types/reac
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const ROOT_DIR = path.resolve(__dirname, '..')
-const PACKAGES_DIR = path.resolve(ROOT_DIR, 'packages')
 
-const readJsonFile = <T>(filePath: string): T => JSON.parse(readFileSync(filePath, 'utf8')) as T
+// NOTE: cross-package version drift is no longer enforced here — since the
+// Changesets migration (PR #127) each `@solvapay/*` publishable package is
+// versioned independently. The runtime adapters (`@solvapay/mcp-core`,
+// `@solvapay/mcp`, `@solvapay/mcp-express`, `@solvapay/mcp-fetch`) live on
+// their own `0.x` track; `@solvapay/react` / `@solvapay/react-supabase` are
+// on their own `1.x` track; `@solvapay/fetch` has its own lineage starting
+// at `1.0.0` (carried over from the `@solvapay/supabase@1.0.1` body). What
+// we still care about is **inside a single install graph** — the checks
+// below catch pnpm peer-dep regressions and cross-workspace prerelease
+// drift that would break the local install tree.
 
 const runRecursiveList = (): ListedPackage[] => {
   const stdout = execSync('pnpm -r ls --depth 0 --json', {
@@ -173,45 +180,6 @@ const findSolvaPayPrereleaseDrift = (packages: ListedPackage[]): string[] => {
     .map(([prereleaseVersion, users]) => `${prereleaseVersion}: ${[...users].sort().join(', ')}`)
 }
 
-const findPublishableVersionDrift = (): string[] => {
-  const packageDirectories = readdirSync(PACKAGES_DIR, { withFileTypes: true })
-    .filter(entry => entry.isDirectory())
-    .map(entry => entry.name)
-
-  const versionToPackages = new Map<string, Set<string>>()
-
-  for (const packageDirectory of packageDirectories) {
-    const packageJsonPath = path.join(PACKAGES_DIR, packageDirectory, 'package.json')
-    if (!existsSync(packageJsonPath)) {
-      continue
-    }
-    const packageJson = readJsonFile<{ name: string; version?: string; private?: boolean }>(packageJsonPath)
-
-    if (packageJson.private) {
-      continue
-    }
-    if (!packageJson.version) {
-      continue
-    }
-    if (!packageJson.name.startsWith('@solvapay/') && packageJson.name !== 'solvapay') {
-      continue
-    }
-
-    if (!versionToPackages.has(packageJson.version)) {
-      versionToPackages.set(packageJson.version, new Set())
-    }
-    versionToPackages.get(packageJson.version)!.add(packageJson.name)
-  }
-
-  if (versionToPackages.size <= 1) {
-    return []
-  }
-
-  return [...versionToPackages.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([version, names]) => `${version}: ${[...names].sort().join(', ')}`)
-}
-
 const printIssueBlock = (title: string, issues: string[]) => {
   if (issues.length === 0) {
     return
@@ -231,20 +199,17 @@ const main = () => {
   const peerWarningsFromInstall = probePeerWarningsWithFrozenInstall()
   const criticalMajorDrift = findCriticalMajorDrift(packages)
   const prereleaseVersionDrift = findSolvaPayPrereleaseDrift(packages)
-  const publishableVersionDrift = findPublishableVersionDrift()
 
   printIssueBlock('Peer dependency problems:', peerProblems)
   printIssueBlock('Peer dependency warnings from frozen install:', peerWarningsFromInstall)
   printIssueBlock('Critical dependency major drift:', criticalMajorDrift)
   printIssueBlock('Mixed @solvapay/* prerelease dependency versions:', prereleaseVersionDrift)
-  printIssueBlock('Publishable package version drift:', publishableVersionDrift)
 
   const hasIssues =
     peerProblems.length > 0 ||
     peerWarningsFromInstall.length > 0 ||
     criticalMajorDrift.length > 0 ||
-    prereleaseVersionDrift.length > 0 ||
-    publishableVersionDrift.length > 0
+    prereleaseVersionDrift.length > 0
 
   if (hasIssues) {
     console.error('\nDependency health check failed.')

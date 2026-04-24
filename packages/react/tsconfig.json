@@ -5,11 +5,11 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@solvapay/mcp": ["../mcp/src"],
+      "@solvapay/mcp-core": ["../mcp-core/src"],
       "@solvapay/server": ["../server/src"],
       "@solvapay/core": ["../core/src"]
     }
   },
   "include": ["src"],
-  "references": [{ "path": "../core" }, { "path": "../server" }, { "path": "../mcp" }]
+  "references": [{ "path": "../core" }, { "path": "../server" }, { "path": "../mcp-core" }]
 }

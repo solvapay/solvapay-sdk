@@ -1,3 +1,3 @@
-import { trackUsage } from '@solvapay/supabase'
+import { trackUsage } from '@solvapay/fetch'
 
 Deno.serve(trackUsage)

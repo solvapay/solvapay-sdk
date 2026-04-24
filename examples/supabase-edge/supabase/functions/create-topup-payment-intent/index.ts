@@ -1,3 +1,3 @@
-import { createTopupPaymentIntent } from '@solvapay/supabase'
+import { createTopupPaymentIntent } from '@solvapay/fetch'
 
 Deno.serve(createTopupPaymentIntent)

@@ -28,21 +28,21 @@ describe('supabase-edge example', () => {
     expect(dirs).toEqual(EXPECTED_FUNCTIONS.sort())
   })
 
-  it('each function imports a valid export from @solvapay/supabase', () => {
+  it('each function imports a valid export from @solvapay/fetch', () => {
     const exportedNames = Object.keys(supabaseExports)
 
     for (const fn of EXPECTED_FUNCTIONS) {
       const indexPath = join(FUNCTIONS_DIR, fn, 'index.ts')
       const content = readFileSync(indexPath, 'utf-8')
 
-      // Extract the imported name from: import { handlerName } from '@solvapay/supabase'
+      // Extract the imported name from: import { handlerName } from '@solvapay/fetch'
       const match = content.match(/import\s*\{\s*(\w+)\s*\}\s*from\s*['"]@solvapay\/supabase['"]/)
-      expect(match, `${fn}/index.ts should import from @solvapay/supabase`).toBeTruthy()
+      expect(match, `${fn}/index.ts should import from @solvapay/fetch`).toBeTruthy()
 
       const importedName = match![1]
       expect(
         exportedNames,
-        `${fn}/index.ts imports '${importedName}' which is not exported by @solvapay/supabase`,
+        `${fn}/index.ts imports '${importedName}' which is not exported by @solvapay/fetch`,
       ).toContain(importedName)
     }
   })
@@ -69,7 +69,7 @@ describe('supabase-edge example', () => {
     const denoJson = JSON.parse(readFileSync(denoJsonPath, 'utf-8'))
 
     expect(denoJson.imports).toBeDefined()
-    expect(denoJson.imports['@solvapay/supabase']).toBe('npm:@solvapay/supabase')
+    expect(denoJson.imports['@solvapay/fetch']).toBe('npm:@solvapay/fetch')
     expect(denoJson.imports['@solvapay/server']).toBe('npm:@solvapay/server')
     expect(denoJson.imports['@solvapay/auth']).toBe('npm:@solvapay/auth')
     expect(denoJson.imports['@solvapay/core']).toBe('npm:@solvapay/core')
