@@ -1,11 +1,11 @@
 {
-  "nodeModulesDir": "auto",
+  "nodeModulesDir": "manual",
   "imports": {
-    "@solvapay/mcp": "../../../../../packages/mcp/dist/index.js",
-    "@solvapay/mcp-core": "../../../../../packages/mcp-core/dist/index.js",
-    "@solvapay/mcp-fetch": "../../../../../packages/mcp-fetch/dist/index.js",
-    "@solvapay/server": "../../../../../packages/server/dist/index.js",
-    "@solvapay/core": "../../../../../packages/core/dist/index.js",
+    "@solvapay/mcp": "npm:@solvapay/mcp",
+    "@solvapay/mcp-core": "npm:@solvapay/mcp-core",
+    "@solvapay/mcp-fetch": "npm:@solvapay/mcp-fetch",
+    "@solvapay/server": "npm:@solvapay/server",
+    "@solvapay/core": "npm:@solvapay/core",
     "@modelcontextprotocol/sdk/": "npm:/@modelcontextprotocol/sdk@1.29.0/",
     "@modelcontextprotocol/ext-apps/": "npm:/@modelcontextprotocol/ext-apps@1.5.0/",
     "zod": "npm:zod@4.3.6"
