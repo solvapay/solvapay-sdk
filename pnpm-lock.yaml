@@ -554,10 +554,6 @@ importers:
         version: 5.9.3
 
   examples/shared:
-    dependencies:
-      next:
-        specifier: '*'
-        version: 16.2.2(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
     devDependencies:
       '@solvapay/next':
         specifier: workspace:*
@@ -565,6 +561,9 @@ importers:
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../packages/server
+      next:
+        specifier: '*'
+        version: 16.2.2(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
 
   examples/supabase-edge-mcp:
     devDependencies:
