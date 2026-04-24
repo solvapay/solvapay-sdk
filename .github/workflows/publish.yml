@@ -79,12 +79,11 @@ jobs:
       - name: Validate fetch-runtime — Node gate
         run: pnpm validate:fetch-runtime
 
-      # Deno gate — non-blocking until inaugural preview packages land on
-      # npm. Once @solvapay/mcp-fetch@preview exists we can switch
-      # deno.local.json to `npm:@solvapay/mcp-fetch@preview` + auto
-      # node_modules resolution and flip this back to blocking.
+      # Deno gate — type-checks examples/supabase-edge-mcp against the
+      # last-published `@preview` versions of the workspace packages it
+      # imports. See publish-preview.yml for the rationale around the
+      # "one-commit-late" detection window.
       - name: Validate fetch-runtime — Deno gate (supabase-edge-mcp type-check)
-        continue-on-error: true
         run: pnpm --filter @example/supabase-edge-mcp validate
 
       - name: Create Release PR or publish
@@ -101,3 +100,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Post-publish verification — mirrors the guard in
+      # publish-preview.yml. Only runs when `changesets/action` actually
+      # published (i.e. merging the "Version Packages" PR), otherwise
+      # there's nothing to verify. The action exposes `published` and
+      # `publishedPackages` outputs we consume directly instead of
+      # re-parsing the publish log.
+      - name: Verify published packages landed on npm
+        if: steps.changesets.outputs.published == 'true'
+        run: node scripts/verify-npm-publishes.mjs --packages='${{ steps.changesets.outputs.publishedPackages }}'

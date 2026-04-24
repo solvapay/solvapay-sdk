@@ -70,20 +70,34 @@ jobs:
       - name: Validate fetch-runtime — Node gate
         run: pnpm validate:fetch-runtime
 
-      # Deno gate — non-blocking until inaugural preview packages land on
-      # npm. Once @solvapay/mcp-fetch@preview exists we can switch
-      # deno.local.json to `npm:@solvapay/mcp-fetch@preview` + auto
-      # node_modules resolution and flip this back to blocking. Tracking:
-      # https://github.com/solvapay/solvapay-sdk/issues (follow-up).
+      # Deno gate — type-checks examples/supabase-edge-mcp against the
+      # last-published `@preview` versions of the workspace packages it
+      # imports. Catches Deno-incompatibility regressions one commit
+      # late (the commit that introduced the break publishes, and the
+      # next push's gate fails), which we accept as the simplest
+      # workable tradeoff for pre-publish validation without juggling
+      # local-dist / file: URL resolution.
       - name: Validate fetch-runtime — Deno gate (supabase-edge-mcp type-check)
-        continue-on-error: true
         run: pnpm --filter @example/supabase-edge-mcp validate
 
       - name: Version snapshot
         run: pnpm changeset version --snapshot preview
 
       - name: Publish snapshot to @preview
-        run: pnpm changeset publish --tag preview --no-git-tag
+        id: publish
+        run: |
+          set -o pipefail
+          pnpm changeset publish --tag preview --no-git-tag 2>&1 | tee publish.log
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Post-publish verification — Changesets reports success based on
+      # npm's exit code, but npm has been observed to exit 0 even when
+      # brand-new scoped package names fail to create (granular token
+      # scope, org create-restrictions, etc.). This step queries the
+      # public registry for every line that Changesets claimed shipped
+      # and fails the job if any package isn't fetchable after a retry
+      # window.
+      - name: Verify published packages landed on npm
+        run: node scripts/verify-npm-publishes.mjs publish.log
