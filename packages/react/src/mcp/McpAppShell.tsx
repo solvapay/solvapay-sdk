@@ -530,11 +530,30 @@ function findRecurringPlan(plans: McpBootstrap['plans']): UpgradeCandidatePlan |
   return match ?? null
 }
 
+// Short, unambiguous suffixes per billing cycle. Falling back to the first
+// two characters breaks for e.g. "yearly" → "ye" or "weekly" → "we", which
+// look wrong next to a price.
+const BILLING_CYCLE_SUFFIX: Record<string, string> = {
+  daily: 'd',
+  weekly: 'wk',
+  monthly: 'mo',
+  quarterly: 'qtr',
+  yearly: 'yr',
+  annual: 'yr',
+  annually: 'yr',
+}
+
+function abbreviateBillingCycle(cycle: string): string {
+  const key = cycle.toLowerCase()
+  if (BILLING_CYCLE_SUFFIX[key]) return BILLING_CYCLE_SUFFIX[key]
+  return key.slice(0, 2)
+}
+
 function formatUpgradeLabel(plan: UpgradeCandidatePlan, locale?: string): string {
   const name = plan.name ?? 'Unlimited'
   if (typeof plan.price === 'number' && plan.price > 0 && plan.currency) {
     const amount = formatPrice(plan.price, plan.currency, { locale })
-    const cycle = plan.billingCycle ? `/${plan.billingCycle.slice(0, 2)}` : ''
+    const cycle = plan.billingCycle ? `/${abbreviateBillingCycle(plan.billingCycle)}` : ''
     return `Upgrade to ${name} — ${amount}${cycle}`
   }
   return `Upgrade to ${name}`
