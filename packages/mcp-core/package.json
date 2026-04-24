@@ -45,15 +45,8 @@
     "@solvapay/server": "workspace:*",
     "zod": "^3.25.0 || ^4.0.0"
   },
-  "peerDependenciesMeta": {
-    "@solvapay/server": {
-      "optional": true
-    },
-    "zod": {
-      "optional": true
-    }
-  },
   "devDependencies": {
+    "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:^",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",

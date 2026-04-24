@@ -28,6 +28,21 @@ Inaugural release. Framework-neutral MCP contracts for the SolvaPay SDK:
 
 Zero runtime dependency on `@modelcontextprotocol/*`.
 
+### Peer dependencies
+
+`@solvapay/server` is a **required** peer. Every barrel re-export
+(`descriptors`, `bootstrap-payload`, `payable-handler`,
+`paywall-meta`, `response-context`, `paywallToolResult`) resolves
+runtime values from `@solvapay/server` (the merchant API `*Core`
+functions, `PaywallError`, `isPaywallStructuredContent`, …), so
+listing it as an optional peer would crash any import at module
+resolution time with `ERR_MODULE_NOT_FOUND`. The peer shape —
+instead of a direct dependency — preserves singleton semantics
+across the adapter family (one `PaywallError` constructor, one
+`SolvaPay` client instance) when `@solvapay/mcp`, `mcp-express`,
+`mcp-fetch`, and app-level code all share a single hoisted
+`@solvapay/server` install.
+
 ### Rename history
 
 `@solvapay/mcp-core` is the rename of the old `@solvapay/mcp` package

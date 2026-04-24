@@ -818,10 +818,10 @@ importers:
       '@solvapay/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
       '@solvapay/server':
         specifier: workspace:*
         version: link:../server
-    devDependencies:
       '@solvapay/test-utils':
         specifier: workspace:^
         version: link:../test-utils
