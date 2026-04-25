@@ -151,48 +151,13 @@ describe('<McpApp> — live tool-result subscription', () => {
     expect(screen.queryByTestId('account-stub')).toBeTruthy()
   })
 
-  it('re-routes when a paywalled merchant tool fires a nudge notification mid-session', async () => {
-    // Merchant data tools (not in VIEW_FOR_TOOL, not in the transport
-    // denylist) must re-route when their notification carries a
-    // recognisable `structuredContent.view`. This is the live-flow
-    // analogue of the mount-time data-tool entry path.
-    const { app, hostContext, fireToolResult } = makeEventfulApp({
-      initialToolName: 'upgrade',
-      initialStructured: {
-        productRef: 'prod_1',
-        returnUrl: 'https://example.test/r',
-        customer: { ref: 'cus_1' },
-      },
-    })
-
-    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">checkout</div>)
-    const NudgeStub = vi.fn(() => <div data-testid="nudge-stub">nudge</div>)
-
-    render(<McpApp app={app} views={{ checkout: CheckoutStub, nudge: NudgeStub }} />)
-    await screen.findByTestId('checkout-stub')
-
-    hostContext.toolInfo.tool.name = 'query_sales_trends'
-
-    await act(async () => {
-      fireToolResult({
-        structuredContent: {
-          view: 'nudge',
-          productRef: 'prod_1',
-          returnUrl: 'https://example.test/r',
-          customer: { ref: 'cus_1' },
-          plans: [{ reference: 'pln_ub', planType: 'usage-based' }],
-          nudge: { kind: 'low-balance', message: 'top up' },
-          data: { ok: true },
-        },
-      })
-    })
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('nudge-stub')).toBeTruthy()
-    })
-  })
-
-  it('ignores error tool-result notifications', async () => {
+  it('does not re-route or tear down on error tool-result notifications post-mount', async () => {
+    // Claude Desktop fires a `toolresult` notification for every
+    // tool call on the server. Once a checkout/account shell is
+    // mounted, a stray `isError` notification from an unrelated
+    // host tool re-invocation must not clobber the user's
+    // in-flight view — the handler catches the parse failure and
+    // leaves the shell alone. `requestTeardown` must NOT fire.
     const { app, hostContext, fireToolResult } = makeEventfulApp({
       initialToolName: 'upgrade',
       initialStructured: {
@@ -219,6 +184,43 @@ describe('<McpApp> — live tool-result subscription', () => {
 
     await new Promise((r) => setTimeout(r, 50))
     expect(screen.queryByTestId('topup-stub')).toBeNull()
+    // The mounted checkout shell must survive — the pre-mount
+    // teardown guard gates on `bootstrapRef`.
+    expect(screen.queryByTestId('checkout-stub')).toBeTruthy()
+    expect(app.requestTeardown).not.toHaveBeenCalled()
+  })
+
+  it('does not tear down when a non-bootstrap (Oracle-style) notification arrives post-mount', async () => {
+    // Companion to the post-mount `isError` test: a stray
+    // host-rendered data tool result (Oracle's `predict_direction`
+    // etc.) must not dismiss the user's in-flight checkout shell.
+    // Without the `bootstrapRef.current === null` guard, every
+    // unrelated tool call on the server would tear the widget down.
+    const { app, hostContext, fireToolResult } = makeEventfulApp({
+      initialToolName: 'upgrade',
+      initialStructured: {
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+        customer: { ref: 'cus_1' },
+      },
+    })
+
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">checkout</div>)
+
+    render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+
+    hostContext.toolInfo.tool.name = 'predict_direction'
+
+    await act(async () => {
+      fireToolResult({
+        structuredContent: { direction: 'up', confidence: 0.8 },
+      })
+    })
+
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByTestId('checkout-stub')).toBeTruthy()
+    expect(app.requestTeardown).not.toHaveBeenCalled()
   })
 
   it('falls back to the legacy `ontoolresult` setter when addEventListener is unavailable', async () => {

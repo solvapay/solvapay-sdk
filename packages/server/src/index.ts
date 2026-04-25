@@ -114,6 +114,12 @@ export { PaywallError, paywallErrorToClientPayload } from './paywall'
 export type { ProtectHandlerContext } from './paywall'
 export { isPaywallStructuredContent } from './types/paywall'
 
+// Pure paywall state engine — classifier + gate / nudge copy builder.
+// Exposed so transport adapters (`@solvapay/mcp-core`) can produce the
+// same text-only copy off a `LimitResponseWithPlan` they already hold.
+export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './paywall-state'
+export type { PaywallState } from './paywall-state'
+
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
 export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'

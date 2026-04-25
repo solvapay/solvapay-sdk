@@ -30,15 +30,40 @@ function makeApp(opts: {
 }
 
 describe('<McpApp>', () => {
-  it('shows a loading card until bootstrap resolves', () => {
-    const app = makeApp({
-      structuredContent: {
-        productRef: 'prod_1',
-        returnUrl: 'https://example.test/r',
-      },
-    })
-    render(<McpApp app={app} />)
-    expect(screen.getByText('Loading…')).toBeTruthy()
+  it('shows a loading card after `connect()` resolves, while bootstrap is in-flight', async () => {
+    // The loading card appears while `fetchMcpBootstrap` is in flight.
+    // Data-tool iframe entries no longer exist (payable merchant
+    // tools don't advertise `_meta.ui.resourceUri`), so the shell
+    // always fires `fetchMcpBootstrap` and the loading card is
+    // always legitimate user feedback.
+    let resolveCall: (value: unknown) => void = () => {}
+    const app = {
+      callServerTool: vi.fn(
+        () =>
+          new Promise((r) => {
+            resolveCall = r
+          }),
+      ),
+      getHostContext: () => undefined,
+      connect: vi.fn().mockResolvedValue(undefined),
+      onhostcontextchanged: undefined,
+      onteardown: undefined,
+      requestTeardown: vi.fn().mockResolvedValue(undefined),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
+    try {
+      render(<McpApp app={app} />)
+      await waitFor(() => {
+        expect(screen.getByText('Loading…')).toBeTruthy()
+      })
+    } finally {
+      resolveCall({
+        structuredContent: {
+          productRef: 'prod_1',
+          returnUrl: 'https://example.test/r',
+        },
+      })
+    }
   })
 
   it('routes to the account view when the host invokes manage_account', async () => {
@@ -95,34 +120,6 @@ describe('<McpApp>', () => {
       expect(screen.getByText('customer_ref missing')).toBeTruthy()
     })
     expect(onInitError.mock.calls[0][0].message).toBe('customer_ref missing')
-  })
-
-  it('routes to the nudge view when bootstrap carries view: "nudge"', async () => {
-    const app = makeApp({
-      // Any tool name; the structured content view field forces the
-      // resolution to `nudge` via `requestedView = structured.view ?? view`.
-      toolName: 'manage_account',
-      structuredContent: {
-        view: 'nudge',
-        productRef: 'prod_1',
-        returnUrl: 'https://example.test/r',
-        nudge: { kind: 'low-balance', message: 'credits running low' },
-        data: { rows: [1, 2, 3] },
-      },
-    })
-    const NudgeStub = vi.fn(() => <div data-testid="nudge-stub">stubbed nudge</div>)
-    render(<McpApp app={app} views={{ nudge: NudgeStub }} />)
-    await screen.findByTestId('nudge-stub')
-    expect(NudgeStub).toHaveBeenCalled()
-    const firstCall = NudgeStub.mock.calls[0] as unknown as [
-      { bootstrap: { view: string; nudge?: { kind: string }; data?: unknown } },
-    ]
-    expect(firstCall[0].bootstrap.view).toBe('nudge')
-    expect(firstCall[0].bootstrap.nudge).toEqual({
-      kind: 'low-balance',
-      message: 'credits running low',
-    })
-    expect(firstCall[0].bootstrap.data).toEqual({ rows: [1, 2, 3] })
   })
 
   it('default onClose routes to app.requestTeardown', async () => {

@@ -59,7 +59,6 @@ export type {
   SolvaPayCallToolResult,
   SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
-  SolvaPayMcpPaywallContent,
   SolvaPayMcpViewKind,
   SolvaPayMerchantBranding,
   SolvaPayPromptDescriptor,
@@ -96,9 +95,15 @@ export {
 export type { IntentTool, NarratorOutput } from './narrate'
 
 // ---- Paywall envelope builders ----
-export { buildPaywallUiMeta } from './paywall-meta'
-export type { PaywallUiMeta, PaywallUiMetaInput } from './paywall-meta'
-
+//
+// The `paywall-meta` module (`buildPaywallUiMeta`, `PaywallUiMeta`,
+// `PaywallUiMetaInput`) was deleted as part of the text-only paywall
+// refactor: MCP Apps hosts open the widget from descriptor-level
+// `_meta.ui.resourceUri` on `tools/list`, and the merchant payable
+// path deliberately doesn't advertise it, so per-call `_meta.ui`
+// stamping has no consumers. Downstream code that constructed its
+// own `_meta.ui` envelope with this helper should drop it outright —
+// the descriptor is the only trigger now.
 export { paywallToolResult } from './paywallToolResult'
 export type { PaywallToolResultContext } from './paywallToolResult'
 

@@ -342,9 +342,13 @@ export function buildSolvaPayDescriptors(
   // surfaces inside the `checkout` view (the tabbed shell and its
   // dedicated activate surface are gone).
 
-  // Paywall responses now carry the full BootstrapPayload in their
-  // `structuredContent` (see `@solvapay/mcp/paywallToolResult`), so
-  // there is no dedicated `open_paywall` tool for the host to re-invoke.
+  // Paywall responses are text-only narrations on `content[0].text`
+  // with the structured gate riding on `structuredContent` (see
+  // `buildPayableHandler` and `paywallToolResult`). No dedicated
+  // `open_paywall` tool exists — hosts never open the widget iframe
+  // on a gate, and the LLM recovers by calling the `upgrade` /
+  // `topup` / `activate_plan` intent tool named inline in the
+  // narration.
 
   // ------- transport tools -------
 

@@ -4,27 +4,23 @@
  * `<McpAppShell>` — thin in-iframe layout wrapping `<McpViewRouter>`.
  *
  * The shell is surface-routed, not tab-routed: `bootstrap.view` locks
- * the rendered surface for the invocation's lifetime. There is no tab
- * strip and no in-session surface switching from the user, only the
- * paywall / nudge `upgradeCta` flip that swaps the body to the
- * checkout view via the `overrideView` state.
+ * the rendered surface for the invocation's lifetime.
  *
  * Surfaces rendered via `<McpViewRouter>`:
  *  - `checkout` — plan picker + activation dispatcher.
  *  - `account`  — current plan, balance, usage, payment method.
  *  - `topup`    — amount picker + Stripe.
- *  - `paywall`  — gate-response takeover; no sidebar, no footer.
- *  - `nudge`    — merchant tool result + upsell strip; no sidebar, no footer.
  *
- * Legacy bootstrap `view: 'about' | 'activate' | 'usage'` values fall
- * through to the appropriate surface inside `<McpViewRouter>` — about
- * and activate collapse into `checkout`, usage into `account`.
+ * The legacy `'paywall'` / `'nudge'` surfaces were removed with the
+ * text-only paywall refactor — merchant paywall / nudge responses are
+ * plain narrations, not widget payloads. Legacy bootstrap
+ * `view: 'about' | 'activate' | 'usage'` values still fall through to
+ * the right surface: about/activate collapse into `checkout`, usage
+ * into `account`.
  */
 
 import React, { useEffect, useRef, useState } from 'react'
 import { useMerchant } from '../hooks/useMerchant'
-// `STALE_THRESHOLD_MS` was used by the tab-era refresh debounce; the
-// mount-once refresh below doesn't need it.
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
@@ -32,25 +28,15 @@ import {
   McpAccountView,
   type McpAccountViewProps,
 } from './views/McpAccountView'
-import { formatPrice } from '../utils/format'
-import { useHostLocale } from './useHostLocale'
 import { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
 import {
   McpCheckoutView,
   type McpCheckoutViewProps,
 } from './views/McpCheckoutView'
 import {
-  McpPaywallView,
-  type McpPaywallViewProps,
-} from './views/McpPaywallView'
-import {
   McpTopupView,
   type McpTopupViewProps,
 } from './views/McpTopupView'
-import {
-  McpNudgeView,
-  type McpNudgeViewProps,
-} from './views/McpNudgeView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { ExternalLinkGlyph } from '../components/ExternalLinkGlyph'
 
@@ -80,8 +66,8 @@ export interface McpAppShellProps {
 /**
  * Resolve the surface to render. The bootstrap's `view` is the source
  * of truth; legacy kinds (`about`, `activate`, `usage`) collapse into
- * the surviving four surfaces. Undefined bootstrap views default to
- * `account` (same fallback the shell used for its tab-era initialTab).
+ * the surviving three surfaces. Undefined bootstrap views default to
+ * `account`.
  */
 function resolveSurface(
   bootstrapView: McpBootstrap['view'] | string | undefined,
@@ -93,10 +79,6 @@ function resolveSurface(
       return 'checkout'
     case 'topup':
       return 'topup'
-    case 'paywall':
-      return 'paywall'
-    case 'nudge':
-      return 'nudge'
     case 'usage': // Usage folds into the account surface.
     case 'account':
     default:
@@ -113,37 +95,17 @@ export function McpAppShell({
   onClose,
 }: McpAppShellProps) {
   const { merchant } = useMerchant()
-  const [paywallDismissed, setPaywallDismissed] = useState(false)
-  // The only in-session surface mutation: paywall / nudge CTAs flip
-  // the rendered surface to `checkout` without waiting for a host
-  // re-invocation. Everything else locks on `bootstrap.view`.
+  // In-session surface swaps (no host re-invocation): the customer
+  // clicks "Change plan" on the account view, "Top up" on the
+  // customer-details card, or "Back" on the topup view. The paywall /
+  // nudge CTA flips were removed along with those surfaces.
   const [overrideView, setOverrideView] = useState<McpViewKind | null>(null)
-  // Sticks once the customer clicks through the paywall takeover so
-  // the checkout view can show the "Upgrade to continue" banner and
-  // the "Stay on Free" dismiss link. Remains false when the checkout
-  // view is reached via `McpAccountView`'s "Change plan" affordance —
-  // satisfying the §6 invariant "one flag, one visual, no heuristics."
-  const [cameFromPaywall, setCameFromPaywall] = useState(false)
-
-  // Initial entry via `bootstrap.view === 'paywall'` counts as
-  // paywall-origin even before the explicit CTA click, so the flag
-  // reflects the same semantics whether the host opens the checkout
-  // directly with a paywall payload or the customer clicks through
-  // the paywall takeover first.
-  const initialFromPaywall = bootstrap.view === 'paywall'
 
   const resolvedView = resolveSurface(bootstrap.view)
-  const isPaywall = resolvedView === 'paywall' && !paywallDismissed
-  const effectiveView: McpViewKind = overrideView ?? (isPaywall ? 'paywall' : resolvedView)
-  // `ShellHeader` shows the merchant brand + product name everywhere
-  // except the minimal `nudge` strip. The paywall gets it too so the
-  // surface has the same branding as the activate flow.
-  const showShellHeader = effectiveView !== 'nudge'
-  // Footer + sidebar stay suppressed on paywall (the paywall "takes
-  // over" per brief §6) and on nudge (minimal strip). Sidebar is
-  // additionally gated on `customer !== null`.
-  const isChrome = showShellHeader && effectiveView !== 'paywall'
-  const fromPaywall = cameFromPaywall || initialFromPaywall
+  const effectiveView: McpViewKind = overrideView ?? resolvedView
+  // Every remaining surface shows the merchant brand + product name.
+  const showShellHeader = true
+  const isChrome = true
 
   // Refresh the bootstrap once on mount if the caller wired it. The
   // tabbed shell used to do this on every tab switch; with a single
@@ -151,19 +113,10 @@ export function McpAppShell({
   // re-opening the iframe after backgrounding it sees fresh data.
   // A ref guard keeps it to one call per `onRefreshBootstrap` identity
   // (protects against strict-mode double-mount).
-  //
-  // Skip for paywall / nudge surfaces: those views are driven by the
-  // originating tool result (the server stamps `view: 'paywall'` /
-  // `view: 'nudge'` on the merchant tool's response). `refreshInitial`
-  // re-calls the `upgrade` intent tool and would return
-  // `view: 'checkout'`, clobbering the gate/strip the user just saw.
-  // The fresh intent snapshot is re-fetched the next time the user
-  // commits an action (upgrade click, topup, etc.).
   const refreshedRef = useRef(false)
   useEffect(() => {
     if (!onRefreshBootstrap) return
     if (refreshedRef.current) return
-    if (bootstrap.view === 'paywall' || bootstrap.view === 'nudge') return
     refreshedRef.current = true
     void Promise.resolve(onRefreshBootstrap()).catch(() => {
       /* best-effort. */
@@ -186,27 +139,8 @@ export function McpAppShell({
   const productDescription =
     (bootstrap.product as { description?: string } | undefined)?.description ?? null
 
-  const handlePaywallUpgrade = () => {
-    setPaywallDismissed(true)
-    setCameFromPaywall(true)
-    setOverrideView('checkout')
-  }
-
-  const handleNudgeCta = () => {
-    setOverrideView('checkout')
-  }
-
-  const handleChangePlan = () => {
-    // Change-plan from the account view is *not* a paywall flow —
-    // clear the flag so the checkout view renders without the banner
-    // or the "Stay on Free" dismiss. If `cameFromPaywall` was already
-    // false (the usual case), this is a no-op.
-    setCameFromPaywall(false)
-    setOverrideView('checkout')
-  }
-
   return (
-    <div className="solvapay-mcp-shell" data-paywall={isPaywall ? 'true' : undefined}>
+    <div className="solvapay-mcp-shell">
       {showShellHeader ? (
         <ShellHeader
           merchant={merchant}
@@ -224,11 +158,7 @@ export function McpAppShell({
             views={views}
             classNames={classNames}
             suppressDetailCards={isShellSidebarEligible}
-            fromPaywall={fromPaywall}
             onSurfaceChange={setOverrideView}
-            onPaywallUpgrade={handlePaywallUpgrade}
-            onNudgeCta={handleNudgeCta}
-            onChangePlan={handleChangePlan}
             onRefreshBootstrap={onRefreshBootstrap}
             onClose={onClose}
           />
@@ -371,31 +301,12 @@ export interface McpViewRouterProps {
   /** Whether the shell already renders the customer/seller cards in a sidebar. */
   suppressDetailCards?: boolean
   /**
-   * True when the checkout view was reached via the paywall takeover
-   * (or the shell mounted with `bootstrap.view === 'paywall'`). Drives
-   * the "Upgrade to continue" banner and `"Stay on Free"` dismiss link
-   * inside `McpCheckoutView`.
-   */
-  fromPaywall?: boolean
-  /**
    * Called when a surface asks to swap to another surface in-session
-   * (only used by the paywall-dismiss and nudge-CTA handlers). The
-   * shell wires this to its `overrideView` state.
+   * (account → topup via the details card, account → checkout via
+   * "Change plan", topup → account via "Back"). The shell wires this
+   * to its `overrideView` state.
    */
   onSurfaceChange?: (next: McpViewKind) => void
-  /**
-   * Paywall-specific upgrade handler forwarded as `upgradeCta.onClick`
-   * on `<McpPaywallView>`. Defaults to `onSurfaceChange?.('checkout')`.
-   */
-  onPaywallUpgrade?: () => void
-  /** Nudge-specific CTA handler; defaults to `onSurfaceChange?.('checkout')`. */
-  onNudgeCta?: () => void
-  /**
-   * Invoked when the account view's "Change plan" affordance fires.
-   * Clears the `fromPaywall` flag before swapping to `'checkout'` so
-   * the banner doesn't render in the change-plan flow.
-   */
-  onChangePlan?: () => void
   /**
    * Forwarded to `McpCheckoutView`'s `"Back to chat"` success CTA so
    * the shell can reseed its caches before the host unmounts.
@@ -421,28 +332,18 @@ export function McpViewRouter({
   views,
   classNames,
   suppressDetailCards,
-  fromPaywall,
   onSurfaceChange,
-  onPaywallUpgrade,
-  onNudgeCta,
-  onChangePlan,
   onRefreshBootstrap,
   onClose,
 }: McpViewRouterProps): React.ReactNode {
-  const { productRef, stripePublishableKey, returnUrl, paywall } = bootstrap
-  const locale = useHostLocale()
+  const { productRef, stripePublishableKey, returnUrl } = bootstrap
   const CheckoutView = (views?.checkout ?? McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
-  const PaywallView = (views?.paywall ?? McpPaywallView) as React.ComponentType<McpPaywallViewProps>
-  const NudgeView = (views?.nudge ?? McpNudgeView) as React.ComponentType<McpNudgeViewProps>
 
   const goCheckout = onSurfaceChange ? () => onSurfaceChange('checkout') : undefined
   const goTopup = onSurfaceChange ? () => onSurfaceChange('topup') : undefined
   const goAccount = onSurfaceChange ? () => onSurfaceChange('account') : undefined
-  const changePlan = onChangePlan ?? goCheckout
-  const nudgeCta = onNudgeCta ?? goCheckout
-  const paywallUpgrade = onPaywallUpgrade ?? goCheckout
 
   switch (view) {
     case 'checkout':
@@ -452,8 +353,6 @@ export function McpViewRouter({
           publishableKey={stripePublishableKey}
           returnUrl={returnUrl}
           classNames={classNames}
-          fromPaywall={fromPaywall}
-          paywallKind={paywall?.kind}
           plans={bootstrap.plans}
           onRequestTopup={goTopup}
           onRefreshBootstrap={onRefreshBootstrap}
@@ -465,7 +364,7 @@ export function McpViewRouter({
         <AccountView
           classNames={classNames}
           onTopup={goTopup}
-          onChangePlan={changePlan}
+          onChangePlan={goCheckout}
           hideDetailCards={suppressDetailCards}
         />
       )
@@ -478,83 +377,7 @@ export function McpViewRouter({
           onBack={goAccount}
         />
       )
-    case 'paywall': {
-      if (!paywall) return null
-      const upgradeCandidate = findRecurringPlan(bootstrap.plans)
-      const upgradeCta =
-        upgradeCandidate && paywallUpgrade
-          ? { label: formatUpgradeLabel(upgradeCandidate, locale), onClick: paywallUpgrade }
-          : undefined
-      return (
-        <PaywallView
-          content={paywall}
-          publishableKey={stripePublishableKey}
-          returnUrl={returnUrl}
-          classNames={classNames}
-          plans={bootstrap.plans}
-          upgradeCta={upgradeCta}
-        />
-      )
-    }
-    case 'nudge':
-      return (
-        <NudgeView
-          bootstrap={bootstrap}
-          onCta={nudgeCta}
-          classNames={classNames}
-        />
-      )
     default:
       return null
   }
-}
-
-interface UpgradeCandidatePlan {
-  reference?: string
-  name?: string | null
-  price?: number
-  currency?: string
-  planType?: string
-  billingCycle?: string | null
-  meterRef?: string | null
-  limit?: number | null
-}
-
-function findRecurringPlan(plans: McpBootstrap['plans']): UpgradeCandidatePlan | null {
-  const list = plans as unknown as UpgradeCandidatePlan[] | undefined
-  if (!list || list.length === 0) return null
-  const match = list.find((p) => {
-    if (p.planType !== 'recurring') return false
-    return !p.meterRef
-  })
-  return match ?? null
-}
-
-// Short, unambiguous suffixes per billing cycle. Falling back to the first
-// two characters breaks for e.g. "yearly" → "ye" or "weekly" → "we", which
-// look wrong next to a price.
-const BILLING_CYCLE_SUFFIX: Record<string, string> = {
-  daily: 'd',
-  weekly: 'wk',
-  monthly: 'mo',
-  quarterly: 'qtr',
-  yearly: 'yr',
-  annual: 'yr',
-  annually: 'yr',
-}
-
-function abbreviateBillingCycle(cycle: string): string {
-  const key = cycle.toLowerCase()
-  if (BILLING_CYCLE_SUFFIX[key]) return BILLING_CYCLE_SUFFIX[key]
-  return key.slice(0, 2)
-}
-
-function formatUpgradeLabel(plan: UpgradeCandidatePlan, locale?: string): string {
-  const name = plan.name ?? 'Unlimited'
-  if (typeof plan.price === 'number' && plan.price > 0 && plan.currency) {
-    const amount = formatPrice(plan.price, plan.currency, { locale })
-    const cycle = plan.billingCycle ? `/${abbreviateBillingCycle(plan.billingCycle)}` : ''
-    return `Upgrade to ${name} — ${amount}${cycle}`
-  }
-  return `Upgrade to ${name}`
 }

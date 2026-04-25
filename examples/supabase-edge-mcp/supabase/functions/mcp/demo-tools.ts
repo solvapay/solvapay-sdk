@@ -20,19 +20,20 @@
  * the handlers for real ones in a few lines to turn this into a
  * production server.
  *
- * Two rendering strategies are demonstrated:
+ * Single rendering strategy — host renders the data:
  *
- * 1. **Widget-embedded data** — `query_sales_trends` attaches a
- *    `nudge` envelope on low balance, which routes the payload through
- *    the SolvaPay iframe widget (see the `DemoNudgeView` override
- *    described in `mcp_demo_market_chart` for the matching consumer).
- * 2. **Numeric `structuredContent`** — the Oracle tools
- *    (`predict_price_chart`, `predict_direction`) return pure numeric
- *    `structuredContent` via `ctx.respond(payload)` so capable MCP
- *    hosts (Claude artifacts) can render a line chart / verdict card
- *    artifact straight off the tool result. The SolvaPay widget still
- *    opens on paywall exhaustion because result-level `_meta.ui` is
- *    stamped by `buildPayableHandler` on gate responses.
+ * The merchant's data rides on `structuredContent` so capable hosts
+ * (Claude artifacts, ChatGPT Apps, MCP Inspector) render it natively —
+ * a chat bubble for `search_knowledge`, a line-chart artifact for
+ * `predict_price_chart`, a verdict card for `predict_direction`, and
+ * so on. The SolvaPay widget is reserved for the three intent tools
+ * (`upgrade`, `manage_account`, `topup`) where the user deliberately
+ * asked for a checkout / account / topup UX.
+ *
+ * Paywall responses on exhaustion are plain text narrations that name
+ * the recovery intent tool and inline `gate.checkoutUrl` for
+ * terminal-first hosts. No iframe opens for a gate — the LLM reads
+ * the narration and calls the recovery tool, which mounts the widget.
  *
  * Gate with the `DEMO_TOOLS` env var (defaults to `true` in dev; set to
  * `"false"` when copying this example to your own repo as a template).
@@ -117,11 +118,10 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
     },
   })
 
-  // Third demo tool exercises the nudge branch of `ctx.respond()`:
-  //
-  //  1. Silent when the customer has comfortable balance.
-  //  2. Nudge when the customer is close to running out; attaches a
-  //     `low-balance` upsell strip to the successful response.
+  // Third demo tool exercises the text-only nudge suffix on
+  // `ctx.respond()`. When the customer is low on credits the nudge
+  // message is appended to `content[0].text` as a plain-text
+  // suffix — no widget surface, no `structuredContent` switch.
   //
   // Also includes `options.units` to demonstrate forward-compatible
   // handler code. V1 silently ignores the field; V1.1 will thread it
@@ -129,7 +129,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('query_sales_trends', {
     title: 'Query sales trends (demo)',
     description:
-      'Demo data tool that exercises the `ctx.respond()` API: returns deterministic sales rows for a date range and, when the customer is low on credits, attaches a `low-balance` upsell nudge to the success response. Use `/query_sales_trends` to try the nudge flow.',
+      'Demo data tool that exercises the `ctx.respond()` API: returns deterministic sales rows for a date range. When the customer is low on credits, the response `content[0].text` carries a plain-text `low-balance` nudge pointing at the `topup` intent tool — hosts render it inline with the data, no widget iframe.',
     schema: { range: z.string().min(1) },
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ range }, ctx) => {
@@ -150,7 +150,8 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
           units: results.length,
           nudge: {
             kind: 'low-balance',
-            message: 'Running low on credits — top up to keep querying.',
+            message:
+              'Running low on credits — call the `topup` tool to add more.',
           },
         },
       )
@@ -158,13 +159,11 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   })
 
   // Oracle tools return pure numeric data via `ctx.respond(payload)`
-  // (no `nudge`, no widget embed) so capable MCP hosts (Claude
-  // artifacts) render a line chart / verdict card artifact straight
-  // off `structuredContent`. Contrast with `get_market_quote` + the
-  // `DemoNudgeView` override, which routes data through the iframe
-  // widget. The descriptor still advertises `_meta.ui.resourceUri`
-  // so paywall responses open the SolvaPay widget on hosts that read
-  // widget metadata from `tools/list` (MCPJam, MCP App inspector).
+  // so capable MCP hosts (Claude artifacts) render a line chart /
+  // verdict card artifact straight off `structuredContent`. Paywall
+  // exhaustion ships a text-only narration via `content[0].text` —
+  // no iframe opens for a gate, the LLM reads the copy and calls the
+  // `upgrade` / `topup` intent tool which mounts the widget.
   registerPayable('predict_price_chart', {
     title: 'Predict price chart (Oracle demo)',
     description:

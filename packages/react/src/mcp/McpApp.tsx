@@ -38,9 +38,7 @@ import { McpAppShell } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import type { McpAccountViewProps } from './views/McpAccountView'
 import type { McpCheckoutViewProps } from './views/McpCheckoutView'
-import type { McpPaywallViewProps } from './views/McpPaywallView'
 import type { McpTopupViewProps } from './views/McpTopupView'
-import type { McpNudgeViewProps } from './views/McpNudgeView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 
 /**
@@ -95,8 +93,6 @@ export interface McpAppViewOverrides {
   checkout?: React.ComponentType<McpCheckoutViewProps>
   account?: React.ComponentType<McpAccountViewProps>
   topup?: React.ComponentType<McpTopupViewProps>
-  paywall?: React.ComponentType<McpPaywallViewProps>
-  nudge?: React.ComponentType<McpNudgeViewProps>
 }
 
 export interface McpAppProps {
@@ -231,69 +227,48 @@ export function McpApp({
     }
     app.onteardown = async () => ({})
 
-    // Deferred promise resolved by the first non-error, non-transport
-    // `toolresult` notification. The data-tool mount path awaits this
-    // instead of re-calling the merchant tool (which would consume
-    // another unit of usage). Intent-tool / fallback paths race it
-    // too — whichever settles first wins.
-    let resolveFirstNotification: (() => void) | undefined
-    const firstNotificationApplied = new Promise<void>((r) => {
-      resolveFirstNotification = r
-    })
-
-    // Subscribe to `ui/notifications/tool-result` for two purposes:
-    //
-    //  1. Phase 3 — re-route when the host re-invokes an intent tool
-    //     against the already-mounted widget (no iframe remount).
-    //  2. Data-tool iframe entry — when the host opens the widget
-    //     because a paywalled merchant tool (e.g. `search_knowledge`)
-    //     returned `_meta.ui.resourceUri`, the widget consumes the
-    //     original tool result here rather than re-fetching an intent
-    //     tool.
+    // Subscribe to `ui/notifications/tool-result` so `<McpApp>` can
+    // re-route when the host re-invokes an intent tool against the
+    // already-mounted widget (no iframe remount).
     //
     // Transport tool results (`create_payment_intent`, `process_payment`,
     // `activate_plan`, …) are awaited via the `callServerTool` adapter
     // promise already; re-applying them to `bootstrap` would double-apply
     // state.
+    //
+    // Merchant payable tools no longer advertise
+    // `_meta.ui.resourceUri`, so the host should never open the iframe
+    // for a paywall / nudge response. If a notification arrives for a
+    // non-intent tool anyway (legacy opt-in server), we accept it only
+    // when `structuredContent` parses as a valid `BootstrapPayload`;
+    // a parse failure is silently logged and doesn't tear down the
+    // mounted view.
     const onToolResult = (params: ToolResultNotificationParams) => {
       if (cancelled) return
       const toolName = app.getHostContext?.()?.toolInfo?.tool?.name ?? null
       if (toolName && isTransportToolName(toolName)) return
       // Dedupe: skip notifications that land during an in-flight
       // client-initiated bootstrap fetch — the fetch's own `setBootstrap`
-      // already applies the same structuredContent. We still resolve
-      // `firstNotificationApplied` so the data-tool wait path sees the
-      // notification even when it's for an intent-tool echo.
-      if (pendingBootstrapFetchRef.current) {
-        resolveFirstNotification?.()
-        return
-      }
+      // already applies the same structuredContent.
+      if (pendingBootstrapFetchRef.current) return
       try {
-        // Route on `structuredContent.view` (set by the server's
-        // `buildPayableHandler` / bootstrap builders). Tool name only
-        // matters as a fallback when the server omitted `view` — which
-        // shouldn't happen, but keeps the parse robust. `paywall` is the
-        // sensible default for data-tool entries (they're gate/nudge by
-        // construction).
-        //
-        // `parseBootstrapFromToolResult` handles the paywall's
-        // `isError: true` semantic by recognising the embedded
-        // `BootstrapPayload` shape; genuine errors (no structured
-        // content) throw and are swallowed below.
         const intentView = toolName ? VIEW_FOR_TOOL[toolName] : undefined
-        const fallbackView: SolvaPayMcpViewKind = intentView ?? 'paywall'
+        const fallbackView: SolvaPayMcpViewKind = intentView ?? 'checkout'
         const fresh = parseBootstrapFromToolResult(
           params as unknown as CallToolResultLike,
           toolName ?? '(unknown tool)',
           fallbackView,
         )
         setBootstrap(fresh)
-        resolveFirstNotification?.()
       } catch (err) {
-        // A malformed notification shouldn't clobber the mounted shell;
-        // surface it as a soft warning and keep the last-good bootstrap.
+        // Non-bootstrap or errored payload — ignore silently. The
+        // mounted view (if any) survives. Pre-mount, the shell stays
+        // on the loading card until `fetchMcpBootstrap` resolves; we
+        // no longer ask the host to tear down on parse failure, since
+        // the intent-tool fetch path is the one that decides mount
+        // outcomes.
         if (typeof console !== 'undefined') {
-          console.warn('[solvapay] ignoring malformed tool-result notification:', err)
+          console.debug('[solvapay] non-bootstrap tool-result notification:', err)
         }
       }
     }
@@ -321,45 +296,17 @@ export function McpApp({
         if (cancelled) return
         applyContextRef.current?.(app.getHostContext())
 
-        const classification = classifyHostEntry(app)
-
-        if (classification.kind === 'data') {
-          // Data-tool entry: the host opened the iframe from a
-          // paywalled merchant tool result. Wait for the original
-          // tool-result payload instead of calling a new tool.
-          const timeoutMs = 2000
-          const timedOut = await Promise.race([
-            firstNotificationApplied.then(() => false as const),
-            new Promise<true>((r) => setTimeout(() => r(true), timeoutMs)),
-          ])
-          if (cancelled) return
-          if (timedOut) {
-            // The host opened the iframe speculatively (MCP Apps
-            // hosts like Claude open the registered UI resource for
-            // every tool call on the server regardless of per-tool
-            // `_meta.ui`), but no bootstrap payload ever arrived.
-            // Either the tool's success payload is host-rendered
-            // data (oracle-style tools that return numeric
-            // `structuredContent`) or the host didn't forward the
-            // originating `ui/notifications/tool-result` — in both
-            // cases there's nothing for us to render. Ask the host
-            // to unmount silently so the user sees the host's own
-            // rendering of the tool result instead of our error
-            // surface. Same fire-and-forget pattern as the shell's
-            // default onClose below.
-            void Promise.resolve(app.requestTeardown?.()).catch(() => {
-              /* best-effort — host may deny teardown. */
-            })
-            return
-          }
-          // The notification handler has already applied the bootstrap.
-          return
-        }
-
         // Intent tool or fallback (unknown / transport entry): call
         // the matching intent tool via `fetchMcpBootstrap`. The
         // `pendingBootstrapFetchRef` gate suppresses the echo
         // notification while this in-flight fetch applies state.
+        //
+        // Data-tool iframe entries don't happen any more —
+        // `registerPayableTool` no longer advertises
+        // `_meta.ui.resourceUri` on merchant tools per the text-only
+        // paywall refactor. `classifyHostEntry` still runs (for
+        // telemetry / future use) but collapses to `intent` / `other`.
+        void classifyHostEntry(app)
         pendingBootstrapFetchRef.current += 1
         try {
           const result = await fetchMcpBootstrap(app)
@@ -523,6 +470,11 @@ export function McpApp({
   }
 
   if (!bootstrap) {
+    // Intent-tool / fallback entries show a loading card while the
+    // in-flight `fetchMcpBootstrap` call resolves. Data-tool iframe
+    // entries no longer exist (payable merchant tools don't advertise
+    // `_meta.ui.resourceUri`) so this is always legitimate user
+    // feedback for an in-flight tool call.
     return (
       <main className="solvapay-mcp-main">
         <div className={cx.card}>

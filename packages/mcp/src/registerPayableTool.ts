@@ -3,12 +3,19 @@
  * a paywall-protected MCP tool on the official `@modelcontextprotocol/sdk`
  * `McpServer`.
  *
- * Always advertises `_meta.ui.resourceUri` at the descriptor level so
- * descriptor-reading hosts (MCPJam's `ResultsPanel`, MCP App inspector)
- * learn the widget exists and open the MCP App iframe when a paywall or
- * nudge response lands. `buildPayableHandler` stamps the same metadata
- * on the result envelope as a secondary signal for hosts that key off
- * tool-call results (Claude Desktop, mcp-ui, ChatGPT Apps).
+ * Payable data tools do NOT advertise `_meta.ui.resourceUri` at the
+ * descriptor level by default. Per SEP-1865 / MCP Apps (2026-01-26),
+ * descriptor-advertising means the host MUST open the iframe on every
+ * call — so auto-stamping would flash an empty widget next to every
+ * successful `search_knowledge` / `predict_direction` result. Paywall
+ * / nudge / activation responses are text-only narrations instead,
+ * with the recovery intent tool (`upgrade` / `topup` / `activate_plan`)
+ * named in `content[0].text` and `checkoutUrl` inlined for
+ * terminal-first hosts.
+ *
+ * Merchants who deliberately want the widget opened on every call
+ * (e.g. the tool's UX genuinely is the iframe — rare) can opt in with
+ * `meta: { ui: { resourceUri } }`.
  *
  * Mirrors the positional-`name` shape of `registerAppTool` to keep the
  * convention consistent across the ecosystem.
@@ -53,11 +60,6 @@ export interface RegisterPayableToolOptions<
 > {
   /** The initialised SolvaPay instance used to build `payable({ product }).mcp(handler)`. */
   solvaPay: SolvaPay
-  /**
-   * UI resource URI the MCP host should open to render the paywall view.
-   * Typically `'ui://<app>/<resource>.html'`.
-   */
-  resourceUri: string
   /** Zod-compatible input schema (raw shape or discriminated schema). */
   schema?: InputSchema
   /** SolvaPay product ref to protect this tool against. */
@@ -78,8 +80,8 @@ export interface RegisterPayableToolOptions<
    *  - `ctx.product` — bootstrap product projection.
    *  - `ctx.respond(data, options?)` — return an envelope. `options`
    *    carries `text` (override `content[0].text`), `nudge` (inline
-   *    upsell strip), and the reserved `units` (V1.1 variable billing —
-   *    V1 silently ignores).
+   *    text-suffix upsell copy), and the reserved `units` (V1.1
+   *    variable billing — V1 silently ignores).
    *  - `ctx.gate(reason?)` — stops handler execution and emits a
    *    paywall response through the adapter's `formatGate` channel.
    *    Rare — the SDK normally fires the paywall automatically via
@@ -93,10 +95,10 @@ export interface RegisterPayableToolOptions<
    */
   handler: PayableHandler<InferHandlerArgs<InputSchema>, TData>
   /**
-   * Builds the full `BootstrapPayload` embedded on paywall results so
-   * the React shell renders the paywall view directly from the gate
-   * response. Wire from
-   * `buildSolvaPayDescriptors(...).buildBootstrapPayload`.
+   * Builds the full `BootstrapPayload`. Accepted for forward
+   * compatibility with intent-tool reuse, but the text-only payable
+   * branch does NOT invoke it — gate responses ride through as
+   * `structuredContent = gate` + `content[0].text = gate.message`.
    */
   buildBootstrap?: BuildBootstrapPayloadFn
   /**
@@ -111,12 +113,12 @@ export interface RegisterPayableToolOptions<
    * Additional `_meta` merged onto the tool **descriptor** (the tool
    * advertisement returned by `tools/list`).
    *
-   * `registerPayableTool` always injects `ui.resourceUri` at the
-   * descriptor level so hosts that read widget metadata from
-   * `tools/list` (MCPJam's `ResultsPanel` reads
-   * `toolMeta.ui.resourceUri` from the tool definition) can open the
-   * MCP App iframe when a paywall/nudge response lands. Merchant
-   * `meta.ui.resourceUri` overrides the default if supplied.
+   * `registerPayableTool` does NOT inject `ui.resourceUri` by default:
+   * per SEP-1865 descriptor-advertising means hosts MUST open the
+   * iframe on every call, so auto-stamping produced empty widgets on
+   * silent success. Merchants who want the widget opened for every
+   * call can opt in explicitly via
+   * `meta: { ui: { resourceUri: 'ui://...' } }`.
    */
   meta?: Record<string, unknown>
   /**
@@ -131,9 +133,7 @@ export interface RegisterPayableToolOptions<
    * Brand icons surfaced on `tools/list`. Hosts that read tool
    * metadata for the chrome strip (ChatGPT, Claude Desktop) swap the
    * default placeholder for this asset. Pass a square logomark for
-   * best results. Merchants typically share one `icons[]` across
-   * every tool — consider a single branding source at the server
-   * level.
+   * best results.
    */
   icons?: SolvaPayToolIcon[]
 }
@@ -151,7 +151,6 @@ export function registerPayableTool<
 ): RegisteredTool {
   const {
     solvaPay,
-    resourceUri,
     schema,
     product,
     title,
@@ -166,33 +165,29 @@ export function registerPayableTool<
 
   const protectedHandler = buildPayableHandler(
     solvaPay,
-    { product, resourceUri, buildBootstrap, getCustomerRef },
+    { product, buildBootstrap, getCustomerRef },
     handler as unknown as Parameters<typeof buildPayableHandler>[2],
   )
 
-  // Inject `_meta.ui.resourceUri` at the descriptor level so hosts
-  // that read widget metadata from `tools/list` (MCPJam's
-  // `ResultsPanel` reads `toolMeta.ui.resourceUri` from the tool
-  // definition, not from the tool-call result) can discover the UI
-  // resource and open the iframe when a paywall/nudge result lands.
-  // The per-call `_meta.ui` stamped by `buildPayableHandler` on
-  // paywall/nudge responses is kept as a secondary signal for hosts
-  // that also inspect call results (mcp-ui, etc.).
-  //
-  // Merchant-supplied `meta.ui.resourceUri` still wins — explicit
-  // overrides take priority over the default.
-  //
-  // Brand icons are merged into `_meta.ui.icons` so ext-apps-aware
-  // hosts pick up the merchant mark for the chrome strip.
+  // Descriptor-level `_meta`:
+  //  - No default `ui.resourceUri` — see the module-level comment on
+  //    the text-only paywall rationale.
+  //  - Merchant-supplied `meta.ui.resourceUri` (if any) passes through
+  //    untouched — merchants opting in are honoured verbatim.
+  //  - Brand icons are merged under `_meta.ui.icons` (the ext-apps
+  //    discovery slot) when supplied, regardless of whether
+  //    `ui.resourceUri` is present.
   const baseMeta = meta ?? {}
   const baseUi = (baseMeta.ui as Record<string, unknown> | undefined) ?? {}
   const hasIcons = icons !== undefined && icons.length > 0
   const mergedUi: Record<string, unknown> = {
-    resourceUri,
     ...baseUi,
     ...(hasIcons ? { icons } : {}),
   }
-  const toolMeta: Record<string, unknown> = { ...baseMeta, ui: mergedUi }
+  const hasUi = Object.keys(mergedUi).length > 0
+  const toolMeta: Record<string, unknown> = hasUi
+    ? { ...baseMeta, ui: mergedUi }
+    : { ...baseMeta }
 
   // Sensible default: paywalled data tools are most often read-only
   // queries (search, fetch, quote). State-mutating merchant tools
@@ -205,22 +200,45 @@ export function registerPayableTool<
     ...annotations,
   }
 
-  return registerAppTool(
-    server,
-    name,
-    // Note: `registerAppTool`'s config type is stricter than ours —
-    // casting so `title` / `description` stay optional and the input
-    // schema flows through correctly at the registration layer.
-    {
-      ...(title !== undefined ? { title } : {}),
-      ...(description !== undefined ? { description } : {}),
-      ...(schema !== undefined ? { inputSchema: schema } : {}),
-      _meta: toolMeta,
-      annotations: effectiveAnnotations,
-      ...(icons !== undefined && icons.length > 0 ? { icons } : {}),
+  // `registerAppTool` is the right surface when a tool advertises a UI
+  // resource — it normalises `_meta.ui.resourceUri` into the legacy
+  // `_meta["ui/resourceUri"]` slot for pre-2026-01-26 hosts. For
+  // text-only payable tools (the default since the SEP-1865 refactor)
+  // there's no UI resource to normalise, so we go through the base
+  // SDK's `registerTool` to avoid `registerAppTool` dereferencing an
+  // absent `_meta.ui`.
+  const hasUiResource =
+    hasUi && typeof (mergedUi as { resourceUri?: unknown }).resourceUri === 'string'
+
+  const toolConfig = {
+    ...(title !== undefined ? { title } : {}),
+    ...(description !== undefined ? { description } : {}),
+    ...(schema !== undefined ? { inputSchema: schema } : {}),
+    ...(Object.keys(toolMeta).length > 0 ? { _meta: toolMeta } : {}),
+    annotations: effectiveAnnotations,
+    ...(icons !== undefined && icons.length > 0 ? { icons } : {}),
+  }
+
+  const toolCallback = async (
+    args: Record<string, unknown>,
+    extra?: McpToolExtra,
+  ): Promise<CallToolResult> => (await protectedHandler(args, extra)) as CallToolResult
+
+  if (hasUiResource) {
+    return registerAppTool(
+      server,
+      name,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any,
-    async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
-      (await protectedHandler(args, extra)) as CallToolResult,
+      toolConfig as any,
+      toolCallback,
+    )
+  }
+
+  return server.registerTool(
+    name,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toolConfig as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toolCallback as any,
   )
 }

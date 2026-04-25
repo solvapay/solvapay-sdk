@@ -140,62 +140,7 @@ describe('fetchMcpBootstrap', () => {
   })
 })
 
-describe('parseBootstrapFromToolResult — data-tool paywall/nudge entries', () => {
-  it('parses a paywall response driven by a non-intent tool name (isError: true + embedded bootstrap)', () => {
-    const bootstrap = parseBootstrapFromToolResult(
-      {
-        isError: true,
-        structuredContent: {
-          view: 'paywall',
-          productRef: 'prd_7TGKZI27',
-          stripePublishableKey: 'pk_test_abc',
-          returnUrl: 'https://example.test/r',
-          merchant: { displayName: 'Acme' },
-          product: { reference: 'prd_7TGKZI27' },
-          plans: [{ reference: 'pln_ub', planType: 'usage-based' }],
-          customer: { ref: 'cus_7' },
-          paywall: {
-            kind: 'payment_required',
-            product: 'prd_7TGKZI27',
-            message: 'Purchase required. Remaining: 0',
-          },
-        },
-      },
-      // Data tool name that isn't in TOOL_FOR_VIEW — the parser should
-      // still honour `structuredContent.view`.
-      'search_knowledge',
-      // Caller passes `paywall` as the fallback, but the structured
-      // content's `view` wins regardless.
-      'paywall',
-    )
-    expect(bootstrap.view).toBe('paywall')
-    expect(bootstrap.productRef).toBe('prd_7TGKZI27')
-    expect(bootstrap.paywall).toMatchObject({
-      kind: 'payment_required',
-      message: 'Purchase required. Remaining: 0',
-    })
-  })
-
-  it('parses a nudge response driven by a non-intent tool name and preserves merchant data', () => {
-    const merchantData = { range: '7d', results: [{ date: '2026-01-01', units: 12 }] }
-    const bootstrap = parseBootstrapFromToolResult(
-      {
-        structuredContent: {
-          view: 'nudge',
-          productRef: 'prd_7TGKZI27',
-          returnUrl: 'https://example.test/r',
-          nudge: { kind: 'low-balance', message: 'top up' },
-          data: merchantData,
-        },
-      },
-      'query_sales_trends',
-      'nudge',
-    )
-    expect(bootstrap.view).toBe('nudge')
-    expect(bootstrap.nudge).toEqual({ kind: 'low-balance', message: 'top up' })
-    expect(bootstrap.data).toEqual(merchantData)
-  })
-
+describe('parseBootstrapFromToolResult', () => {
   it('falls back to the caller-provided view when structuredContent omits `view`', () => {
     const bootstrap = parseBootstrapFromToolResult(
       {
@@ -205,9 +150,9 @@ describe('parseBootstrapFromToolResult — data-tool paywall/nudge entries', () 
         },
       },
       'search_knowledge',
-      'paywall',
+      'checkout',
     )
-    expect(bootstrap.view).toBe('paywall')
+    expect(bootstrap.view).toBe('checkout')
   })
 
   it('throws when an errored response has no recognizable bootstrap shape', () => {
@@ -218,7 +163,7 @@ describe('parseBootstrapFromToolResult — data-tool paywall/nudge entries', () 
           content: [{ type: 'text', text: 'customer_ref missing' }],
         },
         'search_knowledge',
-        'paywall',
+        'checkout',
       ),
     ).toThrow('customer_ref missing')
   })
@@ -251,13 +196,13 @@ describe('classifyHostEntry', () => {
     })
   })
 
-  it('classifies merchant-registered tools as `data`', () => {
+  it('classifies merchant-registered tools as `other` (data-tool entries no longer open the widget)', () => {
     expect(classifyHostEntry(mkApp('search_knowledge'))).toEqual({
-      kind: 'data',
+      kind: 'other',
       toolName: 'search_knowledge',
     })
     expect(classifyHostEntry(mkApp('query_sales_trends'))).toEqual({
-      kind: 'data',
+      kind: 'other',
       toolName: 'query_sales_trends',
     })
   })
@@ -350,10 +295,9 @@ describe('waitForInitialToolResult', () => {
     await Promise.resolve()
     fire({
       structuredContent: {
-        view: 'paywall',
+        view: 'checkout',
         productRef: 'prd_7TGKZI27',
         returnUrl: 'https://example.test/r',
-        paywall: { kind: 'payment_required', product: 'prd_7TGKZI27' },
       },
     })
 
@@ -361,7 +305,7 @@ describe('waitForInitialToolResult', () => {
     expect(outcome.timedOut).toBe(false)
     if (outcome.timedOut) return
     expect(outcome.toolName).toBe('search_knowledge')
-    expect(outcome.bootstrap.view).toBe('paywall')
+    expect(outcome.bootstrap.view).toBe('checkout')
     expect(outcome.bootstrap.productRef).toBe('prd_7TGKZI27')
   })
 
@@ -378,14 +322,14 @@ describe('waitForInitialToolResult', () => {
     ;(app as unknown as { getHostContext: () => typeof hostContext }).getHostContext =
       () => hostContext
     fire({
-      structuredContent: { view: 'paywall', productRef: 'prd_x', returnUrl: 'https://e/r' },
+      structuredContent: { view: 'checkout', productRef: 'prd_x', returnUrl: 'https://e/r' },
     })
     expect(listeners['toolresult']?.length).toBe(1)
 
     hostContext.toolInfo.tool.name = 'search_knowledge'
     fire({
       structuredContent: {
-        view: 'paywall',
+        view: 'checkout',
         productRef: 'prd_7TGKZI27',
         returnUrl: 'https://example.test/r',
       },
@@ -414,7 +358,7 @@ describe('waitForInitialToolResult', () => {
 
     app.ontoolresult?.({
       structuredContent: {
-        view: 'paywall',
+        view: 'checkout',
         productRef: 'prd_7TGKZI27',
         returnUrl: 'https://example.test/r',
       },
@@ -432,7 +376,7 @@ describe('waitForInitialToolResult', () => {
     await Promise.resolve()
 
     fire({
-      structuredContent: { view: 'paywall', returnUrl: 'https://example.test/r' },
+      structuredContent: { view: 'checkout', returnUrl: 'https://example.test/r' },
     })
 
     await expect(promise).rejects.toThrow(/productRef/)

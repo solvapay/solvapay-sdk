@@ -130,45 +130,26 @@ export interface PaywallToolResult {
 /**
  * Which view a SolvaPay MCP server knows how to bootstrap.
  *
- * Four kinds map to an intent `open_*`-style tool: `checkout`,
- * `account`, `topup`, and `nudge` (opened implicitly when a successful
- * paywalled tool response carries `options.nudge`). `paywall` has no
- * dedicated tool — the gate response inlines the bootstrap payload on
- * its `structuredContent`, and the React shell takes over the surface
- * when it sees `view: 'paywall'`.
+ * Each kind maps to exactly one intent `open_*`-style tool: `checkout`,
+ * `account`, `topup`. There is no `paywall` or `nudge` view — those
+ * responses are plain text narrations per the text-only paywall
+ * refactor (merchant paywall / nudge tool results ship
+ * `content[0].text` + `structuredContent = gate` and never open the
+ * iframe).
  *
  * The legacy `'about'`, `'activate'`, and `'usage'` surfaces were
- * dropped with the three-mode refactor — About is now served by tool
- * descriptions + docs resources, Activate merged into checkout's
+ * dropped earlier — About is served by tool descriptions + docs
+ * resources, Activate merged into checkout's
  * `PlanActivationDispatcher`, and Usage folds inline into the account
  * view.
  */
-export type SolvaPayMcpViewKind =
-  | 'checkout'
-  | 'account'
-  | 'topup'
-  | 'paywall'
-  | 'nudge'
+export type SolvaPayMcpViewKind = 'checkout' | 'account' | 'topup'
 
 export const SOLVAPAY_MCP_VIEW_KINDS = [
   'checkout',
   'account',
   'topup',
-  'paywall',
-  'nudge',
 ] as const satisfies readonly SolvaPayMcpViewKind[]
-
-/**
- * Minimal `kind`-tagged paywall content passed through `BootstrapPayload`
- * when the host opens the paywall view. The full
- * `PaywallStructuredContent` type lives in `@solvapay/server` (it's also
- * consumed by the non-MCP react paywall primitives); this shape is a
- * structural superset that adapters can forward without importing it.
- */
-export interface SolvaPayMcpPaywallContent {
-  kind: 'payment_required' | 'activation_required'
-  [key: string]: unknown
-}
 
 /**
  * Payload returned by every `open_*` bootstrap tool and consumed by the
@@ -181,25 +162,18 @@ export interface SolvaPayMcpPaywallContent {
  * `customer` is `null` when the call is unauthenticated; each nested
  * field is `null` when the corresponding sub-read errored or doesn't
  * apply (e.g. `paymentMethod: null` when no card is on file).
+ *
+ * The legacy `paywall` / `nudge` / `data` fields were removed as part
+ * of the text-only paywall refactor: merchant paywall / nudge
+ * responses are plain narrations, not widget payloads, so the
+ * bootstrap no longer carries a gate or a nudge spec for the shell to
+ * render.
  */
 export interface BootstrapPayload {
   view: SolvaPayMcpViewKind
   productRef: string
   stripePublishableKey: string | null
   returnUrl: string
-  /** Only set for the `open_paywall` branch. */
-  paywall?: SolvaPayMcpPaywallContent
-  /**
-   * Upsell strip spec attached when `view: 'nudge'`. Rendered above
-   * the merchant tool result by `McpNudgeView`.
-   */
-  nudge?: NudgeSpec
-  /**
-   * Merchant tool result data embedded alongside a nudge so the shell
-   * can surface it without a follow-up tool call. Only set when
-   * `view: 'nudge'`.
-   */
-  data?: unknown
   merchant: BootstrapMerchant
   product: BootstrapProduct
   plans: BootstrapPlan[]

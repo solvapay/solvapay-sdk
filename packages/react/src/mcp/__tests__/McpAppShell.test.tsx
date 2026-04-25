@@ -201,31 +201,6 @@ describe('<McpAppShell>', () => {
     expect(screen.getByTestId('account-stub')).toBeTruthy()
   })
 
-  it('paywall takeover renders `<McpPaywallView>` regardless of the customer field', () => {
-    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
-    const ctx = buildCtx(config, [], 0)
-    const Paywall = vi.fn(() => <div data-testid="paywall-stub" />)
-    renderShell(
-      {
-        view: 'paywall',
-        // Authenticated customer would normally enable the sidebar,
-        // but the paywall takeover should suppress chrome regardless.
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
-        paywall: {
-          kind: 'payment_required',
-          message: 'Out of credits',
-          product: { reference: 'prd_x', name: 'X', description: '', displayName: 'X' },
-          checkoutUrl: 'https://example.test/pay',
-          plans: [],
-        } as never,
-      },
-      ctx,
-      { views: { paywall: Paywall } },
-    )
-    expect(screen.getByTestId('paywall-stub')).toBeTruthy()
-    expect(screen.queryByLabelText('Your account context')).toBeNull()
-  })
-
   it('defaults to the account surface when bootstrap.view is undefined', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
@@ -296,116 +271,6 @@ describe('<McpAppShell>', () => {
     expect(initials?.textContent).toBe('AC')
   })
 
-  it('shows the in-iframe header on the paywall so branding + product name stay visible', () => {
-    const config = seedMerchant({
-      displayName: 'Acme',
-      legalName: 'Acme Inc.',
-      logoUrl: 'https://acme.test/logo.png',
-    })
-    const ctx = buildCtx(config, [], 0)
-    const { container } = renderShell(
-      {
-        view: 'paywall',
-        paywall: {
-          kind: 'payment_required',
-          message: 'Out of credits',
-          product: { reference: 'prd_x', name: 'X', description: '', displayName: 'X' },
-          checkoutUrl: 'https://example.test/pay',
-          plans: [],
-        } as never,
-      },
-      ctx,
-    )
-    const header = container.querySelector('.solvapay-mcp-shell-header')
-    expect(header).not.toBeNull()
-    expect(
-      container.querySelector('.solvapay-mcp-shell-brand-name')?.textContent,
-    ).toBe('Acme')
-  })
-
-  it('suppresses the in-iframe header on nudge surfaces (minimal strip)', () => {
-    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
-    const ctx = buildCtx(config, [], 0)
-    const { container } = renderShell(
-      {
-        view: 'nudge',
-        nudge: {
-          kind: 'low-balance',
-          message: 'Low balance',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      },
-      ctx,
-    )
-    expect(container.querySelector('.solvapay-mcp-shell-header')).toBeNull()
-  })
-
-  it('paywall view takes over — no sidebar, no footer', () => {
-    const config = seedMerchant({
-      displayName: 'Acme',
-      legalName: 'Acme Inc.',
-      termsUrl: 'https://acme.com/terms',
-      privacyUrl: 'https://acme.com/privacy',
-    })
-    const ctx = buildCtx(config, [], 0)
-    renderShell(
-      {
-        view: 'paywall',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
-        paywall: {
-          kind: 'payment_required',
-          message: 'Out of credits',
-          product: { reference: 'prd_x', name: 'X', description: '', displayName: 'X' },
-          checkoutUrl: 'https://example.test/pay',
-          plans: [],
-        } as never,
-      },
-      ctx,
-    )
-    expect(screen.queryByLabelText('Your account context')).toBeNull()
-    expect(screen.queryByText(/Provided by SolvaPay/)).toBeNull()
-  })
-
-  it('paywall upgrade CTA flips the body to the checkout surface', () => {
-    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
-    const ctx = buildCtx(config, [], 0)
-    renderShell(
-      {
-        view: 'paywall',
-        plans: [
-          {
-            reference: 'pln_u',
-            planType: 'recurring',
-            name: 'Unlimited',
-            price: 10000,
-            currency: 'USD',
-            billingCycle: 'monthly',
-          } as never,
-        ],
-        paywall: {
-          kind: 'payment_required',
-          message: 'Out of credits',
-          product: { reference: 'prd_x', name: 'X', description: '', displayName: 'X' },
-          checkoutUrl: 'https://example.test/pay',
-          plans: [],
-        } as never,
-      },
-      ctx,
-    )
-
-    const upgradeButton = screen.getByRole('button', { name: /Upgrade to Unlimited/ })
-    expect(upgradeButton).toBeTruthy()
-
-    act(() => {
-      fireEvent.click(upgradeButton)
-    })
-
-    // After the CTA, the shell body switches to the checkout picker —
-    // "Pick your plan" is the heading that `<McpCheckoutView>` renders
-    // when no active paid purchase exists.
-    expect(screen.getByRole('heading', { name: /Pick your plan|Renew your plan|Upgrade your plan/ })).toBeTruthy()
-  })
-
   it('renders the Provided by SolvaPay footer when terms/privacy exist', () => {
     const config = seedMerchant({
       displayName: 'Acme',
@@ -451,48 +316,7 @@ describe('<McpAppShell>', () => {
     expect(container.querySelector('[data-tour-step]')).toBeNull()
   })
 
-  it('passes `fromPaywall` to the checkout view after the paywall CTA fires', () => {
-    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
-    const ctx = buildCtx(config, [], 0)
-    const Checkout = vi.fn(
-      (props: { fromPaywall?: boolean }) => (
-        <div data-testid="checkout-stub" data-from-paywall={String(props.fromPaywall)} />
-      ),
-    )
-    renderShell(
-      {
-        view: 'paywall',
-        plans: [
-          {
-            reference: 'pln_u',
-            planType: 'recurring',
-            name: 'Unlimited',
-            price: 10000,
-            currency: 'USD',
-            billingCycle: 'monthly',
-          } as never,
-        ],
-        paywall: {
-          kind: 'payment_required',
-          message: 'Out of credits',
-          product: { reference: 'prd_x', name: 'X', description: '', displayName: 'X' },
-          checkoutUrl: 'https://example.test/pay',
-          plans: [],
-        } as never,
-      },
-      ctx,
-      { views: { checkout: Checkout } },
-    )
-
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Upgrade to Unlimited/ }))
-    })
-
-    const stub = screen.getByTestId('checkout-stub')
-    expect(stub.getAttribute('data-from-paywall')).toBe('true')
-  })
-
-  it('change-plan from the account view leaves `fromPaywall` false', () => {
+  it('change-plan from the account view routes to the checkout surface', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
     const Account = vi.fn((props: { onChangePlan?: () => void }) => (
@@ -502,9 +326,7 @@ describe('<McpAppShell>', () => {
         </button>
       </div>
     ))
-    const Checkout = vi.fn((props: { fromPaywall?: boolean }) => (
-      <div data-testid="checkout-stub" data-from-paywall={String(props.fromPaywall)} />
-    ))
+    const Checkout = vi.fn(() => <div data-testid="checkout-stub" />)
     renderShell(
       {
         view: 'account',
@@ -516,8 +338,7 @@ describe('<McpAppShell>', () => {
     act(() => {
       fireEvent.click(screen.getByTestId('change-plan'))
     })
-    const stub = screen.getByTestId('checkout-stub')
-    expect(stub.getAttribute('data-from-paywall')).toBe('false')
+    expect(screen.getByTestId('checkout-stub')).toBeTruthy()
   })
 
   it('forwards `onClose` to the checkout view', () => {

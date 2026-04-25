@@ -218,7 +218,7 @@ retry — without hand-rolling a gated tool.
 | --- | --- |
 | `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. |
 | `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. |
-| `query_sales_trends` | Returns deterministic sales rows for a date range and attaches a **`low-balance` nudge** to the success response when the customer is running low on credits. Exercises the nudge branch of `ctx.respond()`. |
+| `query_sales_trends` | Returns deterministic sales rows for a date range. When the customer is low on credits, appends a **plain-text `low-balance` nudge** to `content[0].text` that names the `topup` intent tool — the data still rides on `structuredContent`. Exercises the text-only nudge suffix on `ctx.respond(options.nudge)`. |
 | `predict_price_chart` | Oracle demo — returns history + forecast numeric arrays with an 80% confidence band for a ticker. Renders as a **host-drawn line-chart artifact** (no widget). |
 | `predict_direction` | Oracle demo — returns an up/down verdict + confidence score `∈ [0, 1]` for a ticker over N days. Renders as a **host-drawn verdict-card artifact** (no widget). Seeded from the same model as `predict_price_chart` so the two agree for a given symbol. |
 
@@ -228,40 +228,34 @@ slash-command prompts (`/search_knowledge`, `/get_market_quote`,
 `/query_sales_trends`, `/predict_price_chart`, `/predict_direction`)
 disappear and your copy becomes a clean template.
 
-### Two rendering strategies in one example
+### Single rendering strategy — host renders the data
 
-The five demo tools showcase both paths SolvaPay hosts in one place:
+The five demo tools all share one rendering path: the merchant data
+rides on `structuredContent` and capable hosts (Claude artifacts,
+ChatGPT Apps, MCP Inspector) draw the native affordance for it — a
+chat bubble, a line-chart artifact, a verdict card, and so on. The
+SolvaPay widget iframe is reserved for the three **intent tools**
+(`upgrade`, `manage_account`, `topup`) where the user deliberately
+asked for a checkout / account / topup UX.
 
-- **Numeric `structuredContent` artifacts (`predict_price_chart`,
-  `predict_direction`)** — the handler calls `ctx.respond(payload)`
-  with **no** `nudge`, so `structuredContent = payload` and capable
-  MCP hosts (Claude artifacts, some MCPJam renderers) draw a line
-  chart / verdict card artifact straight off the numeric fields. Try
-  it with `/predict_price_chart NVDA 10` or `/predict_direction NVDA
-  10`. The descriptor still advertises `_meta.ui.resourceUri` at the
-  `tools/list` layer via `registerPayable`
-  ([`registerPayableTool.ts`](../../packages/mcp/src/registerPayableTool.ts))
-  so paywall responses open the SolvaPay widget on descriptor-reading
-  hosts when the customer runs out; `buildPayableHandler` stamps the
-  same metadata at the **result** level on gate responses for hosts
-  that key off tool-call results
-  ([`payable-handler.ts`](../../packages/mcp-core/src/payable-handler.ts)).
-  Use this path when the host can render the data better than you
-  can.
-- **Widget-embedded data (`query_sales_trends` + the
-  [`mcp_demo_market_chart`](../../.cursor/plans/mcp_demo_market_chart_962a38f2.plan.md)
-  pattern)** — the handler attaches a `nudge` envelope, which makes
-  `buildPayableHandler` rewrite `structuredContent` into a full
-  `BootstrapPayload` with `view: 'nudge'` and stamp `_meta.ui`. The
-  host opens the SolvaPay iframe, which renders the payload (with the
-  optional `DemoNudgeView` override) beside the `McpUpsellStrip`. Use
-  this path when you want branded, interactive UI next to the data.
+Paywall responses on exhaustion are **plain text narrations**:
+`content[0].text` carries a message that names the recovery intent
+tool (`upgrade` / `topup` / `activate_plan`) and inlines
+`gate.checkoutUrl` for terminal-first hosts. The LLM reads that copy
+and calls the recovery tool, which mounts the widget. `isError` stays
+`false` across every paywall response so hosts don't short-circuit on
+the error path.
 
-Both branches share the same `registerPayable(...)` wiring, gate,
-credit semantics, and `DEMO_TOOLS` env switch — the only difference is
-whether the handler attaches a `nudge` envelope.
+This is a deliberate departure from the earlier "data-tool iframe
+entry" design. Descriptor-advertising `_meta.ui.resourceUri` means
+the host MUST open the iframe on every call per SEP-1865 /
+MCP Apps (2026-01-26), which meant silent successes flashed an empty
+widget next to every `predict_direction` / `search_knowledge` result.
+Merchant payable tools no longer advertise it, so the widget only
+opens when the user deliberately invokes one of the three intent
+tools.
 
-### `ctx.respond()` and upsell nudges
+### `ctx.respond()` and text-only nudges
 
 `query_sales_trends` shows the handler surface end-to-end:
 
@@ -273,7 +267,10 @@ handler: async ({ range }, ctx) => {
       { range, results },
       {
         units: results.length, // reserved for V1.1 — V1 ignores this
-        nudge: { kind: 'low-balance', message: 'Running low on credits' },
+        nudge: {
+          kind: 'low-balance',
+          message: 'Running low on credits — call the `topup` tool to add more.',
+        },
       },
     )
   }
@@ -285,9 +282,11 @@ handler: async ({ range }, ctx) => {
   values are ≤10s stale after mutations. Call `ctx.customer.fresh()`
   for a round-trip when freshness matters.
 - `ctx.respond(data, options?)` — returns a branded envelope. V1
-  supports `text` (content[0].text override) and `nudge` (inline
-  upsell strip). Reserved: `units` (V1.1 variable-unit billing — V1
-  silently ignores the field for forward-compatible handler code).
+  supports `text` (content[0].text override) and `nudge` (the nudge
+  message is appended to `content[0].text` as a plain-text suffix —
+  no widget surface, no `structuredContent` switch). Reserved:
+  `units` (V1.1 variable-unit billing — V1 silently ignores the
+  field for forward-compatible handler code).
 - `ctx.gate(reason?)` — stops handler execution and routes a paywall
   response through the adapter's `formatGate` channel when
   merchant-side rules need to force the gate. Rare — the SDK fires
@@ -296,45 +295,32 @@ handler: async ({ range }, ctx) => {
   `ctx.progress(...)` / `ctx.progressRaw(...)` (V1 no-op), `ctx.signal`
   (V1 unaborted).
 
-### Data-tool iframe entry — how paywall / nudge reach the widget
+### How paywall / nudge reach the user
 
-When a paywalled merchant tool (e.g. `search_knowledge`) returns a gate
-or nudge response, `buildPayableHandler` stamps `_meta.ui.resourceUri`
-and rewrites `structuredContent` with `view: 'paywall'` (gate) or
-`view: 'nudge'` (strip) plus the full `BootstrapPayload`. The MCP host
-(MCPJam, ChatGPT Apps, Claude Desktop) opens the iframe *from that
-tool result* and forwards the payload to the mounted widget via
-`ui/notifications/tool-result`. `<McpApp>` does **not** re-call the
-merchant tool for bootstrap — doing so would consume another unit of
-usage, and the `upgrade` intent fallback would return a checkout
-payload that clobbers the gate / strip the user just saw.
+Payable merchant tools no longer advertise `_meta.ui.resourceUri` at
+the descriptor level, so the host never opens the iframe for a
+paywall or nudge response. Instead:
 
-Concretely, the widget's mount branches on `classifyHostEntry(app)`:
+- **Paywall / activation gate** — `content[0].text` carries a plain
+  narration naming the recovery intent tool (`upgrade` / `topup` /
+  `activate_plan`) and inlining `gate.checkoutUrl`. The host renders
+  the text; the LLM sees the same copy and calls the recovery tool,
+  which mounts the widget for the deliberate checkout UX.
+- **Low-balance nudge** — merchant data rides on `structuredContent`
+  unchanged, and the nudge message is appended to `content[0].text`
+  as a plain-text suffix. The user sees the data and a gentle
+  heads-up pointing at the `topup` tool; nothing is blocked.
+
+This is why the widget's `<McpApp>` mount now only handles two host
+entry cases:
 
 - **intent entry** (`toolInfo.tool.name ∈ { upgrade, manage_account,
   topup }`): call the matching intent tool via `fetchMcpBootstrap`.
-  Same behaviour as before.
-- **data entry** (merchant-registered tool, e.g. `search_knowledge`):
-  wait up to 2s for the originating `ui/notifications/tool-result` and
-  consume its `structuredContent` directly via
-  `parseBootstrapFromToolResult`. No `callServerTool` round-trip. If
-  the host fails to deliver the initial notification within the
-  timeout, `<McpApp>` surfaces an `onInitError` naming the fix ("host
-  must forward the originating tool result to the mounted iframe").
-- **transport entry** (payments / sessions / renewal / activation):
-  treated as unknown — rare but safe fallback to `upgrade`.
+- **other** (transport or no tool info): fall back to `upgrade` for
+  a fresh snapshot.
 
-`McpAppShell` skips its mount-refresh when `bootstrap.view` is
-`paywall` or `nudge` for the same reason: the gate / strip came from
-an authoritative tool result and should not race a fresh `upgrade`
-fetch. The refresh fires again the next time the customer commits an
-action (plan select, topup confirmation, etc.).
-
-Integrators who own their own widget mount on top of
-`createMcpAppAdapter` can replicate this flow with
-`waitForInitialToolResult(app, { timeoutMs })` — a one-shot helper
-exported from `@solvapay/react/mcp` that subscribes, parses, and
-unsubscribes.
+There is no third "data entry" branch any more — because there's no
+widget to mount on a data-tool call.
 
 ### End-to-end recipe
 
@@ -349,14 +335,17 @@ unsubscribes.
    point `basic-host` at `http://localhost:3006/mcp`.
 3. Customer is on Free by default. Call `/search_knowledge query: "hi"`
    N times; each call drains the free quota.
-4. When the Free quota exhausts, the next call returns a **paywall gate**.
-   The host opens the UI resource on `view: 'paywall'` — `McpPaywallView`
-   renders the reason + an `Upgrade to <plan>` CTA.
-5. Click the upgrade CTA. `McpAppShell` flips to `<McpCheckoutView>`
-   with `cameFromPaywall=true`. The amber "Upgrade to continue" banner
-   shows; plan cards render **paid plans only** (no Free card), with
-   PAYG featured as `recommended` and the CTA label tracking the
-   selected plan.
+4. When the Free quota exhausts, the next call returns a **paywall
+   gate** as plain text. `content[0].text` carries a narration like
+   _"You don't have an active plan for this tool. Call the `upgrade`
+   tool to pick a plan, or open https://.../checkout in a browser."_
+   The LLM reads it, narrates for the user, and either (a) the user
+   clicks the inlined URL and completes checkout in the browser, or
+   (b) the LLM calls the `upgrade` intent tool which opens the
+   SolvaPay widget on `<McpCheckoutView>`.
+5. Inside the checkout view, plan cards render **paid plans only**
+   (no Free card), with PAYG featured as `recommended` and the CTA
+   label tracking the selected plan.
 6. **PAYG branch:** pick Pay as you go → `Continue with Pay as you go`
    → amount picker (presets 500 / 2 000 / 10 000 credits, `popular` on
    2 000) → Continue → SDK fires `activate_plan` then opens the
@@ -370,38 +359,39 @@ unsubscribes.
    (subscription flag) + `process_payment` → success surface with
    next-renewal row + `Manage from /manage_account` pointer →
    `Back to chat`.
-8. `Stay on Free` text link at the bottom of the plan step dismisses
-   the iframe without activating anything — the triggering call
-   stays failed, future within-quota calls keep working.
 
-### Gate → iframe → topup → retry sequence
+### Gate → upgrade intent → topup → retry sequence
 
 ```mermaid
 sequenceDiagram
   participant U as User
+  participant LLM as LLM
   participant H as Host (basic-host)
   participant S as mcp-checkout-app
   participant SP as SolvaPay backend
 
-  U->>H: /search_knowledge query:"hi"
+  U->>LLM: /search_knowledge query:"hi"
+  LLM->>H: tools/call search_knowledge
   H->>S: tools/call search_knowledge
   S->>SP: payable.checkLimits
   SP-->>S: withinLimits=false
-  S-->>H: paywall bootstrap (structuredContent + _meta.ui)
-  H-->>U: iframe opens on view=paywall
+  S-->>H: text-only gate: content[0].text narrates "Call `upgrade`..."
+  H-->>LLM: narration + structuredContent = gate
+  LLM-->>U: reads the gate narration aloud
 
-  U->>H: click "Top up $10"
-  H->>S: create_topup_payment_intent
-  S-->>H: clientSecret
-  Note over U,S: Stripe Elements inside iframe
-  H->>S: process_payment
-  S->>SP: credit balance
-  S-->>H: refreshBootstrap (re-seed caches)
+  U->>LLM: "upgrade me"
+  LLM->>H: tools/call upgrade
+  H->>S: tools/call upgrade
+  S-->>H: BootstrapPayload (view=checkout)
+  H-->>U: iframe opens on McpCheckoutView
 
-  U->>H: /search_knowledge query:"hi" (retry)
+  U->>H: picks plan / pays
+  H->>S: create_payment_intent + process_payment
+  S->>SP: credit balance / activate plan
+
+  U->>LLM: /search_knowledge query:"hi" (retry)
+  LLM->>H: tools/call search_knowledge
   H->>S: tools/call search_knowledge
-  S->>SP: payable.checkLimits
-  SP-->>S: withinLimits=true
   S-->>H: { results: [...] }
 ```
 

@@ -16,7 +16,6 @@ import {
   isErrorResult,
   listPlansCore,
   type ErrorResult,
-  type PaywallStructuredContent,
   type SolvaPay,
 } from '@solvapay/server'
 import {
@@ -37,10 +36,15 @@ export interface CreateBuildBootstrapPayloadOptions {
   getCustomerRef?: (extra?: McpToolExtra) => string | null
 }
 
+/**
+ * `extras` is kept on the signature for forward compatibility with
+ * intent-tool reuse even though the text-only paywall refactor
+ * removed the only consumer (the removed widget-paywall branch).
+ */
 export type BuildBootstrapPayloadFn = (
   view: SolvaPayMcpViewKind,
   extra: McpToolExtra | undefined,
-  extras?: { paywall?: PaywallStructuredContent },
+  extras?: Record<string, never>,
 ) => Promise<BootstrapPayload>
 
 const okOrNull = <T>(result: T | ErrorResult): T | null =>
@@ -82,7 +86,7 @@ export function createBuildBootstrapPayload(
   const productQueryRequest = () =>
     buildSolvaPayRequest(undefined, { query: { productRef }, getCustomerRef: () => null })
 
-  return async (view, extra, extras = {}) => {
+  return async (view, extra, _extras = {}) => {
     const customerRef = getCustomerRef(extra)
 
     const wrapError = <T>(promise: Promise<T | ErrorResult>): Promise<T | ErrorResult> =>
@@ -143,7 +147,7 @@ export function createBuildBootstrapPayload(
         }
       : null
 
-    const payload: BootstrapPayload = {
+    return {
       view,
       productRef,
       stripePublishableKey,
@@ -153,7 +157,5 @@ export function createBuildBootstrapPayload(
       plans,
       customer,
     }
-    if (extras.paywall) payload.paywall = extras.paywall
-    return payload
   }
 }

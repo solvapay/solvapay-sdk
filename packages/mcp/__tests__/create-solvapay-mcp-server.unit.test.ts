@@ -234,7 +234,7 @@ describe('createSolvaPayMcpServer', () => {
   })
 
   describe('tool _meta.ui descriptor', () => {
-    it('auto-stamps _meta.ui.resourceUri on merchant payable tools', () => {
+    it('does NOT advertise _meta.ui.resourceUri on merchant payable tools (text-only paywall; widget reserved for intent tools)', () => {
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable }) => {
           registerPayable('search_knowledge', {
@@ -248,13 +248,15 @@ describe('createSolvaPayMcpServer', () => {
       const registered = server._registeredTools ?? {}
       const payable = registered['search_knowledge']
       const ui = (payable?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
-      // Merchant payable tools carry a descriptor-level UI link so
-      // hosts that read widget metadata from `tools/list` (MCPJam's
-      // `ResultsPanel` reads `toolMeta.ui.resourceUri` from the tool
-      // definition, not from the tool-call result) open the MCP App
-      // iframe when a paywall/nudge response lands.
-      expect(ui?.resourceUri).toBe('ui://test/view.html')
-      // SolvaPay intent tools also carry their descriptor-level UI link.
+      // Merchant payable tools intentionally carry no
+      // `_meta.ui.resourceUri`: the descriptor-advertising contract
+      // per SEP-1865 says hosts MUST open the iframe on every call,
+      // so stamping it meant data tools triggered an empty widget on
+      // every successful call. Paywall / nudge / activation
+      // responses are text-only narrations now.
+      expect(ui?.resourceUri).toBeUndefined()
+      // SolvaPay intent tools — where opening the iframe IS the UX —
+      // still advertise their UI resource.
       const upgrade = registered[MCP_TOOL_NAMES.upgrade]
       const upgradeUi = (
         upgrade?._meta as { ui?: { resourceUri?: string } } | undefined
@@ -346,7 +348,11 @@ describe('createSolvaPayMcpServer', () => {
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
     })
 
-    it('respects an explicit opt-in descriptor-level UI link on payable tools', () => {
+    it('respects an explicit opt-in descriptor-level UI link on payable tools (merchant override)', () => {
+      // Text-only paywall is the default, but merchants who
+      // deliberately want the iframe opened on every call can still
+      // opt in by passing `meta: { ui: { resourceUri } }`. The
+      // descriptor merge leaves explicit values untouched.
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable, resourceUri }) => {
           registerPayable('always_open', {

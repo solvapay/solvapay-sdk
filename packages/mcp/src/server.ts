@@ -54,10 +54,7 @@ export interface AdditionalToolsContext {
     TData = unknown,
   >(
     name: string,
-    options: Omit<
-      RegisterPayableToolOptions<InputSchema, TData>,
-      'solvaPay' | 'resourceUri' | 'product'
-    > & {
+    options: Omit<RegisterPayableToolOptions<InputSchema, TData>, 'solvaPay' | 'product'> & {
       product?: string
     },
   ) => void
@@ -246,10 +243,11 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
       // Spread `opts` *first* so an explicit `undefined` on
       // `opts.product` / `opts.buildBootstrap` (shape allows it via
-      // `?:`) can't overwrite the defaults set below.
+      // `?:`) can't overwrite the defaults set below. `resourceUri` is
+      // no longer forwarded: merchant payable tools use text-only
+      // paywall / nudge responses per the SEP-1865 refactor.
       registerPayableTool(server, name, {
         solvaPay,
-        resourceUri,
         ...opts,
         product: opts.product ?? productRef,
         buildBootstrap: opts.buildBootstrap ?? buildBootstrapPayload,
