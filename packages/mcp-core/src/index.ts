@@ -111,7 +111,7 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
+export { buildSolvaPayDescriptors, buildSolvaPayPrompts, deriveIcons } from './descriptors'
 export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,

@@ -63,12 +63,21 @@ import type {
 
 /**
  * Project `SolvaPayMerchantBranding` into an `icons[]` array suitable
- * for the `SolvaPayToolDescriptor` / MCP host chrome. Prefers the
- * square `iconUrl` (expected shape for avatar slots); falls back to
- * the landscape `logoUrl` with a note that hosts may need to
- * letterbox. Returns `undefined` when neither asset is set.
+ * for MCP host chrome — either the per-tool `SolvaPayToolDescriptor`
+ * or the server-level `Implementation.icons[]` returned at
+ * `initialize`. Prefers the square `iconUrl` (expected shape for
+ * avatar slots); falls back to the landscape `logoUrl` with a note
+ * that hosts may need to letterbox. Returns `undefined` when neither
+ * asset is set.
+ *
+ * Exported so the MCP adapter (`@solvapay/mcp`) can reuse the same
+ * branding → icon projection when building the server-level
+ * `Implementation` payload, keeping per-tool and server-wide icons in
+ * lock-step.
  */
-function deriveIcons(branding: SolvaPayMerchantBranding | undefined): SolvaPayToolIcon[] | undefined {
+export function deriveIcons(
+  branding: SolvaPayMerchantBranding | undefined,
+): SolvaPayToolIcon[] | undefined {
   if (!branding) return undefined
   const assets: SolvaPayToolIcon[] = []
   if (branding.iconUrl) {

@@ -22,6 +22,7 @@ import type {
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import {
   buildSolvaPayDescriptors,
+  deriveIcons,
   type BuildSolvaPayDescriptorsOptions,
   type SolvaPayDocsResourceDescriptor,
   type SolvaPayPromptDescriptor,
@@ -181,16 +182,25 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
   const { tools, resource, prompts, docsResources, buildBootstrapPayload } =
     buildSolvaPayDescriptors(descriptorOptions)
 
-  // Prefer the merchant's brand name for `Implementation.name` — MCP
-  // hosts render it in the chrome strip next to the tool name, so
-  // surfacing the merchant there (instead of a generic SolvaPay
-  // string) is what removes the "double-branding" inside the iframe.
-  // Explicit `serverName` still wins when the integrator needs a
-  // stable protocol identifier distinct from the brand.
+  // Prefer the merchant's brand name + icon for the MCP
+  // `Implementation` payload returned at `initialize` — hosts render
+  // both in the chrome strip next to the tool name (Claude Web /
+  // Desktop swap the default globe for `serverInfo.icons[0]`), so
+  // surfacing the merchant there is what gives the widget its "native
+  // merchant app" look. Explicit `serverName` still wins when the
+  // integrator needs a stable protocol identifier distinct from the
+  // brand. `deriveIcons` returns `undefined` when branding has neither
+  // `iconUrl` nor `logoUrl`; we omit the field in that case so the
+  // serialised handshake matches the zero-branding baseline.
   const effectiveServerName =
     serverName ?? descriptorOptions.branding?.brandName ?? 'solvapay-mcp-server'
+  const serverIcons = deriveIcons(descriptorOptions.branding)
 
-  const server = new McpServer({ name: effectiveServerName, version: serverVersion })
+  const server = new McpServer({
+    name: effectiveServerName,
+    version: serverVersion,
+    ...(serverIcons ? { icons: serverIcons } : {}),
+  })
 
   for (const tool of tools) {
     registerDescriptor(server, tool)
@@ -217,7 +227,15 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
       _meta: {
         ui: {
           csp: resource.csp,
-          prefersBorder: true,
+          // `false` asks the host to skip painting its own outer card /
+          // border around the iframe. The widget paints its own frame
+          // via `.solvapay-mcp-card`, and `<AppHeader>` renders the
+          // merchant mark at the top; a host-painted card on top of
+          // that produced a nested-container look (visible on MCP Jam
+          // with the earlier `true` default). Hosts that honour the
+          // preference (per the MCP Apps spec) now render us flush
+          // inside their conversation surface.
+          prefersBorder: false,
         },
       },
     },
@@ -230,7 +248,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
           _meta: {
             ui: {
               csp: resource.csp,
-              prefersBorder: true,
+              prefersBorder: false,
             },
           },
         },

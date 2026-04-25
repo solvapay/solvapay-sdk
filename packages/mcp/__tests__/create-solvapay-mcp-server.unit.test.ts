@@ -326,6 +326,57 @@ describe('createSolvaPayMcpServer', () => {
       expect(info?.name).toBe('acme-protocol-id')
     })
 
+    it('stamps branding.iconUrl into Implementation.icons on initialize', () => {
+      // MCP hosts (Claude Web / Desktop) paint the chrome strip from
+      // `serverInfo.icons[0]` returned at `initialize` — stamping the
+      // merchant icon there is what swaps the default globe for the
+      // merchant mark. `sizes: ['any', '512x512']` mirrors the
+      // `deriveIcons` projection for square `iconUrl` input.
+      const { server } = buildTestServer({
+        branding: {
+          brandName: 'Acme',
+          iconUrl: 'https://cdn.acme.test/icon.png',
+          logoUrl: 'https://cdn.acme.test/logo.png',
+        },
+      })
+      // @ts-expect-error — private state used for coverage only
+      const info = server.server?._serverInfo ?? server.server?.['_serverInfo']
+      expect(info?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
+      expect(info?.icons?.[0]?.sizes).toEqual(['any', '512x512'])
+    })
+
+    it('falls back to branding.logoUrl for Implementation.icons when iconUrl is missing', () => {
+      const { server } = buildTestServer({
+        branding: {
+          brandName: 'Acme',
+          logoUrl: 'https://cdn.acme.test/logo.png',
+        },
+      })
+      // @ts-expect-error — private state used for coverage only
+      const info = server.server?._serverInfo ?? server.server?.['_serverInfo']
+      expect(info?.icons?.[0]?.src).toBe('https://cdn.acme.test/logo.png')
+    })
+
+    it('omits Implementation.icons when branding has no icon assets', () => {
+      // Without either `iconUrl` or `logoUrl`, `deriveIcons` returns
+      // `undefined` and we skip the field entirely so the handshake
+      // matches the zero-branding baseline — no empty `icons: []` that
+      // could fail stricter host validators.
+      const { server } = buildTestServer({
+        branding: { brandName: 'Acme' },
+      })
+      // @ts-expect-error — private state used for coverage only
+      const info = server.server?._serverInfo ?? server.server?.['_serverInfo']
+      expect(info?.icons).toBeUndefined()
+    })
+
+    it('omits Implementation.icons when no branding is passed at all', () => {
+      const { server } = buildTestServer()
+      // @ts-expect-error — private state used for coverage only
+      const info = server.server?._serverInfo ?? server.server?.['_serverInfo']
+      expect(info?.icons).toBeUndefined()
+    })
+
     it('forwards icons into _meta.ui.icons on registerPayable', () => {
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable }) => {
@@ -368,6 +419,22 @@ describe('createSolvaPayMcpServer', () => {
       const alwaysOpen = registered['always_open']
       const ui = (alwaysOpen?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
       expect(ui?.resourceUri).toBe('ui://test/view.html')
+    })
+
+    it('advertises prefersBorder: false on the app UI resource (widget paints its own frame)', () => {
+      // The SolvaPay widget renders its own `.solvapay-mcp-card` frame
+      // plus `<AppHeader>` merchant strip; a host-painted outer card
+      // (prefersBorder: true) nested the two containers on MCP Jam.
+      // Hosts that honour the preference now render us flush inside
+      // their conversation surface.
+      const { server } = buildTestServer()
+      // @ts-expect-error — private registry used for coverage only
+      const resources = server._registeredResources ?? {}
+      const entry = resources['ui://test/view.html']
+      const metaUi = (
+        entry?.metadata?._meta as { ui?: { prefersBorder?: boolean } } | undefined
+      )?.ui
+      expect(metaUi?.prefersBorder).toBe(false)
     })
 
   })
