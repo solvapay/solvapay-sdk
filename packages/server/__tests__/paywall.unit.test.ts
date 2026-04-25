@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createSolvaPay, PaywallError } from '../src'
+import { SolvaPayPaywall } from '../src/paywall'
 import type { SolvaPayClient } from '../src/types'
 
 // Mock API client for testing
@@ -140,6 +141,32 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
     })
 
+    it('produces an actionable payment_required message naming a recovery tool', async () => {
+      mockApiClient.shouldBlock = true
+      const handler = vi.fn()
+      const payable = solvaPay.payable({ product: 'test' })
+      const protectedHandler = await payable.function(handler)
+
+      let captured: PaywallError | null = null
+      try {
+        await protectedHandler({ auth: { customer_ref: 'blocked_user' } })
+      } catch (err) {
+        captured = err as PaywallError
+      }
+      expect(captured).toBeInstanceOf(PaywallError)
+      const sc = captured!.structuredContent
+      expect(sc.kind).toBe('payment_required')
+      // Text-only paywall names the recovery tool (`upgrade` when
+      // there's no active plan) and inlines `checkoutUrl` for
+      // terminal-first hosts. The legacy "Pick a plan below" widget
+      // copy is gone; it collapsed distinct recovery states into one
+      // widget-assuming nudge.
+      expect(sc.message).not.toMatch(/Remaining:\s*0/)
+      expect(sc.message).not.toMatch(/below/i)
+      expect(sc.message).toMatch(/upgrade/i)
+      expect(sc.message).toContain('https://example.com/checkout')
+    })
+
     it('should throw PaywallError with activation_required when checkLimits returns activationRequired', async () => {
       const plans = [{ reference: 'pln_usage', name: 'Usage' }]
       const balance = { available: 0, currency: 'USD' }
@@ -233,6 +260,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           limit: '10',
           auth: { customer_ref: 'cus_http_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -287,6 +315,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           limit: '5',
           auth: { customer_ref: 'cus_next_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -306,6 +335,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           id: '123',
           auth: { customer_ref: 'cus_demo_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -365,6 +395,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
           input: 'test',
           auth: { customer_ref: 'cus_mcp_user' },
         }),
+        expect.anything(),
       )
     })
 
@@ -396,6 +427,79 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       await mcpHandler({})
 
       expect(mockApiClient.trackUsageCalls[0].customerRef).toContain('adapter_level')
+    })
+  })
+
+  describe('ProtectHandlerContext — ctx.respond plumbing', () => {
+    it('passes { customerRef, limits } to the handler on cache-miss', async () => {
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'ctx-test' })
+      const mcpHandler = payable.mcp(handler)
+
+      await mcpHandler(
+        { input: 'test' },
+        { authInfo: { extra: { customer_ref: 'ctx_user' } } },
+      )
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      const [, handlerContext] = handler.mock.calls[0]
+      expect(handlerContext).toMatchObject({
+        customerRef: expect.stringContaining('ctx_user'),
+        limits: expect.objectContaining({
+          withinLimits: true,
+          remaining: expect.any(Number),
+        }),
+      })
+    })
+
+    it('keeps `limits` populated on cache-hit within the TTL window', async () => {
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'ctx-cache-test' })
+      const mcpHandler = payable.mcp(handler)
+
+      await mcpHandler(
+        { a: 1 },
+        { authInfo: { extra: { customer_ref: 'cache_user' } } },
+      )
+      await mcpHandler(
+        { a: 2 },
+        { authInfo: { extra: { customer_ref: 'cache_user' } } },
+      )
+
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+      expect(handler).toHaveBeenCalledTimes(2)
+      const [, ctxFirst] = handler.mock.calls[0]
+      const [, ctxSecond] = handler.mock.calls[1]
+      expect(ctxFirst.limits).toBeTruthy()
+      expect(ctxSecond.limits).toBeTruthy()
+      expect(ctxSecond.limits.withinLimits).toBe(true)
+    })
+
+    it('forwards `extra` bag as `handlerContext.extra`', async () => {
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'ctx-extra-test' })
+      const mcpHandler = payable.mcp(handler)
+
+      const extra = { authInfo: { extra: { customer_ref: 'extra_user' }, token: 'tkn' } }
+      await mcpHandler({ hello: 'world' }, extra)
+
+      const [, handlerContext] = handler.mock.calls[0]
+      expect(handlerContext.extra).toEqual(expect.objectContaining({ authInfo: expect.any(Object) }))
+    })
+
+    it('supports legacy one-arg handlers (backwards compatible)', async () => {
+      const legacyHandler = vi.fn(async (args: any) => ({ args }))
+      const payable = solvaPay.payable({ product: 'legacy-test' })
+      const mcpHandler = payable.mcp(legacyHandler)
+
+      const result = await mcpHandler(
+        { foo: 'bar' },
+        { authInfo: { extra: { customer_ref: 'legacy_user' } } },
+      )
+
+      expect(legacyHandler).toHaveBeenCalledTimes(1)
+      expect(result).toHaveProperty('content')
     })
   })
 
@@ -433,6 +537,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           auth: { customer_ref: 'cus_jwt_user_123' },
         }),
+        expect.anything(),
       )
     })
 
@@ -455,6 +560,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           auth: { customer_ref: 'cus_jwt_user_123' },
         }),
+        expect.anything(),
       )
     })
 
@@ -472,6 +578,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({
           auth: { customer_ref: 'cus_demo_user' },
         }),
+        expect.anything(),
       )
     })
   })
@@ -762,6 +869,90 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       })
 
       consoleErrorSpy.mockRestore()
+    })
+  })
+
+  describe('SolvaPayPaywall.decide()', () => {
+    let paywall: SolvaPayPaywall
+
+    beforeEach(() => {
+      // `createSolvaPay` doesn't expose the underlying paywall instance
+      // on the public surface; drive `decide()` against a fresh instance
+      // sharing the same mock client so we exercise the real caching +
+      // ensureCustomer behaviour rather than a stub.
+      paywall = new SolvaPayPaywall(mockApiClient)
+    })
+
+    it('returns an allow decision with limits + customerRef when within limits', async () => {
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'decide_ok' } },
+        { product: 'decide-product' },
+      )
+      expect(decision.outcome).toBe('allow')
+      if (decision.outcome !== 'allow') throw new Error('unreachable')
+      expect(decision.customerRef).toBe('cus_decide_ok')
+      expect(decision.limits.withinLimits).toBe(true)
+      expect(decision.args).toEqual({ auth: { customer_ref: 'decide_ok' } })
+      // `allow` outcomes do NOT emit a trackUsage event from decide() —
+      // the caller (protect/adapter) is responsible for tracking the
+      // handler's success/fail outcome once it runs.
+      expect(mockApiClient.trackUsageCalls).toHaveLength(0)
+    })
+
+    it('returns a payment_required gate when limits are exhausted', async () => {
+      mockApiClient.shouldBlock = true
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'decide_blocked' } },
+        { product: 'decide-blocked-product' },
+      )
+      expect(decision.outcome).toBe('gate')
+      if (decision.outcome !== 'gate') throw new Error('unreachable')
+      expect(decision.gate.kind).toBe('payment_required')
+      expect(decision.gate.product).toBe('decide-blocked-product')
+      expect(decision.gate.checkoutUrl).toBe('https://example.com/checkout')
+      // Text-only paywall: message names the recovery tool (`upgrade`
+      // by default when no active plan resolves) and inlines the URL
+      // for terminal-first hosts.
+      expect(decision.gate.message).toMatch(/upgrade/i)
+      expect(decision.gate.message).toContain('https://example.com/checkout')
+      expect(decision.customerRef).toBe('cus_decide_blocked')
+      // decide() emits the paywall-outcome usage event so observability
+      // matches the legacy throw-based path.
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+      expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
+    })
+
+    it('returns an activation_required gate when the plan is pending activation', async () => {
+      const plans = [{ reference: 'pln_usage', name: 'Usage' }]
+      const balance = { available: 0, currency: 'USD' }
+      mockApiClient.checkLimits = vi.fn().mockResolvedValue({
+        withinLimits: false,
+        remaining: 0,
+        plan: 'usage',
+        activationRequired: true,
+        plans,
+        balance,
+        confirmationUrl: 'https://pay.example.com/confirm',
+        checkoutUrl: 'https://pay.example.com/checkout',
+      })
+
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'decide_activate' } },
+        { product: 'decide-activate-product' },
+      )
+
+      expect(decision.outcome).toBe('gate')
+      if (decision.outcome !== 'gate') throw new Error('unreachable')
+      expect(decision.gate.kind).toBe('activation_required')
+      if (decision.gate.kind !== 'activation_required') throw new Error('unreachable')
+      expect(decision.gate.product).toBe('decide-activate-product')
+      expect(decision.gate.plans).toEqual(plans)
+      expect(decision.gate.balance).toEqual(balance)
+      expect(decision.gate.confirmationUrl).toBe('https://pay.example.com/confirm')
+      // confirmationUrl takes precedence over checkoutUrl when present.
+      expect(decision.gate.checkoutUrl).toBe('https://pay.example.com/confirm')
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+      expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
     })
   })
 })

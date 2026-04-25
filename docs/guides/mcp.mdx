@@ -14,15 +14,37 @@ description: "This guide shows you how to integrate SolvaPay SDK with Model Cont
 
 ## Installation
 
-Install the required packages:
+Install the required packages. Pick the runtime-specific OAuth bridge based on where you're deploying.
+
+### Node.js (Express, Fastify, etc.)
 
 ```bash
-npm install @solvapay/server @modelcontextprotocol/sdk
+npm install @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-express \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 # or
-pnpm add @solvapay/server @modelcontextprotocol/sdk
+pnpm add @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-express \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 # or
-yarn add @solvapay/server @modelcontextprotocol/sdk
+yarn add @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-express \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
 ```
+
+### Web-standards runtimes (Deno, Supabase Edge, Cloudflare Workers, Bun, Next edge, Vercel Functions)
+
+```bash
+pnpm add @solvapay/server @solvapay/mcp-core @solvapay/mcp @solvapay/mcp-fetch \
+  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
+```
+
+### Package split
+
+- **`@solvapay/server`** — paywall core, `createSolvaPay`, `PaywallError`, webhook verification.
+- **`@solvapay/mcp-core`** — framework-neutral MCP contracts: `MCP_TOOL_NAMES`, `buildSolvaPayDescriptors`, `buildPayableHandler`, OAuth discovery JSON builders, JWT bearer helpers. No `@modelcontextprotocol/*` dependency.
+- **`@solvapay/mcp`** — official `@modelcontextprotocol/sdk` + `ext-apps` adapter. Exports `createSolvaPayMcpServer` and `registerPayableTool`. Only package that imports `@modelcontextprotocol/*`.
+- **`@solvapay/mcp-express`** — Node `(req, res, next)` OAuth bridge middleware (`createMcpOAuthBridge`).
+- **`@solvapay/mcp-fetch`** — Web-standards `(Request) => Promise<Response>` OAuth bridge + turnkey MCP handler (`createSolvaPayMcpFetchHandler`) for Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel Functions.
+
+Skip `@solvapay/mcp` + `@modelcontextprotocol/*` if you only need the OAuth bridge / bearer helpers, or if you're adapting SolvaPay onto a non-official MCP server (`fastmcp`, raw JSON-RPC).
 
 ## Basic Setup
 
@@ -243,7 +265,7 @@ For MCP servers that authenticate with bearer tokens, you can use the server SDK
 import {
   getCustomerRefFromBearerAuthHeader,
   McpBearerAuthError,
-} from '@solvapay/server'
+} from '@solvapay/mcp'
 
 const handler = payable.mcp(createTask, {
   getCustomerRef: args => {
@@ -266,16 +288,63 @@ Fail closed on auth failures. Do not substitute fallback identities such as `ano
 
 ### Non-hosted OAuth Bridge Pattern
 
-If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP proxy):
+If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP proxy), the
+`createMcpOAuthBridge` helper turns your MCP origin into a fully self-consistent OAuth
+authorization server (RFC 8414 §3.3). All OAuth endpoints are served from your MCP origin
+and transparently proxied to SolvaPay:
 
-1. Serve local discovery endpoints:
-   - `/.well-known/oauth-protected-resource`
-   - `/.well-known/oauth-authorization-server`
-2. Point discovery metadata to SolvaPay OAuth endpoints (`/v1/customer/auth/*`)
-3. Ensure `registration_endpoint` includes `mcp_server_id`
-4. Protect `/mcp` with bearer auth and return RFC9728 `WWW-Authenticate` challenge when missing
+| Endpoint (on MCP origin)                         | Proxied to                                         |
+| ------------------------------------------------ | -------------------------------------------------- |
+| `GET /.well-known/oauth-protected-resource`      | local (`authorization_servers: [mcpOrigin]`)       |
+| `GET /.well-known/oauth-authorization-server`    | local (`issuer` = MCP origin, endpoints on origin) |
+| `POST /oauth/register`                           | `POST /v1/customer/auth/register?product_ref=…`    |
+| `GET  /oauth/authorize`                          | `302` → `/v1/customer/auth/authorize`              |
+| `POST /oauth/token`                              | `POST /v1/customer/auth/token`                     |
+| `POST /oauth/revoke`                             | `POST /v1/customer/auth/revoke`                    |
+
+`product_ref` is injected automatically at Dynamic Client Registration, so your MCP clients
+do not need to know about it. `/mcp` is still protected with bearer auth and returns an
+RFC9728 `WWW-Authenticate` challenge when the token is missing or invalid.
+
+```ts
+import express from 'express'
+import { createMcpOAuthBridge } from '@solvapay/mcp'
+
+const app = express()
+app.use(express.json())
+// /oauth/token uses application/x-www-form-urlencoded
+app.use(express.urlencoded({ extended: false }))
+app.use(
+  ...createMcpOAuthBridge({
+    publicBaseUrl: process.env.MCP_PUBLIC_BASE_URL!,
+    apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL!,
+    productRef: process.env.SOLVAPAY_PRODUCT_REF!,
+    mcpPath: '/mcp',
+  }),
+)
+```
 
 Reference implementation: `examples/mcp-oauth-bridge`.
+
+### Streamable HTTP transport tips
+
+- **`GET /mcp` must return 405, not 400.** Cursor (and other Streamable HTTP clients) opens
+  a server-initiated SSE back-channel with `GET /mcp` + `Accept: text/event-stream` right
+  after OAuth completes. Stateless MCP servers can't serve it; respond `405 Method Not
+  Allowed` with `Allow: POST, OPTIONS` and the client stays connected. `createMcpOAuthBridge`
+  does this for you — if your router forwards GETs to a different transport, make sure the
+  fallback returns 405, not 400, or the client will transition to `failed` on
+  "Failed to open SSE stream: Bad Request".
+- **`/.well-known/openid-configuration` must return 404.** Cursor attempts OIDC Discovery
+  before RFC 8414. `createMcpOAuthBridge` returns 404 on this path for you. If you don't
+  use the bridge, add a handler that explicitly returns 404 — a JSON response missing
+  `jwks_uri`, `subject_types_supported`, or `id_token_signing_alg_values_supported` fails
+  Cursor's OIDC validator and logs a noisy Zod error. We return 404 (rather than a full
+  OIDC doc) because SolvaPay is an OAuth 2.0 authorization server (RFC 8414), not an
+  OpenID Provider: we don't issue `id_token`s or expose a JWKS endpoint, so advertising
+  OIDC would be a false capability claim that could break strict OIDC clients later in
+  the flow. Only serve `/.well-known/oauth-authorization-server` and
+  `/.well-known/oauth-protected-resource` from your MCP origin.
 
 ## Error Handling
 

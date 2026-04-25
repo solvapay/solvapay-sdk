@@ -5,4 +5,4 @@
  */
 
 export { createSupabaseAuthAdapter } from './supabase-adapter'
-export type { SupabaseAuthAdapterConfig } from './supabase-adapter'
+export type { SupabaseAuthAdapterConfig, SupabaseClientLike } from './supabase-adapter'

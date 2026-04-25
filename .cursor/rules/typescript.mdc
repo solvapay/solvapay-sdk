@@ -1,0 +1,32 @@
+---
+description: TypeScript best practices and type safety standards
+alwaysApply: true
+---
+
+# TypeScript Standards
+
+## Strict Mode
+
+Always use `strict: true` in tsconfig. No exceptions for new packages.
+
+## Never Use `any`
+
+Zero tolerance -- no `any`, no `as any`, no suppressions. Use `unknown` and narrow the type with type guards, Zod parsing, or `instanceof`.
+
+## Exports and Declarations
+
+- **Prefer named exports** -- do not use `export default`. Named exports improve refactoring, auto-imports, and grep-ability
+- **Prefer `const` over `let`; never use `var`** -- use `let` only when reassignment is genuinely needed
+
+## Type Assertions and Narrowing
+
+- **Minimize type assertions (`as`)** -- prefer type guards, discriminated unions, or Zod `.parse()`. If an assertion is unavoidable, add a comment explaining why
+- **Avoid non-null assertions (`!`)** -- use optional chaining `?.`, nullish coalescing `??`, or explicit null checks
+- **Prefer `@ts-expect-error` over `@ts-ignore`** -- it errors when the suppression becomes unnecessary. Always include an explanation
+
+## Types and Schemas
+
+- **Prefer union types over `enum`** -- use `type Status = 'active' | 'inactive'` with companion `as const` array for runtime values
+- **Derive types from Zod v4 schemas** -- use `z.infer<typeof Schema>` to derive types. Never duplicate a type definition alongside its Zod schema
+- **All public API types must be explicitly annotated and exported**
+- **Let TypeScript infer where obvious** -- don't annotate local variables or simple return types the compiler already knows

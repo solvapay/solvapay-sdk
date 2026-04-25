@@ -24,10 +24,10 @@ const createMockPurchaseStatus = (
   error: null,
   purchases: [],
   hasProduct: vi.fn(() => false),
-  hasPlan: vi.fn(() => false),
   activePurchase: null,
   hasPaidPurchase: false,
   activePaidPurchase: null,
+  balanceTransactions: [],
   ...overrides,
 })
 
@@ -48,6 +48,8 @@ const createMockContextValue = (
     loading: false,
     credits: null,
     displayCurrency: null,
+    creditsPerMinorUnit: null,
+    displayExchangeRate: null,
     refetch: vi.fn(),
     adjustBalance: vi.fn(),
   },
@@ -354,7 +356,6 @@ describe('usePurchase', () => {
       const mockHasProduct = vi.fn(() => true)
       const mockPurchase = createMockPurchaseStatus({
         hasProduct: mockHasProduct,
-        hasPlan: mockHasProduct,
       })
       const mockContextValue = createMockContextValue(mockPurchase)
 
@@ -372,7 +373,6 @@ describe('usePurchase', () => {
       const mockHasProduct = vi.fn(() => false)
       const mockPurchase = createMockPurchaseStatus({
         hasProduct: mockHasProduct,
-        hasPlan: mockHasProduct,
       })
       const mockContextValue = createMockContextValue(mockPurchase)
 

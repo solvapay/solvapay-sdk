@@ -1,0 +1,5 @@
+dist/
+supabase/functions/mcp/mcp-app.html
+node_modules/
+.env
+.env.local

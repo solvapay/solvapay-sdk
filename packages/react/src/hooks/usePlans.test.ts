@@ -246,6 +246,25 @@ describe('usePlans', () => {
       expect(result.current.selectedPlanIndex).toBe(2)
       expect(result.current.selectedPlan?.reference).toBe('plan_pro')
     })
+
+    it('setSelectedPlanIndex(-1) clears the selection and pins user intent', async () => {
+      const fetcher = createFetcher()
+      const { result } = renderHook(() =>
+        usePlans({
+          productRef: 'prd_1',
+          fetcher,
+          initialPlanRef: 'plan_pro',
+          selectionReady: true,
+        }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlan?.reference).toBe('plan_pro')
+
+      act(() => result.current.setSelectedPlanIndex(-1))
+      // `plans[-1]` is undefined → selectedPlan becomes null.
+      expect(result.current.selectedPlan).toBeNull()
+    })
   })
 
   describe('user selection blocks deferred auto-selection', () => {

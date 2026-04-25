@@ -16,6 +16,10 @@
       "@solvapay/core": ["packages/core/src"],
       "@solvapay/auth": ["packages/auth/src"],
       "@solvapay/server": ["packages/server/src"],
+      "@solvapay/mcp-core": ["packages/mcp-core/src"],
+      "@solvapay/mcp": ["packages/mcp/src"],
+      "@solvapay/mcp-express": ["packages/mcp-express/src"],
+      "@solvapay/mcp-fetch": ["packages/mcp-fetch/src"],
       "@solvapay/react": ["packages/react/src"]
     }
   }

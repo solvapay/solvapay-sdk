@@ -1,0 +1,30 @@
+{
+  "name": "@example/supabase-edge-mcp",
+  "private": true,
+  "type": "module",
+  "description": "Full SolvaPay MCP server running on Supabase Edge Functions — `createSolvaPayMcpFetchHandler` over Deno. Ships the same paywalled demo toolbox as `mcp-checkout-app`, deployed at the network edge.",
+  "scripts": {
+    "build": "cross-env INPUT=mcp-app.html vite build && cp dist/mcp-app.html supabase/functions/mcp/mcp-app.html",
+    "dev": "cross-env INPUT=mcp-app.html vite build --watch",
+    "validate": "pnpm -w build:packages && pnpm build && deno check --config=supabase/functions/mcp/deno.local.json supabase/functions/mcp/index.ts",
+    "deploy": "supabase functions deploy mcp",
+    "serve:local": "supabase functions serve mcp --import-map=supabase/functions/mcp/deno.local.json"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@solvapay/mcp": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
+    "@solvapay/mcp-fetch": "workspace:*",
+    "@solvapay/react": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "cross-env": "^10.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "vite": "^8.0.6",
+    "vite-plugin-singlefile": "^2.3.2",
+    "zod": "^4.3.6"
+  }
+}

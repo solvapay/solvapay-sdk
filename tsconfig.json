@@ -4,6 +4,11 @@
   "references": [
     { "path": "packages/core" },
     { "path": "packages/auth" },
+    { "path": "packages/fetch" },
+    { "path": "packages/mcp-core" },
+    { "path": "packages/mcp" },
+    { "path": "packages/mcp-express" },
+    { "path": "packages/mcp-fetch" },
     { "path": "packages/server" },
     { "path": "packages/react" },
     { "path": "packages/demo-services" },

@@ -3,8 +3,17 @@
  */
 
 import type { PaymentIntent } from '@stripe/stripe-js'
-import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
+import type {
+  ProcessPaymentResult,
+  ActivatePlanResult,
+  PaymentMethodInfo,
+  CustomerBalanceResult,
+  GetUsageResult,
+  PurchaseCheckResult,
+} from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
+import type { PartialSolvaPayCopy } from '../i18n/types'
+import type { SolvaPayTransport } from '../transport/types'
 
 export interface PurchaseInfo {
   reference: string
@@ -15,8 +24,13 @@ export interface PurchaseInfo {
   endDate?: string
   cancelledAt?: string
   cancellationReason?: string
+  /** Normalised amount in USD cents (for cross-currency aggregation). */
   amount?: number
+  /** Amount in minor units of `currency` — what the customer was actually charged. */
+  originalAmount?: number
   currency?: string
+  /** Exchange rate used to convert `originalAmount` → `amount` (USD). */
+  exchangeRate?: number
   planType?: string
   isRecurring?: boolean
   nextBillingDate?: string
@@ -24,6 +38,7 @@ export interface PurchaseInfo {
   planRef?: string
   planSnapshot?: {
     reference?: string
+    name?: string | null
     price?: number
     meterRef?: string
     limit?: number
@@ -40,6 +55,12 @@ export interface PurchaseInfo {
     periodStart?: string
     periodEnd?: string
   }
+  /**
+   * Arbitrary metadata attached to the purchase. `metadata.purpose ===
+   * 'credit_topup'` signals a balance top-up rather than a plan purchase;
+   * see `isPlanPurchase` / `isTopupPurchase` for classification helpers.
+   */
+  metadata?: Record<string, unknown>
 }
 
 export interface CustomerPurchaseData {
@@ -54,6 +75,83 @@ export interface PaymentIntentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string // Backend customer reference
+}
+
+/**
+ * Subset of merchant identity surfaced by `GET /v1/sdk/merchant`.
+ * Used by `<MandateText>` and customer-facing trust signals.
+ */
+export interface Merchant {
+  displayName: string
+  legalName: string
+  supportEmail?: string
+  supportUrl?: string
+  termsUrl?: string
+  privacyUrl?: string
+  country?: string
+  defaultCurrency?: string
+  statementDescriptor?: string
+  logoUrl?: string
+  /**
+   * Absolute URL to a square app icon / logomark. Preferred over
+   * `logoUrl` for avatar slots and chrome-strip icons that can't
+   * letterbox a landscape mark.
+   */
+  iconUrl?: string
+}
+
+export interface UseMerchantReturn {
+  merchant: Merchant | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
+
+export interface Product {
+  reference: string
+  name?: string
+  description?: string
+  status?: string
+  [key: string]: unknown
+}
+
+export interface UseProductReturn {
+  product: Product | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
+
+export interface UsePlanOptions {
+  /** Plan reference (e.g. `'pln_premium'`). */
+  planRef?: string
+  /**
+   * Optional product reference. When provided, the hook reuses the
+   * `usePlans` cache instead of fetching a dedicated plan endpoint.
+   */
+  productRef?: string
+  /**
+   * Fetcher for plan lookup when `productRef` is not provided. Required in
+   * that mode so the hook stays dependency-free.
+   */
+  fetcher?: (productRef: string) => Promise<Plan[]>
+}
+
+export interface UsePlanReturn {
+  plan: Plan | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
+
+/**
+ * Optional customer fields forwarded to payment-intent creation so the
+ * backend customer record is authoritative. Read back via `useCustomer()`
+ * after the intent is created.
+ */
+export interface PrefillCustomer {
+  name?: string
+  email?: string
 }
 
 export interface TopupPaymentResult {
@@ -99,8 +197,6 @@ export interface PurchaseStatus {
   name?: string
   purchases: PurchaseInfo[]
   hasProduct: (productName: string) => boolean
-  /** @deprecated Use hasProduct instead */
-  hasPlan: (productName: string) => boolean
   /**
    * Primary active purchase (paid or free) - most recent purchase with status === 'active'
    * Backend keeps purchases as 'active' until expiration, even when cancelled.
@@ -119,6 +215,13 @@ export interface PurchaseStatus {
    * null if no active paid purchase exists
    */
   activePaidPurchase: PurchaseInfo | null
+  /**
+   * Purchases that are not plans — e.g. credit top-ups, and any future
+   * balance-transaction purposes the backend introduces. Classified
+   * structurally (`planSnapshot == null`) with a belt-and-braces check on
+   * `metadata.purpose`. See `isPlanPurchase` / `isTopupPurchase`.
+   */
+  balanceTransactions: PurchaseInfo[]
 }
 
 /**
@@ -133,6 +236,24 @@ export interface BalanceStatus {
   displayExchangeRate: number | null
   refetch: () => Promise<void>
   adjustBalance: (credits: number) => void
+}
+
+/**
+ * Hydration seed passed by MCP App hosts so `SolvaPayProvider` can mount
+ * with cached data instead of firing per-view tool calls. Non-MCP
+ * integrators leave this undefined — all current behaviour (fetch on
+ * mount, HTTP routes) is preserved.
+ */
+export interface SolvaPayProviderInitial {
+  /** Authenticated customer ref (`customer.ref` from the bootstrap). */
+  customerRef: string | null
+  purchase: PurchaseCheckResult | null
+  paymentMethod: PaymentMethodInfo | null
+  balance: CustomerBalanceResult | null
+  usage: GetUsageResult | null
+  merchant: Merchant
+  product: Product
+  plans: Plan[]
 }
 
 export interface SolvaPayConfig {
@@ -150,7 +271,34 @@ export interface SolvaPayConfig {
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
     activatePlan?: string // Default: '/api/activate-plan'
     listPlans?: string // Default: '/api/list-plans'
+    getMerchant?: string // Default: '/api/merchant'
+    getProduct?: string // Default: '/api/get-product'
+    createCheckoutSession?: string // Default: '/api/create-checkout-session'
+    createCustomerSession?: string // Default: '/api/create-customer-session'
+    getPaymentMethod?: string // Default: '/api/payment-method'
+    getUsage?: string // Default: '/api/usage'
   }
+
+  /**
+   * Data-access transport. Replaces the default HTTP calls with any
+   * compatible implementation (e.g. `createMcpAppAdapter(app)` from
+   * `@solvapay/react/mcp`). When omitted, the provider builds a default
+   * HTTP transport from `config.api` + `config.fetch`.
+   */
+  transport?: SolvaPayTransport
+
+  /**
+   * BCP-47 locale tag (e.g. 'en', 'sv-SE'). Threaded through every SDK
+   * component, `Intl.NumberFormat`, and Stripe Elements. Defaults to the
+   * runtime default (typically 'en').
+   */
+  locale?: string
+
+  /**
+   * Partial copy overrides. Keys not supplied fall back to the bundled English
+   * defaults — consumers only provide the strings they actually want to change.
+   */
+  copy?: PartialSolvaPayCopy
 
   /**
    * Authentication configuration
@@ -178,18 +326,6 @@ export interface SolvaPayConfig {
      * ```
      */
     adapter?: AuthAdapter
-
-    /**
-     * @deprecated Use `adapter` instead. Will be removed in a future version.
-     * Function to get auth token
-     */
-    getToken?: () => Promise<string | null>
-
-    /**
-     * @deprecated Use `adapter` instead. Will be removed in a future version.
-     * Function to get user ID (for cache key)
-     */
-    getUserId?: () => Promise<string | null>
   }
 
   /**
@@ -209,6 +345,27 @@ export interface SolvaPayConfig {
    * Default: logs to console
    */
   onError?: (error: Error, context: string) => void
+
+  /**
+   * Pre-fetched seed for MCP App hosts. When provided, the provider
+   * mounts with the snapshot already applied — no `checkPurchase`,
+   * `getBalance`, `getMerchant`, `getProduct`, `getPlans`, or
+   * `getPaymentMethod` calls on first render. Non-MCP integrators leave
+   * this undefined; HTTP behaviour is unchanged.
+   */
+  initial?: SolvaPayProviderInitial
+
+  /**
+   * Post-mutation re-fetch for MCP App hosts. When provided, the
+   * provider's `refreshBootstrap()` calls this to get a fresh
+   * `SolvaPayProviderInitial` snapshot (typically by re-invoking
+   * `manage_account` on the host) and re-applies it to provider state
+   * and the module caches. Non-MCP integrators leave this undefined —
+   * `refreshBootstrap()` falls back to `refetchPurchase()` +
+   * `balance.refetch()`. Return `null` to skip the refresh (e.g. when
+   * the host is offline).
+   */
+  refreshInitial?: () => Promise<SolvaPayProviderInitial | null>
 }
 
 export interface CancelResult {
@@ -224,12 +381,23 @@ export interface ReactivateResult {
   [key: string]: unknown
 }
 
-export { type ActivatePlanResult }
+export { type ActivatePlanResult, type PaymentMethodInfo }
+
+export interface UsePaymentMethodReturn {
+  paymentMethod: PaymentMethodInfo | null
+  loading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
 
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
-  createPayment: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
+  createPayment: (params: {
+    planRef?: string
+    productRef?: string
+    customer?: PrefillCustomer
+  }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
     paymentIntentId: string
     productRef: string
@@ -248,59 +416,31 @@ export interface SolvaPayContextValue {
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
   balance: BalanceStatus
+  /**
+   * Re-bootstrap the MCP snapshot (customer + product-scoped data).
+   * Always callable; on non-MCP transports falls back to
+   * `refetchPurchase()` + `balance.refetch()` so every caller can use
+   * the same post-mutation hook.
+   */
+  refreshBootstrap?: () => Promise<void>
   /** @internal Provider config — used by SDK hooks, not part of public API */
   _config?: SolvaPayConfig
 }
 
 export interface SolvaPayProviderProps {
   /**
-   * Configuration object with sensible defaults
-   * If not provided, uses standard Next.js API routes
+   * Configuration object with sensible defaults.
+   *
+   * To customise data access (e.g. route through MCP instead of HTTP), pass
+   * `config.transport`. Legacy per-method overrides (`createPayment`,
+   * `checkPurchase`, `processPayment`, `createTopupPayment`) have been
+   * removed in favour of the unified transport surface — see
+   * [`SolvaPayTransport`](../transport/types.ts) and
+   * `@solvapay/react/mcp` for an MCP implementation.
    */
   config?: SolvaPayConfig
 
-  /**
-   * Custom API functions (override config defaults)
-   * Use only if you need custom logic beyond standard API routes
-   */
-  createPayment?: (params: { planRef?: string; productRef?: string }) => Promise<PaymentIntentResult>
-  checkPurchase?: () => Promise<CustomerPurchaseData>
-  processPayment?: (params: {
-    paymentIntentId: string
-    productRef: string
-    planRef?: string
-  }) => Promise<ProcessPaymentResult>
-  createTopupPayment?: (params: {
-    amount: number
-    currency?: string
-  }) => Promise<TopupPaymentResult>
-
   children: React.ReactNode
-}
-
-export interface ProductBadgeProps {
-  children?: (props: {
-    purchases: PurchaseInfo[]
-    loading: boolean
-    displayPlan: string | null
-    shouldShow: boolean
-  }) => React.ReactNode
-  as?: React.ElementType
-  className?: string | ((props: { purchases: PurchaseInfo[] }) => string)
-}
-
-/** @deprecated Use ProductBadgeProps instead */
-export type PlanBadgeProps = ProductBadgeProps
-
-export interface PurchaseGateProps {
-  /** @deprecated Use requireProduct instead */
-  requirePlan?: string
-  requireProduct?: string
-  children: (props: {
-    hasAccess: boolean
-    purchases: PurchaseInfo[]
-    loading: boolean
-  }) => React.ReactNode
 }
 
 /**
@@ -404,45 +544,6 @@ export interface UsePlansReturn {
 }
 
 /**
- * Props for headless PricingSelector component
- */
-export interface PricingSelectorProps {
-  /**
-   * Product reference to fetch plans for
-   */
-  productRef?: string
-  /**
-   * Fetcher function to retrieve plans
-   */
-  fetcher: (productRef: string) => Promise<Plan[]>
-  /**
-   * Optional filter function
-   */
-  filter?: (plan: Plan, index: number) => boolean
-  /**
-   * Optional sort function
-   */
-  sortBy?: (a: Plan, b: Plan) => number
-  /**
-   * Auto-select first paid plan on load
-   */
-  autoSelectFirstPaid?: boolean
-  /**
-   * Render prop function
-   */
-  children: (
-    props: UsePlansReturn & {
-      purchases: PurchaseInfo[]
-      isPaidPlan: (planRef: string) => boolean
-      isCurrentPlan: (planRef: string) => boolean
-    },
-  ) => React.ReactNode
-}
-
-/** @deprecated Use PricingSelectorProps instead */
-export type PlanSelectorProps = PricingSelectorProps
-
-/**
  * Return type for usePurchaseStatus hook
  *
  * Provides advanced purchase status helpers and utilities.
@@ -475,6 +576,16 @@ export interface PurchaseStatusReturn {
 /**
  * Payment form props - simplified and minimal
  */
+/**
+ * Discriminated checkout-completion result surfaced by `<PaymentForm>` and
+ * `<CheckoutLayout>` via their `onResult` callback. Integrators handling
+ * both paid and free plans should use `onResult` to get a single typed
+ * callback; paid-only integrators keep using `onSuccess(paymentIntent)`.
+ */
+export type PaymentResult = { kind: 'paid'; paymentIntent: PaymentIntent }
+export type ActivationResult = { kind: 'activated'; result: ActivatePlanResult }
+export type CheckoutResult = PaymentResult | ActivationResult
+
 export interface PaymentFormProps {
   /**
    * Plan reference to checkout. When omitted, the SDK auto-resolves the plan from
@@ -488,9 +599,23 @@ export interface PaymentFormProps {
    */
   productRef?: string
   /**
-   * Callback when payment succeeds
+   * Callback when payment succeeds. Fires on paid flows only — preserved
+   * exactly for backwards compatibility. Free/activation flows do NOT fire
+   * `onSuccess`; use `onResult` to receive both paid and activated results.
    */
   onSuccess?: (paymentIntent: PaymentIntent) => void
+  /**
+   * Unified callback fired on both paid and activated completions with a
+   * discriminated result. Safe to provide alongside `onSuccess` — for paid
+   * flows both fire (in order: `onSuccess` first, then `onResult`).
+   */
+  onResult?: (result: CheckoutResult) => void
+  /**
+   * Override the default free-plan activation step. When provided, the form
+   * awaits this promise on submit and fires `onResult` when it resolves.
+   * When omitted, the default behavior calls `activatePlan` from context.
+   */
+  onFreePlan?: (plan: Plan) => Promise<unknown> | void
   /**
    * Callback when payment fails
    */
@@ -511,17 +636,18 @@ export interface PaymentFormProps {
    * Optional className for the submit button
    */
   buttonClassName?: string
-}
-
-export interface BalanceBadgeProps {
-  className?: string
-  numberOnly?: boolean
-  children?: (props: {
-    credits: number | null
-    loading: boolean
-    displayCurrency: string | null
-    creditsPerMinorUnit: number | null
-  }) => React.ReactNode
+  /**
+   * Customer name/email to forward to backend PaymentIntent creation so the
+   * server-side customer record is authoritative. Echoed back via
+   * `useCustomer()` after the intent is created.
+   */
+  prefillCustomer?: PrefillCustomer
+  /**
+   * When true, the default tree renders a terms/privacy checkbox and gates
+   * the submit button until it is ticked. No-op when custom `children` are
+   * passed — compose `<PaymentForm.TermsCheckbox />` yourself.
+   */
+  requireTermsAcceptance?: boolean
 }
 
 export interface UseTopupAmountSelectorOptions {

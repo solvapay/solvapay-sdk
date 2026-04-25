@@ -1,6 +1,6 @@
 ## Description
 
-<!-- Provide a brief description of the changes in this PR -->
+<!-- Brief description of the changes in this PR. -->
 
 ## Type of Change
 
@@ -17,45 +17,57 @@
 
 ## Related Issues
 
-<!-- Link to related issues using #issue_number -->
-
 Closes #
 Related to #
 
 ## Changes Made
 
-<!-- List the key changes made in this PR -->
+-
+-
+-
 
--
--
--
+## Changeset
+
+> [!IMPORTANT]
+> Every user-visible change to a published package **MUST** include a
+> changeset file under [`.changeset/`](../.changeset). Run
+> `pnpm changeset` to generate one interactively. The file is the
+> single source of truth for the next version bump + CHANGELOG entry.
+
+- [ ] I ran `pnpm changeset` and committed the generated file
+- [ ] Or — this PR touches no published packages (changelog N/A)
+- [ ] My changeset selects the right bump level per package (patch / minor / major)
+
+Pick the bump level honestly:
+
+- **patch** — bug fix, internal refactor, dep-only update.
+- **minor** — new public API, additive and backwards-compatible.
+- **major** — removed/renamed API, changed signature, behaviour break.
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md#releasing) for the full release workflow.
 
 ## Testing
 
-<!-- Describe the tests you ran and how to verify your changes -->
-
-- [ ] Unit tests pass
-- [ ] Integration tests pass
+- [ ] `pnpm test` — unit tests pass
+- [ ] `pnpm build` — full monorepo build passes
+- [ ] `pnpm tsx scripts/validate-fetch-runtime.ts` — Web-standards runtime gate passes (required if you touched `@solvapay/fetch` or `@solvapay/mcp-fetch`)
 - [ ] Manual testing completed
-- [ ] Tested in relevant environments (Node.js / Edge / etc.)
+- [ ] Tested in relevant environments (Node / Deno / Cloudflare Workers / Bun / Next edge / …)
 
 ## Checklist
 
-<!-- Mark completed items with an "x" -->
-
-- [ ] My code follows the project's style guidelines
+- [ ] My code follows the project's style guidelines (`pnpm lint` / `pnpm format`)
 - [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have updated the documentation accordingly
+- [ ] I have commented my code in hard-to-understand areas (not narration comments)
+- [ ] I have updated the documentation (`README.md`, `docs/`, package READMEs) accordingly
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published
 
 ## Screenshots / Examples
 
-<!-- If applicable, add screenshots or code examples to help explain your changes -->
+<!-- If applicable, add screenshots or code examples. -->
 
 ## Additional Notes
 
-<!-- Any additional information that reviewers should know -->
+<!-- Any additional information that reviewers should know. -->

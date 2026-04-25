@@ -1,6 +1,56 @@
-# SolvaPay Checkout Demo - Headless Components
+# SolvaPay Checkout Demo
 
-Complete payment integration demo showcasing SolvaPay's headless React components with locked content and purchase gates.
+A complete, drop-in checkout example built entirely around the SDK's
+`<CheckoutLayout>` component. The whole checkout page is ~50 lines — plan
+selection, payment, usage-based activation, and cancel/reactivate are all
+owned by the SDK.
+
+## Golden path (90% of integrations)
+
+The entire checkout surface is a single component call:
+
+```tsx
+<CheckoutLayout
+  productRef="prd_myapi"
+  prefillCustomer={{ email, name }}
+  initialPlanRef={activePurchase?.planRef}
+  requireTermsAcceptance
+  onResult={result => {
+    // result.kind === 'paid' | 'activated' — navigate away, show success, etc.
+  }}
+/>
+```
+
+`<CheckoutLayout>` internally:
+
+- Fetches plans for `productRef` via `/api/list-plans`
+- Renders `<PlanSelector>` if there's more than one plan (auto-skipped for single-plan products)
+- Routes paid/free plans to `<PaymentForm>`
+- Routes usage-based plans to `<ActivationFlow>` (summary → top-up → retry → activated)
+- Fires `onResult` with a discriminated `CheckoutResult` on success
+
+Pair it with `<CancelledPlanNotice>` (auto-shows when there's a cancelled
+active purchase) and `<CancelPlanButton>` (confirm dialog + plan-type-aware
+copy) for the full lifecycle — see [`app/checkout/page.tsx`](app/checkout/page.tsx).
+
+## Custom composition
+
+Need full layout control? Compose the SDK primitives directly:
+
+- `<PlanSelector>` — styled plan grid with selection state + `PlanSelectionContext`
+- `<PaymentForm>` — Stripe Elements with slot subcomponents (`.Summary`, `.CustomerFields`, `.PaymentElement`, `.MandateText`, `.TermsCheckbox`, `.SubmitButton`)
+- `<ActivationFlow>` — styled usage-based activation state machine
+- `<AmountPicker>` — quick-amount pills + custom input + credit estimate
+
+Same behavior, you own the surrounding layout. See the [SDK README](../../packages/react/README.md#custom-composition-pick-the-primitives-you-need) for slot examples.
+
+## Custom activation UI
+
+When you need to completely replace the default `<ActivationFlow>` — for
+example to show a bespoke credit-purchase flow or integrate with an external
+payment method — compose `@solvapay/react/primitives` directly instead of
+using `<CheckoutLayout>`. The built-in `<ActivationFlow>` covers the full
+summary → top-up → retry → activated state machine for the common case.
 
 ## Table of Contents
 
@@ -128,23 +178,13 @@ Use these test card numbers in the checkout form:
 ```tsx
 // app/layout.tsx
 import { SolvaPayProvider } from '@solvapay/react'
-;<SolvaPayProvider
-  customerRef={customerId}
-  createPayment={async ({ planRef, customerRef }) => {
-    const res = await fetch('/api/create-payment-intent', {
-      method: 'POST',
-      body: JSON.stringify({ planRef, customerRef, productRef }),
-    })
-    return res.json()
-  }}
-  checkPurchase={async customerRef => {
-    const res = await fetch(`/api/check-purchase?customerRef=${customerRef}`)
-    return res.json()
-  }}
->
-  {children}
-</SolvaPayProvider>
+
+// Zero config: uses the default HTTP transport wired to /api/* routes.
+;<SolvaPayProvider>{children}</SolvaPayProvider>
 ```
+
+To override individual methods, pass a custom `transport` on the config. See
+[`@solvapay/react` README](../../packages/react/README.md#fully-custom-implementation).
 
 ### 2. Authentication Setup
 
@@ -328,7 +368,7 @@ The provider automatically:
 
 - Fetches purchase on mount
 - Provides refetch method for updates
-- Exposes helper methods (`hasActivePurchase`, `hasPlan`)
+- Exposes helper methods (`hasActivePurchase`)
 - Manages loading states
 
 ### Authentication
@@ -444,22 +484,12 @@ All components accept any styling approach:
 </PlanBadge>
 ```
 
-### Custom Payment Form
+### Custom layout
 
-```tsx
-<UpgradeButton
-  planRef="pro"
-  renderPaymentForm={({ onSuccess, onCancel }) => (
-    <Modal open onClose={onCancel}>
-      <h2>Complete Payment</h2>
-      <PaymentForm onSuccess={onSuccess} />
-      <button onClick={onCancel}>Cancel</button>
-    </Modal>
-  )}
->
-  {({ onClick }) => <button onClick={onClick}>Upgrade</button>}
-</UpgradeButton>
-```
+Need full control over the surrounding layout? Compose `<PlanSelector>`,
+`<PaymentForm>`, and `<ActivationFlow>` directly. See the
+[SDK README](../../packages/react/README.md#custom-composition-pick-the-primitives-you-need)
+for slot usage and render-prop escape hatches.
 
 ## Best Practices
 
@@ -469,18 +499,16 @@ Always wrap your app with `SolvaPayProvider` at the root level:
 
 ```tsx
 // app/layout.tsx
-<SolvaPayProvider
-  customerRef={customerId}
-  createPayment={handleCreatePayment}
-  checkPurchase={handleCheckPurchase}
->
-  {children}
-</SolvaPayProvider>
+<SolvaPayProvider>{children}</SolvaPayProvider>
 ```
+
+Pass a custom transport only when you need to override the default HTTP
+routing (e.g. MCP App). See
+[`@solvapay/react` README](../../packages/react/README.md#fully-custom-implementation).
 
 ### 2. Error Handling
 
-Handle errors in your API callbacks:
+Handle errors via `config.onError` or wrap your transport:
 
 ```tsx
 const handleCreatePayment = async ({ planRef, customerRef }) => {

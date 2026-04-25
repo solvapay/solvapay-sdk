@@ -1,30 +1,30 @@
-name: Publish Preview to NPM
+name: Publish Preview Snapshot
 
-# Auto-publish disabled - trigger manually via GitHub Actions UI when ready
+# On every push to `dev`, run the pre-publish gates and cut a
+# changesets snapshot to the `@preview` dist-tag. Each publish is
+# addressable as `@solvapay/<pkg>@0.0.0-preview-<shortsha>` (stable
+# version pin) plus a mutable `@preview` pointer at the latest.
 on:
+  push:
+    branches:
+      - dev
   workflow_dispatch:
-    inputs:
-      start_from_version:
-        description: 'Optional: Exact version to publish (e.g., 1.0.0-preview.19). If not provided, auto-detects and bumps from latest git tag'
-        required: false
-        type: string
-  # push:
-  #   branches:
-  #     - dev
+
+concurrency:
+  group: publish-preview
+  cancel-in-progress: false
 
 jobs:
   publish-preview:
     runs-on: ubuntu-latest
-
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,11 +37,15 @@ jobs:
         with:
           version: 9.6.0
 
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+        run: echo "STORE_PATH=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
@@ -57,182 +61,43 @@ jobs:
       - name: Check dependency health
         run: pnpm deps:check
 
-      # TODO: Re-enable example app tests once changes are merged from main branch and test issues are fixed
-      # Note: Example app tests (@example/*) are currently excluded via --filter=!@example/* in package.json test script
       - name: Run tests
         run: pnpm test
-
-      - name: Get latest preview version from git tags
-        id: get-preview-version
-        run: |
-          # Fetch all tags
-          git fetch --tags
-          
-          # Check if exact version was provided manually
-          if [ -n "${{ inputs.start_from_version }}" ]; then
-            EXACT_VERSION="${{ inputs.start_from_version }}"
-            # Strip 'v' prefix if present
-            EXACT_VERSION=$(echo "${EXACT_VERSION}" | sed 's/^v//')
-            echo "Using manually specified exact version: ${EXACT_VERSION}"
-            echo "exact_version=${EXACT_VERSION}" >> $GITHUB_OUTPUT
-            echo "use_exact_version=true" >> $GITHUB_OUTPUT
-          else
-            # Auto-detect from git tags or package.json
-            echo "No version specified, auto-detecting from git tags..."
-            echo "use_exact_version=false" >> $GITHUB_OUTPUT
-            
-            # Read base version from package.json (to know which base version we're using)
-            CURRENT_VERSION=$(node -p "require('./packages/core/package.json').version")
-            BASE_VERSION=$(echo "${CURRENT_VERSION}" | sed 's/-preview\.[0-9]*$//')
-            echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-            
-            # Get latest preview tag for this base version (e.g., v1.0.0-preview.18)
-            LATEST_PREVIEW_TAG=$(git tag -l "v${BASE_VERSION}-preview.*" | sort -V | tail -1)
-            
-            if [ -z "$LATEST_PREVIEW_TAG" ]; then
-              # No preview tags for this base version yet, start from preview.1
-              echo "No preview tags found for ${BASE_VERSION}, starting from preview.1"
-              echo "has_existing_preview=false" >> $GITHUB_OUTPUT
-            else
-              # Extract preview number (e.g., v1.0.0-preview.18 -> 18)
-              PREVIEW_NUM=$(echo "${LATEST_PREVIEW_TAG}" | sed 's/.*-preview\.\([0-9]*\)$/\1/')
-              echo "Latest preview tag: ${LATEST_PREVIEW_TAG}"
-              echo "Preview number: ${PREVIEW_NUM}"
-              echo "has_existing_preview=true" >> $GITHUB_OUTPUT
-              echo "latest_preview_num=${PREVIEW_NUM}" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-      - name: Set preview version
-        run: |
-          USE_EXACT="${{ steps.get-preview-version.outputs.use_exact_version }}"
-          
-          if [ "${USE_EXACT}" == "true" ]; then
-            # Use the exact version specified manually
-            EXACT_VERSION="${{ steps.get-preview-version.outputs.exact_version }}"
-            echo "Setting package.json to exact version: ${EXACT_VERSION}"
-            pnpm exec tsx -e "
-              const fs = require('fs');
-              const packages = [
-                'packages/core/package.json',
-                'packages/react/package.json',
-                'packages/react-supabase/package.json',
-                'packages/server/package.json',
-                'packages/auth/package.json',
-                'packages/next/package.json',
-                'packages/cli/package.json'
-              ];
-              packages.forEach(pkg => {
-                const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
-                pkgJson.version = '${EXACT_VERSION}';
-                fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
-              });
-            "
-          else
-            # Auto-detect and bump
-            BASE_VERSION="${{ steps.get-preview-version.outputs.base_version }}"
-            HAS_EXISTING="${{ steps.get-preview-version.outputs.has_existing_preview }}"
-            
-            if [ "${HAS_EXISTING}" == "true" ]; then
-              # Update package.json to latest preview version first
-              LATEST_PREVIEW_NUM="${{ steps.get-preview-version.outputs.latest_preview_num }}"
-              LATEST_PREVIEW_VERSION="${BASE_VERSION}-preview.${LATEST_PREVIEW_NUM}"
-              echo "Setting package.json to latest preview: ${LATEST_PREVIEW_VERSION}"
-              pnpm exec tsx -e "
-                const fs = require('fs');
-                const packages = [
-                  'packages/core/package.json',
-                  'packages/react/package.json',
-                  'packages/react-supabase/package.json',
-                  'packages/server/package.json',
-                  'packages/auth/package.json',
-                  'packages/next/package.json',
-                  'packages/cli/package.json'
-                ];
-                packages.forEach(pkg => {
-                  const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
-                  pkgJson.version = '${LATEST_PREVIEW_VERSION}';
-                  fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
-                });
-              "
-            else
-              # No existing preview tags, set to base version first
-              echo "Setting package.json to base version: ${BASE_VERSION}"
-              pnpm exec tsx -e "
-                const fs = require('fs');
-                const packages = [
-                  'packages/core/package.json',
-                  'packages/react/package.json',
-                  'packages/react-supabase/package.json',
-                  'packages/server/package.json',
-                  'packages/auth/package.json',
-                  'packages/next/package.json',
-                  'packages/cli/package.json'
-                ];
-                packages.forEach(pkg => {
-                  const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
-                  pkgJson.version = '${BASE_VERSION}';
-                  fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
-                });
-              "
-            fi
-            
-            # Now bump preview version using existing script
-            echo "Bumping preview version..."
-            pnpm version:bump:preview
-          fi
-          
-          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          echo "Preview version to publish: ${NEW_VERSION}"
-          
-          # Note: Version changes are NOT committed back to git
-          # Versions are tracked via git tags only to avoid branch divergence
-
-      - name: Show version summary
-        run: |
-          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 Preview Version Summary"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Will publish: ${NEW_VERSION}"
-          
-          if [ -n "${{ inputs.start_from_version }}" ]; then
-            echo ""
-            echo "ℹ️  Using manually specified exact version: ${{ inputs.start_from_version }}"
-          else
-            BASE_VERSION="${{ steps.get-preview-version.outputs.base_version }}"
-            HAS_EXISTING="${{ steps.get-preview-version.outputs.has_existing_preview }}"
-            if [ "${HAS_EXISTING}" == "true" ]; then
-              LATEST_PREVIEW_NUM="${{ steps.get-preview-version.outputs.latest_preview_num }}"
-              CURRENT_PREVIEW="${BASE_VERSION}-preview.${LATEST_PREVIEW_NUM}"
-              echo ""
-              echo "Previous preview version: ${CURRENT_PREVIEW}"
-            fi
-          fi
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-      - name: Create git tag
-        run: |
-          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          git tag "v${NEW_VERSION}"
-          echo "Created tag: v${NEW_VERSION}"
 
       - name: Build packages
         run: pnpm build:packages
 
-      # Note: Using --no-provenance flag because provenance signing only works with public repositories
-      # This repository is private, so we skip provenance to avoid NPM 422 errors
-      # Publishes all 7 packages: @solvapay/core, @solvapay/react, @solvapay/react-supabase, @solvapay/server, @solvapay/auth, @solvapay/next, solvapay
-      - name: Publish preview to NPM
-        run: pnpm publish:preview
+      - name: Validate fetch-runtime — Node gate
+        run: pnpm validate:fetch-runtime
+
+      # Deno gate — type-checks examples/supabase-edge-mcp against the
+      # last-published `@preview` versions of the workspace packages it
+      # imports. Catches Deno-incompatibility regressions one commit
+      # late (the commit that introduced the break publishes, and the
+      # next push's gate fails), which we accept as the simplest
+      # workable tradeoff for pre-publish validation without juggling
+      # local-dist / file: URL resolution.
+      - name: Validate fetch-runtime — Deno gate (supabase-edge-mcp type-check)
+        run: pnpm --filter @example/supabase-edge-mcp validate
+
+      - name: Version snapshot
+        run: pnpm changeset version --snapshot preview
+
+      - name: Publish snapshot to @preview
+        id: publish
+        run: |
+          set -o pipefail
+          pnpm changeset publish --tag preview --no-git-tag 2>&1 | tee publish.log
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Push git tag
-        run: |
-          # Only push the tag, not version commits
-          # This prevents branch divergence and version conflicts
-          git push origin --tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Post-publish verification — Changesets reports success based on
+      # npm's exit code, but npm has been observed to exit 0 even when
+      # brand-new scoped package names fail to create (granular token
+      # scope, org create-restrictions, etc.). This step queries the
+      # public registry for every line that Changesets claimed shipped
+      # and fails the job if any package isn't fetchable after a retry
+      # window.
+      - name: Verify published packages landed on npm
+        run: node scripts/verify-npm-publishes.mjs publish.log

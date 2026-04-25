@@ -2,17 +2,29 @@
 
 This example demonstrates a **non-hosted** MCP server that:
 
-- serves local `/.well-known/*` discovery endpoints,
-- delegates OAuth + dynamic client registration to SolvaPay backend,
+- serves local `/.well-known/*` discovery endpoints on the MCP origin,
+- hosts `/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke` on the MCP origin and proxies them to SolvaPay,
 - protects MCP tools with `@solvapay/server` via `payable.mcp(...)`.
 
 ## Why this pattern exists
 
 For non-hosted MCP origins (localhost/custom domains), backend-hosted discovery cannot always infer
-product context from subdomain routing. This example acts as a bridge:
+product context from subdomain routing, and RFC 8414 §3.3 requires `issuer` to match the metadata
+URL. This bridge makes the MCP origin a fully self-consistent authorization server:
 
-- local discovery metadata matches your MCP server origin,
-- OAuth endpoints still point to SolvaPay backend.
+- local discovery metadata has `issuer` = MCP origin and all endpoints under MCP origin,
+- the four `/oauth/*` routes proxy to SolvaPay (`/v1/customer/auth/*`), injecting `product_ref` at DCR.
+
+## Endpoints
+
+| Endpoint (on MCP origin)                         | Proxied to                                         |
+| ------------------------------------------------ | -------------------------------------------------- |
+| `GET /.well-known/oauth-protected-resource`      | local (`authorization_servers: [mcpOrigin]`)       |
+| `GET /.well-known/oauth-authorization-server`    | local (`issuer` = MCP origin)                      |
+| `POST /oauth/register`                           | `POST /v1/customer/auth/register?product_ref=…`    |
+| `GET  /oauth/authorize`                          | `302` → `/v1/customer/auth/authorize`              |
+| `POST /oauth/token`                              | `POST /v1/customer/auth/token`                     |
+| `POST /oauth/revoke`                             | `POST /v1/customer/auth/revoke`                    |
 
 ## Quick start
 
@@ -83,11 +95,11 @@ pnpm oauth:flow
 Script steps:
 
 1. Fetch `/.well-known/oauth-protected-resource`
-2. Fetch `/.well-known/oauth-authorization-server`
-3. Register client at backend `registration_endpoint`
+2. Fetch `/.well-known/oauth-authorization-server` (served by the bridge, `issuer` = MCP origin)
+3. Register client at the bridge's `registration_endpoint` (proxied to SolvaPay with `product_ref`)
 4. Build authorize URL (PKCE), you login in browser
 5. Paste auth code in terminal
-6. Exchange token
+6. Exchange token at the bridge's `token_endpoint` (proxied to SolvaPay)
 7. Call MCP `initialize` then `tools/call`
 
 ## Auth behavior on `/mcp`

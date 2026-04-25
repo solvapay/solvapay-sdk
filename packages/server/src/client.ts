@@ -132,7 +132,31 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       const result = await res.json()
-      return result
+      return {
+        customerRef: result.reference || result.customerRef,
+      }
+    },
+
+    // PATCH: /v1/sdk/customers/{customerRef}
+    async updateCustomer(customerRef, params) {
+      const url = `${base}/v1/sdk/customers/${encodeURIComponent(customerRef)}`
+
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Update customer failed (${res.status}): ${error}`)
+      }
+
+      const result = await res.json()
+      return {
+        customerRef: result.reference || result.customerRef || customerRef,
+      }
     },
 
     // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}|email={email}
@@ -205,6 +229,62 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         externalRef: customer.externalRef,
         purchases: customer.purchases || [],
       }
+    },
+
+    // GET: /v1/sdk/merchant
+    async getMerchant() {
+      const url = `${base}/v1/sdk/merchant`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get merchant failed (${res.status}): ${error}`)
+      }
+
+      return res.json()
+    },
+
+    // GET: /v1/sdk/platform-config
+    async getPlatformConfig() {
+      const url = `${base}/v1/sdk/platform-config`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get platform config failed (${res.status}): ${error}`)
+      }
+
+      return res.json()
+    },
+
+    // GET: /v1/sdk/products/{productRef}
+    async getProduct(productRef) {
+      const url = `${base}/v1/sdk/products/${encodeURIComponent(productRef)}`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get product failed (${res.status}): ${error}`)
+      }
+
+      const result = await res.json()
+      const data = (result.data as Record<string, unknown>) || {}
+      return { ...data, ...result }
     },
 
     // Product management methods (primarily for integration tests)
@@ -734,6 +814,21 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
         throw new SolvaPayError(`Activate plan failed (${res.status}): ${error}`)
+      }
+
+      return await res.json()
+    },
+
+    async getPaymentMethod(params) {
+      const url = new URL(`${base}/v1/sdk/payment-method`)
+      url.searchParams.set('customerRef', params.customerRef)
+
+      const res = await fetch(url.toString(), { method: 'GET', headers })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get payment method failed (${res.status}): ${error}`)
       }
 
       return await res.json()

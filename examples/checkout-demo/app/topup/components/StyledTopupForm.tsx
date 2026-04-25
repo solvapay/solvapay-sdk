@@ -1,6 +1,7 @@
 'use client'
 
-import { TopupForm, useCustomer } from '@solvapay/react'
+import { useCustomer } from '@solvapay/react'
+import { TopupForm } from '@solvapay/react/primitives'
 import { actionButtonClassName } from '../../components/ui/Button'
 import '../../checkout/payment-form.css'
 
@@ -37,7 +38,6 @@ export function StyledTopupForm({
 
   return (
     <div className="space-y-6">
-      {/* Top-up Summary */}
       <div className="pb-6 border-b border-slate-200">
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm text-slate-600">Top-up type:</span>
@@ -46,7 +46,9 @@ export function StyledTopupForm({
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-600">Amount:</span>
           <div className="text-right">
-            <span className="text-lg font-bold text-slate-900">{formatAmount(amountCents, currency)}</span>
+            <span className="text-lg font-bold text-slate-900">
+              {formatAmount(amountCents, currency)}
+            </span>
             {creditsPerMinorUnit != null && creditsPerMinorUnit > 0 && (
               <p className="text-sm text-slate-500">
                 {exchangeRate !== 1 ? '~' : '='}{' '}
@@ -60,7 +62,6 @@ export function StyledTopupForm({
         </div>
       </div>
 
-      {/* Customer Information */}
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-slate-900">Customer</h2>
         <div className="space-y-3">
@@ -75,22 +76,27 @@ export function StyledTopupForm({
         </div>
       </div>
 
-      {/* Payment Section */}
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-slate-900">Payment</h2>
 
-        <TopupForm
+        <TopupForm.Root
           amount={amountCents}
           currency={currency}
           onSuccess={onSuccess}
           onError={onError}
-          submitButtonText={`Pay ${formatAmount(amountCents, currency)}`}
-          className="space-y-6 payment-form-wrapper"
-          buttonClassName={actionButtonClassName}
-        />
+          className="payment-form-wrapper space-y-4"
+        >
+          <TopupForm.PaymentElement />
+          <TopupForm.Loading />
+          <TopupForm.Error className="text-sm text-red-600" />
+          <TopupForm.SubmitButton asChild>
+            <button className={actionButtonClassName}>
+              Pay {formatAmount(amountCents, currency)}
+            </button>
+          </TopupForm.SubmitButton>
+        </TopupForm.Root>
       </div>
 
-      {/* Footer */}
       <div className="pt-4 border-t border-slate-200 space-y-2">
         <p className="text-xs text-slate-400 text-center">Powered by SolvaPay</p>
         <div className="flex justify-center space-x-4 text-xs text-slate-400">
@@ -99,7 +105,6 @@ export function StyledTopupForm({
         </div>
       </div>
 
-      {/* Back Button */}
       <button onClick={onBack} className="text-sm text-slate-600 hover:text-slate-900 block">
         ← Change amount
       </button>

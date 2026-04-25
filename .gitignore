@@ -8,11 +8,20 @@ dist
 .npmrc
 .pnpm-store
 .turbo
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/plans/
+!.cursor/skills/
 .DS_Store
 *.tsbuildinfo
 **/.demo-data/*
 **/*.local.sh
+
+# Deno — written by `deno check` during the CI validate gate. We pin
+# workspace imports to `@preview` dist-tags on purpose (mutable; each
+# gate run should pick up the latest preview), so committing a lockfile
+# here would defeat the regression-detection window.
+deno.lock
 
 # Code coverage
 coverage/

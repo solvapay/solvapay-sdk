@@ -21,6 +21,18 @@ import type { SolvaPayClient, CustomerResponseMapped } from '@solvapay/server'
 export type { SolvaPayClient }
 
 type ListPlansResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['listPlans']>>>
+type CreatePaymentIntentResult = Awaited<
+  ReturnType<NonNullable<SolvaPayClient['createPaymentIntent']>>
+>
+type ProcessPaymentResult = Awaited<
+  ReturnType<NonNullable<SolvaPayClient['processPaymentIntent']>>
+>
+type ActivatePlanResult = Awaited<ReturnType<NonNullable<SolvaPayClient['activatePlan']>>>
+type CustomerBalanceResult = Awaited<
+  ReturnType<NonNullable<SolvaPayClient['getCustomerBalance']>>
+>
+type ProductResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['getProduct']>>>
+type MerchantResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['getMerchant']>>>
 
 interface FreeTierData {
   [customerPlanKey: string]: {
@@ -502,6 +514,201 @@ export class StubSolvaPayClient implements SolvaPayClient {
       processorPaymentId,
       clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
       publishableKey: 'pk_test_stub_demo_key',
+    }
+  }
+
+  /**
+   * Create a plan-purchase payment intent (stub returns mock Stripe data).
+   *
+   * The returned `clientSecret` is deliberately unusable against Stripe — it
+   * exists so `next build` and initial UI rendering succeed. Runtime
+   * `confirmPayment` calls will fail unless the consumer swaps the stub for a
+   * real `createSolvaPay({ apiKey })` or wires `STRIPE_TEST_PK` into a
+   * bespoke variant.
+   */
+  async createPaymentIntent(params: {
+    productRef: string
+    planRef: string
+    customerRef: string
+    idempotencyKey?: string
+  }): Promise<CreatePaymentIntentResult> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(`📡 Stub Request: POST /v1/sdk/payment-intents`)
+    this.log(
+      `   Customer: ${params.customerRef}, Product: ${params.productRef}, Plan: ${params.planRef}`,
+    )
+
+    const processorPaymentId = `pi_stub_${Math.random().toString(36).slice(2, 15)}`
+
+    return {
+      processorPaymentId,
+      clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
+      publishableKey: 'pk_test_stub_demo_key',
+    }
+  }
+
+  /**
+   * Process a plan-purchase payment intent (stub returns a synthetic purchase).
+   *
+   * The stub does not verify the payment intent against Stripe. It marks the
+   * customer as holding the paid plan and returns a well-formed
+   * `ProcessPaymentResult` suitable for driving the UI.
+   */
+  async processPaymentIntent(params: {
+    paymentIntentId: string
+    productRef: string
+    customerRef: string
+    planRef?: string
+  }): Promise<ProcessPaymentResult> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(
+      `📡 Stub Request: POST /v1/sdk/payment-intents/${params.paymentIntentId}/process`,
+    )
+
+    const customerData = await this.loadCustomerData()
+    if (!customerData[params.customerRef]) {
+      customerData[params.customerRef] = { credits: 0 }
+    }
+
+    const isProPlan = params.planRef === 'plan_pro'
+    if (isProPlan) {
+      customerData[params.customerRef].plan = 'pro'
+      await this.saveCustomerData(customerData)
+    }
+
+    const now = new Date()
+    const purchase: NonNullable<ProcessPaymentResult['purchase']> = {
+      reference: `pur_stub_${Math.random().toString(36).slice(2, 10)}`,
+      productName: 'Demo Product',
+      productRef: params.productRef,
+      status: 'active',
+      startDate: now.toISOString(),
+      amount: isProPlan ? 2900 : 0,
+      currency: 'USD',
+      planRef: params.planRef,
+    }
+
+    return {
+      type: 'recurring',
+      purchase,
+      status: 'completed',
+    }
+  }
+
+  /**
+   * Activate a plan for a customer (stub).
+   *
+   * - `plan_free` → always `activated`.
+   * - any other plan + balance `0` → `topup_required` (paid plans still need
+   *   a payment intent; this mirrors the backend's activation semantics for
+   *   usage-based plans).
+   * - any other plan + balance `> 0` → `activated`.
+   */
+  async activatePlan(params: {
+    customerRef: string
+    productRef: string
+    planRef: string
+  }): Promise<ActivatePlanResult> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(`📡 Stub Request: POST /v1/sdk/activate`)
+    this.log(
+      `   Customer: ${params.customerRef}, Product: ${params.productRef}, Plan: ${params.planRef}`,
+    )
+
+    if (params.planRef === 'plan_free') {
+      const customerData = await this.loadCustomerData()
+      if (!customerData[params.customerRef]) {
+        customerData[params.customerRef] = { credits: 0 }
+      }
+      customerData[params.customerRef].plan = 'free'
+      await this.saveCustomerData(customerData)
+
+      return {
+        status: 'activated',
+        purchaseRef: `pur_stub_${Math.random().toString(36).slice(2, 10)}`,
+      }
+    }
+
+    const credits = await this.getCredits(params.customerRef)
+    if (credits <= 0) {
+      return {
+        status: 'topup_required',
+        creditBalance: 0,
+        creditsPerUnit: 1,
+        currency: 'USD',
+      }
+    }
+
+    return {
+      status: 'activated',
+      purchaseRef: `pur_stub_${Math.random().toString(36).slice(2, 10)}`,
+      creditBalance: credits,
+      creditsPerUnit: 1,
+      currency: 'USD',
+    }
+  }
+
+  /**
+   * Get customer credit balance (stub reads from in-memory/file storage).
+   */
+  async getCustomerBalance(params: {
+    customerRef: string
+  }): Promise<CustomerBalanceResult> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(`📡 Stub Request: GET /v1/sdk/customers/${params.customerRef}/credits`)
+
+    const credits = await this.getCredits(params.customerRef)
+
+    return {
+      customerRef: params.customerRef,
+      credits,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    }
+  }
+
+  /**
+   * Get a product by reference (stub returns a fixed demo product).
+   */
+  async getProduct(productRef: string): Promise<ProductResponse> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(`📡 Stub Request: GET /v1/sdk/products/${productRef}`)
+
+    const now = new Date().toISOString()
+    return {
+      reference: productRef,
+      name: 'Demo Product',
+      description: 'A stubbed product for local development and example builds.',
+      status: 'active',
+      balance: 0,
+      totalTransactions: 0,
+      isMcpPay: false,
+      createdAt: now,
+      updatedAt: now,
+    }
+  }
+
+  /**
+   * Get merchant identity (stub returns demo data).
+   */
+  async getMerchant(): Promise<MerchantResponse> {
+    await new Promise(resolve => setTimeout(resolve, this.delays.customer))
+
+    this.log(`📡 Stub Request: GET /v1/sdk/merchant`)
+
+    return {
+      displayName: 'Demo Merchant',
+      legalName: 'Demo Merchant Ltd',
+      supportEmail: 'support@example.com',
+      termsUrl: 'https://example.com/terms',
+      privacyUrl: 'https://example.com/privacy',
+      defaultCurrency: 'USD',
     }
   }
 

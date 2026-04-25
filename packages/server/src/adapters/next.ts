@@ -6,8 +6,8 @@
 
 import type { Adapter } from './base'
 import { AdapterUtils } from './base'
-import type { NextAdapterOptions } from '../types'
-import { PaywallError } from '../paywall'
+import type { NextAdapterOptions, PaywallStructuredContent } from '../types'
+import { PaywallError, paywallErrorToClientPayload } from '../paywall'
 
 /**
  * Next.js context (Web Request + optional route context)
@@ -104,23 +104,23 @@ export class NextAdapter implements Adapter<NextContext, Response> {
     })
   }
 
-  formatError(error: Error, _context: NextContext): Response {
-    if (error instanceof PaywallError) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Payment required',
-          product: error.structuredContent.product,
-          checkoutUrl: error.structuredContent.checkoutUrl,
-          message: error.structuredContent.message,
-        }),
-        {
-          status: 402,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      )
-    }
+  /**
+   * Emit a 402 Payment Required `Response` with the same JSON body
+   * REST consumers have always received. Reuses
+   * `paywallErrorToClientPayload` so HTTP / Next / hosted-proxy
+   * clients don't have to branch on an SDK version.
+   */
+  formatGate(gate: PaywallStructuredContent, _context: NextContext): Response {
+    return new Response(
+      JSON.stringify(paywallErrorToClientPayload(new PaywallError(gate.message, gate))),
+      {
+        status: 402,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
+  }
 
+  formatError(error: Error, _context: NextContext): Response {
     return new Response(
       JSON.stringify({
         success: false,

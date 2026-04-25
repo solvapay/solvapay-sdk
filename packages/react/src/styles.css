@@ -1,0 +1,1115 @@
+/**
+ * @solvapay/react — golden-path default styles.
+ *
+ * Opt-in via `import '@solvapay/react/styles.css'`. Theme by overriding the
+ * CSS custom properties exposed on `:root`. Every rule targets either an
+ * opaque `data-solvapay-*` selector (works for consumer compositions of the
+ * primitives) or a `.solvapay-*` class seeded by the default-tree shims in
+ * `src/components/*`. No element styles; safe to layer.
+ */
+
+:root {
+  --solvapay-accent: hsl(222 47% 11%);
+  --solvapay-accent-foreground: hsl(0 0% 98%);
+  --solvapay-accent-hover: hsl(222 47% 20%);
+  --solvapay-surface: hsl(0 0% 100%);
+  --solvapay-muted: hsl(210 40% 96%);
+  --solvapay-muted-foreground: hsl(215 16% 47%);
+  --solvapay-border: hsl(214 32% 91%);
+  --solvapay-destructive: hsl(0 72% 51%);
+  --solvapay-warning: hsl(38 92% 50%);
+  --solvapay-radius: 0.5rem;
+  --solvapay-font: inherit;
+}
+
+/* -----------------------------------------------------------------------------
+ * Spinner (shared across PaymentForm, TopupForm, StripePaymentFormWrapper)
+ * -------------------------------------------------------------------------- */
+
+@keyframes solvapay-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[data-solvapay-spinner] {
+  animation: solvapay-spin 0.8s linear infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-solvapay-spinner] {
+    animation: none;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+ * Checkout layout shell (drop-in)
+ * -------------------------------------------------------------------------- */
+
+.solvapay-checkout-layout {
+  font-family: var(--solvapay-font);
+  color: var(--solvapay-accent);
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+[data-solvapay-checkout-layout='desktop'].solvapay-checkout-layout {
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+[data-solvapay-checkout-layout='desktop'][data-solvapay-step='pay'].solvapay-checkout-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+[data-solvapay-checkout-layout='mobile'].solvapay-checkout-layout {
+  font-size: 0.9375rem;
+}
+
+[data-solvapay-checkout-layout='chat'].solvapay-checkout-layout {
+  padding: 0.5rem;
+  gap: 0.75rem;
+}
+
+.solvapay-back {
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  color: var(--solvapay-muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.25rem 0;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+
+.solvapay-back:hover {
+  color: var(--solvapay-accent);
+}
+
+.solvapay-back:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+  border-radius: calc(var(--solvapay-radius) / 2);
+}
+
+.solvapay-continue {
+  align-self: stretch;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+.solvapay-continue:hover:not(:disabled) {
+  background: var(--solvapay-accent-hover);
+}
+
+.solvapay-continue:disabled,
+.solvapay-continue[data-state='disabled'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.solvapay-continue:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+/* -----------------------------------------------------------------------------
+ * CheckoutSummary
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-checkout-summary] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--solvapay-muted);
+  border-radius: var(--solvapay-radius);
+  padding: 1rem;
+}
+
+[data-solvapay-checkout-summary-product],
+.solvapay-checkout-summary-product {
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+.solvapay-checkout-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+[data-solvapay-checkout-summary-plan],
+.solvapay-checkout-summary-plan {
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-checkout-summary-price],
+.solvapay-checkout-summary-price {
+  font-weight: 600;
+  color: var(--solvapay-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-solvapay-checkout-summary-trial],
+.solvapay-checkout-summary-trial,
+[data-solvapay-checkout-summary-tax-note],
+.solvapay-checkout-summary-tax-note {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.8125rem;
+}
+
+/* -----------------------------------------------------------------------------
+ * PlanSelector
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-plan-selector],
+.solvapay-plan-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+[data-solvapay-plan-selector-heading],
+.solvapay-plan-selector-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-plan-selector-grid],
+.solvapay-plan-selector-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+[data-solvapay-plan-selector-card] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  padding: 1rem;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
+}
+
+[data-solvapay-plan-selector-card]:hover:not([data-state='disabled']) {
+  border-color: var(--solvapay-accent);
+}
+
+[data-solvapay-plan-selector-card]:focus-visible {
+  outline: none;
+  border-color: var(--solvapay-accent);
+  box-shadow: 0 0 0 2px var(--solvapay-accent);
+}
+
+[data-solvapay-plan-selector-card][data-state='selected'] {
+  border-color: var(--solvapay-accent);
+  box-shadow: 0 0 0 1px var(--solvapay-accent);
+}
+
+[data-solvapay-plan-selector-card][data-state='current'] {
+  background: var(--solvapay-muted);
+  border-color: var(--solvapay-border);
+  cursor: default;
+}
+
+[data-solvapay-plan-selector-card][data-state='disabled'] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-solvapay-plan-selector-card][data-popular] {
+  border-color: var(--solvapay-accent);
+}
+
+[data-solvapay-plan-selector-card-name],
+.solvapay-plan-selector-card-name {
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-plan-selector-card-price],
+.solvapay-plan-selector-card-price {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--solvapay-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-solvapay-plan-selector-card-interval],
+.solvapay-plan-selector-card-interval {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.8125rem;
+}
+
+[data-solvapay-plan-selector-card-badge] {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.125rem 0.5rem;
+  text-transform: uppercase;
+}
+
+[data-solvapay-plan-selector-card-badge][data-variant='current'] {
+  background: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-plan-selector-loading],
+.solvapay-plan-selector-loading {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+  padding: 1rem 0;
+}
+
+[data-solvapay-plan-selector-error],
+.solvapay-plan-selector-error {
+  color: var(--solvapay-destructive);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--solvapay-destructive);
+  border-radius: var(--solvapay-radius);
+  background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+ * PaymentForm
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-payment-form] {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-solvapay-payment-form-customer-fields] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+[data-solvapay-payment-form-customer-email] input,
+[data-solvapay-payment-form-customer-name] input {
+  width: 100%;
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  font: inherit;
+  padding: 0.625rem 0.75rem;
+  color: var(--solvapay-accent);
+  transition: border-color 120ms ease;
+}
+
+[data-solvapay-payment-form-customer-email] input:focus,
+[data-solvapay-payment-form-customer-name] input:focus {
+  outline: none;
+  border-color: var(--solvapay-accent);
+  box-shadow: 0 0 0 1px var(--solvapay-accent);
+}
+
+[data-solvapay-payment-form-terms] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-payment-form-submit] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+[data-solvapay-payment-form-submit]:hover:not(:disabled) {
+  background: var(--solvapay-accent-hover);
+}
+
+[data-solvapay-payment-form-submit]:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+[data-solvapay-payment-form-submit][data-state='processing'] {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+[data-solvapay-payment-form-submit][data-state='disabled'],
+[data-solvapay-payment-form-submit]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-solvapay-payment-form-loading] {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+  padding: 1rem 0;
+}
+
+[data-solvapay-payment-form-error] {
+  color: var(--solvapay-destructive);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--solvapay-destructive);
+  border-radius: var(--solvapay-radius);
+  background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+ * ActivationFlow
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-activation-flow] {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-solvapay-activation-flow-summary],
+.solvapay-activation-flow-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--solvapay-muted);
+  border-radius: var(--solvapay-radius);
+  padding: 1rem;
+}
+
+.solvapay-activation-flow-heading,
+.solvapay-activation-flow-topup-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--solvapay-accent);
+}
+
+.solvapay-activation-flow-topup-subheading {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+[data-solvapay-activation-flow-activate],
+[data-solvapay-activation-flow-continue],
+.solvapay-activation-flow-activate,
+.solvapay-activation-flow-continue {
+  align-self: stretch;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+[data-solvapay-activation-flow-activate]:hover:not(:disabled),
+[data-solvapay-activation-flow-continue]:hover:not(:disabled) {
+  background: var(--solvapay-accent-hover);
+}
+
+[data-solvapay-activation-flow-activate]:disabled,
+[data-solvapay-activation-flow-continue]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-solvapay-activation-flow-activate]:focus-visible,
+[data-solvapay-activation-flow-continue]:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+.solvapay-activation-flow-change-amount,
+.solvapay-activation-flow-try-again,
+.solvapay-activation-flow-back {
+  background: transparent;
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  color: var(--solvapay-accent);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.solvapay-activation-flow-change-amount:hover,
+.solvapay-activation-flow-try-again:hover,
+.solvapay-activation-flow-back:hover {
+  background: var(--solvapay-muted);
+  border-color: var(--solvapay-accent);
+}
+
+[data-solvapay-activation-flow-retrying],
+.solvapay-activation-flow-retrying,
+[data-solvapay-activation-flow-activated],
+.solvapay-activation-flow-activated {
+  background: var(--solvapay-muted);
+  border-radius: var(--solvapay-radius);
+  padding: 1rem;
+}
+
+[data-solvapay-activation-flow-loading] {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+  padding: 1rem 0;
+}
+
+[data-solvapay-activation-flow-error],
+.solvapay-activation-flow-error {
+  color: var(--solvapay-destructive);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--solvapay-destructive);
+  border-radius: var(--solvapay-radius);
+  background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+ * AmountPicker
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-amount-picker],
+.solvapay-amount-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.solvapay-amount-picker-label,
+.solvapay-amount-picker-custom-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--solvapay-muted-foreground);
+  margin: 0;
+}
+
+.solvapay-amount-picker-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+[data-solvapay-amount-picker-option],
+.solvapay-amount-picker-pill {
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: 999px;
+  color: var(--solvapay-accent);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.375rem 0.875rem;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+[data-solvapay-amount-picker-option]:hover:not([data-state='disabled']),
+.solvapay-amount-picker-pill:hover {
+  border-color: var(--solvapay-accent);
+}
+
+[data-solvapay-amount-picker-option][data-state='selected'] {
+  background: var(--solvapay-accent);
+  border-color: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+}
+
+[data-solvapay-amount-picker-option][data-state='disabled'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-solvapay-amount-picker-option]:focus-visible,
+.solvapay-amount-picker-pill:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+.solvapay-amount-picker-custom-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.solvapay-amount-picker-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  padding: 0.5rem 0.75rem;
+  transition: border-color 120ms ease;
+}
+
+.solvapay-amount-picker-custom-row:focus-within {
+  border-color: var(--solvapay-accent);
+  box-shadow: 0 0 0 1px var(--solvapay-accent);
+}
+
+.solvapay-amount-picker-currency-symbol {
+  color: var(--solvapay-muted-foreground);
+  font-weight: 500;
+}
+
+[data-solvapay-amount-picker-custom],
+.solvapay-amount-picker-custom-input {
+  background: transparent;
+  border: none;
+  color: var(--solvapay-accent);
+  flex: 1;
+  font: inherit;
+  min-width: 0;
+  outline: none;
+  padding: 0;
+}
+
+[data-solvapay-amount-picker-custom][data-state='active'] {
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-amount-picker-custom][data-state='dormant'] {
+  color: var(--solvapay-muted-foreground);
+}
+
+.solvapay-amount-picker-credit-estimate {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.solvapay-amount-picker-error {
+  color: var(--solvapay-destructive);
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+/* -----------------------------------------------------------------------------
+ * BalanceBadge
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-balance-badge] {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-balance-badge][data-state='loading'] {
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-balance-badge][data-state='zero'] {
+  color: var(--solvapay-destructive);
+}
+
+[data-solvapay-balance-badge][data-state='low'] {
+  color: var(--solvapay-warning);
+}
+
+/* -----------------------------------------------------------------------------
+ * CancelPlanButton
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-cancel-plan] {
+  background: transparent;
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  color: var(--solvapay-accent);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.5rem 0.875rem;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
+}
+
+[data-solvapay-cancel-plan]:hover:not(:disabled) {
+  background: var(--solvapay-muted);
+  border-color: var(--solvapay-destructive);
+  color: var(--solvapay-destructive);
+}
+
+[data-solvapay-cancel-plan]:focus-visible {
+  outline: 2px solid var(--solvapay-destructive);
+  outline-offset: 2px;
+}
+
+[data-solvapay-cancel-plan][data-state='cancelling'],
+[data-solvapay-cancel-plan]:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* -----------------------------------------------------------------------------
+ * CancelledPlanNotice
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-cancelled-notice],
+.solvapay-cancelled-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--solvapay-muted);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  padding: 1rem;
+}
+
+[data-solvapay-cancelled-notice][data-state='expired'] {
+  border-color: var(--solvapay-destructive);
+  background: color-mix(in srgb, var(--solvapay-destructive) 6%, var(--solvapay-muted));
+}
+
+[data-solvapay-cancelled-notice-heading],
+.solvapay-cancelled-notice-heading {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--solvapay-accent);
+}
+
+.solvapay-cancelled-notice-details,
+.solvapay-cancelled-notice-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-cancelled-notice-days-remaining],
+.solvapay-cancelled-notice-days-remaining {
+  color: var(--solvapay-accent);
+  font-weight: 500;
+}
+
+[data-solvapay-cancelled-notice-reactivate],
+.solvapay-cancelled-notice-reactivate {
+  align-self: flex-start;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.5rem 0.875rem;
+  transition: background-color 120ms ease;
+}
+
+[data-solvapay-cancelled-notice-reactivate]:hover:not(:disabled) {
+  background: var(--solvapay-accent-hover);
+}
+
+[data-solvapay-cancelled-notice-reactivate]:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+/* -----------------------------------------------------------------------------
+ * CreditGate / PurchaseGate
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-credit-gate],
+[data-solvapay-purchase-gate],
+.solvapay-credit-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+[data-solvapay-credit-gate-heading],
+.solvapay-credit-gate-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-credit-gate-subheading],
+.solvapay-credit-gate-subheading {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+[data-solvapay-credit-gate-loading],
+[data-solvapay-purchase-gate-loading] {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+}
+
+[data-solvapay-credit-gate-error],
+[data-solvapay-purchase-gate-error] {
+  color: var(--solvapay-destructive);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--solvapay-destructive);
+  border-radius: var(--solvapay-radius);
+  background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+ * TopupForm
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-topup-form],
+.solvapay-topup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-solvapay-topup-form-submit],
+.solvapay-topup-form-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  align-self: stretch;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+[data-solvapay-topup-form-submit]:hover:not(:disabled) {
+  background: var(--solvapay-accent-hover);
+}
+
+[data-solvapay-topup-form-submit]:disabled,
+[data-solvapay-topup-form-submit][data-state='disabled'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-solvapay-topup-form-submit][data-state='processing'] {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+[data-solvapay-topup-form-submit]:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+[data-solvapay-topup-form-loading],
+.solvapay-topup-form-loading {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+}
+
+[data-solvapay-topup-form-error],
+.solvapay-topup-form-error {
+  color: var(--solvapay-destructive);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--solvapay-destructive);
+  border-radius: var(--solvapay-radius);
+  background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+ * Leaves: MandateText, ProductBadge, PlanBadge
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-mandate-text] {
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+[data-solvapay-product-badge] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--solvapay-muted);
+  border-radius: 999px;
+  color: var(--solvapay-accent);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+}
+
+/* -----------------------------------------------------------------------------
+ * CurrentPlanCard
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-current-plan-card],
+.solvapay-current-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  padding: 1rem;
+}
+
+[data-solvapay-current-plan-heading],
+.solvapay-current-plan-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-current-plan-name],
+.solvapay-current-plan-name {
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-current-plan-price],
+.solvapay-current-plan-price {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--solvapay-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-solvapay-current-plan-next-billing],
+[data-solvapay-current-plan-expires],
+.solvapay-current-plan-date-line {
+  display: block;
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.8125rem;
+}
+
+[data-solvapay-current-plan-balance-line],
+.solvapay-current-plan-balance-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+}
+
+[data-solvapay-current-plan-payment-method],
+.solvapay-current-plan-payment-method {
+  display: block;
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.8125rem;
+}
+
+[data-solvapay-current-plan-actions],
+.solvapay-current-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* -----------------------------------------------------------------------------
+ * LaunchCustomerPortalButton (also applies to UpdatePaymentMethodButton, which
+ * forwards `data-solvapay-update-payment-method` onto the same element).
+ *
+ * Ready state renders as <a target="_blank">; loading/error render as
+ * <button disabled>. The <a> rules explicitly reset `text-decoration` and
+ * align the label so the link doesn't fall back to the browser's default
+ * underlined styling inside the CurrentPlanCard actions row.
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-launch-customer-portal] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.5rem 0.875rem;
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+[data-solvapay-launch-customer-portal][data-state='ready']:hover {
+  background: var(--solvapay-accent-hover);
+}
+
+[data-solvapay-launch-customer-portal]:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+[data-solvapay-launch-customer-portal][data-state='loading'] {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+[data-solvapay-launch-customer-portal][data-state='error'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -----------------------------------------------------------------------------
+ * UsageMeter (Phase 2.2)
+ *
+ * Horizontal progress bar with `data-state="safe|warning|critical|loading"`
+ * on both the root and the bar itself. The fill width is driven by a CSS
+ * custom property so the bar never needs inline styles.
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --solvapay-usage-safe: var(--solvapay-accent);
+  --solvapay-usage-warning: var(--solvapay-warning);
+  --solvapay-usage-critical: var(--solvapay-destructive);
+  --solvapay-usage-meter-fill: 0%;
+}
+
+[data-solvapay-usage-meter] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-usage-meter-bar] {
+  position: relative;
+  width: 100%;
+  height: 0.5rem;
+  background: var(--solvapay-muted);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+[data-solvapay-usage-meter-bar]::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: var(--solvapay-usage-meter-fill, 0%);
+  background: var(--solvapay-usage-safe);
+  border-radius: inherit;
+  transition: width 200ms ease;
+}
+
+[data-solvapay-usage-meter-bar][data-state='warning']::after {
+  background: var(--solvapay-usage-warning);
+}
+
+[data-solvapay-usage-meter-bar][data-state='critical']::after {
+  background: var(--solvapay-usage-critical);
+}
+
+[data-solvapay-usage-meter-label] {
+  color: var(--solvapay-accent);
+  font-weight: 500;
+}
+
+[data-solvapay-usage-meter-percentage],
+[data-solvapay-usage-meter-resets-in] {
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-usage-meter-empty] {
+  color: var(--solvapay-muted-foreground);
+  font-style: italic;
+}
+
+/* -----------------------------------------------------------------------------
+ * PaywallNotice (Phase 2.1)
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-paywall-notice] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  background: var(--solvapay-surface);
+}
+
+[data-solvapay-paywall-heading] {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-paywall-message] {
+  margin: 0;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-paywall-balance] {
+  font-weight: 500;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-paywall-retry][data-state='waiting'] {
+  opacity: 0.5;
+  cursor: wait;
+}

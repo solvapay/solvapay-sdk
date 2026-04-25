@@ -130,14 +130,38 @@ describe('SolvaPayProvider - createTopupPayment', () => {
     expect(topupCalls[0][1].headers['x-solvapay-customer-ref']).toBe('cus_cached')
   })
 
-  it('custom createTopupPayment prop overrides default implementation', async () => {
+  it('config.transport overrides the default topup implementation', async () => {
     const customFn = vi.fn().mockResolvedValue({
       clientSecret: 'cs_custom',
       publishableKey: 'pk_custom',
     })
 
+    // Partial transport: only override createTopupPayment. Any other method
+    // would throw if called — the test only exercises the topup path.
+    const transport = {
+      checkPurchase: vi.fn(),
+      createPayment: vi.fn(),
+      processPayment: vi.fn(),
+      createTopupPayment: customFn,
+      getBalance: vi.fn(),
+      cancelRenewal: vi.fn(),
+      reactivateRenewal: vi.fn(),
+      activatePlan: vi.fn(),
+      createCheckoutSession: vi.fn(),
+      createCustomerSession: vi.fn(),
+      getMerchant: vi.fn(),
+      getProduct: vi.fn(),
+      listPlans: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
+
     const { result } = renderHook(() => useSolvaPay(), {
-      wrapper: createWrapper({ createTopupPayment: customFn }),
+      wrapper: createWrapper({
+        config: {
+          auth: { adapter: mockAdapter },
+          transport,
+        },
+      }),
     })
 
     await act(async () => {

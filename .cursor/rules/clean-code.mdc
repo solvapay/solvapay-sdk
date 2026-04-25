@@ -1,0 +1,44 @@
+---
+description: Clean code principles for post-launch development
+alwaysApply: true
+---
+
+# Clean Code Standards
+
+## No Broken Windows
+
+Fix problems as you encounter them. Don't leave:
+- Commented-out code
+- Unused imports, variables, or functions
+- Inconsistent naming or patterns
+- Copy-pasted code that should be abstracted
+
+If you touch a file, leave it cleaner than you found it.
+
+## Move Fast, Break Nothing
+
+**We are post-launch with live customers. The SDK is consumed directly by integrators -- changes here have immediate downstream impact.**
+
+- Refactor code you're already touching to make it better -- the boy scout rule applies
+- Don't refactor unrelated code while working on a task unless it's a small obvious fix
+- Don't rename public APIs, change type signatures, or restructure exports just because you can -- changes must have a reason
+- Consider integrator impact before changing any exported type, function signature, or behavior
+- When in doubt about whether a change is breaking, flag it rather than just doing it
+- Delete genuinely unused code paths -- but verify they're unused first
+
+## Prefer the Right Solution
+
+When implementing features:
+
+1. **Do it right the first time** - don't plan to "fix it later"
+2. **Improve existing patterns** - if something looks wrong, fix it while you're there. Don't change things that work just because they look different from what you'd write
+3. **Simplify aggressively** - less code is better code
+4. **Use proper types** - avoid `any`, define clear interfaces
+5. **Name things clearly** - code should read like documentation
+
+## When Refactoring
+
+If you see code that could be improved while working on a task:
+- Small fixes: just do them
+- Medium refactors: mention them and do them if related to the task
+- Large refactors: flag them but stay focused on the current task

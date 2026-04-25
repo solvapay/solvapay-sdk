@@ -20,11 +20,18 @@ export { createCheckoutSession, createCustomerSession } from './checkout'
 // Export activation helpers
 export { activatePlan } from './activation'
 
+// Export payment-method helpers
+export { getPaymentMethod } from './payment-method'
+
 // Export purchase cancellation & reactivation helpers
 export { cancelRenewal, reactivateRenewal } from './renewal'
 
 // Export plans helpers
 export { listPlans } from './plans'
+
+// Export merchant/product helpers
+export { getMerchant } from './merchant'
+export { getProduct } from './product'
 
 // Export usage helpers
 export { trackUsage } from './usage'
