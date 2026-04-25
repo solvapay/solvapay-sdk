@@ -33,6 +33,7 @@ import {
 import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
+import { withPaymentElementDefaults } from './paymentElementDefaults'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import { useCheckout } from '../hooks/useCheckout'
@@ -747,7 +748,7 @@ const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
   return (
     <div data-solvapay-payment-form-payment-element="">
       <StripePaymentElement
-        options={options}
+        options={withPaymentElementDefaults(options)}
         onChange={e => setPaymentInputComplete(e.complete)}
         key={locale || 'default'}
       />

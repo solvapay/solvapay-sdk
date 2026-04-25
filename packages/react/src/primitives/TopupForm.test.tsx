@@ -1,19 +1,31 @@
 /// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import React, { createRef } from 'react'
 import { TopupForm, useTopupForm } from './TopupForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { SolvaPayContextValue } from '../types'
 
+// Captures the last `options` prop received by the mocked Stripe
+// `PaymentElement` so integration tests can assert `TopupForm.PaymentElement`
+// forwards SolvaPay defaults (e.g. `wallets.link = 'never'`).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lastPaymentElementOptions: { current: any } = { current: undefined }
+
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
   useStripe: () => ({ confirmCardPayment: vi.fn(), confirmPayment: vi.fn() }),
-  useElements: () => ({ getElement: vi.fn() }),
+  useElements: () => ({ getElement: vi.fn(), submit: vi.fn() }),
   CardElement: () => React.createElement('div', { 'data-testid': 'card-element' }),
-  PaymentElement: () => React.createElement('div', { 'data-testid': 'payment-element' }),
+  PaymentElement: (props: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    options?: any
+  }) => {
+    lastPaymentElementOptions.current = props.options
+    return React.createElement('div', { 'data-testid': 'payment-element' })
+  },
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
@@ -67,6 +79,7 @@ function Wrap({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  lastPaymentElementOptions.current = undefined
 })
 
 describe('TopupForm primitive', () => {
@@ -149,5 +162,61 @@ describe('TopupForm primitive', () => {
       ),
     ).toThrow(MissingProviderError)
     spy.mockRestore()
+  })
+})
+
+// ---------- PaymentElement default options (Stripe Link disabled) ----------
+//
+// Guards the centralized `withPaymentElementDefaults` wire-up inside
+// `TopupForm.PaymentElement`. The Link sign-in banner + "Save my
+// information for faster checkout" enrollment UI would duplicate the
+// SolvaPay-owned "Save card for future top-ups" affordance, so the
+// primitive must pass `wallets.link = 'never'` to Stripe by default
+// while still letting callers override via `options`.
+
+describe('TopupForm.PaymentElement default options', () => {
+  it('disables Stripe Link by default when the caller passes no options', async () => {
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.PaymentElement />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('payment-element')).toBeTruthy()
+    })
+    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('never')
+  })
+
+  it('honours caller-supplied wallets.link override', async () => {
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.PaymentElement options={{ wallets: { link: 'auto' } }} />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('payment-element')).toBeTruthy()
+    })
+    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('auto')
+  })
+
+  it('composes caller-supplied wallet flags with the default link=never', async () => {
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.PaymentElement options={{ wallets: { applePay: 'never' } }} />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('payment-element')).toBeTruthy()
+    })
+    expect(lastPaymentElementOptions.current?.wallets).toEqual({
+      link: 'never',
+      applePay: 'never',
+    })
   })
 })
