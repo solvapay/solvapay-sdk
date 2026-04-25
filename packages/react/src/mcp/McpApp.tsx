@@ -39,6 +39,8 @@ import type { McpAccountViewProps } from './views/McpAccountView'
 import type { McpCheckoutViewProps } from './views/McpCheckoutView'
 import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
+import { AppHeader } from './views/AppHeader'
+import { McpHostInfoProvider } from './hooks/useHostInfo'
 
 /**
  * Minimal host-context shape `<McpApp>` reads. Kept loose so the real
@@ -58,6 +60,14 @@ export type McpUiHostContextLike = any
  */
 export interface McpAppFull extends McpAppBootstrapLike, McpAppLike, McpBridgeAppLike {
   connect: () => Promise<void>
+  /**
+   * Host implementation info discovered during `connect()`. Exposed by
+   * `@modelcontextprotocol/ext-apps` `App.getHostVersion()` — `<McpApp>`
+   * reads it after connect resolves so `<AppHeader>` can suppress itself
+   * on hosts that already paint a merchant mark in their chrome
+   * (ChatGPT). Optional so minimal test adapters don't have to stub it.
+   */
+  getHostVersion?: () => { name?: string; version?: string } | undefined
   // Real `App` uses `((ctx: McpUiHostContext) => void) | undefined` here;
   // we keep the type intentionally loose so callers don't fight variance.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -189,6 +199,13 @@ export function McpApp({
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
+  // Host implementation name (e.g. `'ChatGPT'`, `'Claude Desktop'`,
+  // `'MCP Jam'`). Resolved after `app.connect()` so downstream
+  // `<AppHeader>` consumers can suppress themselves on hosts that
+  // already paint a merchant mark (see OpenAI Apps SDK UI guidelines
+  // and `HOSTS_WITH_MERCHANT_CHROME`). Null until the handshake
+  // completes.
+  const [hostName, setHostName] = useState<string | null>(null)
   // Counter tracking client-initiated bootstrap fetches (mount +
   // `refreshBootstrap`). The tool-result subscription consults it so
   // it doesn't double-apply the same payload a fetch is about to
@@ -217,6 +234,7 @@ export function McpApp({
     // re-bootstrap against the new app.
     setInitError(null)
     setBootstrap(null)
+    setHostName(null)
 
     // `@modelcontextprotocol/ext-apps` `App` exposes lifecycle hooks as
     // property setters — mutating the `app` prop is intentional and part
@@ -294,6 +312,12 @@ export function McpApp({
         await app.connect()
         if (cancelled) return
         applyContextRef.current?.(app.getHostContext())
+        // Capture the host implementation name now that `connect()` has
+        // populated it. `<AppHeader mode="auto">` consumes this via
+        // `useHostName()` to decide whether to render (ChatGPT paints
+        // its own chrome mark — suppress — while Claude / MCP Jam
+        // leave in-widget branding to the app — render).
+        setHostName(app.getHostVersion?.()?.name ?? null)
 
         // Mount the matching intent tool via `fetchMcpBootstrap`. The
         // `pendingBootstrapFetchRef` gate suppresses the echo
@@ -359,8 +383,26 @@ export function McpApp({
     link.rel = 'icon'
     link.href = iconUrl
     if (!existing) document.head.appendChild(link)
+
+    // Kick off a preload so the browser starts fetching the icon the
+    // moment bootstrap resolves — by the time `<AppHeader>` mounts
+    // `<img src={iconUrl}>`, the HTTP response is typically already in
+    // the cache, so `onLoad` fires synchronously and the initials →
+    // icon swap is invisible. Managed via a separate `data-*` attr so
+    // favicon + preload links don't clobber each other.
+    const PRELOAD_ATTR = 'data-solvapay-icon-preload'
+    const existingPreload = document.head.querySelector<HTMLLinkElement>(
+      `link[${PRELOAD_ATTR}]`,
+    )
+    const preload = existingPreload ?? document.createElement('link')
+    preload.setAttribute(PRELOAD_ATTR, '')
+    preload.rel = 'preload'
+    preload.as = 'image'
+    preload.href = iconUrl
+    if (!existingPreload) document.head.appendChild(preload)
+
     return () => {
-      // Leave the tag in place across bootstrap updates so the tab
+      // Leave both tags in place across bootstrap updates so the tab
       // favicon doesn't flicker — the next render's effect will update
       // `href` in-place. Only clean up on unmount.
     }
@@ -455,51 +497,58 @@ export function McpApp({
   )
   const effectiveOnClose = onClose ?? defaultOnClose
 
-  if (initError) {
-    return (
-      <main className="solvapay-mcp-main">
-        <div className={`${cx.card} ${cx.error}`.trim()}>
-          <h2 className={cx.heading}>Unable to load SolvaPay</h2>
-          <p>{initError}</p>
-        </div>
-      </main>
-    )
-  }
-
-  if (!bootstrap) {
-    // Intent-tool / fallback entries show a loading card while the
-    // in-flight `fetchMcpBootstrap` call resolves. Data-tool iframe
-    // entries no longer exist (payable merchant tools don't advertise
-    // `_meta.ui.resourceUri`) so this is always legitimate user
-    // feedback for an in-flight tool call.
-    return (
-      <main className="solvapay-mcp-main">
-        <div className={cx.card}>
-          <p>Loading…</p>
-        </div>
-      </main>
-    )
-  }
-
-  const effectiveBootstrap = productRefOverride
-    ? { ...bootstrap, productRef: productRefOverride }
-    : bootstrap
+  const effectiveBootstrap =
+    bootstrap && productRefOverride
+      ? { ...bootstrap, productRef: productRefOverride }
+      : bootstrap
 
   return (
-    <SolvaPayProvider config={providerConfig}>
-      <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
-        <main className="solvapay-mcp-main">
-          <McpAppShell
-            bootstrap={effectiveBootstrap}
-            views={views}
-            classNames={classNames}
-            {...(footer !== undefined ? { footer } : {})}
-            onRefreshBootstrap={refreshBootstrap}
-            onClose={effectiveOnClose}
-          />
-        </main>
-      </McpBridgeProvider>
-    </SolvaPayProvider>
+    <McpHostInfoProvider hostName={hostName}>
+      <main className="solvapay-mcp-main">
+        {/*
+         * `<AppHeader>` lives above the conditional provider tree so
+         * the merchant mark persists across loading / error / ready
+         * states. Pass `bootstrap.merchant` directly: the header's
+         * cache lookup would return `null` here because this slot is
+         * outside the `<SolvaPayProvider>` subtree (no
+         * `SolvaPayContext` in scope), so without the prop we'd fall
+         * back to the `SolvaPay` / `SP` placeholder even after
+         * bootstrap resolves.
+         */}
+        <AppHeader
+          classNames={classNames}
+          merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
+        />
+        {initError ? (
+          <div className={`${cx.card} ${cx.error}`.trim()}>
+            <h2 className={cx.heading}>Unable to load SolvaPay</h2>
+            <p>{initError}</p>
+          </div>
+        ) : !effectiveBootstrap ? (
+          // Intent-tool / fallback entries show a loading card while the
+          // in-flight `fetchMcpBootstrap` call resolves. Data-tool iframe
+          // entries no longer exist (payable merchant tools don't advertise
+          // `_meta.ui.resourceUri`) so this is always legitimate user
+          // feedback for an in-flight tool call.
+          <div className={cx.card}>
+            <p>Loading…</p>
+          </div>
+        ) : (
+          <SolvaPayProvider config={providerConfig}>
+            <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
+              <McpAppShell
+                bootstrap={effectiveBootstrap}
+                views={views}
+                classNames={classNames}
+                {...(footer !== undefined ? { footer } : {})}
+                onRefreshBootstrap={refreshBootstrap}
+                onClose={effectiveOnClose}
+              />
+            </McpBridgeProvider>
+          </SolvaPayProvider>
+        )}
+      </main>
+    </McpHostInfoProvider>
   )
 }
 

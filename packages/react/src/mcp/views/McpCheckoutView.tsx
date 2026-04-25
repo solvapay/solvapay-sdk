@@ -132,6 +132,7 @@ export function McpCheckoutView({
         onRefreshBootstrap={onRefreshBootstrap}
         onClose={onClose}
         cx={cx}
+        classNames={classNames}
       >
         {children}
       </EmbeddedCheckout>

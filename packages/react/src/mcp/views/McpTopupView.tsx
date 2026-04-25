@@ -79,7 +79,8 @@ export function McpTopupView({
     )
   }
 
-  if (probe === 'blocked') return <HostedTopupFallback cx={cx} onBack={onBack} />
+  if (probe === 'blocked')
+    return <HostedTopupFallback cx={cx} onBack={onBack} />
 
   const currency = merchant?.defaultCurrency?.toUpperCase() ?? FALLBACK_TOPUP_CURRENCY
 
@@ -239,7 +240,13 @@ function QuickAmountOptions({
   )
 }
 
-function HostedTopupFallback({ cx, onBack }: { cx: Cx; onBack?: () => void }) {
+function HostedTopupFallback({
+  cx,
+  onBack,
+}: {
+  cx: Cx
+  onBack?: () => void
+}) {
   return (
     <div className={cx.card}>
       {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}

@@ -342,6 +342,7 @@ a bespoke layout — compose the pieces directly:
 
 ```tsx
 import {
+  AppHeader,
   createMcpAppAdapter,
   createMcpFetch,
   fetchMcpBootstrap,
@@ -359,6 +360,63 @@ typed per-view (`McpCheckoutViewProps`, `McpAccountViewProps`,
 / `McpUpsellStrip` surfaces were removed with the text-only paywall
 refactor — merchant paywall / nudge responses narrate in
 `content[0].text` and don't open the widget iframe.
+
+### `<AppHeader>` — host-aware merchant strip
+
+Every built-in view renders `<AppHeader />` at its surface root: a
+compact `[icon] Merchant-Name` row at the top of the card. When you
+compose your own view (via `<McpViewRouter>` or `<SolvaPayProvider>`
+directly) drop it in as the first child to keep branding consistent.
+
+```tsx
+import { AppHeader } from '@solvapay/react/mcp'
+
+function MyView() {
+  return (
+    <div className="solvapay-mcp-card">
+      <AppHeader />
+      <h2>Your custom step</h2>
+      {/* ... */}
+    </div>
+  )
+}
+```
+
+`<AppHeader>` is **host-aware**. In `mode="auto"` (the default) it
+suppresses itself on hosts that already paint a merchant mark in their
+chrome:
+
+- **ChatGPT**, whose [Apps SDK UI guidelines](https://developers.openai.com/apps-sdk/concepts/ui-guidelines)
+  explicitly prohibit in-widget logos (*"ChatGPT will always append
+  your logo and app name before the widget is rendered."*).
+- **Claude Desktop**, which paints its own MCP app chrome strip (app
+  icon + app name + active tool name) above every widget iframe — a
+  second in-widget merchant row stacks on top of it.
+
+On MCP Jam, VS Code, and other hosts that leave in-widget branding to
+the app, `<AppHeader>` paints the strip so the user always sees who
+they're dealing with.
+
+```tsx
+<AppHeader mode="auto" />    // default — host-aware
+<AppHeader mode="always" />  // force render (e.g. testing)
+<AppHeader mode="never" />   // force hide (e.g. custom chrome)
+```
+
+Use `classNames={{ appHeader, appHeaderIcon, appHeaderInitials, appHeaderName }}`
+to restyle any slot, or pass `children` for inline content on the
+right side (e.g. a close affordance or status chip). The merchant is
+read from `useMerchant()` automatically.
+
+Integrators building entirely custom shells can also read the raw host
+name via `useHostName()`:
+
+```tsx
+import { useHostName, HOSTS_WITH_MERCHANT_CHROME } from '@solvapay/react/mcp'
+
+const hostName = useHostName() // 'ChatGPT' | 'Claude Desktop' | 'MCP Jam' | null
+const showMark = !hostName || !HOSTS_WITH_MERCHANT_CHROME.test(hostName)
+```
 
 ### Architecture ADR
 

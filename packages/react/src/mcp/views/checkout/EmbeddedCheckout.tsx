@@ -12,6 +12,7 @@ import React, { useMemo, useState } from 'react'
 import { PlanSelector } from '../../../primitives/PlanSelector'
 import { usePurchase } from '../../../hooks/usePurchase'
 import type { Plan } from '../../../types'
+import type { McpViewClassNames } from '../types'
 import { CheckoutStateMachine } from './CheckoutStateMachine'
 import type { BootstrapPlanLike, Cx, Step, SuccessMeta } from './shared'
 import { isPayg, planSortByPaygFirstThenAsc } from './shared'
@@ -45,6 +46,12 @@ export interface EmbeddedCheckoutProps {
   onRefreshBootstrap?: () => void | Promise<void>
   onClose?: () => void
   cx: Cx
+  /**
+   * Forwarded to `<AppHeader>` so integrator-supplied slot overrides
+   * (`appHeaderIcon`, `appHeaderName`, …) reach the merchant strip at
+   * the top of the card.
+   */
+  classNames?: McpViewClassNames
   children?: React.ReactNode
 }
 
@@ -59,6 +66,7 @@ export function EmbeddedCheckout({
   onRefreshBootstrap,
   onClose,
   cx,
+  classNames,
   children,
 }: EmbeddedCheckoutProps) {
   const { loading, isRefetching, activePurchase } = usePurchase()

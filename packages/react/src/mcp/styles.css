@@ -44,7 +44,7 @@ body {
 .solvapay-mcp-main {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   max-width: 520px;
   margin: 0 auto;
 }
@@ -66,13 +66,69 @@ body {
 .solvapay-mcp-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 16px;
   border-radius: var(--border-radius-lg, 12px);
   border: 1px solid var(--color-border-secondary, #e2e8f0);
   background: var(--color-background-primary, #ffffff);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
   transition: opacity 180ms ease;
+}
+
+/*
+ * `<AppHeader>` — compact merchant strip rendered once above every
+ * MCP surface (`[icon] Merchant-Name`). Host-aware: suppresses itself
+ * on hosts that paint their own chrome mark (ChatGPT, Claude Desktop).
+ * Sits above the card stack as a standalone row — the 12px flex-gap on
+ * `.solvapay-mcp-main` provides breathing room below. Color on the
+ * name is intentionally muted so the step heading in the card below
+ * (`How many credits?`, `Upgrade your plan`) carries the visual
+ * weight.
+ */
+.solvapay-mcp-app-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.solvapay-mcp-app-header-icon,
+.solvapay-mcp-app-header-initials {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.solvapay-mcp-app-header-icon {
+  object-fit: contain;
+}
+
+.solvapay-mcp-app-header-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-secondary, #f1f5f9);
+  color: var(--color-text-secondary, #475569);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.solvapay-mcp-app-header-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #475569);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.solvapay-mcp-app-header-slot {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /*
@@ -340,72 +396,19 @@ body {
  * The UsageMeter primitive already ships default styles in
  * @solvapay/react/styles.css — the MCP view only adds view-level spacing. */
 
-/* Shell chrome — header, tab nav, footer
+/* Shell chrome — layout, sidebar, footer
  *
- * The in-iframe header (logo + brand name + product heading) is kept
- * as the reliable source of merchant identity. MCP hosts advertise
- * tool-level `icons[]` / `Implementation.name` via the `@solvapay/mcp`
- * server, but some host chromes (e.g. Cursor) only paint the active
- * tool name above the iframe and drop the merchant mark, which leaves
- * the widget reading as anonymous. Painting identity inside guarantees
- * it shows everywhere; hosts that do render the icon just get a second
- * mark, which is an acceptable trade-off versus anonymous widgets.
+ * Merchant branding moved to `<AppHeader>` inside each view (see
+ * `.solvapay-mcp-app-header-*` above) so hosts that paint their own
+ * chrome mark (ChatGPT, Claude Desktop) can suppress the strip, while
+ * MCP Jam / VS Code keep the in-widget mark they need. The shell now
+ * only lays out the view router + optional sidebar + footer.
  */
 
 .solvapay-mcp-shell {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.solvapay-mcp-shell-header {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.solvapay-mcp-shell-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.solvapay-mcp-shell-logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  border-radius: 6px;
-}
-
-.solvapay-mcp-shell-logo-initials {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--color-background-secondary, #f1f5f9);
-  color: var(--color-text-primary, #0f172a);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.solvapay-mcp-shell-brand-name {
-  font-size: 14px;
-  color: var(--color-text-primary, #0f172a);
-  font-weight: 500;
-}
-
-.solvapay-mcp-shell-title {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.solvapay-mcp-shell-tagline {
-  margin: -6px 0 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--color-text-secondary, #475569);
 }
 
 .solvapay-mcp-tablist {

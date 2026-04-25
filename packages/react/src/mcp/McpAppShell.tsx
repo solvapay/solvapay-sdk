@@ -40,6 +40,12 @@ import {
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { ExternalLinkGlyph } from '../components/ExternalLinkGlyph'
 
+// Merchant branding is rendered once by `<McpApp>` as a chrome row
+// above the shell (see `packages/react/src/mcp/views/AppHeader.tsx`);
+// hosts that paint their own chrome mark (ChatGPT, Claude Desktop)
+// still suppress the in-widget strip via `AppHeader`'s `mode="auto"`
+// host-name check.
+
 export interface McpAppShellProps {
   bootstrap: McpBootstrap
   views?: McpAppViewOverrides
@@ -125,28 +131,8 @@ export function McpAppShell({
   // there's an authenticated customer to render details for.
   const isShellSidebarEligible = bootstrap.customer !== null
 
-  // Product-driven title; the merchant/brand marker stays above it. The
-  // MCP host chrome in some clients (Cursor) only prints the active
-  // tool name above the iframe — no merchant logo — so re-painting the
-  // identity inside the widget is the only reliable way to show it.
-  // Hosts that do render a merchant icon (via `_meta.ui.icons` or
-  // spec-level `icons[]`) now effectively get a second, larger mark;
-  // that's a deliberate trade-off to avoid anonymous widgets on hosts
-  // that don't.
-  const productName =
-    (bootstrap.product as { name?: string } | undefined)?.name ?? null
-  const productDescription =
-    (bootstrap.product as { description?: string } | undefined)?.description ?? null
-
   return (
     <div className="solvapay-mcp-shell">
-      <ShellHeader
-        merchant={merchant}
-        productName={productName}
-        productDescription={productDescription}
-        classNames={classNames}
-      />
-
       <div className="solvapay-mcp-shell-layout">
         <div className="solvapay-mcp-shell-body">
           <McpViewRouter
@@ -174,64 +160,6 @@ export function McpAppShell({
 
       {showFooter ? <ShellFooter classNames={classNames} merchant={merchant} /> : null}
     </div>
-  )
-}
-
-function ShellHeader({
-  merchant,
-  productName,
-  productDescription,
-  classNames,
-}: {
-  merchant: ReturnType<typeof useMerchant>['merchant']
-  productName: string | null
-  productDescription: string | null
-  classNames?: McpViewClassNames
-}) {
-  const cx = resolveMcpClassNames(classNames)
-  const displayName = merchant?.displayName ?? null
-  const logoUrl = merchant?.logoUrl ?? null
-  const initials = displayName
-    ? displayName
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]!.toUpperCase())
-        .join('')
-    : 'SP'
-
-  const headingText = productName ?? displayName ?? 'My account'
-  // Only show the description when we actually resolved a product
-  // heading — falling back to the merchant name and then tacking on
-  // a product description that belongs to a different title would
-  // mislead, so the tagline is tied to the product identity it
-  // describes.
-  const tagline =
-    productName && productDescription ? productDescription.trim() : null
-
-  return (
-    <header className="solvapay-mcp-shell-header">
-      <div className="solvapay-mcp-shell-brand">
-        {logoUrl ? (
-          <img
-            className="solvapay-mcp-shell-logo"
-            src={logoUrl}
-            alt={displayName ?? 'Merchant logo'}
-          />
-        ) : (
-          <span className="solvapay-mcp-shell-logo-initials" aria-hidden="true">
-            {initials}
-          </span>
-        )}
-        {displayName ? (
-          <span className="solvapay-mcp-shell-brand-name">{displayName}</span>
-        ) : null}
-      </div>
-      <h1 className={`${cx.heading} solvapay-mcp-shell-title`.trim()}>{headingText}</h1>
-      {tagline ? (
-        <p className="solvapay-mcp-shell-tagline">{tagline}</p>
-      ) : null}
-    </header>
   )
 }
 

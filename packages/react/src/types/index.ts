@@ -92,6 +92,12 @@ export interface Merchant {
   defaultCurrency?: string
   statementDescriptor?: string
   logoUrl?: string
+  /**
+   * Absolute URL to a square app icon / logomark. Preferred over
+   * `logoUrl` for avatar slots and chrome-strip icons that can't
+   * letterbox a landscape mark.
+   */
+  iconUrl?: string
 }
 
 export interface UseMerchantReturn {

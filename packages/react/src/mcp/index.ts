@@ -96,6 +96,19 @@ export type {
 export { BackLink } from './views/BackLink'
 export type { BackLinkProps } from './views/BackLink'
 
+export {
+  AppHeader,
+  HOSTS_WITH_MERCHANT_CHROME,
+  type AppHeaderMode,
+  type AppHeaderProps,
+} from './views/AppHeader'
+
+export {
+  McpHostInfoProvider,
+  useHostName,
+  type McpHostInfoProviderProps,
+} from './hooks/useHostInfo'
+
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 
