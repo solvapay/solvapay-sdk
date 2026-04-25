@@ -70,7 +70,9 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
         onSuccess={onSuccess as any}
       >
         <PaymentForm.Loading />
-        <PaymentForm.PaymentElement />
+        {/* Disable Stripe Link for consistency with the PAYG flow; see
+            PaygPaymentStep for rationale. */}
+        <PaymentForm.PaymentElement options={{ wallets: { link: 'never' } }} />
         <PaymentForm.Error className={cx.error} />
 
         <p className={`${cx.muted} solvapay-mcp-checkout-terms`.trim()}>

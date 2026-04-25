@@ -75,7 +75,11 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
         onSuccess={() => onSuccess()}
       >
         <TopupForm.Loading />
-        <TopupForm.PaymentElement />
+        {/* Disable Stripe Link: we surface our own "Save card for future
+            top-ups" checkbox below, so the Link sign-in banner and the
+            "Save my information for faster checkout" enrollment form
+            would be redundant. */}
+        <TopupForm.PaymentElement options={{ wallets: { link: 'never' } }} />
         <TopupForm.Error className={cx.error} />
 
         {/* Per brief §4: optional "Save card for future top-ups"
