@@ -348,8 +348,6 @@ import {
   McpCheckoutView,
   McpAccountView,
   McpTopupView,
-  McpPaywallView,
-  McpNudgeView,
   McpViewRouter,
   useStripeProbe,
 } from '@solvapay/react/mcp'
@@ -357,7 +355,10 @@ import {
 
 Every view accepts a `classNames?: McpViewClassNames` partial. Props are
 typed per-view (`McpCheckoutViewProps`, `McpAccountViewProps`,
-`McpTopupViewProps`, `McpPaywallViewProps`, `McpNudgeViewProps`).
+`McpTopupViewProps`). The previous `McpPaywallView` / `McpNudgeView`
+/ `McpUpsellStrip` surfaces were removed with the text-only paywall
+refactor — merchant paywall / nudge responses narrate in
+`content[0].text` and don't open the widget iframe.
 
 ### Architecture ADR
 

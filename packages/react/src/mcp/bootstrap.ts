@@ -13,12 +13,9 @@ import type {
   BootstrapPayload,
   BootstrapPlan,
   BootstrapProduct,
-  NudgeSpec,
   SolvaPayMcpViewKind,
 } from '@solvapay/mcp-core'
 import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL } from '@solvapay/mcp-core'
-import type { PaywallStructuredContent } from '@solvapay/server'
-import { isPaywallStructuredContent } from '@solvapay/server'
 import type { McpAppLike } from './adapter'
 
 /**
@@ -29,32 +26,18 @@ export type McpView = SolvaPayMcpViewKind
 
 /**
  * Bootstrap payload returned from `fetchMcpBootstrap`. Structurally
- * compatible with `BootstrapPayload` from `@solvapay/mcp-core` but narrows
- * `paywall` to the server-owned `PaywallStructuredContent` union so
- * the client-side views can discriminate on `kind`.
+ * compatible with `BootstrapPayload` from `@solvapay/mcp-core`.
+ *
+ * The legacy `paywall` / `nudge` / `data` fields were removed with the
+ * text-only paywall refactor — paywall / nudge responses are plain
+ * narrations now, not widget payloads, so the shell never mounts a
+ * paywall/nudge surface.
  */
 export interface McpBootstrap {
   view: SolvaPayMcpViewKind
   productRef: string
   stripePublishableKey: string | null
   returnUrl: string
-  /**
-   * Set when the MCP host invokes `open_paywall` — the structured
-   * content gets forwarded on the bootstrap payload so the client
-   * doesn't have to re-fetch it. Only populated for `view: 'paywall'`.
-   */
-  paywall?: PaywallStructuredContent
-  /**
-   * Upsell strip spec attached when `view: 'nudge'`. `McpNudgeView`
-   * renders `McpUpsellStrip` using this.
-   */
-  nudge?: NudgeSpec
-  /**
-   * Merchant tool result data embedded alongside a nudge so the shell
-   * can preview it without a follow-up tool call. Only populated when
-   * `view: 'nudge'`.
-   */
-  data?: unknown
   /** Product-scoped snapshot — always present. */
   merchant: BootstrapMerchant
   product: BootstrapProduct
@@ -127,18 +110,20 @@ export function isTransportToolName(name: string): boolean {
  *
  *  - `intent`  — one of `upgrade` / `manage_account` / `topup`. Call
  *                the corresponding tool via `fetchMcpBootstrap`.
- *  - `data`    — a merchant-registered paywalled tool (e.g.
- *                `search_knowledge`). The host opened the widget from
- *                its paywall/nudge result; wait for the initial
- *                `ui/notifications/tool-result` instead of re-calling
- *                the tool (which would consume another unit).
  *  - `other`   — no tool info, or a SolvaPay transport tool as the
  *                iframe entry point (rare). Fall back to the `upgrade`
  *                intent tool for a fresh snapshot.
+ *
+ * The previous `data` kind was removed with the text-only paywall
+ * refactor: payable merchant tools no longer advertise
+ * `_meta.ui.resourceUri`, so the host never opens the iframe on a
+ * silent success or a paywall response. If one of those ever fires
+ * anyway (a legacy opt-in server), the classification falls through
+ * to `other` and the shell asks `fetchMcpBootstrap` for a clean
+ * `upgrade` snapshot.
  */
 export type HostEntryClassification =
   | { kind: 'intent'; toolName: string; view: keyof typeof TOOL_FOR_VIEW }
-  | { kind: 'data'; toolName: string }
   | { kind: 'other'; toolName?: string }
 
 /**
@@ -160,8 +145,7 @@ export function classifyHostEntry(app: McpAppBootstrapLike): HostEntryClassifica
       view: view as keyof typeof TOOL_FOR_VIEW,
     }
   }
-  if (isTransportToolName(toolName)) return { kind: 'other', toolName }
-  return { kind: 'data', toolName }
+  return { kind: 'other', toolName }
 }
 
 /**
@@ -211,6 +195,12 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
  * `ui/notifications/tool-result` subscription (`<McpApp>` Phase 3).
  * Throws on missing product ref / invalid return URL so callers can
  * surface the error to `onInitError` instead of half-applying state.
+ *
+ * Paywall / nudge recognition was removed with the text-only paywall
+ * refactor: merchant paywall / nudge responses are plain narrations
+ * now (`content[0].text`) and don't open the iframe. Only intent-tool
+ * responses flow through this parser — they always carry a valid
+ * `BootstrapPayload` with `isError: false`.
  */
 export function parseBootstrapFromToolResult(
   result: CallToolResultLike,
@@ -218,14 +208,8 @@ export function parseBootstrapFromToolResult(
   fallbackView: SolvaPayMcpViewKind,
 ): McpBootstrap {
   const structured = result.structuredContent as
-    | (Partial<BootstrapPayload> & { view?: McpView; paywall?: unknown })
+    | (Partial<BootstrapPayload> & { view?: McpView })
     | undefined
-  // Paywall + nudge responses ship with `isError: false` now —
-  // `buildPayableHandler` deliberately clears the error flag so hosts
-  // open the `_meta.ui` widget instead of short-circuiting on the
-  // error path. The old behaviour (paywall + isError:true) is still
-  // accepted here so older servers keep working; only treat `isError`
-  // as a real failure when we can't recognise the embedded bootstrap.
   const hasBootstrapShape =
     structured !== undefined &&
     typeof structured === 'object' &&
@@ -256,18 +240,7 @@ export function parseBootstrapFromToolResult(
   }
   const key = structured?.stripePublishableKey ?? null
   const requestedView = structured?.view ?? fallbackView
-  const paywall =
-    requestedView === 'paywall' && isPaywallStructuredContent(structured?.paywall)
-      ? structured.paywall
-      : undefined
   const resolvedView: SolvaPayMcpViewKind = requestedView
-  const nudgeSpec = (structured as { nudge?: unknown } | undefined)?.nudge
-  const nudge =
-    requestedView === 'nudge' && isNudgeSpec(nudgeSpec) ? (nudgeSpec as NudgeSpec) : undefined
-  const data =
-    requestedView === 'nudge'
-      ? (structured as { data?: unknown } | undefined)?.data
-      : undefined
   return {
     view: resolvedView,
     productRef: ref,
@@ -277,19 +250,7 @@ export function parseBootstrapFromToolResult(
     product: (structured?.product ?? { reference: ref }) as BootstrapProduct,
     plans: Array.isArray(structured?.plans) ? (structured.plans as BootstrapPlan[]) : [],
     customer: (structured?.customer ?? null) as BootstrapCustomer | null,
-    ...(paywall ? { paywall } : {}),
-    ...(nudge ? { nudge } : {}),
-    ...(data !== undefined ? { data } : {}),
   }
-}
-
-function isNudgeSpec(value: unknown): value is NudgeSpec {
-  if (typeof value !== 'object' || value === null) return false
-  const kind = (value as { kind?: unknown }).kind
-  return (
-    typeof kind === 'string' &&
-    (kind === 'low-balance' || kind === 'cycle-ending' || kind === 'approaching-limit')
-  )
 }
 
 /**
@@ -334,8 +295,9 @@ export interface WaitForInitialToolResultOptions {
   /**
    * Fallback `view` passed to `parseBootstrapFromToolResult` when the
    * incoming payload doesn't carry a `structuredContent.view`. Defaults
-   * to `'paywall'` since data-tool entries are paywall/nudge by
-   * construction.
+   * to `'checkout'` — intent-tool responses always set the view
+   * explicitly, and `checkout` is the safe default if one ever slips
+   * through without it.
    */
   fallbackView?: SolvaPayMcpViewKind
 }
@@ -367,7 +329,7 @@ export function waitForInitialToolResult(
   app: McpAppBootstrapLike & AppToolResultEvents,
   options: WaitForInitialToolResultOptions = {},
 ): Promise<WaitForInitialToolResultResult> {
-  const { timeoutMs = 2000, signal, fallbackView = 'paywall' } = options
+  const { timeoutMs = 2000, signal, fallbackView = 'checkout' } = options
 
   return new Promise<WaitForInitialToolResultResult>((resolve, reject) => {
     let settled = false

@@ -85,22 +85,23 @@ returns a gate.
 
 **Expect**:
 
-- Host opens the iframe on `view: 'paywall'`. `<McpPaywallView>`
-  renders with the `payment_required` copy ("quota exhausted") plus
-  the `Upgrade to <plan>` secondary CTA derived from `bootstrap.plans`.
-- Chrome suppressed: no sidebar, no footer.
+- The response is text-only: `isError: false`,
+  `content[0].text` is a narration like _"You don't have an active
+  plan for this tool. Call the `upgrade` tool to pick a plan, or
+  open https://.../checkout in a browser."_, and
+  `structuredContent` carries the `kind: 'payment_required'` gate.
+- **No widget iframe opens** — merchant payable tools no longer
+  advertise `_meta.ui.resourceUri`.
 
-### 4. Click through to activation
+### 4. Recover via the `upgrade` intent tool
 
-Click the `Upgrade to —` CTA.
+Say "upgrade me" (or have the LLM call `upgrade` directly) based on
+the gate narration.
 
 **Expect**:
 
-- `McpAppShell` flips `paywallDismissed=true`, sets
-  `cameFromPaywall=true`, and swaps the body to `<McpCheckoutView>`
-  at `step: 'plan'`.
-- Amber `Upgrade to continue` banner renders at the top — the
-  customer came from the paywall, so the flag is on.
+- `/upgrade` returns a `BootstrapPayload` and the host mounts the
+  widget iframe on `McpCheckoutView` at `step: 'plan'`.
 - Plan cards render in the order `Pay as you go` → `Pro` (PAYG first,
   then recurring ascending). **No Free card** — it's filtered out.
 - PAYG is auto-selected with the `recommended` badge.
@@ -192,14 +193,14 @@ Run any intent tool from Claude Code or the basic-host stdout mode
 
 ## What this surfaces that unit tests don't
 
-- Step 3: paywall gate response shape reaches the iframe cleanly
-  (the one genuinely cross-package flow — server `PaywallError`
-  serializes through `structuredContent` onto the bootstrap payload
-  and the shell takes over the surface on `view: 'paywall'`).
-- Step 4: `cameFromPaywall` signal stays on across the paywall →
-  checkout surface swap and off on the `McpAccountView` →
-  checkout swap — without that, the banner and `Stay on Free` link
-  would either never show or always show (both wrong).
+- Step 3: gate response ships as a text-only narration — the server's
+  state engine (`classifyPaywallState` + `buildGateMessage`)
+  produces a message that names the correct recovery intent tool,
+  and the host never opens an uninvited iframe on a merchant data
+  tool.
+- Step 4: `/upgrade` bootstraps the checkout surface on demand; the
+  round-trip from gate narration → LLM tool choice → widget mount
+  exercises the full cross-package contract.
 - Step 5a: `activate_plan` fires **before** `create_topup_payment_intent`
   so the active plan is PAYG by the time the topup lands — not the
   other way around. Previously the SDK ran activation lazily via

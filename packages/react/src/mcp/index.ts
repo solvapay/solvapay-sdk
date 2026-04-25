@@ -111,14 +111,11 @@ export type {
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
 
-export { McpPaywallView } from './views/McpPaywallView'
-export type { McpPaywallViewProps } from './views/McpPaywallView'
-
-export { McpNudgeView } from './views/McpNudgeView'
-export type { McpNudgeViewProps } from './views/McpNudgeView'
-
-export { McpUpsellStrip } from './components/McpUpsellStrip'
-export type { McpUpsellStripProps } from './components/McpUpsellStrip'
+// Paywall / nudge surfaces were removed as part of the text-only
+// paywall refactor. Merchant paywall / nudge responses are plain
+// narrations now — hosts render them in text and the widget iframe is
+// reserved for deliberate intent-tool calls (`upgrade` /
+// `manage_account` / `topup`).
 
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'

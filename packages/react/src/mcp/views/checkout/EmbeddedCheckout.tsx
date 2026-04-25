@@ -31,10 +31,9 @@ export interface EmbeddedCheckoutProps {
    * Suppress the inline `UpgradeBanner` on the plan step even when
    * `fromPaywall` is true. Set by surfaces that already provide
    * "you hit a paywall" reason copy outside the state machine —
-   * e.g. `McpPaywallView` wraps this component in `<PaywallNotice>`,
-   * which already renders a heading + message. `McpCheckoutView`'s
-   * paywall-takeover flow leaves this unset so the banner is still
-   * the only reason signal on that surface.
+   * custom integrators who wrap the state machine in their own
+   * `<PaywallNotice>` chrome set this so the banner doesn't
+   * duplicate the heading + message.
    */
   hideUpgradeBanner?: boolean
   /**

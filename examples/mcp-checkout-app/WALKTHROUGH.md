@@ -89,9 +89,12 @@ What that line hides (from `@solvapay/react/mcp`):
   Activate) driven by visibility rules, keyboard a11y, persistent
   Customer + Seller detail sidebar on wide iframes, "My account"
   header, `Terms · Privacy · Provided by SolvaPay` footer.
-- Paywall take-over behaviour — when `bootstrap.view === 'paywall'`,
-  the tab strip hides; `McpPaywallView` renders top-up + (optional)
-  upgrade CTAs derived from `bootstrap.plans`.
+- Paywall narration — merchant paywalled data tools no longer open
+  the widget iframe on a gate. Instead the gate's
+  `content[0].text` narrates the recovery intent tool (`upgrade` /
+  `topup` / `activate_plan`) and inlines `checkoutUrl`. The iframe
+  mounts only when the user or LLM deliberately calls one of the
+  three intent tools.
 
 ## `src/demo-tools.ts`
 

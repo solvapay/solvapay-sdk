@@ -48,21 +48,24 @@ describe('isPaywallStructuredContent', () => {
 })
 
 describe('paywallToolResult', () => {
-  it('attaches _meta.ui with the resourceUri and mirrors the gate structuredContent by default', async () => {
+  it('ships the gate verbatim on structuredContent with isError:false and narration text', async () => {
     const err = new PaywallError('Payment required', {
       kind: 'payment_required',
       product: 'prd_foo',
       checkoutUrl: 'https://example.com/checkout',
       message: 'Purchase required',
     })
-    const result = await paywallToolResult(err, { resourceUri: 'ui://my-app/mcp-app.html' })
-    // Paywall is a user-actionable gate, not a tool failure. Hosts
-    // short-circuit `isError: true` and never open the widget; the
-    // `structuredContent` + `content[0].text` carry the gate reason
-    // for LLM narration.
+    const result = await paywallToolResult(err)
+    // Paywall is a user-actionable gate, not a tool failure. The
+    // LLM narrates recovery from `content[0].text` and
+    // `structuredContent` stays available for programmatic
+    // consumers.
     expect(result.isError).toBe(false)
     expect(result.structuredContent).toEqual(err.structuredContent)
-    expect(result._meta).toEqual({ ui: { resourceUri: 'ui://my-app/mcp-app.html' } })
+    expect(result.content).toEqual([{ type: 'text', text: err.message }])
+    // Per-call `_meta.ui` is no longer stamped anywhere — the widget
+    // iframe for payable data tools has been removed.
+    expect(result._meta).toBeUndefined()
   })
 
   it('accepts a PaywallStructuredContent gate directly (decide() form)', async () => {
@@ -72,42 +75,29 @@ describe('paywallToolResult', () => {
       checkoutUrl: 'https://example.com/checkout',
       message: 'Purchase required',
     }
-    const result = await paywallToolResult(gate, { resourceUri: 'ui://my-app/mcp-app.html' })
+    const result = await paywallToolResult(gate)
     expect(result.isError).toBe(false)
     expect(result.structuredContent).toEqual(gate)
     expect(result.content).toEqual([{ type: 'text', text: gate.message }])
-    expect(result._meta).toEqual({ ui: { resourceUri: 'ui://my-app/mcp-app.html' } })
+    expect(result._meta).toBeUndefined()
   })
 
-  it('embeds the full BootstrapPayload when buildBootstrap is provided', async () => {
+  it('ignores buildBootstrap when passed (text-only path does not invoke the bootstrap builder)', async () => {
     const err = new PaywallError('Activation required', {
       kind: 'activation_required',
       product: 'prd_bar',
       checkoutUrl: '',
       message: 'Activate',
     })
-    const bootstrap = {
-      view: 'paywall' as const,
-      productRef: 'prd_bar',
-      stripePublishableKey: null,
-      returnUrl: 'https://app.example',
-      merchant: { displayName: 'Acme' },
-      product: { reference: 'prd_bar' },
-      plans: [],
-      customer: null,
-      paywall: err.structuredContent,
-    }
-    const buildBootstrap = vi.fn().mockResolvedValue(bootstrap)
+    const buildBootstrap = vi.fn()
     const result = await paywallToolResult(err, {
-      resourceUri: 'ui://app/view.html',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       buildBootstrap: buildBootstrap as any,
     })
-    expect(buildBootstrap).toHaveBeenCalledWith('paywall', undefined, {
-      paywall: err.structuredContent,
-    })
-    expect(result.structuredContent).toEqual(bootstrap)
-    expect(result._meta).toEqual({ ui: { resourceUri: 'ui://app/view.html' } })
+    expect(buildBootstrap).not.toHaveBeenCalled()
+    expect(result.isError).toBe(false)
+    expect(result.structuredContent).toEqual(err.structuredContent)
+    expect(result._meta).toBeUndefined()
   })
 })
 

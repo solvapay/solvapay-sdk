@@ -8,6 +8,8 @@ import type {
   ResponseContext,
   SolvaPayCallToolResult,
 } from '../src/types'
+// `resourceUri` is no longer part of `BuildPayableHandlerContext`;
+// these tests intentionally omit it to lock in the narrower signature.
 
 /**
  * Minimal mock `SolvaPayClient` with pluggable `checkLimits` / trackUsage
@@ -84,7 +86,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) => ctx.respond(data),
       )
 
@@ -106,7 +108,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) =>
           ctx.respond({ x: 1 }, { text: 'Found 1 result' }),
       )
@@ -118,29 +120,37 @@ describe('buildPayableHandler — ctx.respond V1', () => {
     })
   })
 
-  describe('options.nudge', () => {
-    it('stamps _meta.ui = { resourceUri, nudge } on the response', async () => {
+  describe('options.nudge — text-only contract', () => {
+    it('appends the nudge message as a plain-text suffix on content[0].text, leaves structuredContent as the raw merchant data', async () => {
       const client = makeMockClient()
       const solvaPay = makeSolvaPay(client)
       const nudge: NudgeSpec = { kind: 'low-balance', message: 'Running low on credits' }
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) => ctx.respond({ y: 2 }, { nudge }),
       )
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
 
-      expect(result._meta).toEqual({
-        ui: { resourceUri: 'ui://test/view.html', nudge },
-      })
-      // Without a bootstrap builder, `structuredContent` stays as the
-      // raw merchant data so text-only hosts still see it directly.
+      // No per-call `_meta.ui` stamping; the widget-iframe path for
+      // payable data tools is gone.
+      expect(result._meta).toBeUndefined()
+
+      // Merchant data rides on `structuredContent` verbatim.
       expect(result.structuredContent).toEqual({ y: 2 })
+
+      // `content[0].text` narrates merchant data + nudge suffix so
+      // terminal / text-only hosts render both without a second
+      // surface.
+      const firstBlock = result.content[0] as { type: string; text: string }
+      expect(firstBlock.type).toBe('text')
+      expect(firstBlock.text.startsWith(JSON.stringify({ y: 2 }))).toBe(true)
+      expect(firstBlock.text).toContain(nudge.message)
     })
 
-    it('rewrites structuredContent into a view:"nudge" BootstrapPayload when buildBootstrap is wired', async () => {
+    it('still produces a text-only nudge when buildBootstrap is wired (bootstrap builder is ignored)', async () => {
       const client = makeMockClient()
       const solvaPay = makeSolvaPay(client)
       const nudge: NudgeSpec = { kind: 'low-balance', message: 'low' }
@@ -159,20 +169,27 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const merchantData = { rows: [1, 2, 3] }
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html', buildBootstrap },
+        { product: 'prd_test', buildBootstrap },
         async (_args, ctx: ResponseContext) => ctx.respond(merchantData, { nudge }),
       )
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
-      expect(buildBootstrap).toHaveBeenCalledWith('nudge', expect.anything())
+      // Text-only nudge: `buildBootstrap` is NOT invoked — nudges no
+      // longer route through the widget path.
+      expect(buildBootstrap).not.toHaveBeenCalled()
 
-      const sc = result.structuredContent as Record<string, unknown>
-      expect(sc.view).toBe('nudge')
-      expect(sc.nudge).toEqual(nudge)
-      expect(sc.data).toEqual(merchantData)
-      expect(result._meta).toEqual({
-        ui: { resourceUri: 'ui://test/view.html', nudge },
-      })
+      // Merchant data rides on `structuredContent` unchanged.
+      expect(result.structuredContent).toEqual(merchantData)
+
+      // `content[0].text` carries the merchant data as JSON, with
+      // the nudge message appended as a plain-text suffix. Separator
+      // is a double newline so terminal hosts render cleanly.
+      const firstBlock = result.content[0] as { type: string; text: string }
+      expect(firstBlock.type).toBe('text')
+      expect(firstBlock.text.startsWith(JSON.stringify(merchantData))).toBe(true)
+      expect(firstBlock.text).toContain(nudge.message)
+
+      expect(result._meta).toBeUndefined()
     })
   })
 
@@ -183,7 +200,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) =>
           ctx.respond({ results: [1, 2, 3, 4] }, { units: 4 }),
       )
@@ -213,7 +230,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) => {
           capturedCustomer = {
             ref: ctx.customer.ref,
@@ -250,7 +267,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) => {
           // First call: uses the cached/pre-check limits.
           expect(ctx.customer.balance).toBe(100)
@@ -282,7 +299,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_gated', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_gated' },
         async (_args, ctx: ResponseContext) => {
           ctx.gate('custom reason')
         },
@@ -318,7 +335,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_throw', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_throw' },
         async () => {
           throw new PaywallError('manual', {
             kind: 'payment_required',
@@ -347,7 +364,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) => {
           const block1: ContentBlock = { type: 'text', text: 'intermediate 1' }
           const block2: ContentBlock = { type: 'text', text: 'intermediate 2' }
@@ -372,7 +389,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) => {
           await ctx.progress({ percent: 50, message: 'halfway' })
           await ctx.progressRaw({ progress: 1, total: 2, message: 'raw' })
@@ -393,7 +410,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async (_args, ctx: ResponseContext) => {
           aborted = ctx.signal.aborted
           return ctx.respond({ ok: true })
@@ -412,7 +429,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         async () => {
           throw new Error('boom')
         },
@@ -437,7 +454,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html' },
+        { product: 'prd_test' },
         rawHandler,
       )
 
@@ -450,8 +467,8 @@ describe('buildPayableHandler — ctx.respond V1', () => {
     })
   })
 
-  describe('paywall branch (pre-check)', () => {
-    it('rewrites structuredContent to BootstrapPayload-shaped paywall when buildBootstrap provided', async () => {
+  describe('paywall branch (pre-check) — text-only contract', () => {
+    it('ships the gate verbatim on structuredContent with `isError: false` and narration text', async () => {
       const client = makeMockClient({
         limits: {
           withinLimits: false,
@@ -462,44 +479,50 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       })
       const solvaPay = makeSolvaPay(client)
 
+      // `buildBootstrap` is still accepted on the context for
+      // intent-tool reuse, but the paywall branch NO LONGER calls it —
+      // the text-only paywall ships the gate verbatim on
+      // `structuredContent` and narrates via `content[0].text`. The
+      // widget iframe is reserved for deliberate intent-tool calls.
       const buildBootstrap = vi.fn().mockResolvedValue({
         view: 'paywall',
         productRef: 'prd_test',
         stripePublishableKey: null,
         returnUrl: 'https://example.com',
-        paywall: { kind: 'payment_required' },
-        merchant: { reference: 'mer', name: 'Test' },
-        product: { reference: 'prd_test', name: 'Product' },
-        plans: [],
-        customer: null,
       })
 
       const handler = buildPayableHandler(
         solvaPay,
-        { product: 'prd_test', resourceUri: 'ui://test/view.html', buildBootstrap },
+        { product: 'prd_test', buildBootstrap },
         async (_args, ctx: ResponseContext) => ctx.respond({ ok: true }),
       )
 
       const result = (await handler({}, mcpExtra('gate_user'))) as SolvaPayCallToolResult
-      // Paywall results are intentionally not flagged as errors so
-      // hosts open the `_meta.ui` widget instead of short-circuiting
-      // on the error path.
-      expect(result.isError).toBe(false)
-      expect(buildBootstrap).toHaveBeenCalledTimes(1)
-      expect((result.structuredContent as Record<string, unknown>).view).toBe('paywall')
-      expect(result._meta).toEqual({ ui: { resourceUri: 'ui://test/view.html' } })
 
-      // Content block is a plain-string narration — no `{ success:
-      // false, error: "Payment required" }` JSON that hosts could
-      // misinterpret as a tool failure. The paywall pre-check
-      // builds a human message like "You've used all your
-      // included calls..." which rides through as-is.
+      // Paywall results stay `isError: false` so LLMs narrate the
+      // recovery instead of bubbling up an error. Structured gate
+      // content rides through unchanged for programmatic consumers.
+      expect(result.isError).toBe(false)
+      expect(buildBootstrap).not.toHaveBeenCalled()
+      const sc = result.structuredContent as Record<string, unknown>
+      expect(sc.kind).toBe('payment_required')
+      expect(sc.checkoutUrl).toBe('https://example.com/checkout')
+      expect(sc.view).toBeUndefined()
+
+      // No per-call `_meta` stamping — the widget iframe for payable
+      // data tools has been deprecated.
+      expect(result._meta).toBeUndefined()
+
+      // `content[0].text` is the state-engine's human narration:
+      // names the recovery intent tool (`upgrade` here — no active
+      // plan resolves on the fixture) and inlines `checkoutUrl` for
+      // terminal-first hosts.
       const firstBlock = result.content[0] as { type: string; text: string }
       expect(firstBlock.type).toBe('text')
-      expect(typeof firstBlock.text).toBe('string')
+      expect(firstBlock.text).toMatch(/upgrade/i)
+      expect(firstBlock.text).toContain('https://example.com/checkout')
       expect(firstBlock.text).not.toMatch(/success/i)
       expect(firstBlock.text).not.toMatch(/"error"/i)
-      expect(firstBlock.text.length).toBeGreaterThan(0)
     })
   })
 })

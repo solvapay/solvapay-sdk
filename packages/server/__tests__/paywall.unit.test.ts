@@ -141,7 +141,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
     })
 
-    it('produces an actionable payment_required message (no raw "Remaining: 0")', async () => {
+    it('produces an actionable payment_required message naming a recovery tool', async () => {
       mockApiClient.shouldBlock = true
       const handler = vi.fn()
       const payable = solvaPay.payable({ product: 'test' })
@@ -156,8 +156,15 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(captured).toBeInstanceOf(PaywallError)
       const sc = captured!.structuredContent
       expect(sc.kind).toBe('payment_required')
+      // Text-only paywall names the recovery tool (`upgrade` when
+      // there's no active plan) and inlines `checkoutUrl` for
+      // terminal-first hosts. The legacy "Pick a plan below" widget
+      // copy is gone; it collapsed distinct recovery states into one
+      // widget-assuming nudge.
       expect(sc.message).not.toMatch(/Remaining:\s*0/)
-      expect(sc.message).toMatch(/Pick a plan/i)
+      expect(sc.message).not.toMatch(/below/i)
+      expect(sc.message).toMatch(/upgrade/i)
+      expect(sc.message).toContain('https://example.com/checkout')
     })
 
     it('should throw PaywallError with activation_required when checkLimits returns activationRequired', async () => {
@@ -903,7 +910,11 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(decision.gate.kind).toBe('payment_required')
       expect(decision.gate.product).toBe('decide-blocked-product')
       expect(decision.gate.checkoutUrl).toBe('https://example.com/checkout')
-      expect(decision.gate.message).toMatch(/Pick a plan/i)
+      // Text-only paywall: message names the recovery tool (`upgrade`
+      // by default when no active plan resolves) and inlines the URL
+      // for terminal-first hosts.
+      expect(decision.gate.message).toMatch(/upgrade/i)
+      expect(decision.gate.message).toContain('https://example.com/checkout')
       expect(decision.customerRef).toBe('cus_decide_blocked')
       // decide() emits the paywall-outcome usage event so observability
       // matches the legacy throw-based path.

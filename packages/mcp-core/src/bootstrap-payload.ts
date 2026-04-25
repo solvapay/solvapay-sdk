@@ -1,9 +1,13 @@
 /**
- * Standalone `buildBootstrapPayload` factory — same logic `buildSolvaPayDescriptors`
- * wires under the `open_*` tools, exposed separately so the paywall
- * envelope (`paywallToolResult`, `buildPayableHandler`) can embed the
- * full `BootstrapPayload` in `structuredContent` without duplicating
- * the parallel fetch layout.
+ * Standalone `buildBootstrapPayload` factory — same logic
+ * `buildSolvaPayDescriptors` wires under the intent tools, exposed
+ * separately for adapters that want to produce a fresh intent-tool
+ * bootstrap without going through the full descriptor bundle.
+ *
+ * This used to be invoked from the widget-paywall branch of
+ * `buildPayableHandler` / `paywallToolResult` (to embed the full
+ * `BootstrapPayload` on the gate response), but those branches are
+ * text-only now and no longer need the closure.
  */
 
 import {
@@ -16,7 +20,6 @@ import {
   isErrorResult,
   listPlansCore,
   type ErrorResult,
-  type PaywallStructuredContent,
   type SolvaPay,
 } from '@solvapay/server'
 import {
@@ -40,14 +43,13 @@ export interface CreateBuildBootstrapPayloadOptions {
 export type BuildBootstrapPayloadFn = (
   view: SolvaPayMcpViewKind,
   extra: McpToolExtra | undefined,
-  extras?: { paywall?: PaywallStructuredContent },
 ) => Promise<BootstrapPayload>
 
 const okOrNull = <T>(result: T | ErrorResult): T | null =>
   isErrorResult(result) ? null : (result as T)
 
 /**
- * Produce a reusable `buildBootstrapPayload(view, extra, extras?)` closure
+ * Produce a reusable `buildBootstrapPayload(view, extra)` closure
  * wired against the same SolvaPay instance + product as a
  * `buildSolvaPayDescriptors` bundle.
  *
@@ -82,7 +84,7 @@ export function createBuildBootstrapPayload(
   const productQueryRequest = () =>
     buildSolvaPayRequest(undefined, { query: { productRef }, getCustomerRef: () => null })
 
-  return async (view, extra, extras = {}) => {
+  return async (view, extra) => {
     const customerRef = getCustomerRef(extra)
 
     const wrapError = <T>(promise: Promise<T | ErrorResult>): Promise<T | ErrorResult> =>
@@ -143,7 +145,7 @@ export function createBuildBootstrapPayload(
         }
       : null
 
-    const payload: BootstrapPayload = {
+    return {
       view,
       productRef,
       stripePublishableKey,
@@ -153,7 +155,5 @@ export function createBuildBootstrapPayload(
       plans,
       customer,
     }
-    if (extras.paywall) payload.paywall = extras.paywall
-    return payload
   }
 }

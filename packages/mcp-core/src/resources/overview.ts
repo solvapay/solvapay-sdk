@@ -39,9 +39,13 @@ with clickable URLs for text-only hosts.
 
 Each intent tool returns a full \`BootstrapPayload\` (merchant + product + plans
 + customer snapshot) so the embedded UI never fires per-view read calls. When
-a paywalled data tool hits the usage limit, its response carries the same
-payload with \`view: "paywall"\`, letting the host open the UI directly on the
-paywall screen — no second tool call required.
+a paywalled data tool hits the usage limit, its response is plain text: the
+\`content[0].text\` narration names the recovery intent tool
+(\`upgrade\` / \`topup\` / \`activate_plan\`) and inlines \`gate.checkoutUrl\` for
+terminal-first hosts. The structured gate rides on \`structuredContent\` for
+programmatic consumers. No widget iframe opens for a gate — the LLM reads the
+narration and, if the user agrees, calls the named intent tool which mounts
+the checkout / topup / account surface.
 
 Auth is handled by the SolvaPay OAuth bridge (see \`createMcpOAuthBridge\`). The
 bridge injects \`customer_ref\` onto every authenticated request; tools that

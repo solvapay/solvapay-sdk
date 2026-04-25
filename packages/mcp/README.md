@@ -78,10 +78,16 @@ branded envelope produced by `ctx.respond(data, options?)`.
 ```ts
 handler: async ({ prompt }, ctx) => {
   const video = await generate(prompt)
-  // Attach an upsell nudge when the customer is low on credits.
+  // Append a text-only nudge when the customer is low on credits.
+  // The nudge message is appended to `content[0].text` as a plain
+  // suffix — no widget iframe, no `structuredContent` switch. Point
+  // the user at the recovery intent tool by name.
   if (ctx.customer.balance < 500) {
     return ctx.respond({ videoUrl: video.url }, {
-      nudge: { kind: 'low-balance', message: 'Running low on credits' },
+      nudge: {
+        kind: 'low-balance',
+        message: 'Running low on credits — call the `topup` tool to add more.',
+      },
     })
   }
   return ctx.respond({ videoUrl: video.url })
@@ -95,9 +101,10 @@ full surface. The TL;DR:
   `balance` / `remaining` / `plan` to branch on usage; call
   `ctx.customer.fresh()` for a fresh fetch when staleness matters.
 - `ctx.respond(data, options?)` — returns a branded envelope. `options`
-  carries `text` (override `content[0].text`), `nudge` (inline upsell
-  strip), and the reserved `units` (V1.1 variable-unit billing — V1
-  silently ignores).
+  carries `text` (override `content[0].text`), `nudge` (the nudge
+  message is appended to `content[0].text` as a plain-text suffix —
+  no widget surface, no `structuredContent` switch), and the reserved
+  `units` (V1.1 variable-unit billing — V1 silently ignores).
 - `ctx.gate(reason?)` — stops handler execution and routes a paywall
   response through the adapter's `formatGate` channel. Rare — the
   SDK normally fires the paywall automatically via `payable().mcp()`
@@ -106,12 +113,31 @@ full surface. The TL;DR:
   surface. V1 queues (emit) or no-ops (progress / signal); V1.1 wires
   them to SSE and transport cancellation without code changes.
 
+## How paywalls work
+
+Paywall responses from `registerPayable` tools are **text-only**:
+
+- `isError: false`, so hosts don't short-circuit on the error path.
+- `structuredContent = gate` for programmatic consumers.
+- `content[0].text` carries a state-engine-generated narration that
+  names the recovery intent tool (`upgrade` for no active plan,
+  `topup` for usage-based zero-balance, `activate_plan` for pending
+  activation) and inlines `gate.checkoutUrl` for terminal-first
+  hosts (Claude Code, CLI MCP clients).
+
+The LLM reads that narration, tells the user, and either (a) the
+user clicks the inline URL and completes checkout in the browser, or
+(b) the LLM calls the named intent tool which mounts the SolvaPay
+widget on `McpCheckoutView` / `McpTopupView`. Only those three
+intent tools advertise `_meta.ui.resourceUri` — merchant payable
+tools don't, so no uninvited iframe opens on a silent success.
+
 ## What's in the box
 
 | Export | Use when |
 |---|---|
 | `createSolvaPayMcpServer(opts)` | You want the batteries-included `McpServer` with every SolvaPay tool registered |
-| `registerPayableTool(server, name, opts)` | You want to add a paywall-protected tool to an existing `McpServer`. `_meta.ui` is attached per-result on paywall and nudge responses only, so the iframe opens only when there's something to show. |
+| `registerPayableTool(server, name, opts)` | You want to add a paywall-protected tool to an existing `McpServer`. Paywall / nudge responses are text-only narrations; the widget iframe stays reserved for the three intent tools. |
 
 ## Peer dependencies
 
