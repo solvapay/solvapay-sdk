@@ -101,56 +101,63 @@ export function CheckoutStateMachine(props: StateMachineProps) {
 
   // Transition: plan → (amount or payment). Emits
   // `ui/update-model-context` so the model sees the committed plan
-  // selection before the customer finishes paying — Phase 1 of the
-  // MCP Apps bridge alignment plan.
-  const onPlanContinue = useCallback(() => {
+  // selection before the customer finishes paying.
+  //
+  // For PAYG plans this is the activation step: firing `activate_plan`
+  // here means the customer's active plan is live before any topup
+  // intent is created. Post backend fix (see solvapay-backend PR #112),
+  // `activate_plan` on a usage-based plan succeeds regardless of the
+  // customer's current credit balance, so "Continue with Pay as you
+  // go" is a single user-visible activation click. If the subsequent
+  // topup later fails, the plan purchase stays live with zero balance
+  // and the next tool call routes to `topup` via the paywall-state
+  // classifier — not back to `activation_required`.
+  //
+  // Recurring plans skip activation here and activate server-side on
+  // webhook (same as today); the Continue button flows straight to
+  // the payment step.
+  const onPlanContinue = useCallback(async () => {
     if (!selectedPlanShape || !selectedPlanRef) return
     setActivationError(null)
     void notifyModelContext({
       text: `User selected ${selectedPlanShape.name ?? 'a plan'}.`,
     })
     if (branch === 'payg') {
-      setStep('amount')
-      return
-    }
-    setStep('payment')
-  }, [
-    branch,
-    notifyModelContext,
-    selectedPlanRef,
-    selectedPlanShape,
-    setActivationError,
-    setStep,
-  ])
-
-  // Transition: amount → payment. Fires `activate_plan` first so the
-  // customer's active plan is PAYG by the time the topup intent is
-  // created, then lets `TopupForm` take over.
-  const onAmountContinue = useCallback(
-    async (amountMinor: number) => {
-      if (!selectedPlanRef) return
-      setSelectedAmountMinor(amountMinor)
-      setActivationError(null)
       setIsActivating(true)
       try {
         await transport.activatePlan({ productRef, planRef: selectedPlanRef })
-        setStep('payment')
+        setStep('amount')
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Activation failed'
         setActivationError(msg)
       } finally {
         setIsActivating(false)
       }
+      return
+    }
+    setStep('payment')
+  }, [
+    branch,
+    notifyModelContext,
+    productRef,
+    selectedPlanRef,
+    selectedPlanShape,
+    setActivationError,
+    setIsActivating,
+    setStep,
+    transport,
+  ])
+
+  // Transition: amount → payment. Activation already happened at the
+  // plan step; this transition just commits the topup amount and
+  // hands off to `TopupForm` for a plain `credit_topup`.
+  const onAmountContinue = useCallback(
+    (amountMinor: number) => {
+      if (!selectedPlanRef) return
+      setSelectedAmountMinor(amountMinor)
+      setStep('payment')
     },
-    [
-      productRef,
-      selectedPlanRef,
-      setActivationError,
-      setIsActivating,
-      setSelectedAmountMinor,
-      setStep,
-      transport,
-    ],
+    [selectedPlanRef, setSelectedAmountMinor, setStep],
   )
 
   // Transition: payment → success (PAYG branch).
@@ -295,8 +302,6 @@ export function CheckoutStateMachine(props: StateMachineProps) {
           plan={selectedPlanShape!}
           onBack={onBackFromAmount}
           onContinue={onAmountContinue}
-          isActivating={isActivating}
-          activationError={activationError}
           cx={cx}
         />
       )

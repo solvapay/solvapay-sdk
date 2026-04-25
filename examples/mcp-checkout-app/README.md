@@ -347,12 +347,13 @@ widget to mount on a data-tool call.
    (no Free card), with PAYG featured as `recommended` and the CTA
    label tracking the selected plan.
 6. **PAYG branch:** pick Pay as you go → `Continue with Pay as you go`
-   → amount picker (presets 500 / 2 000 / 10 000 credits, `popular` on
-   2 000) → Continue → SDK fires `activate_plan` then opens the
+   fires `activate_plan` (eager — lands an active PAYG purchase even
+   at zero balance) → amount picker (presets 500 / 2 000 / 10 000
+   credits, `popular` on 2 000) → Continue (local transition only) →
    payment step with inline Stripe Elements → `Pay $18.00` →
-   `process_payment` → success surface with receipt grid →
-   `Back to chat` calls `onRefreshBootstrap` then
-   `app.requestTeardown()`.
+   `create_topup_payment_intent` + `process_payment` → success
+   surface with receipt grid → `Back to chat` calls
+   `onRefreshBootstrap` then `app.requestTeardown()`.
 7. **Recurring branch:** pick Pro → `Continue with Pro — $18/mo`
    (skips amount picker) → payment step with order summary + terms
    line → `Subscribe — $18.00 / monthly` → `create_payment_intent`
