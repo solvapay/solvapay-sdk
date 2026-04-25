@@ -175,7 +175,16 @@ export function AppHeader({
   useLayoutEffect(() => {
     const el = imgRef.current
     const cached = el ? el.complete && el.naturalHeight > 0 : false
+    // Intentional setState-in-effect: `useLayoutEffect` is the only
+    // synchronous-before-paint hook React gives us, and the entire
+    // point of this block is to flip `imgLoaded` for the warm-cache
+    // fast path *before* the first visible frame so the initials
+    // bubble doesn't flash. The cascading-render cost the rule warns
+    // about is bounded (one extra commit per `iconUrl` change) and
+    // cheaper than the flicker we'd see otherwise.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setImgFailed(false)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setImgLoaded(cached)
   }, [iconUrl])
 

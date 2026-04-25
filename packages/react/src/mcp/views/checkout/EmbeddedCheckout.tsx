@@ -47,9 +47,13 @@ export interface EmbeddedCheckoutProps {
   onClose?: () => void
   cx: Cx
   /**
-   * Forwarded to `<AppHeader>` so integrator-supplied slot overrides
-   * (`appHeaderIcon`, `appHeaderName`, …) reach the merchant strip at
-   * the top of the card.
+   * Accepted for API stability — earlier revisions rendered
+   * `<AppHeader>` inside this surface and forwarded slot class names
+   * to it. `<McpApp>` now paints `<AppHeader>` once above the shell,
+   * so the per-surface `classNames` never need to reach that header
+   * from here; the prop is kept on the interface so existing callers
+   * (notably `<McpCheckoutView>`) compile without churn and the
+   * option stays available for future surface-scoped styling.
    */
   classNames?: McpViewClassNames
   children?: React.ReactNode
@@ -66,7 +70,8 @@ export function EmbeddedCheckout({
   onRefreshBootstrap,
   onClose,
   cx,
-  classNames,
+  // `classNames` is accepted on the interface for API stability but
+  // not consumed inside this surface — see the JSDoc on the prop.
   children,
 }: EmbeddedCheckoutProps) {
   const { loading, isRefetching, activePurchase } = usePurchase()
