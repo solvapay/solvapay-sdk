@@ -5,7 +5,7 @@ Full SolvaPay MCP server running on [**Supabase Edge Functions**](https://supaba
 - HTTP transport — [`createSolvaPayMcpFetchHandler`](../../packages/mcp-fetch/src/handler.ts) (Web-standards `Request`/`Response`)
 - MCP server — [`createSolvaPayMcpServer`](../../packages/mcp/src/server.ts) (framework-neutral descriptors + payable handler)
 - OAuth bridge — the fetch-first `/oauth/{register,authorize,token,revoke}` routes from [`@solvapay/mcp-fetch`](../../packages/mcp-fetch)
-- Paywalled tools — [`demo-tools.ts`](./supabase/functions/mcp/demo-tools.ts), byte-for-byte copy of `mcp-checkout-app`'s toolbox
+- Paywalled tools — [`demo-tools.ts`](./supabase/functions/mcp/demo-tools.ts), the two Goldberg stock-predictor Oracle tools (trimmed from `mcp-checkout-app`'s full toolbox)
 
 ## Why this example exists
 
@@ -98,13 +98,12 @@ See [`packages/mcp-fetch/src/handler.ts`](../../packages/mcp-fetch/src/handler.t
 
 ## Trying the demo tools
 
-Once deployed, any MCP client can list the tools. The demo toolbox includes:
+Once deployed, any MCP client can list the tools. The demo toolbox is the Goldberg stock-predictor Oracle — two paywalled tools that share a single seeded simulation so their outputs agree for the same ticker:
 
-- `search_knowledge` — paywalled search against a deterministic stub corpus
-- `get_market_quote` — paywalled deterministic quote for a ticker symbol
-- `query_sales_trends` — paywalled sales rows that attach a `low-balance` upsell nudge when the customer is close to running out
-- `predict_price_chart` — paywalled Oracle: history + forecast numeric arrays for an interactive line-chart artifact
-- `predict_direction` — paywalled Oracle: up/down verdict with a confidence score for a card artifact
+- `predict_price_chart` — paywalled Oracle: 30 days of history + an N-day forecast with an 80% confidence band as parallel numeric arrays; renders as an interactive line-chart artifact on capable hosts (Claude artifacts, ChatGPT Apps, MCP Inspector).
+- `predict_direction` — paywalled Oracle: up/down verdict + confidence score in `[0.5, 0.95]` for the same horizon; renders as a compact verdict card artifact.
+
+Both charge 1 credit per call. When the customer runs out, `content[0].text` narrates "call the `upgrade` tool…" and the host mounts the SolvaPay widget iframe.
 
 To disable the demo tools when using this example as a template:
 

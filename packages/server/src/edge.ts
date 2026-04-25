@@ -19,11 +19,23 @@ export type { CreateSolvaPayConfig, SolvaPay, PayableFunction } from './factory'
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
 
+// Paywall type-guard + state engine — exported here so edge / Deno
+// consumers of `@solvapay/server` (notably `@solvapay/mcp-core`, which
+// Deno resolves via the `deno` export condition to `./dist/edge.js`)
+// can pull the same narration + discrimination helpers the Node entry
+// point already ships. Pure modules — safe on every edge runtime.
+export { isPaywallStructuredContent } from './types/paywall'
+export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './paywall-state'
+export type { PaywallState } from './paywall-state'
+export type { PaywallDecision } from './types/paywall'
+
 // Export types
 export type {
+  components,
   LimitActivationBalance,
   LimitActivationProduct,
   LimitPlanSummary,
+  LimitResponseWithPlan,
   SolvaPayClient,
   PayableOptions,
   HttpAdapterOptions,
@@ -39,6 +51,26 @@ export type {
   CustomerWebhookObject,
   WebhookProduct,
 } from './types'
+
+// Export payment processing types (shared surface with the Node
+// entrypoint — `@solvapay/mcp-core` imports these via its top-level
+// `@solvapay/server` import, which Deno resolves to `edge.js`).
+export type {
+  OneTimePurchaseInfo,
+  ProcessPaymentResult,
+  CustomerResponseMapped,
+  ActivatePlanResult,
+  PaymentMethodInfo,
+  McpBootstrapRequest,
+  McpBootstrapResponse,
+  McpBootstrapPlanInput,
+  ConfigureMcpPlansRequest,
+  ConfigureMcpPlansResponse,
+  McpToolPlanMappingInput,
+  ToolPlanMappingInput,
+  SdkMerchantResponse,
+  SdkProductResponse,
+} from './types/client'
 
 // Export retry utility for general use
 export { withRetry } from './utils'
