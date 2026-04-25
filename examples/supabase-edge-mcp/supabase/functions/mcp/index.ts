@@ -126,31 +126,37 @@ const server = createSolvaPayMcpServer({
 
 // Hide UI-only virtual tools from `tools/list` for text-host MCP
 // clients (Claude Haiku via MCPJam, ChatGPT connector, etc.) that
-// don't mount the SolvaPay iframe surface. These tools are still
-// registered on the server — UI hosts that embed the MCP App iframe
-// will re-enable them at bootstrap — but their default `tools/list`
-// shape omits them so the LLM only sees the four intent tools
-// (`upgrade` / `manage_account` / `activate_plan` / `topup`) + any
+// don't mount the SolvaPay iframe surface. These tools stay
+// callable so the iframe can still invoke them for server-side
+// work (e.g. `create_topup_payment_intent` when the user clicks
+// "Pay $10" in the top-up view) — we just filter them out of the
+// default `tools/list` shape so the LLM's tool catalogue only
+// surfaces the four intent tools
+// (`upgrade` / `manage_account` / `activate_plan` / `topup`) + the
 // merchant-registered data tools (`predict_price_chart`,
 // `predict_direction`).
 //
-// The `@modelcontextprotocol/sdk` McpServer filters its tools/list
-// response by `registeredTool.enabled`, so flipping that flag is
-// the SDK-blessed hide mechanism — no need to patch the tool map
-// directly.
+// Wrap the SDK's built-in tools/list handler instead of replacing
+// it: the built-in one does the zod → JSON-schema conversion via
+// `toJsonSchemaCompat`, and reimplementing that here would
+// duplicate SDK internals. We read the existing handler out of the
+// protocol's `_requestHandlers` map, call it, then drop entries
+// with `_meta.audience === 'ui'` from the response.
 {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const registeredTools = (server as any)._registeredTools as Record<string, {
-    enabled: boolean
-    _meta?: { audience?: unknown }
-  }>
-  if (registeredTools) {
-    for (const [name, tool] of Object.entries(registeredTools)) {
-      if ((tool._meta as { audience?: unknown } | undefined)?.audience === 'ui') {
-        tool.enabled = false
-        console.log(`[mcp] hiding UI-only tool from tools/list: ${name}`)
-      }
-    }
+  const innerServer = (server as any).server
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handlers = innerServer._requestHandlers as Map<string, (req: unknown, extra: unknown) => Promise<{ tools: Array<{ _meta?: { audience?: unknown } }> }>>
+  const method = 'tools/list'
+  const original = handlers.get(method)
+  if (original) {
+    handlers.set(method, async (req, extra) => {
+      const response = await original(req, extra)
+      const filtered = (response.tools ?? []).filter(
+        t => (t._meta as { audience?: unknown } | undefined)?.audience !== 'ui',
+      )
+      return { ...response, tools: filtered }
+    })
   }
 }
 
