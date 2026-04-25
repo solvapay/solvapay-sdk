@@ -69,6 +69,55 @@ function rewriteRequestPath(req: Request): Request {
   return new Request(url, req)
 }
 
+/**
+ * Mirror the request `Origin` header back on every response so
+ * browser-origin MCP clients (ChatGPT Custom Connectors, MCP Inspector
+ * web UI, anything served from an `https://…` origin) can connect.
+ *
+ * `@solvapay/mcp-fetch`'s built-in CORS helper only mirrors native
+ * schemes (`cursor://`, `vscode://`, `claude://`) by design. For a
+ * public MCP endpoint fronted by Bearer-token auth (no cookies, no
+ * `credentials: 'include'`) the safe browser-compat move is to echo
+ * `Origin` back + `Vary: Origin`, and keep `Access-Control-Expose-
+ * Headers: WWW-Authenticate` so clients see the DCR discovery
+ * challenge on 401.
+ *
+ * OPTIONS preflights also get the mirror + the `Access-Control-Allow-
+ * Methods` / `Allow-Headers` / `Max-Age` envelope so the browser's
+ * CORS cache warms on the first call.
+ */
+function applyBrowserCors(req: Request, res: Response): Response {
+  const origin = req.headers.get('origin')
+  if (!origin) return res
+
+  const headers = new Headers(res.headers)
+  if (!headers.has('access-control-allow-origin')) {
+    headers.set('Access-Control-Allow-Origin', origin)
+    const vary = headers.get('vary')
+    headers.set('Vary', vary ? `${vary}, Origin` : 'Origin')
+  }
+  const exposed = headers.get('access-control-expose-headers')
+  if (!exposed || !/www-authenticate/i.test(exposed)) {
+    headers.set(
+      'Access-Control-Expose-Headers',
+      exposed ? `${exposed}, WWW-Authenticate` : 'WWW-Authenticate',
+    )
+  }
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
+}
+
+function browserCorsPreflight(req: Request): Response {
+  const requestedMethod = req.headers.get('access-control-request-method') ?? 'POST'
+  const requestedHeaders =
+    req.headers.get('access-control-request-headers') ?? 'authorization, content-type, mcp-session-id'
+
+  const headers = new Headers()
+  headers.set('Access-Control-Allow-Methods', `${requestedMethod}, OPTIONS`)
+  headers.set('Access-Control-Allow-Headers', requestedHeaders)
+  headers.set('Access-Control-Max-Age', '600')
+  return applyBrowserCors(req, new Response(null, { status: 204, headers }))
+}
+
 const solvaPay = createSolvaPay({
   apiKey: requireEnv('SOLVAPAY_SECRET_KEY'),
   apiBaseUrl: Deno.env.get('SOLVAPAY_API_BASE_URL'),
@@ -105,4 +154,11 @@ const handler = createSolvaPayMcpFetchHandler({
   mcpPath: '/',
 })
 
-Deno.serve(req => handler(rewriteRequestPath(req)))
+Deno.serve(async req => {
+  // Short-circuit every browser preflight so the SDK's native-scheme-
+  // only CORS helper doesn't swallow `Origin: https://…` requests.
+  if (req.method === 'OPTIONS') return browserCorsPreflight(req)
+
+  const res = await handler(rewriteRequestPath(req))
+  return applyBrowserCors(req, res)
+})
