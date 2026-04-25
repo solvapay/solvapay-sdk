@@ -1,50 +1,52 @@
 /**
  * SolvaPay MCP server — Supabase Edge Function entrypoint.
  *
- * End-to-end Deno target for the turnkey Web-standards handler
- * (`createSolvaPayMcpFetchHandler`). Contrast with
- * `examples/mcp-checkout-app/src/index.ts`, which wires the same toolbox
- * into Express + `createMcpOAuthBridge` + `StreamableHTTPServerTransport`
- * — the two files are shape-for-shape parallel, and the only runtime
- * difference is the HTTP layer (Express vs. `Deno.serve`).
+ * Goldberg demo variant: wires the `@solvapay/mcp-fetch` OAuth bridge
+ * + CORS helpers directly to a module-level singleton
+ * `WebStandardStreamableHTTPServerTransport` so stateful MCP sessions
+ * (initialize → initialized → tools/list) work inside a single warm
+ * Supabase edge isolate.
  *
- * What this gives you vs. the plain `examples/supabase-edge/`:
+ * Two reasons we don't use `createSolvaPayMcpFetchHandler` directly:
  *
- * - `/.well-known/oauth-*` + `/oauth/{register,authorize,token,revoke}`
- *   bridge routes — proxied to the SolvaPay API with native-scheme CORS.
- * - `POST /mcp` / `GET /mcp` / `DELETE /mcp` — the JSON-RPC MCP transport
- *   with per-request Bearer auth.
- * - The Goldberg paywalled Oracle toolbox (`predict_price_chart` +
- *   `predict_direction`) — trimmed from the full `mcp-checkout-app`
- *   example down to the two stock-predictor tools for the Goldberg
- *   MCP launch.
- * - The iframe HTML read from the function's own filesystem — the Deno
- *   runtime never falls back to `node:fs/promises`. The HTML file is
- *   shipped with the function via `static_files` in `supabase/config.toml`.
+ *  1. The SDK's helper destructures `sessionIdGenerator =
+ *     defaultSessionIdGenerator`, which silently swaps our
+ *     `sessionIdGenerator: undefined` (stateless-mode intent) back to
+ *     `crypto.randomUUID`. The transport therefore emits an
+ *     `mcp-session-id` on initialize, but then validates follow-ups
+ *     against a per-request fresh transport that never saw the
+ *     initialize — every request after initialize 400s with
+ *     "Bad Request: Server not initialized".
  *
- * Supabase's edge gateway strips `/functions/v1` on the way in, so the
- * function sees `/<fn-name>/…`. For this function the name is `mcp`,
- * so we drop the leading `/mcp` segment and serve the MCP transport at
- * the root path (`mcpPath: '/'`) with OAuth bridge routes at
- * `/.well-known/*` + `/oauth/*`. This keeps the handler's routing
- * runtime-neutral — the fetch handler stays the same across Deno,
- * Cloudflare Workers, Bun, Next edge, etc.
+ *  2. The SDK helper constructs a new transport per request. Even
+ *     with true stateless mode that'd be fine, but for clients that
+ *     echo `mcp-session-id` back (ChatGPT connector, MCP Inspector)
+ *     we need `_initialized` to persist across requests. A module-
+ *     level singleton transport does exactly that for the lifetime
+ *     of the isolate.
  *
- * To deploy:
- *
- *   pnpm build              # bundle mcp-app.html + copy into ./mcp/
- *   pnpm deploy             # supabase functions deploy mcp
- *
- * Type-check locally (the required CI gate) with:
- *
- *   pnpm validate
+ * Supabase's edge gateway strips `/functions/v1` on the way in, so
+ * incoming paths look like `/mcp/…`. We drop that `/mcp` segment
+ * before the OAuth router / MCP transport see the request, and serve
+ * the MCP transport at the root of the normalised path. The public
+ * URL (set in `MCP_PUBLIC_BASE_URL`) points at the Cloudflare Worker
+ * proxy (`https://mcp-goldberg.solvapay.com`) which forwards every
+ * path verbatim to `/functions/v1/mcp/<path>` on Supabase.
  */
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
 import { createSolvaPay } from '@solvapay/server'
 import { createSolvaPayMcpServer } from '@solvapay/mcp'
-import { createSolvaPayMcpFetchHandler } from '@solvapay/mcp-fetch'
+import {
+  applyNativeCors,
+  authChallenge,
+  buildAuthInfoFromBearer,
+  corsPreflight,
+  createOAuthFetchRouter,
+  McpBearerAuthError,
+} from '@solvapay/mcp-fetch'
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { demoToolsEnabled, registerDemoTools } from './demo-tools.ts'
 
 function requireEnv(name: string): string {
@@ -55,12 +57,8 @@ function requireEnv(name: string): string {
   return value
 }
 
-// Supabase strips `/functions/v1` before the request reaches the
-// function, so incoming paths look like `/<fn-name>/…`. We drop the
-// `/mcp` prefix so the fetch handler can match `/.well-known/*`,
-// `/oauth/*`, and the root MCP transport without knowing anything
-// about its hosting environment.
 const FUNCTION_MOUNT_PREFIX = '/mcp'
+const MCP_PATH = '/mcp'
 
 function rewriteRequestPath(req: Request): Request {
   const url = new URL(req.url)
@@ -72,24 +70,12 @@ function rewriteRequestPath(req: Request): Request {
 /**
  * Mirror the request `Origin` header back on every response so
  * browser-origin MCP clients (ChatGPT Custom Connectors, MCP Inspector
- * web UI, anything served from an `https://…` origin) can connect.
- *
- * `@solvapay/mcp-fetch`'s built-in CORS helper only mirrors native
- * schemes (`cursor://`, `vscode://`, `claude://`) by design. For a
- * public MCP endpoint fronted by Bearer-token auth (no cookies, no
- * `credentials: 'include'`) the safe browser-compat move is to echo
- * `Origin` back + `Vary: Origin`, and keep `Access-Control-Expose-
- * Headers: WWW-Authenticate` so clients see the DCR discovery
- * challenge on 401.
- *
- * OPTIONS preflights also get the mirror + the `Access-Control-Allow-
- * Methods` / `Allow-Headers` / `Max-Age` envelope so the browser's
- * CORS cache warms on the first call.
+ * web UI) can connect. Safe without `Allow-Credentials: true` because
+ * auth is bearer-token only.
  */
 function applyBrowserCors(req: Request, res: Response): Response {
   const origin = req.headers.get('origin')
   if (!origin) return res
-
   const headers = new Headers(res.headers)
   if (!headers.has('access-control-allow-origin')) {
     headers.set('Access-Control-Allow-Origin', origin)
@@ -100,7 +86,7 @@ function applyBrowserCors(req: Request, res: Response): Response {
   if (!exposed || !/www-authenticate/i.test(exposed)) {
     headers.set(
       'Access-Control-Expose-Headers',
-      exposed ? `${exposed}, WWW-Authenticate` : 'WWW-Authenticate',
+      exposed ? `${exposed}, WWW-Authenticate, Mcp-Session-Id` : 'WWW-Authenticate, Mcp-Session-Id',
     )
   }
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
@@ -109,8 +95,8 @@ function applyBrowserCors(req: Request, res: Response): Response {
 function browserCorsPreflight(req: Request): Response {
   const requestedMethod = req.headers.get('access-control-request-method') ?? 'POST'
   const requestedHeaders =
-    req.headers.get('access-control-request-headers') ?? 'authorization, content-type, mcp-session-id'
-
+    req.headers.get('access-control-request-headers') ??
+    'authorization, content-type, mcp-session-id, mcp-protocol-version'
   const headers = new Headers()
   headers.set('Access-Control-Allow-Methods', `${requestedMethod}, OPTIONS`)
   headers.set('Access-Control-Allow-Headers', requestedHeaders)
@@ -126,11 +112,6 @@ const productRef = requireEnv('SOLVAPAY_PRODUCT_REF')
 const publicBaseUrl = requireEnv('MCP_PUBLIC_BASE_URL')
 const apiBaseUrl = Deno.env.get('SOLVAPAY_API_BASE_URL') ?? 'https://api.solvapay.com'
 
-// Read the bundled iframe HTML off the function's filesystem once, at
-// cold start — avoids re-reading on every MCP `initialize` and keeps
-// the readHtml branch runtime-neutral (no dynamic `node:fs/promises`).
-// Requires `static_files = ["./functions/mcp/mcp-app.html"]` in
-// `supabase/config.toml` so the file ships alongside the function bundle.
 const htmlUrl = new URL('./mcp-app.html', import.meta.url)
 const html = await Deno.readTextFile(htmlUrl)
 
@@ -143,27 +124,90 @@ const server = createSolvaPayMcpServer({
   additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
 })
 
-const handler = createSolvaPayMcpFetchHandler({
-  server,
+// Stateful, stateless-id-generator transport. `sessionIdGenerator:
+// undefined` puts the SDK's validator into "session management
+// disabled" mode (see webStandardStreamableHttp.js validateSession()),
+// so subsequent requests don't need a matching `mcp-session-id` and
+// the transport's `_initialized` flag (set on the first initialize)
+// is enough to service follow-ups.
+const transport = new WebStandardStreamableHTTPServerTransport({
+  sessionIdGenerator: undefined,
+})
+await server.connect(transport)
+
+const oauthRouter = createOAuthFetchRouter({
   publicBaseUrl,
   apiBaseUrl,
   productRef,
-  // MCP clients (Inspector, ChatGPT connector) POST the JSON-RPC
-  // transport to `<resource>/mcp` by convention. Since we strip the
-  // Supabase function's `/mcp` mount prefix before the handler sees
-  // the request, `POST https://mcp-goldberg.solvapay.com/mcp` arrives
-  // here with pathname `/mcp`, which matches this option. The
-  // `.well-known/*` and `/oauth/*` routes are unaffected — they match
-  // the OAuth bridge first, before the `pathname !== mcpPath` 404
-  // fallthrough.
-  mcpPath: '/mcp',
 })
 
+async function handleMcpRequest(req: Request): Promise<Response> {
+  // Bearer auth guard — rejects with a 401 + WWW-Authenticate
+  // `resource_metadata="…"` hint so MCP clients know where to do
+  // DCR + OAuth discovery.
+  const authHeader = req.headers.get('authorization')
+  let authInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
+  try {
+    authInfo = buildAuthInfoFromBearer(authHeader)
+    if (!authInfo) throw new McpBearerAuthError('Missing bearer token')
+  } catch {
+    return authChallenge(req, { publicBaseUrl })
+  }
+
+  try {
+    const response = await transport.handleRequest(
+      req,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { authInfo: authInfo as any },
+    )
+    const merged = new Headers(response.headers)
+    applyNativeCors(req.headers, merged)
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: merged,
+    })
+  } catch (error) {
+    const headers = new Headers({ 'content-type': 'application/json' })
+    applyNativeCors(req.headers, headers)
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: -32603,
+          message: error instanceof Error ? error.message : 'internal_error',
+        },
+      }),
+      { status: 500, headers },
+    )
+  }
+}
+
 Deno.serve(async req => {
-  // Short-circuit every browser preflight so the SDK's native-scheme-
-  // only CORS helper doesn't swallow `Origin: https://…` requests.
+  // Browser preflight — mirror Origin back so ChatGPT / Inspector can
+  // complete the CORS handshake.
   if (req.method === 'OPTIONS') return browserCorsPreflight(req)
 
-  const res = await handler(rewriteRequestPath(req))
-  return applyBrowserCors(req, res)
+  const rewritten = rewriteRequestPath(req)
+  const url = new URL(rewritten.url)
+
+  // 1) OAuth bridge — `.well-known/*` discovery + `/oauth/*` DCR /
+  //    authorize / token / revoke routes.
+  const oauthResponse = await oauthRouter(rewritten)
+  if (oauthResponse) return applyBrowserCors(req, oauthResponse)
+
+  // 2) MCP JSON-RPC transport.
+  if (url.pathname === MCP_PATH) {
+    if (req.method !== 'POST') {
+      const headers = new Headers({ Allow: 'POST, OPTIONS' })
+      applyNativeCors(req.headers, headers)
+      return applyBrowserCors(req, new Response(null, { status: 405, headers }))
+    }
+    const res = await handleMcpRequest(rewritten)
+    return applyBrowserCors(req, res)
+  }
+
+  // 3) Fallback 404.
+  return applyBrowserCors(req, new Response('not_found', { status: 404 }))
 })
