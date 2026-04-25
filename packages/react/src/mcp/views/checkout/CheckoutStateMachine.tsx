@@ -21,6 +21,7 @@
 import React, { useCallback } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { usePlanSelector } from '../../../primitives/PlanSelector'
+import { useBalance } from '../../../hooks/useBalance'
 import { useTransport } from '../../../hooks/useTransport'
 import { useMcpBridge } from '../../bridge'
 import { useHostLocale } from '../../useHostLocale'
@@ -89,6 +90,7 @@ export function CheckoutStateMachine(props: StateMachineProps) {
   const transport = useTransport()
   const locale = useHostLocale()
   const { notifyModelContext, notifySuccess } = useMcpBridge()
+  const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
 
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
   const branch: 'payg' | 'recurring' | null = selectedPlanShape
@@ -155,8 +157,15 @@ export function CheckoutStateMachine(props: StateMachineProps) {
   const onPaygPaymentSuccess = useCallback(() => {
     if (!selectedPlanShape || selectedAmountMinor == null) return
     const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
-    const creditsPerUnit = selectedPlanShape.creditsPerUnit ?? 1
-    const creditsAdded = Math.round(selectedAmountMinor * creditsPerUnit)
+    // `creditsPerMinorUnit` is the mint rate surfaced on the balance
+    // DTO — the right input for "how many credits landed." The
+    // plan's `creditsPerUnit` is a usage-debit rate and is NOT
+    // interchangeable. Fall back to 0 when the balance hasn't
+    // loaded so the receipt stays coherent.
+    const creditsAdded =
+      creditsPerMinorUnit != null && creditsPerMinorUnit > 0
+        ? Math.floor((selectedAmountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit)
+        : 0
     setSuccessMeta({
       branch: 'payg',
       amountMinor: selectedAmountMinor,
@@ -177,6 +186,8 @@ export function CheckoutStateMachine(props: StateMachineProps) {
     void notifySuccess({ kind: 'topup', amountMinor: selectedAmountMinor, currency })
     onPurchaseSuccess?.()
   }, [
+    creditsPerMinorUnit,
+    displayExchangeRate,
     locale,
     notifyModelContext,
     notifySuccess,

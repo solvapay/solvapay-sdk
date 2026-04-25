@@ -567,6 +567,47 @@ describe('<McpCheckoutView> — PAYG branch', () => {
       expect(onClose).toHaveBeenCalledTimes(1)
     })
   })
+
+  // Regression — the PAYG order summary and success receipt used to
+  // multiply `amountMinor` by `plan.creditsPerUnit` (a usage *debit*
+  // rate), producing wildly inflated figures. The correct input is
+  // the balance DTO's `creditsPerMinorUnit` (mint rate), matching the
+  // canonical formula used across the SDK. With the fixture values
+  // `creditsPerMinorUnit = 100`, `displayExchangeRate = 1`, and a
+  // $18 custom amount (1800 minor units), both surfaces should show
+  // 180,000 credits — not 1800 * plan.creditsPerUnit (=1800 here) or
+  // any other product of the debit rate.
+  it('PAYG surfaces credit counts via the balance mint rate (creditsPerMinorUnit), not plan.creditsPerUnit', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() =>
+      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+    )
+    act(() => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+      )
+    })
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('or custom amount'), {
+        target: { value: '18' },
+      })
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await waitFor(() => screen.getByTestId('topup-form-stub'))
+
+    // Order summary: 1800 minor * 100 creditsPerMinorUnit = 180,000.
+    expect(screen.getByText(/180[,. ]000 credits/)).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('topup-form-submit'))
+    })
+    await waitFor(() => screen.getByText(/Credits added/))
+
+    // Success receipt: same figure, rendered as `+180,000`.
+    expect(screen.getByText(/\+180[,. ]000/)).toBeTruthy()
+  })
 })
 
 // ------------------------------------------------------------------

@@ -8,6 +8,7 @@
  */
 
 import React, { memo } from 'react'
+import { useBalance } from '../../../../hooks/useBalance'
 import { TopupForm } from '../../../../primitives/TopupForm'
 import { formatPrice } from '../../../../utils/format'
 import { useHostLocale } from '../../../useHostLocale'
@@ -33,8 +34,18 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
 }: PaygPaymentStepProps) {
   const currency = (plan.currency ?? 'USD').toUpperCase()
   const locale = useHostLocale()
-  const creditsPerUnit = plan.creditsPerUnit ?? 1
-  const creditsAdded = Math.round(amountMinor * creditsPerUnit)
+  const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  // `creditsPerMinorUnit` is the mint rate the backend surfaces on the
+  // balance DTO (credits granted per paid minor unit). Unlike
+  // `plan.creditsPerUnit` — which is the *debit* rate (credits
+  // consumed per usage unit) — it is the right input for a
+  // "credits you'll receive" preview. When the balance hasn't
+  // loaded or the provider didn't return the field, hide the row
+  // rather than show a meaningless number.
+  const creditsAdded =
+    creditsPerMinorUnit != null && creditsPerMinorUnit > 0
+      ? Math.floor((amountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit)
+      : null
 
   return (
     <>
@@ -44,8 +55,12 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
 
       <div className="solvapay-mcp-checkout-order-summary" data-variant="payg">
         <div className="solvapay-mcp-checkout-order-summary-row">
-          <span className={cx.muted}>{creditsAdded.toLocaleString(locale)} credits</span>
-          <span>{formatPrice(amountMinor, currency, { locale })}</span>
+          <span className={cx.muted}>
+            {creditsAdded != null
+              ? `${creditsAdded.toLocaleString(locale)} credits`
+              : formatPrice(amountMinor, currency, { locale })}
+          </span>
+          {creditsAdded != null ? <span>{formatPrice(amountMinor, currency, { locale })}</span> : null}
         </div>
         <div className="solvapay-mcp-checkout-order-summary-row">
           <span className={cx.muted}>One-time</span>
