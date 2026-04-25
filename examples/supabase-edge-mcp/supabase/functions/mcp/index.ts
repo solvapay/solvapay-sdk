@@ -148,10 +148,15 @@ const handler = createSolvaPayMcpFetchHandler({
   publicBaseUrl,
   apiBaseUrl,
   productRef,
-  // The Supabase edge gateway mounts this function at
-  // `/functions/v1/mcp` and strips the `/mcp` segment above, so the
-  // transport lives at the root from the handler's perspective.
-  mcpPath: '/',
+  // MCP clients (Inspector, ChatGPT connector) POST the JSON-RPC
+  // transport to `<resource>/mcp` by convention. Since we strip the
+  // Supabase function's `/mcp` mount prefix before the handler sees
+  // the request, `POST https://mcp-goldberg.solvapay.com/mcp` arrives
+  // here with pathname `/mcp`, which matches this option. The
+  // `.well-known/*` and `/oauth/*` routes are unaffected — they match
+  // the OAuth bridge first, before the `pathname !== mcpPath` 404
+  // fallthrough.
+  mcpPath: '/mcp',
 })
 
 Deno.serve(async req => {
