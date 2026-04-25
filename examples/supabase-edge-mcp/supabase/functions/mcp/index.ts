@@ -124,6 +124,36 @@ const server = createSolvaPayMcpServer({
   additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
 })
 
+// Hide UI-only virtual tools from `tools/list` for text-host MCP
+// clients (Claude Haiku via MCPJam, ChatGPT connector, etc.) that
+// don't mount the SolvaPay iframe surface. These tools are still
+// registered on the server — UI hosts that embed the MCP App iframe
+// will re-enable them at bootstrap — but their default `tools/list`
+// shape omits them so the LLM only sees the four intent tools
+// (`upgrade` / `manage_account` / `activate_plan` / `topup`) + any
+// merchant-registered data tools (`predict_price_chart`,
+// `predict_direction`).
+//
+// The `@modelcontextprotocol/sdk` McpServer filters its tools/list
+// response by `registeredTool.enabled`, so flipping that flag is
+// the SDK-blessed hide mechanism — no need to patch the tool map
+// directly.
+{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const registeredTools = (server as any)._registeredTools as Record<string, {
+    enabled: boolean
+    _meta?: { audience?: unknown }
+  }>
+  if (registeredTools) {
+    for (const [name, tool] of Object.entries(registeredTools)) {
+      if ((tool._meta as { audience?: unknown } | undefined)?.audience === 'ui') {
+        tool.enabled = false
+        console.log(`[mcp] hiding UI-only tool from tools/list: ${name}`)
+      }
+    }
+  }
+}
+
 // Stateful, stateless-id-generator transport. `sessionIdGenerator:
 // undefined` puts the SDK's validator into "session management
 // disabled" mode (see webStandardStreamableHttp.js validateSession()),
