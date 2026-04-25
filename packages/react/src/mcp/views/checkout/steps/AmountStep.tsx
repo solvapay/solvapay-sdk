@@ -3,9 +3,11 @@
 /**
  * Step 2 — PAYG amount picker. Only renders on the PAYG branch; the
  * recurring branch transitions directly from `plan` to `payment`.
- * Clicking `Continue` fires `activate_plan` via the parent's
- * `onContinue(amountMinor)` callback, then advances to the payment
- * step once the activation call resolves.
+ *
+ * Activation has already happened at the plan step (the `activate_plan`
+ * call behind the "Continue with Pay as you go" button), so clicking
+ * `Continue` here just commits the topup amount and advances to the
+ * payment step. No network call on this transition.
  */
 
 import React, { memo, useState } from 'react'
@@ -18,9 +20,7 @@ import type { BootstrapPlanLike, Cx } from '../shared'
 interface AmountStepProps {
   plan: BootstrapPlanLike
   onBack: () => void
-  onContinue: (amountMinor: number) => Promise<void>
-  isActivating: boolean
-  activationError: string | null
+  onContinue: (amountMinor: number) => void
   cx: Cx
 }
 
@@ -28,8 +28,6 @@ export const AmountStep = memo(function AmountStep({
   plan,
   onBack,
   onContinue,
-  isActivating,
-  activationError,
   cx,
 }: AmountStepProps) {
   const currency = (plan.currency ?? 'USD').toUpperCase()
@@ -54,23 +52,13 @@ export const AmountStep = memo(function AmountStep({
         <AmountPicker.Custom className={cx.amountCustom} placeholder="or custom amount" />
         <AmountPicker.Confirm
           className={cx.button}
-          onConfirm={amountMinor => {
-            void onContinue(amountMinor)
-          }}
+          onConfirm={amountMinor => onContinue(amountMinor)}
         >
-          {isActivating
-            ? 'Activating…'
-            : stagedAmountMinor
-              ? `Continue — ${formatPrice(stagedAmountMinor, currency, { locale })}`
-              : 'Continue'}
+          {stagedAmountMinor
+            ? `Continue — ${formatPrice(stagedAmountMinor, currency, { locale })}`
+            : 'Continue'}
         </AmountPicker.Confirm>
       </AmountPicker.Root>
-
-      {activationError ? (
-        <p className={cx.error} role="alert">
-          {activationError}
-        </p>
-      ) : null}
     </>
   )
 })
