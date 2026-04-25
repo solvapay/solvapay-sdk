@@ -28,6 +28,12 @@ import type { Plan, SolvaPayContextValue } from '../types'
 // These mocks never execute for the free-plan tests above because
 // FreeInner doesn't touch Stripe or confirmPayment/reconcilePayment.
 
+// Captures the last `options` prop received by the mocked Stripe
+// `PaymentElement` so integration tests can assert the primitive forwards
+// SolvaPay defaults (e.g. `wallets.link = 'never'`).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lastPaymentElementOptions: { current: any } = { current: undefined }
+
 vi.mock('@stripe/react-stripe-js', async () => {
   const ReactMod = await import('react')
   return {
@@ -38,9 +44,13 @@ vi.mock('@stripe/react-stripe-js', async () => {
     CardElement: () => ReactMod.createElement('div', { 'data-testid': 'card-element' }),
     PaymentElement: ({
       onChange,
+      options,
     }: {
       onChange?: (e: { complete: boolean }) => void
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      options?: any
     }) => {
+      lastPaymentElementOptions.current = options
       // Auto-complete the payment element so `canSubmit` becomes true
       // without driving Stripe's real change events.
       ReactMod.useEffect(() => {
@@ -388,5 +398,108 @@ describe('PaymentForm paid-branch polling (MCP checkout flicker fix)', () => {
     )
     // At least a handful of refetches were attempted before the ceiling hit.
     expect(paidHarnessRef.current?.refetchCalls() ?? 0).toBeGreaterThanOrEqual(3)
+  })
+})
+
+// ---------- PaymentElement default options (Stripe Link disabled) ----------
+//
+// Guards the centralized `withPaymentElementDefaults` wire-up inside
+// `PaymentForm.PaymentElement`. The Link sign-in banner + "Save my
+// information for faster checkout" enrollment UI would duplicate the
+// SolvaPay-owned "Save card" affordance, so the primitive must pass
+// `wallets.link = 'never'` to Stripe by default, while still letting
+// callers override via `options`.
+
+const OptionsHarness: React.FC<{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options?: any
+}> = ({ options }) => {
+  const ctx = React.useMemo<SolvaPayContextValue>(
+    () => ({
+      purchase: {
+        loading: false,
+        isRefetching: false,
+        error: null,
+        purchases: [],
+        hasProduct: () => false,
+        activePurchase: null,
+        hasPaidPurchase: false,
+        activePaidPurchase: null,
+        balanceTransactions: [],
+      },
+      refetchPurchase: vi.fn(),
+      createPayment: vi.fn().mockResolvedValue({
+        clientSecret: 'cs_test_options',
+        publishableKey: 'pk_test',
+      }),
+      processPayment: vi.fn().mockResolvedValue({ status: 'succeeded' }),
+      createTopupPayment: vi.fn(),
+      cancelRenewal: vi.fn(),
+      reactivateRenewal: vi.fn(),
+      activatePlan: vi.fn(),
+      balance: {
+        loading: false,
+        credits: null,
+        displayCurrency: null,
+        creditsPerMinorUnit: null,
+        displayExchangeRate: null,
+        refetch: vi.fn(),
+        adjustBalance: vi.fn(),
+      },
+    }),
+    [],
+  )
+  return (
+    <SolvaPayContext.Provider value={ctx}>
+      <PaymentForm.Root planRef="pln_paid" productRef="prd_paid">
+        <PaymentForm.PaymentElement options={options} />
+        <PaymentForm.SubmitButton data-testid="submit" />
+      </PaymentForm.Root>
+    </SolvaPayContext.Provider>
+  )
+}
+
+describe('PaymentForm.PaymentElement default options', () => {
+  beforeEach(() => {
+    lastPaymentElementOptions.current = undefined
+    plansCache.clear()
+    productCache.clear()
+    merchantCache.clear()
+    plansCache.set('prd_paid', {
+      plans: [paidPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_paid', {
+      product: { reference: 'prd_paid', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    merchantCache.set('/api/merchant', {
+      merchant: { legalName: 'Acme', displayName: 'Acme' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+  })
+
+  it('disables Stripe Link by default when the caller passes no options', async () => {
+    render(<OptionsHarness />)
+    await screen.findByTestId('payment-element')
+    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('never')
+  })
+
+  it('honours caller-supplied wallets.link override', async () => {
+    render(<OptionsHarness options={{ wallets: { link: 'auto' } }} />)
+    await screen.findByTestId('payment-element')
+    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('auto')
+  })
+
+  it('composes caller-supplied wallet flags with the default link=never', async () => {
+    render(<OptionsHarness options={{ wallets: { applePay: 'never' } }} />)
+    await screen.findByTestId('payment-element')
+    expect(lastPaymentElementOptions.current?.wallets).toEqual({
+      link: 'never',
+      applePay: 'never',
+    })
   })
 })

@@ -34,6 +34,7 @@ import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { AmountPicker as AmountPickerPrimitive } from './AmountPicker'
+import { withPaymentElementDefaults } from './paymentElementDefaults'
 import { useTopup } from '../hooks/useTopup'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
@@ -354,7 +355,7 @@ const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
   return (
     <div data-solvapay-topup-form-payment-element="">
       <StripePaymentElement
-        options={options}
+        options={withPaymentElementDefaults(options)}
         onChange={e => setPaymentInputComplete(e.complete)}
         key={locale || 'default'}
       />
