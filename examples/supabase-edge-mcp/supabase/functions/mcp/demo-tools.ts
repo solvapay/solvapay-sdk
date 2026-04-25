@@ -1,42 +1,49 @@
 /**
- * Example-local paywalled data tools for `supabase-edge-mcp`.
+ * Goldberg paywalled Oracle tools for `supabase-edge-mcp`.
  *
- * Byte-for-byte copy of `mcp-checkout-app/src/demo-tools.ts` with one
- * runtime-neutral tweak: `demoToolsEnabled` reads the env flag through
- * a plain `Record<string, string | undefined>` default so the file
- * compiles under both Node (via `process.env`) and Deno (via
- * `Deno.env.toObject()`). The rest — the tools, the paywalled
- * handlers, the seeded oracle simulation — is production-identical
- * between the two examples; the only thing that changes between
- * runtimes is the HTTP handler wrapping them.
+ * Trimmed from the full `mcp-checkout-app` toolbox down to the two
+ * stock-predictor demo tools — `predict_price_chart` and
+ * `predict_direction` — for the Goldberg MCP launch. Everything else
+ * (auth, transport, paywall wiring, widget surface) is identical to
+ * the original example; only the registered tool surface area
+ * changed.
+ *
+ * One runtime-neutral tweak vs. the sibling `mcp-checkout-app` copy:
+ * `demoToolsEnabled` reads the env flag through a plain
+ * `Record<string, string | undefined>` default so the file compiles
+ * under both Node (via `process.env`) and Deno (via
+ * `Deno.env.toObject()`). The tools, paywalled handlers, and seeded
+ * oracle simulation are production-identical between the two
+ * examples; the only thing that changes between runtimes is the HTTP
+ * handler wrapping them.
  *
  * These tools illustrate how a "data MCP" server wraps its business
- * logic with the SolvaPay usage-based paywall. They are **not** part of
- * any `@solvapay/*` package — they consume `registerPayable` exactly
- * the way a third-party integrator would.
+ * logic with the SolvaPay usage-based paywall. They are **not** part
+ * of any `@solvapay/*` package — they consume `registerPayable`
+ * exactly the way a third-party integrator would.
  *
- * All tools return deterministic stub payloads so the demo is
- * self-contained: no external dependencies, keys, or rate limits. Swap
- * the handlers for real ones in a few lines to turn this into a
- * production server.
+ * Both tools return deterministic stub payloads (seeded from the
+ * ticker symbol) so the demo is self-contained: no external market
+ * data, API keys, or rate limits. Swap the handlers for real ones in
+ * a few lines to turn this into a production oracle server.
  *
  * Single rendering strategy — host renders the data:
  *
  * The merchant's data rides on `structuredContent` so capable hosts
- * (Claude artifacts, ChatGPT Apps, MCP Inspector) render it natively —
- * a chat bubble for `search_knowledge`, a line-chart artifact for
- * `predict_price_chart`, a verdict card for `predict_direction`, and
- * so on. The SolvaPay widget is reserved for the three intent tools
- * (`upgrade`, `manage_account`, `topup`) where the user deliberately
- * asked for a checkout / account / topup UX.
+ * (Claude artifacts, ChatGPT Apps, MCP Inspector) render it natively
+ * — a line-chart artifact for `predict_price_chart` and a verdict
+ * card for `predict_direction`. The SolvaPay widget is reserved for
+ * the three intent tools (`upgrade`, `manage_account`, `topup`) where
+ * the user deliberately asked for a checkout / account / topup UX.
  *
  * Paywall responses on exhaustion are plain text narrations that name
  * the recovery intent tool and inline `gate.checkoutUrl` for
  * terminal-first hosts. No iframe opens for a gate — the LLM reads
  * the narration and calls the recovery tool, which mounts the widget.
  *
- * Gate with the `DEMO_TOOLS` env var (defaults to `true` in dev; set to
- * `"false"` when copying this example to your own repo as a template).
+ * Gate with the `DEMO_TOOLS` env var (defaults to `true` in dev; set
+ * to `"false"` when copying this example to your own repo as a
+ * template).
  */
 
 import { z } from 'zod'
@@ -69,101 +76,26 @@ function readEnv(): Record<string, string | undefined> {
 }
 
 /**
- * Registers two paywalled demo tools + their slash-command prompts on the
- * server provided by `createSolvaPayMcpServer`'s `additionalTools` hook.
+ * Registers the two paywalled Oracle demo tools + their slash-command
+ * prompts on the server provided by `createSolvaPayMcpServer`'s
+ * `additionalTools` hook.
  *
  * Tool shape mirrors
- * `examples/checkout-demo/app/components/UsageSimulator.tsx`: each call
- * consumes one unit of usage; when the customer runs out, the tool
- * returns a paywall bootstrap instead of results (handled entirely by
- * `solvaPay.payable().mcp()` inside `registerPayable`).
+ * `examples/checkout-demo/app/components/UsageSimulator.tsx`: each
+ * call consumes one unit of usage; when the customer runs out, the
+ * tool returns a paywall bootstrap instead of results (handled
+ * entirely by `solvaPay.payable().mcp()` inside `registerPayable`).
+ *
+ * Oracle tools return pure numeric data via `ctx.respond(payload)` so
+ * capable MCP hosts (Claude artifacts) render a line chart / verdict
+ * card artifact straight off `structuredContent`. Paywall exhaustion
+ * ships a text-only narration via `content[0].text` — no iframe opens
+ * for a gate, the LLM reads the copy and calls the `upgrade` /
+ * `topup` intent tool which mounts the widget.
  */
 export function registerDemoTools(ctx: AdditionalToolsContext): void {
   const { registerPayable, server } = ctx
 
-  registerPayable('search_knowledge', {
-    title: 'Search knowledge base (demo)',
-    description:
-      'Demo data tool — returns deterministic fake snippets for a query. Wrapped with `solvaPay.payable.mcp()` so each call consumes 1 unit of usage; when the customer runs out, the tool returns a paywall bootstrap instead of results. Pair with `/search_knowledge` for a one-keystroke exercise of the paywall.',
-    schema: { query: z.string().min(1) },
-    // Explicit for docs clarity; `registerPayable` would otherwise
-    // default to `{ readOnlyHint: true, openWorldHint: true }` — the
-    // same 80% case most paywalled data tools land on.
-    annotations: { readOnlyHint: true, idempotentHint: true },
-    handler: async ({ query }, ctx) =>
-      ctx.respond({
-        query,
-        results: [
-          { id: 'stub-1', title: `Why ${query} matters`, snippet: `Lorem ipsum about ${query}.` },
-          { id: 'stub-2', title: `Getting started with ${query}`, snippet: 'Dolor sit amet.' },
-          { id: 'stub-3', title: `${query} in depth`, snippet: 'Consectetur adipiscing elit.' },
-        ],
-      }),
-  })
-
-  registerPayable('get_market_quote', {
-    title: 'Get market quote (demo)',
-    description:
-      'Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as `search_knowledge`: one unit of usage per call, and the gate response narrates the recovery intent tool (`topup` / `upgrade`) inline on `content[0].text`. Use `/get_market_quote` to try the paywall on a second tool.',
-    schema: { symbol: z.string().min(1).max(8) },
-    annotations: { readOnlyHint: true, idempotentHint: true },
-    handler: async ({ symbol }, ctx) => {
-      const upper = symbol.toUpperCase()
-      return ctx.respond({
-        symbol: upper,
-        price: 123.45,
-        currency: 'USD',
-        asOf: '2026-01-01T00:00:00.000Z',
-      })
-    },
-  })
-
-  // Third demo tool exercises the text-only nudge suffix on
-  // `ctx.respond()`. When the customer is low on credits the nudge
-  // message is appended to `content[0].text` as a plain-text
-  // suffix — no widget surface, no `structuredContent` switch.
-  //
-  // Also includes `options.units` to demonstrate forward-compatible
-  // handler code. V1 silently ignores the field; V1.1 will thread it
-  // into `trackUsage` without requiring any merchant code changes.
-  registerPayable('query_sales_trends', {
-    title: 'Query sales trends (demo)',
-    description:
-      'Demo data tool that exercises the `ctx.respond()` API: returns deterministic sales rows for a date range. When the customer is low on credits, the response `content[0].text` carries a plain-text `low-balance` nudge pointing at the `topup` intent tool — hosts render it inline with the data, no widget iframe.',
-    schema: { range: z.string().min(1) },
-    annotations: { readOnlyHint: true, idempotentHint: true },
-    handler: async ({ range }, ctx) => {
-      const results = buildDeterministicRows(range)
-
-      // Balance threshold is deliberately chatty so the demo can cross
-      // it after a handful of calls against a starter top-up.
-      const LOW_BALANCE_CENTS = 1000
-      const isLowBalance = ctx.customer.balance < LOW_BALANCE_CENTS
-
-      if (!isLowBalance) {
-        return ctx.respond({ range, results }, { units: results.length })
-      }
-
-      return ctx.respond(
-        { range, results },
-        {
-          units: results.length,
-          nudge: {
-            kind: 'low-balance',
-            message:
-              'Running low on credits — call the `topup` tool to add more.',
-          },
-        },
-      )
-    },
-  })
-
-  // Oracle tools return pure numeric data via `ctx.respond(payload)`
-  // so capable MCP hosts (Claude artifacts) render a line chart /
-  // verdict card artifact straight off `structuredContent`. Paywall
-  // exhaustion ships a text-only narration via `content[0].text` —
-  // no iframe opens for a gate, the LLM reads the copy and calls the
-  // `upgrade` / `topup` intent tool which mounts the widget.
   registerPayable('predict_price_chart', {
     title: 'Predict price chart (Oracle demo)',
     description:
@@ -238,25 +170,6 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   // demo tools. Hosts without prompt support silently ignore these —
   // purely additive.
   registerDemoPrompts(server)
-}
-
-/**
- * Deterministic sales-trend rows so `query_sales_trends` is self-contained
- * and doesn't depend on any backend data source. Real integrations swap
- * this for a database / warehouse call.
- */
-function buildDeterministicRows(range: string): Array<{
-  date: string
-  units: number
-  revenue: number
-}> {
-  const base = range.length
-  return [
-    { date: '2026-01-01', units: 12 + base, revenue: 1_234 + base * 10 },
-    { date: '2026-01-02', units: 15 + base, revenue: 1_512 + base * 10 },
-    { date: '2026-01-03', units: 18 + base, revenue: 1_789 + base * 10 },
-    { date: '2026-01-04', units: 14 + base, revenue: 1_401 + base * 10 },
-  ]
 }
 
 // ——————————————————————————————————————————————————————————————————————
@@ -429,75 +342,6 @@ function deriveVerdict(path: SimulatedPath): {
 function registerDemoPrompts(server: McpServer): void {
   const promptHost = server as unknown as McpServerWithPrompts
   if (typeof promptHost.registerPrompt !== 'function') return
-
-  promptHost.registerPrompt(
-    'search_knowledge',
-    {
-      title: 'Search knowledge (demo)',
-      description:
-        'Call the demo `search_knowledge` paywalled tool. Each call consumes 1 credit; when you run out, the SolvaPay paywall opens.',
-      argsSchema: { query: z.string().optional() },
-    },
-    async ({ query }: { query?: string }) => ({
-      messages: [
-        {
-          role: 'user' as const,
-          content: {
-            type: 'text' as const,
-            text: query
-              ? `Search the knowledge base for: ${query}`
-              : 'Search the knowledge base for something you care about.',
-          },
-        },
-      ],
-    }),
-  )
-
-  promptHost.registerPrompt(
-    'get_market_quote',
-    {
-      title: 'Get market quote (demo)',
-      description:
-        'Call the demo `get_market_quote` paywalled tool. Each call consumes 1 credit; when you run out, the SolvaPay paywall opens.',
-      argsSchema: { symbol: z.string().optional() },
-    },
-    async ({ symbol }: { symbol?: string }) => ({
-      messages: [
-        {
-          role: 'user' as const,
-          content: {
-            type: 'text' as const,
-            text: symbol
-              ? `Get the current market quote for ${symbol.toUpperCase()}.`
-              : 'Get the current market quote for a ticker symbol.',
-          },
-        },
-      ],
-    }),
-  )
-
-  promptHost.registerPrompt(
-    'query_sales_trends',
-    {
-      title: 'Query sales trends (demo)',
-      description:
-        'Call the demo `query_sales_trends` paywalled tool. Exercises `ctx.respond()` — a low balance triggers a `low-balance` upsell nudge attached to the success response.',
-      argsSchema: { range: z.string().optional() },
-    },
-    async ({ range }: { range?: string }) => ({
-      messages: [
-        {
-          role: 'user' as const,
-          content: {
-            type: 'text' as const,
-            text: range
-              ? `Query sales trends for ${range}.`
-              : 'Query sales trends for the last 7 days.',
-          },
-        },
-      ],
-    }),
-  )
 
   promptHost.registerPrompt(
     'predict_price_chart',

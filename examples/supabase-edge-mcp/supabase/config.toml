@@ -1,0 +1,16 @@
+# Supabase CLI config for the Goldberg / supabase-edge-mcp example.
+#
+# The `mcp` edge function is a public MCP server — it does its own
+# Bearer-token auth inside the handler (via `createSolvaPayMcpFetchHandler`)
+# and exposes unauthenticated discovery routes under `/.well-known/…`.
+# Disable Supabase's default anon-JWT gate so those routes and the OAuth
+# bridge at `/oauth/{register,authorize,token,revoke}` are reachable
+# without the project anon key.
+#
+# `project_id` is a local CLI identifier; the remote project ref lives in
+# `supabase/.temp/project-ref` after `supabase link`.
+
+project_id = "supabase-edge-mcp"
+
+[functions.mcp]
+verify_jwt = false

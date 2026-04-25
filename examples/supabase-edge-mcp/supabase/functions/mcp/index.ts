@@ -14,8 +14,10 @@
  *   bridge routes — proxied to the SolvaPay API with native-scheme CORS.
  * - `POST /mcp` / `GET /mcp` / `DELETE /mcp` — the JSON-RPC MCP transport
  *   with per-request Bearer auth.
- * - The same paywalled demo toolbox as `mcp-checkout-app` (search,
- *   market quote, sales trends, price chart, verdict card).
+ * - The Goldberg paywalled Oracle toolbox (`predict_price_chart` +
+ *   `predict_direction`) — trimmed from the full `mcp-checkout-app`
+ *   example down to the two stock-predictor tools for the Goldberg
+ *   MCP launch.
  * - The iframe HTML read from the function's own filesystem — the Deno
  *   runtime never falls back to `node:fs/promises`.
  *
