@@ -154,22 +154,19 @@ const server = createSolvaPayMcpServer({
   }
 }
 
-// Stateful, stateless-id-generator transport. `sessionIdGenerator:
-// undefined` puts the SDK's validator into "session management
-// disabled" mode (see webStandardStreamableHttp.js validateSession()),
-// so subsequent requests don't need a matching `mcp-session-id` and
-// the transport's `_initialized` flag (set on the first initialize)
-// is enough to service follow-ups.
-const transport = new WebStandardStreamableHTTPServerTransport({
-  sessionIdGenerator: undefined,
-})
-await server.connect(transport)
-
 const oauthRouter = createOAuthFetchRouter({
   publicBaseUrl,
   apiBaseUrl,
   productRef,
 })
+
+// Serialize server connect/close cycles so two concurrent requests
+// don't race on the shared server's `_transport` slot. The protocol
+// guard throws on double-connect, so we queue each request behind
+// the previous one's close. Fine for low-throughput demo traffic;
+// a production deployment would partition by session or fan out to
+// multiple server instances.
+let serverMutex: Promise<void> = Promise.resolve()
 
 async function handleMcpRequest(req: Request): Promise<Response> {
   // Bearer auth guard — rejects with a 401 + WWW-Authenticate
@@ -184,7 +181,40 @@ async function handleMcpRequest(req: Request): Promise<Response> {
     return authChallenge(req, { publicBaseUrl })
   }
 
+  // Wait for any in-flight request to finish its connect/close cycle.
+  const previous = serverMutex
+  let resolveThis: (() => void) | null = null
+  serverMutex = new Promise<void>(resolve => {
+    resolveThis = resolve
+  })
+  await previous
+
+  // Fresh transport per request in stateless mode — the SDK's guard
+  // at webStandardStreamableHttp.js:139 refuses to reuse a stateless
+  // transport because messages from concurrent clients would
+  // collide on shared JSON-RPC ids. `sessionIdGenerator: undefined`
+  // also puts the validator into the early-return branch at
+  // validateSession():585, so follow-up requests from clients that
+  // skip `mcp-session-id` (stateless-friendly) pass straight through.
+  //
+  // `enableJsonResponse: true` switches the transport from SSE
+  // streaming to single-JSON-response mode — `handleRequest` returns
+  // a Promise that resolves once the full JSON-RPC response is
+  // assembled. Without this the SSE stream would be cut off by our
+  // `transport.close()` in the finally block before the actual
+  // tool-result frame is written.
+  //
+  // `server.connect(transport)` takes ownership of the server's
+  // `_transport` slot; `transport.close()` in the finally block
+  // triggers the protocol's `_onclose` which nulls the slot so the
+  // next request's `connect(...)` call doesn't throw "Already
+  // connected to a transport".
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  })
   try {
+    await server.connect(transport)
     const response = await transport.handleRequest(
       req,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -211,6 +241,9 @@ async function handleMcpRequest(req: Request): Promise<Response> {
       }),
       { status: 500, headers },
     )
+  } finally {
+    await transport.close().catch(() => {})
+    resolveThis?.()
   }
 }
 
