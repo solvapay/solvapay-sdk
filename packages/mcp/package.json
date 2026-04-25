@@ -42,7 +42,7 @@
     "@solvapay/mcp-core": "workspace:*"
   },
   "peerDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/ext-apps": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "@solvapay/server": "workspace:*",
     "zod": "^3.25.0 || ^4.0.0"
@@ -53,7 +53,7 @@
     }
   },
   "devDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/ext-apps": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:^",

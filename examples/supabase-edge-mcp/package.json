@@ -11,7 +11,7 @@
     "serve:local": "supabase functions serve mcp --import-map=supabase/functions/mcp/deno.local.json"
   },
   "devDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/ext-apps": "^1.7.0",
     "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/mcp-fetch": "workspace:*",
