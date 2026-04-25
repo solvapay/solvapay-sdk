@@ -19,7 +19,16 @@
  *   example down to the two stock-predictor tools for the Goldberg
  *   MCP launch.
  * - The iframe HTML read from the function's own filesystem — the Deno
- *   runtime never falls back to `node:fs/promises`.
+ *   runtime never falls back to `node:fs/promises`. The HTML file is
+ *   shipped with the function via `static_files` in `supabase/config.toml`.
+ *
+ * Supabase's edge gateway strips `/functions/v1` on the way in, so the
+ * function sees `/<fn-name>/…`. For this function the name is `mcp`,
+ * so we drop the leading `/mcp` segment and serve the MCP transport at
+ * the root path (`mcpPath: '/'`) with OAuth bridge routes at
+ * `/.well-known/*` + `/oauth/*`. This keeps the handler's routing
+ * runtime-neutral — the fetch handler stays the same across Deno,
+ * Cloudflare Workers, Bun, Next edge, etc.
  *
  * To deploy:
  *
@@ -46,6 +55,20 @@ function requireEnv(name: string): string {
   return value
 }
 
+// Supabase strips `/functions/v1` before the request reaches the
+// function, so incoming paths look like `/<fn-name>/…`. We drop the
+// `/mcp` prefix so the fetch handler can match `/.well-known/*`,
+// `/oauth/*`, and the root MCP transport without knowing anything
+// about its hosting environment.
+const FUNCTION_MOUNT_PREFIX = '/mcp'
+
+function rewriteRequestPath(req: Request): Request {
+  const url = new URL(req.url)
+  if (!url.pathname.startsWith(FUNCTION_MOUNT_PREFIX)) return req
+  url.pathname = url.pathname.slice(FUNCTION_MOUNT_PREFIX.length) || '/'
+  return new Request(url, req)
+}
+
 const solvaPay = createSolvaPay({
   apiKey: requireEnv('SOLVAPAY_SECRET_KEY'),
   apiBaseUrl: Deno.env.get('SOLVAPAY_API_BASE_URL'),
@@ -57,6 +80,8 @@ const apiBaseUrl = Deno.env.get('SOLVAPAY_API_BASE_URL') ?? 'https://api.solvapa
 // Read the bundled iframe HTML off the function's filesystem once, at
 // cold start — avoids re-reading on every MCP `initialize` and keeps
 // the readHtml branch runtime-neutral (no dynamic `node:fs/promises`).
+// Requires `static_files = ["./functions/mcp/mcp-app.html"]` in
+// `supabase/config.toml` so the file ships alongside the function bundle.
 const htmlUrl = new URL('./mcp-app.html', import.meta.url)
 const html = await Deno.readTextFile(htmlUrl)
 
@@ -69,11 +94,15 @@ const server = createSolvaPayMcpServer({
   additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
 })
 
-Deno.serve(
-  createSolvaPayMcpFetchHandler({
-    server,
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-  }),
-)
+const handler = createSolvaPayMcpFetchHandler({
+  server,
+  publicBaseUrl,
+  apiBaseUrl,
+  productRef,
+  // The Supabase edge gateway mounts this function at
+  // `/functions/v1/mcp` and strips the `/mcp` segment above, so the
+  // transport lives at the root from the handler's perspective.
+  mcpPath: '/',
+})
+
+Deno.serve(req => handler(rewriteRequestPath(req)))

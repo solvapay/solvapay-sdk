@@ -14,3 +14,11 @@ project_id = "supabase-edge-mcp"
 
 [functions.mcp]
 verify_jwt = false
+
+# Bundle the MCP App iframe HTML (built by `pnpm build` and copied into
+# `supabase/functions/mcp/mcp-app.html`) alongside the function source
+# so `new URL('./mcp-app.html', import.meta.url)` + `Deno.readTextFile`
+# resolve at runtime. Without this, `supabase functions deploy`'s eszip
+# bundler only ships `.ts`/`.json` and the boot-time read fails with
+# `path not found`, which surfaces as `WORKER_ERROR` on every request.
+static_files = ["./functions/mcp/mcp-app.html"]
