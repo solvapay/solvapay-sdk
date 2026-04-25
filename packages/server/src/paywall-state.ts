@@ -32,10 +32,13 @@ export type PaywallState =
  * Precedence:
  *  1. `activationRequired === true` — trumps everything else; the
  *     backend explicitly flagged that no plan is live yet.
- *  2. Usage-based plan with zero credit balance — the customer has a
- *     plan but ran out, so a topup is the right action. Presence of
- *     `balance` is the "usage-based" proxy when the plan list doesn't
- *     resolve the plan's `type` (older backends).
+ *  2. Usage-based plan out of credits — the customer has a plan but
+ *     ran out, so a topup is the right action. "Out of credits" is
+ *     determined from (in order): the nested
+ *     `balance.creditBalance === 0` block, the top-level
+ *     `creditBalance === 0` field, or `remaining === 0` as a
+ *     fallback for older backend responses that omit both credit
+ *     fields on usage-based plans.
  *  3. Everything else → `upgrade_required`, including:
  *     - `limits === null` (defensive),
  *     - no active plan on the product,
@@ -57,12 +60,31 @@ export function classifyPaywallState(
   }
 
   const activePlan = limits.plans?.find(p => p.reference === limits.plan)
+  // A resolved plan with `type === 'usage-based'` is authoritative.
+  // Presence of the `balance` block is an older-backend proxy for
+  // "this response describes a usage-based customer" — every
+  // backend that emits the structured balance uses it for
+  // usage-based tiers. We treat either signal as usage-based so
+  // the topup path fires when the plan list is missing.
   const isUsageBased =
     activePlan?.type === 'usage-based' || limits.balance !== undefined
-  const creditBalance = limits.balance?.creditBalance
+  // Coalesce the two credit-balance channels. Nested wins when
+  // present (richer schema on newer backends); fall back to the
+  // top-level optional field. `undefined` means "we can't
+  // determine the balance" and we defer to `remaining` below.
+  const creditBalance = limits.balance?.creditBalance ?? limits.creditBalance
 
-  if (isUsageBased && creditBalance === 0) {
-    return { kind: 'topup_required' }
+  if (isUsageBased) {
+    if (creditBalance === 0) return { kind: 'topup_required' }
+    // Fallback: when the response omits both credit-balance
+    // channels on a usage-based plan, `remaining === 0` means the
+    // customer is exhausted — the only actionable recovery is a
+    // topup. Without this, usage-based customers on older backend
+    // responses got sent to `upgrade` ("pick a plan") when they
+    // should have been sent to `topup` ("add credits").
+    if (creditBalance === undefined && limits.remaining === 0) {
+      return { kind: 'topup_required' }
+    }
   }
 
   return { kind: 'upgrade_required' }

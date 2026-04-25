@@ -100,6 +100,55 @@ describe('classifyPaywallState', () => {
     )
     expect(state).toEqual({ kind: 'upgrade_required' })
   })
+
+  it('returns topup_required for an exhausted usage-based plan even when the response omits the balance block', () => {
+    // Edge case surfaced by Bugbot: when the backend response resolves
+    // the plan to usage-based via `plans[]` but omits the top-level
+    // `balance` block, `limits.balance?.creditBalance` is `undefined`
+    // — the old strict-zero check fell through to `upgrade_required`
+    // and sent the customer down the wrong recovery path ("pick a
+    // plan" instead of "add credits"). Usage-based + exhausted
+    // (`remaining: 0`) must classify as `topup_required` regardless
+    // of whether the balance block is present.
+    const state = classifyPaywallState(
+      limits({
+        plan: 'pln_usage',
+        plans: [
+          {
+            reference: 'pln_usage',
+            name: 'Usage',
+            type: 'usage-based',
+            price: 0,
+            currency: 'USD',
+            requiresPayment: true,
+          },
+        ],
+        // No `balance` block — older backend responses may omit it.
+        remaining: 0,
+      }),
+    )
+    expect(state).toEqual({ kind: 'topup_required' })
+  })
+
+  it('returns topup_required when the top-level `creditBalance` field is zero (no nested balance block)', () => {
+    const state = classifyPaywallState(
+      limits({
+        plan: 'pln_usage',
+        plans: [
+          {
+            reference: 'pln_usage',
+            name: 'Usage',
+            type: 'usage-based',
+            price: 0,
+            currency: 'USD',
+            requiresPayment: true,
+          },
+        ],
+        creditBalance: 0,
+      }),
+    )
+    expect(state).toEqual({ kind: 'topup_required' })
+  })
 })
 
 describe('buildGateMessage', () => {
