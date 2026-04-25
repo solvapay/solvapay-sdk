@@ -103,9 +103,6 @@ export function McpAppShell({
 
   const resolvedView = resolveSurface(bootstrap.view)
   const effectiveView: McpViewKind = overrideView ?? resolvedView
-  // Every remaining surface shows the merchant brand + product name.
-  const showShellHeader = true
-  const isChrome = true
 
   // Refresh the bootstrap once on mount if the caller wired it. The
   // tabbed shell used to do this on every tab switch; with a single
@@ -124,7 +121,9 @@ export function McpAppShell({
   }, [onRefreshBootstrap, bootstrap.view])
 
   const showFooter = footer ?? Boolean(merchant?.termsUrl || merchant?.privacyUrl)
-  const isShellSidebarEligible = isChrome && bootstrap.customer !== null
+  // The sidebar (seller + customer details cards) shows only when
+  // there's an authenticated customer to render details for.
+  const isShellSidebarEligible = bootstrap.customer !== null
 
   // Product-driven title; the merchant/brand marker stays above it. The
   // MCP host chrome in some clients (Cursor) only prints the active
@@ -141,14 +140,12 @@ export function McpAppShell({
 
   return (
     <div className="solvapay-mcp-shell">
-      {showShellHeader ? (
-        <ShellHeader
-          merchant={merchant}
-          productName={productName}
-          productDescription={productDescription}
-          classNames={classNames}
-        />
-      ) : null}
+      <ShellHeader
+        merchant={merchant}
+        productName={productName}
+        productDescription={productDescription}
+        classNames={classNames}
+      />
 
       <div className="solvapay-mcp-shell-layout">
         <div className="solvapay-mcp-shell-body">
@@ -175,9 +172,7 @@ export function McpAppShell({
         ) : null}
       </div>
 
-      {isChrome && showFooter ? (
-        <ShellFooter classNames={classNames} merchant={merchant} />
-      ) : null}
+      {showFooter ? <ShellFooter classNames={classNames} merchant={merchant} /> : null}
     </div>
   )
 }

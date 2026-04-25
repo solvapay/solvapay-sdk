@@ -1,9 +1,8 @@
 'use client'
 
 /**
- * `<CheckoutStateMachine>` — four-step activation flow shared by
- * `<McpCheckoutView>` (the `activate_plan` surface) and
- * `<McpPaywallView>` (the paywall surface).
+ * `<CheckoutStateMachine>` — four-step activation flow powering
+ * `<McpCheckoutView>` (the `upgrade` / `activate_plan` surface).
  *
  * Owns `step`, `selectedAmountMinor`, `successMeta`, `activationError`,
  * and `isActivating` and routes between `PlanStep` → `AmountStep` (PAYG
@@ -11,6 +10,12 @@
  * Transport side-effects (`activate_plan`, `notifyModelContext`,
  * `notifySuccess`) live in the transitions defined here so step
  * components stay presentation-only.
+ *
+ * The `fromPaywall` / `paywallKind` props are preserved for custom
+ * integrators who want to render the "Upgrade to continue" banner
+ * when they wire their own gate → checkout redirection; the stock
+ * `<McpAppShell>` does not set them any more (paywall responses are
+ * text-only in the SDK).
  */
 
 import React, { useCallback } from 'react'
@@ -43,10 +48,10 @@ export interface StateMachineProps {
   paywallKind?: 'payment_required' | 'activation_required'
   /**
    * Suppress the `PlanStep` `UpgradeBanner` even when `fromPaywall`
-   * is true. Used by `McpPaywallView` because the surrounding
-   * `PaywallNotice` chrome already shows the paywall reason copy;
-   * `McpCheckoutView`'s takeover flow leaves it unset so the banner
-   * remains the only reason signal.
+   * is true. Retained for custom integrators who render their own
+   * paywall reason copy above the embedded checkout; the stock
+   * `<McpCheckoutView>` flow leaves it unset so the banner remains
+   * the only reason signal.
    */
   hideUpgradeBanner?: boolean
   productRef: string

@@ -1,7 +1,11 @@
 /**
- * Shared MCP checkout state machine. Used by both `McpCheckoutView`
- * (activate_plan) and `McpPaywallView` (paywall) so both surfaces
- * share the same plan → amount → payment → success flow.
+ * Shared MCP checkout state machine powering `McpCheckoutView`
+ * (plan → amount → payment → success). Previously also wrapped by
+ * `McpPaywallView`, which was removed in the text-only paywall
+ * refactor — the `fromPaywall` / `paywallKind` props on the state
+ * machine are still honoured so custom integrators can reuse the
+ * amber "Upgrade to continue" banner when they build their own
+ * surface.
  */
 
 export { EmbeddedCheckout } from './EmbeddedCheckout'

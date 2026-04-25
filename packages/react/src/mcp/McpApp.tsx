@@ -25,7 +25,6 @@ import { VIEW_FOR_TOOL } from '@solvapay/mcp-core'
 import { McpBridgeProvider, type McpBridgeAppLike, type McpMessageOnSuccess } from './bridge'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {
-  classifyHostEntry,
   fetchMcpBootstrap,
   isTransportToolName,
   parseBootstrapFromToolResult,
@@ -296,17 +295,15 @@ export function McpApp({
         if (cancelled) return
         applyContextRef.current?.(app.getHostContext())
 
-        // Intent tool or fallback (unknown / transport entry): call
-        // the matching intent tool via `fetchMcpBootstrap`. The
+        // Mount the matching intent tool via `fetchMcpBootstrap`. The
         // `pendingBootstrapFetchRef` gate suppresses the echo
         // notification while this in-flight fetch applies state.
         //
-        // Data-tool iframe entries don't happen any more —
-        // `registerPayableTool` no longer advertises
-        // `_meta.ui.resourceUri` on merchant tools per the text-only
-        // paywall refactor. `classifyHostEntry` still runs (for
-        // telemetry / future use) but collapses to `intent` / `other`.
-        void classifyHostEntry(app)
+        // Merchant payable tools no longer advertise
+        // `_meta.ui.resourceUri`, so data-tool iframe entries don't
+        // exist anymore — every mount arrives via an intent tool
+        // (`upgrade` / `manage_account` / `topup`) and `classifyHostEntry`
+        // now collapses to `intent | other`.
         pendingBootstrapFetchRef.current += 1
         try {
           const result = await fetchMcpBootstrap(app)

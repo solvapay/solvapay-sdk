@@ -1,10 +1,12 @@
 /**
  * Shared types and pure helpers for the MCP checkout state machine.
  *
- * The plan → amount → payment → success flow is used by both
- * `<McpCheckoutView>` (the `activate_plan` surface) and
- * `<McpPaywallView>` (the paywall surface) so the helpers live in a
- * dedicated module to keep the state machine and step components slim.
+ * Consumed by `<McpCheckoutView>` (the `activate_plan` / `upgrade`
+ * intent-tool surface). The state machine's `fromPaywall` /
+ * `paywallKind` props are still honoured so custom integrators who
+ * build their own surface can reuse the amber "Upgrade to continue"
+ * banner; the `<McpAppShell>` itself no longer sets those props
+ * because merchant paywall responses are text-only now.
  */
 
 import type { Plan } from '../../../types'

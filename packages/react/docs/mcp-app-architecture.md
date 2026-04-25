@@ -35,20 +35,21 @@ Both compound and primitive access are first-class:
 - `<McpApp app={app} />` is the turnkey 5-line entrypoint for any MCP App
   built on `@modelcontextprotocol/ext-apps`. It mounts a `SolvaPayProvider`
   and wraps a thin `<McpAppShell>` around `<McpViewRouter>`.
-- `<McpAppShell>` — in-iframe layout (header / sidebar / footer / paywall
-  takeover) that surface-routes by `bootstrap.view`. There is no tab strip
-  and no user-driven cross-surface navigation; the only in-session mutation
-  is the paywall / nudge CTA flip back to the checkout surface.
+- `<McpAppShell>` — in-iframe layout (header / sidebar / footer) that
+  surface-routes by `bootstrap.view`. There is no tab strip and no
+  user-driven cross-surface navigation; the in-session mutations are
+  limited to the `account → topup` (via the customer details card) and
+  `account → checkout` (via "Change plan") swaps.
 - `<McpViewRouter>` — single `switch` on `McpViewKind` that resolves each
   view from `views?.*` overrides (falling back to the built-in primitive).
   Exported for integrators that own their own shell.
-- `<McpCheckoutView />`, `<McpAccountView />`, `<McpTopupView />`,
-  `<McpPaywallView />`, and `<McpNudgeView />` are the composable primitives
-  underneath. Integrators who want a custom shell use them directly
-  alongside `createMcpAppAdapter`, `fetchMcpBootstrap`, and `createMcpFetch`.
-- `<McpUpsellStrip>` is the inline nudge primitive. `<McpNudgeView>`
-  renders it alongside the merchant tool result; the ctx.respond follow-up
-  wires it inline on the other surfaces.
+- `<McpCheckoutView />`, `<McpAccountView />`, `<McpTopupView />` are the
+  composable primitives underneath. Integrators who want a custom shell
+  use them directly alongside `createMcpAppAdapter`, `fetchMcpBootstrap`,
+  and `createMcpFetch`. The legacy `<McpPaywallView />` / `<McpNudgeView />`
+  / `<McpUpsellStrip />` primitives were removed with the text-only paywall
+  refactor — paywall and nudge responses narrate in `content[0].text` and
+  no widget surface mounts for them.
 
 There is **one implementation**: `<McpApp>` is a thin wrapper that composes
 the same per-view primitives the custom-shell path uses. That means there is

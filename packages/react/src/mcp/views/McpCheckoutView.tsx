@@ -9,8 +9,8 @@
  * checkout path below instead.
  *
  * The full activation state machine (and all step components) lives in
- * `./checkout/` so `<McpPaywallView>` can mount the same flow when a
- * customer hits the paywall and Stripe is reachable.
+ * `./checkout/` so custom integrators who build their own gated
+ * surface can mount the same flow.
  *
  * ## Rendering paths
  *
@@ -54,15 +54,18 @@ export interface McpCheckoutViewProps {
    */
   onRequestTopup?: () => void
   /**
-   * True when the checkout view was reached via the paywall takeover.
+   * True when the checkout view was reached via a paywall takeover.
    * Drives the amber "Upgrade to continue" banner and the
-   * `"Stay on Free"` dismiss link on the plan-selection step. The
-   * brief's §6 invariant: "banner appears iff the customer hit the
-   * paywall."
+   * `"Stay on Free"` dismiss link on the plan-selection step.
+   *
+   * Retained as a prop for custom integrators who wire their own
+   * gate → checkout redirection; the stock `<McpAppShell>` does not
+   * set this (merchant paywall responses are text-only in the SDK
+   * so there is no in-iframe paywall takeover to track).
    */
   fromPaywall?: boolean
   /**
-   * Paywall kind surfaced from `bootstrap.paywall.kind` when
+   * Paywall kind surfaced from the original gate payload when
    * `fromPaywall` is true. Selects between the two banner copies:
    * `'payment_required'` → quota-exhausted language;
    * `'activation_required'` → tool-needs-a-paid-plan language.

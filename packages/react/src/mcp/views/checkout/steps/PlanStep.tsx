@@ -7,9 +7,9 @@
  *
  * When `fromPaywall` is true the step assumes it owns the "you hit a
  * paywall" reason copy and prefaces the grid with an `UpgradeBanner`.
- * `hideUpgradeBanner` overrides that — set it from surfaces that
- * already provide the reason copy outside the step (e.g.
- * `McpPaywallView` wraps the state machine in `<PaywallNotice>`,
+ * `hideUpgradeBanner` overrides that — set it from custom surfaces
+ * that already provide the reason copy outside the step (e.g. a
+ * consumer wrapping the state machine in their own `<PaywallNotice>`
  * which already renders a heading + message).
  */
 

@@ -104,7 +104,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('get_market_quote', {
     title: 'Get market quote (demo)',
     description:
-      'Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as `search_knowledge`: one unit of usage per call, and the gate response opens the embedded top-up iframe. Use `/get_market_quote` to try the paywall on a second tool.',
+      'Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as `search_knowledge`: one unit of usage per call, and the gate response narrates the recovery intent tool (`topup` / `upgrade`) inline on `content[0].text`. Use `/get_market_quote` to try the paywall on a second tool.',
     schema: { symbol: z.string().min(1).max(8) },
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol }, ctx) => {

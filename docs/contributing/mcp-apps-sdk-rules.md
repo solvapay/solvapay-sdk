@@ -26,8 +26,8 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 - **Do not build an About surface.** Product description lives in tool descriptions, Claude's text response, and the `docs://solvapay/overview.md` resource. Not in an iframe.
 - **The UI is a mode, not a primary.** `McpAppShell` is an internal composition. What's exported as primary is intent-specific surfaces.
 - **One surface, one job.** No nested navigation. No multi-step wizards except where genuinely unavoidable (card entry, top-up amount selection). If a surface needs tabs to fit its content, the content is too broad.
-- **The widget routes on `structuredContent.view`, not tool name.** `<McpApp>` / `<McpAppShell>` pick the surface from the `view` discriminator the server stamps on every tool result, not from `toolInfo.tool.name`. This is load-bearing for paywall/nudge: when a merchant data tool (e.g. `search_knowledge`) returns the gate/strip, the host opens the iframe *from that tool's result* — the widget consumes the initial `ui/notifications/tool-result` and renders paywall/nudge directly, without re-calling an intent tool. Re-calling would (a) consume another unit of usage on the paywalled tool or (b) clobber the gate view with a fresh `checkout`. The only tool-name-driven decision left in `<McpApp>` is the intent-tool shortcut: `upgrade` / `manage_account` / `topup` iframe entries may call their matching tool up front as a bootstrap optimisation.
-- **Refresh is for intent surfaces, not gates.** `McpAppShell` skips its mount-refresh when `bootstrap.view` is `paywall` or `nudge`. The server's gate response is the authoritative snapshot for those surfaces; refreshing via `upgrade` would race and replace the gate with a checkout view.
+- **The widget routes on `structuredContent.view`, not tool name.** `<McpApp>` / `<McpAppShell>` pick the surface from the `view` discriminator the server stamps on intent-tool results (`checkout` / `account` / `topup`), not from `toolInfo.tool.name`. The paywall / nudge surfaces were removed in the text-only paywall refactor — merchant paywall / nudge responses narrate in `content[0].text` and never mount the widget; the iframe only opens for a deliberate intent-tool call.
+- **Refresh on mount.** `McpAppShell` fires its mount-refresh once per mount so backgrounded iframes see fresh data when re-opened. There are no paywall/nudge surfaces to skip any more.
 
 ### Text-mode
 
@@ -40,7 +40,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 
 - **The merchant writes `registerPayable`, not components.** The 90% path is a business-logic handler. If a merchant has to touch a view to ship a paid tool, the SDK has failed.
 - **The handler context carries customer state.** Balance, tier, usage, plan shape. Merchants make their own judgments about when to nudge, without building a component.
-- **Paywall is automatic.** The merchant never imports a paywall view, never wires a `_meta.ui.resourceUri`, never constructs a bootstrap payload. The SDK does all of it.
+- **Paywall is automatic and text-only.** The merchant never imports a paywall view, never wires a `_meta.ui.resourceUri`, never constructs a bootstrap payload. The SDK emits a text narration on `content[0].text` that names the recovery intent tool.
 - **Response envelope is context-aware.** Merchants call `ctx.respond(data)` or `ctx.respond(data).withNudge(...)`. They do not return plain objects that the SDK has to guess about.
 
 ### Pricing stance
@@ -60,7 +60,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 
 - **Every tool has annotations.** `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` are required. Not optional. Default for `registerPayable` is `{ readOnlyHint: true, openWorldHint: true }`.
 - **Every UI resource uses `mimeType: RESOURCE_MIME_TYPE`.** Never hardcode the string. Import from `@modelcontextprotocol/ext-apps/server`.
-- **`_meta.ui.resourceUri` is wired by the SDK, not the merchant — but only when there's something to show.** `buildPayableHandler` stamps `_meta.ui` on **tool results** for paywall (gate) and `ctx.respond(..., { nudge })` (nudge) responses. The descriptor-level `_meta.ui` on payable tools is intentionally left unset so hosts don't auto-open the iframe on silent successes. SolvaPay intent tools (`/upgrade`, `/manage_account`, `/topup`) keep descriptor-level `_meta.ui.resourceUri` because calling them is the user's explicit intent to open the UI.
+- **`_meta.ui.resourceUri` lives only on the three intent-tool descriptors.** Merchant payable tools (`registerPayable`) deliberately do NOT advertise it — SEP-1865 says hosts MUST open the iframe on every call when the descriptor advertises it, which means auto-stamping flashed an empty widget on every silent data-tool success. Paywall / nudge / activation responses ship as plain-text narrations on `content[0].text` (naming the recovery intent tool) with `structuredContent = gate` for programmatic consumers. SolvaPay intent tools (`/upgrade`, `/manage_account`, `/topup`) keep descriptor-level `_meta.ui.resourceUri` because calling them is the user's explicit intent to open the UI.
 - **Stripe.js is loaded from `js.stripe.com/v3` at runtime.** Never bundled. The CSP baseline allows this origin.
 
 ### Developer experience

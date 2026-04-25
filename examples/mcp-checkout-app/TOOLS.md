@@ -43,8 +43,12 @@ Each returns a `BootstrapPayload` with:
   the embedded Stripe Elements.
 - `merchant`, `product`, `plans`, `customer` — seeded data so the
   iframe never re-fetches.
-- `paywall` — populated only when the response is a gate response
-  (`view: "paywall"`).
+
+Merchant paywalled data tools do not return a `BootstrapPayload` —
+their gate response is a text-only narration on `content[0].text`
+plus the structured gate on `structuredContent` (no widget mount).
+See the "How paywalls work" section in the `@solvapay/mcp` README for
+the full shape.
 
 ## Shell surface (what the UI renders)
 
