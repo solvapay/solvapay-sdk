@@ -9,16 +9,16 @@
  * connecting to someone else's merchant or backend environment.
  *
  * For *your* Worker, override those placeholders at deploy time by
- * putting real values in a local `.dev.vars` file (gitignored — see
- * `.dev.vars.example` for the full list). This script sources that
- * file and passes the three overridable keys as `--var` flags to
+ * putting real values in a local `.env` file (gitignored — see
+ * `.env.example` for the full list). This script sources that file
+ * and passes the three overridable keys as `--var` flags to
  * `wrangler deploy`, so the repo stays clean while your deploys
  * continue pointing at the right merchant + API origin.
  *
  * `SOLVAPAY_SECRET_KEY` is managed separately as a Worker secret
  * (`wrangler secret put SOLVAPAY_SECRET_KEY` — run once, persists
- * across deploys). It's listed in `.dev.vars` so `wrangler dev` can
- * use it for local testing, but this script does NOT re-upload it on
+ * across deploys). It's listed in `.env` so `wrangler dev` can use
+ * it for local testing, but this script does NOT re-upload it on
  * every deploy; secrets belong out of deploy-time plaintext.
  *
  * Pass-through: any extra CLI args (e.g. `--dry-run`) are forwarded
@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const exampleRoot = resolve(here, '..')
-const dotEnvPath = resolve(exampleRoot, '.dev.vars')
+const dotEnvPath = resolve(exampleRoot, '.env')
 
 const OVERRIDABLE_VARS = [
   'SOLVAPAY_PRODUCT_REF',
@@ -68,7 +68,7 @@ if (!existsSync(dotEnvPath)) {
     [
       '',
       `⚠  ${dotEnvPath} not found — deploying with placeholder vars from wrangler.jsonc.`,
-      '   Copy .dev.vars.example to .dev.vars and fill in your SolvaPay values',
+      '   Copy .env.example to .env and fill in your SolvaPay values',
       '   to override the committed placeholders at deploy time.',
       '',
     ].join('\n'),

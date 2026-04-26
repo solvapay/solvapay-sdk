@@ -32,8 +32,8 @@ pnpm install
 pnpm -w build:packages
 
 cd examples/cloudflare-workers-mcp
-cp .dev.vars.example .dev.vars
-# Fill in SOLVAPAY_SECRET_KEY, SOLVAPAY_PRODUCT_REF in .dev.vars
+cp .env.example .env
+# Fill in SOLVAPAY_SECRET_KEY, SOLVAPAY_PRODUCT_REF in .env
 
 pnpm build            # Builds src/assets/mcp-app.html via vite
 pnpm serve:local      # wrangler dev on http://localhost:8787
@@ -54,10 +54,10 @@ pnpm build
 # One-time: upload the merchant secret to the Worker
 pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY
 
-# Copy .dev.vars.example -> .dev.vars and fill in your real values
+# Copy .env.example -> .env and fill in your real values
 # (product ref, canonical URL, optional staging API base).
-cp .dev.vars.example .dev.vars
-$EDITOR .dev.vars
+cp .env.example .env
+$EDITOR .env
 
 # Edit wrangler.jsonc one-offs you want durable in git:
 #   - `routes[].pattern`  — your hostname (or remove the routes block
@@ -76,18 +76,18 @@ can run `pnpm deploy` without accidentally connecting to someone
 else's merchant or backend environment.
 
 `pnpm deploy` runs [`scripts/deploy.mjs`](./scripts/deploy.mjs),
-which sources `.dev.vars` (gitignored) and passes your real values
+which sources `.env` (gitignored) and passes your real values
 through to `wrangler deploy --var KEY:VALUE` for:
 
 - `SOLVAPAY_PRODUCT_REF`
 - `MCP_PUBLIC_BASE_URL`
 - `SOLVAPAY_API_BASE_URL` (optional)
 
-Your `SOLVAPAY_SECRET_KEY` stays in `.dev.vars` for `wrangler dev`
+Your `SOLVAPAY_SECRET_KEY` stays in `.env` for `wrangler dev`
 but is *not* re-uploaded on every deploy — it lives on the Worker as
 a proper Secret (via the one-time `wrangler secret put` above) and
 persists across deploys. Rotating it is a single `wrangler secret
-put` + editing `.dev.vars`.
+put` + editing `.env`.
 
 ## File layout
 
@@ -98,7 +98,7 @@ examples/cloudflare-workers-mcp/
 ├── tsconfig.json             // ES2022, Bundler, @cloudflare/workers-types
 ├── vite.config.ts            // Builds src/mcp-app.tsx -> dist/mcp-app.html (duplicated from supabase-edge-mcp)
 ├── mcp-app.html              // top-level HTML entry
-├── .dev.vars.example
+├── .env.example
 ├── .gitignore
 └── src/
     ├── worker.ts             // ~60-line entrypoint: createSolvaPayMcpFetch + CORS mirror
@@ -147,7 +147,7 @@ const handler = createSolvaPayMcpFetch({
 
 ## Swapping in your own tools
 
-The demo tools live entirely in `src/demo-tools.ts` and are not part of any `@solvapay/*` package. Replace the body of `registerDemoTools` with your own `registerPayable(...)` calls, or gate them off entirely by setting `DEMO_TOOLS=false` in `wrangler.jsonc` or `.dev.vars`.
+The demo tools live entirely in `src/demo-tools.ts` and are not part of any `@solvapay/*` package. Replace the body of `registerDemoTools` with your own `registerPayable(...)` calls, or gate them off entirely by setting `DEMO_TOOLS=false` in `wrangler.jsonc` or `.env`.
 
 ## Widget source sync
 

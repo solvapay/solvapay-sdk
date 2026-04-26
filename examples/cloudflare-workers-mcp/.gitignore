@@ -2,5 +2,6 @@ dist/
 src/assets/mcp-app.html
 node_modules/
 .wrangler/
-.dev.vars
-.dev.vars.local
+.env
+.env.local
+!.env.example
