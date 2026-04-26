@@ -23,14 +23,22 @@ The probe now:
 
 1. Races `loadStripe()` against a ≤3s timeout (unchanged script-src
    check).
-2. On success, mounts a hidden throwaway `paymentElement` on a
-   visually-hidden host node appended to `document.body` and races its
-   `ready` event against a ≤2s timeout + a `loaderror` listener. This
-   is the `frame-src` check — the nested Stripe iframe only reaches
-   `ready` when the host CSP permits it.
-3. Always tears down the element and removes the host node on resolve,
-   on effect cleanup, and on `loaderror`. A cancellation flag guards
-   StrictMode double-invokes.
+2. Registers a scoped `securitypolicyviolation` listener on
+   `document` *before* mounting. Chrome dispatches this event when it
+   refuses the nested `js.stripe.com` iframe; we filter to
+   `frame-src` violations with a `stripe.com` `blockedURI` so
+   unrelated CSP noise on the host page is ignored. A matching
+   violation resolves `'blocked'` immediately.
+3. Mounts a hidden throwaway Payment Element on a visually-hidden
+   host node appended to `document.body` and races the element's
+   `ready` event against a ≤2s timeout + a `loaderror` listener.
+   **`ready` is ignored when a stripe-domain CSP violation has already
+   fired** — on Claude, Chrome inserts the iframe but swaps its
+   content for a `chrome-error://chromewebdata/` placeholder, which
+   Stripe misreads as a successful mount and fires `ready` anyway.
+4. Always tears down the element, removes the host node, and removes
+   the CSP listener on resolve, on effect cleanup, and on
+   `loaderror`. A cancellation flag guards StrictMode double-invokes.
 
 Total worst-case budget ≤ 5s. Public return type is unchanged
 (`'loading' | 'ready' | 'blocked'`), so every call site

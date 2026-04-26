@@ -41,6 +41,24 @@ function createStripeMock(): MockElementHandle {
 
 const PROBE_HOST_SELECTOR = '[data-solvapay-stripe-probe]'
 
+// jsdom does not dispatch `SecurityPolicyViolationEvent` naturally, so
+// tests fabricate a plain `Event` with the properties the probe reads
+// and dispatch it at `document`. Casting through `unknown` lets us
+// avoid importing the DOM type just to satisfy `dispatchEvent`.
+function dispatchCspViolation(partial: {
+  effectiveDirective?: string
+  violatedDirective?: string
+  blockedURI?: string
+}) {
+  const event = new Event('securitypolicyviolation', { bubbles: false })
+  Object.assign(event, {
+    effectiveDirective: partial.effectiveDirective ?? '',
+    violatedDirective: partial.violatedDirective ?? partial.effectiveDirective ?? '',
+    blockedURI: partial.blockedURI ?? '',
+  })
+  document.dispatchEvent(event)
+}
+
 describe('useStripeProbe', () => {
   beforeEach(() => {
     loadStripeMock.mockReset()
@@ -152,6 +170,104 @@ describe('useStripeProbe', () => {
     expect(result.current).toBe('blocked')
     expect(mock.element.unmount).toHaveBeenCalledTimes(1)
     expect(document.body.querySelector(PROBE_HOST_SELECTOR)).toBeNull()
+  })
+
+  it("returns 'blocked' when a stripe-domain `frame-src` SecurityPolicyViolationEvent fires", async () => {
+    // Simulates Chrome refusing the nested js.stripe.com iframe while
+    // Stripe has already fired `ready` (because Chrome inserts a
+    // `chrome-error://chromewebdata/` placeholder and Stripe sees a
+    // successful mount). The CSP event must win over the `ready`
+    // signal — this is the Claude repro.
+    const mock = createStripeMock()
+    loadStripeMock.mockResolvedValueOnce(mock.stripe)
+
+    const { result } = renderHook(() => useStripeProbe('pk_test_123'))
+    await waitFor(() => expect(mock.element.mount).toHaveBeenCalled())
+
+    act(() => {
+      dispatchCspViolation({
+        effectiveDirective: 'frame-src',
+        violatedDirective: "frame-src 'self' blob: data:",
+        blockedURI: 'https://js.stripe.com/v3/m-outer-3437aad.html',
+      })
+    })
+
+    await waitFor(() => expect(result.current).toBe('blocked'))
+    expect(mock.element.unmount).toHaveBeenCalledTimes(1)
+    expect(document.body.querySelector(PROBE_HOST_SELECTOR)).toBeNull()
+  })
+
+  it("stays 'blocked' even if Stripe fires a bogus `ready` after the CSP violation", async () => {
+    // Claude's exact failure mode: CSP violation fires first, then
+    // Stripe fires `ready` because it sees the iframe element in the
+    // DOM. The `ready` handler must no-op.
+    const mock = createStripeMock()
+    loadStripeMock.mockResolvedValueOnce(mock.stripe)
+
+    const { result } = renderHook(() => useStripeProbe('pk_test_123'))
+    await waitFor(() => expect(mock.element.mount).toHaveBeenCalled())
+
+    act(() => {
+      dispatchCspViolation({
+        effectiveDirective: 'frame-src',
+        blockedURI: 'https://js.stripe.com/v3/m-outer-3437aad.html',
+      })
+    })
+    await waitFor(() => expect(result.current).toBe('blocked'))
+
+    act(() => {
+      mock.fire('ready')
+    })
+    expect(result.current).toBe('blocked')
+    expect(mock.element.unmount).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores unrelated CSP violations (non-stripe blockedURI, non-frame-src directive)', async () => {
+    // Host pages commonly log incidental CSP violations (fonts,
+    // analytics scripts, misconfigured img-src). Only a `frame-src`
+    // refusal of a `stripe.com` URI should flip the probe.
+    const mock = createStripeMock()
+    loadStripeMock.mockResolvedValueOnce(mock.stripe)
+
+    const { result } = renderHook(() => useStripeProbe('pk_test_123'))
+    await waitFor(() => expect(mock.element.mount).toHaveBeenCalled())
+
+    act(() => {
+      dispatchCspViolation({
+        effectiveDirective: 'img-src',
+        blockedURI: 'https://js.stripe.com/v3/some-image.png',
+      })
+      dispatchCspViolation({
+        effectiveDirective: 'frame-src',
+        blockedURI: 'https://analytics.example.com/iframe.html',
+      })
+    })
+
+    act(() => {
+      mock.fire('ready')
+    })
+    await waitFor(() => expect(result.current).toBe('ready'))
+    expect(mock.element.unmount).toHaveBeenCalledTimes(1)
+  })
+
+  it('removes the CSP listener on unmount so it cannot fire late', async () => {
+    const mock = createStripeMock()
+    loadStripeMock.mockResolvedValueOnce(mock.stripe)
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { unmount } = renderHook(() => useStripeProbe('pk_test_123'))
+    await waitFor(() => expect(mock.element.mount).toHaveBeenCalled())
+
+    unmount()
+
+    act(() => {
+      dispatchCspViolation({
+        effectiveDirective: 'frame-src',
+        blockedURI: 'https://js.stripe.com/v3/m-outer.html',
+      })
+    })
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
   })
 
   it('tears down element + host node on unmount before resolution (no orphan DOM, no setState-on-unmounted)', async () => {
