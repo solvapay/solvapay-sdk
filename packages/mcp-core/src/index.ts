@@ -10,8 +10,8 @@
  * server↔client boundary (bootstrap payload, tool names, view map). It
  * has no runtime dependency on `@modelcontextprotocol/sdk`,
  * `@modelcontextprotocol/ext-apps`, Express, or any runtime-specific OAuth
- * middleware — those live in `@solvapay/mcp`, `@solvapay/mcp-express`,
- * and `@solvapay/mcp-fetch` respectively.
+ * middleware — those live in `@solvapay/mcp` (root entry),
+ * `@solvapay/mcp/express`, and `@solvapay/mcp/fetch` respectively.
  *
  * @example Build the descriptor bundle and hand it to an adapter:
  * ```ts
@@ -111,6 +111,7 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
+export { applyHideToolsByAudience } from './hideToolsByAudience'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts, deriveIcons } from './descriptors'
 export type {
   BuildSolvaPayDescriptorsOptions,

@@ -7,7 +7,7 @@
  * filesystem via `Deno.readTextFile(new URL('./mcp-app.html', import.meta.url))`.
  *
  * Byte-for-byte identical to `mcp-checkout-app/src/mcp-app.tsx` — the
- * whole point of `@solvapay/mcp-fetch` is that the iframe payload
+ * whole point of `@solvapay/mcp/fetch` is that the iframe payload
  * doesn't need to know which runtime serves it.
  */
 

@@ -3,3 +3,8 @@ supabase/functions/mcp/mcp-app.html
 node_modules/
 .env
 .env.local
+
+# Supabase CLI machine-local state (project-ref, linked-project.json,
+# upstream version pins). Written by `supabase link` / every subsequent
+# CLI call against the linked project. Not portable across developers.
+supabase/.temp/

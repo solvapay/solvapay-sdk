@@ -1,3 +1,3 @@
-import { getMerchant } from '@solvapay/fetch'
+import { getMerchant } from '@solvapay/server/fetch'
 
 Deno.serve(getMerchant)

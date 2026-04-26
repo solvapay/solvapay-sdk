@@ -18,8 +18,8 @@
       "@solvapay/server": ["packages/server/src"],
       "@solvapay/mcp-core": ["packages/mcp-core/src"],
       "@solvapay/mcp": ["packages/mcp/src"],
-      "@solvapay/mcp-express": ["packages/mcp-express/src"],
-      "@solvapay/mcp-fetch": ["packages/mcp-fetch/src"],
+      "@solvapay/mcp/express": ["packages/mcp/src/express"],
+      "@solvapay/mcp/fetch": ["packages/mcp/src/fetch"],
       "@solvapay/react": ["packages/react/src"]
     }
   }

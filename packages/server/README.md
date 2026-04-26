@@ -52,6 +52,64 @@ const solvapay = createSolvaPayClient({
 })
 ```
 
+### Web-standards runtimes — `@solvapay/server/fetch` subpath
+
+For Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge /
+Vercel Functions deploys, use the `./fetch` subpath export. Every
+SolvaPay route ships as a ready-made `(req: Request) => Promise<Response>`
+handler with CORS + JSON serialisation baked in, so each Edge Function
+is a one-liner:
+
+```ts
+// supabase/functions/check-purchase/index.ts
+import { checkPurchase } from '@solvapay/server/fetch'
+
+Deno.serve(checkPurchase)
+```
+
+Available handlers: `checkPurchase`, `trackUsage`, `createPaymentIntent`,
+`processPayment`, `createTopupPaymentIntent`, `customerBalance`,
+`cancelRenewal`, `reactivateRenewal`, `activatePlan`, `getPaymentMethod`,
+`listPlans`, `syncCustomer`, `createCheckoutSession`,
+`createCustomerSession`, `getMerchant`, `getProduct`, `solvapayWebhook`.
+
+Configure CORS for production origins:
+
+```ts
+import { checkPurchase, configureCors } from '@solvapay/server/fetch'
+
+configureCors({ origins: ['https://myapp.com', 'http://localhost:5173'] })
+
+Deno.serve(checkPurchase)
+```
+
+Webhook handler (verifies the `SV-Signature` header via Web Crypto,
+returns 401 on invalid signatures, 500 on handler failures):
+
+```ts
+import { solvapayWebhook } from '@solvapay/server/fetch'
+
+Deno.serve(
+  solvapayWebhook({
+    secret: Deno.env.get('SOLVAPAY_WEBHOOK_SECRET')!,
+    onEvent: async event => {
+      if (event.type === 'purchase.created') {
+        // handle new purchase
+      }
+    },
+  }),
+)
+```
+
+Full reference implementation in
+[`examples/supabase-edge`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge).
+
+> **History**: the `./fetch` subpath was formerly shipped as the
+> standalone package `@solvapay/fetch@1.0.0` (renamed from
+> `@solvapay/supabase@1.0.1`). It was folded into `@solvapay/server`
+> in `@solvapay/server@1.0.8` — see the CHANGELOG for the migration
+> one-liner.
+
 ### Paywall Protection
 
 Use the unified payable API to protect your endpoints and functions with usage limits and metered billing:
@@ -137,14 +195,14 @@ Fail closed on missing/invalid auth. Do not fall back to shared identities like 
 adapter. For framework-neutral descriptors (`fastmcp`, raw JSON-RPC),
 use
 [`@solvapay/mcp-core`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-core)'s
-`buildSolvaPayDescriptors`. OAuth-bridge middleware lives in
-runtime-specific packages:
-[`@solvapay/mcp-express`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-express)
+`buildSolvaPayDescriptors`. OAuth-bridge middleware ships as runtime-
+specific subpath exports of `@solvapay/mcp`:
+[`@solvapay/mcp/express`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp/src/express)
 (`createMcpOAuthBridge`) for Node, and
-[`@solvapay/mcp-fetch`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-fetch)
-(`createSolvaPayMcpFetchHandler`) for Web-standards runtimes
-(Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel
-Functions). JWT bearer helpers
+[`@solvapay/mcp/fetch`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp/src/fetch)
+(`createSolvaPayMcpFetchHandler`, `createSolvaPayMcpFetch`) for
+Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers /
+Bun / Next edge / Vercel Functions). JWT bearer helpers
 (`getCustomerRefFromBearerAuthHeader`, `McpBearerAuthError`) live
 in `@solvapay/mcp-core`.
 

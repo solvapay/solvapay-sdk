@@ -1,6 +1,8 @@
 # Supabase Edge Functions Example
 
-Reference project showing how to use `@solvapay/fetch` to wire up SolvaPay endpoints as Supabase Edge Functions. Each function is a one-liner.
+Reference project showing how to use the `@solvapay/server/fetch`
+subpath export to wire up SolvaPay endpoints as Supabase Edge
+Functions. Each function is a one-liner.
 
 ## Why this adapter?
 
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // supabase/functions/check-purchase/index.ts
-import { checkPurchase } from '@solvapay/fetch'
+import { checkPurchase } from '@solvapay/server/fetch'
 
 Deno.serve(checkPurchase)
 ```
@@ -46,13 +48,17 @@ supabase secrets set SOLVAPAY_WEBHOOK_SECRET=whsec_...
 
 ### 2. Import map
 
-The `supabase/functions/deno.json` maps npm packages for Deno:
+The `supabase/functions/deno.json` maps npm packages for Deno. The
+`@solvapay/server/` subpath resolver is what makes
+`@solvapay/server/fetch` resolve on Deno — bare `@solvapay/server`
+alone wouldn't; Deno needs an explicit entry for the `/fetch`
+subpath resolution:
 
 ```json
 {
   "imports": {
-    "@solvapay/fetch": "npm:@solvapay/fetch",
     "@solvapay/server": "npm:@solvapay/server",
+    "@solvapay/server/": "npm:/@solvapay/server@preview/",
     "@solvapay/auth": "npm:@solvapay/auth",
     "@solvapay/core": "npm:@solvapay/core"
   }
@@ -115,7 +121,7 @@ Default: `*` (permissive, suitable for development). For production, configure a
 
 ```typescript
 // supabase/functions/check-purchase/index.ts
-import { checkPurchase, configureCors } from '@solvapay/fetch'
+import { checkPurchase, configureCors } from '@solvapay/server/fetch'
 
 configureCors({
   origins: ['https://myapp.com', 'http://localhost:5173'],

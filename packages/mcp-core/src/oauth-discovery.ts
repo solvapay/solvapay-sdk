@@ -1,7 +1,7 @@
 /**
  * Framework-neutral OAuth discovery JSON builders. These are runtime-agnostic
- * (no Node, no fetch, no Express) — both `@solvapay/mcp-express` and
- * `@solvapay/mcp-fetch` import them to produce the well-known responses.
+ * (no Node, no fetch, no Express) — both `@solvapay/mcp/express` and
+ * `@solvapay/mcp/fetch` import them to produce the well-known responses.
  *
  * Kept in `@solvapay/mcp-core` so third-party adapter authors (raw JSON-RPC,
  * `fastmcp`, …) can reuse the exact same shapes with zero transitive deps.

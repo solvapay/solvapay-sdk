@@ -25,13 +25,14 @@ const ROOT_DIR = path.resolve(__dirname, '..')
 // NOTE: cross-package version drift is no longer enforced here — since the
 // Changesets migration (PR #127) each `@solvapay/*` publishable package is
 // versioned independently. The runtime adapters (`@solvapay/mcp-core`,
-// `@solvapay/mcp`, `@solvapay/mcp-express`, `@solvapay/mcp-fetch`) live on
-// their own `0.x` track; `@solvapay/react` / `@solvapay/react-supabase` are
-// on their own `1.x` track; `@solvapay/fetch` has its own lineage starting
-// at `1.0.0` (carried over from the `@solvapay/supabase@1.0.1` body). What
-// we still care about is **inside a single install graph** — the checks
-// below catch pnpm peer-dep regressions and cross-workspace prerelease
-// drift that would break the local install tree.
+// `@solvapay/mcp` — now a single package with `./fetch` + `./express`
+// subpath exports) live on their own `0.x` track; `@solvapay/server`
+// folded the former `@solvapay/fetch` package in as a `./fetch` subpath
+// export on its 1.x track; `@solvapay/react` / `@solvapay/react-supabase`
+// are on their own 1.x track. What we still care about is **inside a
+// single install graph** — the checks below catch pnpm peer-dep
+// regressions and cross-workspace prerelease drift that would break the
+// local install tree.
 
 const runRecursiveList = (): ListedPackage[] => {
   const stdout = execSync('pnpm -r ls --depth 0 --json', {

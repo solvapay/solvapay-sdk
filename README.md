@@ -46,24 +46,22 @@ npm install @solvapay/react-supabase @supabase/supabase-js
 # For Next.js integration
 npm install @solvapay/next
 
-# For Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers / Bun)
-npm install @solvapay/fetch
-
 # For authentication adapters
 npm install @solvapay/auth
 ```
 
 ## Packages
 
-The SDK consists of **8 published packages**:
+The SDK consists of **7 published packages**:
 
 - **`@solvapay/core`** - Types, schemas, and shared utilities
-- **`@solvapay/server`** - Universal server SDK (Node + Edge runtime)
+- **`@solvapay/server`** - Universal server SDK (Node + Edge runtime). Ships three subpath exports: `.` (Node), `./edge` (Web Crypto variants of the factories + webhook verifier), and `./fetch` (Web-standards `(req: Request) => Promise<Response>` handlers for Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel Functions — formerly shipped as standalone package `@solvapay/fetch`)
 - **`@solvapay/react`** - Headless payment components and hooks
 - **`@solvapay/react-supabase`** - Supabase auth adapter for React Provider
 - **`@solvapay/auth`** - Authentication adapters and utilities for extracting user IDs from requests
 - **`@solvapay/next`** - Next.js-specific utilities and helpers
-- **`@solvapay/fetch`** - Fetch-first adapter for Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel Functions). Renamed from `@solvapay/supabase` — API surface is unchanged.
+- **`@solvapay/mcp`** - Official `@modelcontextprotocol/sdk` + `@modelcontextprotocol/ext-apps` adapter. Ships three subpath exports: `.` (MCP server factory + `registerPayableTool`), `./fetch` (Web-standards transport + OAuth bridge for edge runtimes), and `./express` (Node `(req, res, next)` OAuth middleware — formerly shipped as standalone packages `@solvapay/mcp-fetch` / `@solvapay/mcp-express`)
+- **`@solvapay/mcp-core`** - Framework-neutral MCP contracts (tool names, descriptors, paywall meta, OAuth discovery JSON, JWT helpers). Zero runtime dependency on `@modelcontextprotocol/*`
 - **`solvapay`** - CLI for auth bootstrap (`npx solvapay init`)
 
 See [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for contributor
@@ -199,11 +197,12 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Supabase Edge Functions** using `@solvapay/fetch` (one-liner per endpoint):
+**Supabase Edge Functions** using the `@solvapay/server/fetch` subpath
+(one-liner per endpoint):
 
 ```typescript
 // supabase/functions/check-purchase/index.ts
-import { checkPurchase } from '@solvapay/fetch'
+import { checkPurchase } from '@solvapay/server/fetch'
 
 Deno.serve(checkPurchase)
 ```
@@ -340,7 +339,7 @@ cd examples/hosted-checkout-demo && pnpm dev
 
 ### [supabase-edge](./examples/supabase-edge)
 
-Supabase Edge Functions with `@solvapay/fetch` adapter:
+Supabase Edge Functions using the `@solvapay/server/fetch` subpath:
 
 - One-liner per Edge Function (10 endpoints)
 - CORS utility with configurable origins
@@ -427,8 +426,8 @@ The monorepo uses [**Changesets**](https://github.com/changesets/changesets) for
 
 - `pnpm test` — full monorepo test suite.
 - `pnpm build:packages` — every publishable package builds to `dist/`.
-- `pnpm validate:fetch-runtime` — asserts `@solvapay/fetch` and
-  `@solvapay/mcp-fetch` load cleanly in a bare Web-standards environment
+- `pnpm validate:fetch-runtime` — asserts `@solvapay/server/fetch` and
+  `@solvapay/mcp/fetch` load cleanly in a bare Web-standards environment
   and don't leak forbidden Node built-ins. Blocks publish on any
   regression in the Web-standards runtime surface.
 

@@ -1,0 +1,24 @@
+# Supabase CLI config for the Goldberg / supabase-edge-mcp example.
+#
+# The `mcp` edge function is a public MCP server — it does its own
+# Bearer-token auth inside the handler (via `createSolvaPayMcpFetchHandler`)
+# and exposes unauthenticated discovery routes under `/.well-known/…`.
+# Disable Supabase's default anon-JWT gate so those routes and the OAuth
+# bridge at `/oauth/{register,authorize,token,revoke}` are reachable
+# without the project anon key.
+#
+# `project_id` is a local CLI identifier; the remote project ref lives in
+# `supabase/.temp/project-ref` after `supabase link`.
+
+project_id = "supabase-edge-mcp"
+
+[functions.mcp]
+verify_jwt = false
+
+# Bundle the MCP App iframe HTML (built by `pnpm build` and copied into
+# `supabase/functions/mcp/mcp-app.html`) alongside the function source
+# so `new URL('./mcp-app.html', import.meta.url)` + `Deno.readTextFile`
+# resolve at runtime. Without this, `supabase functions deploy`'s eszip
+# bundler only ships `.ts`/`.json` and the boot-time read fails with
+# `path not found`, which surfaces as `WORKER_ERROR` on every request.
+static_files = ["./functions/mcp/mcp-app.html"]

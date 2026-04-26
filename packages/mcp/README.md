@@ -8,10 +8,10 @@ Framework-neutral contracts (tool names, descriptors, paywall meta,
 OAuth discovery JSON, JWT helpers) live in
 [`@solvapay/mcp-core`](../mcp-core) so alternative adapters
 (`fastmcp`, raw JSON-RPC) can reuse the same contract. Runtime-specific
-OAuth middleware lives alongside:
+OAuth middleware ships as two subpath exports of this package:
 
-- [`@solvapay/mcp-express`](../mcp-express) — Node `(req, res, next)`.
-- [`@solvapay/mcp-fetch`](../mcp-fetch) — Web standards `(req: Request) => Promise<Response>`.
+- [`@solvapay/mcp/express`](./src/express) — Node `(req, res, next)`.
+- [`@solvapay/mcp/fetch`](./src/fetch) — Web standards `(req: Request) => Promise<Response>` + the turnkey `createSolvaPayMcpFetch` factory for Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel Functions.
 
 ## Install
 

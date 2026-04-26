@@ -1,8 +1,10 @@
 /**
- * Pre-publish gate for the Web-standards runtime packages.
+ * Pre-publish gate for the Web-standards runtime subpaths.
  *
- * Imports `@solvapay/fetch` + `@solvapay/mcp-fetch` from their freshly
- * built `dist/index.js` ESM entries in a bare Node process with:
+ * Imports `@solvapay/server/fetch` + `@solvapay/mcp/fetch` (the fetch-
+ * first subpath exports of `@solvapay/server` + `@solvapay/mcp`) from
+ * their freshly built `dist/fetch/index.js` ESM entries in a bare
+ * Node process with:
  *
  * - No `express`, `node:http`, or `connect`-family body parser available.
  * - No Supabase client (`@supabase/*`) available.
@@ -13,8 +15,9 @@
  *
  * If either import crashes, the process exits non-zero. CI wires this
  * into [`.github/workflows/publish-preview.yml`] so we can't ship a
- * `@solvapay/fetch` or `@solvapay/mcp-fetch` preview that silently
- * leaks a Node-only builtin into a fetch-first runtime.
+ * `@solvapay/server@preview/fetch` or `@solvapay/mcp@preview/fetch`
+ * preview that silently leaks a Node-only builtin into a fetch-first
+ * runtime.
  *
  * Run via `pnpm validate:fetch-runtime`.
  */
@@ -29,20 +32,48 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 
 interface TargetPackage {
   name: string
+  /**
+   * Package identifier passed to `pnpm --filter=…` in the
+   * "hasn't been built yet" hint. For subpath exports (e.g.
+   * `@solvapay/mcp/fetch`) this is the parent package name.
+   */
+  filterName: string
   distEsm: string
   expectedExports: string[]
 }
 
 const TARGETS: TargetPackage[] = [
   {
-    name: '@solvapay/fetch',
-    distEsm: path.join(REPO_ROOT, 'packages/fetch/dist/index.js'),
-    expectedExports: ['checkPurchase', 'createPaymentIntent'],
+    name: '@solvapay/server/fetch',
+    filterName: '@solvapay/server',
+    distEsm: path.join(REPO_ROOT, 'packages/server/dist/fetch/index.js'),
+    expectedExports: [
+      'checkPurchase',
+      'createPaymentIntent',
+      'processPayment',
+      'createTopupPaymentIntent',
+      'customerBalance',
+      'cancelRenewal',
+      'reactivateRenewal',
+      'activatePlan',
+      'getPaymentMethod',
+      'listPlans',
+      'syncCustomer',
+      'createCheckoutSession',
+      'createCustomerSession',
+      'getMerchant',
+      'getProduct',
+      'trackUsage',
+      'solvapayWebhook',
+      'configureCors',
+    ],
   },
   {
-    name: '@solvapay/mcp-fetch',
-    distEsm: path.join(REPO_ROOT, 'packages/mcp-fetch/dist/index.js'),
+    name: '@solvapay/mcp/fetch',
+    filterName: '@solvapay/mcp',
+    distEsm: path.join(REPO_ROOT, 'packages/mcp/dist/fetch/index.js'),
     expectedExports: [
+      'createSolvaPayMcpFetch',
       'createSolvaPayMcpFetchHandler',
       'createOAuthFetchRouter',
       'createProtectedResourceHandler',
@@ -71,7 +102,7 @@ const FORBIDDEN_MODULES = new Set([
 function assertBuilt(target: TargetPackage): void {
   if (!existsSync(target.distEsm)) {
     throw new Error(
-      `[validate-fetch-runtime] ${target.name} has not been built (${path.relative(REPO_ROOT, target.distEsm)} missing). Run \`pnpm --filter=${target.name} build\` first.`,
+      `[validate-fetch-runtime] ${target.name} has not been built (${path.relative(REPO_ROOT, target.distEsm)} missing). Run \`pnpm --filter=${target.filterName} build\` first.`,
     )
   }
 }

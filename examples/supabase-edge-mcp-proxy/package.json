@@ -1,0 +1,15 @@
+{
+  "name": "@example/supabase-edge-mcp-proxy",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Cloudflare Worker proxy that fronts the Supabase edge MCP function on a custom subdomain so RFC 9728 OAuth metadata URLs resolve to the function.",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251001.0",
+    "wrangler": "^4.30.0"
+  }
+}

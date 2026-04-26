@@ -1,3 +1,3 @@
-import { createCustomerSession } from '@solvapay/fetch'
+import { createCustomerSession } from '@solvapay/server/fetch'
 
 Deno.serve(createCustomerSession)

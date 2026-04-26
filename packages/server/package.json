@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/server",
-  "version": "1.0.8-preview.10",
+  "version": "1.0.8",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -18,6 +18,11 @@
       "types": "./dist/edge.d.ts",
       "import": "./dist/edge.js",
       "default": "./dist/edge.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch/index.d.ts",
+      "import": "./dist/fetch/index.js",
+      "require": "./dist/fetch/index.cjs"
     }
   },
   "files": [
@@ -40,8 +45,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "generate:types": "tsx scripts/generate-types.ts",
-    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/paywall-state.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts",
-    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/paywall-state.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts",
+    "test": "vitest run __tests__/paywall.unit.test.ts __tests__/paywall-state.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts src/__tests__/edge-exports.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts __tests__/fetch/cors.test.ts __tests__/fetch/handlers.test.ts __tests__/fetch/utils.test.ts",
+    "test:unit": "vitest run __tests__/paywall.unit.test.ts __tests__/paywall-state.unit.test.ts __tests__/bootstrap-mcp.unit.test.ts __tests__/verify-webhook.unit.test.ts __tests__/edge-exports.unit.test.ts src/__tests__/edge-exports.test.ts __tests__/auth-core.unit.test.ts __tests__/ensure-customer.unit.test.ts __tests__/create-customer.unit.test.ts __tests__/fetch/cors.test.ts __tests__/fetch/handlers.test.ts __tests__/fetch/utils.test.ts",
     "test:integration": "vitest run __tests__/backend.integration.test.ts",
     "test:integration:payment": "vitest run __tests__/payment-stripe.integration.test.ts",
     "test:all": "vitest run",

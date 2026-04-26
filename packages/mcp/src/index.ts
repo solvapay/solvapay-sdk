@@ -8,8 +8,15 @@
  * paywall meta, OAuth discovery JSON, JWT helpers) lives in
  * `@solvapay/mcp-core` and can be reused by alternative adapters
  * (`fastmcp`, raw JSON-RPC, …). Runtime-specific OAuth middleware
- * lives in `@solvapay/mcp-express` (Node req/res/next) and
- * `@solvapay/mcp-fetch` (Web-standards `Request`/`Response`).
+ * lives on two subpath exports of this package:
+ *
+ * - `@solvapay/mcp/express` — Node `(req, res, next)` middleware
+ *   (`createMcpOAuthBridge`).
+ * - `@solvapay/mcp/fetch` — Web-standards `(Request) => Response`
+ *   turnkey handler (`createSolvaPayMcpFetch`,
+ *   `createSolvaPayMcpFetchHandler`, `createOAuthFetchRouter`) for
+ *   Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge /
+ *   Vercel Functions.
  *
  * @example
  * ```ts
