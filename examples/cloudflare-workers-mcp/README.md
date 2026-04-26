@@ -63,7 +63,7 @@ $EDITOR .env
 #   - `routes[].pattern`  — your hostname (or remove the routes block
 #     entirely to serve on *.workers.dev)
 
-pnpm deploy
+pnpm run deploy
 ```
 
 ### How the deploy overrides work
@@ -72,10 +72,10 @@ pnpm deploy
 (`prd_your_product_ref`, `https://your-worker.example.com`, no
 `SOLVAPAY_API_BASE_URL` override — src/worker.ts falls back to
 `https://api.solvapay.com`). This means anyone who clones the repo
-can run `pnpm deploy` without accidentally connecting to someone
+can run `pnpm run deploy` without accidentally connecting to someone
 else's merchant or backend environment.
 
-`pnpm deploy` runs [`scripts/deploy.mjs`](./scripts/deploy.mjs),
+`pnpm run deploy` runs [`scripts/deploy.mjs`](./scripts/deploy.mjs),
 which sources `.env` (gitignored) and passes your real values
 through to `wrangler deploy --var KEY:VALUE` for:
 
