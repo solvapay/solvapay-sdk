@@ -14,42 +14,15 @@ description: "This guide shows you how to integrate SolvaPay SDK with Model Cont
 
 ## Installation
 
-Install the required packages. Pick the runtime-specific OAuth bridge based on where you're deploying.
-
-### Node.js (Express, Fastify, etc.)
+Install the required packages:
 
 ```bash
-npm install @solvapay/server @solvapay/mcp-core @solvapay/mcp \
-  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
+npm install @solvapay/server @modelcontextprotocol/sdk
 # or
-pnpm add @solvapay/server @solvapay/mcp-core @solvapay/mcp \
-  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
+pnpm add @solvapay/server @modelcontextprotocol/sdk
 # or
-yarn add @solvapay/server @solvapay/mcp-core @solvapay/mcp \
-  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
+yarn add @solvapay/server @modelcontextprotocol/sdk
 ```
-
-Import the Node OAuth bridge from the `@solvapay/mcp/express` subpath.
-
-### Web-standards runtimes (Deno, Supabase Edge, Cloudflare Workers, Bun, Next edge, Vercel Functions)
-
-```bash
-pnpm add @solvapay/server @solvapay/mcp-core @solvapay/mcp \
-  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps
-```
-
-Import the fetch-first OAuth bridge + turnkey handler from the `@solvapay/mcp/fetch` subpath.
-
-### Package split
-
-- **`@solvapay/server`** — paywall core, `createSolvaPay`, `PaywallError`, webhook verification.
-- **`@solvapay/mcp-core`** — framework-neutral MCP contracts: `MCP_TOOL_NAMES`, `buildSolvaPayDescriptors`, `buildPayableHandler`, OAuth discovery JSON builders, JWT bearer helpers. No `@modelcontextprotocol/*` dependency.
-- **`@solvapay/mcp`** — official `@modelcontextprotocol/sdk` + `ext-apps` adapter. The only package that imports `@modelcontextprotocol/*`. Three subpath exports:
-  - `@solvapay/mcp` (root) — `createSolvaPayMcpServer` + `registerPayableTool`.
-  - `@solvapay/mcp/express` — Node `(req, res, next)` OAuth bridge middleware (`createMcpOAuthBridge`).
-  - `@solvapay/mcp/fetch` — Web-standards `(Request) => Promise<Response>` OAuth bridge + turnkey MCP handler (`createSolvaPayMcpFetch`, `createSolvaPayMcpFetchHandler`) for Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel Functions.
-
-Skip `@solvapay/mcp` + `@modelcontextprotocol/*` if you only need the OAuth bridge / bearer helpers, or if you're adapting SolvaPay onto a non-official MCP server (`fastmcp`, raw JSON-RPC).
 
 ## Basic Setup
 
@@ -270,7 +243,7 @@ For MCP servers that authenticate with bearer tokens, you can use the server SDK
 import {
   getCustomerRefFromBearerAuthHeader,
   McpBearerAuthError,
-} from '@solvapay/mcp'
+} from '@solvapay/server'
 
 const handler = payable.mcp(createTask, {
   getCustomerRef: args => {
@@ -293,69 +266,35 @@ Fail closed on auth failures. Do not substitute fallback identities such as `ano
 
 ### Non-hosted OAuth Bridge Pattern
 
-If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP proxy), the
-`createMcpOAuthBridge` helper turns your MCP origin into a fully self-consistent OAuth
-authorization server (RFC 8414 §3.3). All OAuth endpoints are served from your MCP origin
-and transparently proxied to SolvaPay:
+If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP proxy):
 
-| Endpoint (on MCP origin)                         | Proxied to                                         |
-| ------------------------------------------------ | -------------------------------------------------- |
-| `GET /.well-known/oauth-protected-resource`      | local (`authorization_servers: [mcpOrigin]`)       |
-| `GET /.well-known/oauth-authorization-server`    | local (`issuer` = MCP origin, endpoints on origin) |
-| `POST /oauth/register`                           | `POST /v1/customer/auth/register?product_ref=…`    |
-| `GET  /oauth/authorize`                          | `302` → `/v1/customer/auth/authorize`              |
-| `POST /oauth/token`                              | `POST /v1/customer/auth/token`                     |
-| `POST /oauth/revoke`                             | `POST /v1/customer/auth/revoke`                    |
-
-`product_ref` is injected automatically at Dynamic Client Registration, so your MCP clients
-do not need to know about it. `/mcp` is still protected with bearer auth and returns an
-RFC9728 `WWW-Authenticate` challenge when the token is missing or invalid.
-
-```ts
-import express from 'express'
-import { createMcpOAuthBridge } from '@solvapay/mcp/express'
-
-const app = express()
-app.use(express.json())
-// /oauth/token uses application/x-www-form-urlencoded
-app.use(express.urlencoded({ extended: false }))
-app.use(
-  ...createMcpOAuthBridge({
-    publicBaseUrl: process.env.MCP_PUBLIC_BASE_URL!,
-    apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL!,
-    productRef: process.env.SOLVAPAY_PRODUCT_REF!,
-    mcpPath: '/mcp',
-  }),
-)
-```
+1. Serve local discovery endpoints:
+   - `/.well-known/oauth-protected-resource`
+   - `/.well-known/oauth-authorization-server`
+2. Point discovery metadata to SolvaPay OAuth endpoints (`/v1/customer/auth/*`)
+3. Ensure `registration_endpoint` includes `mcp_server_id`
+4. Protect `/mcp` with bearer auth and return RFC9728 `WWW-Authenticate` challenge when missing
 
 Reference implementation: `examples/mcp-oauth-bridge`.
 
-### Streamable HTTP transport tips
+## Plan activation from MCP tools
 
-- **`GET /mcp` must return 405, not 400.** Cursor (and other Streamable HTTP clients) opens
-  a server-initiated SSE back-channel with `GET /mcp` + `Accept: text/event-stream` right
-  after OAuth completes. Stateless MCP servers can't serve it; respond `405 Method Not
-  Allowed` with `Allow: POST, OPTIONS` and the client stays connected. `createMcpOAuthBridge`
-  does this for you — if your router forwards GETs to a different transport, make sure the
-  fallback returns 405, not 400, or the client will transition to `failed` on
-  "Failed to open SSE stream: Bad Request".
-- **`/.well-known/openid-configuration` must return 404.** Cursor attempts OIDC Discovery
-  before RFC 8414. `createMcpOAuthBridge` returns 404 on this path for you. If you don't
-  use the bridge, add a handler that explicitly returns 404 — a JSON response missing
-  `jwks_uri`, `subject_types_supported`, or `id_token_signing_alg_values_supported` fails
-  Cursor's OIDC validator and logs a noisy Zod error. We return 404 (rather than a full
-  OIDC doc) because SolvaPay is an OAuth 2.0 authorization server (RFC 8414), not an
-  OpenID Provider: we don't issue `id_token`s or expose a JWKS endpoint, so advertising
-  OIDC would be a false capability claim that could break strict OIDC clients later in
-  the flow. Only serve `/.well-known/oauth-authorization-server` and
-  `/.well-known/oauth-protected-resource` from your MCP origin.
+Expose `activate_plan` (backed by `activatePlanCore` from `@solvapay/server` or the `@solvapay/next` wrapper) so the agent can upgrade the customer without a browser round-trip. The result shape depends on plan type:
+
+- **Free plan** — `{ status: 'activated', purchaseRef }`.
+- **Usage-based plan** — `{ status: 'activated', purchaseRef, creditBalance }` even when `creditBalance === 0`. The customer can start calling paid tools immediately; top-up is optional and flows through `create_topup_payment_intent`.
+- **Recurring / hybrid plan** — `{ status: 'topup_required' | 'payment_required', checkoutUrl }` when the customer has no credit balance and no card on file. Return the `checkoutUrl` so the agent can surface it via a hosted checkout link.
+
+In the default `createSolvaPayMcpServer` tool surface, `activate_plan`, `upgrade`, and `topup` already map to these flows — you rarely need to implement them by hand.
 
 ## Error Handling
 
 ### Basic Error Handling
 
-The MCP adapter automatically handles `PaywallError` and converts it to MCP error format:
+The MCP adapter routes paywall gate outcomes through a typed
+`formatGate` channel — the transport emits `isError: false`, a plain-string
+narration in `content[0].text`, and the machine-readable gate payload on
+`structuredContent`. Merchants don't need to `try/catch` for the happy path:
 
 ```typescript
 server.setRequestHandler(CallToolRequestSchema, async request => {
@@ -372,56 +311,58 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
         throw new Error(`Unknown tool: ${name}`)
     }
   } catch (error) {
-    // PaywallError is automatically handled by the adapter
-    // Other errors are re-thrown
+    // Paywall gate outcomes are handled by the adapter before this
+    // catch block runs. Anything that lands here is a genuine
+    // handler failure — re-throw it.
     throw error
   }
 })
 ```
 
-### Custom Error Handling
+### Custom Paywall Responses
 
-Handle errors manually for custom error responses:
+Use `paywall.decide()` directly when you want full control over the paywall
+response shape (e.g. a hand-rolled MCP handler that doesn't use
+`payable().mcp()`):
 
 ```typescript
-import { PaywallError } from '@solvapay/server'
+import { paywallToolResult } from '@solvapay/mcp'
 
 server.setRequestHandler(CallToolRequestSchema, async request => {
   const { name, arguments: args } = request.params
 
-  try {
-    switch (name) {
-      case 'create_task': {
-        const handler = payable.mcp(createTask)
-        return await handler(args)
-      }
+  if (name === 'create_task') {
+    const decision = await solvaPay.paywall.decide(args, {
+      product: 'prd_myapi',
+    })
 
-      default:
-        throw new Error(`Unknown tool: ${name}`)
-    }
-  } catch (error) {
-    if (error instanceof PaywallError) {
-      // Custom paywall error response
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: 'Payment required',
-              message: error.message,
-              checkoutUrl: error.structuredContent.checkoutUrl,
-              product: error.structuredContent.product,
-            }),
-          },
-        ],
-        isError: true,
-      }
+    if (decision.outcome === 'gate') {
+      return paywallToolResult(decision.gate, {
+        resourceUri: 'ui://my-app/mcp-app.html',
+      })
     }
 
-    // Handle other errors
-    throw error
+    return await createTask(args)
   }
+
+  throw new Error(`Unknown tool: ${name}`)
 })
+```
+
+Legacy consumers that still `try/catch` a `PaywallError` keep working —
+`PaywallError` is exported as a compat shim:
+
+```typescript
+import { PaywallError } from '@solvapay/server'
+
+try {
+  return await payable.mcp(createTask)(args)
+} catch (error) {
+  if (error instanceof PaywallError) {
+    return paywallToolResult(error, { resourceUri: 'ui://my-app/mcp-app.html' })
+  }
+  throw error
+}
 ```
 
 ## Complete Example
@@ -656,25 +597,11 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
         throw new Error(`Unknown tool: ${name}`)
     }
   } catch (error) {
-    if (error instanceof PaywallError) {
-      // Return paywall error in MCP format
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: 'Payment required',
-              message: error.message,
-              checkoutUrl: error.structuredContent.checkoutUrl,
-              product: error.structuredContent.product,
-            }),
-          },
-        ],
-        isError: true,
-      }
-    }
-
-    // Re-throw other errors
+    // Paywall gate outcomes are handled by `payable.mcp(...)`
+    // before this catch block runs — they come back as a normal
+    // tool result with `isError: false`, a narration text, and the
+    // machine-readable gate on `structuredContent`. Anything that
+    // lands here is a genuine handler failure.
     throw error
   }
 })
