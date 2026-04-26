@@ -50,11 +50,21 @@ function parseDotEnv(contents) {
     let [, key, value] = match
     value = value.trim()
     // Strip a single layer of matching quotes (e.g. VALUE="foo" or 'foo').
+    // Comments inside quoted values are preserved as part of the value,
+    // matching standard dotenv semantics (dotenv npm v15+, wrangler's
+    // built-in `.env` parser).
     if (
       (value.startsWith('"') && value.endsWith('"')) ||
       (value.startsWith("'") && value.endsWith("'"))
     ) {
       value = value.slice(1, -1)
+    } else {
+      // Unquoted values: strip inline comment starting with whitespace+`#`.
+      // Without this, `FOO=bar # note` yields `bar # note` — different from
+      // what `wrangler dev` sees for the same `.env` file, which would
+      // produce a silent "works locally, broken in deploy" split.
+      const commentIdx = value.search(/\s+#/)
+      if (commentIdx >= 0) value = value.slice(0, commentIdx).trim()
     }
     env[key] = value
   }
