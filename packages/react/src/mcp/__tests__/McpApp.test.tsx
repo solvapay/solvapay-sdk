@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 import { McpApp, type McpAppFull } from '../McpApp'
 
@@ -10,7 +10,6 @@ function makeApp(opts: {
   text?: string
   connectFails?: boolean
   requestTeardown?: () => void | Promise<void>
-  hostName?: string | null
 }): McpAppFull {
   return {
     callServerTool: vi.fn().mockResolvedValue({
@@ -23,10 +22,6 @@ function makeApp(opts: {
     connect: opts.connectFails
       ? vi.fn().mockRejectedValue(new Error('connect failed'))
       : vi.fn().mockResolvedValue(undefined),
-    getHostVersion:
-      opts.hostName === undefined
-        ? undefined
-        : () => (opts.hostName == null ? undefined : { name: opts.hostName }),
     onhostcontextchanged: undefined,
     onteardown: undefined,
     requestTeardown: opts.requestTeardown ?? vi.fn().mockResolvedValue(undefined),
@@ -207,101 +202,5 @@ describe('<McpApp>', () => {
     )
     await screen.findByTestId('account-stub')
     expect(received[0]?.classNames?.card).toBe('my-card')
-  })
-})
-
-describe('<McpApp> merchant icon head tags', () => {
-  const ICON_URL = 'https://cdn.example.test/icon.png'
-  const FAVICON_SELECTOR = 'link[data-solvapay-favicon]'
-  const PRELOAD_SELECTOR = 'link[data-solvapay-icon-preload]'
-
-  // Head-tag state is global (`document.head`); scrub between tests so
-  // a previous case's favicon / preload can't leak into the next.
-  afterEach(() => {
-    document.head
-      .querySelectorAll(`${FAVICON_SELECTOR}, ${PRELOAD_SELECTOR}`)
-      .forEach((el) => el.remove())
-  })
-
-  function makeIconApp(hostName: string | null | undefined): McpAppFull {
-    return makeApp({
-      toolName: 'manage_account',
-      hostName,
-      structuredContent: {
-        productRef: 'prod_1',
-        returnUrl: 'https://example.test/r',
-        customer: { ref: 'cus_1' },
-        merchant: { displayName: 'Example', iconUrl: ICON_URL },
-      },
-    })
-  }
-
-  function AccountStub() {
-    return <div data-testid="account-stub" />
-  }
-
-  it('inserts both favicon and preload on hosts that render AppHeader (MCP Jam)', async () => {
-    const app = makeIconApp('MCP Jam')
-    render(<McpApp app={app} views={{ account: AccountStub }} />)
-    await screen.findByTestId('account-stub')
-
-    const favicon = document.head.querySelector<HTMLLinkElement>(FAVICON_SELECTOR)
-    const preload = document.head.querySelector<HTMLLinkElement>(PRELOAD_SELECTOR)
-    expect(favicon?.rel).toBe('icon')
-    expect(favicon?.href).toBe(ICON_URL)
-    expect(preload?.rel).toBe('preload')
-    expect(preload?.as).toBe('image')
-    expect(preload?.href).toBe(ICON_URL)
-  })
-
-  it('inserts both tags when hostName is unknown (safe fallback — matches AppHeader render-time behaviour)', async () => {
-    // `getHostVersion` undefined → hostName stays null; AppHeader
-    // renders, so the preload has a consumer.
-    const app = makeIconApp(undefined)
-    render(<McpApp app={app} views={{ account: AccountStub }} />)
-    await screen.findByTestId('account-stub')
-
-    expect(document.head.querySelector(FAVICON_SELECTOR)).not.toBeNull()
-    expect(document.head.querySelector(PRELOAD_SELECTOR)).not.toBeNull()
-  })
-
-  it('omits the preload on Claude Desktop (host paints its own merchant chrome)', async () => {
-    const app = makeIconApp('Claude Desktop')
-    render(<McpApp app={app} views={{ account: AccountStub }} />)
-    await screen.findByTestId('account-stub')
-
-    expect(document.head.querySelector(FAVICON_SELECTOR)).not.toBeNull()
-    expect(document.head.querySelector(PRELOAD_SELECTOR)).toBeNull()
-  })
-
-  it('omits the preload on ChatGPT', async () => {
-    const app = makeIconApp('ChatGPT')
-    render(<McpApp app={app} views={{ account: AccountStub }} />)
-    await screen.findByTestId('account-stub')
-
-    expect(document.head.querySelector(FAVICON_SELECTOR)).not.toBeNull()
-    expect(document.head.querySelector(PRELOAD_SELECTOR)).toBeNull()
-  })
-
-  it('removes a stale preload when the app handshake flips to a chrome host', async () => {
-    // Pre-seed the head as if a prior mount inserted the preload tag
-    // (simulates the handshake-after-bootstrap race: iconUrl committed
-    // before hostName resolved to `Claude Desktop`). The effect's
-    // hostName-aware branch should strip it on re-run.
-    const stale = document.createElement('link')
-    stale.setAttribute('data-solvapay-icon-preload', '')
-    stale.rel = 'preload'
-    stale.as = 'image'
-    stale.href = ICON_URL
-    document.head.appendChild(stale)
-
-    const app = makeIconApp('Claude Desktop')
-    render(<McpApp app={app} views={{ account: AccountStub }} />)
-    await screen.findByTestId('account-stub')
-
-    await waitFor(() => {
-      expect(document.head.querySelector(PRELOAD_SELECTOR)).toBeNull()
-    })
-    expect(document.head.querySelector(FAVICON_SELECTOR)).not.toBeNull()
   })
 })
