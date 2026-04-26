@@ -1,27 +1,36 @@
-# Local wrangler dev secrets. Copy to `.dev.vars` and fill in your own
-# values, then `pnpm serve:local` will pick them up automatically.
+# Local values for this Worker — used in two places:
 #
-# Production values live in `wrangler.jsonc` (non-secrets) + `wrangler
-# secret put SOLVAPAY_SECRET_KEY` (secrets). The `vars` block in
-# wrangler.jsonc overrides matching keys here at deploy time.
+#   1. `pnpm serve:local` / `wrangler dev` picks these up automatically
+#      for local testing.
+#   2. `pnpm deploy` (see scripts/deploy.mjs) sources this file and
+#      passes SOLVAPAY_PRODUCT_REF / MCP_PUBLIC_BASE_URL /
+#      SOLVAPAY_API_BASE_URL as `--var` overrides at deploy time.
+#
+# SOLVAPAY_SECRET_KEY is NOT re-uploaded on each deploy — it lives on
+# the Worker as a proper secret via `wrangler secret put SOLVAPAY_SECRET_KEY`
+# (run once; persists across deploys). Kept here so `wrangler dev`
+# can read it for local testing.
+#
+# Copy this file to `.dev.vars` and fill in your real values. The
+# copy is gitignored; keep secrets out of git.
 
-# The SolvaPay secret key for your merchant account. Never check this
-# in. Get it from the SolvaPay dashboard -> API Keys.
+# The SolvaPay secret key for your merchant account. Never commit.
+# Dashboard -> API Keys -> secret key (sk_…).
 SOLVAPAY_SECRET_KEY=sk_test_your_key_here
 
-# The product ref the paywall gates on. Create one in the SolvaPay
-# dashboard -> Products and copy its `prd_…` ID.
+# Product ref the paywall gates on. Create one in the dashboard
+# under Products and copy its `prd_…` ID.
 SOLVAPAY_PRODUCT_REF=prd_your_product_ref
 
-# Public origin this worker answers at. For `wrangler dev`,
-# http://localhost:8787 is fine. For deployed runs, the canonical URL
-# (e.g. https://mcp-workers-example.solvapay.com).
+# Canonical public URL this Worker answers at. For `wrangler dev`,
+# http://localhost:8787 is fine. For deployed runs, your custom
+# domain (e.g. https://mcp.your-company.com).
 MCP_PUBLIC_BASE_URL=http://localhost:8787
 
 # SolvaPay API origin. Omit / leave blank to use production
-# (https://api.solvapay.com). Set explicitly to point at a different
-# environment (e.g. https://api-dev.solvapay.com for staging).
-# SOLVAPAY_API_BASE_URL=https://api.solvapay.com
+# (https://api.solvapay.com — this is what src/worker.ts falls back
+# to). Set explicitly if you need a different environment:
+# SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
 
 # Flip to "false" to skip registering the paywalled demo tools
 # (predict_price_chart, predict_direction — toy stock-predictor
