@@ -211,71 +211,67 @@ app.post(
 
 ### Basic Error Handling
 
-The HTTP adapter automatically handles `PaywallError` and converts it to an HTTP response:
+The HTTP adapter routes paywall gate outcomes through a `formatGate`
+channel that emits a 402 response with the standard JSON body
+(`{success:false, error, product, checkoutUrl, message, ...}`). Merchants
+don't need to catch anything for the happy path:
 
 ```typescript
-import { PaywallError } from '@solvapay/server'
-
 async function createTask(req: express.Request) {
   // Your business logic
   return { success: true, task: {} }
 }
 
-// PaywallError is automatically handled
+// 402 paywall responses are emitted by the adapter automatically.
 app.post('/api/tasks', payable.http(createTask))
 ```
 
-### Custom Error Handling
+### Custom Paywall Responses
 
-Wrap the handler to customize error responses:
+Use `paywall.decide()` directly when you want full control over the
+402 response shape (e.g. a hand-rolled route that doesn't use
+`payable.http()`):
 
 ```typescript
-async function handlePaywall(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) {
-  try {
-    const handler = payable.http(createTask)
-    await handler(req, res)
-  } catch (error) {
-    if (error instanceof PaywallError) {
-      // Custom paywall response
-      return res.status(402).json({
-        error: 'Payment required',
-        message: error.message,
-        checkoutUrl: error.structuredContent.checkoutUrl,
-        product: error.structuredContent.product,
-      })
-    }
+app.post('/api/tasks', async (req, res) => {
+  const decision = await solvaPay.paywall.decide(req.body, {
+    product: 'prd_myapi',
+  })
 
-    // Handle other errors
-    next(error)
+  if (decision.outcome === 'gate') {
+    return res.status(402).json({
+      error: decision.gate.kind === 'activation_required'
+        ? 'Activation required'
+        : 'Payment required',
+      product: decision.gate.product,
+      checkoutUrl: decision.gate.checkoutUrl,
+      message: decision.gate.message,
+    })
   }
-}
 
-app.post('/api/tasks', handlePaywall)
+  const task = await createTask(req)
+  res.json(task)
+})
 ```
 
-### Global Error Handler
+### Legacy `PaywallError` Compat
 
-Use Express error middleware for consistent error handling:
+Consumers that still `try/catch` a `PaywallError` keep working —
+`PaywallError` is exported as a compat shim for merchant code that
+throws from deep inside business logic:
 
 ```typescript
 import { PaywallError } from '@solvapay/server'
 
-// Error handling middleware
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (error instanceof PaywallError) {
     return res.status(402).json({
       error: 'Payment required',
       checkoutUrl: error.structuredContent.checkoutUrl,
-      // Include all structured content
       ...error.structuredContent,
     })
   }
 
-  // Handle other errors
   console.error('Unhandled error:', error)
   res.status(500).json({ error: 'Internal server error' })
 })
@@ -422,7 +418,11 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok' })
 })
 
-// Error handling middleware
+// Error handling middleware — the HTTP adapter already emits 402
+// paywall responses via `formatGate`, so anything landing here is a
+// genuine uncaught error. The `instanceof PaywallError` branch
+// below is a compat shim for merchant code that still throws
+// `PaywallError` directly from deep business logic.
 app.use((error: Error, req: Request, res: Response, next: express.NextFunction) => {
   if (error instanceof PaywallError) {
     return res.status(402).json({

@@ -94,6 +94,32 @@ app.post('/tasks', payable.http(async req => {
 }))
 ```
 
+### Create-or-link semantics
+
+When you call `POST /v1/sdk/customers` (or `ensureCustomer` / `syncCustomer`) with an email that already exists under this provider and the caller supplies an `externalRef`, the API links the `externalRef` onto the existing customer instead of returning `409 Conflict`. This lets you idempotently adopt pre-existing SolvaPay customers when wiring up your own auth layer for the first time. Callers without `externalRef` still get `409` on duplicate email so the behavior is explicit.
+
+### Update a customer
+
+Use `PATCH /v1/sdk/customers/:reference` to backfill or change `externalRef`, `name`, or `email`. Only the fields you supply are modified.
+
+```typescript
+await fetch(`https://api.solvapay.com/v1/sdk/customers/${ref}`, {
+  method: 'PATCH',
+  headers: { Authorization: `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ externalRef: 'auth_user_12345' }),
+})
+```
+
+## Data helpers
+
+Three read-only endpoints power customer-facing UI without bloating `check_purchase`:
+
+- **`GET /v1/sdk/platform-config`** — browser-safe platform values (today: the SolvaPay Stripe publishable key used to initialize the Stripe.js client). Resolves against the sandbox or live environment matching your secret key. Call it once on page load before mounting `<PaymentForm>`; additions will land here rather than in `/sdk/merchant`.
+- **`GET /v1/sdk/merchant`** — provider identity safe to render in checkout and mandate copy: `name`, `legalName`, `supportContact`, `termsUrl`, `privacyUrl`, `iconUrl` (square app icon), and `logoUrl` (absolute URL resolved against `ASSETS_BASE_URL`). Used by SDK components like `MandateText` and `CheckoutSummary`.
+- **`GET /v1/sdk/payment-method?customerRef=…`** — returns `{ kind: 'card', brand, last4, expMonth, expYear }` or `{ kind: 'none' }`. The card brand and last4 are mirrored onto the Customer by the `payment_intent.succeeded` webhook, so this endpoint reads from SolvaPay's database with no Stripe round-trip. Safe to poll alongside `check_purchase`.
+
+All three are exposed as route-wrapper helpers in `@solvapay/next` (`getMerchant`, `getProduct`, `getPaymentMethod`), as fetch handlers in `@solvapay/server/fetch`, and as MCP tools in the default `createSolvaPayMcpServer` tool surface.
+
 ## Paywall protection flow
 
 When your handler is wrapped with `payable()`, the SDK:
@@ -139,7 +165,7 @@ await reactivateRenewal(request, { purchaseRef: 'pur_...' })
 
 ### Activate a plan directly
 
-Activate a product for a customer on a specific plan without checkout. Handles free plans, credit-based activation, and plan switching.
+Activate a product for a customer on a specific plan without checkout. Handles free plans, credit-based activation, usage-based (PAYG) plans, and plan switching.
 
 ```typescript
 import { activatePlan } from '@solvapay/next'
@@ -150,6 +176,12 @@ const result = await activatePlan(request, {
 })
 // result.status: 'activated' | 'already_active' | 'topup_required' | 'payment_required' | 'invalid'
 ```
+
+Activation policy by plan type:
+
+- **Free** — always `activated`.
+- **Usage-based (PAYG)** — `activated` immediately at zero balance. The customer can start using the product and pay per action; top-up is a separate optional step via `createTopupPaymentIntent`.
+- **Recurring / hybrid** — return `topup_required` or `payment_required` when the customer has no credits and no card on file. Route them to checkout before granting access.
 
 When the customer already has an active purchase on a different plan, `activatePlan` automatically expires the old purchase and creates a new one.
 

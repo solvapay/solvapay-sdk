@@ -77,22 +77,20 @@ export const POST = payable.next(createTask)
 
 ### Using Next.js Helpers
 
-The `@solvapay/next` package provides helper functions that simplify common operations:
+The `@solvapay/next` package provides route-wrapper helpers that handle auth, body parsing, error formatting, and cache invalidation. Every wrapper returns `Promise<NextResponse>` — `return` it directly from your route handler.
+
+<Warning>
+**Breaking change (SDK 1.1):** wrappers such as `checkPurchase`, `createPaymentIntent`, `processPaymentIntent`, `activatePlan`, `cancelRenewal`, `reactivateRenewal`, `createCheckoutSession`, `createCustomerSession`, `syncCustomer`, `listPlans`, `getMerchant`, `getProduct`, `getPaymentMethod`, `getCustomerBalance`, and `trackUsage` now **always** return `Promise<NextResponse>`. Earlier versions returned `NextResponse | data`, so if you still have `result instanceof NextResponse ? result : NextResponse.json(result)` in your handlers, delete that branch.
+
+Unchanged: `getAuthenticatedUser`, `getCustomerReference`, and `syncCustomer` helpers that return raw user/customer data stay as-is.
+</Warning>
 
 ```typescript
 // app/api/check-purchase/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { checkPurchase } from '@solvapay/next'
 
-export async function GET(request: NextRequest) {
-  const result = await checkPurchase(request)
-
-  // checkPurchase returns NextResponse or data object
-  if (result instanceof NextResponse) {
-    return result
-  }
-
-  return NextResponse.json(result)
+export async function GET(request: Request) {
+  return checkPurchase(request)
 }
 ```
 
@@ -102,12 +100,10 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // app/api/check-purchase/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { checkPurchase } from '@solvapay/next'
 
-export async function GET(request: NextRequest) {
-  const result = await checkPurchase(request)
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+export async function GET(request: Request) {
+  return checkPurchase(request)
 }
 ```
 
@@ -115,18 +111,11 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // app/api/create-payment-intent/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { createPaymentIntent } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { planRef, productRef } = await request.json()
-
-  if (!planRef || !productRef) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
-  }
-
-  const result = await createPaymentIntent(request, { planRef, productRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+  return createPaymentIntent(request, { planRef, productRef })
 }
 ```
 
@@ -134,18 +123,11 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/api/process-payment/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { processPayment } from '@solvapay/next'
+import { processPaymentIntent } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { paymentIntentId, productRef, planRef } = await request.json()
-
-  if (!paymentIntentId || !productRef) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
-  }
-
-  const result = await processPayment(request, { paymentIntentId, productRef, planRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+  return processPaymentIntent(request, { paymentIntentId, productRef, planRef })
 }
 ```
 
@@ -153,14 +135,22 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/api/create-checkout-session/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { createCheckoutSession } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { planRef, productRef } = await request.json()
+  return createCheckoutSession(request, { planRef, productRef })
+}
+```
 
-  const result = await createCheckoutSession(request, { planRef, productRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+#### Create Customer Portal Session
+
+```typescript
+// app/api/create-customer-session/route.ts
+import { createCustomerSession } from '@solvapay/next'
+
+export async function POST(request: Request) {
+  return createCustomerSession(request)
 }
 ```
 
@@ -168,12 +158,10 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/api/sync-customer/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { syncCustomer } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
-  const result = await syncCustomer(request)
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+export async function POST(request: Request) {
+  return syncCustomer(request)
 }
 ```
 
@@ -181,13 +169,11 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/api/cancel-renewal/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { cancelRenewal } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { purchaseRef, reason } = await request.json()
-  const result = await cancelRenewal(request, { purchaseRef, reason })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+  return cancelRenewal(request, { purchaseRef, reason })
 }
 ```
 
@@ -195,13 +181,11 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/api/reactivate-renewal/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { reactivateRenewal } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { purchaseRef } = await request.json()
-  const result = await reactivateRenewal(request, { purchaseRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+  return reactivateRenewal(request, { purchaseRef })
 }
 ```
 
@@ -209,68 +193,115 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // app/api/activate-plan/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { activatePlan } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { productRef, planRef } = await request.json()
-  const result = await activatePlan(request, { productRef, planRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+  return activatePlan(request, { productRef, planRef })
 }
 ```
 
-Returns `{ status, purchaseRef?, checkoutUrl?, creditBalance?, ... }`. See [Purchase lifecycle management](./purchase-management) for all status values.
+Response body: `{ status, purchaseRef?, checkoutUrl?, creditBalance?, ... }`. Usage-based plans now activate eagerly at the plan step (no balance gate). See [Purchase lifecycle management](./purchase-management) for all status values.
 
 #### List Plans
 
 ```typescript
 // app/api/list-plans/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { listPlans } from '@solvapay/next'
 
-export async function GET(request: NextRequest) {
-  const result = await listPlans(request)
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+export async function GET(request: Request) {
+  return listPlans(request)
 }
 ```
 
-Returns `{ plans, productRef }`. Pass `?productRef=prd_...` as a query parameter.
+Response body: `{ plans, productRef }`. Pass `?productRef=prd_...` as a query parameter.
+
+#### Merchant, Product, and Payment Method
+
+```typescript
+// app/api/merchant/route.ts
+import { getMerchant } from '@solvapay/next'
+
+export async function GET(request: Request) {
+  return getMerchant(request)
+}
+```
+
+```typescript
+// app/api/product/route.ts
+import { getProduct } from '@solvapay/next'
+
+export async function GET(request: Request) {
+  return getProduct(request)
+}
+```
+
+```typescript
+// app/api/payment-method/route.ts
+import { getPaymentMethod } from '@solvapay/next'
+
+export async function GET(request: Request) {
+  return getPaymentMethod(request)
+}
+```
+
+- `getMerchant` returns `{ name, iconUrl, logoUrl, termsUrl, privacyUrl, ... }` — use it to brand checkout and mandate copy.
+- `getProduct` returns the product with public plans for the current authenticated customer.
+- `getPaymentMethod` returns `{ kind: 'card', brand, last4, expMonth, expYear } | { kind: 'none' }`, mirrored from the last successful `payment_intent.succeeded` webhook. Safe to poll alongside `check-purchase`.
+
+#### Customer Balance
+
+```typescript
+// app/api/customer-balance/route.ts
+import { getCustomerBalance } from '@solvapay/next'
+
+export async function GET(request: Request) {
+  return getCustomerBalance(request)
+}
+```
+
+#### Track Usage
+
+```typescript
+// app/api/track-usage/route.ts
+import { trackUsage } from '@solvapay/next'
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  return trackUsage(request, body)
+}
+```
 
 ## Server Components
 
-Use SolvaPay in Server Components to check purchase status:
+In Server Components, reach for the `*Core` primitives from `@solvapay/server` instead of the route-wrapper helpers — the wrappers always return `NextResponse`, which isn't useful when you want to read data.
 
 ```typescript
 // app/dashboard/page.tsx
-import { checkPurchase } from '@solvapay/next';
+import { checkPurchaseCore, isErrorResult } from '@solvapay/server';
 import { cookies } from 'next/headers';
+import { solvaPay } from '@/lib/solvapay';
 
 export default async function DashboardPage() {
-  // Create a request-like object for checkPurchase
   const cookieStore = await cookies();
   const headers = new Headers();
 
-  // Add auth headers if needed
   const authToken = cookieStore.get('auth-token');
   if (authToken) {
     headers.set('authorization', `Bearer ${authToken.value}`);
   }
 
-  const request = new Request('http://localhost', {
-    headers,
-  });
+  const request = new Request('http://localhost', { headers });
+  const result = await checkPurchaseCore(request, { solvaPay });
 
-  const purchase = await checkPurchase(request);
-
-  if (purchase instanceof Response) {
-    // Handle error
+  if (isErrorResult(result)) {
     return <div>Error checking purchase</div>;
   }
 
   return (
     <div>
       <h1>Dashboard</h1>
-      {purchase.hasPaidPurchase ? (
+      {result.hasPaidPurchase ? (
         <p>You have an active purchase!</p>
       ) : (
         <p>Please subscribe to access premium features.</p>
@@ -414,50 +445,34 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ### 2. Create API Routes
 
-Set up the required API routes using Next.js helpers:
+Set up the required API routes using Next.js helpers — each is a one-liner because every wrapper returns `Promise<NextResponse>`:
 
 ```typescript
 // app/api/check-purchase/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { checkPurchase } from '@solvapay/next'
 
-export async function GET(request: NextRequest) {
-  const result = await checkPurchase(request)
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+export async function GET(request: Request) {
+  return checkPurchase(request)
 }
 ```
 
 ```typescript
 // app/api/create-payment-intent/route.ts
-import { NextRequest, NextResponse } from 'next/server'
 import { createPaymentIntent } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { planRef, productRef } = await request.json()
-
-  if (!planRef || !productRef) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
-  }
-
-  const result = await createPaymentIntent(request, { planRef, productRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+  return createPaymentIntent(request, { planRef, productRef })
 }
 ```
 
 ```typescript
 // app/api/process-payment/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { processPayment } from '@solvapay/next'
+import { processPaymentIntent } from '@solvapay/next'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const { paymentIntentId, productRef, planRef } = await request.json()
-
-  if (!paymentIntentId || !productRef) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
-  }
-
-  const result = await processPayment(request, { paymentIntentId, productRef, planRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
+  return processPaymentIntent(request, { paymentIntentId, productRef, planRef })
 }
 ```
 
@@ -668,7 +683,7 @@ console.log(stats)
 
 2. **Separate API Routes**: Keep API routes separate from page routes for better organization.
 
-3. **Error Handling**: Always handle errors from helper functions (they may return `NextResponse`).
+3. **Error Handling**: Helpers always return `NextResponse` (including error responses). For Server Component / RSC code paths where you need raw data, use the `*Core` primitives from `@solvapay/server` and check with `isErrorResult`.
 
 4. **Type Safety**: Use TypeScript for better type safety.
 
