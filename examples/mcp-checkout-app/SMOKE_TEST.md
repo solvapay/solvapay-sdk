@@ -118,16 +118,20 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
 
 **Expect** *(step transitions: plan → amount → payment → success)*:
 
-- `step: 'amount'`. BackLink reads `← Back`. Three preset credit
-  tiers render (500 / 2 000 / 10 000), with `popular` on the 2 000
-  tier. Custom input is available.
+- Click fires `activate_plan({ planRef: <payg> })` immediately. The
+  active PAYG purchase is created server-side (eager activation — no
+  credit-balance gate), and the widget advances to `step: 'amount'`.
+  BackLink reads `← Back`. Three preset credit tiers render (500 /
+  2 000 / 10 000), with `popular` on the 2 000 tier. Custom input is
+  available.
 - Tap a preset → CTA label updates to `Continue — $18.00`.
-- Click Continue. SDK fires `activate_plan({ planRef: <payg> })`,
-  then `step: 'payment'`. BackLink reads `← Change amount`. The
-  order summary + Stripe Elements render inline; a
+- Click Continue. Purely a local transition to `step: 'payment'` —
+  activation already happened at the plan step, so the SDK does NOT
+  fire `activate_plan` again here. BackLink reads `← Change amount`.
+  The order summary + Stripe Elements render inline; a
   `Save card for future top-ups` checkbox sits below.
-- Complete the card. SDK fires `create_topup_payment_intent` then
-  `process_payment`. `step: 'success'`.
+- Complete the card. SDK fires `create_topup_payment_intent`
+  (purpose: `credit_topup`) then `process_payment`. `step: 'success'`.
 - Success surface: green check, `Credits added` heading, receipt
   grid (Amount / Credits / Plan / Rate), `Back to chat` CTA.
 - Click `Back to chat`. SDK fires `onRefreshBootstrap()` then
@@ -201,12 +205,17 @@ Run any intent tool from Claude Code or the basic-host stdout mode
 - Step 4: `/upgrade` bootstraps the checkout surface on demand; the
   round-trip from gate narration → LLM tool choice → widget mount
   exercises the full cross-package contract.
-- Step 5a: `activate_plan` fires **before** `create_topup_payment_intent`
-  so the active plan is PAYG by the time the topup lands — not the
-  other way around. Previously the SDK ran activation lazily via
-  `ActivationFlow` and relied on the server's `topup_required`
-  response to re-sequence the flow; the brief's replacement wires
-  the ordering explicitly.
+- Step 5a: `activate_plan` fires on the plan-step `Continue` click —
+  one user-visible activation action, and it completes before any
+  topup intent is created. For usage-based plans the backend
+  activates eagerly (no credit-balance gate), so clicking Continue
+  lands an active PAYG purchase even when the balance is zero. The
+  subsequent amount-step Continue is purely a local transition. If
+  payment later fails, the plan purchase stays live with zero
+  balance and the next paywalled tool call classifies as
+  `topup_required` (via `paywall-state.ts`), not
+  `activation_required` — so the LLM recovers with `topup`, not
+  another round of plan picking.
 - Step 5a/5b: `app.requestTeardown()` gets called on `Back to chat`
   after `onRefreshBootstrap` finishes, so the host sees a fresh
   bootstrap before unmounting.

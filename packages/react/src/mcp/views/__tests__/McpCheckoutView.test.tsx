@@ -409,30 +409,9 @@ describe('<McpCheckoutView> — plan step', () => {
 // ------------------------------------------------------------------
 
 describe('<McpCheckoutView> — PAYG branch', () => {
-  it('transitions plan → amount on Continue (no tool call yet)', async () => {
-    const { transport } = renderView({ fromPaywall: true })
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      ).toBeTruthy()
-    })
-    act(() => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
-    })
-    expect(screen.getByText(/How many credits/)).toBeTruthy()
-    expect(transport.activatePlan).not.toHaveBeenCalled()
-    expect(transport.createTopupPayment).not.toHaveBeenCalled()
-  })
-
-  it('fires activate_plan on amount → payment transition', async () => {
+  it('fires activate_plan on plan → amount transition', async () => {
     const activate = vi.fn().mockResolvedValue({ status: 'activated' })
-    const { transport } = renderView({
-      fromPaywall: true,
-      publishableKey: 'pk_test',
-    })
-    // Replace activatePlan on the existing transport (buildCtx froze it).
+    const { transport } = renderView({ fromPaywall: true })
     ;(transport as unknown as { activatePlan: typeof activate }).activatePlan = activate
 
     await waitFor(() => {
@@ -440,39 +419,61 @@ describe('<McpCheckoutView> — PAYG branch', () => {
         screen.getByRole('button', { name: /Continue with Pay as you go/ }),
       ).toBeTruthy()
     })
-    act(() => {
+    await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /Continue with Pay as you go/ }),
       )
     })
 
-    // Pick 2 000 credits — the popular preset.
-    const presets = screen.getAllByRole('button', { name: /\$/ })
-    const twoK = presets.find((el) => el.getAttribute('data-amount'))
-    expect(twoK).toBeTruthy()
-
-    // Type a custom amount instead — keeps the test robust against
-    // AmountPicker quick-amount default behaviour.
-    const customInput = screen.getByPlaceholderText('or custom amount')
-    act(() => {
-      fireEvent.change(customInput, { target: { value: '18' } })
-    })
-
-    const continueBtn = screen.getByRole('button', { name: /Continue/i })
-    await act(async () => {
-      fireEvent.click(continueBtn)
-    })
-
+    // The plan-step Continue click drives activation; the amount picker
+    // renders only after the activate_plan call resolves.
     await waitFor(() => {
       expect(activate).toHaveBeenCalledWith({
         productRef,
         planRef: 'pln_payg',
       })
     })
-    // After activation the view transitions to the payment step.
+    await waitFor(() => {
+      expect(screen.getByText(/How many credits/)).toBeTruthy()
+    })
+    expect(transport.createTopupPayment).not.toHaveBeenCalled()
+  })
+
+  it('amount → payment does not re-fire activate_plan (activation already happened at plan step)', async () => {
+    const { transport } = renderView({
+      fromPaywall: true,
+      publishableKey: 'pk_test',
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+      ).toBeTruthy()
+    })
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+      )
+    })
+    // Wait for the amount step so we know activation completed.
+    await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
+    expect(transport.activatePlan).toHaveBeenCalledTimes(1)
+
+    // Pick an amount and continue to payment.
+    const customInput = screen.getByPlaceholderText('or custom amount')
+    act(() => {
+      fireEvent.change(customInput, { target: { value: '18' } })
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
     await waitFor(() => {
       expect(screen.getByTestId('topup-form-stub')).toBeTruthy()
     })
+    // Amount-step Continue is purely a local state transition now — no
+    // second activate_plan round-trip.
+    expect(transport.activatePlan).toHaveBeenCalledTimes(1)
   })
 
   it('BackLink returns from amount to plan and clears any activation error', async () => {
@@ -480,12 +481,14 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     await waitFor(() =>
       screen.getByRole('button', { name: /Continue with Pay as you go/ }),
     )
-    act(() => {
+    // Plan-step Continue now awaits activate_plan — click needs to flush the
+    // async state update before the amount step renders.
+    await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /Continue with Pay as you go/ }),
       )
     })
-    expect(screen.getByText(/How many credits/)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
     // BackLink's arrow glyph is aria-hidden, so the accessible name is
     // just "Back" (not "← Back"). Anchor the match so "Back to chat"
     // or any other Back-* button doesn't false-match.
@@ -502,12 +505,14 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     await waitFor(() =>
       screen.getByRole('button', { name: /Continue with Pay as you go/ }),
     )
-    act(() => {
+    await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /Continue with Pay as you go/ }),
       )
     })
-    const customInput = screen.getByPlaceholderText('or custom amount')
+    const customInput = await waitFor(() =>
+      screen.getByPlaceholderText('or custom amount'),
+    )
     act(() => {
       fireEvent.change(customInput, { target: { value: '18' } })
     })
@@ -531,13 +536,16 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     await waitFor(() =>
       screen.getByRole('button', { name: /Continue with Pay as you go/ }),
     )
-    act(() => {
+    await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /Continue with Pay as you go/ }),
       )
     })
+    const amountInput = await waitFor(() =>
+      screen.getByPlaceholderText('or custom amount'),
+    )
     act(() => {
-      fireEvent.change(screen.getByPlaceholderText('or custom amount'), {
+      fireEvent.change(amountInput, {
         target: { value: '18' },
       })
     })
@@ -582,13 +590,16 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     await waitFor(() =>
       screen.getByRole('button', { name: /Continue with Pay as you go/ }),
     )
-    act(() => {
+    await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /Continue with Pay as you go/ }),
       )
     })
+    const amountInput = await waitFor(() =>
+      screen.getByPlaceholderText('or custom amount'),
+    )
     act(() => {
-      fireEvent.change(screen.getByPlaceholderText('or custom amount'), {
+      fireEvent.change(amountInput, {
         target: { value: '18' },
       })
     })
