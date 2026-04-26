@@ -30,10 +30,13 @@ todos:
     content: "Validation pass before PR: pnpm test (180/180 green across mcp-core + mcp), pnpm build (DTS + ESM + CJS clean), pnpm lint (clean on edited files), pnpm validate:fetch-runtime (18 + 11 exports reported), deno check on supabase-edge-mcp (clean), prettier --check on edited files (clean)."
     status: completed
   - id: p2-pr
-    content: "Open PR targeting dev so publish-preview.yml auto-publishes @solvapay/mcp@0.2.1-preview-<sha> + @solvapay/mcp-core@0.2.1-preview-<sha> to the @preview tag. Branch ready for commit+push; held off per git safety protocol pending explicit user approval."
-    status: pending
+    content: "PR #137 (fix/csp-auto-include-and-oauth-normalizer → dev) opened, all CI green, 2 Bugbot findings addressed (Medium: mirrored fix onto Express bridge; Low: extracted shared OAuth error normalizer into packages/mcp/src/internal/oauth-error-normalize.ts). Merged via merge-commit strategy (f0c7fb4) on 2026-04-26. Feature branch auto-deleted."
+    status: completed
   - id: p2-redeploy-smoke
-    content: After @preview republishes, redeploy Goldberg + MCP Inspector smoke (auth round-trip, merchant images render, OAuth errors RFC-shaped)
+    content: "Goldberg redeployed to Supabase Edge (project ohzivhxmsdnjahtaicus, function mcp v41 @ 14:53 UTC). OAuth normalizer verified via curl — POST /oauth/token with bogus credentials returns HTTP 401 {error: invalid_client, error_description: 'Invalid or inactive client'} (RFC 6749 §5.2 shape); missing grant_type returns HTTP 400 {error: invalid_request, error_description: 'grant_type: Required'}. Discovery doc at /.well-known/oauth-authorization-server returns HTTP 200 with correct issuer. CSP auto-include is in-deploy (deploy resolved to @solvapay/mcp-core@0.2.1-preview-f0c7fb4e…) but advertised via _meta.ui.csp in tools/list — needs an authenticated MCP client round-trip (Claude / MCP Inspector) to visually confirm merchant images load without CSP violation."
+    status: in_progress
+  - id: p2-predeploy-hardening
+    content: "Root-caused + patched a latent deploy trap surfaced during smoke: `supabase functions deploy` bundles `supabase/functions/mcp/deno.lock` if present, and the lockfile was an untracked local file that Deno regenerated against whatever happened to be in the local npm cache (in this run: the `1.0.0-preview-4a7c…` orphan that lacks the `./fetch` subpath export → BOOT_ERROR on v40). Fix: added `predeploy` script that `rm -f deno.lock && deno cache …` before every deploy, and gitignored `supabase/functions/mcp/deno.lock` with an inline comment documenting why. Follow-up PR on branch `fix/supabase-edge-mcp-predeploy-lockfile`."
     status: pending
   - id: p3a-gates-check
     content: "Run pre-promote gate checklist: E2E smoke, topup decision, 24-48h stability on @preview, fetch-runtime CI green"
