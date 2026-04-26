@@ -195,11 +195,15 @@ export function createRequestDeduplicator<T = unknown>(
 
   const inFlightRequests = new Map<string, Promise<T>>()
   const resultCache = new Map<string, CacheEntry<T>>()
-  // Cleanup interval runs in background - intentionally not stored for clearing
+  // Cleanup interval runs in background - intentionally not stored for clearing.
+  // Lazy-initialised on first `deduplicate()` call so constructing a
+  // deduplicator at module top-level is safe on runtimes that forbid
+  // I/O / timers in the global scope (e.g. Cloudflare Workers — see
+  // https://developers.cloudflare.com/workers/runtime-apis/handlers/).
   let _cleanupInterval: ReturnType<typeof setInterval> | null = null
 
-  // Start cleanup interval if caching is enabled
-  if (cacheTTL > 0) {
+  function ensureCleanupInterval(): void {
+    if (_cleanupInterval || cacheTTL <= 0) return
     _cleanupInterval = setInterval(
       () => {
         const now = Date.now()
@@ -232,6 +236,10 @@ export function createRequestDeduplicator<T = unknown>(
   }
 
   const deduplicate = async (key: string, fn: () => Promise<T>): Promise<T> => {
+    // Start the background cleanup on first use. Keeps module-scope
+    // construction Workers-safe; no-op once the interval is live.
+    ensureCleanupInterval()
+
     // Check cache first if caching is enabled
     if (cacheTTL > 0) {
       const cached = resultCache.get(key)
