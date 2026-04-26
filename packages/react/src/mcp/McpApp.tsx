@@ -39,7 +39,7 @@ import type { McpAccountViewProps } from './views/McpAccountView'
 import type { McpCheckoutViewProps } from './views/McpCheckoutView'
 import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
-import { AppHeader } from './views/AppHeader'
+import { AppHeader, HOSTS_WITH_MERCHANT_CHROME } from './views/AppHeader'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
 
 /**
@@ -384,29 +384,44 @@ export function McpApp({
     link.href = iconUrl
     if (!existing) document.head.appendChild(link)
 
-    // Kick off a preload so the browser starts fetching the icon the
-    // moment bootstrap resolves — by the time `<AppHeader>` mounts
-    // `<img src={iconUrl}>`, the HTTP response is typically already in
-    // the cache, so `onLoad` fires synchronously and the initials →
-    // icon swap is invisible. Managed via a separate `data-*` attr so
-    // favicon + preload links don't clobber each other.
+    // `<link rel="preload" as="image">` is gated on the same condition
+    // `AppHeader` uses to mount. Hosts that paint their own merchant
+    // chrome (ChatGPT / OpenAI / Claude — see
+    // `HOSTS_WITH_MERCHANT_CHROME`) suppress `<AppHeader>` entirely, so
+    // no `<img src={iconUrl}>` ever consumes the preload and the browser
+    // logs `preloaded but not used`. The favicon insertion above stays
+    // unconditional because browsers silently accept unused favicons
+    // and some hosts still pick it up for their chrome strip.
+    //
+    // `hostName` is null until `app.connect()` resolves — we match
+    // `AppHeader`'s own render-time fallback (`hostName && …` → render
+    // when null) by treating null as "will render", so a warm-cache
+    // preload is kicked off immediately on MCP Jam / VS Code / unknown
+    // hosts. If `hostName` later resolves to a chrome host, the cleanup
+    // branch below removes the stale preload tag.
+    const willRenderAppHeader =
+      !hostName || !HOSTS_WITH_MERCHANT_CHROME.test(hostName)
     const PRELOAD_ATTR = 'data-solvapay-icon-preload'
     const existingPreload = document.head.querySelector<HTMLLinkElement>(
       `link[${PRELOAD_ATTR}]`,
     )
-    const preload = existingPreload ?? document.createElement('link')
-    preload.setAttribute(PRELOAD_ATTR, '')
-    preload.rel = 'preload'
-    preload.as = 'image'
-    preload.href = iconUrl
-    if (!existingPreload) document.head.appendChild(preload)
+    if (willRenderAppHeader) {
+      const preload = existingPreload ?? document.createElement('link')
+      preload.setAttribute(PRELOAD_ATTR, '')
+      preload.rel = 'preload'
+      preload.as = 'image'
+      preload.href = iconUrl
+      if (!existingPreload) document.head.appendChild(preload)
+    } else if (existingPreload) {
+      existingPreload.remove()
+    }
 
     return () => {
       // Leave both tags in place across bootstrap updates so the tab
       // favicon doesn't flicker — the next render's effect will update
       // `href` in-place. Only clean up on unmount.
     }
-  }, [iconUrl])
+  }, [iconUrl, hostName])
 
   const providerConfig = useMemo(
     () => {
