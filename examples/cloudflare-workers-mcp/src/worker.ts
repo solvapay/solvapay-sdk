@@ -73,7 +73,7 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (req.method === 'OPTIONS') return browserCorsPreflight(req)
 
-    const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? 'https://api.solvapay.com'
+    const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? 'https://api-dev.solvapay.com'
     const handler = createSolvaPayMcpFetch({
       solvaPay: createSolvaPay({
         apiKey: requireEnv(env, 'SOLVAPAY_SECRET_KEY'),

@@ -31,7 +31,7 @@
     // starter. Created in the SolvaPay dashboard -> Products.
     "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",
     "MCP_PUBLIC_BASE_URL": "https://mcp-workers-example.solvapay.com",
-    "SOLVAPAY_API_BASE_URL": "https://api.solvapay.com",
+    "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com",
     "DEMO_TOOLS": "1"
   },
   "observability": {
