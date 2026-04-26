@@ -25,16 +25,16 @@ pnpm add @solvapay/mcp-core @solvapay/server
 
 ## What's in the box
 
-| Export | Use when |
-|---|---|
-| `MCP_TOOL_NAMES`, `McpToolName` | You're implementing a SolvaPay MCP transport tool on any framework and need the canonical tool names |
-| `buildSolvaPayDescriptors(opts)` | You're writing an MCP adapter (`fastmcp`, raw JSON-RPC) and want the full SolvaPay tool surface as descriptor objects |
-| `buildPayableHandler(solvaPay, ctx, handler)` | You're hand-rolling a paywall-protected tool and want the pre-check paywall to return a clean text-only narration on `content[0].text` + the gate on `structuredContent` |
-| `paywallToolResult(errOrGate)` | You have a `PaywallError` (legacy `try/catch`) or a `PaywallStructuredContent` gate from `paywall.decide()` and want a text-only tool result |
-| `SOLVAPAY_DEFAULT_CSP`, `mergeCsp(overrides)` | You're registering the SolvaPay UI resource and want the Stripe allow-list baked in |
-| `getOAuthAuthorizationServerResponse(opts)`, `getOAuthProtectedResourceResponse(url)` | You're serving the `.well-known/*` discovery JSON from any runtime |
-| `buildAuthInfoFromBearer(header, opts)` | You're plugging a raw `Authorization: Bearer …` header into an MCP `authInfo` envelope |
-| `McpBearerAuthError`, `extractBearerToken`, `decodeJwtPayload`, `getCustomerRefFromJwtPayload`, `getCustomerRefFromBearerAuthHeader` | Low-level JWT bearer parsing — no signature verification (validate upstream first) |
+| Export                                                                                                                               | Use when                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MCP_TOOL_NAMES`, `McpToolName`                                                                                                      | You're implementing a SolvaPay MCP transport tool on any framework and need the canonical tool names                                                                                                                                                                |
+| `buildSolvaPayDescriptors(opts)`                                                                                                     | You're writing an MCP adapter (`fastmcp`, raw JSON-RPC) and want the full SolvaPay tool surface as descriptor objects                                                                                                                                               |
+| `buildPayableHandler(solvaPay, ctx, handler)`                                                                                        | You're hand-rolling a paywall-protected tool and want the pre-check paywall to return a clean text-only narration on `content[0].text` + the gate on `structuredContent`                                                                                            |
+| `paywallToolResult(errOrGate)`                                                                                                       | You have a `PaywallError` (legacy `try/catch`) or a `PaywallStructuredContent` gate from `paywall.decide()` and want a text-only tool result                                                                                                                        |
+| `SOLVAPAY_DEFAULT_CSP`, `mergeCsp(overrides, apiBaseUrl?)`                                                                           | You're registering the SolvaPay UI resource and want the Stripe allow-list baked in. Pass `apiBaseUrl` to auto-include the configured SolvaPay API origin in `resourceDomains` + `connectDomains` so merchant branding images render without a hand-extended `csp`. |
+| `getOAuthAuthorizationServerResponse(opts)`, `getOAuthProtectedResourceResponse(url)`                                                | You're serving the `.well-known/*` discovery JSON from any runtime                                                                                                                                                                                                  |
+| `buildAuthInfoFromBearer(header, opts)`                                                                                              | You're plugging a raw `Authorization: Bearer …` header into an MCP `authInfo` envelope                                                                                                                                                                              |
+| `McpBearerAuthError`, `extractBearerToken`, `decodeJwtPayload`, `getCustomerRefFromJwtPayload`, `getCustomerRefFromBearerAuthHeader` | Low-level JWT bearer parsing — no signature verification (validate upstream first)                                                                                                                                                                                  |
 
 ## How paywalls work
 
@@ -85,10 +85,10 @@ myAdapter.registerResource(resource)
 
 ## Peer dependencies
 
-| Peer | Why | Optional? |
-|---|---|---|
+| Peer               | Why                                                                                    | Optional?                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `@solvapay/server` | Runtime `*Core` helpers + `SolvaPay`, `PaywallError`, `PaywallStructuredContent` types | Yes — only consumed by `buildSolvaPayDescriptors`, `buildPayableHandler`, `paywallToolResult` |
-| `zod` | Descriptor `inputSchema` shape | Yes — descriptor consumers decide whether to use zod |
+| `zod`              | Descriptor `inputSchema` shape                                                         | Yes — descriptor consumers decide whether to use zod                                          |
 
 ## See also
 

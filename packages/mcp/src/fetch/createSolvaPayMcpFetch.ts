@@ -16,24 +16,16 @@
  */
 
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
-import {
-  applyHideToolsByAudience,
-  buildSolvaPayMcpServer,
-} from '../internal/buildMcpServer'
-import {
-  registerPayableTool,
-  type RegisterPayableToolOptions,
-} from '../registerPayableTool'
+import { applyHideToolsByAudience, buildSolvaPayMcpServer } from '../internal/buildMcpServer'
+import { registerPayableTool, type RegisterPayableToolOptions } from '../registerPayableTool'
 import type { AdditionalToolsContext } from '../server'
-import {
-  createSolvaPayMcpFetchHandler,
-  type CreateSolvaPayMcpFetchHandlerOptions,
-} from './handler'
+import { createSolvaPayMcpFetchHandler, type CreateSolvaPayMcpFetchHandlerOptions } from './handler'
 
 export type { AdditionalToolsContext } from '../server'
 
 export interface CreateSolvaPayMcpFetchOptions
-  extends BuildSolvaPayDescriptorsOptions,
+  extends
+    Omit<BuildSolvaPayDescriptorsOptions, 'apiBaseUrl'>,
     Omit<CreateSolvaPayMcpFetchHandlerOptions, 'server'> {
   /**
    * Register non-SolvaPay tools on the freshly-built server. Receives
@@ -99,6 +91,13 @@ export function createSolvaPayMcpFetch(
     ...handlerRest
   } = options
 
+  // `apiBaseUrl` lives on the handler-options extension (it's required
+  // there for the OAuth proxy upstream), but we also forward it to the
+  // descriptor builder so the CSP auto-includes the configured API
+  // origin. Read from `handlerRest` without removing it — the handler
+  // call below still needs its copy to build the OAuth router.
+  const apiBaseUrl = handlerRest.apiBaseUrl
+
   const { server, descriptors } = buildSolvaPayMcpServer({
     solvaPay,
     productRef,
@@ -108,6 +107,7 @@ export function createSolvaPayMcpFetch(
     publicBaseUrl,
     ...(views !== undefined ? { views } : {}),
     ...(csp !== undefined ? { csp } : {}),
+    ...(apiBaseUrl !== undefined ? { apiBaseUrl } : {}),
     ...(getCustomerRef !== undefined ? { getCustomerRef } : {}),
     ...(onToolCall !== undefined ? { onToolCall } : {}),
     ...(onToolResult !== undefined ? { onToolResult } : {}),

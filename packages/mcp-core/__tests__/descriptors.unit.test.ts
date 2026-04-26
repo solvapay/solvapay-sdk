@@ -197,15 +197,71 @@ describe('buildSolvaPayDescriptors', () => {
       }),
     ).toThrow(/http\(s\)/)
   })
+
+  it('auto-includes apiBaseUrl origin in resourceDomains + connectDomains', () => {
+    const { resource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      apiBaseUrl: 'https://api-dev.solvapay.com',
+    })
+    expect(resource.csp.resourceDomains).toContain('https://api-dev.solvapay.com')
+    expect(resource.csp.connectDomains).toContain('https://api-dev.solvapay.com')
+    // Baseline Stripe origins stay intact.
+    expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
+    expect(resource.csp.connectDomains).toContain('https://api.stripe.com')
+  })
+
+  it('apiBaseUrl is normalised to origin (strips path + trailing slash)', () => {
+    const { resource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      apiBaseUrl: 'https://api.solvapay.com/v1/',
+    })
+    expect(resource.csp.resourceDomains).toContain('https://api.solvapay.com')
+    expect(resource.csp.resourceDomains).not.toContain('https://api.solvapay.com/v1/')
+  })
+
+  it('apiBaseUrl auto-include dedupes against integrator-supplied csp overrides', () => {
+    const { resource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      apiBaseUrl: 'https://api.solvapay.com',
+      csp: {
+        resourceDomains: ['https://api.solvapay.com', 'https://assets.merchant.test'],
+      },
+    })
+    const occurrences = resource.csp.resourceDomains.filter(d => d === 'https://api.solvapay.com')
+    expect(occurrences).toHaveLength(1)
+    expect(resource.csp.resourceDomains).toContain('https://assets.merchant.test')
+  })
+
+  it('omitting apiBaseUrl leaves CSP untouched (backward compat)', () => {
+    const { resource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    expect(resource.csp.resourceDomains.some(d => d.includes('solvapay.com'))).toBe(false)
+    expect(resource.csp.connectDomains.some(d => d.includes('solvapay.com'))).toBe(false)
+  })
 })
 
 describe('buildSolvaPayDescriptors → bootstrap payload', () => {
   async function invokeOpen(
     toolName: string,
     overrides: MakeSolvaPayOverrides = {},
-    extra?: Parameters<
-      ReturnType<typeof buildSolvaPayDescriptors>['tools'][number]['handler']
-    >[1],
+    extra?: Parameters<ReturnType<typeof buildSolvaPayDescriptors>['tools'][number]['handler']>[1],
   ) {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(overrides),
