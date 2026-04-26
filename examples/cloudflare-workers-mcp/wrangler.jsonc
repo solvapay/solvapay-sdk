@@ -23,18 +23,22 @@
   "routes": [
     {
       "pattern": "mcp-workers-example.solvapay.com",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
   "vars": {
     // Replace with your own SolvaPay product ref when cloning this
     // starter. Created in the SolvaPay dashboard -> Products.
-    "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",
+    "SOLVAPAY_PRODUCT_REF": "prd_30BAQH9T",
     "MCP_PUBLIC_BASE_URL": "https://mcp-workers-example.solvapay.com",
+    // Worker.ts defaults to https://api.solvapay.com (production) when
+    // this var is unset. Overridden here so this specific staging deploy
+    // hits api-dev for side-by-side parity with the Goldberg Supabase
+    // instance. Remove this line to point at production.
     "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com",
-    "DEMO_TOOLS": "1"
+    "DEMO_TOOLS": "1",
   },
   "observability": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
 }

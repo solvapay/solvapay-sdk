@@ -58,7 +58,7 @@ wrangler secret put SOLVAPAY_SECRET_KEY
 #   - `routes[].pattern`  — your hostname (or remove the routes block entirely)
 #   - `vars.SOLVAPAY_PRODUCT_REF`    — your product ref
 #   - `vars.MCP_PUBLIC_BASE_URL`     — the canonical public URL
-#   - `vars.SOLVAPAY_API_BASE_URL`   — the SolvaPay backend origin (default `https://api-dev.solvapay.com`)
+#   - `vars.SOLVAPAY_API_BASE_URL`   — the SolvaPay backend origin (defaults to `https://api.solvapay.com`; override for staging/dev environments)
 
 pnpm deploy
 ```
@@ -90,7 +90,7 @@ flowchart TD
     Worker["src/worker.ts<br/>(Cloudflare Worker)"]
     Fetch["createSolvaPayMcpFetch<br/>(from @solvapay/mcp/fetch)"]
     Core["buildSolvaPayDescriptors<br/>(from @solvapay/mcp-core, transitive)"]
-    API["api-dev.solvapay.com<br/>(OAuth + merchant product)"]
+    API["api.solvapay.com<br/>(OAuth + merchant product)"]
 
     Client -->|POST /| Worker
     Worker -->|CORS wrap| Fetch

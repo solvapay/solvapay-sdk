@@ -79,7 +79,7 @@ let cachedHandler: ((req: Request) => Promise<Response>) | undefined
 function getHandler(env: Env): (req: Request) => Promise<Response> {
   if (cachedHandler) return cachedHandler
 
-  const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? 'https://api-dev.solvapay.com'
+  const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? 'https://api.solvapay.com'
   cachedHandler = createSolvaPayMcpFetch({
     solvaPay: createSolvaPay({
       apiKey: requireEnv(env, 'SOLVAPAY_SECRET_KEY'),

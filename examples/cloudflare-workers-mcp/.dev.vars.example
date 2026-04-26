@@ -18,10 +18,10 @@ SOLVAPAY_PRODUCT_REF=prd_your_product_ref
 # (e.g. https://mcp-workers-example.solvapay.com).
 MCP_PUBLIC_BASE_URL=http://localhost:8787
 
-# SolvaPay API origin. Omit / leave blank to use the SolvaPay backend
-# (https://api-dev.solvapay.com). Set explicitly to point at a
-# different environment (e.g. a preview backend).
-# SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+# SolvaPay API origin. Omit / leave blank to use production
+# (https://api.solvapay.com). Set explicitly to point at a different
+# environment (e.g. https://api-dev.solvapay.com for staging).
+# SOLVAPAY_API_BASE_URL=https://api.solvapay.com
 
 # Flip to "false" to skip registering the paywalled demo tools
 # (predict_price_chart, predict_direction — toy stock-predictor
