@@ -190,10 +190,13 @@ async function relayJsonResponse(upstream: Response, res: ResponseLike): Promise
 }
 
 /**
- * RFC 6749 §5.2 valid error codes for the token endpoint. Revocation
- * (RFC 7009 §2.2.1) accepts the first two plus `unsupported_token_type`,
- * which we never synthesise — an HTTP 400 without a recognisable mapping
- * always lands on `invalid_request` regardless of endpoint.
+ * RFC 6749 §5.2 valid error codes for the token endpoint. §4.1.2.1
+ * adds `server_error`, `temporarily_unavailable`, and `access_denied`,
+ * which authorization servers may also emit from the token endpoint in
+ * practice. Revocation (RFC 7009 §2.2.1) accepts the first two plus
+ * `unsupported_token_type`, which we never synthesise — an HTTP 400
+ * without a recognisable mapping always lands on `invalid_request`
+ * regardless of endpoint.
  */
 type OAuthTokenErrorCode =
   | 'invalid_request'
@@ -204,6 +207,28 @@ type OAuthTokenErrorCode =
   | 'invalid_scope'
   | 'server_error'
   | 'temporarily_unavailable'
+  | 'access_denied'
+
+/**
+ * Runtime allow-list of RFC 6749 token + authorization error codes. An
+ * upstream body whose `error` field is in this set is trusted and
+ * proxied verbatim; anything else (e.g. NestJS's literal
+ * `"Unauthorized"` / `"Forbidden"` labels) falls through to
+ * `deriveOAuthErrorCode` for mapping.
+ *
+ * Kept in sync with the fetch bridge (packages/mcp/src/fetch/oauth-bridge.ts).
+ */
+const VALID_OAUTH_TOKEN_ERROR_CODES = new Set<string>([
+  'invalid_request',
+  'invalid_client',
+  'invalid_grant',
+  'unauthorized_client',
+  'unsupported_grant_type',
+  'invalid_scope',
+  'server_error',
+  'temporarily_unavailable',
+  'access_denied',
+])
 
 interface OAuthErrorBody {
   error: OAuthTokenErrorCode | string
@@ -212,11 +237,9 @@ interface OAuthErrorBody {
 }
 
 function hasOAuthErrorShape(body: unknown): body is OAuthErrorBody {
-  return (
-    body !== null &&
-    typeof body === 'object' &&
-    typeof (body as Record<string, unknown>).error === 'string'
-  )
+  if (body === null || typeof body !== 'object') return false
+  const err = (body as Record<string, unknown>).error
+  return typeof err === 'string' && VALID_OAUTH_TOKEN_ERROR_CODES.has(err)
 }
 
 function extractZodErrors(body: Record<string, unknown>): Array<Record<string, unknown>> {

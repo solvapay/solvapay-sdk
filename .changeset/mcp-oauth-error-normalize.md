@@ -2,12 +2,14 @@
 '@solvapay/mcp': patch
 ---
 
-`createOAuthTokenHandler` (and `createOAuthRevokeHandler`) now only
-pass an upstream error body through unchanged when its `error` field
-is one of the nine RFC 6749 error codes accepted at the token endpoint
-(`invalid_request`, `invalid_client`, `invalid_grant`,
-`unauthorized_client`, `unsupported_grant_type`, `invalid_scope`,
-`server_error`, `temporarily_unavailable`, `access_denied`).
+`createOAuthTokenHandler` + `createOAuthRevokeHandler` on both the
+fetch bridge (`@solvapay/mcp/fetch`) and the Express bridge
+(`@solvapay/mcp/express`) now only pass an upstream error body through
+unchanged when its `error` field is one of the nine RFC 6749 error
+codes accepted at the token endpoint (`invalid_request`,
+`invalid_client`, `invalid_grant`, `unauthorized_client`,
+`unsupported_grant_type`, `invalid_scope`, `server_error`,
+`temporarily_unavailable`, `access_denied`).
 
 Previously any upstream body with a string `error` field was treated
 as RFC-compliant and proxied verbatim. NestJS' default exception

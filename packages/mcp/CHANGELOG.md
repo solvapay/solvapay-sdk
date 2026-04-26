@@ -6,18 +6,19 @@ the inaugural release are maintained by hand.
 
 ## 0.2.1
 
-### Fixed: OAuth token-error normalizer no longer leaks non-RFC upstream labels
+### Fixed: OAuth token-error normalizer no longer leaks non-RFC upstream labels (both bridges)
 
-`createOAuthTokenHandler` / `createOAuthRevokeHandler` previously
-treated any upstream body with a string `error` field as RFC-compliant
-and proxied it verbatim. NestJS's default exception filter ships
-`{ error: "Unauthorized", message, statusCode }` on 401 responses, so
-the literal `"Unauthorized"` leaked through unchanged and strict MCP
-OAuth clients (MCPJam, MCP Inspector with validation) surfaced the
-token exchange as an opaque "auth failed".
+`createOAuthTokenHandler` / `createOAuthRevokeHandler` on **both**
+adapter bridges (`@solvapay/mcp/fetch` and `@solvapay/mcp/express`)
+previously treated any upstream body with a string `error` field as
+RFC-compliant and proxied it verbatim. NestJS's default exception
+filter ships `{ error: "Unauthorized", message, statusCode }` on 401
+responses, so the literal `"Unauthorized"` leaked through unchanged
+and strict MCP OAuth clients (MCPJam, MCP Inspector with validation)
+surfaced the token exchange as an opaque "auth failed".
 
-The pass-through gate now checks membership in an RFC 6749 token
-error-code allow-list (`invalid_request`, `invalid_client`,
+The pass-through gate on each bridge now checks membership in an RFC
+6749 token error-code allow-list (`invalid_request`, `invalid_client`,
 `invalid_grant`, `unauthorized_client`, `unsupported_grant_type`,
 `invalid_scope`, `server_error`, `temporarily_unavailable`,
 `access_denied`). Non-RFC bodies fall through to
