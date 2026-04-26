@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "paths": {
+      "@solvapay/react/mcp": ["../../packages/react/src/mcp/index.ts"],
+      "@solvapay/react/styles.css": ["../../packages/react/src/styles.css"],
+      "@solvapay/react/mcp/styles.css": ["../../packages/react/src/mcp/styles.css"]
+    }
+  },
+  // Worker TS: check the Cloudflare Worker entrypoint, the demo
+  // tool registrations, and the asset-module declaration. The widget
+  // source (`src/mcp-app.tsx`) is transpiled by vite during the
+  // iframe build and has its own type-drift against
+  // `@modelcontextprotocol/ext-apps`'s `McpAppFull` shape that the
+  // sibling `supabase-edge-mcp` also doesn't typecheck — delegating
+  // widget typechecking to vite is consistent across both examples.
+  "include": ["src/worker.ts", "src/demo-tools.ts", "src/assets.d.ts", "vite.config.ts"],
+  "exclude": ["dist", ".wrangler", "src/assets", "src/mcp-app.tsx"]
+}

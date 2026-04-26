@@ -1,5 +1,14 @@
 ---
 name: Worker cache well-known discovery
+superseded_by: cloudflare_workers_mcp_example_299944db
+supersede_rationale: >
+  Obviated by `examples/cloudflare-workers-mcp/` — once the primary MCP
+  server itself runs as a Cloudflare Worker colocated with the client
+  path, the `.well-known/*` discovery documents are served directly
+  from the Worker runtime (no Supabase round-trip to cache in front
+  of). The `supabase-edge-mcp-proxy` this plan was going to modify
+  becomes optional infrastructure once the Workers example replaces
+  Goldberg's prod path.
 overview: Teach the existing `supabase-edge-mcp-proxy` Cloudflare Worker to cache the three `/.well-known/*` OAuth discovery documents at Cloudflare's edge, so MCP clients stop paying the Supabase cold-start tax on every connect. Keep every other route (OAuth DCR/authorize/token/revoke, MCP JSON-RPC) as a dumb passthrough.
 todos:
   - id: scope-cache-paths

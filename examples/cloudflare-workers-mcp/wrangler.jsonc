@@ -1,0 +1,51 @@
+/**
+ * Wrangler config for the SolvaPay MCP Cloudflare Workers example.
+ *
+ * - `main` points at the fetch-first entrypoint that composes
+ *   `@solvapay/mcp/fetch` in a single call.
+ * - `import mcpAppHtml from './assets/mcp-app.html'` resolves to the
+ *   file contents at build time via Wrangler's built-in Text module
+ *   rule (covers .txt, .html, .sql by default) - no Workers Assets
+ *   binding required. Vite produces src/assets/mcp-app.html via the
+ *   `build` script (see package.json).
+ * - `nodejs_compat` is a safety net for any transitively Node-ish path
+ *   in `@modelcontextprotocol/sdk`. The SolvaPay MCP surface itself is
+ *   fetch-first; this flag just prevents runtime surprises.
+ * - `SOLVAPAY_SECRET_KEY` is a secret, not a var. Set with:
+ *     wrangler secret put SOLVAPAY_SECRET_KEY
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "solvapay-mcp-workers-example",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-04-26",
+  "compatibility_flags": ["nodejs_compat"],
+  // Route binds a custom domain to this Worker. Replace with your
+  // own zone or remove this block entirely to serve on the default
+  // `<worker>.<subdomain>.workers.dev` URL.
+  "routes": [
+    {
+      "pattern": "mcp-workers-example.solvapay.com",
+      "custom_domain": true,
+    },
+  ],
+  "vars": {
+    // Replace with your own SolvaPay product ref — create one in the
+    // SolvaPay dashboard -> Products and copy its `prd_…` ID here, OR
+    // override at deploy time via `wrangler secret put SOLVAPAY_PRODUCT_REF`
+    // (secret overrides this var at runtime).
+    "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",
+    // Replace with your own canonical public URL (OAuth `issuer` will
+    // reflect this). `wrangler secret put MCP_PUBLIC_BASE_URL` also
+    // works at runtime.
+    "MCP_PUBLIC_BASE_URL": "https://your-worker.example.com",
+    "DEMO_TOOLS": "1",
+    // `SOLVAPAY_API_BASE_URL` is intentionally not committed here —
+    // src/worker.ts defaults to https://api.solvapay.com (production).
+    // Override at deploy time via `wrangler secret put SOLVAPAY_API_BASE_URL`
+    // when you need to point at a staging backend.
+  },
+  "observability": {
+    "enabled": true,
+  },
+}

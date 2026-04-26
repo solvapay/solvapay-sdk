@@ -172,6 +172,63 @@ importers:
         specifier: ^4.1.3
         version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
+  examples/cloudflare-workers-mcp:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20251124.0
+        version: 4.20260425.1
+      '@modelcontextprotocol/ext-apps':
+        specifier: ^1.5.0
+        version: 1.5.0(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@4.3.6)
+      '@solvapay/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
+      '@solvapay/mcp-core':
+        specifier: workspace:*
+        version: link:../../packages/mcp-core
+      '@solvapay/react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      '@solvapay/server':
+        specifier: workspace:*
+        version: link:../../packages/server
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.1
+        version: 6.0.1(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^8.0.6
+        version: 8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vite-plugin-singlefile:
+        specifier: ^2.3.2
+        version: 2.3.2(rollup@4.60.1)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      wrangler:
+        specifier: ^4.47.0
+        version: 4.85.0(@cloudflare/workers-types@4.20260425.1)
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+
   examples/express-basic:
     dependencies:
       '@solvapay/core':
