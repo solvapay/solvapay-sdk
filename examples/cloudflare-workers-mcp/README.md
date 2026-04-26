@@ -32,8 +32,8 @@ pnpm install
 pnpm -w build:packages
 
 cd examples/cloudflare-workers-mcp
-cp .dev.vars.example .dev.vars
-# Fill in SOLVAPAY_SECRET_KEY, SOLVAPAY_PRODUCT_REF in .dev.vars
+cp .env.example .env
+# Fill in SOLVAPAY_SECRET_KEY, SOLVAPAY_PRODUCT_REF in .env
 
 pnpm build            # Builds src/assets/mcp-app.html via vite
 pnpm serve:local      # wrangler dev on http://localhost:8787
@@ -51,32 +51,43 @@ Then point an MCP client at `http://localhost:8787/`. Good candidates for a firs
 # From examples/cloudflare-workers-mcp/
 pnpm build
 
-# Set the merchant secret (one-time per Worker)
+# One-time: upload the merchant secret to the Worker
 pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY
 
-# Edit wrangler.jsonc:
-#   - `routes[].pattern`  — your hostname (or remove the routes block entirely to serve on *.workers.dev)
-#   - `vars.SOLVAPAY_PRODUCT_REF`    — your product ref (prd_…)
-#   - `vars.MCP_PUBLIC_BASE_URL`     — the canonical public URL
-# SOLVAPAY_API_BASE_URL is not a var — worker.ts defaults to https://api.solvapay.com.
-# Override only if you need a different environment:
-#   echo "https://api-dev.solvapay.com" | pnpm exec wrangler secret put SOLVAPAY_API_BASE_URL
+# Copy .env.example -> .env and fill in your real values
+# (product ref, canonical URL, optional staging API base).
+cp .env.example .env
+$EDITOR .env
 
-pnpm deploy
+# Edit wrangler.jsonc one-offs you want durable in git:
+#   - `routes[].pattern`  — your hostname (or remove the routes block
+#     entirely to serve on *.workers.dev)
+
+pnpm run deploy
 ```
 
-### Deploy-time overrides via secrets
+### How the deploy overrides work
 
-Every var in `wrangler.jsonc` can be overridden at runtime by a same-named `wrangler secret put`. Useful when you want to keep the committed `vars` clean (safe defaults, ready to clone) but point a specific Worker at different values:
+`wrangler.jsonc` intentionally ships public-safe placeholder values
+(`prd_your_product_ref`, `https://your-worker.example.com`, no
+`SOLVAPAY_API_BASE_URL` override — src/worker.ts falls back to
+`https://api.solvapay.com`). This means anyone who clones the repo
+can run `pnpm run deploy` without accidentally connecting to someone
+else's merchant or backend environment.
 
-```bash
-# Override committed placeholders without editing wrangler.jsonc
-echo "prd_your_real_ref"           | pnpm exec wrangler secret put SOLVAPAY_PRODUCT_REF
-echo "https://your-worker.example" | pnpm exec wrangler secret put MCP_PUBLIC_BASE_URL
-echo "https://api-dev.solvapay.com"| pnpm exec wrangler secret put SOLVAPAY_API_BASE_URL
-```
+`pnpm run deploy` runs [`scripts/deploy.mjs`](./scripts/deploy.mjs),
+which sources `.env` (gitignored) and passes your real values
+through to `wrangler deploy --var KEY:VALUE` for:
 
-Secrets are not committed; they persist across `wrangler deploy` runs and can be rotated without a repo change.
+- `SOLVAPAY_PRODUCT_REF`
+- `MCP_PUBLIC_BASE_URL`
+- `SOLVAPAY_API_BASE_URL` (optional)
+
+Your `SOLVAPAY_SECRET_KEY` stays in `.env` for `wrangler dev`
+but is *not* re-uploaded on every deploy — it lives on the Worker as
+a proper Secret (via the one-time `wrangler secret put` above) and
+persists across deploys. Rotating it is a single `wrangler secret
+put` + editing `.env`.
 
 ## File layout
 
@@ -87,7 +98,7 @@ examples/cloudflare-workers-mcp/
 ├── tsconfig.json             // ES2022, Bundler, @cloudflare/workers-types
 ├── vite.config.ts            // Builds src/mcp-app.tsx -> dist/mcp-app.html (duplicated from supabase-edge-mcp)
 ├── mcp-app.html              // top-level HTML entry
-├── .dev.vars.example
+├── .env.example
 ├── .gitignore
 └── src/
     ├── worker.ts             // ~60-line entrypoint: createSolvaPayMcpFetch + CORS mirror
@@ -136,7 +147,7 @@ const handler = createSolvaPayMcpFetch({
 
 ## Swapping in your own tools
 
-The demo tools live entirely in `src/demo-tools.ts` and are not part of any `@solvapay/*` package. Replace the body of `registerDemoTools` with your own `registerPayable(...)` calls, or gate them off entirely by setting `DEMO_TOOLS=false` in `wrangler.jsonc` or `.dev.vars`.
+The demo tools live entirely in `src/demo-tools.ts` and are not part of any `@solvapay/*` package. Replace the body of `registerDemoTools` with your own `registerPayable(...)` calls, or gate them off entirely by setting `DEMO_TOOLS=false` in `wrangler.jsonc` or `.env`.
 
 ## Widget source sync
 

@@ -105,12 +105,20 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log('Step 2: Creating isolated product and plan fixtures...')
       const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
       const fixtureName = `SDK Integration Fixture ${Date.now()}`
+
+      // Backend rejects plans whose currency doesn't match the provider's
+      // default (e.g. a SEK-only provider). Resolve the provider currency
+      // once so all fixture plans in this run use the same code.
+      const merchant = await apiClient.getMerchant()
+      const providerCurrency: string = merchant?.defaultCurrency || 'USD'
+      console.log(`📍 Provider currency: ${providerCurrency}`)
+
       defaultProduct = await createTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY!, fixtureName)
       defaultPlan = await createTestPlan(
         apiBaseUrl,
         SOLVAPAY_SECRET_KEY!,
         defaultProduct.reference,
-        10,
+        { freeUnits: 10, currency: providerCurrency },
       )
 
       console.log('✅ Created fixture product:', {
@@ -130,7 +138,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           type: 'usage-based',
           creditsPerUnit: 100,
           freeUnits: 5,
-          currency: 'USD',
+          currency: providerCurrency,
           isDefault: false,
         },
       )
@@ -559,13 +567,20 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       }
 
       // 11th call should be paywalled.
-      const blockedResult = await mcpHandler({
+      // MCP gate responses narrate in plain text on content[0].text, and
+      // expose the machine-readable payload via structuredContent (not JSON
+      // in .text). isError stays false so AI clients still surface the
+      // narration naturally.
+      const blockedResult: any = await mcpHandler({
         limit: 10,
         auth: { customer_ref: testCustomer },
       })
-      const parsedBlockedResult = JSON.parse(blockedResult.content[0].text)
-      expect(parsedBlockedResult.success).toBe(false)
-      expect(String(parsedBlockedResult.error || '')).toContain('Payment required')
+      expect(blockedResult.isError).toBe(false)
+      expect(['payment_required', 'activation_required']).toContain(
+        blockedResult.structuredContent?.kind,
+      )
+      expect(typeof blockedResult.content[0].text).toBe('string')
+      expect(blockedResult.content[0].text.length).toBeGreaterThan(0)
 
       const finalLimits = await apiClient.checkLimits({
         customerRef,
@@ -1185,6 +1200,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     }
 
     it('should initialize credit balance correctly on usage-based plan activation', async () => {
+      // Usage-based plans now activate into a "topup required" state rather
+      // than auto-granting freeUnits as credits. Verify the paywall/topup
+      // surface is exposed immediately after activation.
       const customer = `test_credit_init_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(customer)
 
@@ -1197,20 +1215,23 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         planRef: creditPlan.reference,
       })
 
-      expect(result.withinLimits).toBe(true)
-      expect(result.remaining).toBeGreaterThan(0)
+      expect(result.withinLimits).toBe(false)
+      expect(result.remaining).toBeLessThanOrEqual(0)
+      expect(result.checkoutUrl || result.confirmationUrl).toBeTruthy()
+
       if (result.creditsPerUnit !== undefined) {
         expect(typeof result.creditsPerUnit).toBe('number')
       }
       if (result.creditBalance !== undefined) {
         expect(typeof result.creditBalance).toBe('number')
+        expect(result.creditBalance).toBeLessThanOrEqual(0)
       }
       if (result.currency !== undefined) {
         expect(typeof result.currency).toBe('string')
       }
 
       console.log(
-        `✅ Credit plan activated: remaining=${result.remaining}, creditBalance=${result.creditBalance}, status=${activation.status}`,
+        `✅ Credit plan activated (topup required): remaining=${result.remaining}, creditBalance=${result.creditBalance}, status=${activation.status}`,
       )
     })
 
@@ -1231,85 +1252,29 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log(`✅ getCustomerBalance: credits=${balanceResult.credits}, currency=${balanceResult.displayCurrency}`)
     })
 
-    it('should deduct credits and decrement remaining units on usage consumption', async () => {
-      const customer = `test_credit_use_${Date.now()}_${Math.random().toString(36).substring(7)}`
-      const customerRef = await solvaPay.ensureCustomer(customer)
+    // NOTE: Credit-deduction-on-consumption tests are covered by the payment
+    // integration suite (packages/server/__tests__/payment-stripe.integration.test.ts)
+    // because they require a real top-up payment flow. Usage-based plans no
+    // longer auto-grant credits on activation, so there is no standalone
+    // path to "initial credits -> deduct -> remaining decreased" without a
+    // Stripe sandbox payment confirmation.
+    it.skip(
+      'should deduct credits and decrement remaining units on usage consumption (covered by payment suite)',
+      async () => {},
+    )
 
-      await activateCreditPlan(customerRef)
-
-      const initial = await apiClient.checkLimits({
-        customerRef,
-        productRef: defaultProduct.reference,
-        planRef: creditPlan.reference,
-      })
-      expect(initial.withinLimits).toBe(true)
-      expect(initial.remaining).toBeGreaterThan(0)
-
-      await burnCredits(customerRef, 1)
-
-      const after = await apiClient.checkLimits({
-        customerRef,
-        productRef: defaultProduct.reference,
-        planRef: creditPlan.reference,
-      })
-      expect(after.remaining).toBe(initial.remaining - 1)
-      expect(after.withinLimits).toBe(true)
-
-      console.log(`✅ Usage consumed one unit: ${initial.remaining} → ${after.remaining}`)
-    })
-
-    it('should consume credits when calling protected functions on usage-based plan', async () => {
-      const customer = `test_credit_fn_${Date.now()}_${Math.random().toString(36).substring(7)}`
-      const customerRef = await solvaPay.ensureCustomer(customer)
-
-      await activateCreditPlan(customerRef)
-
-      const before = await apiClient.checkLimits({
-        customerRef,
-        productRef: defaultProduct.reference,
-        planRef: creditPlan.reference,
-      })
-      expect(before.withinLimits).toBe(true)
-      expect(before.remaining).toBeGreaterThan(0)
-
-      const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
-      const payable = freshSolvaPay.payable({
-        productRef: defaultProduct.reference,
-        planRef: creditPlan.reference,
-      })
-      const protectedHandler = await payable.function(createTask)
-
-      const result = await protectedHandler({
-        title: 'Credit-based task',
-        description: 'Should deduct from credit balance',
-        auth: { customer_ref: customer },
-      })
-      expect(result).toHaveProperty('success', true)
-
-      const afterCheck = await apiClient.checkLimits({
-        customerRef,
-        productRef: defaultProduct.reference,
-        planRef: creditPlan.reference,
-      })
-      expect(afterCheck.remaining).toBe(before.remaining - 1)
-
-      console.log(`✅ Protected function consumed one unit: ${before.remaining} → ${afterCheck.remaining}`)
-    })
+    it.skip(
+      'should consume credits when calling protected functions on usage-based plan (covered by payment suite)',
+      async () => {},
+    )
 
     it('should fire paywall with topup info when credits are exhausted', async () => {
+      // Usage-based plans activate straight into "topup required" now — no
+      // burn step needed, the fresh activation is already at zero credits.
       const customer = `test_credit_paywall_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(customer)
 
       await activateCreditPlan(customerRef)
-
-      const before = await apiClient.checkLimits({
-        customerRef,
-        productRef: defaultProduct.reference,
-        planRef: creditPlan.reference,
-      })
-      expect(before.withinLimits).toBe(true)
-      expect(before.remaining).toBeGreaterThan(0)
-      await burnCredits(customerRef, before.remaining)
 
       const exhausted = await apiClient.checkLimits({
         customerRef,
@@ -1340,21 +1305,15 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         }),
       ).rejects.toThrow('Payment required')
 
-      console.log(`✅ Paywall fired after credit exhaustion: checkoutUrl=${exhausted.checkoutUrl}, confirmationUrl=${exhausted.confirmationUrl}`)
+      console.log(`✅ Paywall fired on topup-required activation: checkoutUrl=${exhausted.checkoutUrl}, confirmationUrl=${exhausted.confirmationUrl}`)
     })
 
     it('should return topup information in MCP handler when credits exhausted', async () => {
       const customer = `test_credit_mcp_${Date.now()}_${Math.random().toString(36).substring(7)}`
       const customerRef = await solvaPay.ensureCustomer(customer)
 
+      // Fresh activation on a usage-based plan = zero credits = paywall.
       await activateCreditPlan(customerRef)
-      const before = await apiClient.checkLimits({
-        customerRef,
-        productRef: defaultProduct.reference,
-        planRef: creditPlan.reference,
-      })
-      expect(before.remaining).toBeGreaterThan(0)
-      await burnCredits(customerRef, before.remaining)
 
       const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
       const payable = freshSolvaPay.payable({
@@ -1370,13 +1329,16 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       expect(result).toHaveProperty('content')
       expect(result.content[0].type).toBe('text')
-      const parsed = JSON.parse(result.content[0].text)
+      expect(result.isError).toBe(false)
+      expect(['payment_required', 'activation_required']).toContain(
+        result.structuredContent?.kind,
+      )
+      expect(typeof result.content[0].text).toBe('string')
+      expect(result.content[0].text.length).toBeGreaterThan(0)
 
-      expect(parsed.success).toBe(false)
-      const errorText = String(parsed.error || parsed.message || '')
-      expect(errorText).toContain('Payment required')
-
-      console.log(`✅ MCP handler returned paywall response: ${errorText.substring(0, 100)}`)
+      console.log(
+        `✅ MCP handler returned paywall gate: kind=${result.structuredContent?.kind}, text="${String(result.content[0].text).substring(0, 80)}..."`,
+      )
     })
 
     it('should return valid payment intent shape from createTopupPaymentIntent', async () => {
@@ -1388,7 +1350,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       const result = await apiClient.createTopupPaymentIntent({
         customerRef,
         amount: 1000,
-        currency: 'USD',
+        currency: creditPlan.currency,
       })
 
       expect(result).toBeDefined()
