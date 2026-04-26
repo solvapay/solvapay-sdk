@@ -69,29 +69,40 @@ function browserCorsPreflight(req: Request): Response {
   return applyBrowserCors(req, new Response(null, { status: 204, headers }))
 }
 
+// Cache the `createSolvaPayMcpFetch` handler at isolate scope so the
+// `McpServer`, OAuth router, tool registrations, and internal caches
+// only build once per Workers isolate (not once per request). Secret
+// or var rotations trigger a new worker version, which spins up a
+// fresh isolate and a fresh cache — so invalidation is free.
+let cachedHandler: ((req: Request) => Promise<Response>) | undefined
+
+function getHandler(env: Env): (req: Request) => Promise<Response> {
+  if (cachedHandler) return cachedHandler
+
+  const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? 'https://api-dev.solvapay.com'
+  cachedHandler = createSolvaPayMcpFetch({
+    solvaPay: createSolvaPay({
+      apiKey: requireEnv(env, 'SOLVAPAY_SECRET_KEY'),
+      apiBaseUrl,
+    }),
+    productRef: requireEnv(env, 'SOLVAPAY_PRODUCT_REF'),
+    resourceUri: 'ui://cloudflare-workers-mcp/mcp-app.html',
+    readHtml: async () => mcpAppHtml,
+    publicBaseUrl: requireEnv(env, 'MCP_PUBLIC_BASE_URL'),
+    apiBaseUrl,
+    mode: 'json-stateless',
+    hideToolsByAudience: ['ui'],
+    ...(demoToolsEnabled(env as unknown as Record<string, string | undefined>)
+      ? { additionalTools: registerDemoTools }
+      : {}),
+  })
+  return cachedHandler
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (req.method === 'OPTIONS') return browserCorsPreflight(req)
-
-    const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? 'https://api-dev.solvapay.com'
-    const handler = createSolvaPayMcpFetch({
-      solvaPay: createSolvaPay({
-        apiKey: requireEnv(env, 'SOLVAPAY_SECRET_KEY'),
-        apiBaseUrl,
-      }),
-      productRef: requireEnv(env, 'SOLVAPAY_PRODUCT_REF'),
-      resourceUri: 'ui://cloudflare-workers-mcp/mcp-app.html',
-      readHtml: async () => mcpAppHtml,
-      publicBaseUrl: requireEnv(env, 'MCP_PUBLIC_BASE_URL'),
-      apiBaseUrl,
-      mode: 'json-stateless',
-      hideToolsByAudience: ['ui'],
-      ...(demoToolsEnabled(env as unknown as Record<string, string | undefined>)
-        ? { additionalTools: registerDemoTools }
-        : {}),
-    })
-
-    const response = await handler(req)
+    const response = await getHandler(env)(req)
     return applyBrowserCors(req, response)
   },
 } satisfies ExportedHandler<Env>
