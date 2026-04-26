@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@solvapay/server', () => ({
+// The fetch handlers import `*Core` helpers + `isErrorResult` from
+// `../helpers` and `verifyWebhook` from `../edge`. We mock those two
+// relative specifiers (vitest resolves them against `handlers.ts`,
+// the consumer). Previously this test mocked `@solvapay/server`; now
+// that the fetch code lives inside `@solvapay/server` the self-mock
+// would have been a mock-in-mock tangle, so we target the exact
+// specifiers the consumer uses.
+vi.mock('../../src/helpers', () => ({
   checkPurchaseCore: vi.fn(),
   trackUsageCore: vi.fn(),
   createPaymentIntentCore: vi.fn(),
@@ -10,16 +17,20 @@ vi.mock('@solvapay/server', () => ({
   cancelPurchaseCore: vi.fn(),
   reactivatePurchaseCore: vi.fn(),
   activatePlanCore: vi.fn(),
+  getPaymentMethodCore: vi.fn(),
   listPlansCore: vi.fn(),
   syncCustomerCore: vi.fn(),
   createCheckoutSessionCore: vi.fn(),
   createCustomerSessionCore: vi.fn(),
   getMerchantCore: vi.fn(),
   getProductCore: vi.fn(),
-  verifyWebhook: vi.fn(),
   isErrorResult: vi.fn(
     (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
+}))
+
+vi.mock('../../src/edge', () => ({
+  verifyWebhook: vi.fn(),
 }))
 
 import {
@@ -38,8 +49,8 @@ import {
   createCustomerSessionCore,
   getMerchantCore,
   getProductCore,
-  verifyWebhook,
-} from '@solvapay/server'
+} from '../../src/helpers'
+import { verifyWebhook } from '../../src/edge'
 import {
   checkPurchase,
   trackUsage,
@@ -57,8 +68,8 @@ import {
   getMerchant,
   getProduct,
   solvapayWebhook,
-} from './handlers'
-import { configureCors } from './cors'
+} from '../../src/fetch/handlers'
+import { configureCors } from '../../src/fetch/cors'
 
 const mockCheckPurchaseCore = vi.mocked(checkPurchaseCore)
 const mockTrackUsageCore = vi.mocked(trackUsageCore)
@@ -408,7 +419,9 @@ describe('solvapayWebhook', () => {
   }
 
   it('returns 200 and calls onEvent when signature is valid', async () => {
-    mockVerifyWebhook.mockReturnValue(validEvent as never)
+    // `verifyWebhook` on the edge entry is async (Web Crypto). The
+    // consumer awaits it; the mock must resolve.
+    mockVerifyWebhook.mockResolvedValue(validEvent as never)
     const onEvent = vi.fn()
 
     const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
@@ -420,9 +433,7 @@ describe('solvapayWebhook', () => {
   })
 
   it('returns 401 when signature verification fails', async () => {
-    mockVerifyWebhook.mockImplementation(() => {
-      throw new Error('Invalid webhook signature')
-    })
+    mockVerifyWebhook.mockRejectedValue(new Error('Invalid webhook signature'))
     const onEvent = vi.fn()
 
     const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
@@ -434,7 +445,7 @@ describe('solvapayWebhook', () => {
   })
 
   it('returns 500 when onEvent throws', async () => {
-    mockVerifyWebhook.mockReturnValue(validEvent as never)
+    mockVerifyWebhook.mockResolvedValue(validEvent as never)
     const onEvent = vi.fn().mockRejectedValue(new Error('handler boom'))
 
     const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
@@ -445,7 +456,7 @@ describe('solvapayWebhook', () => {
   })
 
   it('does not include CORS headers on responses', async () => {
-    mockVerifyWebhook.mockReturnValue(validEvent as never)
+    mockVerifyWebhook.mockResolvedValue(validEvent as never)
     const onEvent = vi.fn()
 
     const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })

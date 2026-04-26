@@ -1,24 +1,59 @@
+/**
+ * Fetch-first `(req: Request) => Promise<Response>` handlers for every
+ * SolvaPay route, plus the `solvapayWebhook` factory. Wraps the pure
+ * `*Core` helpers from `../helpers` with CORS + JSON serialisation so
+ * the edge-runtime entry point (Deno / Supabase Edge / Cloudflare
+ * Workers / Bun / Next edge / Vercel Functions) is a one-liner:
+ *
+ * ```ts
+ * import { checkPurchase } from '@solvapay/server/fetch'
+ * Deno.serve(checkPurchase)
+ * ```
+ *
+ * Lifted verbatim from `@solvapay/fetch@1.0.0` when the standalone
+ * package was folded into `@solvapay/server` as the `./fetch` subpath
+ * export. Three substantive tweaks captured in the move:
+ *
+ *  1. `*Core` imports are relative (`'../helpers'`), not self-imports
+ *     through `'@solvapay/server'` — avoids the re-export indirection
+ *     and keeps the build tree-shake-friendly.
+ *  2. `verifyWebhook` imports from `'../edge'` explicitly so the
+ *     `./fetch` subpath is deterministically Web Crypto regardless of
+ *     which export condition a consumer's bundler selects for
+ *     `@solvapay/server` (the root entry's `node:crypto` variant was
+ *     the wrong choice on edge runtimes and the bundler-selected
+ *     default could swing either way).
+ *  3. `await verifyWebhook(...)` — the previous call was un-awaited.
+ *     Worked by accident on Deno because the `deno` export condition
+ *     resolved `@solvapay/server` to `./dist/edge.js` (async Web Crypto
+ *     variant), and passing the Promise through `options.onEvent` got
+ *     coerced to the event object in most handlers. Latent bug —
+ *     surfaced as "event is a Promise" in strict TypeScript handlers
+ *     that destructured `event.type` synchronously. The `await` makes
+ *     the handler return the parsed `WebhookEvent` deterministically.
+ */
+
+import type { WebhookEvent } from '../types/webhook'
 import {
-  checkPurchaseCore,
-  trackUsageCore,
-  createPaymentIntentCore,
-  processPaymentIntentCore,
-  createTopupPaymentIntentCore,
-  getCustomerBalanceCore,
-  cancelPurchaseCore,
-  reactivatePurchaseCore,
   activatePlanCore,
-  getPaymentMethodCore,
-  listPlansCore,
-  syncCustomerCore,
+  cancelPurchaseCore,
+  checkPurchaseCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  createPaymentIntentCore,
+  createTopupPaymentIntentCore,
+  getCustomerBalanceCore,
   getMerchantCore,
+  getPaymentMethodCore,
   getProductCore,
-  verifyWebhook,
   isErrorResult,
-} from '@solvapay/server'
-import type { WebhookEvent } from '@solvapay/server'
+  listPlansCore,
+  processPaymentIntentCore,
+  reactivatePurchaseCore,
+  syncCustomerCore,
+  trackUsageCore,
+} from '../helpers'
+import { verifyWebhook } from '../edge'
 import { handleCors } from './cors'
 import { errorResponse, jsonResponseWithCors } from './utils'
 
@@ -253,7 +288,9 @@ export interface SolvapayWebhookOptions {
 
 export function solvapayWebhook(options: SolvapayWebhookOptions): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
-    const secret = options.secret || (typeof process !== 'undefined' ? process.env.SOLVAPAY_WEBHOOK_SECRET : undefined)
+    const secret =
+      options.secret ||
+      (typeof process !== 'undefined' ? process.env.SOLVAPAY_WEBHOOK_SECRET : undefined)
     if (!secret) {
       return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
         status: 500,
@@ -266,7 +303,11 @@ export function solvapayWebhook(options: SolvapayWebhookOptions): (req: Request)
 
     let event: WebhookEvent
     try {
-      event = verifyWebhook({ body, signature, secret })
+      // `verifyWebhook` is the async Web Crypto variant from `../edge`
+      // (deterministic choice — see module-level comment for why the
+      // root entry's `node:crypto` variant would be wrong here even on
+      // Node's undici-backed fetch runtime).
+      event = await verifyWebhook({ body, signature, secret })
     } catch {
       return new Response(JSON.stringify({ error: 'Invalid webhook signature' }), {
         status: 401,

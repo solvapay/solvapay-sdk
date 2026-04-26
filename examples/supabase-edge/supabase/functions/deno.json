@@ -1,7 +1,7 @@
 {
   "imports": {
-    "@solvapay/fetch": "npm:@solvapay/fetch",
     "@solvapay/server": "npm:@solvapay/server",
+    "@solvapay/server/": "npm:/@solvapay/server@preview/",
     "@solvapay/auth": "npm:@solvapay/auth",
     "@solvapay/core": "npm:@solvapay/core"
   }

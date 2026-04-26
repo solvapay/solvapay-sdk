@@ -79,7 +79,7 @@ The application will start on `http://localhost:3000`
 
 A reference project demonstrating:
 
-- One-liner Supabase Edge Functions using `@solvapay/fetch`
+- One-liner Supabase Edge Functions using `@solvapay/server/fetch`
 - All 10 payment/purchase endpoints as 2-line files
 - Deno import map for npm packages
 - CORS configuration for production
@@ -212,8 +212,8 @@ PORT=3001
    ```
 
 3. **Supabase Edge Functions examples:**
-   `supabase-edge` (one-liner `@solvapay/fetch` endpoints) and
-   `supabase-edge-mcp` (full MCP server via `@solvapay/mcp-fetch`) both
+   `supabase-edge` (one-liner `@solvapay/server/fetch` endpoints) and
+   `supabase-edge-mcp` (full MCP server via `@solvapay/mcp/fetch`) both
    use Deno and run via the Supabase CLI instead of `pnpm dev`:
 
    ```bash

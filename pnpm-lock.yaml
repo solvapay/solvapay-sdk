@@ -765,25 +765,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/fetch:
-    dependencies:
-      '@solvapay/server':
-        specifier: workspace:*
-        version: link:../server
-    devDependencies:
-      '@solvapay/auth':
-        specifier: workspace:*
-        version: link:../auth
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
-
   packages/mcp:
     devDependencies:
       '@modelcontextprotocol/ext-apps':

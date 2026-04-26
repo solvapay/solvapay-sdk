@@ -50,7 +50,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md#releasing) for the full release workflo
 
 - [ ] `pnpm test` — unit tests pass
 - [ ] `pnpm build` — full monorepo build passes
-- [ ] `pnpm tsx scripts/validate-fetch-runtime.ts` — Web-standards runtime gate passes (required if you touched `@solvapay/fetch` or `@solvapay/mcp-fetch`)
+- [ ] `pnpm tsx scripts/validate-fetch-runtime.ts` — Web-standards runtime gate passes (required if you touched `@solvapay/server/fetch` or `@solvapay/mcp/fetch`)
 - [ ] Manual testing completed
 - [ ] Tested in relevant environments (Node / Deno / Cloudflare Workers / Bun / Next edge / …)
 

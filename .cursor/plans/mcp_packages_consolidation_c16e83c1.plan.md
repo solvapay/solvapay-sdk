@@ -46,37 +46,37 @@ todos:
     status: pending
   - id: merge-fetch-source
     content: Move packages/fetch/src/ into packages/server/src/fetch/. Switch the webhook factory to import verifyWebhook from '../edge' (async Web Crypto variant) and add the missing `await` — latent bug fix captured in the merge. Internal *Core imports become relative ('../helpers').
-    status: pending
+    status: completed
   - id: rewrite-server-package-json
-    content: Add "./fetch" export to packages/server/package.json alongside existing "." and "./edge" entries. Promote @solvapay/auth from devDependencies to peerDependencies (fetch handlers need auth at runtime). Bump @solvapay/server minor (1.1.0 from 1.0.8-preview.10 path).
-    status: pending
+    content: "Add './fetch' export to packages/server/package.json alongside existing '.' and './edge' entries. (@solvapay/auth was already on peerDependencies; no change needed there.) Version stays at 1.0.8 per the hand-set approach — the subpath addition is additive, folded into the same release as the edge-entry fix + gate-narration refresh. The fetch-merge narrative lives in packages/server/CHANGELOG.md@1.0.8 + the historical appendix at the bottom of that file."
+    status: completed
   - id: update-server-tsup
     content: Extend packages/server/tsup.config.ts entries to include 'src/fetch/index.ts'. Verify dist/fetch/index.js + .d.ts + .cjs emit cleanly and tree-shake to the Web Crypto verifyWebhook (no node:crypto leak).
-    status: pending
+    status: completed
   - id: delete-fetch-package
     content: Delete packages/fetch/ entirely (source, tests, README, CHANGELOG, tsconfigs). Archive the CHANGELOG content as a historical appendix at the bottom of packages/server/CHANGELOG.md.
-    status: pending
+    status: completed
   - id: move-fetch-tests
     content: Move packages/fetch/src/{cors,handlers,utils}.test.ts into packages/server/__tests__/fetch/. Extend packages/server/__tests__/edge-exports.unit.test.ts to also probe the new "./fetch" subpath exports.
-    status: pending
+    status: completed
   - id: update-supabase-edge-example
-    content: Rewrite 16 handler files under examples/supabase-edge/supabase/functions/*/index.ts (@solvapay/fetch -> @solvapay/server/fetch). Update deno.json to drop the @solvapay/fetch entry and add an @solvapay/server/ subpath resolver. Update examples/supabase-edge/supabase-edge.test.ts imports and examples/supabase-edge/README.md.
-    status: pending
+    content: Rewrite 17 handler files under examples/supabase-edge/supabase/functions/*/index.ts (@solvapay/fetch -> @solvapay/server/fetch). Update deno.json to drop the @solvapay/fetch entry and add an @solvapay/server/ subpath resolver. Update examples/supabase-edge/supabase-edge.test.ts imports and examples/supabase-edge/README.md. (The solvapay-webhook handler gains an explicit `WebhookEvent` type annotation so Deno can type-check the inline `onEvent` callback even while `@solvapay/server@preview` on npm doesn't yet carry the `./fetch` subpath exports; once the subpath publishes, the explicit annotation remains as teaching material.)
+    status: completed
   - id: update-docs-fetch
-    content: Update root README.md, CONTRIBUTING.md, packages/react/README.md, packages/server/README.md (add a Web-standards runtimes section), and scripts/check-dependency-health.ts / scripts/README.md to drop @solvapay/fetch references.
-    status: pending
+    content: Update root README.md, CONTRIBUTING.md, packages/react/README.md, packages/server/README.md (add a Web-standards runtimes section), .github/workflows/README.md, .github/pull_request_template.md, and scripts/check-dependency-health.ts / scripts/README.md to drop @solvapay/fetch references.
+    status: completed
   - id: update-ci-gate-fetch
     content: Update scripts/validate-fetch-runtime.ts — replace the @solvapay/fetch target with @solvapay/server/fetch pointing at packages/server/dist/fetch/index.js. The forbidden-modules guard stays; it's the whole point of the gate. Also update the @solvapay/mcp-fetch target to @solvapay/mcp/fetch (folded in from the MCP workstream).
-    status: pending
+    status: completed
   - id: rewrite-fetch-changeset
-    content: Add .changeset/server-fetch-subpath.md — @solvapay/server minor, documenting the new ./fetch subpath and the @solvapay/fetch -> @solvapay/server/fetch consolidation.
-    status: pending
+    content: "Superseded by the hand-set-versions approach — the fetch-merge narrative is already in the empty-frontmatter override changeset (.changeset/hand-set-versions-consolidation.md) + packages/server/CHANGELOG.md@1.0.8. No separate .changeset/server-fetch-subpath.md needed because adding it would re-trigger the peer-dep cascade this PR is specifically avoiding."
+    status: completed
   - id: unpublish-fetch
-    content: Unpublish @solvapay/fetch@1.0.0 and every 1.0.1-preview-* snapshot from npm (inside 72h window, 0 dependents confirmed). Final CI gate confirms no repo references remain before the unpublish runs.
+    content: "After PR #135 merges + the hand-set @preview smoke test passes, unpublish @solvapay/fetch from a maintainer's local machine: `npm unpublish @solvapay/fetch --force` (drops 1.0.0 + every 1.0.1-preview-* snapshot). Name-level window closes 2026-04-27 ~15:30 UTC (72h from the 2026-04-24 22:30 UTC first publish). Fallback: if the window has elapsed, `npm deprecate @solvapay/fetch 'Merged into @solvapay/server/fetch'` instead. 0 external dependents confirmed via npm registry — internal repo references already migrated."
     status: pending
   - id: run-validation
     content: Run pnpm install + build:packages + test + validate:fetch-runtime + Deno validate gate (supabase-edge-mcp AND supabase-edge) + each example's build. All green before commit.
-    status: pending
+    status: completed
 isProject: false
 ---
 

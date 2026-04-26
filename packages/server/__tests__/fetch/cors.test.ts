@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { configureCors, handleCors, getCorsHeaders } from './cors'
+import { configureCors, handleCors, getCorsHeaders } from '../../src/fetch/cors'
 
 describe('cors', () => {
   beforeEach(() => {

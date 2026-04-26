@@ -1,4 +1,4 @@
-import type { ErrorResult } from '@solvapay/server'
+import type { ErrorResult } from '../helpers'
 import { getCorsHeaders } from './cors'
 
 export function jsonResponse(

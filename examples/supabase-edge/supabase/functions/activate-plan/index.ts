@@ -1,3 +1,3 @@
-import { activatePlan } from '@solvapay/fetch'
+import { activatePlan } from '@solvapay/server/fetch'
 
 Deno.serve(activatePlan)

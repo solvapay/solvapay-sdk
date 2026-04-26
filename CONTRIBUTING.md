@@ -86,7 +86,7 @@ Before submitting a pull request, ensure:
 - [ ] Builds (`pnpm build`)
 - [ ] Tests pass (`pnpm test`)
 - [ ] Types OK (no dts errors)
-- [ ] Web-standards runtime gate passes (`pnpm validate:fetch-runtime`) — required when touching `@solvapay/fetch` or `@solvapay/mcp-fetch`
+- [ ] Web-standards runtime gate passes (`pnpm validate:fetch-runtime`) — required when touching `@solvapay/server/fetch` or `@solvapay/mcp/fetch`
 - [ ] Docs updated when needed
 - [ ] Documentation links valid (`pnpm docs:validate-links`)
 - [ ] **Changeset committed** — run `pnpm changeset` and commit the generated `.changeset/*.md`. Skip only if the PR touches no published package.
@@ -138,8 +138,8 @@ Both workflows run the same gates — regressions here **block publish**:
 
 1. `pnpm test` — full monorepo test suite.
 2. `pnpm build:packages` — every publishable package builds to `dist/`.
-3. `pnpm validate:fetch-runtime` — asserts `@solvapay/fetch` and
-   `@solvapay/mcp-fetch` load cleanly in a bare Web-standards
+3. `pnpm validate:fetch-runtime` — asserts `@solvapay/server/fetch` and
+   `@solvapay/mcp/fetch` load cleanly in a bare Web-standards
    environment (no `node:`-prefixed imports, no leaked Node builtins).
 
 Run them locally before opening the PR to shorten the feedback loop.

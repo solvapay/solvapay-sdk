@@ -17,8 +17,8 @@ Every push to `dev` runs the full pre-publish gate:
 
 1. `pnpm test` — unit tests for every workspace package.
 2. `pnpm build:packages` — every publishable package builds to `dist/`.
-3. `pnpm validate:fetch-runtime` — asserts `@solvapay/fetch` and
-   `@solvapay/mcp-fetch` load cleanly in a bare Web-standards
+3. `pnpm validate:fetch-runtime` — asserts `@solvapay/server/fetch` and
+   `@solvapay/mcp/fetch` load cleanly in a bare Web-standards
    environment (no `node:`-prefixed imports, no leaked Node builtins).
 4. `pnpm changeset version --snapshot preview` — stamps a
    `0.0.0-preview-<shortsha>` version on every package with a pending
@@ -95,7 +95,7 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 ### `validate:fetch-runtime` fails
 
-- A new dep got pulled into `@solvapay/fetch` or `@solvapay/mcp-fetch`
+- A new dep got pulled into `@solvapay/server/fetch` or `@solvapay/mcp/fetch`
   that pulls a `node:`-prefixed builtin. Remove the offending dep or
   gate it behind a runtime detector before importing.
 

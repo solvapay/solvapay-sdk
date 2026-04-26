@@ -27,7 +27,7 @@ See [`docs/documentation/DOC_LINK_VALIDATION.md`](../docs/documentation/DOC_LINK
 
 ## Release Gates
 
-- `validate-fetch-runtime.ts` — Pre-publish gate ensuring `@solvapay/fetch` and `@solvapay/mcp/fetch` still import cleanly on a bare Node `fetch`-only runtime (no `express`, no `node:http`, no `supabase-js`). Wired into [`publish-preview.yml`](../.github/workflows/publish-preview.yml) so a broken Web-standards build blocks the preview channel. Usage: `pnpm validate:fetch-runtime`
+- `validate-fetch-runtime.ts` — Pre-publish gate ensuring `@solvapay/server/fetch` and `@solvapay/mcp/fetch` (the Web-standards subpath exports) still import cleanly on a bare Node `fetch`-only runtime (no `express`, no `node:http`, no `supabase-js`). Wired into [`publish-preview.yml`](../.github/workflows/publish-preview.yml) so a broken Web-standards build blocks the preview channel. Usage: `pnpm validate:fetch-runtime`
 
 ## Dependency + Repository Management
 

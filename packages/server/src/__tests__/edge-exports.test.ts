@@ -2,8 +2,8 @@
  * Broader regression guard for `@solvapay/server`'s edge entrypoint.
  *
  * Unlike `__tests__/edge-exports.unit.test.ts` (which scopes to the
- * `*Core` route helpers consumed by `@solvapay/fetch`), this suite
- * imports every symbol `@solvapay/mcp-core` / `@solvapay/mcp/fetch`
+ * `*Core` route helpers consumed by `@solvapay/server/fetch`), this
+ * suite imports every symbol `@solvapay/mcp-core` / `@solvapay/mcp/fetch`
  * pulls through their top-level `@solvapay/server` import and asserts
  * each one resolves on `./edge`. Runtimes that set the `deno`,
  * `edge-light`, or `worker` export conditions (Deno Deploy, Vercel

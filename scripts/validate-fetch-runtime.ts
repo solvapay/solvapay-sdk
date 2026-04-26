@@ -1,9 +1,9 @@
 /**
- * Pre-publish gate for the Web-standards runtime packages.
+ * Pre-publish gate for the Web-standards runtime subpaths.
  *
- * Imports `@solvapay/fetch` + `@solvapay/mcp/fetch` (the fetch-first
- * subpath export of `@solvapay/mcp`) from their freshly built
- * `dist/index.js` / `dist/fetch/index.js` ESM entries in a bare
+ * Imports `@solvapay/server/fetch` + `@solvapay/mcp/fetch` (the fetch-
+ * first subpath exports of `@solvapay/server` + `@solvapay/mcp`) from
+ * their freshly built `dist/fetch/index.js` ESM entries in a bare
  * Node process with:
  *
  * - No `express`, `node:http`, or `connect`-family body parser available.
@@ -15,8 +15,9 @@
  *
  * If either import crashes, the process exits non-zero. CI wires this
  * into [`.github/workflows/publish-preview.yml`] so we can't ship a
- * `@solvapay/fetch` or `@solvapay/mcp@preview/fetch` preview that
- * silently leaks a Node-only builtin into a fetch-first runtime.
+ * `@solvapay/server@preview/fetch` or `@solvapay/mcp@preview/fetch`
+ * preview that silently leaks a Node-only builtin into a fetch-first
+ * runtime.
  *
  * Run via `pnpm validate:fetch-runtime`.
  */
@@ -43,10 +44,29 @@ interface TargetPackage {
 
 const TARGETS: TargetPackage[] = [
   {
-    name: '@solvapay/fetch',
-    filterName: '@solvapay/fetch',
-    distEsm: path.join(REPO_ROOT, 'packages/fetch/dist/index.js'),
-    expectedExports: ['checkPurchase', 'createPaymentIntent'],
+    name: '@solvapay/server/fetch',
+    filterName: '@solvapay/server',
+    distEsm: path.join(REPO_ROOT, 'packages/server/dist/fetch/index.js'),
+    expectedExports: [
+      'checkPurchase',
+      'createPaymentIntent',
+      'processPayment',
+      'createTopupPaymentIntent',
+      'customerBalance',
+      'cancelRenewal',
+      'reactivateRenewal',
+      'activatePlan',
+      'getPaymentMethod',
+      'listPlans',
+      'syncCustomer',
+      'createCheckoutSession',
+      'createCustomerSession',
+      'getMerchant',
+      'getProduct',
+      'trackUsage',
+      'solvapayWebhook',
+      'configureCors',
+    ],
   },
   {
     name: '@solvapay/mcp/fetch',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { jsonResponse, errorResponse } from './utils'
+import { jsonResponse, errorResponse } from '../../src/fetch/utils'
 
 describe('jsonResponse', () => {
   it('returns a Response with JSON body and 200 status by default', async () => {

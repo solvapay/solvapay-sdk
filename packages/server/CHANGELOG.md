@@ -7,11 +7,13 @@ peer-dep cascade.
 
 ## 1.0.8
 
-Two edge-entrypoint fixes + a gate-message narration refresh. Hand-
-set version (the Changesets peer-dep cascade would otherwise have
-forced this to `1.1.0` because of the `text-only-paywall` minor;
-we're keeping it on `1.0.x` because the public API surface is
-unchanged — the only semantic change is the gate `message` copy,
+Two edge-entrypoint fixes, a gate-message narration refresh, and the
+`@solvapay/fetch` → `@solvapay/server/fetch` consolidation. Hand-set
+version (the Changesets peer-dep cascade would otherwise have forced
+this to `1.1.0` because of the `text-only-paywall` minor; we're
+keeping it on `1.0.x` because the public API surface is additive —
+the new `./fetch` subpath and the restored edge re-exports are pure
+additions, and the only semantic change is the gate `message` copy,
 which is narration for LLMs, not a typed contract). See
 `.changeset/hand-set-versions-consolidation.md` for the full
 rationale.
@@ -70,3 +72,75 @@ The structured gate shape (`kind`, `checkoutUrl`, `plans`,
 refresh, not a typed contract change. Released as patch despite the
 copy shift because `gate.message` has always been documented as
 narration, not a stable identifier.
+
+### Added: `./fetch` subpath export (Web-standards Request → Response handlers)
+
+Folds the standalone `@solvapay/fetch@1.0.0` package into
+`@solvapay/server` as a new subpath export:
+
+```diff
+- import { checkPurchase } from '@solvapay/fetch'
++ import { checkPurchase } from '@solvapay/server/fetch'
+```
+
+Every export from the old package carries over unchanged:
+`checkPurchase`, `trackUsage`, `createPaymentIntent`, `processPayment`,
+`createTopupPaymentIntent`, `customerBalance`, `cancelRenewal`,
+`reactivateRenewal`, `activatePlan`, `getPaymentMethod`, `listPlans`,
+`syncCustomer`, `createCheckoutSession`, `createCustomerSession`,
+`getMerchant`, `getProduct`, `solvapayWebhook`, `configureCors`. Same
+signatures, same CORS-by-default behaviour, same `Deno.serve(handler)`
+one-liner deploy pattern.
+
+Why fold it in: the fetch handlers are ~290 LOC of thin
+`Request → Response` wrappers around `*Core` helpers that already
+live in `@solvapay/server`. Splitting them into their own package
+was pulling its own peer-dep matrix + changeset file + install
+instructions for zero runtime benefit — `@solvapay/fetch` had
+`@solvapay/server` as a `dependencies:` anyway, so every install
+already carried the server payload. Subpath export gives the same
+ergonomics with one less install line.
+
+Fixes a latent async-webhook bug while folding in:
+`solvapayWebhook()` used to call `verifyWebhook({...})` WITHOUT
+`await` and without explicitly importing from `'../edge'`. Deno
+happened to resolve `@solvapay/server` to `./dist/edge.js` (async
+Web Crypto variant), so the un-awaited Promise got coerced through
+`options.onEvent(event)` as a Promise cast to `WebhookEvent` —
+strict TypeScript handlers that destructured `event.type`
+synchronously saw `undefined`. The new `./fetch` subpath imports
+`verifyWebhook` from `'../edge'` explicitly and adds the missing
+`await`, so the handler deterministically returns the parsed
+`WebhookEvent` regardless of which export condition a consumer's
+bundler picks.
+
+Peer-dependencies: `@solvapay/auth` was already a peer of
+`@solvapay/server` (required for the `*Core` route helpers'
+authentication path), so fetch consumers don't need to install
+anything new.
+
+## Historical appendix — `@solvapay/fetch` (unpublished)
+
+The standalone `@solvapay/fetch` package shipped `1.0.0` on
+2026-04-25 as a rename of `@solvapay/supabase@1.0.1`. It had 0
+external dependents and was inside the 72-hour unpublish window at
+the time of consolidation. The `@solvapay/fetch` name is being
+unpublished from npm alongside this `@solvapay/server@1.0.8`
+release (see Step 8 of
+[.cursor/plans/mcp_packages_consolidation_c16e83c1.plan.md](../../.cursor/plans/mcp_packages_consolidation_c16e83c1.plan.md)).
+Consumers who installed the brief-lived `@solvapay/fetch@1.0.0`
+upgrade by swapping the package name for the new subpath:
+
+```diff
+- "@solvapay/fetch": "^1.0.0"
++ "@solvapay/server": "^1.0.8"
+```
+
+```diff
+- import { checkPurchase } from '@solvapay/fetch'
++ import { checkPurchase } from '@solvapay/server/fetch'
+```
+
+The source lineage `@solvapay/supabase` → `@solvapay/fetch` →
+`@solvapay/server/fetch` is preserved in git history via `git mv`
+on every file in the move.

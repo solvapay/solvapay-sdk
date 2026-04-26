@@ -774,11 +774,11 @@ Lovable-style apps deploy React frontends against Supabase Edge Functions
 </SolvaPayProvider>
 ```
 
-The matching Deno edge functions ship in
-[`@solvapay/fetch`](../../packages/fetch) — see
+The matching Deno edge functions ship on the
+[`@solvapay/server/fetch`](../server/src/fetch) subpath — see
 [`examples/supabase-edge`](../../examples/supabase-edge) for one-liner
-`Deno.serve(handler)` files covering every handler including the new
-`get-merchant` and `get-product` endpoints.
+`Deno.serve(handler)` files covering every handler including
+`get-merchant` and `get-product`.
 
 ## More Information
 

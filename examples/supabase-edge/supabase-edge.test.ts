@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import * as fetchExports from '../../packages/fetch/src/index'
+import * as fetchExports from '../../packages/server/src/fetch/index'
 
 const FUNCTIONS_DIR = join(__dirname, 'supabase/functions')
 
@@ -35,20 +35,25 @@ describe('supabase-edge example', () => {
     expect(dirs).toEqual([...EXPECTED_FUNCTIONS].sort())
   })
 
-  it('each function imports a valid export from @solvapay/fetch', () => {
+  it('each function imports a valid export from @solvapay/server/fetch', () => {
     const exportedNames = Object.keys(fetchExports)
 
     for (const fn of EXPECTED_FUNCTIONS) {
       const indexPath = join(FUNCTIONS_DIR, fn, 'index.ts')
       const content = readFileSync(indexPath, 'utf-8')
 
-      const match = content.match(/import\s*\{\s*(\w+)\s*\}\s*from\s*['"]@solvapay\/fetch['"]/)
-      expect(match, `${fn}/index.ts should import from @solvapay/fetch`).toBeTruthy()
+      const match = content.match(
+        /import\s*\{\s*(\w+)\s*\}\s*from\s*['"]@solvapay\/server\/fetch['"]/,
+      )
+      expect(
+        match,
+        `${fn}/index.ts should import from @solvapay/server/fetch`,
+      ).toBeTruthy()
 
       const importedName = match![1]
       expect(
         exportedNames,
-        `${fn}/index.ts imports '${importedName}' which is not exported by @solvapay/fetch`,
+        `${fn}/index.ts imports '${importedName}' which is not exported by @solvapay/server/fetch`,
       ).toContain(importedName)
     }
   })
@@ -59,7 +64,7 @@ describe('supabase-edge example', () => {
       const content = readFileSync(indexPath, 'utf-8')
 
       const importMatch = content.match(
-        /import\s*\{\s*(\w+)\s*\}\s*from\s*['"]@solvapay\/fetch['"]/,
+        /import\s*\{\s*(\w+)\s*\}\s*from\s*['"]@solvapay\/server\/fetch['"]/,
       )
       const handlerName = importMatch![1]
 
@@ -81,9 +86,16 @@ describe('supabase-edge example', () => {
     const denoJson = JSON.parse(readFileSync(denoJsonPath, 'utf-8'))
 
     expect(denoJson.imports).toBeDefined()
-    expect(denoJson.imports['@solvapay/fetch']).toBe('npm:@solvapay/fetch')
+    // Bare `@solvapay/server` resolves to @latest (stable Node + edge
+    // entries). The subpath resolver `@solvapay/server/` picks up
+    // `@solvapay/server/fetch` from the @preview tag during the
+    // consolidation window; post-promotion the subpath resolver can
+    // be collapsed to the bare @latest entry.
     expect(denoJson.imports['@solvapay/server']).toBe('npm:@solvapay/server')
+    expect(denoJson.imports['@solvapay/server/']).toBe('npm:/@solvapay/server@preview/')
     expect(denoJson.imports['@solvapay/auth']).toBe('npm:@solvapay/auth')
     expect(denoJson.imports['@solvapay/core']).toBe('npm:@solvapay/core')
+    // @solvapay/fetch is unpublished; no longer expected in the map.
+    expect(denoJson.imports['@solvapay/fetch']).toBeUndefined()
   })
 })
