@@ -7,6 +7,7 @@
     "build": "cross-env INPUT=mcp-app.html vite build && cp dist/mcp-app.html supabase/functions/mcp/mcp-app.html",
     "dev": "cross-env INPUT=mcp-app.html vite build --watch",
     "validate": "pnpm -w build:packages && pnpm build && deno check --config=supabase/functions/mcp/deno.local.json supabase/functions/mcp/index.ts",
+    "predeploy": "rm -f supabase/functions/mcp/deno.lock && deno cache --config=supabase/functions/mcp/deno.json supabase/functions/mcp/index.ts",
     "deploy": "supabase functions deploy mcp",
     "serve:local": "supabase functions serve mcp --import-map=supabase/functions/mcp/deno.local.json"
   },

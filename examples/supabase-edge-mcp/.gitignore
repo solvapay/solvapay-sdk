@@ -8,3 +8,14 @@ node_modules/
 # upstream version pins). Written by `supabase link` / every subsequent
 # CLI call against the linked project. Not portable across developers.
 supabase/.temp/
+
+# Deno lockfile is regenerated fresh on every `pnpm deploy` via the
+# `predeploy` hook (rm + `deno cache` against the current `@preview`
+# dist-tag). Keeping a tracked lockfile here would defeat the whole
+# point of pinning the function to the mutable `@preview` tag — a
+# committed `deno.lock` would silently re-pin deploys to whatever
+# snapshot was current when the file was last regenerated, which has
+# already burned us once (old lockfile pinned `@preview` →
+# `@solvapay/mcp@1.0.0-preview-4a7c…`, a post-consolidation orphan
+# without the `./fetch` subpath export, → BOOT_ERROR on deploy).
+supabase/functions/mcp/deno.lock
