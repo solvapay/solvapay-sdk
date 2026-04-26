@@ -74,7 +74,11 @@ function mockRes() {
   return { res, state }
 }
 
-function jsonFetchResponse(status: number, body: unknown, extraHeaders: Record<string, string> = {}) {
+function jsonFetchResponse(
+  status: number,
+  body: unknown,
+  extraHeaders: Record<string, string> = {},
+) {
   const text = JSON.stringify(body)
   return new Response(text, {
     status,
@@ -521,6 +525,57 @@ describe('createOAuthTokenHandler — RFC 6749 §5.2 error normalisation', () =>
       error: 'invalid_request',
       error_description: 'upstream went sideways',
     })
+  })
+
+  it('normalizes NestJS 401 bodies with a non-RFC `error` field into invalid_client', async () => {
+    // NestJS ExceptionFilter ships `{ error: "Unauthorized", message,
+    // statusCode }` on 401. `"Unauthorized"` is a string but NOT an
+    // RFC 6749 §5.2 token error code, so the normalizer must map it
+    // via deriveOAuthErrorCode rather than pass it through unchanged.
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(401, {
+        error: 'Unauthorized',
+        message: 'Invalid or inactive client',
+        statusCode: 401,
+      }),
+    )
+
+    const state = await invokeToken()
+
+    expect(state.statusCode).toBe(401)
+    expect(state.body).toEqual({
+      error: 'invalid_client',
+      error_description: 'Invalid or inactive client',
+    })
+  })
+
+  it('preserves upstream bodies whose `error` is in the RFC 6749 allow-list', async () => {
+    // Defense against over-normalising — RFC 6749 codes from §5.2 and
+    // §4.1.2.1 should pass through verbatim, including `access_denied`
+    // which can surface on the token endpoint in practice.
+    for (const code of [
+      'invalid_request',
+      'invalid_client',
+      'invalid_grant',
+      'unauthorized_client',
+      'unsupported_grant_type',
+      'invalid_scope',
+      'server_error',
+      'temporarily_unavailable',
+      'access_denied',
+    ] as const) {
+      fetchMock.mockResolvedValueOnce(
+        jsonFetchResponse(400, {
+          error: code,
+          error_description: `upstream described ${code}`,
+        }),
+      )
+      const state = await invokeToken()
+      expect(state.body, `expected ${code} to pass through unchanged`).toEqual({
+        error: code,
+        error_description: `upstream described ${code}`,
+      })
+    }
   })
 })
 

@@ -14,7 +14,11 @@ const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'
 const productRef = 'prd_test_123'
 
-function jsonFetchResponse(status: number, body: unknown, extraHeaders: Record<string, string> = {}) {
+function jsonFetchResponse(
+  status: number,
+  body: unknown,
+  extraHeaders: Record<string, string> = {},
+) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json', ...extraHeaders },
@@ -24,9 +28,7 @@ function jsonFetchResponse(status: number, body: unknown, extraHeaders: Record<s
 describe('createProtectedResourceHandler', () => {
   it('returns the discovery JSON on GET /.well-known/oauth-protected-resource', async () => {
     const handler = createProtectedResourceHandler({ publicBaseUrl })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
-    )
+    const res = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
     expect(res).toBeInstanceOf(Response)
     expect(res!.status).toBe(200)
     const body = (await res!.json()) as { resource: string; authorization_servers: string[] }
@@ -196,9 +198,9 @@ describe('createOAuthTokenHandler', () => {
     expect(res!.status).toBe(200)
     const upstreamInit = fetchMock.mock.calls[0]![1] as RequestInit
     expect(upstreamInit.body).toBe(body)
-    expect(
-      (upstreamInit.headers as Record<string, string>)['content-type'],
-    ).toBe('application/x-www-form-urlencoded')
+    expect((upstreamInit.headers as Record<string, string>)['content-type']).toBe(
+      'application/x-www-form-urlencoded',
+    )
   })
 
   it('normalizes NestJS validation errors into RFC 6749 shape', async () => {
@@ -265,6 +267,68 @@ describe('createOAuthTokenHandler', () => {
     const body = (await res!.json()) as { error: string; error_description: string }
     expect(body.error).toBe('invalid_grant')
     expect(body.error_description).toBe('authorization code expired')
+  })
+
+  it('normalizes NestJS 401 bodies with a non-RFC `error` field into invalid_client', async () => {
+    // NestJS ExceptionFilter ships `{ error: "Unauthorized", message,
+    // statusCode }` on 401. The literal `"Unauthorized"` is a valid JS
+    // string but NOT an RFC 6749 §5.2 token error code, so the
+    // normalizer must map it via deriveOAuthErrorCode rather than pass
+    // it through unchanged.
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      jsonFetchResponse(401, {
+        error: 'Unauthorized',
+        message: 'Invalid or inactive client',
+        statusCode: 401,
+      }),
+    )
+    const handler = createOAuthTokenHandler({ apiBaseUrl })
+    const res = await handler(
+      new Request(`${publicBaseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: 'grant_type=authorization_code&code=abc&client_id=c_dead',
+      }),
+    )
+    expect(res!.status).toBe(401)
+    const body = (await res!.json()) as { error: string; error_description?: string }
+    expect(body.error).toBe('invalid_client')
+    expect(body.error_description).toBe('Invalid or inactive client')
+  })
+
+  it('preserves upstream bodies whose `error` is in the RFC 6749 allow-list', async () => {
+    // Defense against over-normalising — `server_error` and
+    // `temporarily_unavailable` are valid RFC 6749 codes even though
+    // they come from §4.1.2.1 rather than the §5.2 token table.
+    for (const code of [
+      'invalid_request',
+      'invalid_client',
+      'invalid_grant',
+      'unauthorized_client',
+      'unsupported_grant_type',
+      'invalid_scope',
+      'server_error',
+      'temporarily_unavailable',
+      'access_denied',
+    ] as const) {
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+        jsonFetchResponse(400, {
+          error: code,
+          error_description: `upstream described ${code}`,
+        }),
+      )
+      const handler = createOAuthTokenHandler({ apiBaseUrl })
+      const res = await handler(
+        new Request(`${publicBaseUrl}/oauth/token`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: 'grant_type=authorization_code&code=x',
+        }),
+      )
+      const body = (await res!.json()) as { error: string; error_description?: string }
+      expect(body.error, `expected ${code} to pass through unchanged`).toBe(code)
+      expect(body.error_description).toBe(`upstream described ${code}`)
+    }
   })
 })
 

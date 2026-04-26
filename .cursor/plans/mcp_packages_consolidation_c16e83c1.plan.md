@@ -39,11 +39,11 @@ todos:
     content: Update docs/guides/mcp.mdx + packages/server/README.md + packages/server/src/__tests__/edge-exports.test.ts doc refs + scripts/README.md to the new MCP subpath names.
     status: completed
   - id: unpublish-obsolete-mcp-packages
-    content: "After PR #135 merges + the hand-set @preview smoke test passes, unpublish the obsolete MCP package names entirely from a maintainer's local machine (CI token may lack unpublish scope): `npm unpublish @solvapay/mcp-fetch --force` + `npm unpublish @solvapay/mcp-express --force`. Name-level window closes 2026-04-27 22:28 UTC. Fallback: if the window has elapsed, `npm deprecate` instead. See Step D of .cursor/plans/npm_housekeeping_mcp_packages_0f253f3b.plan.md."
-    status: pending
+    content: "Completed 2026-04-26 via npm web UI (Delete Package button): @solvapay/mcp-fetch + @solvapay/mcp-express both return E404. CLI path was blocked — maintainer account has `two-factor auth: disabled` and the @solvapay org enforces package-level `mfa=publish`, so every `npm unpublish` / `npm access set mfa=*` / `npm deprecate` returns 403. The web UI's Delete Package flow does not require an OTP for accounts without 2FA enrolled."
+    status: completed
   - id: unpublish-wrong-version-mcp-snapshots
-    content: "After the hand-set @preview smoke test passes, run version-specific `npm unpublish` for the wrong-numbered preview snapshots: @solvapay/mcp@1.0.0-preview-* (x2), @solvapay/mcp-core@1.0.0-preview-* (x2), @solvapay/react@2.0.0-preview-* (x2), @solvapay/react-supabase@2.0.0-preview-* (x2), @solvapay/server@1.1.0-preview-* (x2). Stable 0.1.0 / 1.0.7 versions stay. Version-level window closes 2026-04-28 16:45 UTC."
-    status: pending
+    content: "DEFERRED. npm web UI has no per-version delete button, and the CLI path is blocked by the same 2FA wall as `unpublish-obsolete-mcp-packages`. The ten orphan versions (mcp/mcp-core@1.0.0-preview-* x2, react/react-supabase@2.0.0-preview-* x2, server@1.1.0-preview-* x2) are cosmetic only: no dist-tag points to them, so `npm i` / `npm i @preview` / `npm outdated` never resolve them. Revisit once 2FA enrolment is unblocked on the maintainer account — by then the 72h unpublish windows will have elapsed, so the fallback is `npm deprecate <pkg>@<version>` with a message steering toward the current @preview. See Phase 1 of .cursor/plans/preview_iteration_+_promote_roadmap_88a4eaa0.plan.md for the re-runnable deprecate snippet."
+    status: cancelled
   - id: merge-fetch-source
     content: Move packages/fetch/src/ into packages/server/src/fetch/. Switch the webhook factory to import verifyWebhook from '../edge' (async Web Crypto variant) and add the missing `await` — latent bug fix captured in the merge. Internal *Core imports become relative ('../helpers').
     status: completed
@@ -72,8 +72,8 @@ todos:
     content: "Superseded by the hand-set-versions approach — the fetch-merge narrative is already in the empty-frontmatter override changeset (.changeset/hand-set-versions-consolidation.md) + packages/server/CHANGELOG.md@1.0.8. No separate .changeset/server-fetch-subpath.md needed because adding it would re-trigger the peer-dep cascade this PR is specifically avoiding."
     status: completed
   - id: unpublish-fetch
-    content: "After PR #135 merges + the hand-set @preview smoke test passes, unpublish @solvapay/fetch from a maintainer's local machine: `npm unpublish @solvapay/fetch --force` (drops 1.0.0 + every 1.0.1-preview-* snapshot). Name-level window closes 2026-04-27 ~15:30 UTC (72h from the 2026-04-24 22:30 UTC first publish). Fallback: if the window has elapsed, `npm deprecate @solvapay/fetch 'Merged into @solvapay/server/fetch'` instead. 0 external dependents confirmed via npm registry — internal repo references already migrated."
-    status: pending
+    content: "Completed 2026-04-26 via npm web UI (Delete Package button): @solvapay/fetch returns E404. CLI path was blocked by the same 2FA wall as `unpublish-obsolete-mcp-packages`. The web UI flow dropped 1.0.0 + both 1.0.1-preview-* snapshots in one action."
+    status: completed
   - id: run-validation
     content: Run pnpm install + build:packages + test + validate:fetch-runtime + Deno validate gate (supabase-edge-mcp AND supabase-edge) + each example's build. All green before commit.
     status: completed

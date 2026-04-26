@@ -34,10 +34,7 @@ import {
   toolResult,
 } from './helpers'
 import type { IntentTool } from './narrate'
-import {
-  createBuildBootstrapPayload,
-  type BuildBootstrapPayloadFn,
-} from './bootstrap-payload'
+import { createBuildBootstrapPayload, type BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { mergeCsp } from './csp'
 import {
   SOLVAPAY_OVERVIEW_MARKDOWN,
@@ -139,6 +136,16 @@ export interface BuildSolvaPayDescriptorsOptions {
   /** Additional CSP allow-lists merged with the Stripe baseline. */
   csp?: SolvaPayMcpCsp
   /**
+   * Configured SolvaPay API origin (e.g. `'https://api.solvapay.com'`
+   * or `'https://api-dev.solvapay.com'`). When provided, the origin is
+   * auto-appended to `csp.resourceDomains` + `csp.connectDomains` so
+   * the widget iframe can load merchant branding images (served by
+   * `GET /v1/files/public/provider-assets/...`) and make XHR / fetch
+   * calls back to the API without the integrator hand-extending the
+   * CSP. Pass the same value you pass to `createSolvaPay({ apiBaseUrl })`.
+   */
+  apiBaseUrl?: string
+  /**
    * Override customer-ref extraction. Defaults to reading
    * `extra.authInfo.extra.customer_ref` (populated by the MCP OAuth
    * bridge).
@@ -209,6 +216,7 @@ export function buildSolvaPayDescriptors(
     publicBaseUrl,
     views = DEFAULT_VIEWS,
     csp,
+    apiBaseUrl,
     getCustomerRef = defaultGetCustomerRefHelper,
     onToolCall,
     onToolResult,
@@ -296,11 +304,7 @@ export function buildSolvaPayDescriptors(
     getCustomerRef,
   })
 
-  const pushIntentTool = (
-    view: keyof typeof TOOL_FOR_VIEW,
-    title: string,
-    description: string,
-  ) => {
+  const pushIntentTool = (view: keyof typeof TOOL_FOR_VIEW, title: string, description: string) => {
     if (!enabledViews.has(view)) return
     const name = TOOL_FOR_VIEW[view]
     pushTool({
@@ -616,7 +620,7 @@ export function buildSolvaPayDescriptors(
 
   // ------- UI resource -------
 
-  const resolvedCsp = mergeCsp(csp)
+  const resolvedCsp = mergeCsp(csp, apiBaseUrl)
   const resource: SolvaPayResourceDescriptor = {
     uri: resourceUri,
     mimeType: 'text/html;profile=mcp-app',
@@ -661,8 +665,7 @@ export function buildSolvaPayDescriptors(
 export function buildSolvaPayPrompts(
   options: { enabledViews?: Set<SolvaPayMcpViewKind> } = {},
 ): SolvaPayPromptDescriptor[] {
-  const enabled =
-    options.enabledViews ?? new Set<SolvaPayMcpViewKind>(DEFAULT_VIEWS)
+  const enabled = options.enabledViews ?? new Set<SolvaPayMcpViewKind>(DEFAULT_VIEWS)
 
   const prompts: SolvaPayPromptDescriptor[] = []
 

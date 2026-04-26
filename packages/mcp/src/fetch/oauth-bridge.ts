@@ -18,6 +18,7 @@ import {
   withoutTrailingSlash,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
+import { toOAuthErrorBody } from '../internal/oauth-error-normalize'
 import { applyNativeCors, corsPreflight } from './cors'
 
 export interface FetchOAuthOptions {
@@ -30,111 +31,6 @@ export interface FetchOAuthOptions {
 }
 
 type FetchHandler = (req: Request) => Promise<Response | null>
-
-type OAuthTokenErrorCode =
-  | 'invalid_request'
-  | 'invalid_client'
-  | 'invalid_grant'
-  | 'unauthorized_client'
-  | 'unsupported_grant_type'
-  | 'invalid_scope'
-  | 'server_error'
-  | 'temporarily_unavailable'
-
-interface OAuthErrorBody {
-  error: OAuthTokenErrorCode | string
-  error_description?: string
-  [key: string]: unknown
-}
-
-function hasOAuthErrorShape(body: unknown): body is OAuthErrorBody {
-  return (
-    body !== null &&
-    typeof body === 'object' &&
-    typeof (body as Record<string, unknown>).error === 'string'
-  )
-}
-
-function extractZodErrors(body: Record<string, unknown>): Array<Record<string, unknown>> {
-  const errs = body.errors
-  if (!Array.isArray(errs)) return []
-  return errs.filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
-}
-
-function deriveOAuthErrorCode(
-  status: number,
-  nestBody: Record<string, unknown>,
-): OAuthTokenErrorCode {
-  if (status === 401 || status === 403) return 'invalid_client'
-  if (status >= 500) return 'server_error'
-
-  const zodErrors = extractZodErrors(nestBody)
-  const touches = (field: string): boolean =>
-    zodErrors.some(e => {
-      const path = (e as { path?: unknown }).path
-      return Array.isArray(path) && path.includes(field)
-    })
-
-  if (touches('grant_type')) {
-    const grantTypeErr = zodErrors.find(e => {
-      const path = (e as { path?: unknown }).path
-      return Array.isArray(path) && path.includes('grant_type')
-    })
-    const received = grantTypeErr && (grantTypeErr as { received?: unknown }).received
-    if (received !== 'undefined' && received !== undefined && received !== '') {
-      return 'unsupported_grant_type'
-    }
-    return 'invalid_request'
-  }
-  if (touches('code') || touches('refresh_token')) return 'invalid_grant'
-  if (touches('scope')) return 'invalid_scope'
-  if (touches('client_id') || touches('client_secret')) return 'invalid_client'
-  return 'invalid_request'
-}
-
-function buildErrorDescription(nestBody: Record<string, unknown>): string | undefined {
-  const zodErrors = extractZodErrors(nestBody)
-  if (zodErrors.length > 0) {
-    const parts = zodErrors
-      .map(e => {
-        const path = (e as { path?: unknown }).path
-        const message = (e as { message?: unknown }).message
-        const pathStr = Array.isArray(path) ? path.filter(p => typeof p === 'string').join('.') : ''
-        const msgStr = typeof message === 'string' ? message : ''
-        if (pathStr && msgStr) return `${pathStr}: ${msgStr}`
-        return pathStr || msgStr
-      })
-      .filter(Boolean)
-    if (parts.length > 0) return parts.join('; ')
-  }
-
-  const message = nestBody.message
-  if (typeof message === 'string') return message
-  if (Array.isArray(message)) {
-    const strings = message.filter((m: unknown): m is string => typeof m === 'string')
-    if (strings.length > 0) return strings.join('; ')
-  }
-
-  return undefined
-}
-
-function toOAuthErrorBody(body: unknown, text: string, status: number): OAuthErrorBody {
-  if (hasOAuthErrorShape(body)) return body
-
-  if (body && typeof body === 'object') {
-    const nestBody = body as Record<string, unknown>
-    const error = deriveOAuthErrorCode(status, nestBody)
-    const error_description = buildErrorDescription(nestBody)
-    return error_description ? { error, error_description } : { error }
-  }
-
-  const fallbackError: OAuthTokenErrorCode = status >= 500 ? 'server_error' : 'invalid_request'
-  const description =
-    typeof text === 'string' && text.length > 0 && text.length < 500 ? text : undefined
-  return description
-    ? { error: fallbackError, error_description: description }
-    : { error: fallbackError }
-}
 
 async function parseUpstreamJson(response: Response): Promise<{ body: unknown; text: string }> {
   const text = await response.text()
