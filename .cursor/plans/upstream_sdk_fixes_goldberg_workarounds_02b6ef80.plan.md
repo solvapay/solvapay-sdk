@@ -1,6 +1,6 @@
 ---
 name: upstream sdk fixes goldberg workarounds
-overview: Fold the three SDK workarounds from the `supabase-edge-mcp` Goldberg example back into `@solvapay/*` packages so future consumers get stateless-mode MCP, UI-only tool filtering, and edge entrypoint parity out of the box — then simplify the example down to the minimum it actually demonstrates.
+overview: Fold four SDK gaps exposed by the `supabase-edge-mcp` Goldberg example back into `@solvapay/*` packages so future consumers get stateless-mode MCP, UI-only tool filtering, edge entrypoint parity, and a self-contained edge adapter out of the box — then simplify the example down to the minimum it actually demonstrates.
 todos:
   - id: draft-mode-option
     content: Implement `mode` + `buildTransport` options in packages/mcp-fetch/src/handler.ts with per-mode transport construction and a shared connect-close mutex
@@ -17,11 +17,17 @@ todos:
   - id: edge-exports-regression-test
     content: Add packages/server/src/__tests__/edge-exports.test.ts asserting every symbol imported via `@solvapay/server` is present on the built edge entrypoint
     status: pending
+  - id: mcp-fetch-unified-factory
+    content: "Add `createSolvaPayMcpFetch` to packages/mcp-fetch/src/createSolvaPayMcpFetch.ts — a descriptor-accepting factory that internally builds the McpServer (buildSolvaPayDescriptors + ext-apps registration + hideToolsByAudience) and wraps in the existing handler. Promotes @modelcontextprotocol/ext-apps/server from @solvapay/mcp into @solvapay/mcp-fetch as a runtime dep. Keep createSolvaPayMcpFetchHandler unchanged for BYO-server callers."
+    status: pending
+  - id: mcp-fetch-unified-factory-test
+    content: Add packages/mcp-fetch/src/__tests__/createSolvaPayMcpFetch.test.ts covering descriptor-driven initialize → tools/list (with + without hideToolsByAudience) → resources/read ui://… → tools/call against a real SolvaPay fake. Assert the Workers example can import only @solvapay/mcp-fetch.
+    status: pending
   - id: changesets
-    content: Write .changeset/mcp-fetch-stateless-modes.md (minor) and .changeset/mcp-hide-tools-by-audience.md (minor); optionally .changeset/server-edge-exports-regression-test.md (patch)
+    content: Write .changeset/mcp-fetch-stateless-modes.md (minor), .changeset/mcp-hide-tools-by-audience.md (minor), .changeset/mcp-fetch-unified-factory.md (minor); optionally .changeset/server-edge-exports-regression-test.md (patch)
     status: pending
   - id: example-cleanup
-    content: "Follow-up PR: collapse examples/supabase-edge-mcp/supabase/functions/mcp/index.ts back to <30 lines using the new options; update README"
+    content: "Follow-up PR: collapse examples/supabase-edge-mcp/supabase/functions/mcp/index.ts to <30 lines using createSolvaPayMcpFetch (single adapter import); update README"
     status: pending
   - id: full-smoke-rerun
     content: After preview snapshot ships, rerun full MCPJam / ChatGPT connector smoke test to confirm no regression vs the Goldberg deploy behaviour
@@ -36,14 +42,17 @@ isProject: false
 
 During the Goldberg demo stand-up we hit three SDK limitations in sequence and worked around each one in [examples/supabase-edge-mcp/supabase/functions/mcp/index.ts](examples/supabase-edge-mcp/supabase/functions/mcp/index.ts). The example now carries ~80 lines of SDK-glue that should live inside `@solvapay/mcp-fetch` + `@solvapay/mcp` so any future integrator on a Web-standards runtime can wire up a paywalled MCP server in <30 lines.
 
-Target state: the example file goes back to calling `createSolvaPayMcpFetchHandler(...)` directly with one new option, and the SDK grows a handful of well-typed knobs that every workaround we did collapses into.
+Queuing the Cloudflare Workers port onto `@solvapay/mcp-fetch` also surfaced a fourth gap: `@solvapay/mcp-fetch` currently takes `server: McpServer` as a parameter and forces callers to pre-build the server with `@solvapay/mcp`. That contradicts the parallel-adapters design stated in [`packages/mcp-core/src/index.ts`](packages/mcp-core/src/index.ts) lines 12-14 — `mcp`, `mcp-express`, and `mcp-fetch` were meant to be peer adapters onto `mcp-core`, not stacked layers. Edge consumers should be able to use `mcp-fetch` alone.
+
+Target state: the Supabase example calls `createSolvaPayMcpFetch(...)` directly with descriptor options, and the SDK grows a handful of well-typed knobs that every workaround we did collapses into.
 
 ```mermaid
 flowchart LR
-  eg[examples/supabase-edge-mcp/index.ts] -->|today: 180 lines, deep SDK internals| sdk1[workaround soup]
-  eg -->|after plan: ~30 lines, one createSolvaPayMcpFetchHandler| sdk2[createSolvaPayMcpFetchHandler + audienceFilter]
-  sdk2 -->|mode: stateless-json + BYO transport| transport[@mcp/sdk WebStandardStreamableHTTPServerTransport]
-  sdk2 -->|hideToolsByAudience| coreServer["createSolvaPayMcpServer"]
+  eg[examples/supabase-edge-mcp/index.ts] -->|today: 283 lines, deep SDK internals| sdk1[workaround soup]
+  eg -->|after plan: ~55 lines, one createSolvaPayMcpFetch| sdk2[createSolvaPayMcpFetch]
+  sdk2 -->|mode: json-stateless + close + mutex| transport[@mcp/sdk WebStandardStreamableHTTPServerTransport]
+  sdk2 -->|internal buildSolvaPayDescriptors + registerAppTool| descriptors["@solvapay/mcp-core descriptors"]
+  sdk2 -->|hideToolsByAudience| audience["tools/list filter"]
 ```
 
 ## Issue inventory
@@ -175,25 +184,104 @@ Action needed:
 
 Changeset: covered by the existing `.changeset/server-edge-exports.md` — no new changeset needed. The new smoke test counts as a `patch` bump if folded into a separate changeset (optional, recommended for clarity: `.changeset/server-edge-exports-regression-test.md`).
 
+## Fix 4 — `@solvapay/mcp-fetch`: descriptor-accepting unified edge factory
+
+Today [packages/mcp-fetch/src/handler.ts](packages/mcp-fetch/src/handler.ts) lines 87-89 takes `server: McpServer` as a required parameter. That forces every edge consumer (Supabase Edge, Cloudflare Workers, Vercel Edge, Deno, Bun) to *also* import `@solvapay/mcp` purely to call `createSolvaPayMcpServer(...)` and pass the result in. The `@solvapay/mcp` peer dep in [packages/mcp-fetch/package.json](packages/mcp-fetch/package.json) lines 43-50 is currently marked `optional: true` — a hint that this was never the intended shape.
+
+The architectural intent, stated explicitly in [packages/mcp-core/src/index.ts](packages/mcp-core/src/index.ts) lines 12-14:
+
+> It has no runtime dependency on `@modelcontextprotocol/sdk`, `@modelcontextprotocol/ext-apps`, Express, or any runtime-specific OAuth middleware — those live in `@solvapay/mcp`, `@solvapay/mcp-express`, and `@solvapay/mcp-fetch` respectively.
+
+`mcp`, `mcp-express`, `mcp-fetch` are **parallel** adapters onto `mcp-core`, not stacked. Fix 4 closes the gap for `mcp-fetch`.
+
+### API shape
+
+Add a new export to `@solvapay/mcp-fetch` alongside the existing `createSolvaPayMcpFetchHandler`:
+
+```ts
+// packages/mcp-fetch/src/createSolvaPayMcpFetch.ts
+import type {
+  BuildSolvaPayDescriptorsOptions,
+} from '@solvapay/mcp-core'
+
+export interface CreateSolvaPayMcpFetchOptions
+  extends BuildSolvaPayDescriptorsOptions,
+    Omit<CreateSolvaPayMcpFetchHandlerOptions, 'server'> {
+  /** Hide UI-audience tools from `tools/list`. Same semantics as the @solvapay/mcp option. */
+  hideToolsByAudience?: string[]
+  /** Register non-SolvaPay tools on the built server. Same callback shape as @solvapay/mcp. */
+  additionalTools?: (ctx: AdditionalToolsContext) => void
+  /** Override the default McpServer name / version. */
+  serverName?: string
+  serverVersion?: string
+  /** Register slash-command prompts. Defaults to true. */
+  registerPrompts?: boolean
+  /** Register docs://solvapay/overview.md resource. Defaults to true. */
+  registerDocsResources?: boolean
+}
+
+export function createSolvaPayMcpFetch(
+  options: CreateSolvaPayMcpFetchOptions,
+): (req: Request) => Promise<Response>
+```
+
+### Implementation
+
+The body is a straight copy of `createSolvaPayMcpServer`'s body from [packages/mcp/src/server.ts](packages/mcp/src/server.ts) followed by a single call to `createSolvaPayMcpFetchHandler`. Concretely:
+
+1. Split incoming options into `descriptorOptions` (the `BuildSolvaPayDescriptorsOptions` subset) vs `handlerOptions` (the `CreateSolvaPayMcpFetchHandlerOptions` subset).
+2. Call `buildSolvaPayDescriptors(descriptorOptions)`.
+3. `new McpServer({ name, version, icons: deriveIcons(branding) })`.
+4. For each tool → `registerAppTool(server, ...)` with the tool's meta merged via the same icon-merging logic as today's `registerDescriptor`.
+5. For each prompt → `server.registerPrompt(...)`.
+6. For each docs resource → `server.registerResource(...)`.
+7. `registerAppResource(server, resourceUri, ...)` for the UI iframe.
+8. Run the `additionalTools` callback if present.
+9. Apply `hideToolsByAudience` — wrap `tools/list` handler (same internal-map reach-in as Fix 2).
+10. `return createSolvaPayMcpFetchHandler({ server, ...handlerOptions })`.
+
+**Dependency impact**: `@solvapay/mcp-fetch` grows a runtime dep on `@modelcontextprotocol/ext-apps/server` (for `registerAppResource`, `registerAppTool`, `RESOURCE_MIME_TYPE`). Promote `@modelcontextprotocol/ext-apps` from a peer dep of `@solvapay/mcp` to a runtime/peer dep of `@solvapay/mcp-fetch` too. The `@solvapay/mcp` optional peer dep can be removed from `mcp-fetch`'s `package.json`.
+
+**No code duplication between `@solvapay/mcp` and `@solvapay/mcp-fetch`** (open question): either accept the ~80 line overlap (both packages register descriptors onto an `McpServer`), or extract the shared registration loop into a small internal helper. Recommended: extract to `packages/mcp-core/src/internal/registerOnMcpServer.ts` *but* guard it with a type-only import of `McpServer` so `mcp-core` stays SDK-runtime-free. If that proves awkward, accept the duplication — the code is stable and the diff is easy to keep in sync.
+
+### New tests
+
+`packages/mcp-fetch/src/__tests__/createSolvaPayMcpFetch.test.ts`:
+
+1. Build a minimal handler via `createSolvaPayMcpFetch({ solvaPay: fakeSolvaPay, productRef: 'prod_test', resourceUri: 'ui://test/app.html', readHtml: async () => '<html/>', publicBaseUrl: 'https://test.example', apiBaseUrl: 'https://api.test.example', requireAuth: false, mode: 'json-stateless' })`.
+2. `initialize` → 200 + `serverInfo` with default name / icons.
+3. `tools/list` → all 11 SolvaPay tools present.
+4. Same, with `hideToolsByAudience: ['ui']` → 4 intent tools only.
+5. `resources/read ui://test/app.html` → returns the HTML + correct `_meta.ui` (csp + prefersBorder: false).
+6. `tools/call upgrade_plan` → paywall envelope returned with `_meta.ui.resourceUri` matching the descriptor.
+7. `additionalTools` callback fires with the expected `{ server, solvaPay, resourceUri, productRef, registerPayable }` context.
+8. Assert the test file imports **only** from `@solvapay/mcp-fetch` + `@solvapay/server` — no `@solvapay/mcp` import (proves the architectural claim).
+
+### Changeset
+
+`.changeset/mcp-fetch-unified-factory.md` — `minor` bump on `@solvapay/mcp-fetch`. Additive; existing `createSolvaPayMcpFetchHandler` + the BYO-server path stay unchanged. Mentions the new `@modelcontextprotocol/ext-apps` runtime dep as a peer-dep addition.
+
 ## Example cleanup
 
-Once Fix 1 + Fix 2 are published (preview first, then stable), collapse [examples/supabase-edge-mcp/supabase/functions/mcp/index.ts](examples/supabase-edge-mcp/supabase/functions/mcp/index.ts) back to a ~30-line entrypoint that calls `createSolvaPayMcpFetchHandler({ ..., mode: 'json-stateless', hideToolsByAudience: ['ui'] })` directly.
+Once Fix 1 + Fix 2 + Fix 4 are published (preview first, then stable), collapse [examples/supabase-edge-mcp/supabase/functions/mcp/index.ts](examples/supabase-edge-mcp/supabase/functions/mcp/index.ts) to a ~20-line entrypoint that calls `createSolvaPayMcpFetch({ ..., mode: 'json-stateless', hideToolsByAudience: ['ui'] })` directly.
 
 Planned diff shape:
 
+- Drop the `createSolvaPayMcpServer` call and the `@solvapay/mcp` import — use `createSolvaPayMcpFetch` with descriptor options directly.
 - Drop the custom `WebStandardStreamableHTTPServerTransport` singleton / mutex / per-request connect-close dance.
 - Drop the `_requestHandlers` reach into the McpServer.
 - Keep the Supabase-specific bits: `rewriteRequestPath` (strip `/mcp` function prefix), `applyBrowserCors` / `browserCorsPreflight` (the SDK's native-scheme-only CORS still applies).
 - Keep `MCP_PUBLIC_BASE_URL` + static_files config.
 - Add a short README note: "If you're deploying on a stateless fetch runtime (Supabase Edge, Cloudflare Workers, Vercel Edge), pass `mode: 'json-stateless'`."
+- Update the example's `package.json` to drop the `@solvapay/mcp` dependency (now unused).
 
 ## Release sequence
 
-1. Land all three fixes in a single PR against `dev` (so the preview snapshot gets them atomically).
+1. Land all four fixes in a single PR against `dev` (so the preview snapshot gets them atomically).
 2. `publish-preview.yml` cuts a preview snapshot → example's `deno.json` keeps `@preview` dist-tag, picks them up on next deploy.
 3. Run the same full MCPJam / ChatGPT connector smoke tests the Goldberg demo just passed to confirm no regression.
 4. Collapse the example in a follow-up PR (fewer file changes per PR, clean diff).
-5. Version Packages PR on `main` promotes the combined set to stable. Expected semver roll: `@solvapay/mcp-fetch` → minor, `@solvapay/mcp` → minor, `@solvapay/server` → already-queued minor from `text-only-paywall.md` (now with `edge-exports` patch riding along). Peer-dep cascade (documented in [.changeset/migration-hand-set-versions.md](.changeset/migration-hand-set-versions.md)) still applies; expect `react`/`mcp-core` to major-bump alongside.
+5. Version Packages PR on `main` promotes the combined set to stable. Expected semver roll: `@solvapay/mcp-fetch` → **minor** (two new symbols: `mode`/`buildTransport` on existing handler, plus `createSolvaPayMcpFetch`), `@solvapay/mcp` → minor (`hideToolsByAudience`), `@solvapay/server` → already-queued minor from `text-only-paywall.md` (now with `edge-exports` patch riding along). Peer-dep cascade (documented in [.changeset/migration-hand-set-versions.md](.changeset/migration-hand-set-versions.md)) still applies; expect `react`/`mcp-core` to major-bump alongside.
 
 ## Out of scope
 

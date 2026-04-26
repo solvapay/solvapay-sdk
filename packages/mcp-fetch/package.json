@@ -39,21 +39,25 @@
     "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
     "@modelcontextprotocol/sdk": "^1.28.0",
-    "@solvapay/mcp": "workspace:*",
-    "@solvapay/mcp-core": "workspace:*"
+    "@solvapay/mcp-core": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
-    "@solvapay/mcp": {
+    "zod": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
+    "@solvapay/server": "workspace:*",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "zod": "^4.3.6"
   }
 }

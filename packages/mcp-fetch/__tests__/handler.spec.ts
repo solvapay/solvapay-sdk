@@ -6,8 +6,10 @@ vi.mock('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js', () => {
   return {
     WebStandardStreamableHTTPServerTransport: class MockTransport {
       sessionIdGenerator?: () => string
-      constructor(opts: { sessionIdGenerator?: () => string } = {}) {
+      enableJsonResponse?: boolean
+      constructor(opts: { sessionIdGenerator?: () => string; enableJsonResponse?: boolean } = {}) {
         this.sessionIdGenerator = opts.sessionIdGenerator
+        this.enableJsonResponse = opts.enableJsonResponse
       }
       async handleRequest(req: Request) {
         const sid = this.sessionIdGenerator?.()
@@ -16,6 +18,9 @@ vi.mock('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js', () => {
           { status: 200, headers: { 'content-type': 'application/json' } },
         )
       }
+      // Handler closes the transport per-request so the server's
+      // `_transport` slot is released for the next call.
+      async close() {}
     },
   }
 })

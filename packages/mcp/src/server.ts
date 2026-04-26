@@ -21,6 +21,7 @@ import type {
 } from '@modelcontextprotocol/sdk/server/zod-compat.js'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import {
+  applyHideToolsByAudience,
   buildSolvaPayDescriptors,
   deriveIcons,
   type BuildSolvaPayDescriptorsOptions,
@@ -85,6 +86,21 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
   serverName?: string
   /** Overrides the default `McpServer` version. */
   serverVersion?: string
+  /**
+   * After registration, wrap the `tools/list` handler to drop any
+   * tool whose `_meta.audience` matches one of these values. The
+   * tools stay `enabled: true` so `tools/call` still reaches their
+   * handlers — this option only affects the `tools/list` response
+   * shape. Pass `['ui']` when deploying to a text-host MCP client
+   * (Claude Desktop, MCPJam, ChatGPT connectors) that won't embed
+   * the SolvaPay iframe surface, so the LLM's tool catalogue only
+   * surfaces the intent tools (`upgrade` / `manage_account` /
+   * `activate_plan` / `topup`) and merchant-registered data tools.
+   * The hidden transport tools (`create_payment_intent`, etc.) stay
+   * callable so the iframe can still invoke them for server-side
+   * work.
+   */
+  hideToolsByAudience?: string[]
 }
 
 function registerDescriptor(server: McpServer, tool: SolvaPayToolDescriptor): void {
@@ -176,6 +192,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     registerDocsResources = true,
     serverName,
     serverVersion = '1.0.0',
+    hideToolsByAudience,
     ...descriptorOptions
   } = options
 
@@ -274,6 +291,10 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     }
     additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
   }
+
+  // Apply the tools/list audience filter last so it sees every tool
+  // registered by the descriptor loop + `additionalTools` hook.
+  applyHideToolsByAudience(server, hideToolsByAudience)
 
   return server
 }

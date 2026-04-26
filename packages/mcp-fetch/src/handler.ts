@@ -17,6 +17,25 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { applyNativeCors, authChallenge, corsPreflight } from './cors'
 import { createOAuthFetchRouter } from './oauth-bridge'
 
+/**
+ * Transport wiring preset.
+ *
+ * - `'sse-stateful'` — default. SSE streaming + UUID `mcp-session-id`
+ *   on initialize. Matches the original helper behaviour and is what
+ *   Node / Express / Bun deployments expect.
+ * - `'json-stateless'` — `{ sessionIdGenerator: undefined,
+ *   enableJsonResponse: true }`. Required on stateless fetch runtimes
+ *   (Supabase Edge, Cloudflare Workers, Vercel Edge, Deno Deploy) that
+ *   can't keep per-session state across invocations and need a
+ *   single-JSON-response wire shape so the response body is assembled
+ *   before the per-request transport is closed.
+ * - `'sse-stateless'` — SSE streaming without session IDs. Advanced /
+ *   hypothetical; provided for symmetry. Most stateless runtimes want
+ *   `'json-stateless'` instead (a cut SSE stream drops the response
+ *   frame).
+ */
+export type McpHandlerMode = 'sse-stateful' | 'json-stateless' | 'sse-stateless'
+
 export interface CreateSolvaPayMcpFetchHandlerOptions {
   server: McpServer
   publicBaseUrl: string
@@ -29,9 +48,30 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
   /**
+   * Transport wiring preset. Defaults to `'sse-stateful'` to preserve
+   * the Node / Express / Bun behaviour of earlier versions. Stateless
+   * fetch runtimes (Supabase Edge, Cloudflare Workers, Vercel Edge)
+   * should pass `'json-stateless'`.
+   *
+   * Ignored when `buildTransport` is provided.
+   */
+  mode?: McpHandlerMode
+  /**
+   * Escape hatch: bring your own transport builder. When provided,
+   * `mode` and `sessionIdGenerator` are ignored — the caller owns the
+   * transport's configuration. The handler still manages
+   * `server.connect(transport)` + `transport.close()` per request and
+   * serialises concurrent requests through the shared-server mutex.
+   */
+  buildTransport?: () => WebStandardStreamableHTTPServerTransport
+  /**
    * Optional session-id generator for the underlying
-   * `WebStandardStreamableHTTPServerTransport`. Defaults to
-   * `crypto.randomUUID`. Set to `undefined` for stateless mode.
+   * `WebStandardStreamableHTTPServerTransport`. Only honoured in the
+   * default `'sse-stateful'` mode; ignored in stateless modes (which
+   * pass `sessionIdGenerator: undefined` to disable session tracking)
+   * and when `buildTransport` is provided.
+   *
+   * Defaults to `crypto.randomUUID`.
    */
   sessionIdGenerator?: () => string
 }
@@ -77,7 +117,10 @@ async function readJsonRpcId(req: Request): Promise<string | number | null> {
  *    when auth is missing.
  * 4. Forwards the request to a fresh
  *    `WebStandardStreamableHTTPServerTransport` wired to the provided
- *    `McpServer`.
+ *    `McpServer`. The transport's `close()` runs in a `finally` block
+ *    so the server's `_transport` slot is released for the next
+ *    request; concurrent requests serialise through a shared mutex so
+ *    two overlapping calls never double-connect the same `McpServer`.
  *
  * A fresh transport is created per request — that's the recommended
  * pattern for stateless fetch runtimes (Workers, Deno, Supabase Edge).
@@ -98,7 +141,9 @@ export function createSolvaPayMcpFetchHandler(
     protectedResourcePath,
     authorizationServerPath,
     oauthPaths,
-    sessionIdGenerator = defaultSessionIdGenerator,
+    mode = 'sse-stateful',
+    buildTransport,
+    sessionIdGenerator,
   } = options
 
   const oauthRouter = createOAuthFetchRouter({
@@ -109,6 +154,42 @@ export function createSolvaPayMcpFetchHandler(
     authorizationServerPath,
     oauthPaths,
   })
+
+  // Construct the per-request transport based on `mode`. The stateless
+  // modes pass `sessionIdGenerator: undefined` explicitly so the
+  // transport's `validateSession()` early-return branch is reachable
+  // for clients that don't echo `mcp-session-id` back. `json-stateless`
+  // also flips the response wire shape to a single JSON body, which is
+  // what makes the `transport.close()` in the finally block safe for
+  // stateless fetch runtimes (an SSE stream would otherwise be cut off
+  // before the final tool-result frame is written).
+  const makeTransport = (): WebStandardStreamableHTTPServerTransport => {
+    if (buildTransport) return buildTransport()
+    if (mode === 'json-stateless') {
+      return new WebStandardStreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
+      })
+    }
+    if (mode === 'sse-stateless') {
+      return new WebStandardStreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      })
+    }
+    return new WebStandardStreamableHTTPServerTransport({
+      sessionIdGenerator: sessionIdGenerator ?? defaultSessionIdGenerator,
+    })
+  }
+
+  // Serialise server connect/close cycles. `McpServer._transport` is a
+  // single slot — the protocol's `connect()` throws "Already connected
+  // to a transport" if it's set, and only `transport.close()` (which
+  // fires the protocol's `_onclose` handler) nulls it. Two overlapping
+  // requests would therefore race on this slot; we queue each request
+  // behind the previous one's close to sidestep the race entirely.
+  // Fine for the low-throughput edge-function case; high-throughput
+  // deployments should fan out to multiple `McpServer` instances.
+  let serverMutex: Promise<void> = Promise.resolve()
 
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)
@@ -156,13 +237,18 @@ export function createSolvaPayMcpFetchHandler(
       }
     }
 
-    // 6) Spin up a fresh transport per request and connect the server.
-    const transport = new WebStandardStreamableHTTPServerTransport({
-      sessionIdGenerator,
+    // 6) Serialise behind the previous in-flight request's close cycle.
+    const previous = serverMutex
+    let releaseMutex: () => void = () => {}
+    serverMutex = new Promise<void>(resolve => {
+      releaseMutex = resolve
     })
-    await server.connect(transport)
+    await previous
 
+    // 7) Spin up a fresh transport per request and connect the server.
+    const transport = makeTransport()
     try {
+      await server.connect(transport)
       const response = await transport.handleRequest(
         req,
         resolvedAuthInfo
@@ -193,6 +279,15 @@ export function createSolvaPayMcpFetchHandler(
         }),
         { status: 500, headers },
       )
+    } finally {
+      // `close()` is idempotent on every mode (see
+      // `webStandardStreamableHttp.js` — `close()` walks the stream
+      // map and calls `_onclose`, which triggers the protocol's
+      // `_onclose` to null the server's `_transport` slot). Swallow
+      // errors so a failed close never masks the real response /
+      // error above.
+      await transport.close().catch(() => {})
+      releaseMutex()
     }
   }
 }
