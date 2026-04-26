@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { createSolvaPayMcpFetchHandler } from '../src/handler'
+import { createSolvaPayMcpFetchHandler } from '../../src/fetch/handler'
 
 const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'

@@ -9,7 +9,7 @@ import {
   createOAuthRegisterHandler,
   createOAuthRevokeHandler,
   createOAuthTokenHandler,
-} from '../src/oauth-bridge'
+} from '../../src/express/oauth-bridge'
 
 type Headers = Record<string, string | string[] | undefined>
 

@@ -5,11 +5,13 @@
  * `WebStandardStreamableHTTPServerTransport` + `McpServer` wiring —
  * no SDK mocks. The suite proves the architectural claim that edge
  * consumers can wire up a paywalled MCP server importing ONLY from
- * `@solvapay/mcp-fetch` (+ `@solvapay/server` for the factory input
+ * `@solvapay/mcp/fetch` (+ `@solvapay/server` for the factory input
  * + `@solvapay/mcp-core` for the tool-name constants): the
  * `"does not leak @solvapay/mcp into the import surface"` test at
  * the bottom of this file parses its own source and asserts the
- * absence.
+ * absence of any bare `@solvapay/mcp` import (the root `.` entry
+ * would drag in `registerPayableTool` + its zod-compat wiring, which
+ * is exactly what the `./fetch` subpath is meant to avoid).
  */
 import { readFile } from 'node:fs/promises'
 import * as path from 'node:path'
@@ -17,7 +19,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
-import { createSolvaPayMcpFetch } from '../src/createSolvaPayMcpFetch'
+import { createSolvaPayMcpFetch } from '../../src/fetch/createSolvaPayMcpFetch'
 
 const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'
@@ -273,9 +275,12 @@ describe('createSolvaPayMcpFetch', () => {
 
   it('does not leak @solvapay/mcp into the import surface (architectural guarantee)', async () => {
     // The unified factory exists so edge consumers can import ONLY
-    // from `@solvapay/mcp-fetch`. Assert this test file itself doesn't
-    // reach into `@solvapay/mcp` — if anyone adds a convenience import
-    // here the guarantee quietly breaks for their consumers.
+    // from `@solvapay/mcp/fetch`. Assert this test file itself doesn't
+    // reach into `@solvapay/mcp` (the root `.` entry) — if anyone
+    // adds a convenience import here the guarantee quietly breaks
+    // for their consumers, since the root entry carries
+    // `registerPayableTool` + its zod-compat + payable-handler wiring
+    // that the subpath is meant to leave behind.
     const source = await readFile(path.resolve(__dirname, 'createSolvaPayMcpFetch.spec.ts'), 'utf-8')
     expect(source).not.toMatch(/from\s+['"]@solvapay\/mcp['"]/)
   })

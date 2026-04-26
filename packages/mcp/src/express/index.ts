@@ -1,17 +1,17 @@
 /**
- * `@solvapay/mcp-express` — Node `(req, res, next)` OAuth bridge
+ * `@solvapay/mcp/express` — Node `(req, res, next)` OAuth bridge
  * middleware for the SolvaPay MCP server.
  *
- * Pair with `@solvapay/mcp` (MCP server factory) and
- * `@solvapay/mcp-core` (framework-neutral contracts). For
- * Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers /
- * Bun / Next edge / Vercel Functions) use `@solvapay/mcp-fetch`
- * instead.
+ * Pair with `@solvapay/mcp` (root entry — MCP server factory +
+ * `registerPayableTool`) and `@solvapay/mcp-core` (framework-neutral
+ * contracts). For Web-standards runtimes (Deno / Supabase Edge /
+ * Cloudflare Workers / Bun / Next edge / Vercel Functions) use
+ * `@solvapay/mcp/fetch` instead.
  *
  * @example
  * ```ts
  * import express from 'express'
- * import { createMcpOAuthBridge } from '@solvapay/mcp-express'
+ * import { createMcpOAuthBridge } from '@solvapay/mcp/express'
  *
  * const app = express()
  * app.use(express.json())

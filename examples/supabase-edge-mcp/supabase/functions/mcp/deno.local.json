@@ -2,8 +2,8 @@
   "nodeModulesDir": "auto",
   "imports": {
     "@solvapay/mcp": "npm:@solvapay/mcp@preview",
+    "@solvapay/mcp/": "npm:/@solvapay/mcp@preview/",
     "@solvapay/mcp-core": "npm:@solvapay/mcp-core@preview",
-    "@solvapay/mcp-fetch": "npm:@solvapay/mcp-fetch@preview",
     "@solvapay/server": "npm:@solvapay/server@preview",
     "@solvapay/core": "npm:@solvapay/core@preview",
     "@modelcontextprotocol/sdk/": "npm:/@modelcontextprotocol/sdk@1.29.0/",

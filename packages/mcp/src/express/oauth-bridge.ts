@@ -2,10 +2,10 @@
  * Node `(req, res, next)` OAuth bridge middleware for the SolvaPay MCP
  * server.
  *
- * Lifted verbatim from `@solvapay/mcp@1.0.8-preview.10` so the
- * framework-neutral `@solvapay/mcp-core` stays runtime-agnostic. Pure
- * JSON discovery builders come from `@solvapay/mcp-core`; everything
- * request/response-shaped lives here.
+ * Lifted verbatim from `@solvapay/mcp-express` when it was folded into
+ * this package as a subpath export. Pure JSON discovery builders come
+ * from `@solvapay/mcp-core`; everything request/response-shaped lives
+ * here so `@solvapay/mcp-core` stays runtime-agnostic.
  */
 
 import {

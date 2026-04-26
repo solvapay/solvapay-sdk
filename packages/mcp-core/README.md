@@ -12,9 +12,10 @@ discovery JSON builders, and JWT bearer helpers.
 It does **not** depend on `@modelcontextprotocol/sdk`,
 `@modelcontextprotocol/ext-apps`, or any runtime-specific HTTP plumbing.
 The official `@modelcontextprotocol/*` adapter lives in
-[`@solvapay/mcp`](../mcp); Node `(req, res, next)` OAuth middleware lives
-in [`@solvapay/mcp-express`](../mcp-express); fetch-first OAuth + the
-turnkey handler lives in [`@solvapay/mcp-fetch`](../mcp-fetch).
+[`@solvapay/mcp`](../mcp); Node `(req, res, next)` OAuth middleware ships
+as the [`@solvapay/mcp/express`](../mcp/src/express) subpath export;
+fetch-first OAuth + the turnkey handler ships as the
+[`@solvapay/mcp/fetch`](../mcp/src/fetch) subpath export.
 
 ## Install
 
@@ -59,9 +60,9 @@ If you're starting a new SolvaPay MCP server on the official
 [`@solvapay/mcp`](../mcp), which wraps it with one-call ergonomics.
 
 If you need HTTP-level OAuth handlers, pair this package with either
-[`@solvapay/mcp-express`](../mcp-express) (Node) or
-[`@solvapay/mcp-fetch`](../mcp-fetch) (Deno / Supabase Edge / Cloudflare
-Workers / Bun / Next edge).
+[`@solvapay/mcp/express`](../mcp/src/express) (Node) or
+[`@solvapay/mcp/fetch`](../mcp/src/fetch) (Deno / Supabase Edge /
+Cloudflare Workers / Bun / Next edge).
 
 If you're writing a new adapter (fastmcp, custom JSON-RPC):
 
@@ -92,7 +93,7 @@ myAdapter.registerResource(resource)
 ## See also
 
 - [`@solvapay/mcp`](../mcp) — official `@modelcontextprotocol/sdk` + `ext-apps` adapter (`createSolvaPayMcpServer`)
-- [`@solvapay/mcp-express`](../mcp-express) — Node `(req, res, next)` OAuth middleware stack
-- [`@solvapay/mcp-fetch`](../mcp-fetch) — fetch-first OAuth handlers + turnkey `createSolvaPayMcpFetchHandler`
+- [`@solvapay/mcp/express`](../mcp/src/express) — Node `(req, res, next)` OAuth middleware stack
+- [`@solvapay/mcp/fetch`](../mcp/src/fetch) — fetch-first OAuth handlers + turnkey `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch`
 - [`@solvapay/server`](../server) — core SDK (paywall, webhooks, `*Core` helpers)
 - [`@solvapay/react/mcp`](../react) — React provider + views for the MCP App UI shell

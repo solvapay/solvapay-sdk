@@ -1,15 +1,15 @@
 /**
- * `@solvapay/mcp-fetch` — fetch-first OAuth bridge + turnkey MCP
+ * `@solvapay/mcp/fetch` — fetch-first OAuth bridge + turnkey MCP
  * handler for Web-standards runtimes (Deno / Supabase Edge /
  * Cloudflare Workers / Bun / Next edge / Vercel Functions). Parallel
- * adapter to `@solvapay/mcp` (Node `McpServer` wiring) and
- * `@solvapay/mcp-express` (`(req, res, next)` middleware) — edge
- * consumers should import ONLY from this package.
+ * subpath export to `@solvapay/mcp` (Node `McpServer` wiring) and
+ * `@solvapay/mcp/express` (`(req, res, next)` middleware) — edge
+ * consumers should import ONLY from this subpath.
  *
  * @example Unified factory (recommended for edge runtimes):
  *
  * ```ts
- * import { createSolvaPayMcpFetch } from '@solvapay/mcp-fetch'
+ * import { createSolvaPayMcpFetch } from '@solvapay/mcp/fetch'
  *
  * Deno.serve(
  *   createSolvaPayMcpFetch({
@@ -29,7 +29,7 @@
  *
  * ```ts
  * import { createSolvaPayMcpServer } from '@solvapay/mcp'
- * import { createSolvaPayMcpFetchHandler } from '@solvapay/mcp-fetch'
+ * import { createSolvaPayMcpFetchHandler } from '@solvapay/mcp/fetch'
  *
  * const server = createSolvaPayMcpServer({ …descriptorOptions })
  * Deno.serve(
@@ -67,10 +67,8 @@ export { createSolvaPayMcpFetchHandler } from './handler'
 export type { CreateSolvaPayMcpFetchHandlerOptions, McpHandlerMode } from './handler'
 
 export { createSolvaPayMcpFetch } from './createSolvaPayMcpFetch'
-export type {
-  AdditionalToolsContext,
-  CreateSolvaPayMcpFetchOptions,
-} from './createSolvaPayMcpFetch'
+export type { CreateSolvaPayMcpFetchOptions } from './createSolvaPayMcpFetch'
+export type { AdditionalToolsContext } from '../server'
 
 // Convenience re-exports from @solvapay/mcp-core.
 export {

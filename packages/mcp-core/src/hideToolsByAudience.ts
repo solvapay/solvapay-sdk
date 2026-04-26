@@ -27,7 +27,7 @@
  *
  * This helper is exported from `@solvapay/mcp-core` so both
  * `@solvapay/mcp` (stacked `createSolvaPayMcpServer`) and
- * `@solvapay/mcp-fetch` (unified `createSolvaPayMcpFetch`) can apply
+ * `@solvapay/mcp/fetch` (unified `createSolvaPayMcpFetch`) can apply
  * the same filter without each re-implementing the reach-in.
  */
 

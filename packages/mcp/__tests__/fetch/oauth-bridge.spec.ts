@@ -8,7 +8,7 @@ import {
   createOAuthTokenHandler,
   createOpenidNotFoundHandler,
   createProtectedResourceHandler,
-} from '../src/oauth-bridge'
+} from '../../src/fetch/oauth-bridge'
 
 const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'

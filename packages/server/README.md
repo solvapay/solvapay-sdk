@@ -137,14 +137,14 @@ Fail closed on missing/invalid auth. Do not fall back to shared identities like 
 adapter. For framework-neutral descriptors (`fastmcp`, raw JSON-RPC),
 use
 [`@solvapay/mcp-core`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-core)'s
-`buildSolvaPayDescriptors`. OAuth-bridge middleware lives in
-runtime-specific packages:
-[`@solvapay/mcp-express`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-express)
+`buildSolvaPayDescriptors`. OAuth-bridge middleware ships as runtime-
+specific subpath exports of `@solvapay/mcp`:
+[`@solvapay/mcp/express`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp/src/express)
 (`createMcpOAuthBridge`) for Node, and
-[`@solvapay/mcp-fetch`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-fetch)
-(`createSolvaPayMcpFetchHandler`) for Web-standards runtimes
-(Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge / Vercel
-Functions). JWT bearer helpers
+[`@solvapay/mcp/fetch`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp/src/fetch)
+(`createSolvaPayMcpFetchHandler`, `createSolvaPayMcpFetch`) for
+Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers /
+Bun / Next edge / Vercel Functions). JWT bearer helpers
 (`getCustomerRefFromBearerAuthHeader`, `McpBearerAuthError`) live
 in `@solvapay/mcp-core`.
 

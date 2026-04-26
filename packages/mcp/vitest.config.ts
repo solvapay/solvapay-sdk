@@ -12,7 +12,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
+    include: [
+      '__tests__/**/*.test.ts',
+      '__tests__/**/*.spec.ts',
+      'src/**/*.test.ts',
+      'src/**/*.spec.ts',
+    ],
     testTimeout: 30000,
   },
 })

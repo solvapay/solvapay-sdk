@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSolvaPayMcpFetchHandler } from '../src/handler'
+import { createSolvaPayMcpFetchHandler } from '../../src/fetch/handler'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 vi.mock('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js', () => {

@@ -2,9 +2,9 @@
 
 Full SolvaPay MCP server running on [**Supabase Edge Functions**](https://supabase.com/docs/guides/functions). The same paywalled demo toolbox that ships in [`../mcp-checkout-app`](../mcp-checkout-app) — deployed at the network edge, no Node server, no Express middleware.
 
-- HTTP transport — [`createSolvaPayMcpFetchHandler`](../../packages/mcp-fetch/src/handler.ts) (Web-standards `Request`/`Response`)
-- MCP server — [`createSolvaPayMcpServer`](../../packages/mcp/src/server.ts) (framework-neutral descriptors + payable handler)
-- OAuth bridge — the fetch-first `/oauth/{register,authorize,token,revoke}` routes from [`@solvapay/mcp-fetch`](../../packages/mcp-fetch)
+- Unified MCP + HTTP factory — [`createSolvaPayMcpFetch`](../../packages/mcp/src/fetch/createSolvaPayMcpFetch.ts) from the `@solvapay/mcp/fetch` subpath (Web-standards `Request`/`Response` handler with the full SolvaPay tool surface + OAuth bridge baked in)
+- Underlying MCP server — built via [`buildSolvaPayMcpServer`](../../packages/mcp/src/internal/buildMcpServer.ts) (framework-neutral descriptors + payable handler)
+- OAuth bridge — the fetch-first `/oauth/{register,authorize,token,revoke}` routes composed into the unified factory by [`createOAuthFetchRouter`](../../packages/mcp/src/fetch/oauth-bridge.ts)
 - Paywalled tools — [`demo-tools.ts`](./supabase/functions/mcp/demo-tools.ts), the two Goldberg stock-predictor Oracle tools (trimmed from `mcp-checkout-app`'s full toolbox)
 
 ## Why this example exists
@@ -25,7 +25,7 @@ examples/supabase-edge-mcp/
 └── supabase/
     └── functions/
         └── mcp/
-            ├── index.ts                   Deno.serve(createSolvaPayMcpFetchHandler(…))
+            ├── index.ts                   Deno.serve(createSolvaPayMcpFetch(…))
             ├── demo-tools.ts              paywalled tool handlers (runtime-neutral copy)
             ├── deno.json                  PRODUCTION import map → npm:@solvapay/*
             ├── deno.local.json            LOCAL-DEV import map → file:../../../../packages/*
@@ -113,11 +113,11 @@ supabase secrets set DEMO_TOOLS=false
 
 ## CI gate
 
-The root [`.github/workflows/publish-preview.yml`](../../.github/workflows/publish-preview.yml) runs `pnpm --filter @example/supabase-edge-mcp validate` as a required gate before publishing `@solvapay/mcp-fetch` snapshots. The gate runs `deno check` against this function using the local import map, so **any change that breaks the canonical Supabase Edge consumer blocks the preview publish** — not a test, a type-check under a real Deno binary.
+The root [`.github/workflows/publish-preview.yml`](../../.github/workflows/publish-preview.yml) runs `pnpm --filter @example/supabase-edge-mcp validate` as a required gate before publishing `@solvapay/mcp` snapshots. The gate runs `deno check` against this function using the local import map, so **any change that breaks the canonical Supabase Edge consumer blocks the preview publish** — not a test, a type-check under a real Deno binary.
 
 ## See also
 
-- [`packages/mcp-fetch/README.md`](../../packages/mcp-fetch/README.md) — full fetch-first handler reference
+- [`packages/mcp/src/fetch/`](../../packages/mcp/src/fetch/) — full fetch-first handler reference (the `@solvapay/mcp/fetch` subpath export)
 - [`packages/mcp/README.md`](../../packages/mcp/README.md) — the `@modelcontextprotocol/sdk` adapter used inside the handler
 - [`examples/mcp-checkout-app/README.md`](../mcp-checkout-app/README.md) — same toolbox, Express transport
 - [`examples/supabase-edge/README.md`](../supabase-edge/README.md) — checkout REST functions (the non-MCP companion)

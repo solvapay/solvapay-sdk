@@ -5,7 +5,7 @@ import {
   corsPreflight,
   isNativeClientOrigin,
   resolveBearer,
-} from '../src/cors'
+} from '../../src/fetch/cors'
 
 describe('isNativeClientOrigin', () => {
   it('matches native MCP client schemes', () => {

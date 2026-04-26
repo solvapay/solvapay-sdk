@@ -3,7 +3,7 @@ import express, { type Request, type Response } from 'express'
 import { randomUUID } from 'node:crypto'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
-import { createMcpOAuthBridge } from '@solvapay/mcp-express'
+import { createMcpOAuthBridge } from '@solvapay/mcp/express'
 import type { SolvaPayMerchantBranding } from '@solvapay/mcp-core'
 import { createServer, fetchBranding } from './server'
 import {

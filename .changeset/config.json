@@ -19,5 +19,8 @@
     "hosted-checkout-demo",
     "shadcn-checkout",
     "tailwind-checkout"
-  ]
+  ],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
 }
