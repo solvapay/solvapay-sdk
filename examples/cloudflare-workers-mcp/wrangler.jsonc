@@ -1,0 +1,40 @@
+/**
+ * Wrangler config for the SolvaPay MCP Cloudflare Workers example.
+ *
+ * - `main` points at the fetch-first entrypoint that composes
+ *   `@solvapay/mcp/fetch` in a single call.
+ * - `import mcpAppHtml from './assets/mcp-app.html'` resolves to the
+ *   file contents at build time via Wrangler's built-in Text module
+ *   rule (covers .txt, .html, .sql by default) - no Workers Assets
+ *   binding required. Vite produces src/assets/mcp-app.html via the
+ *   `build` script (see package.json).
+ * - `nodejs_compat` is a safety net for any transitively Node-ish path
+ *   in `@modelcontextprotocol/sdk`. The SolvaPay MCP surface itself is
+ *   fetch-first; this flag just prevents runtime surprises.
+ * - `SOLVAPAY_SECRET_KEY` is a secret, not a var. Set with:
+ *     wrangler secret put SOLVAPAY_SECRET_KEY
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "solvapay-mcp-workers-example",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-04-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "mcp-workers-example.solvapay.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    // Replace with your own SolvaPay product ref when cloning this
+    // starter. Created in the SolvaPay dashboard -> Products.
+    "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",
+    "MCP_PUBLIC_BASE_URL": "https://mcp-workers-example.solvapay.com",
+    "SOLVAPAY_API_BASE_URL": "https://api.solvapay.com",
+    "DEMO_TOOLS": "1"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

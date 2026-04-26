@@ -7,6 +7,8 @@ Full SolvaPay MCP server running on [**Supabase Edge Functions**](https://supaba
 - OAuth bridge — the fetch-first `/oauth/{register,authorize,token,revoke}` routes composed into the unified factory by [`createOAuthFetchRouter`](../../packages/mcp/src/fetch/oauth-bridge.ts)
 - Paywalled tools — [`demo-tools.ts`](./supabase/functions/mcp/demo-tools.ts), the two Goldberg stock-predictor Oracle tools (trimmed from `mcp-checkout-app`'s full toolbox)
 
+> **Sibling example:** [`../cloudflare-workers-mcp/`](../cloudflare-workers-mcp/) is the same paywalled toolbox on the Cloudflare Workers runtime. The widget iframe source (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`, `demo-tools.ts` tool handlers) is byte-for-byte duplicated between the two until we extract a shared package. **Sync edits in both places** if you change the widget or the demo tools.
+
 ## Why this example exists
 
 The plain [`../supabase-edge/`](../supabase-edge/) example hosts the checkout/billing REST surface — `POST /check-purchase`, `POST /create-payment-intent`, etc. This example sits one abstraction up: it hosts an MCP server that _paywalls arbitrary tools_, served from Supabase Edge in a single turnkey handler. If you're building an MCP-accessible product (Claude skills, Cursor tools, ChatGPT apps), this is the shape.
