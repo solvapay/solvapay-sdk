@@ -125,6 +125,12 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       // Step 2: Ensure dedicated test product and usage-based plan exist
       console.log('Step 2: Ensuring integration test product and plan...')
 
+      // Resolve the provider's default currency so fixture plans pass the
+      // backend's currency-consistency check (e.g. SEK-only providers).
+      const merchant = await apiClient.getMerchant()
+      const providerCurrency: string = merchant?.defaultCurrency || 'USD'
+      console.log(`📍 Provider currency: ${providerCurrency}`)
+
       const products = await apiClient.listProducts()
       const fixturePrefix = 'SDK Payment Integration Fixture'
       const existingFixture = products.find((p: any) =>
@@ -161,7 +167,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
           billingModel: 'pre-paid',
           billingCycle: 'monthly',
           creditsPerUnit: 100,
-          currency: 'USD',
+          currency: providerCurrency,
           freeUnits: 5,
           limit: 5,
           limits: {},
