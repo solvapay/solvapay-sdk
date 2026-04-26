@@ -20,6 +20,9 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-04-26",
   "compatibility_flags": ["nodejs_compat"],
+  // Route binds a custom domain to this Worker. Replace with your
+  // own zone or remove this block entirely to serve on the default
+  // `<worker>.<subdomain>.workers.dev` URL.
   "routes": [
     {
       "pattern": "mcp-workers-example.solvapay.com",
@@ -27,16 +30,20 @@
     },
   ],
   "vars": {
-    // Replace with your own SolvaPay product ref when cloning this
-    // starter. Created in the SolvaPay dashboard -> Products.
-    "SOLVAPAY_PRODUCT_REF": "prd_30BAQH9T",
-    "MCP_PUBLIC_BASE_URL": "https://mcp-workers-example.solvapay.com",
-    // Worker.ts defaults to https://api.solvapay.com (production) when
-    // this var is unset. Overridden here so this specific staging deploy
-    // hits api-dev for side-by-side parity with the Goldberg Supabase
-    // instance. Remove this line to point at production.
-    "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com",
+    // Replace with your own SolvaPay product ref — create one in the
+    // SolvaPay dashboard -> Products and copy its `prd_…` ID here, OR
+    // override at deploy time via `wrangler secret put SOLVAPAY_PRODUCT_REF`
+    // (secret overrides this var at runtime).
+    "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",
+    // Replace with your own canonical public URL (OAuth `issuer` will
+    // reflect this). `wrangler secret put MCP_PUBLIC_BASE_URL` also
+    // works at runtime.
+    "MCP_PUBLIC_BASE_URL": "https://your-worker.example.com",
     "DEMO_TOOLS": "1",
+    // `SOLVAPAY_API_BASE_URL` is intentionally not committed here —
+    // src/worker.ts defaults to https://api.solvapay.com (production).
+    // Override at deploy time via `wrangler secret put SOLVAPAY_API_BASE_URL`
+    // when you need to point at a staging backend.
   },
   "observability": {
     "enabled": true,

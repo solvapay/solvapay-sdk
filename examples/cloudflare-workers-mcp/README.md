@@ -52,16 +52,31 @@ Then point an MCP client at `http://localhost:8787/`. Good candidates for a firs
 pnpm build
 
 # Set the merchant secret (one-time per Worker)
-wrangler secret put SOLVAPAY_SECRET_KEY
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY
 
 # Edit wrangler.jsonc:
-#   - `routes[].pattern`  — your hostname (or remove the routes block entirely)
-#   - `vars.SOLVAPAY_PRODUCT_REF`    — your product ref
+#   - `routes[].pattern`  — your hostname (or remove the routes block entirely to serve on *.workers.dev)
+#   - `vars.SOLVAPAY_PRODUCT_REF`    — your product ref (prd_…)
 #   - `vars.MCP_PUBLIC_BASE_URL`     — the canonical public URL
-#   - `vars.SOLVAPAY_API_BASE_URL`   — the SolvaPay backend origin (defaults to `https://api.solvapay.com`; override for staging/dev environments)
+# SOLVAPAY_API_BASE_URL is not a var — worker.ts defaults to https://api.solvapay.com.
+# Override only if you need a different environment:
+#   echo "https://api-dev.solvapay.com" | pnpm exec wrangler secret put SOLVAPAY_API_BASE_URL
 
 pnpm deploy
 ```
+
+### Deploy-time overrides via secrets
+
+Every var in `wrangler.jsonc` can be overridden at runtime by a same-named `wrangler secret put`. Useful when you want to keep the committed `vars` clean (safe defaults, ready to clone) but point a specific Worker at different values:
+
+```bash
+# Override committed placeholders without editing wrangler.jsonc
+echo "prd_your_real_ref"           | pnpm exec wrangler secret put SOLVAPAY_PRODUCT_REF
+echo "https://your-worker.example" | pnpm exec wrangler secret put MCP_PUBLIC_BASE_URL
+echo "https://api-dev.solvapay.com"| pnpm exec wrangler secret put SOLVAPAY_API_BASE_URL
+```
+
+Secrets are not committed; they persist across `wrangler deploy` runs and can be rotated without a repo change.
 
 ## File layout
 
