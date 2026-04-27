@@ -169,6 +169,35 @@ describe('McpAccountView', () => {
     expect(screen.queryByRole('link', { name: /manage account/i })).toBeNull()
   })
 
+  it('hides the portal hint when the Manage account button itself is hidden (zero-amount paid purchase)', async () => {
+    // Defensive case: hasPaidPurchase is true but the active purchase has
+    // a zero amount (free plan, edge data). The hint and the button must
+    // share the same gate or the hint points at a button that never
+    // renders.
+    const zeroAmountPurchase: PurchaseInfo = { ...paidPurchase, amount: 0 }
+    const ctx = buildCtx(
+      {
+        purchase: {
+          loading: false,
+          isRefetching: false,
+          error: null,
+          purchases: [zeroAmountPurchase],
+          hasProduct: () => true,
+          activePurchase: zeroAmountPurchase,
+          hasPaidPurchase: true,
+          activePaidPurchase: zeroAmountPurchase,
+          balanceTransactions: [],
+        },
+      },
+      [zeroAmountPurchase],
+      0,
+    )
+    renderAccount(ctx)
+    await new Promise(r => setTimeout(r, 0))
+    expect(screen.queryByRole('link', { name: /manage account/i })).toBeNull()
+    expect(document.querySelector('[data-solvapay-mcp-portal-hint]')).toBeNull()
+  })
+
   it('leads with the product header sourced from the product prop', () => {
     const ctx = buildCtx({}, [paidPurchase], 0)
     renderAccount(ctx, {

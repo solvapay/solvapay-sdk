@@ -98,6 +98,13 @@ export function McpAccountView({
 
   const hasAnyPlan = hasPaidPurchase || shouldShowCancelledNotice
   const hasCredits = (credits ?? 0) > 0
+  // The portal only meaningfully serves paid plans with a non-zero
+  // amount (free plans have nothing to manage in Stripe). The hint
+  // and the button must use the same gate or the hint will point at
+  // a button that never renders.
+  const showPortalCta = Boolean(
+    hasPaidPurchase && activePurchase && activePurchase.amount && activePurchase.amount > 0,
+  )
 
   // Product name falls back to the active purchase's productName for
   // legacy callers (and unauthenticated bootstraps where `product` is
@@ -151,9 +158,11 @@ export function McpAccountView({
               showStartDate
               showReference
             />
-            <p className={cx.muted} data-solvapay-mcp-portal-hint="">
-              {copy.currentPlan.portalHint}
-            </p>
+            {showPortalCta ? (
+              <p className={cx.muted} data-solvapay-mcp-portal-hint="">
+                {copy.currentPlan.portalHint}
+              </p>
+            ) : null}
           </>
         ) : null}
 
@@ -196,7 +205,7 @@ export function McpAccountView({
           </div>
         )}
 
-        {hasPaidPurchase && activePurchase && activePurchase.amount && activePurchase.amount > 0 ? (
+        {showPortalCta ? (
           <LaunchCustomerPortalButton
             className={cx.button}
             loadingClassName={cx.button}
