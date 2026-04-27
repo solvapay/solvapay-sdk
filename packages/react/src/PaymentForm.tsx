@@ -11,6 +11,12 @@
  * the submit handler so the default tree works identically for paid and
  * free plans.
  *
+ * The `<MandateText>` sentence carries the legal commitment (terms +
+ * privacy URLs are linkified inline), so the default tree intentionally
+ * does NOT append `<LegalFooter />` — that strip is reserved for shells
+ * that compose multiple cards. Consumers who want it can opt back in
+ * via the `LegalFooter` namespace member or by composing their own tree.
+ *
  * Full control (swap PaymentElement for CardElement, reorder, compose with
  * shadcn/Tailwind) is available via the primitives at
  * `@solvapay/react/primitives`.
@@ -28,6 +34,7 @@ import {
   PaymentFormSubmitButton,
   PaymentFormLoading,
   PaymentFormError,
+  PaymentFormLegalFooter,
 } from './primitives/PaymentForm'
 import type { PaymentFormProps, PrefillCustomer } from './types'
 
@@ -70,6 +77,7 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   SubmitButton: typeof PaymentFormSubmitButton
   Loading: typeof PaymentFormLoading
   Error: typeof PaymentFormError
+  LegalFooter: typeof PaymentFormLegalFooter
 } = Object.assign(PaymentFormBase, {
   Summary: PaymentFormSummary,
   CustomerFields: PaymentFormCustomerFields,
@@ -80,4 +88,5 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   SubmitButton: PaymentFormSubmitButton,
   Loading: PaymentFormLoading,
   Error: PaymentFormError,
+  LegalFooter: PaymentFormLegalFooter,
 })

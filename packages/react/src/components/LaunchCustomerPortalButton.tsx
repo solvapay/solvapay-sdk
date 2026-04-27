@@ -4,46 +4,57 @@
  * `<LaunchCustomerPortalButton>` — opens the SolvaPay hosted customer
  * portal in a new browser tab.
  *
- * Works identically in HTTP and MCP contexts because it routes through
- * `transport.createCustomerSession()` (either HTTP `/api/create-customer-session`
- * or MCP `create_customer_session` tool). The portal URL is pre-fetched on
- * mount so the click handler can navigate via a real `<a target="_blank">`,
- * which MCP host sandboxes permit (scripted `window.open` after an async
- * round-trip is blocked — see `mcp-checkout-app` for prior art).
+ * Render-eager: the button is enabled and labelled from the first paint
+ * regardless of session state. The portal session URL is fetched in the
+ * background through `useCustomerSessionUrl()` (a single in-flight call
+ * shared across every instance under the same transport). When the URL
+ * is ready, click is a synchronous `<a target="_blank">` navigation —
+ * which MCP host sandboxes permit even though scripted `window.open`
+ * after an async round-trip is blocked.
+ *
+ * If the user clicks before the URL has resolved, the click handler
+ * awaits the in-flight fetch and falls back to `window.open` (works on
+ * hosts that don't sandbox scripted opens, e.g. ChatGPT). On Claude the
+ * sandbox silently drops the open in that race; the cache-hit path
+ * remains the optimal one and is the steady state for any user that
+ * doesn't click within a few hundred ms of opening the surface.
  */
 
-import React, { forwardRef, useEffect, useRef, useState } from 'react'
-import { useTransport } from '../hooks/useTransport'
+import React, { forwardRef, useState } from 'react'
+import { useCustomerSessionUrl } from '../hooks/useCustomerSessionUrl'
 import { useCopy } from '../hooks/useCopy'
 import { composeEventHandlers } from '../primitives/composeEventHandlers'
 import { Slot } from '../primitives/slot'
 import { ExternalLinkGlyph } from './ExternalLinkGlyph'
 
-type UrlState =
-  | { status: 'loading' }
-  | { status: 'ready'; href: string }
-  | { status: 'error'; message: string }
+type ClickState = 'idle' | 'pending' | 'error'
 
 export interface LaunchCustomerPortalButtonProps
   extends Omit<
     React.AnchorHTMLAttributes<HTMLAnchorElement>,
     'href' | 'target' | 'rel' | 'onError'
   > {
-  /** Override the default "Manage billing" label. */
+  /** Override the default "Manage account" label. */
   children?: React.ReactNode
   /** Called immediately before the user navigates to `href`. */
   onLaunch?: (href: string) => void
   /** Called when the portal session fetch fails. */
   onError?: (error: Error) => void
-  /** Optional className applied to the disabled <button> shown while loading. */
+  /**
+   * Optional className appended while a click-time fetch is in flight.
+   * Only applies on the cache-miss click path — the cached path resolves
+   * synchronously, so this class never lights up under steady-state use.
+   */
   loadingClassName?: string
-  /** Optional className applied to the disabled <button> shown on error. */
+  /**
+   * Optional className appended after a click-time fetch fails. Cleared
+   * on the next successful click attempt.
+   */
   errorClassName?: string
   /**
-   * Render the ready-state anchor via `Slot` so consumers can substitute
-   * their own element (typically a real `<button>`) while preserving the
-   * `href`, `target`, `rel`, and click chain. The loading/error fallback
-   * buttons are untouched — `asChild` only swaps the ready-state shell.
+   * Render via `Slot` so consumers can substitute their own element
+   * (typically a real `<button>`) while preserving the `href`, `target`,
+   * `rel`, and click chain.
    */
   asChild?: boolean
 }
@@ -60,54 +71,69 @@ export const LaunchCustomerPortalButton = forwardRef<
     loadingClassName,
     errorClassName,
     asChild,
+    className,
     ...rest
   },
   forwardedRef,
 ) {
-  const transport = useTransport()
+  const { status, url, ensure } = useCustomerSessionUrl()
   const copy = useCopy()
-  const [state, setState] = useState<UrlState>({ status: 'loading' })
+  const [clickState, setClickState] = useState<ClickState>('idle')
 
-  // Capture onError in a ref so parents passing an inline arrow don't
-  // re-fire the pre-fetch effect on every render.
-  const onErrorRef = useRef(onError)
-  useEffect(() => {
-    onErrorRef.current = onError
-  }, [onError])
+  const isReady = status === 'ready' && typeof url === 'string'
+  const label = children ?? copy.customerPortal.launchButton
+  const labelText = typeof label === 'string' ? label : copy.customerPortal.launchButton
 
-  useEffect(() => {
-    let cancelled = false
-    transport
-      .createCustomerSession()
-      .then(({ customerUrl }) => {
-        if (cancelled) return
-        setState({ status: 'ready', href: customerUrl })
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        const error = err instanceof Error ? err : new Error(String(err))
-        setState({ status: 'error', message: error.message })
-        onErrorRef.current?.(error)
-      })
-    return () => {
-      cancelled = true
+  const composedClassName = [
+    className,
+    clickState === 'pending' ? loadingClassName : null,
+    clickState === 'error' ? errorClassName : null,
+  ]
+    .filter(Boolean)
+    .join(' ') || undefined
+
+  // Synchronous, sandbox-safe path: anchor has a real href + target,
+  // browser handles the navigation, we just notify onLaunch.
+  const handleReadyClick = (): void => {
+    if (!isReady || !url) return
+    onLaunch?.(url)
+  }
+
+  // Cache-miss path: prevent the empty-href navigation, await the
+  // shared in-flight promise, then window.open. Claude's sandbox blocks
+  // post-await opens; ChatGPT permits them.
+  const handlePendingClick = async (event: React.MouseEvent<HTMLAnchorElement>): Promise<void> => {
+    event.preventDefault()
+    setClickState('pending')
+    try {
+      const resolved = await ensure()
+      setClickState('idle')
+      if (typeof window !== 'undefined') {
+        window.open(resolved, '_blank', 'noopener,noreferrer')
+      }
+      onLaunch?.(resolved)
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      setClickState('error')
+      onError?.(error)
     }
-  }, [transport])
+  }
 
-  if (state.status === 'ready') {
-    const label = children ?? copy.customerPortal.launchButton
-    const labelText = typeof label === 'string' ? label : copy.customerPortal.launchButton
+  const sharedProps = {
+    'data-solvapay-launch-customer-portal': '',
+    'data-state': clickState === 'pending' ? 'pending' : isReady ? 'ready' : 'idle',
+    'aria-label': `${labelText} (opens in a new tab)`,
+    className: composedClassName,
+    ...rest,
+  }
+
+  if (isReady && url) {
     const readyProps = {
-      href: state.href,
+      ...sharedProps,
+      href: url,
       target: '_blank' as const,
       rel: 'noopener noreferrer',
-      'data-solvapay-launch-customer-portal': '',
-      'data-state': 'ready' as const,
-      'aria-label': `${labelText} (opens in a new tab)`,
-      onClick: composeEventHandlers(onClick, () => {
-        onLaunch?.(state.href)
-      }),
-      ...rest,
+      onClick: composeEventHandlers(onClick, handleReadyClick),
     }
     if (asChild) {
       return (
@@ -125,33 +151,23 @@ export const LaunchCustomerPortalButton = forwardRef<
     )
   }
 
-  if (state.status === 'error') {
+  const pendingProps = {
+    ...sharedProps,
+    role: 'link',
+    onClick: composeEventHandlers(onClick, handlePendingClick),
+  }
+  if (asChild) {
     return (
-      <button
-        type="button"
-        className={errorClassName}
-        data-solvapay-launch-customer-portal=""
-        data-state="error"
-        aria-disabled
-        disabled
-      >
-        {children ?? copy.customerPortal.launchButton}
-      </button>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      <Slot ref={forwardedRef as any} {...(pendingProps as Record<string, unknown>)}>
+        {label}
+      </Slot>
     )
   }
-
-  // loading
   return (
-    <button
-      type="button"
-      className={loadingClassName}
-      data-solvapay-launch-customer-portal=""
-      data-state="loading"
-      aria-busy
-      aria-disabled
-      disabled
-    >
-      {copy.customerPortal.loadingLabel}
-    </button>
+    <a ref={forwardedRef} {...pendingProps}>
+      {label}
+      <ExternalLinkGlyph />
+    </a>
   )
 })

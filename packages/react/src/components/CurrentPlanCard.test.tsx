@@ -281,6 +281,35 @@ describe('CurrentPlanCard', () => {
     expect(price?.textContent).not.toContain('/ monthly')
   })
 
+  it('falls back to planSnapshot.billingCycle when the top-level cycle is missing', async () => {
+    // Bootstrap stamps the cycle on `planSnapshot.billingCycle` only — the
+    // top-level field can be absent. Without the snapshot fallback the
+    // price line would render "SEK 500" instead of "SEK 500 / month".
+    const snapshotOnlyCycle: PurchaseInfo = {
+      reference: 'purchase_snapshot_cycle',
+      productName: 'MCP pro',
+      status: 'active',
+      startDate: '2026-04-20T00:00:00Z',
+      amount: 5426,
+      originalAmount: 50000,
+      currency: 'SEK',
+      planRef: 'pln_sek_m',
+      isRecurring: true,
+      planSnapshot: {
+        planType: 'recurring',
+        reference: 'pln_sek_m',
+        name: 'Pro Monthly',
+        billingCycle: 'month',
+      },
+    }
+    const ctx = buildCtx(snapshotOnlyCycle, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price?.textContent).toContain('/ month')
+  })
+
   it('renders planSnapshot.name when present and falls back to productName when absent', async () => {
     const named: PurchaseInfo = {
       ...recurringPurchase,

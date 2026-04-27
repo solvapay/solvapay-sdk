@@ -274,10 +274,15 @@ Behind the scenes:
 
 - Plan metadata comes from `usePurchase` (provider state, no extra fetch)
 - Payment-method line comes from `usePaymentMethod` → `transport.getPaymentMethod()`
-- `<UpdatePaymentMethodButton>` pre-fetches `transport.createCustomerSession()`
-  on mount and renders a real `<a target="_blank">` to the hosted portal —
-  MCP host sandboxes permit direct anchor clicks even though scripted
-  `window.open` after an async round-trip is blocked.
+- `<UpdatePaymentMethodButton>` and `<LaunchCustomerPortalButton>` render
+  enabled from the first paint. They share a single in-flight
+  `transport.createCustomerSession()` fetch across every instance under the
+  same provider (de-duped via `useCustomerSessionUrl`), so two buttons on the
+  same surface only round-trip once. When the URL has resolved, click is a
+  synchronous `<a target="_blank">` navigation — MCP host sandboxes permit
+  direct anchor clicks. If the user clicks before the URL resolves, the
+  handler awaits the in-flight promise and falls back to `window.open`
+  (works on hosts that don't sandbox scripted opens, e.g. ChatGPT).
 - `<CancelPlanButton>` reuses Phase 1 behaviour — no new plumbing.
 
 If you want the bare portal-launch button on its own (e.g. in a top nav),
@@ -360,6 +365,14 @@ typed per-view (`McpCheckoutViewProps`, `McpAccountViewProps`,
 / `McpUpsellStrip` surfaces were removed with the text-only paywall
 refactor — merchant paywall / nudge responses narrate in
 `content[0].text` and don't open the widget iframe.
+
+`<McpAccountView>` is opinionated about the host iframe: it renders
+`<CurrentPlanCard hideUpdatePaymentButton hideCancelButton />` and
+collapses card updates and cancellation into a single **Manage account**
+`<LaunchCustomerPortalButton>`, paired with a one-line hint pointing
+users at it. The portal's confirm/cancel flow is reliable inside MCP
+host sandboxes; the inline `<CancelPlanButton>` in the card is not
+(see issue tracker for the planned fix).
 
 ### `<AppHeader>` — host-aware merchant strip
 

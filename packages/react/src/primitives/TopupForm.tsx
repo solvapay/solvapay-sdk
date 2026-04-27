@@ -34,6 +34,7 @@ import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { AmountPicker as AmountPickerPrimitive } from './AmountPicker'
+import { LegalFooter } from './LegalFooter'
 import { withPaymentElementDefaults } from './paymentElementDefaults'
 import { useTopup } from '../hooks/useTopup'
 import { useCopy, useLocale } from '../hooks/useCopy'
@@ -460,6 +461,7 @@ export const TopupFormPaymentElement = PaymentElementSlot
 export const TopupFormSubmitButton = SubmitButton
 export const TopupFormLoading = Loading
 export const TopupFormError = ErrorSlot
+export const TopupFormLegalFooter = LegalFooter
 
 export const TopupForm = {
   Root,
@@ -468,6 +470,7 @@ export const TopupForm = {
   SubmitButton,
   Loading,
   Error: ErrorSlot,
+  LegalFooter,
 } as const
 
 export function useTopupForm(): TopupFormContextValue {

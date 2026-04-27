@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 import { UpdatePaymentMethodButton } from './UpdatePaymentMethodButton'
@@ -60,7 +60,7 @@ function buildCtxWithTransport(
 }
 
 describe('UpdatePaymentMethodButton', () => {
-  it('renders as a portal-launching anchor in the default (portal) mode', async () => {
+  it('renders an enabled portal-launching anchor immediately and resolves the URL lazily', async () => {
     const ctx = buildCtxWithTransport({})
 
     render(
@@ -69,10 +69,11 @@ describe('UpdatePaymentMethodButton', () => {
       </SolvaPayContext.Provider>,
     )
 
-    const link = await screen.findByRole('link')
-    expect(link.getAttribute('href')).toBe('https://portal.test')
+    const link = screen.getByRole('link')
     expect(link.textContent).toContain('Update card')
     expect(link.getAttribute('data-solvapay-update-payment-method')).toBe('')
+
+    await waitFor(() => expect(link.getAttribute('href')).toBe('https://portal.test'))
   })
 
   it('accepts custom children as the label', async () => {
@@ -91,7 +92,6 @@ describe('UpdatePaymentMethodButton', () => {
   it('throws a descriptive error for unimplemented modes so future callers do not silently break', () => {
     const ctx = buildCtxWithTransport({})
 
-    // Suppress expected console.error from the thrown render
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(() =>
       render(
@@ -104,10 +104,9 @@ describe('UpdatePaymentMethodButton', () => {
     spy.mockRestore()
   })
 
-  it('propagates transport failures via onError', async () => {
-    const ctx = buildCtxWithTransport({
-      createCustomerSession: vi.fn().mockRejectedValue(new Error('boom')),
-    })
+  it('propagates transport failures via onError when the click-time fetch fails', async () => {
+    const createCustomerSession = vi.fn().mockRejectedValue(new Error('boom'))
+    const ctx = buildCtxWithTransport({ createCustomerSession })
     const onError = vi.fn()
 
     render(
@@ -115,6 +114,14 @@ describe('UpdatePaymentMethodButton', () => {
         <UpdatePaymentMethodButton onError={onError} />
       </SolvaPayContext.Provider>,
     )
+
+    await waitFor(() => expect(createCustomerSession).toHaveBeenCalled())
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link'))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
 
     await waitFor(() => expect(onError).toHaveBeenCalled())
     expect(onError.mock.calls[0][0].message).toBe('boom')

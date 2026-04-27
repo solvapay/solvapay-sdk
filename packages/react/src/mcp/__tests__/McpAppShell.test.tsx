@@ -238,7 +238,28 @@ describe('<McpAppShell>', () => {
     expect(container.querySelector('.solvapay-mcp-shell-tagline')).toBeNull()
   })
 
-  it('renders the Provided by SolvaPay footer when terms/privacy exist', () => {
+  it('threads bootstrap.product into the account view as the surface heading', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    renderShell(
+      {
+        view: 'account',
+        product: {
+          reference: 'prd_x',
+          name: 'Acme Knowledge Base',
+          description: 'Search Acme docs from anywhere.',
+        } as never,
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+      },
+      ctx,
+    )
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Acme Knowledge Base' }),
+    ).toBeTruthy()
+    expect(screen.getByText('Search Acme docs from anywhere.')).toBeTruthy()
+  })
+
+  it('renders the SolvaPay legal footer with solvapay.com legal URLs', () => {
     const config = seedMerchant({
       displayName: 'Acme',
       legalName: 'Acme Inc.',
@@ -247,9 +268,24 @@ describe('<McpAppShell>', () => {
     })
     const ctx = buildCtx(config, [], 0)
     renderShell({}, ctx)
-    expect(screen.getByText(/Provided by SolvaPay/)).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Terms/ })).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Privacy/ })).toBeTruthy()
+    const terms = screen.getByRole('link', { name: 'Terms' })
+    const privacy = screen.getByRole('link', { name: 'Privacy' })
+    expect(terms.getAttribute('href')).toBe('https://solvapay.com/legal/terms')
+    expect(privacy.getAttribute('href')).toBe('https://solvapay.com/legal/privacy')
+    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+  })
+
+  it('renders the SolvaPay legal footer even when the merchant has no terms/privacy URLs', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    renderShell({}, ctx)
+    expect(screen.getByRole('link', { name: 'Terms' }).getAttribute('href')).toBe(
+      'https://solvapay.com/legal/terms',
+    )
+    expect(screen.getByRole('link', { name: 'Privacy' }).getAttribute('href')).toBe(
+      'https://solvapay.com/legal/privacy',
+    )
+    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
   })
 
   it('calls onRefreshBootstrap once on mount', async () => {

@@ -67,8 +67,59 @@ describe('MandateText', () => {
     const node = screen.getByText(/Acme Inc\./)
     expect(node.textContent).toContain('$19.99')
     expect(node.textContent).toContain('every month')
-    expect(node.textContent).toContain('acme.com/terms')
-    expect(node.textContent).toContain('acme.com/privacy')
+    expect(node.textContent).toContain('Terms')
+    expect(node.textContent).toContain('Privacy')
+  })
+
+  it('linkifies merchant terms/privacy URLs as clickable <a> tags', async () => {
+    primeMerchant()
+    render(
+      <SolvaPayProvider config={{}}>
+        <MandateText mode="topup" amountMinor={500} currency="usd" />
+      </SolvaPayProvider>,
+    )
+
+    const terms = await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
+    const privacy = screen.getByRole('link', { name: 'Privacy' })
+    expect(terms.getAttribute('href')).toBe('https://acme.com/terms')
+    expect(privacy.getAttribute('href')).toBe('https://acme.com/privacy')
+    expect(terms.getAttribute('target')).toBe('_blank')
+    expect(terms.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(terms.getAttribute('data-solvapay-mandate-link')).toBe('')
+  })
+
+  it('renders only a Terms link when the merchant has no privacyUrl', async () => {
+    merchantCache.set('/api/merchant', {
+      merchant: {
+        displayName: 'Acme',
+        legalName: 'Acme Inc.',
+        termsUrl: 'https://acme.com/terms',
+      },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{}}>
+        <MandateText mode="topup" amountMinor={500} currency="usd" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
+    expect(screen.queryByRole('link', { name: 'Privacy' })).toBeNull()
+  })
+
+  it('renders no <a> tags when the merchant has neither terms nor privacy URL', async () => {
+    merchantCache.set('/api/merchant', {
+      merchant: { displayName: 'Plain', legalName: 'Plain LLC' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayProvider config={{}}>
+        <MandateText mode="topup" amountMinor={500} currency="usd" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText(/Plain LLC/)).toBeTruthy())
+    expect(screen.queryByRole('link')).toBeNull()
   })
 
   it('renders one-time mandate without interval', async () => {

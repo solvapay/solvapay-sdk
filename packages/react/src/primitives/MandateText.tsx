@@ -9,6 +9,15 @@
  * `mode="topup"` inside `<TopupForm>` where there is no plan). All strings
  * resolve through the localized copy bundle so integrators can override
  * text without forking the component.
+ *
+ * The copy templates embed the merchant's terms / privacy URLs verbatim
+ * (e.g. "... See https://acme.com/terms and https://acme.com/privacy.").
+ * `MandateText` post-processes the rendered string and swaps any
+ * occurrence of `merchant.termsUrl` / `merchant.privacyUrl` for an
+ * `<a target="_blank">` whose visible label comes from
+ * `copy.legalFooter.{terms, privacy}` ("Terms" / "Privacy"). Keeps the
+ * i18n template signature untouched while lifting the legal commitment
+ * to the point of charge.
  */
 
 import React, { forwardRef, useContext, useMemo } from 'react'
@@ -22,7 +31,7 @@ import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { usePlanSelection } from '../components/PlanSelectionContext'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
-import type { MandateContext } from '../i18n/types'
+import type { MandateContext, SolvaPayCopy } from '../i18n/types'
 
 export type MandateTextProps = {
   planRef?: string
@@ -110,8 +119,50 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(
         data-variant={resolvedVariant}
         {...rest}
       >
-        {children ?? text}
+        {children ?? linkifyMandateText(text, ctx.merchant, copy)}
       </Comp>
     )
   },
 )
+
+/**
+ * Replace `merchant.termsUrl` / `merchant.privacyUrl` substrings in the
+ * rendered mandate text with `<a>` elements whose label comes from
+ * `copy.legalFooter.{terms, privacy}`. Falls back to the URL itself if
+ * the localized label is missing. URLs that don't match either field
+ * are left as plain text — the template owner is expected to embed only
+ * the merchant URLs the renderer knows how to label.
+ */
+function linkifyMandateText(
+  text: string,
+  merchant: MandateContext['merchant'],
+  copy: SolvaPayCopy,
+): React.ReactNode[] {
+  const entries = [
+    { url: merchant.termsUrl, label: copy.legalFooter.terms },
+    { url: merchant.privacyUrl, label: copy.legalFooter.privacy },
+  ].filter((entry): entry is { url: string; label: string } => Boolean(entry.url))
+
+  if (entries.length === 0) return [text]
+
+  const pattern = new RegExp(`(${entries.map(e => escapeRegExp(e.url)).join('|')})`, 'g')
+  return text.split(pattern).map((part, i) => {
+    const match = entries.find(e => e.url === part)
+    if (!match) return part
+    return (
+      <a
+        key={i}
+        href={match.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-solvapay-mandate-link=""
+      >
+        {match.label || match.url}
+      </a>
+    )
+  })
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}

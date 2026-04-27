@@ -161,10 +161,12 @@ export const enCopy: SolvaPayCopy = {
     nextBilling: 'Next billing: {date}',
     expiresOn: 'Expires {date}',
     validIndefinitely: 'Valid indefinitely',
+    startedOn: 'Started {date}',
     paymentMethod: '{brand} •••• {last4}',
     paymentMethodExpires: 'expires {month}/{year}',
     noPaymentMethod: 'No payment method on file',
     updatePaymentButton: 'Update card',
+    portalHint: 'Click Manage account to update your card or cancel your plan.',
     cycleUnit: {
       weekly: 'week',
       monthly: 'month',
@@ -172,9 +174,29 @@ export const enCopy: SolvaPayCopy = {
       yearly: 'year',
     },
   },
+  account: {
+    currentPlanAndUsage: 'Current plan and usage',
+    refreshLabel: 'Refresh',
+    payAsYouGoTitle: "You're on pay-as-you-go credits",
+    payAsYouGoBody:
+      'Top up to keep going, or pick a plan for predictable monthly billing.',
+    noPlanTitle: "You don't have an active plan",
+    noPlanBody: 'Pick a plan — free, pay-as-you-go, or paid — to get started.',
+    seePlansButton: 'See plans',
+    pickPlanButton: 'Pick a plan',
+  },
   customerPortal: {
-    launchButton: 'Manage billing',
+    launchButton: 'Manage account',
     loadingLabel: 'Loading portal…',
+  },
+  checkout: {
+    backToAccount: 'Back to my account',
+  },
+  legalFooter: {
+    terms: 'Terms',
+    privacy: 'Privacy',
+    providedBy: 'Provided by SolvaPay',
+    poweredBy: 'Powered by SolvaPay',
   },
   errors: {
     paymentInitFailed: 'Payment initialization failed',

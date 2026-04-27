@@ -91,6 +91,15 @@ export interface McpCheckoutViewProps {
    * those affordances disappear.
    */
   onClose?: () => void
+  /**
+   * Called when the user picks "Back to my account" at the top of
+   * the plan picker. `<McpAppShell>` wires this whenever the shell
+   * owns surface routing — same pattern as `<McpTopupView>` — so the
+   * customer can return to the account view from a "See plans" /
+   * "Pick a plan" entry without re-invoking a tool. `undefined`
+   * hides the back-link.
+   */
+  onBack?: () => void
   classNames?: McpViewClassNames
   children?: React.ReactNode
 }
@@ -106,6 +115,7 @@ export function McpCheckoutView({
   plans,
   onRefreshBootstrap,
   onClose,
+  onBack,
   classNames,
   children,
 }: McpCheckoutViewProps) {
@@ -131,6 +141,7 @@ export function McpCheckoutView({
         plans={plans}
         onRefreshBootstrap={onRefreshBootstrap}
         onClose={onClose}
+        onBack={onBack}
         cx={cx}
         classNames={classNames}
       >

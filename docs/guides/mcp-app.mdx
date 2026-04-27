@@ -149,7 +149,7 @@ On `focus` / `visibilitychange`, call `refetch()` from `usePurchase` so returnin
 
 ## Account management
 
-Once a customer has paid, drop `<CurrentPlanCard />` into the tree and the SDK does the rest — plan name, next-billing line, payment-method summary, **Update card** and **Cancel plan** actions. The card returns `null` when there is no active purchase, so you can render it unconditionally.
+Once a customer has paid, drop `<CurrentPlanCard />` into the tree and the SDK does the rest — plan name, next-billing line, payment-method summary, plus **Update card** and **Cancel plan** actions. The card returns `null` when there is no active purchase, so you can render it unconditionally. The MCP `manage_account` view passes `hideUpdatePaymentButton` and `hideCancelButton` and pairs the card with a single **Manage account** customer-portal CTA — both flows run through the portal there.
 
 ```tsx
 import { CurrentPlanCard, LaunchCustomerPortalButton } from '@solvapay/react'
@@ -158,14 +158,14 @@ function Account() {
   return (
     <>
       <CurrentPlanCard />
-      <LaunchCustomerPortalButton>Manage billing</LaunchCustomerPortalButton>
+      <LaunchCustomerPortalButton />
     </>
   )
 }
 ```
 
-- **`<CurrentPlanCard />`** renders the active plan, mirrored card brand/last4, and inline **Update card** / **Cancel plan** actions.
-- **`<LaunchCustomerPortalButton />`** opens the hosted customer portal in a new tab. It pre-fetches `createCustomerSession` on hover so the portal link is ready the moment the user clicks (anchor-click semantics are preserved for sandboxed hosts).
+- **`<CurrentPlanCard />`** renders the active plan, mirrored card brand/last4, and inline **Update card** / **Cancel plan** actions. The MCP `manage_account` view hides both — card updates and cancellation route through the **Manage account** customer-portal CTA — and surfaces a one-line hint pointing at it.
+- **`<LaunchCustomerPortalButton />`** opens the hosted customer portal in a new tab (default label: "Manage account"). The button renders enabled from first paint and fetches the portal URL in the background; multiple instances under the same provider share a single in-flight `createCustomerSession` round-trip. When the URL has resolved, click is a real `<a target="_blank">` navigation (sandbox-safe). On a cache-miss click the handler awaits the in-flight promise and falls back to `window.open`.
 - **`usePaymentMethod()`** exposes the mirrored card under `{ paymentMethod, loading, refetch }` when you need to build a custom account view. The card brand and last4 come from the `payment_intent.succeeded` webhook persisted on the Customer — no card-element iframe required inside the MCP App sandbox.
 
 ## Text-only paywall

@@ -70,7 +70,7 @@ Elements).
 - **Top up** — three-step flow with shared `BackLink` primitive
   (Amount → Payment → Success; `← Back to my account` on each step).
 - **Account** — balance card, usage meter (when present), Current
-  plan + Manage billing ↗ + seller details.
+  plan + Manage account ↗ + seller details.
 
 A dismissible first-run tour (gated by
 `localStorage['solvapay-mcp-tour-seen']`) anchors popovers to the

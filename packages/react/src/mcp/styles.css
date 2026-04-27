@@ -73,6 +73,13 @@ body {
   background: var(--color-background-primary, #ffffff);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
   transition: opacity 180ms ease;
+  /* Dampens iframe shrink → grow round-trips when a brief
+   * "Loading…" interstitial paints between bootstrap re-fetches
+   * during `account` ↔ `checkout` ↔ `topup` view swaps. Kept below
+   * the natural height of the simplest real card (PAYG account
+   * state) so content drives sizing and we don't trail awkward
+   * empty space under short cards. */
+  min-height: 160px;
 }
 
 /*
@@ -293,6 +300,21 @@ body {
   gap: 12px;
 }
 
+.solvapay-mcp-balance-row .solvapay-mcp-button {
+  width: auto;
+  padding: 8px 18px;
+}
+
+/* The link-button primitive ships with `align-self: flex-start` so it
+ * left-aligns inside the card's column flex; inside `balance-row` we
+ * want it to inherit the row's `align-items: center` instead so a
+ * "See plans" link sits at the same vertical centre as the adjacent
+ * `Top up` button. Reset `align-self` to `auto` to defer to the
+ * parent's `align-items` value. */
+.solvapay-mcp-balance-row .solvapay-mcp-link-button {
+  align-self: auto;
+}
+
 /* Topup view */
 
 .solvapay-mcp-amount-picker {
@@ -354,17 +376,44 @@ body {
   gap: 12px;
 }
 
+/* Pay-with-card step header: amount being purchased is the hero, the
+ * customer's existing balance drops to a muted context line. The
+ * AmountPicker step and the Success step keep the prominent
+ * `BalanceBadge` — balance is the right hero on those screens. */
+.solvapay-mcp-topup-amount-hero {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.solvapay-mcp-topup-balance-context {
+  margin: 0;
+  color: var(--color-text-secondary, #475569);
+  font-size: 13px;
+}
+
 /* Center the `TopupForm.Loading` / `PaymentForm.Loading` spinner
  * inside MCP checkout surfaces. The primitive-layer styles stay
  * layout-neutral so web integrators can place the spinner wherever
  * they want; the MCP view always wants it centered above the
- * submit button. */
+ * submit button.
+ *
+ * `min-height` reserves the vertical space the loaded Stripe
+ * `<PaymentElement>` will occupy (~280px for the typical card +
+ * Apple Pay + saved-method layout at our iframe widths). Without
+ * it, swapping from `PlanStep` to the payment step paints a small
+ * spinner first, then grows the card by ~300px when Stripe.js
+ * finishes loading — visible jank in hosts that auto-size the
+ * iframe to content height (MCP Jam, Claude Desktop, ChatGPT). */
 .solvapay-mcp-topup-form [data-solvapay-topup-form-loading],
 .solvapay-mcp-card [data-solvapay-payment-form-loading] {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 12px 0;
+  min-height: 280px;
 }
 
 /* Activation view */
@@ -494,20 +543,40 @@ body {
   }
 }
 
+/*
+ * Shell-level legal footer.
+ *
+ * Lays the `<LegalFooter>` primitive out as a single horizontal row —
+ * `Provided by SolvaPay` flush left, `Terms · Privacy` flush right —
+ * with no hairline divider above it. The parent `.solvapay-mcp-shell`
+ * already supplies a `gap: 16px` between children, so the row needs no
+ * extra `padding-top` of its own — that gap alone gives it enough
+ * breathing room from the surface card without the old 32px stacked
+ * void where the hairline used to live.
+ *
+ * `flex-direction: row-reverse` swaps the visual order without changing
+ * the primitive's markup: the links live first in the DOM (correct
+ * screen-reader reading order — "Terms / Privacy / Provided by") while
+ * the attribution is painted on the left edge.
+ *
+ * Scoped to the shell context so the primitive's default centred
+ * column layout, font size, and muted slate-500 ink keep working for
+ * any other consumer who drops the primitive in.
+ */
 .solvapay-mcp-shell-footer {
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border-secondary, #e2e8f0);
   font-size: 12px;
-  text-align: center;
 }
 
-.solvapay-mcp-shell-footer-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.solvapay-mcp-shell-footer-link:hover {
-  text-decoration: underline;
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer] {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  /* Step the ink up from slate-500 (the primitive default) to
+   * slate-600 so the footer reads cleanly against white without
+   * fading into the card border. Matches the rest of the MCP
+   * chrome (`AppHeader`, muted body copy). */
+  color: var(--color-text-secondary, #475569);
 }
 
 /* Account view — Customer + Seller details cards
@@ -520,6 +589,91 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Product header — leads the account surface with the same hierarchy as
+ * the hosted manage page: product name as the surface hero, optional
+ * product description in muted ink. Sits above the
+ * `CURRENT PLAN AND USAGE` section label. */
+.solvapay-mcp-product-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.solvapay-mcp-product-name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.solvapay-mcp-product-description {
+  margin: 0;
+  color: var(--color-text-secondary, #475569);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Section label rhythm — uppercased label, optional inline refresh
+ * icon button on the right. Matches the hosted manage page's
+ * `CURRENT PLAN AND USAGE` row. */
+.solvapay-mcp-section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 0;
+  /* Pull the row tighter to the card below so the section label reads as
+   * an over-line for the card, not a free-floating hairline. */
+  margin-bottom: -4px;
+}
+
+.solvapay-mcp-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #475569);
+}
+
+.solvapay-mcp-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary, #475569);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.solvapay-mcp-refresh-button:hover {
+  background: var(--color-background-secondary, #f1f5f9);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.solvapay-mcp-refresh-button:focus-visible {
+  outline: 2px solid var(--color-border-focus, #2563eb);
+  outline-offset: 2px;
+}
+
+.solvapay-mcp-account[data-refreshing='true'] .solvapay-mcp-refresh-button svg {
+  animation: solvapay-mcp-spin 800ms linear infinite;
+}
+
+@keyframes solvapay-mcp-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .solvapay-mcp-detail-grid {
@@ -681,15 +835,30 @@ body {
   color: var(--color-text-secondary, #475467);
   font-size: 13px;
   cursor: pointer;
+  transition: color 120ms ease;
 }
 
 .solvapay-mcp-back-link:hover {
   color: var(--color-text-primary, #101828);
+}
+
+/* Underline only the label on hover — applying `text-decoration` to
+ * the parent leaves a 6px gap under the flex `gap` between the glyph
+ * and the label. Targeting the label span keeps the underline as one
+ * continuous segment. */
+.solvapay-mcp-back-link:hover .solvapay-mcp-back-link-label {
   text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 .solvapay-mcp-back-link-glyph {
   font-weight: 500;
+  transition: transform 120ms ease;
+}
+
+.solvapay-mcp-back-link:hover .solvapay-mcp-back-link-glyph {
+  transform: translateX(-2px);
 }
 
 /* ---- External-link glyph ---- */

@@ -69,10 +69,15 @@ vi.mock('../../primitives/PaymentForm', () => {
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span>{children}</span>
   )
+  const MandateText: React.FC = () => null
   return {
-    PaymentForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton },
+    PaymentForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, MandateText },
   }
 })
+
+vi.mock('../../primitives/MandateText', () => ({
+  MandateText: () => null,
+}))
 
 vi.mock('../useStripeProbe', () => ({ useStripeProbe: () => 'ready' }))
 

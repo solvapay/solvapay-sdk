@@ -9,9 +9,12 @@
  *     Has a `← Back to my account` BackLink when `onBack` is wired.
  *  2. `TopupForm.Root` — mounts only once the amount is committed so
  *     we don't create a Stripe PaymentIntent per keystroke. Has a
- *     `← Change amount` BackLink + the outer `Back to my account`.
+ *     single `← Change amount` BackLink at the top of the card; the
+ *     outer "Back to my account" is intentionally dropped on this
+ *     step so users don't have two competing back affordances on the
+ *     same surface.
  *  3. Success state — "Credits added" + `[ Add more credits ]` +
- *     `Manage billing ↗`, same `Back to my account` back-link.
+ *     `Manage account ↗`, same `Back to my account` back-link.
  *
  * Gated behind `useStripeProbe` with the same fallback logic as
  * `<McpCheckoutView>`: if the host sandbox's CSP refuses to load
@@ -33,6 +36,7 @@ import {
   useAmountPicker,
 } from '../../primitives/AmountPicker'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
+import { MandateText } from '../../primitives/MandateText'
 import { TopupForm } from '../../primitives/TopupForm'
 import { formatPrice } from '../../utils/format'
 import { useMcpBridge } from '../bridge'
@@ -112,7 +116,7 @@ function EmbeddedTopup({
 }) {
   const [committedAmountMinor, setCommittedAmountMinor] = useState<number | null>(null)
   const [justPaidMinor, setJustPaidMinor] = useState<number | null>(null)
-  const { adjustBalance, creditsPerMinorUnit } = useBalance()
+  const { adjustBalance, credits, creditsPerMinorUnit, displayExchangeRate } = useBalance()
   const locale = useHostLocale()
   const { notifyModelContext, notifySuccess } = useMcpBridge()
 
@@ -137,23 +141,36 @@ function EmbeddedTopup({
           className={cx.button}
           loadingClassName={cx.button}
           errorClassName={cx.button}
-        >
-          Manage billing
-        </LaunchCustomerPortalButton>
+        />
       </div>
     )
   }
 
   if (committedAmountMinor != null && committedAmountMinor > 0) {
     const displayAmount = formatPrice(committedAmountMinor, currency, { locale, free: '' })
+    const creditsAdded =
+      creditsPerMinorUnit != null && creditsPerMinorUnit > 0
+        ? Math.floor(
+            (committedAmountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit,
+          )
+        : null
+    const formattedBalance =
+      credits != null ? new Intl.NumberFormat(locale).format(credits) : null
+    const contextParts = [
+      creditsAdded != null ? `Adds ${creditsAdded.toLocaleString(locale)} credits` : null,
+      formattedBalance ? `Balance ${formattedBalance} credits` : null,
+    ].filter(Boolean)
+
     return (
       <div className={cx.card}>
-        {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
-        <div className={cx.balanceRow}>
-          <h2 className={cx.heading}>Pay with card</h2>
-          <BalanceBadge />
+        <BackLink label="Change amount" onClick={() => setCommittedAmountMinor(null)} />
+        <div className={cx.stack}>
+          <p className={cx.muted}>Pay with card</p>
+          <p className={cx.topupAmountHero}>{displayAmount}</p>
+          {contextParts.length > 0 ? (
+            <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
+          ) : null}
         </div>
-        <p className={cx.muted}>Adding {displayAmount} in credits.</p>
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}
@@ -181,12 +198,15 @@ function EmbeddedTopup({
           <TopupForm.Loading />
           <TopupForm.PaymentElement />
           <TopupForm.Error className={cx.error} />
-          <TopupForm.SubmitButton className={cx.button} />
+          <MandateText
+            mode="topup"
+            amountMinor={committedAmountMinor}
+            currency={currency}
+          />
+          <TopupForm.SubmitButton className={cx.button}>
+            Top up {displayAmount}
+          </TopupForm.SubmitButton>
         </TopupForm.Root>
-        <BackLink
-          label="Change amount"
-          onClick={() => setCommittedAmountMinor(null)}
-        />
       </div>
     )
   }

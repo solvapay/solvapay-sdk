@@ -45,6 +45,12 @@ export interface EmbeddedCheckoutProps {
   plans?: readonly BootstrapPlanLike[]
   onRefreshBootstrap?: () => void | Promise<void>
   onClose?: () => void
+  /**
+   * Called when the user picks "Back to my account" on the plan
+   * picker. Forwarded by `<McpCheckoutView>` from the shell when
+   * the customer reached checkout via an in-session surface swap.
+   */
+  onBack?: () => void
   cx: Cx
   /**
    * Accepted for API stability — earlier revisions rendered
@@ -69,6 +75,7 @@ export function EmbeddedCheckout({
   plans,
   onRefreshBootstrap,
   onClose,
+  onBack,
   cx,
   // `classNames` is accepted on the interface for API stability but
   // not consumed inside this surface — see the JSDoc on the prop.
@@ -153,6 +160,7 @@ export function EmbeddedCheckout({
           onPurchaseSuccess={onPurchaseSuccess}
           onRefreshBootstrap={onRefreshBootstrap}
           onClose={onClose}
+          onBack={onBack}
           cx={cx}
         />
       </PlanSelector.Root>

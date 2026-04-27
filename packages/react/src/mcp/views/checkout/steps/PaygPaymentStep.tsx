@@ -9,6 +9,7 @@
 
 import React, { memo } from 'react'
 import { useBalance } from '../../../../hooks/useBalance'
+import { MandateText } from '../../../../primitives/MandateText'
 import { TopupForm } from '../../../../primitives/TopupForm'
 import { formatPrice } from '../../../../utils/format'
 import { useHostLocale } from '../../../useHostLocale'
@@ -87,6 +88,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
           <span className={cx.muted}>Save card for future top-ups</span>
         </label>
 
+        <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
         <TopupForm.SubmitButton className={cx.button}>
           Pay {formatPrice(amountMinor, currency, { locale })}
         </TopupForm.SubmitButton>

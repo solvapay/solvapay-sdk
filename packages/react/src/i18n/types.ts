@@ -143,10 +143,19 @@ export interface SolvaPayCopy {
     nextBilling: string
     expiresOn: string
     validIndefinitely: string
+    /** "Started {date}" — purchase start-date line on `<CurrentPlanCard>`. */
+    startedOn: string
     paymentMethod: string
     paymentMethodExpires: string
     noPaymentMethod: string
     updatePaymentButton: string
+    /**
+     * Fine-print rendered beneath `<CurrentPlanCard>` in the MCP account
+     * view, where the inline Update / Cancel actions are hidden in favour
+     * of a single "Manage account" CTA. Tells the user where those
+     * actions moved.
+     */
+    portalHint: string
     /**
      * Human-readable unit names for `billingCycle`, used as the `interval`
      * arg to `formatPrice` so a monthly SEK plan renders "500 kr / month"
@@ -159,9 +168,52 @@ export interface SolvaPayCopy {
       yearly: string
     }
   }
+  /**
+   * MCP `<McpAccountView>` strings — the product/plan focus surface.
+   * Other surfaces continue to use surface-specific keys (`activation`,
+   * `paywall`, `usage`, etc.).
+   */
+  account: {
+    /** Section label above the active plan card. Uppercased in CSS. */
+    currentPlanAndUsage: string
+    /** aria-label for the inline refresh icon button. */
+    refreshLabel: string
+    /** Heading for the in-card pay-as-you-go credits state. */
+    payAsYouGoTitle: string
+    /** Body copy for the in-card pay-as-you-go credits state. */
+    payAsYouGoBody: string
+    /** Heading for the in-card "no active plan" state. */
+    noPlanTitle: string
+    /** Body copy for the in-card "no active plan" state. */
+    noPlanBody: string
+    /** Inline CTA on the pay-as-you-go state that switches to the Plan tab. */
+    seePlansButton: string
+    /** Primary CTA on the no-plan state that switches to the Plan tab. */
+    pickPlanButton: string
+  }
   customerPortal: {
     launchButton: string
     loadingLabel: string
+  }
+  /**
+   * `<McpCheckoutView>` chrome strings that aren't owned by the
+   * sub-flows (`planSelector`, `activationFlow`, `paywall`). Currently
+   * only the in-iframe back-link surfaced when `<McpAppShell>` owns
+   * surface routing.
+   */
+  checkout: {
+    /**
+     * Label for the BackLink at the top of the plan-selector step.
+     * Wired by `<McpAppShell>` whenever the user reached checkout
+     * in-session (e.g. via `Pick a plan` on `<McpAccountView>`).
+     */
+    backToAccount: string
+  }
+  legalFooter: {
+    terms: string
+    privacy: string
+    providedBy: string
+    poweredBy: string
   }
   errors: {
     paymentInitFailed: string
