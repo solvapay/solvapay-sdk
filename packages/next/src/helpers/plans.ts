@@ -1,23 +1,24 @@
-import { NextResponse } from 'next/server'
-import { listPlansCore, isErrorResult } from '@solvapay/server'
-
-type ListPlansSuccess = Exclude<Awaited<ReturnType<typeof listPlansCore>>, { error: string }>
+import type { NextResponse } from 'next/server'
+import type { SolvaPay } from '@solvapay/server'
+import { listPlansCore } from '@solvapay/server'
+import { toNextRouteResponse } from './_response'
 
 /**
- * Next.js Plans Helper
+ * Next.js route wrapper for GET /api/list-plans?productRef=...
+ *
+ * @example
+ * ```ts
+ * // app/api/list-plans/route.ts
+ * import { listPlans } from '@solvapay/next/helpers'
+ * export const GET = (request: Request) => listPlans(request)
+ * ```
  */
-
 export async function listPlans(
   request: globalThis.Request,
-): Promise<ListPlansSuccess | NextResponse> {
-  const result = await listPlansCore(request)
-
-  if (isErrorResult(result)) {
-    return NextResponse.json(
-      { error: result.error, details: result.details },
-      { status: result.status },
-    )
-  }
-
-  return result
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
+): Promise<NextResponse> {
+  const result = await listPlansCore(request, options)
+  return toNextRouteResponse(result)
 }

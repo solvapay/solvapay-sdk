@@ -36,5 +36,20 @@ export { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
 // Export activation helpers
 export { activatePlanCore } from './activation'
 
+// Export payment-method helpers
+export { getPaymentMethodCore } from './payment-method'
+
 // Export plans helpers
 export { listPlansCore } from './plans'
+
+// Export merchant/product helpers
+export { getMerchantCore } from './merchant'
+export { getProductCore } from './product'
+
+// Export purchase check helpers
+export { checkPurchaseCore } from './purchase'
+export type { PurchaseCheckResult } from './purchase'
+
+// Export usage tracking helpers
+export { trackUsageCore, getUsageCore } from './usage'
+export type { GetUsageResult } from './usage'

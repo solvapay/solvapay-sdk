@@ -97,12 +97,10 @@ Use the Supabase auth adapter for automatic user ID extraction:
 ```tsx
 import { SolvaPayProvider } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+import { supabase } from './lib/supabase'
 
 function App() {
-  const supabaseAdapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  })
+  const supabaseAdapter = createSupabaseAuthAdapter({ client: supabase })
 
   return (
     <SolvaPayProvider
@@ -229,20 +227,21 @@ function PricingPage() {
 
 ### PurchaseGate
 
-Conditionally render content based on purchase status using the render-prop pattern:
+Conditionally render content based on purchase status using the compound
+primitive. Match by `productRef` (any plan of that product) or `planRef`
+(specific plan). Both together require they match on the same active
+purchase.
 
 ```tsx
 import { PurchaseGate } from '@solvapay/react'
 
 function PremiumContent() {
   return (
-    <PurchaseGate requireProduct="pln_premium">
-      {({ hasAccess, loading }) => {
-        if (loading) return <div>Loading...</div>
-        if (!hasAccess) return <div>Please subscribe to access this content.</div>
-        return <div>Premium content here!</div>
-      }}
-    </PurchaseGate>
+    <PurchaseGate.Root planRef="pln_premium">
+      <PurchaseGate.Loading>Loading...</PurchaseGate.Loading>
+      <PurchaseGate.Blocked>Please subscribe to access this content.</PurchaseGate.Blocked>
+      <PurchaseGate.Allowed>Premium content here!</PurchaseGate.Allowed>
+    </PurchaseGate.Root>
   )
 }
 ```
@@ -305,12 +304,13 @@ function Dashboard() {
 
 #### usePurchase Return Values
 
-- `loading` - Boolean indicating if purchase check is in progress
+- `loading` - Boolean indicating the first purchase check for this user is in progress. Stays `false` on background refetches — gate your initial skeleton on this.
+- `isRefetching` - Boolean indicating a background refetch is in progress (first fetch already completed). Use for subtle "refreshing" indicators that shouldn't remount the UI.
 - `purchases` - Array of purchase objects
 - `activePurchase` - The active purchase (or null)
 - `hasPaidPurchase` - Boolean indicating if user has paid purchase
 - `activePaidPurchase` - The active paid purchase (or null)
-- `hasProduct(productName)` - Function to check if user has a specific product
+- `hasPurchase(criteria?)` - Predicate with AND semantics. Pass `{ productRef }`, `{ planRef }`, or both (both must match the same active purchase). Call with no arguments to check for any active purchase. Mirrors `<PurchaseGate.Root>` prop shape.
 - `refetch` - Function to manually refetch purchase status
 
 ### useCheckout
@@ -542,13 +542,13 @@ function PurchaseDetails() {
 import { usePurchase } from '@solvapay/react'
 
 function PurchaseStatus() {
-  const { activePurchase, refetch, loading } = usePurchase()
+  const { activePurchase, refetch, loading, isRefetching } = usePurchase()
 
   return (
     <div>
       <p>Status: {activePurchase?.status || 'None'}</p>
-      <button onClick={() => refetch()} disabled={loading}>
-        Refresh
+      <button onClick={() => refetch()} disabled={loading || isRefetching}>
+        {isRefetching ? 'Refreshing...' : 'Refresh'}
       </button>
     </div>
   )
@@ -563,14 +563,12 @@ Here's a complete React application with SolvaPay integration:
 // App.tsx
 import { SolvaPayProvider } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+import { supabase } from './lib/supabase'
 import { Dashboard } from './Dashboard'
 import { Checkout } from './Checkout'
 
 function App() {
-  const supabaseAdapter = createSupabaseAuthAdapter({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  })
+  const supabaseAdapter = createSupabaseAuthAdapter({ client: supabase })
 
   return (
     <SolvaPayProvider config={{ auth: { adapter: supabaseAdapter } }}>

@@ -1,23 +1,31 @@
-name: Publish to NPM
+name: Publish Stable Releases
 
-# Auto-publish disabled - trigger manually via GitHub Actions UI when ready
+# Changesets-driven stable publish.
+#
+# On every push to `main`, `changesets/action` opens (or updates) a
+# "Version Packages" PR whose body enumerates every accumulated
+# `.changeset/*.md` grouped by semver bump. Merging that PR applies
+# the version bumps + regenerates CHANGELOG.md for every affected
+# package, which then triggers this workflow again — this time with
+# an empty `.changeset/` directory and bumped versions, so
+# `changesets/action` takes the `publish` branch and ships to the
+# `@latest` dist-tag with matching git tags.
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      start_from_version:
-        description: 'Optional: Exact version to publish (e.g., 1.0.1). If not provided, auto-detects and bumps patch from latest git tag'
-        required: false
-        type: string
-  # push:
-  #   branches:
-  #     - main
+
+concurrency:
+  group: publish-stable
+  cancel-in-progress: false
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
+      pull-requests: write
       id-token: write
 
     steps:
@@ -38,11 +46,15 @@ jobs:
         with:
           version: 9.6.0
 
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+        run: echo "STORE_PATH=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
@@ -58,151 +70,43 @@ jobs:
       - name: Check dependency health
         run: pnpm deps:check
 
-      # TODO: Re-enable example app tests once changes are merged from main branch and test issues are fixed
-      # Note: Example app tests (@example/*) are currently excluded via --filter=!@example/* in package.json test script
       - name: Run tests
         run: pnpm test
-
-      - name: Get latest stable version from git tags
-        id: get-version
-        run: |
-          # Fetch all tags
-          git fetch --tags
-          
-          # Check if exact version was provided manually
-          if [ -n "${{ inputs.start_from_version }}" ]; then
-            EXACT_VERSION="${{ inputs.start_from_version }}"
-            # Strip 'v' prefix if present
-            EXACT_VERSION=$(echo "${EXACT_VERSION}" | sed 's/^v//')
-            # Strip preview suffix if present (e.g., 1.0.1-preview.1 -> 1.0.1)
-            EXACT_VERSION=$(echo "${EXACT_VERSION}" | sed 's/-preview\.[0-9]*$//')
-            echo "Using manually specified exact version: ${EXACT_VERSION}"
-            echo "exact_version=${EXACT_VERSION}" >> $GITHUB_OUTPUT
-            echo "use_exact_version=true" >> $GITHUB_OUTPUT
-          else
-            # Auto-detect from git tags or package.json
-            echo "No version specified, auto-detecting from git tags..."
-            echo "use_exact_version=false" >> $GITHUB_OUTPUT
-            
-            # Get latest stable tag (exclude preview tags)
-            LATEST_STABLE_TAG=$(git tag -l "v*" | grep -v "preview" | sort -V | tail -1)
-            
-            if [ -z "$LATEST_STABLE_TAG" ]; then
-              # No stable tags yet, read from package.json and strip preview if present
-              echo "No stable tags found, reading from package.json"
-              CURRENT_VERSION=$(node -p "require('./packages/core/package.json').version")
-              BASE_VERSION=$(echo "${CURRENT_VERSION}" | sed 's/-preview\.[0-9]*$//')
-              echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-              echo "Using base version from package.json: ${BASE_VERSION}"
-            else
-              # Extract version from tag (e.g., v1.0.1 -> 1.0.1)
-              BASE_VERSION=$(echo "${LATEST_STABLE_TAG}" | sed 's/^v//')
-              echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-              echo "Latest stable tag: ${LATEST_STABLE_TAG}"
-              echo "Base version: ${BASE_VERSION}"
-            fi
-          fi
-
-      - name: Set version and generate changelog
-        run: |
-          USE_EXACT="${{ steps.get-version.outputs.use_exact_version }}"
-          
-          if [ "${USE_EXACT}" == "true" ]; then
-            # Use the exact version specified manually
-            EXACT_VERSION="${{ steps.get-version.outputs.exact_version }}"
-            echo "Setting package.json to exact version: ${EXACT_VERSION}"
-            pnpm exec tsx -e "
-              const fs = require('fs');
-              const packages = [
-                'packages/core/package.json',
-                'packages/react/package.json',
-                'packages/react-supabase/package.json',
-                'packages/server/package.json',
-                'packages/auth/package.json',
-                'packages/next/package.json',
-                'packages/cli/package.json'
-              ];
-              packages.forEach(pkg => {
-                const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
-                pkgJson.version = '${EXACT_VERSION}';
-                fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
-              });
-            "
-          else
-            # Auto-detect and bump
-            BASE_VERSION="${{ steps.get-version.outputs.base_version }}"
-            
-            # Update package.json to base version first (in case it has preview)
-            echo "Setting package.json to base version: ${BASE_VERSION}"
-            pnpm exec tsx -e "
-              const fs = require('fs');
-              const packages = [
-                'packages/core/package.json',
-                'packages/react/package.json',
-                'packages/react-supabase/package.json',
-                'packages/server/package.json',
-                'packages/auth/package.json',
-                'packages/next/package.json',
-                'packages/cli/package.json'
-              ];
-              packages.forEach(pkg => {
-                const pkgJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));
-                pkgJson.version = '${BASE_VERSION}';
-                fs.writeFileSync(pkg, JSON.stringify(pkgJson, null, 2) + '\n');
-              });
-            "
-            
-            # Now bump patch version using existing script
-            echo "Bumping patch version from ${BASE_VERSION}..."
-            pnpm version:bump
-          fi
-          
-          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          echo "Stable version to publish: ${NEW_VERSION}"
-          
-          # Note: Version changes are NOT committed back to git
-          # Versions are tracked via git tags only to avoid branch divergence
-
-      - name: Show version summary
-        run: |
-          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 Stable Release Version Summary"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Will publish: ${NEW_VERSION}"
-          
-          if [ -n "${{ inputs.start_from_version }}" ]; then
-            echo ""
-            echo "ℹ️  Using manually specified exact version: ${{ inputs.start_from_version }}"
-          else
-            BASE_VERSION="${{ steps.get-version.outputs.base_version }}"
-            echo ""
-            echo "Previous stable version: ${BASE_VERSION}"
-          fi
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-      - name: Create git tag
-        run: |
-          NEW_VERSION=$(node -p "require('./packages/core/package.json').version")
-          git tag "v${NEW_VERSION}"
-          echo "Created tag: v${NEW_VERSION}"
 
       - name: Build packages
         run: pnpm build:packages
 
-      # Note: Using --no-provenance flag because provenance signing only works with public repositories
-      # This repository is private, so we skip provenance to avoid NPM 422 errors
-      # Publishes all 7 packages: @solvapay/core, @solvapay/react, @solvapay/react-supabase, @solvapay/server, @solvapay/auth, @solvapay/next, solvapay
-      - name: Publish to NPM
-        run: pnpm publish:packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Validate fetch-runtime — Node gate
+        run: pnpm validate:fetch-runtime
 
-      - name: Push git tag
-        run: |
-          # Only push the tag, not version commits
-          # This prevents branch divergence and version conflicts
-          git push origin --tags
+      # Deno gate — type-checks examples/supabase-edge-mcp against the
+      # last-published `@preview` versions of the workspace packages it
+      # imports. See publish-preview.yml for the rationale around the
+      # "one-commit-late" detection window.
+      - name: Validate fetch-runtime — Deno gate (supabase-edge-mcp type-check)
+        run: pnpm --filter @example/supabase-edge-mcp validate
+
+      - name: Create Release PR or publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # `pnpm changeset:version` is the monorepo's wrapper around
+          # `changeset version`; same behaviour, respects our config.
+          version: pnpm changeset:version
+          publish: pnpm changeset:publish
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Post-publish verification — mirrors the guard in
+      # publish-preview.yml. Only runs when `changesets/action` actually
+      # published (i.e. merging the "Version Packages" PR), otherwise
+      # there's nothing to verify. The action exposes `published` and
+      # `publishedPackages` outputs we consume directly instead of
+      # re-parsing the publish log.
+      - name: Verify published packages landed on npm
+        if: steps.changesets.outputs.published == 'true'
+        run: node scripts/verify-npm-publishes.mjs --packages='${{ steps.changesets.outputs.publishedPackages }}'

@@ -8,7 +8,7 @@ import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
  * to all downstream routes.
  */
 export const proxy = createSupabaseAuthMiddleware({
-  publicRoutes: ['/api/list-plans'],
+  publicRoutes: ['/api/list-plans', '/api/merchant', '/api/get-product'],
 })
 
 export const config = {

@@ -60,6 +60,36 @@ export interface ProcessPaymentResult {
 
 export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 
+/**
+ * SDK-facing payment-method projection returned by
+ * `GET /v1/sdk/payment-method?customerRef=...`.
+ *
+ * Derived from the generated operation response so any backend shape
+ * change propagates through a single `npm run generate:types` run. The
+ * inline `oneOf` schema on the backend controller translates to a clean
+ * `{ kind: 'card', ... } | { kind: 'none' }` discriminated union here.
+ */
+export type PaymentMethodInfo =
+  operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
+
+/**
+ * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
+ */
+export type SdkMerchantResponse = components['schemas']['SdkMerchantResponseDto']
+
+/**
+ * SDK-facing platform config (source: GET /v1/sdk/platform-config).
+ *
+ * Environment-aware platform values resolved against the authenticated
+ * provider. Primary consumer today is the MCP checkout app, which uses
+ * `stripePublishableKey` to boot Stripe.js for a CSP probe before a
+ * PaymentIntent exists.
+ */
+export type SdkPlatformConfigResponse = components['schemas']['SdkPlatformConfigResponseDto']
+
+/** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
+export type SdkProductResponse = components['schemas']['SdkProductResponse']
+
 export type McpBootstrapPlanInput =
   NonNullable<components['schemas']['McpBootstrapDto']['plans']>[number]
 
@@ -130,12 +160,48 @@ export interface SolvaPayClient {
     params: components['schemas']['CreateCustomerRequest'],
   ): Promise<{ customerRef: string }>
 
+  /**
+   * PATCH: /v1/sdk/customers/{customerRef}
+   * Update mutable customer fields. Used by `ensureCustomer` to backfill
+   * `externalRef` on an existing email-matched customer, and exposed
+   * directly for integrators who need it.
+   */
+  updateCustomer?(
+    customerRef: string,
+    params: {
+      email?: string
+      name?: string
+      telephone?: string
+      metadata?: Record<string, unknown>
+      externalRef?: string
+    },
+  ): Promise<{ customerRef: string }>
+
   // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
   getCustomer(params: {
     customerRef?: string
     externalRef?: string
     email?: string
   }): Promise<CustomerResponseMapped>
+
+  /**
+   * SDK-facing merchant identity (GET /v1/sdk/merchant).
+   * Returns the subset of provider fields safe for browser consumption —
+   * used by `<MandateText>`, `<CheckoutSummary>`, and trust signals.
+   */
+  getMerchant?(): Promise<SdkMerchantResponse>
+
+  /**
+   * SDK-facing platform config (GET /v1/sdk/platform-config).
+   * Returns environment-aware browser-safe values (resolved sandbox/live
+   * against the authenticated provider). Primary consumer today is the
+   * MCP checkout app, which uses `stripePublishableKey` to boot Stripe.js
+   * for a CSP probe before a PaymentIntent exists.
+   */
+  getPlatformConfig?(): Promise<SdkPlatformConfigResponse>
+
+  // GET: /v1/sdk/products/{productRef}
+  getProduct?(productRef: string): Promise<SdkProductResponse>
 
   // Management methods
 
@@ -268,4 +334,7 @@ export interface SolvaPayClient {
   activatePlan?(
     params: components['schemas']['ActivatePlanDto'],
   ): Promise<ActivatePlanResult>
+
+  // GET: /v1/sdk/payment-method?customerRef=...
+  getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
 }

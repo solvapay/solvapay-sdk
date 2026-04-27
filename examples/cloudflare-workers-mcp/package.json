@@ -1,0 +1,33 @@
+{
+  "name": "@example/cloudflare-workers-mcp",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Workers starter for SolvaPay MCP — single `createSolvaPayMcpFetch` call over the Workers runtime. Ships the same paywalled demo toolbox as `supabase-edge-mcp`; the only runtime difference is the HTTP entrypoint.",
+  "scripts": {
+    "build": "cross-env INPUT=mcp-app.html vite build && cp dist/mcp-app.html src/assets/mcp-app.html",
+    "dev": "cross-env INPUT=mcp-app.html vite build --watch",
+    "predeploy": "pnpm -w build:packages && pnpm build",
+    "deploy": "node scripts/deploy.mjs",
+    "serve:local": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251124.0",
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@solvapay/mcp": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
+    "@solvapay/react": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "cross-env": "^10.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.9.2",
+    "vite": "^8.0.6",
+    "vite-plugin-singlefile": "^2.3.2",
+    "wrangler": "^4.47.0",
+    "zod": "^4.3.6"
+  }
+}

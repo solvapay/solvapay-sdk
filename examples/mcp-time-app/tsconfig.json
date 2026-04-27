@@ -10,6 +10,10 @@
     "lib": ["ES2022", "DOM"],
     "paths": {
       "@solvapay/core": ["../../packages/core/dist/index.d.ts"],
+      "@solvapay/mcp": ["../../packages/mcp/dist/index.d.ts"],
+      "@solvapay/mcp/express": ["../../packages/mcp/dist/express/index.d.ts"],
+      "@solvapay/mcp/fetch": ["../../packages/mcp/dist/fetch/index.d.ts"],
+      "@solvapay/mcp-core": ["../../packages/mcp-core/dist/index.d.ts"],
       "@solvapay/server": ["../../packages/server/dist/index.d.ts"]
     },
     "allowSyntheticDefaultImports": true,

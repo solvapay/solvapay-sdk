@@ -7,8 +7,8 @@
 
 import type { Adapter } from './base'
 import { AdapterUtils } from './base'
-import type { HttpAdapterOptions } from '../types'
-import { PaywallError } from '../paywall'
+import type { HttpAdapterOptions, PaywallStructuredContent } from '../types'
+import { PaywallError, paywallErrorToClientPayload } from '../paywall'
 
 /**
  * HTTP context (Express or Fastify)
@@ -76,30 +76,30 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
     return result
   }
 
-  formatError(error: Error, [_req, reply]: HttpContext): unknown {
-    if (error instanceof PaywallError) {
-      const errorResponse = {
-        success: false,
-        error: 'Payment required',
-        product: error.structuredContent.product,
-        checkoutUrl: error.structuredContent.checkoutUrl,
-        message: error.structuredContent.message,
-      }
+  /**
+   * Emit a 402 Payment Required response with the same JSON body shape
+   * REST consumers have always received (`{success:false, error, product,
+   * checkoutUrl, message, ...}`). The shape is reused via
+   * `paywallErrorToClientPayload` so HTTP / Next / hosted-proxy clients
+   * don't have to branch on an SDK version.
+   */
+  formatGate(gate: PaywallStructuredContent, [_req, reply]: HttpContext): unknown {
+    const errorResponse = paywallErrorToClientPayload(new PaywallError(gate.message, gate))
 
-      // Express: has reply.status method
-      if (reply && reply.status && typeof reply.json === 'function') {
-        reply.status(402).json(errorResponse)
-        return
-      }
-
-      // Fastify: use reply.code
-      if (reply && reply.code) {
-        reply.code(402)
-      }
-      return errorResponse
+    // Express: has reply.status method
+    if (reply && reply.status && typeof reply.json === 'function') {
+      reply.status(402).json(errorResponse)
+      return
     }
 
-    // Generic error
+    // Fastify: use reply.code
+    if (reply && reply.code) {
+      reply.code(402)
+    }
+    return errorResponse
+  }
+
+  formatError(error: Error, [_req, reply]: HttpContext): unknown {
     const errorResponse = {
       success: false,
       error: error instanceof Error ? error.message : 'Internal server error',

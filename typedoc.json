@@ -2,12 +2,17 @@
   "$schema": "https://typedoc.org/schema.json",
   "tsconfig": "tsconfig.docs.json",
   "entryPoints": [
+    "packages/core/src/index.ts",
     "packages/server/src/index.ts",
+    "packages/fetch/src/index.ts",
+    "packages/mcp-core/src/index.ts",
+    "packages/mcp/src/index.ts",
+    "packages/mcp-express/src/index.ts",
+    "packages/mcp-fetch/src/index.ts",
     "packages/react/src/index.tsx",
-    "packages/next/src/index.ts",
-    "packages/auth/src/index.ts",
     "packages/react-supabase/src/index.ts",
-    "packages/core/src/index.ts"
+    "packages/next/src/index.ts",
+    "packages/auth/src/index.ts"
   ],
   "out": "docs/api",
   "readme": "none",

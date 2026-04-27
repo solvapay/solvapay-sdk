@@ -14,10 +14,34 @@ export { TopupForm } from './TopupForm'
 // Headless Components
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
 export { PurchaseGate } from './components/PurchaseGate'
-export { PricingSelector, PlanSelector } from './components/PricingSelector'
 export { Spinner } from './components/Spinner'
 export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 export { BalanceBadge } from './components/BalanceBadge'
+export { CheckoutSummary } from './components/CheckoutSummary'
+export { MandateText } from './components/MandateText'
+export { CheckoutLayout } from './components/CheckoutLayout'
+
+// Styled-default components (checkout composition)
+export { PlanSelector } from './components/PlanSelector'
+export { AmountPicker } from './components/AmountPicker'
+export { ActivationFlow } from './components/ActivationFlow'
+export { CancelPlanButton } from './components/CancelPlanButton'
+export { CancelledPlanNotice } from './components/CancelledPlanNotice'
+export { CreditGate } from './components/CreditGate'
+
+// Account-management (phase 2 — MCP slice)
+export { CurrentPlanCard } from './components/CurrentPlanCard'
+export { LaunchCustomerPortalButton } from './components/LaunchCustomerPortalButton'
+export { UpdatePaymentMethodButton } from './components/UpdatePaymentMethodButton'
+export {
+  PaymentFormContext,
+  usePaymentForm,
+  PaymentFormProvider,
+} from './components/PaymentFormContext'
+export type {
+  PaymentFormContextValue,
+  PaymentElementKind,
+} from './components/PaymentFormContext'
 
 // Hooks
 export { usePurchase } from './hooks/usePurchase'
@@ -25,12 +49,35 @@ export { useCustomer } from './hooks/useCustomer'
 export { useCheckout } from './hooks/useCheckout'
 export { useSolvaPay } from './hooks/useSolvaPay'
 export { usePlans } from './hooks/usePlans'
+export { usePlan } from './hooks/usePlan'
+export { useProduct } from './hooks/useProduct'
+export { useMerchant } from './hooks/useMerchant'
+export { useCopy, useLocale } from './hooks/useCopy'
 export { usePurchaseStatus } from './hooks/usePurchaseStatus'
 export { usePurchaseActions } from './hooks/usePurchaseActions'
 export { useActivation } from './hooks/useActivation'
 export { useTopup } from './hooks/useTopup'
 export { useBalance } from './hooks/useBalance'
 export { useTopupAmountSelector } from './hooks/useTopupAmountSelector'
+export { usePaymentMethod } from './hooks/usePaymentMethod'
+export { useTransport } from './hooks/useTransport'
+export { useUsage } from './hooks/useUsage'
+export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
+export { usePaywallResolver } from './hooks/usePaywallResolver'
+export type { UsePaywallResolverReturn } from './hooks/usePaywallResolver'
+
+// i18n primitives (for consumers who want to author copy bundles or mount
+// CopyProvider independently of SolvaPayProvider)
+export { CopyProvider, CopyContext } from './i18n/context'
+export { enCopy } from './i18n/en'
+export { interpolate } from './i18n/interpolate'
+export { mergeCopy } from './i18n/merge'
+export type {
+  SolvaPayCopy,
+  PartialSolvaPayCopy,
+  MandateContext,
+  MandateTemplate,
+} from './i18n/types'
 
 // Types
 export type {
@@ -41,12 +88,10 @@ export type {
   PurchaseInfo,
   CustomerPurchaseData,
   PaymentIntentResult,
-  ProductBadgeProps,
-  PlanBadgeProps,
-  PurchaseGateProps,
-  PricingSelectorProps,
-  PlanSelectorProps,
   PaymentFormProps,
+  CheckoutResult,
+  PaymentResult,
+  ActivationResult,
   PaymentError,
   Plan,
   UsePlansOptions,
@@ -58,16 +103,46 @@ export type {
   UseTopupOptions,
   UseTopupReturn,
   BalanceStatus,
-  BalanceBadgeProps,
   CancelResult,
   ReactivateResult,
   ActivatePlanResult,
+  PaymentMethodInfo,
+  UsePaymentMethodReturn,
   UseTopupAmountSelectorOptions,
   UseTopupAmountSelectorReturn,
+  Merchant,
+  UseMerchantReturn,
+  Product,
+  UseProductReturn,
+  UsePlanOptions,
+  UsePlanReturn,
+  PrefillCustomer,
 } from './types'
 export type { PurchaseActions } from './hooks/usePurchaseActions'
 export type { UseActivationReturn, ActivationState } from './hooks/useActivation'
 export type { CustomerInfo } from './hooks/useCustomer'
+export type { CheckoutSummaryProps } from './components/CheckoutSummary'
+export type { MandateTextProps } from './components/MandateText'
+export type {
+  CheckoutLayoutProps,
+  CheckoutLayoutSize,
+  CheckoutLayoutPlanSelectorOptions,
+} from './components/CheckoutLayout'
+export type { PlanSelectorProps } from './components/PlanSelector'
+export type { AmountPickerProps } from './components/AmountPicker'
+export type { ActivationFlowProps, ActivationFlowStep } from './components/ActivationFlow'
+export type { CancelledPlanNoticeProps } from './components/CancelledPlanNotice'
+export type { CreditGateProps } from './components/CreditGate'
+export type { CheckoutVariant } from './utils/checkoutVariant'
+export type {
+  CurrentPlanCardProps,
+  CurrentPlanCardClassNames,
+} from './components/CurrentPlanCard'
+export type { LaunchCustomerPortalButtonProps } from './components/LaunchCustomerPortalButton'
+export type {
+  UpdatePaymentMethodButtonProps,
+  UpdatePaymentMethodButtonMode,
+} from './components/UpdatePaymentMethodButton'
 
 // Adapters
 export type { AuthAdapter } from './adapters/auth'
@@ -81,4 +156,26 @@ export {
   getMostRecentPurchase,
   getPrimaryPurchase,
   isPaidPurchase,
+  isPlanPurchase,
+  isTopupPurchase,
 } from './utils/purchases'
+export { formatPrice, getMinorUnitsPerMajor, toMajorUnits } from './utils/format'
+export type { FormatPriceOptions } from './utils/format'
+export { deriveVariant } from './utils/checkoutVariant'
+export { resolveCta } from './utils/checkoutCta'
+export { confirmPayment } from './utils/confirmPayment'
+export type {
+  ConfirmPaymentMode,
+  ConfirmPaymentInput,
+  ConfirmPaymentResult,
+} from './utils/confirmPayment'
+
+// Transport — unified data-access surface. Use with SolvaPayProvider via
+// `config.transport`. See `@solvapay/react/mcp` for an MCP implementation.
+export { createHttpTransport, DEFAULT_ROUTES, UnsupportedTransportMethodError } from './transport'
+export type {
+  SolvaPayTransport,
+  TransportBalanceResult,
+  TransportCheckoutSessionResult,
+  TransportCustomerSessionResult,
+} from './transport'

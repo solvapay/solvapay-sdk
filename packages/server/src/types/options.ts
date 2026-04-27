@@ -43,15 +43,35 @@ export interface RetryOptions {
   onRetry?: (error: Error, attempt: number) => void
 }
 
+/**
+ * Extra context passed into MCP tool handlers — structural copy of
+ * `McpToolExtra` from `@solvapay/mcp` kept here to avoid a build-time
+ * circular dependency between `@solvapay/server` and `@solvapay/mcp`.
+ *
+ * The canonical version lives in `@solvapay/mcp/types.ts`. Keep the two
+ * in lockstep — a `vitest` snapshot in `@solvapay/mcp` guards the
+ * shape.
+ */
 export interface McpToolExtra {
   authInfo?: {
-    token: string
-    clientId: string
-    scopes: string[]
+    token?: string
+    clientId?: string
+    scopes?: string[]
     expiresAt?: number
     extra?: Record<string, unknown>
   }
   [key: string]: unknown
+}
+
+/**
+ * MCP adapter options — structural copy of `McpAdapterOptions` from
+ * `@solvapay/mcp`.
+ */
+export interface McpAdapterOptions {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getCustomerRef?: (args: any, extra?: McpToolExtra) => string | Promise<string>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  transformResponse?: (result: any) => any
 }
 
 /**
@@ -125,19 +145,3 @@ export interface NextAdapterOptions {
   transformResponse?: (result: any) => any
 }
 
-/**
- * MCP adapter options for MCP servers
- */
-export interface McpAdapterOptions {
-  /**
-   * Extract customer reference from MCP args
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getCustomerRef?: (args: any, extra?: McpToolExtra) => string | Promise<string>
-
-  /**
-   * Transform the response before wrapping in MCP format
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  transformResponse?: (result: any) => any
-}

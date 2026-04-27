@@ -2,6 +2,8 @@
 
 This directory contains utility scripts for the SolvaPay SDK monorepo.
 
+Versioning + publishing now live under [Changesets](https://github.com/changesets/changesets) — run `pnpm changeset`, merge the generated "Version Packages" PR, and the GitHub Actions workflows under [`.github/workflows/`](../.github/workflows) handle the rest. Hand-rolled publish scripts (`tag-as-latest.ts`, `test-publish.ts`, `unpublish-preview.sh`, `verify-preview.sh`, `deprecate-version.sh`) have been removed in favour of `changesets/action`.
+
 ## Documentation Scripts
 
 ### `validate-doc-links.ts`
@@ -21,32 +23,15 @@ pnpm docs:validate-links
 - Reports broken links with file and line numbers
 - Exits with error code 1 if broken links are found
 
-**Integration:**
-
-- Add to PR checklist (see `CONTRIBUTING.md`)
-- Run before committing documentation changes
-- Can be integrated into CI/CD pipelines
-- Optional: Use `setup-pre-commit-hook.sh` to add automatic validation
-
 See [`docs/documentation/DOC_LINK_VALIDATION.md`](../docs/documentation/DOC_LINK_VALIDATION.md) for detailed documentation.
 
-### `fix-doc-links.sh`
+## Release Gates
 
-Script to fix common documentation link issues. Run this if links need to be updated after restructuring.
+- `validate-fetch-runtime.ts` — Pre-publish gate ensuring `@solvapay/server/fetch` and `@solvapay/mcp/fetch` (the Web-standards subpath exports) still import cleanly on a bare Node `fetch`-only runtime (no `express`, no `node:http`, no `supabase-js`). Wired into [`publish-preview.yml`](../.github/workflows/publish-preview.yml) so a broken Web-standards build blocks the preview channel. Usage: `pnpm validate:fetch-runtime`
 
-**Note:** This script modifies files in place. Review changes before committing.
+## Dependency + Repository Management
 
-## Version Management
-
-- `version-bump.ts` - Bump package versions
-- `version-bump-preview.ts` - Preview version changes
-- `tag-as-latest.ts` - Tag packages as latest
-
-## Publishing
-
-- `test-publish.ts` - Test publishing workflow
-
-## Repository Management
-
-- `cleanup-for-public.sh` - Prepare repository for public release
-- `setup-pre-commit-hook.sh` - Setup git hooks for link validation
+- `check-dependency-health.ts` — `pnpm deps:check`
+- `cleanup-for-public.sh` — one-off helper for preparing the repo for public release
+- `setup-pre-commit-hook.sh` — sets up the doc-link pre-commit hook
+- `create-missing-tag.sh` — legacy, kept for creating git tags manually (e.g. historical releases that predate changesets)

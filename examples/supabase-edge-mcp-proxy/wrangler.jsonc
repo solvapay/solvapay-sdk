@@ -1,0 +1,34 @@
+{
+  // Cloudflare Worker proxy that fronts the Supabase edge MCP function
+  // on a custom subdomain so RFC 9728 OAuth metadata URLs
+  // (https://<host>/.well-known/oauth-*) resolve to the function.
+  // See ./src/worker.ts for the routing rationale.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "supabase-edge-mcp-proxy",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // SolvaPay organisation account (not the personal account) so the
+  // `solvapay.com` zone is in scope for the custom-domain route.
+  "account_id": "98aefe33182e11a1b0e5d7fa89a12a6d",
+
+  // Bind the Worker to `mcp-goldberg.solvapay.com`. Cloudflare needs
+  // both the DNS record (CNAME → workers.dev target) and the route
+  // entry — `custom_domain: true` handles both in one shot.
+  "routes": [
+    {
+      "pattern": "mcp-goldberg.solvapay.com",
+      "custom_domain": true
+    }
+  ],
+
+  "vars": {
+    "SUPABASE_PROJECT_REF": "ohzivhxmsdnjahtaicus",
+    "SUPABASE_FUNCTION_NAME": "mcp"
+  },
+
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

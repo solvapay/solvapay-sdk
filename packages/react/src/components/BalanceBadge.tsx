@@ -1,43 +1,7 @@
 'use client'
 
-import { useBalance } from '../hooks/useBalance'
-import type { BalanceBadgeProps } from '../types'
+/**
+ * Re-export shim over the `BalanceBadge` primitive.
+ */
 
-export function BalanceBadge({ className, numberOnly, children }: BalanceBadgeProps) {
-  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate, loading } = useBalance()
-
-  if (children) {
-    return <>{children({ credits, loading, displayCurrency, creditsPerMinorUnit })}</>
-  }
-
-  if (loading) {
-    return <span className={className} aria-busy="true" />
-  }
-
-  if (credits == null) {
-    return null
-  }
-
-  const formattedCredits = new Intl.NumberFormat().format(credits)
-
-  if (numberOnly) {
-    return <span className={className}>{formattedCredits}</span>
-  }
-
-  let currencyEquivalent = ''
-  if (displayCurrency && creditsPerMinorUnit) {
-    const usdCents = credits / creditsPerMinorUnit
-    const displayMajorUnits = (usdCents * (displayExchangeRate ?? 1)) / 100
-    currencyEquivalent = ` (~${new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: displayCurrency,
-      minimumFractionDigits: 2,
-    }).format(displayMajorUnits)})`
-  }
-
-  return (
-    <span className={className}>
-      {formattedCredits} credits{currencyEquivalent}
-    </span>
-  )
-}
+export { BalanceBadge } from '../primitives/BalanceBadge'

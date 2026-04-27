@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/react-supabase",
-  "version": "1.0.1",
+  "version": "1.0.8",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -18,13 +18,13 @@
     "directory": "packages/react-supabase"
   },
   "peerDependencies": {
-    "@solvapay/react": "^1.0.1",
+    "@solvapay/react": "workspace:^",
     "@supabase/supabase-js": "^2.0.0"
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
-    "test": "vitest run || exit 0",
-    "test:unit": "vitest run || exit 0",
+    "test": "vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src --config ../../eslint.config.react.mjs",
     "lint:fix": "eslint src --config ../../eslint.config.react.mjs --fix"

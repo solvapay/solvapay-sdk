@@ -111,18 +111,20 @@ export function verifyWebhook({
 
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
+export type { ProtectHandlerContext } from './paywall'
+export { isPaywallStructuredContent } from './types/paywall'
+
+// Pure paywall state engine — classifier + gate / nudge copy builder.
+// Exposed so transport adapters (`@solvapay/mcp-core`) can produce the
+// same text-only copy off a `LimitResponseWithPlan` they already hold.
+export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './paywall-state'
+export type { PaywallState } from './paywall-state'
 
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
 export type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 export { registerVirtualToolsMcpImpl, jsonSchemaToZodRawShape } from './register-virtual-tools-mcp'
 export type { McpServerLike, RegisterVirtualToolsMcpOptions } from './register-virtual-tools-mcp'
-export { buildAuthInfoFromBearer } from './mcp/auth-bridge'
-export { createMcpOAuthBridge } from './mcp/oauth-bridge'
-export {
-  getOAuthProtectedResourceResponse,
-  getOAuthAuthorizationServerResponse,
-} from './mcp/oauth-bridge'
 
 // Export types
 export type {
@@ -130,17 +132,16 @@ export type {
   LimitActivationBalance,
   LimitActivationProduct,
   LimitPlanSummary,
+  LimitResponseWithPlan,
   SolvaPayClient,
   PayableOptions,
   HttpAdapterOptions,
   NextAdapterOptions,
-  McpAdapterOptions,
   PaywallArgs,
+  PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
-  PaywallToolResult,
   RetryOptions,
-  McpToolExtra,
   WebhookEvent,
   WebhookEventType,
   WebhookEventForType,
@@ -155,6 +156,7 @@ export type {
   ProcessPaymentResult,
   CustomerResponseMapped,
   ActivatePlanResult,
+  PaymentMethodInfo,
   McpBootstrapRequest,
   McpBootstrapResponse,
   McpBootstrapPlanInput,
@@ -162,17 +164,12 @@ export type {
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,
   ToolPlanMappingInput,
+  SdkMerchantResponse,
+  SdkProductResponse,
 } from './types/client'
 
 // Export utilities for general use
 export { withRetry } from './utils'
-export {
-  McpBearerAuthError,
-  extractBearerToken,
-  decodeJwtPayload,
-  getCustomerRefFromJwtPayload,
-  getCustomerRefFromBearerAuthHeader,
-} from './mcp-auth'
 
 // Export route helpers (generic, framework-agnostic)
 export {
@@ -187,8 +184,20 @@ export {
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,
+  getPaymentMethodCore,
+  checkPurchaseCore,
+  trackUsageCore,
+  getUsageCore,
   listPlansCore,
+  getMerchantCore,
+  getProductCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'
-export type { ErrorResult, AuthenticatedUser, CustomerBalanceResult } from './helpers'
+export type {
+  ErrorResult,
+  AuthenticatedUser,
+  CustomerBalanceResult,
+  PurchaseCheckResult,
+  GetUsageResult,
+} from './helpers'

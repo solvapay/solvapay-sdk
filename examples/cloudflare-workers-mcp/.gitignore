@@ -1,0 +1,13 @@
+dist/
+src/assets/mcp-app.html
+node_modules/
+.wrangler/
+.env
+.env.local
+!.env.example
+# Legacy pre-rename: ignore `.dev.vars*` too so any developer who
+# followed earlier instructions (copy .dev.vars.example -> .dev.vars
+# and fill in SOLVAPAY_SECRET_KEY) doesn't accidentally stage their
+# secrets after pulling the .env rename.
+.dev.vars
+.dev.vars.local

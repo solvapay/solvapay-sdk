@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
-import type { Plan } from '../types'
+import { buildRequestHeaders } from '../utils/headers'
+import type { Plan, PrefillCustomer, SolvaPayConfig } from '../types'
 
 export interface UseCheckoutReturn {
   loading: boolean
@@ -31,11 +32,12 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  */
 async function resolvePlanRef(
   productRef: string,
-  fetchFn: typeof fetch,
-  headers: HeadersInit,
-  listPlansRoute: string,
+  config: SolvaPayConfig | undefined,
 ): Promise<string> {
+  const listPlansRoute = config?.api?.listPlans || '/api/list-plans'
   const url = `${listPlansRoute}?productRef=${encodeURIComponent(productRef)}`
+  const fetchFn = config?.fetch || fetch
+  const { headers } = await buildRequestHeaders(config)
   const res = await fetchFn(url, { method: 'GET', headers })
 
   if (!res.ok) {
@@ -93,8 +95,9 @@ async function resolvePlanRef(
 export function useCheckout(options: {
   planRef?: string
   productRef?: string
+  customer?: PrefillCustomer
 }): UseCheckoutReturn {
-  const { planRef, productRef } = options
+  const { planRef, productRef, customer } = options
   const { createPayment, customerRef, updateCustomerRef, _config } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -126,8 +129,7 @@ export function useCheckout(options: {
       let effectivePlanRef = planRef
 
       if (!effectivePlanRef && productRef) {
-        const listPlansRoute = _config?.api?.listPlans || '/api/list-plans'
-        effectivePlanRef = await resolvePlanRef(productRef, fetch, {}, listPlansRoute)
+        effectivePlanRef = await resolvePlanRef(productRef, _config)
         setResolvedPlanRef(effectivePlanRef)
       }
 
@@ -135,7 +137,11 @@ export function useCheckout(options: {
         throw new Error('Could not determine plan reference for checkout')
       }
 
-      const result = await createPayment({ planRef: effectivePlanRef, productRef })
+      const result = await createPayment({
+        planRef: effectivePlanRef,
+        productRef,
+        customer,
+      })
 
       if (!result || typeof result !== 'object') {
         throw new Error('Invalid payment intent response from server')
@@ -172,7 +178,7 @@ export function useCheckout(options: {
       setLoading(false)
       isStartingRef.current = false
     }
-  }, [planRef, productRef, createPayment, updateCustomerRef, loading, _config])
+  }, [planRef, productRef, customer, createPayment, updateCustomerRef, loading, _config])
 
   const reset = useCallback(() => {
     isStartingRef.current = false

@@ -1,89 +1,117 @@
 # GitHub Actions Workflows
 
-This directory contains automated workflows for the SolvaPay SDK.
+Automated workflows for the SolvaPay SDK monorepo. Versioning and
+publishing are driven end-to-end by
+[Changesets](https://github.com/changesets/changesets) — **no
+hand-rolled version bumps, no ad-hoc `npm dist-tag add` invocations**.
+To cut a release, commit a `.changeset/*.md` file alongside your PR;
+the workflows do the rest.
 
 ## Workflows
 
-### `publish.yml` - Stable Release
+### `publish-preview.yml` — Preview Snapshot
 
-**Trigger:** Push to `main` branch (or manual via Actions UI)
+**Trigger:** push to `dev` (or manual `workflow_dispatch`).
 
-Automatically publishes a new stable version to npm with the `latest` tag.
+Every push to `dev` runs the full pre-publish gate:
 
-### `publish-preview.yml` - Preview Release
+1. `pnpm test` — unit tests for every workspace package.
+2. `pnpm build:packages` — every publishable package builds to `dist/`.
+3. `pnpm validate:fetch-runtime` — asserts `@solvapay/server/fetch` and
+   `@solvapay/mcp/fetch` load cleanly in a bare Web-standards
+   environment (no `node:`-prefixed imports, no leaked Node builtins).
+4. `pnpm changeset version --snapshot preview` — stamps a
+   `0.0.0-preview-<shortsha>` version on every package with a pending
+   changeset (plus anything that depends on one).
+5. `pnpm changeset publish --tag preview --no-git-tag` — publishes
+   each snapshot to the `@preview` npm dist-tag.
 
-**Trigger:** Push to `dev` branch
+Consumers install with:
 
-Automatically publishes a new preview version to npm with the `preview` tag.
+```bash
+pnpm add @solvapay/core@preview
+```
 
-### `tag-as-latest.yml` - Tag Version as Latest
+### `publish.yml` — Stable Release
 
-**Trigger:** Manual via GitHub Actions UI only
+**Trigger:** push to `main` (or manual `workflow_dispatch`).
 
-Promotes any existing version (especially preview versions) to the `latest` tag on npm.
+Uses [`changesets/action@v1`](https://github.com/changesets/action),
+which runs in two distinct modes:
 
-**This is the ONLY supported way to tag versions as latest.**
+- **Release PR mode** — when `.changeset/` contains pending changesets,
+  opens (or updates) a **"Version Packages"** PR that enumerates every
+  accumulated change grouped by semver bump level. The PR body is
+  auto-generated from the changeset files.
+- **Publish mode** — when `.changeset/` is empty (i.e. the Release PR
+  has just been merged and `changeset version` has already bumped
+  `package.json`s + appended to `CHANGELOG.md`), publishes each
+  bumped package to the `@latest` npm dist-tag and creates matching
+  git tags (`@solvapay/core@1.1.0`, `@solvapay/mcp@0.2.0`, …).
 
-**How to use:**
+Both modes run the same pre-publish gates as the preview workflow
+(tests, build, `validate-fetch-runtime`).
 
-1. Go to **Actions** tab in GitHub
-2. Select **Tag Version as Latest** workflow
-3. Click **Run workflow**
-4. Enter version (e.g., `1.0.0-preview.9`)
-5. Optionally enable **Dry run** to preview changes first (recommended!)
-6. Click **Run workflow** to execute
+## Release workflow summary
 
-**Inputs:**
+```
+feature branch  ──▶  PR to `dev`  ──▶  merge ──▶  preview snapshot on npm
+     │
+     └── author ran `pnpm changeset` and committed .changeset/*.md
 
-- `version` (required): Version to promote (e.g., `1.0.0-preview.9`)
-- `dry_run` (optional): Preview changes without applying them (recommended first run)
+eventually:
+
+`dev`  ──▶  PR to `main`  ──▶  merge ──▶  changesets/action opens
+                                          "Version Packages" PR
+"Version Packages" PR  ──▶  review  ──▶  merge  ──▶  stable @latest
+                                                     publish + git tags
+```
 
 ## Required Secrets
 
-All workflows require:
+- **`NPM_TOKEN`** — automation token with publish permission for the
+  `@solvapay` scope. Used by both workflows.
+- **`GITHUB_TOKEN`** — auto-provided; used by `changesets/action` to
+  open the Release PR.
 
-- **`NPM_TOKEN`**: NPM access token with publish permissions
-
-Set up in: **Repository Settings → Secrets and variables → Actions**
-
-## Best Practices
-
-1. **Always use dry run first**: When using `tag-as-latest.yml`, enable dry run to verify what will be tagged
-2. **Use GitHub Actions only**: Don't run tagging scripts locally - use the workflow for consistency and audit trail
-3. **Check workflow logs**: Always review the workflow execution logs for any issues
-4. **Verify on npm**: After tagging, check `npm dist-tag ls @solvapay/core` to verify tags
-5. **Keep tokens secure**: Never commit or expose `NPM_TOKEN` in logs or code
+Set the NPM token in **Repository Settings → Secrets and variables → Actions**.
 
 ## Quick Reference
 
-| Action                  | How to Execute                                      |
-| ----------------------- | --------------------------------------------------- |
-| Publish stable release  | Push to `main` branch                               |
-| Publish preview release | Push to `dev` branch                                |
-| Tag version as latest   | Use **Tag Version as Latest** workflow in GitHub UI |
-| Test publish setup      | `pnpm test:publish` (local validation only)         |
+| Action                   | How to trigger                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| Publish preview snapshot | Push to `dev`                                                                  |
+| Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR   |
+| Write a changeset        | `pnpm changeset` (interactive)                                                 |
+| Inspect pending releases | `pnpm changeset status --verbose`                                              |
+| Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx scripts/validate-fetch-runtime.ts`) |
 
 ## Troubleshooting
 
 ### Workflow fails with 401 Unauthorized
 
-- Check that `NPM_TOKEN` secret is set correctly
-- Verify the token has publish permissions for `@solvapay` packages
-- Token may have expired - generate a new one
+- Verify `NPM_TOKEN` is set and has publish permission on `@solvapay`.
+- Tokens expire — regenerate if older than ~12 months.
 
-### Version already exists
+### `validate:fetch-runtime` fails
 
-- Each version can only be published once
-- Bump to next version: `pnpm version:bump`
-- Or specify different version manually
+- A new dep got pulled into `@solvapay/server/fetch` or `@solvapay/mcp/fetch`
+  that pulls a `node:`-prefixed builtin. Remove the offending dep or
+  gate it behind a runtime detector before importing.
 
-### Tag-as-latest shows version not found
+### `changeset version --snapshot preview` publishes no packages
 
-- The version must be published first before it can be tagged
-- Check npm: `npm view @solvapay/core versions`
-- Publish the version first, then tag it
+- No `.changeset/*.md` files are pending. Either (a) the PR missed a
+  changeset (run `pnpm changeset` and commit), or (b) your change
+  doesn't affect any published package.
+
+### Version already exists on npm
+
+- You can't re-publish the same version. Cut a fresh changeset so the
+  next version bumps past the clash.
 
 ## See Also
 
-- [Publishing Documentation](../../docs/publishing.md) - Complete publishing guide
-- [Contributing Guide](../../docs/contributing.md) - Development workflow
+- [`.changeset/README.md`](../../.changeset/README.md) — changeset file format
+- [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — development workflow
+- [`scripts/README.md`](../../scripts/README.md) — helper scripts (incl. `validate-fetch-runtime`)

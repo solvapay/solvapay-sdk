@@ -97,3 +97,27 @@ export function getPrimaryPurchase(purchases: PurchaseInfo[]): PurchaseInfo | nu
 export function isPaidPurchase(purchase: PurchaseInfo): boolean {
   return (purchase.amount ?? 0) > 0
 }
+
+/**
+ * Classify a purchase as a plan (subscription / one-time / usage-based) vs a
+ * balance transaction (credit top-up, and any future non-plan purposes).
+ *
+ * Primary signal is structural: a purchase with no `planSnapshot` was never a
+ * plan. The `metadata.purpose` check is defense in depth — it keeps obvious
+ * top-ups out of plan selectors even if a future backend regression
+ * accidentally attaches a snapshot to one.
+ *
+ * @param purchase - Purchase to classify
+ * @returns true when the purchase represents a plan
+ */
+export function isPlanPurchase(purchase: PurchaseInfo): boolean {
+  return !!purchase.planSnapshot && purchase.metadata?.purpose !== 'credit_topup'
+}
+
+/**
+ * Inverse of `isPlanPurchase` — balance transactions (credit top-ups today,
+ * gift credits / refunds / bonuses tomorrow).
+ */
+export function isTopupPurchase(purchase: PurchaseInfo): boolean {
+  return !isPlanPurchase(purchase)
+}

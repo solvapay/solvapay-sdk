@@ -1,0 +1,46 @@
+---
+description: RED-GREEN-REFACTOR test-driven development workflow for bug fixes and new features
+alwaysApply: false
+---
+
+# Test-Driven Development
+
+Use RED-GREEN-REFACTOR for all bug fixes and new features.
+
+## Workflow
+
+1. **RED** -- Write a failing test that describes the expected behavior
+2. **GREEN** -- Write the minimal code to make the test pass
+3. **REFACTOR** -- Clean up the implementation while keeping tests green
+
+## Bug Fixes
+
+Always write a test that reproduces the bug before writing the fix:
+
+1. Write a test that fails because of the bug
+2. Run the test to confirm it fails
+3. Fix the bug with minimal changes
+4. Run the test again to confirm it passes
+5. Refactor if needed
+
+## New Features
+
+Write tests for the expected behavior before implementing:
+
+1. Define the expected inputs and outputs
+2. Write tests covering the happy path and key edge cases
+3. Implement until all tests pass
+4. Refactor the implementation
+
+## Test Structure
+
+- **Co-locate tests**: `*.test.ts` next to the source file
+- **One behavior per test**: each `it()` should test a single expectation
+- **Descriptive names**: `it('should throw when API key is missing')`
+- **Arrange-Act-Assert**: set up data, call the function, check the result
+
+## Running Tests
+
+- `npx vitest run <path>` -- run a single test file
+- `npx vitest --watch` -- run tests in watch mode
+- `npx vitest run` -- run all tests

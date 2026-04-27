@@ -1,0 +1,253 @@
+---
+title: "Supabase Edge Functions Guide"
+description: "Deploy SolvaPay payment endpoints as Supabase Edge Functions using @solvapay/server/fetch. Each function is a one-liner."
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Basic Setup](#basic-setup)
+- [Creating Edge Functions](#creating-edge-functions)
+- [Webhook Handling](#webhook-handling)
+- [CORS Configuration](#cors-configuration)
+- [Frontend Integration](#frontend-integration)
+- [Complete Example](#complete-example)
+- [Best Practices](#best-practices)
+- [Next Steps](#next-steps)
+
+## Installation
+
+The fetch handlers live at the `@solvapay/server/fetch` subpath, consumed through Deno's npm resolution. No `npm install` is needed — instead, create an import map.
+
+<Note>
+`@solvapay/server/fetch` replaces the older standalone `@solvapay/supabase` / `@solvapay/fetch` packages. Same handlers, same signatures — now co-located with the `*Core` primitives they wrap.
+</Note>
+
+Create `supabase/functions/deno.json`:
+
+```json
+{
+  "imports": {
+    "@solvapay/server": "npm:@solvapay/server",
+    "@solvapay/server/": "npm:/@solvapay/server/",
+    "@solvapay/auth": "npm:@solvapay/auth",
+    "@solvapay/core": "npm:@solvapay/core"
+  }
+}
+```
+
+The `"@solvapay/server/"` trailing-slash entry is what unlocks the `/fetch` subpath import in Deno.
+
+## Basic Setup
+
+### Set secrets
+
+```bash
+supabase secrets set SOLVAPAY_SECRET_KEY=sk_sandbox_...
+supabase secrets set SOLVAPAY_WEBHOOK_SECRET=whsec_...
+```
+
+The `SOLVAPAY_SECRET_KEY` is required for all handlers. The webhook secret is only needed if you deploy the webhook function.
+
+### Prerequisites
+
+- [Supabase CLI](https://supabase.com/docs/guides/cli) installed
+- A SolvaPay account with a product and at least one plan configured in the [SolvaPay Console](https://console.solvapay.com)
+
+## Creating Edge Functions
+
+Each handler is a two-line file. Create one function per endpoint:
+
+```typescript
+// supabase/functions/check-purchase/index.ts
+import { checkPurchase } from '@solvapay/server/fetch'
+
+Deno.serve(checkPurchase)
+```
+
+The adapter handles CORS preflight, JSON serialization, error formatting, and auth extraction internally.
+
+### Available Handlers
+
+| Function | Method | Handler | Description |
+| --- | --- | --- | --- |
+| `check-purchase` | GET | `checkPurchase` | Check user's purchase status |
+| `sync-customer` | POST | `syncCustomer` | Sync/create customer in SolvaPay |
+| `create-payment-intent` | POST | `createPaymentIntent` | Create payment intent for a plan |
+| `process-payment` | POST | `processPayment` | Process confirmed payment |
+| `create-topup-payment-intent` | POST | `createTopupPaymentIntent` | Create credit top-up intent |
+| `customer-balance` | GET | `customerBalance` | Get customer credit balance |
+| `cancel-renewal` | POST | `cancelRenewal` | Cancel subscription renewal |
+| `reactivate-renewal` | POST | `reactivateRenewal` | Reactivate cancelled subscription |
+| `activate-plan` | POST | `activatePlan` | Activate a free/usage plan |
+| `list-plans` | GET | `listPlans` | List available plans |
+| `track-usage` | POST | `trackUsage` | Track usage for metered billing |
+| `create-checkout-session` | POST | `createCheckoutSession` | Create hosted checkout session |
+| `create-customer-session` | POST | `createCustomerSession` | Create customer portal session |
+| `get-merchant` | GET | `getMerchant` | Fetch merchant branding (name, `iconUrl`, `logoUrl`, terms, privacy) |
+| `get-payment-method` | GET | `getPaymentMethod` | Preview mirrored card brand / last4 for a customer |
+| `get-product` | GET | `getProduct` | Fetch product + public plans (used by checkout UI) |
+
+All handlers are pure `(req: Request) => Promise<Response>` and run on any web-standards runtime (Supabase Edge, Deno, Cloudflare Workers, Bun, Next.js Edge, Vercel Edge Functions).
+
+### Deploy
+
+Deploy all functions at once:
+
+```bash
+supabase functions deploy
+```
+
+Or deploy individually:
+
+```bash
+supabase functions deploy check-purchase
+supabase functions deploy create-payment-intent
+# ... etc
+```
+
+## Webhook Handling
+
+For receiving webhook events, use the `solvapayWebhook` factory instead of a direct handler. It verifies HMAC signatures automatically:
+
+```typescript
+// supabase/functions/solvapay-webhook/index.ts
+import type { WebhookEvent } from '@solvapay/server'
+import { solvapayWebhook } from '@solvapay/server/fetch'
+
+Deno.serve(solvapayWebhook({
+  onEvent: async (event: WebhookEvent) => {
+    switch (event.type) {
+      case 'purchase.created':
+      case 'purchase.updated':
+        // Grant or update access
+        break
+      case 'purchase.cancelled':
+      case 'purchase.expired':
+        // Revoke access
+        break
+      case 'payment_intent.succeeded':
+      case 'payment_intent.failed':
+        // Update payment records; mirrored card brand/last4 is now
+        // persisted on the Customer and exposed via `get-payment-method`
+        break
+    }
+  },
+}))
+```
+
+The factory reads `SOLVAPAY_WEBHOOK_SECRET` from the environment automatically. You can also pass it explicitly:
+
+```typescript
+solvapayWebhook({
+  secret: Deno.env.get('SOLVAPAY_WEBHOOK_SECRET')!,
+  onEvent: async event => { /* ... */ },
+})
+```
+
+### When to use `solvapayWebhook` vs `verifyWebhook`
+
+- **`solvapayWebhook`** from `@solvapay/server/fetch`: fetch-runtime convenience wrapper. Handles the full request lifecycle (read body, verify, parse, respond).
+- **`verifyWebhook`** from `@solvapay/server`: low-level primitive for any runtime. You handle body reading, signature extraction, and response formatting yourself.
+
+## CORS Configuration
+
+By default, all handlers respond with `Access-Control-Allow-Origin: *`. For production, restrict to your app's origin:
+
+```typescript
+// supabase/functions/check-purchase/index.ts
+import { checkPurchase, configureCors } from '@solvapay/server/fetch'
+
+configureCors({
+  origins: ['https://myapp.com', 'http://localhost:5173'],
+})
+
+Deno.serve(checkPurchase)
+```
+
+Call `configureCors()` before `Deno.serve()` in each function that needs restricted origins. CORS state is per-isolate, so each function file must configure it independently.
+
+## Frontend Integration
+
+Point your React app's `SolvaPayProvider` at the Edge Function URLs:
+
+```tsx
+import { SolvaPayProvider } from '@solvapay/react'
+import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
+
+const SUPABASE_URL = 'https://<project-ref>.supabase.co/functions/v1'
+
+function App() {
+  return (
+    <SolvaPayProvider
+      config={{
+        auth: {
+          adapter: createSupabaseAuthAdapter(supabase),
+        },
+        api: {
+          checkPurchase: `${SUPABASE_URL}/check-purchase`,
+          createPayment: `${SUPABASE_URL}/create-payment-intent`,
+          processPayment: `${SUPABASE_URL}/process-payment`,
+          createTopupPayment: `${SUPABASE_URL}/create-topup-payment-intent`,
+          customerBalance: `${SUPABASE_URL}/customer-balance`,
+          cancelRenewal: `${SUPABASE_URL}/cancel-renewal`,
+          reactivateRenewal: `${SUPABASE_URL}/reactivate-renewal`,
+          activatePlan: `${SUPABASE_URL}/activate-plan`,
+          listPlans: `${SUPABASE_URL}/list-plans`,
+          getMerchant: `${SUPABASE_URL}/get-merchant`,
+          getPaymentMethod: `${SUPABASE_URL}/get-payment-method`,
+          getProduct: `${SUPABASE_URL}/get-product`,
+        },
+      }}
+    >
+      {/* Your app */}
+    </SolvaPayProvider>
+  )
+}
+```
+
+The `sync-customer`, `create-checkout-session`, `create-customer-session`, and `solvapay-webhook` functions are server-side only and are called directly from application code, not through the React provider.
+
+## Complete Example
+
+The full reference project is available at [`examples/supabase-edge`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge) in the SDK repository.
+
+```
+supabase/functions/
+├── deno.json                            # npm import map
+├── check-purchase/index.ts              # 2 lines
+├── sync-customer/index.ts               # 2 lines
+├── create-payment-intent/index.ts       # 2 lines
+├── process-payment/index.ts             # 2 lines
+├── create-topup-payment-intent/index.ts # 2 lines
+├── customer-balance/index.ts            # 2 lines
+├── cancel-renewal/index.ts              # 2 lines
+├── reactivate-renewal/index.ts          # 2 lines
+├── activate-plan/index.ts               # 2 lines
+├── list-plans/index.ts                  # 2 lines
+├── track-usage/index.ts                 # 2 lines
+├── create-checkout-session/index.ts     # 2 lines
+├── create-customer-session/index.ts     # 2 lines
+├── get-merchant/index.ts                # 2 lines
+├── get-payment-method/index.ts          # 2 lines
+├── get-product/index.ts                 # 2 lines
+└── solvapay-webhook/index.ts            # ~10 lines
+```
+
+Total backend code: ~50 lines across 17 files.
+
+## Best Practices
+
+1. **Set secrets via Supabase CLI**, not in source code or `.env` files. Use `supabase secrets set` for both `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_WEBHOOK_SECRET`.
+2. **Restrict CORS origins** in production. The default `*` is fine for development.
+3. **Process webhooks idempotently**. The same event may be delivered more than once.
+4. **Test locally first** with `supabase start && supabase functions serve` before deploying.
+5. **Deploy all functions at once** with `supabase functions deploy` to avoid version skew between handlers.
+
+## Next Steps
+
+- [React Components Guide](/sdks/typescript/guides/react) — build checkout UI with `PaymentForm` and `usePurchase`
+- [Webhooks Guide](/sdks/typescript/guides/webhooks) — detailed webhook event handling patterns
+- [Usage Events Guide](/sdks/typescript/guides/usage-events) — implement metered billing with `trackUsage`
+- [Purchase Management Guide](/sdks/typescript/guides/purchase-management) — cancel, reactivate, and switch plans
+- [Examples Gallery](/sdks/typescript/guides/examples) — see all SDK examples

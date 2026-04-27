@@ -42,6 +42,25 @@ const event = await verifyWebhook({
 })
 ```
 
+### Fetch runtimes (Deno, Cloudflare Workers, Supabase Edge)
+
+For web-standards fetch runtimes, `@solvapay/server/fetch` provides a `solvapayWebhook` factory that handles the full lifecycle (read body, verify signature, parse, respond):
+
+```typescript
+// supabase/functions/solvapay-webhook/index.ts
+import { solvapayWebhook } from '@solvapay/server/fetch'
+
+Deno.serve(solvapayWebhook({
+  onEvent: async event => {
+    // Handle events here
+  },
+}))
+```
+
+The factory reads `SOLVAPAY_WEBHOOK_SECRET` from the environment automatically. Use `verifyWebhook` from `@solvapay/server/edge` if you need manual control over the request lifecycle.
+
+See the [Supabase Edge Functions guide](/sdks/typescript/guides/supabase-edge) for the complete setup.
+
 ## Event Types
 
 | Event | Description |
@@ -58,5 +77,14 @@ const event = await verifyWebhook({
 | `customer.created` | Customer created |
 | `customer.updated` | Customer updated |
 | `customer.deleted` | Customer deleted |
+
+## Side effects on Customer and Transaction records
+
+Two SolvaPay-internal webhook handlers update derived data you may rely on:
+
+- **Card mirror on `payment_intent.succeeded`.** When a payment succeeds, SolvaPay mirrors the card brand, last4, expMonth, and expYear onto the `Customer` record. `GET /v1/sdk/payment-method?customerRef=…` reads from this mirror, so the SDK's `usePaymentMethod` hook and `CurrentPlanCard` never round-trip to Stripe. The mirror is updated whenever a new successful payment lands, so the "payment method on file" always reflects the last working card.
+- **Refund FX normalization.** For refunds against transactions with a non-unity exchange rate (e.g. EUR → USD), the refund record now stores both the original-currency amount and the USD equivalent computed from the source transaction's stored `exchangeRate`. This keeps wallet balances and revenue reports consistent after cross-currency refunds.
+
+Both behaviors are idempotent and safe to replay.
 
 See [Webhooks documentation](/webhooks) for full payload schemas and integration examples.

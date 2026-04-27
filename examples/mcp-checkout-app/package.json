@@ -1,0 +1,40 @@
+{
+  "name": "@example/mcp-checkout-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cross-env INPUT=mcp-app.html vite build && tsc",
+    "serve": "tsx src/index.ts",
+    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"nodemon --watch src --watch .env --watch dist/mcp-app.html --watch ../../packages/core/src --watch ../../packages/server/src --watch ../../packages/mcp-core/src --watch ../../packages/mcp/src --ext ts,tsx,css,html,env --exec \\\"tsx src/index.ts\\\"\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@solvapay/core": "workspace:*",
+    "@solvapay/mcp": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
+    "@solvapay/react": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "@stripe/stripe-js": "^9.0.0",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "nodemon": "^3.1.14",
+    "rollup": "^4.60.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.6",
+    "vite-plugin-singlefile": "^2.3.2"
+  }
+}

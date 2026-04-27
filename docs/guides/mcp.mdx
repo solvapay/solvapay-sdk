@@ -277,11 +277,24 @@ If your MCP server runs on localhost/custom domain (not SolvaPay hosted MCP prox
 
 Reference implementation: `examples/mcp-oauth-bridge`.
 
+## Plan activation from MCP tools
+
+Expose `activate_plan` (backed by `activatePlanCore` from `@solvapay/server` or the `@solvapay/next` wrapper) so the agent can upgrade the customer without a browser round-trip. The result shape depends on plan type:
+
+- **Free plan** — `{ status: 'activated', purchaseRef }`.
+- **Usage-based plan** — `{ status: 'activated', purchaseRef, creditBalance }` even when `creditBalance === 0`. The customer can start calling paid tools immediately; top-up is optional and flows through `create_topup_payment_intent`.
+- **Recurring / hybrid plan** — `{ status: 'topup_required' | 'payment_required', checkoutUrl }` when the customer has no credit balance and no card on file. Return the `checkoutUrl` so the agent can surface it via a hosted checkout link.
+
+In the default `createSolvaPayMcpServer` tool surface, `activate_plan`, `upgrade`, and `topup` already map to these flows — you rarely need to implement them by hand.
+
 ## Error Handling
 
 ### Basic Error Handling
 
-The MCP adapter automatically handles `PaywallError` and converts it to MCP error format:
+The MCP adapter routes paywall gate outcomes through a typed
+`formatGate` channel — the transport emits `isError: false`, a plain-string
+narration in `content[0].text`, and the machine-readable gate payload on
+`structuredContent`. Merchants don't need to `try/catch` for the happy path:
 
 ```typescript
 server.setRequestHandler(CallToolRequestSchema, async request => {
@@ -298,56 +311,58 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
         throw new Error(`Unknown tool: ${name}`)
     }
   } catch (error) {
-    // PaywallError is automatically handled by the adapter
-    // Other errors are re-thrown
+    // Paywall gate outcomes are handled by the adapter before this
+    // catch block runs. Anything that lands here is a genuine
+    // handler failure — re-throw it.
     throw error
   }
 })
 ```
 
-### Custom Error Handling
+### Custom Paywall Responses
 
-Handle errors manually for custom error responses:
+Use `paywall.decide()` directly when you want full control over the paywall
+response shape (e.g. a hand-rolled MCP handler that doesn't use
+`payable().mcp()`):
 
 ```typescript
-import { PaywallError } from '@solvapay/server'
+import { paywallToolResult } from '@solvapay/mcp'
 
 server.setRequestHandler(CallToolRequestSchema, async request => {
   const { name, arguments: args } = request.params
 
-  try {
-    switch (name) {
-      case 'create_task': {
-        const handler = payable.mcp(createTask)
-        return await handler(args)
-      }
+  if (name === 'create_task') {
+    const decision = await solvaPay.paywall.decide(args, {
+      product: 'prd_myapi',
+    })
 
-      default:
-        throw new Error(`Unknown tool: ${name}`)
-    }
-  } catch (error) {
-    if (error instanceof PaywallError) {
-      // Custom paywall error response
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: 'Payment required',
-              message: error.message,
-              checkoutUrl: error.structuredContent.checkoutUrl,
-              product: error.structuredContent.product,
-            }),
-          },
-        ],
-        isError: true,
-      }
+    if (decision.outcome === 'gate') {
+      return paywallToolResult(decision.gate, {
+        resourceUri: 'ui://my-app/mcp-app.html',
+      })
     }
 
-    // Handle other errors
-    throw error
+    return await createTask(args)
   }
+
+  throw new Error(`Unknown tool: ${name}`)
 })
+```
+
+Legacy consumers that still `try/catch` a `PaywallError` keep working —
+`PaywallError` is exported as a compat shim:
+
+```typescript
+import { PaywallError } from '@solvapay/server'
+
+try {
+  return await payable.mcp(createTask)(args)
+} catch (error) {
+  if (error instanceof PaywallError) {
+    return paywallToolResult(error, { resourceUri: 'ui://my-app/mcp-app.html' })
+  }
+  throw error
+}
 ```
 
 ## Complete Example
@@ -582,25 +597,11 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
         throw new Error(`Unknown tool: ${name}`)
     }
   } catch (error) {
-    if (error instanceof PaywallError) {
-      // Return paywall error in MCP format
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: 'Payment required',
-              message: error.message,
-              checkoutUrl: error.structuredContent.checkoutUrl,
-              product: error.structuredContent.product,
-            }),
-          },
-        ],
-        isError: true,
-      }
-    }
-
-    // Re-throw other errors
+    // Paywall gate outcomes are handled by `payable.mcp(...)`
+    // before this catch block runs — they come back as a normal
+    // tool result with `isError: false`, a narration text, and the
+    // machine-readable gate on `structuredContent`. Anything that
+    // lands here is a genuine handler failure.
     throw error
   }
 })
