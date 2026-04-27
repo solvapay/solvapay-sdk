@@ -73,6 +73,13 @@ body {
   background: var(--color-background-primary, #ffffff);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
   transition: opacity 180ms ease;
+  /* Dampens iframe shrink → grow round-trips when a brief
+   * "Loading…" interstitial paints between bootstrap re-fetches
+   * during `account` ↔ `checkout` ↔ `topup` view swaps. Kept below
+   * the natural height of the simplest real card (PAYG account
+   * state) so content drives sizing and we don't trail awkward
+   * empty space under short cards. */
+  min-height: 160px;
 }
 
 /*
@@ -298,6 +305,16 @@ body {
   padding: 8px 18px;
 }
 
+/* The link-button primitive ships with `align-self: flex-start` so it
+ * left-aligns inside the card's column flex; inside `balance-row` we
+ * want it to inherit the row's `align-items: center` instead so a
+ * "See plans" link sits at the same vertical centre as the adjacent
+ * `Top up` button. Reset `align-self` to `auto` to defer to the
+ * parent's `align-items` value. */
+.solvapay-mcp-balance-row .solvapay-mcp-link-button {
+  align-self: auto;
+}
+
 /* Topup view */
 
 .solvapay-mcp-amount-picker {
@@ -381,13 +398,22 @@ body {
  * inside MCP checkout surfaces. The primitive-layer styles stay
  * layout-neutral so web integrators can place the spinner wherever
  * they want; the MCP view always wants it centered above the
- * submit button. */
+ * submit button.
+ *
+ * `min-height` reserves the vertical space the loaded Stripe
+ * `<PaymentElement>` will occupy (~280px for the typical card +
+ * Apple Pay + saved-method layout at our iframe widths). Without
+ * it, swapping from `PlanStep` to the payment step paints a small
+ * spinner first, then grows the card by ~300px when Stripe.js
+ * finishes loading — visible jank in hosts that auto-size the
+ * iframe to content height (MCP Jam, Claude Desktop, ChatGPT). */
 .solvapay-mcp-topup-form [data-solvapay-topup-form-loading],
 .solvapay-mcp-card [data-solvapay-payment-form-loading] {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 12px 0;
+  min-height: 280px;
 }
 
 /* Activation view */
