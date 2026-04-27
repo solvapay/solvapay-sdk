@@ -119,7 +119,7 @@ export function McpAccountView({
       ) : null}
 
       <div className={cx.card}>
-        {hasPaidPurchase ? <CurrentPlanCard /> : null}
+        {hasPaidPurchase ? <CurrentPlanCard hideUpdatePaymentButton /> : null}
 
         <CancelledPlanNotice.Root className={cx.notice}>
           <CancelledPlanNotice.Heading />

@@ -129,15 +129,23 @@ describe('McpAccountView', () => {
     const ctx = buildCtx({}, [paidPurchase], 0)
     renderAccount(ctx)
     const link = await screen.findByRole('link', { name: /manage billing/i })
-    expect(link.getAttribute('href')).toBe('https://portal.test')
+    await waitFor(() => expect(link.getAttribute('href')).toBe('https://portal.test'))
     expect(link.getAttribute('target')).toBe('_blank')
+  })
+
+  it('does not render the inline "Update card" button on a paid plan (the portal handles card updates)', async () => {
+    const ctx = buildCtx({}, [paidPurchase], 0)
+    renderAccount(ctx)
+    // Wait for the portal-session fetch to settle so any stragglers
+    // would have rendered.
+    await screen.findByRole('link', { name: /manage billing/i })
+    expect(screen.queryByRole('link', { name: /update card/i })).toBeNull()
   })
 
   it('does not render Manage billing for a customer without a paid purchase', async () => {
     const ctx = buildCtx({}, [], 0)
     renderAccount(ctx)
-    // Give the portal session fetch a tick to complete.
-    await new Promise((r) => setTimeout(r, 0))
+    await new Promise(r => setTimeout(r, 0))
     expect(screen.queryByRole('link', { name: /manage billing/i })).toBeNull()
   })
 })

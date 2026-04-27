@@ -164,8 +164,8 @@ function Account() {
 }
 ```
 
-- **`<CurrentPlanCard />`** renders the active plan, mirrored card brand/last4, and inline **Update card** / **Cancel plan** actions.
-- **`<LaunchCustomerPortalButton />`** opens the hosted customer portal in a new tab. It pre-fetches `createCustomerSession` on hover so the portal link is ready the moment the user clicks (anchor-click semantics are preserved for sandboxed hosts).
+- **`<CurrentPlanCard />`** renders the active plan, mirrored card brand/last4, and an inline **Cancel plan** action. (The MCP `manage_account` view hides the inline "Update card" button — card updates are routed through the customer portal.)
+- **`<LaunchCustomerPortalButton />`** opens the hosted customer portal in a new tab. The button renders enabled from first paint and fetches the portal URL in the background; multiple instances under the same provider share a single in-flight `createCustomerSession` round-trip. When the URL has resolved, click is a real `<a target="_blank">` navigation (sandbox-safe). On a cache-miss click the handler awaits the in-flight promise and falls back to `window.open`.
 - **`usePaymentMethod()`** exposes the mirrored card under `{ paymentMethod, loading, refetch }` when you need to build a custom account view. The card brand and last4 come from the `payment_intent.succeeded` webhook persisted on the Customer — no card-element iframe required inside the MCP App sandbox.
 
 ## Text-only paywall
