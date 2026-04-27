@@ -34,7 +34,7 @@ export interface LaunchCustomerPortalButtonProps
     React.AnchorHTMLAttributes<HTMLAnchorElement>,
     'href' | 'target' | 'rel' | 'onError'
   > {
-  /** Override the default "Manage billing" label. */
+  /** Override the default "Manage account" label. */
   children?: React.ReactNode
   /** Called immediately before the user navigates to `href`. */
   onLaunch?: (href: string) => void

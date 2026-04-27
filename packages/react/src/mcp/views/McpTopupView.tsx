@@ -11,7 +11,7 @@
  *     we don't create a Stripe PaymentIntent per keystroke. Has a
  *     `← Change amount` BackLink + the outer `Back to my account`.
  *  3. Success state — "Credits added" + `[ Add more credits ]` +
- *     `Manage billing ↗`, same `Back to my account` back-link.
+ *     `Manage account ↗`, same `Back to my account` back-link.
  *
  * Gated behind `useStripeProbe` with the same fallback logic as
  * `<McpCheckoutView>`: if the host sandbox's CSP refuses to load
@@ -137,9 +137,7 @@ function EmbeddedTopup({
           className={cx.button}
           loadingClassName={cx.button}
           errorClassName={cx.button}
-        >
-          Manage billing
-        </LaunchCustomerPortalButton>
+        />
       </div>
     )
   }

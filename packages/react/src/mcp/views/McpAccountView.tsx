@@ -28,6 +28,7 @@ import React from 'react'
 import { CurrentPlanCard } from '../../components/CurrentPlanCard'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useBalance } from '../../hooks/useBalance'
+import { useCopy } from '../../hooks/useCopy'
 import { usePurchase } from '../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
 import { useUsage } from '../../hooks/useUsage'
@@ -67,6 +68,7 @@ export function McpAccountView({
   hideDetailCards,
 }: McpAccountViewProps) {
   const cx = resolveMcpClassNames(classNames)
+  const copy = useCopy()
   const { loading, isRefetching, hasPaidPurchase, activePurchase } = usePurchase()
   const { shouldShowCancelledNotice } = usePurchaseStatus()
   const { credits } = useBalance()
@@ -119,7 +121,20 @@ export function McpAccountView({
       ) : null}
 
       <div className={cx.card}>
-        {hasPaidPurchase ? <CurrentPlanCard hideUpdatePaymentButton /> : null}
+        {hasPaidPurchase ? (
+          <>
+            {/* TODO(mcp-host-cancel): inline `<CancelPlanButton>` doesn't fire
+             *  reliably inside the MCP host iframe — likely a sandboxed
+             *  `window.confirm()` or a `cancel_purchase` tool gap. Until
+             *  that's root-caused, the card collapses to a single
+             *  "Manage account" CTA below; cancellation runs through the
+             *  Stripe portal instead. Tracked separately. */}
+            <CurrentPlanCard hideUpdatePaymentButton hideCancelButton />
+            <p className={cx.muted} data-solvapay-mcp-portal-hint="">
+              {copy.currentPlan.portalHint}
+            </p>
+          </>
+        ) : null}
 
         <CancelledPlanNotice.Root className={cx.notice}>
           <CancelledPlanNotice.Heading />
@@ -162,9 +177,7 @@ export function McpAccountView({
             className={cx.button}
             loadingClassName={cx.button}
             errorClassName={cx.button}
-          >
-            Manage billing
-          </LaunchCustomerPortalButton>
+          />
         ) : null}
       </div>
 

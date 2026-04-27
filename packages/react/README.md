@@ -366,6 +366,14 @@ typed per-view (`McpCheckoutViewProps`, `McpAccountViewProps`,
 refactor — merchant paywall / nudge responses narrate in
 `content[0].text` and don't open the widget iframe.
 
+`<McpAccountView>` is opinionated about the host iframe: it renders
+`<CurrentPlanCard hideUpdatePaymentButton hideCancelButton />` and
+collapses card updates and cancellation into a single **Manage account**
+`<LaunchCustomerPortalButton>`, paired with a one-line hint pointing
+users at it. The portal's confirm/cancel flow is reliable inside MCP
+host sandboxes; the inline `<CancelPlanButton>` in the card is not
+(see issue tracker for the planned fix).
+
 ### `<AppHeader>` — host-aware merchant strip
 
 Every built-in view renders `<AppHeader />` at its surface root: a

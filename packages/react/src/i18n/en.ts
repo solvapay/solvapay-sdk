@@ -165,6 +165,7 @@ export const enCopy: SolvaPayCopy = {
     paymentMethodExpires: 'expires {month}/{year}',
     noPaymentMethod: 'No payment method on file',
     updatePaymentButton: 'Update card',
+    portalHint: 'Click Manage account to update your card or cancel your plan.',
     cycleUnit: {
       weekly: 'week',
       monthly: 'month',
@@ -173,7 +174,7 @@ export const enCopy: SolvaPayCopy = {
     },
   },
   customerPortal: {
-    launchButton: 'Manage billing',
+    launchButton: 'Manage account',
     loadingLabel: 'Loading portal…',
   },
   errors: {

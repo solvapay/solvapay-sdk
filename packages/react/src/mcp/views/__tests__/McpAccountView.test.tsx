@@ -125,10 +125,10 @@ describe('McpAccountView', () => {
     })
   })
 
-  it('renders a Manage billing button backed by the customer portal transport when the customer has a paid purchase', async () => {
+  it('renders a Manage account button backed by the customer portal transport when the customer has a paid purchase', async () => {
     const ctx = buildCtx({}, [paidPurchase], 0)
     renderAccount(ctx)
-    const link = await screen.findByRole('link', { name: /manage billing/i })
+    const link = await screen.findByRole('link', { name: /manage account/i })
     await waitFor(() => expect(link.getAttribute('href')).toBe('https://portal.test'))
     expect(link.getAttribute('target')).toBe('_blank')
   })
@@ -138,14 +138,31 @@ describe('McpAccountView', () => {
     renderAccount(ctx)
     // Wait for the portal-session fetch to settle so any stragglers
     // would have rendered.
-    await screen.findByRole('link', { name: /manage billing/i })
+    await screen.findByRole('link', { name: /manage account/i })
     expect(screen.queryByRole('link', { name: /update card/i })).toBeNull()
   })
 
-  it('does not render Manage billing for a customer without a paid purchase', async () => {
+  it('does not render the inline "Cancel plan" button on a paid plan (cancel runs through the portal)', async () => {
+    const ctx = buildCtx({}, [paidPurchase], 0)
+    renderAccount(ctx)
+    await screen.findByRole('link', { name: /manage account/i })
+    expect(screen.queryByRole('button', { name: /cancel plan/i })).toBeNull()
+  })
+
+  it('renders the portal hint fine-print under the plan card on a paid plan', async () => {
+    const ctx = buildCtx({}, [paidPurchase], 0)
+    renderAccount(ctx)
+    await screen.findByRole('link', { name: /manage account/i })
+    expect(
+      screen.getByText('Click Manage account to update your card or cancel your plan.'),
+    ).toBeTruthy()
+    expect(document.querySelector('[data-solvapay-mcp-portal-hint]')).toBeTruthy()
+  })
+
+  it('does not render Manage account for a customer without a paid purchase', async () => {
     const ctx = buildCtx({}, [], 0)
     renderAccount(ctx)
     await new Promise(r => setTimeout(r, 0))
-    expect(screen.queryByRole('link', { name: /manage billing/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /manage account/i })).toBeNull()
   })
 })

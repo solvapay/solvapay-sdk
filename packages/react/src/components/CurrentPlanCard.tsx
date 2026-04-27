@@ -166,9 +166,9 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   // non-USD `currency` would render e.g. "SEK 54.26" for a 500 SEK charge.
   const amount = activePurchase.originalAmount ?? activePurchase.amount ?? 0
   const currency = activePurchase.currency ?? 'usd'
-  const cycleKey = activePurchase.billingCycle as
-    | keyof typeof copy.currentPlan.cycleUnit
-    | undefined
+  const cycleKey = (activePurchase.billingCycle ??
+    activePurchase.planSnapshot?.billingCycle ??
+    undefined) as keyof typeof copy.currentPlan.cycleUnit | undefined
   const intervalLabel = cycleKey ? copy.currentPlan.cycleUnit[cycleKey] ?? cycleKey : undefined
   const priceLabel = formatPrice(amount, currency, {
     interval: intervalLabel,

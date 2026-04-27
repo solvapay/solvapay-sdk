@@ -148,6 +148,13 @@ export interface SolvaPayCopy {
     noPaymentMethod: string
     updatePaymentButton: string
     /**
+     * Fine-print rendered beneath `<CurrentPlanCard>` in the MCP account
+     * view, where the inline Update / Cancel actions are hidden in favour
+     * of a single "Manage account" CTA. Tells the user where those
+     * actions moved.
+     */
+    portalHint: string
+    /**
      * Human-readable unit names for `billingCycle`, used as the `interval`
      * arg to `formatPrice` so a monthly SEK plan renders "500 kr / month"
      * rather than "500 kr / monthly".
