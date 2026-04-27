@@ -4,16 +4,19 @@ overview: useStripeProbe currently only tests `script-src` (via loadStripe), whi
 todos:
   - id: probe-rewrite
     content: Rewrite useStripeProbe.ts to mount a hidden throwaway Stripe paymentElement after loadStripe resolves; return 'ready' only when the element's ready event fires; return 'blocked' on loaderror or ~2s timeout; always tear down
-    status: pending
+    status: completed
+  - id: probe-v2-csp-listener
+    content: Added after v1 smoke-testing on Claude revealed `ready` fires even on CSP-blocked iframes — extend the probe with a `securitypolicyviolation` listener scoped to stripe.com frame-src refusals; `ready` is ignored when a matching violation has fired
+    status: completed
   - id: tests
-    content: Add useStripeProbe.test.ts covering loadStripe-fail, element-ready, element-loaderror, timeout, and unmount-teardown
-    status: pending
+    content: Add useStripeProbe.test.ts covering loadStripe-fail, element-ready, element-loaderror, timeout, unmount-teardown, and the v2 CSP-violation paths (violation wins over bogus ready, non-stripe violations ignored, listener removal on unmount)
+    status: completed
   - id: changeset
     content: Add @solvapay/react changeset noting the stricter probe
-    status: pending
+    status: completed
   - id: smoke
-    content: Smoke-test examples/cloudflare-workers-mcp on Claude.ai (expect hosted fallback, no Framing-js.stripe.com console errors) and MCPJam (expect embedded flow still works)
-    status: pending
+    content: Smoke-test on Claude.ai (expect hosted fallback, no stuck skeletons) and MCPJam (expect embedded flow still works)
+    status: completed
 isProject: false
 ---
 
@@ -114,4 +117,63 @@ Existing tests stay as-is: [`McpCheckoutView.test.tsx:97`](solvapay-sdk/packages
 - `PaymentForm` / `TopupForm` `onReady` runtime timeout — not needed once the probe is correct; revisit only if a new host surfaces a partial-CSP variant the probe misses.
 - Host-sniffing for `claude.ai` — brittle, rejected.
 - Claude's upstream CSP fix (`anthropics/claude-ai-mcp#40`) — when they honor `_meta.ui.csp.frameDomains` the new probe will simply return `'ready'` faster. No code change needed on our side.
-- Unrelated `link rel="preload"` warnings for `api-dev.solvapay.com/.../icons/*.stripe.1` — separate PR.
+- Unrelated `link rel="preload"` warnings for `api-dev.solvapay.com/.../icons/*.stripe.1` — separate plan ([`mcp_server_merchant_favicon.plan.md`](mcp_server_merchant_favicon.plan.md)).
+- Hosted-fallback's `Reopen checkout` button being blocked by Claude's iframe sandbox (`allow-popups` unset). Once the probe routes correctly, the sandbox blocks `window.open` on the fallback — separate plan ([`hosted_checkout_open_link_fallback.plan.md`](hosted_checkout_open_link_fallback.plan.md)).
+
+---
+
+## Update: v2 — `SecurityPolicyViolationEvent` gate
+
+Shipped on branch `fix/mcp-host-ui-polish`, [PR #142](https://github.com/solvapay/solvapay-sdk/pull/142). Two commits:
+
+- `2e09385` — v1 as specified above: mount hidden Payment Element, race `ready` / `loaderror` / 2s timeout.
+- `7c656bb` — v2 hardening, added after smoke-testing v1 on Claude revealed the `ready` signal itself is unreliable.
+
+### What v1 missed
+
+The v1 plan assumed Stripe's `ready` event only fires when the nested iframe actually loads. Wrong. Chrome's behaviour for a CSP-refused iframe is to insert the element but swap its content for a synthetic `chrome-error://chromewebdata/` placeholder and report `load`. Stripe's JS sees a successful DOM insertion and fires `ready` anyway. The console signature on Claude under v1:
+
+```
+Unsafe attempt to load URL https://js.stripe.com/v3/m-outer-3437aad…html
+  from frame with URL chrome-error://chromewebdata/
+```
+
+…cascading ~5 entries because Stripe continued creating nested iframes (payment-request, controller-with-preconnect, elements-inner-accessory, …) after the initial `ready`. The probe resolved `'ready'` and committed to the embedded branch. Same four stuck skeletons.
+
+### What v2 added
+
+The reliable signal is the standard DOM `SecurityPolicyViolationEvent` (`securitypolicyviolation`) — Chrome dispatches it on `document` synchronously when it refuses an iframe, and typically *before* Stripe's bogus `ready` fires. [`useStripeProbe.ts`](solvapay-sdk/packages/react/src/mcp/useStripeProbe.ts) now:
+
+- Attaches a `securitypolicyviolation` listener on `document` *before* mounting the Payment Element. Filter narrows to `effectiveDirective === 'frame-src'` with a `stripe.com` `blockedURI` so unrelated host CSP noise is ignored.
+- Resolves `'blocked'` immediately on a matching violation.
+- Treats `ready` as authoritative only when no stripe-domain violation has fired — the `ready` handler no-ops once the `cspBlockedStripeFrame` flag is set.
+- Removes the listener on resolve, effect cleanup, and unmount-before-resolution.
+
+Updated flow:
+
+```mermaid
+flowchart TD
+  Load["loadStripe(pk)"] -->|timeout| Blocked1["'blocked'"]
+  Load -->|resolved| Mount["mount hidden paymentElement"]
+  Mount -->|"securitypolicyviolation (stripe + frame-src)"| Blocked2["'blocked'"]
+  Mount -->|loaderror| Blocked3["'blocked'"]
+  Mount -->|"ready (cspBlocked == false)"| Ready["'ready'"]
+  Mount -->|"2s timeout"| Blocked4["'blocked'"]
+  Mount -->|"ready (cspBlocked == true)"| Ignored["no-op (already resolved)"]
+```
+
+### Tests added in v2
+
+In addition to v1 cases:
+
+- Stripe-domain `frame-src` violation → `'blocked'`.
+- Violation wins over a later bogus `ready` (stays `'blocked'`).
+- Non-stripe / non-`frame-src` violations ignored (probe still resolves `'ready'` on `ready`).
+- CSP listener removed on unmount — late events don't fire a setState.
+
+Suite at 666/666 green at commit `7c656bb` (-5 when the McpApp icon-preload fix was subsequently reverted to narrow this branch's scope).
+
+### Smoke results
+
+- **Claude.ai** via local ngrok: widget shows hosted-checkout fallback UI ("Waiting for payment… Reopen checkout"). The `Framing 'https://js.stripe.com/'` cascade collapses from ~5 iframe attempts to a single violation event that the probe immediately acts on and tears down. (Clicking the "Reopen checkout" button itself is still blocked by Claude's iframe sandbox — follow-up in [`hosted_checkout_open_link_fallback.plan.md`](hosted_checkout_open_link_fallback.plan.md).)
+- **MCPJam**: embedded `PaymentElement` flow unchanged — no violation fires, `ready` lands, probe returns `'ready'`, form inputs render normally.
