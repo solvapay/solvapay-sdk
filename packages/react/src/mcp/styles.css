@@ -359,6 +359,24 @@ body {
   gap: 12px;
 }
 
+/* Pay-with-card step header: amount being purchased is the hero, the
+ * customer's existing balance drops to a muted context line. The
+ * AmountPicker step and the Success step keep the prominent
+ * `BalanceBadge` — balance is the right hero on those screens. */
+.solvapay-mcp-topup-amount-hero {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.solvapay-mcp-topup-balance-context {
+  margin: 0;
+  color: var(--color-text-secondary, #475569);
+  font-size: 13px;
+}
+
 /* Center the `TopupForm.Loading` / `PaymentForm.Loading` spinner
  * inside MCP checkout surfaces. The primitive-layer styles stay
  * layout-neutral so web integrators can place the spinner wherever

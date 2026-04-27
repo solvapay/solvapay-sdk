@@ -116,7 +116,7 @@ function EmbeddedTopup({
 }) {
   const [committedAmountMinor, setCommittedAmountMinor] = useState<number | null>(null)
   const [justPaidMinor, setJustPaidMinor] = useState<number | null>(null)
-  const { adjustBalance, creditsPerMinorUnit } = useBalance()
+  const { adjustBalance, credits, creditsPerMinorUnit, displayExchangeRate } = useBalance()
   const locale = useHostLocale()
   const { notifyModelContext, notifySuccess } = useMcpBridge()
 
@@ -148,14 +148,29 @@ function EmbeddedTopup({
 
   if (committedAmountMinor != null && committedAmountMinor > 0) {
     const displayAmount = formatPrice(committedAmountMinor, currency, { locale, free: '' })
+    const creditsAdded =
+      creditsPerMinorUnit != null && creditsPerMinorUnit > 0
+        ? Math.floor(
+            (committedAmountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit,
+          )
+        : null
+    const formattedBalance =
+      credits != null ? new Intl.NumberFormat(locale).format(credits) : null
+    const contextParts = [
+      creditsAdded != null ? `Adds ${creditsAdded.toLocaleString(locale)} credits` : null,
+      formattedBalance ? `Balance ${formattedBalance} credits` : null,
+    ].filter(Boolean)
+
     return (
       <div className={cx.card}>
         <BackLink label="Change amount" onClick={() => setCommittedAmountMinor(null)} />
-        <div className={cx.balanceRow}>
-          <h2 className={cx.heading}>Pay with card</h2>
-          <BalanceBadge />
+        <div className={cx.stack}>
+          <p className={cx.muted}>Pay with card</p>
+          <p className={cx.topupAmountHero}>{displayAmount}</p>
+          {contextParts.length > 0 ? (
+            <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
+          ) : null}
         </div>
-        <p className={cx.muted}>Adding {displayAmount} in credits.</p>
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}
@@ -188,7 +203,9 @@ function EmbeddedTopup({
             amountMinor={committedAmountMinor}
             currency={currency}
           />
-          <TopupForm.SubmitButton className={cx.button} />
+          <TopupForm.SubmitButton className={cx.button}>
+            Top up {displayAmount}
+          </TopupForm.SubmitButton>
         </TopupForm.Root>
       </div>
     )
