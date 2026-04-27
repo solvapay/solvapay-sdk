@@ -617,63 +617,19 @@ body {
   line-height: 1.5;
 }
 
-/* Section label rhythm — uppercased label, optional inline refresh
- * icon button on the right. Matches the hosted manage page's
- * `CURRENT PLAN AND USAGE` row. */
-.solvapay-mcp-section-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 4px 0;
-  /* Pull the row tighter to the card below so the section label reads as
-   * an over-line for the card, not a free-floating hairline. */
-  margin-bottom: -4px;
-}
-
+/* Section label — uppercased over-line above the plan card. Matches
+ * the hosted manage page's `CURRENT PLAN AND USAGE` row. */
 .solvapay-mcp-section-label {
+  display: block;
+  padding: 4px 4px 0;
+  /* Pull the label tighter to the card below so it reads as an
+   * over-line for the card, not a free-floating hairline. */
+  margin-bottom: -4px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-secondary, #475569);
-}
-
-.solvapay-mcp-refresh-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-text-secondary, #475569);
-  cursor: pointer;
-  transition:
-    background-color 120ms ease,
-    color 120ms ease;
-}
-
-.solvapay-mcp-refresh-button:hover {
-  background: var(--color-background-secondary, #f1f5f9);
-  color: var(--color-text-primary, #0f172a);
-}
-
-.solvapay-mcp-refresh-button:focus-visible {
-  outline: 2px solid var(--color-border-focus, #2563eb);
-  outline-offset: 2px;
-}
-
-.solvapay-mcp-account[data-refreshing='true'] .solvapay-mcp-refresh-button svg {
-  animation: solvapay-mcp-spin 800ms linear infinite;
-}
-
-@keyframes solvapay-mcp-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .solvapay-mcp-detail-grid {
