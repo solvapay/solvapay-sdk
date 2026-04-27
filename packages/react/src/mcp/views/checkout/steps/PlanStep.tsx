@@ -16,6 +16,7 @@
 import React, { memo } from 'react'
 import { PlanSelector, usePlanSelector } from '../../../../primitives/PlanSelector'
 import { useHostLocale } from '../../../useHostLocale'
+import { BackLink } from '../../BackLink'
 import type { BootstrapPlanLike, Cx } from '../shared'
 import { formatContinueLabel } from '../shared'
 
@@ -26,6 +27,12 @@ interface PlanStepProps {
   hideUpgradeBanner?: boolean
   onContinue: () => void
   onStayOnFree?: () => void
+  /**
+   * Called when the user picks "Back to my account" at the top of
+   * the plan picker. Wired by `<McpAppShell>` whenever the shell
+   * owns surface routing — mirrors the topup view's back-link.
+   */
+  onBack?: () => void
   isActivating: boolean
   activationError: string | null
   cx: Cx
@@ -37,6 +44,7 @@ export const PlanStep = memo(function PlanStep({
   hideUpgradeBanner,
   onContinue,
   onStayOnFree,
+  onBack,
   isActivating,
   activationError,
   cx,
@@ -49,6 +57,8 @@ export const PlanStep = memo(function PlanStep({
 
   return (
     <>
+      {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
+
       {showBanner ? <UpgradeBanner kind={paywallKind} cx={cx} /> : null}
 
       <h2 className={cx.heading}>Choose a plan</h2>

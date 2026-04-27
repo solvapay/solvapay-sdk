@@ -235,6 +235,7 @@ export function McpViewRouter({
           onRequestTopup={goTopup}
           onRefreshBootstrap={onRefreshBootstrap}
           onClose={onClose}
+          onBack={goAccount}
         />
       )
     case 'account':

@@ -60,6 +60,11 @@ export interface StateMachineProps {
   onPurchaseSuccess?: () => void
   onRefreshBootstrap?: () => void | Promise<void>
   onClose?: () => void
+  /**
+   * Called when the user picks "Back to my account" from the plan
+   * step. Forwarded by `<McpCheckoutView>` from the shell.
+   */
+  onBack?: () => void
   cx: Cx
 }
 
@@ -83,6 +88,7 @@ export function CheckoutStateMachine(props: StateMachineProps) {
     onPurchaseSuccess,
     onRefreshBootstrap,
     onClose,
+    onBack,
     cx,
   } = props
 
@@ -291,6 +297,7 @@ export function CheckoutStateMachine(props: StateMachineProps) {
           // `McpAccountView` leave it hidden so "switching plans"
           // doesn't double as "downgrade to Free."
           onStayOnFree={fromPaywall && onClose ? onStayOnFree : undefined}
+          onBack={onBack}
           isActivating={isActivating}
           activationError={activationError}
           cx={cx}
@@ -339,6 +346,7 @@ export function CheckoutStateMachine(props: StateMachineProps) {
           hideUpgradeBanner={hideUpgradeBanner}
           onContinue={onPlanContinue}
           onStayOnFree={fromPaywall && onClose ? onStayOnFree : undefined}
+          onBack={onBack}
           isActivating={isActivating}
           activationError={activationError}
           cx={cx}
