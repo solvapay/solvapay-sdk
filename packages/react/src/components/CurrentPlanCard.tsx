@@ -41,6 +41,10 @@ export interface CurrentPlanCardClassNames {
   productContext?: string
   price?: string
   dateLine?: string
+  /** "Started {date}" line. */
+  startedLine?: string
+  /** Monospaced purchase reference (`pur_…`). */
+  reference?: string
   balanceLine?: string
   usageMeter?: string
   paymentMethod?: string
@@ -60,6 +64,29 @@ export interface CurrentPlanCardProps {
    * a quota).
    */
   hideUsageMeter?: boolean
+  /**
+   * Hide the card's own `<h2>` heading (e.g. "Your plan"). Useful when
+   * a parent surface (the MCP account view) already paints a section
+   * label above the card. Default: `false`.
+   */
+  hideHeading?: boolean
+  /**
+   * Hide the product-context line (`productName` rendered above the
+   * plan name when they differ). The MCP account view renders the
+   * product as the surface hero, so the plan card doesn't need to
+   * repeat it. Default: `false`.
+   */
+  hideProductContext?: boolean
+  /**
+   * Show the purchase start date as `Started {date}`. Default: `false`.
+   * Hosted-page parity for the MCP account surface.
+   */
+  showStartDate?: boolean
+  /**
+   * Show the purchase reference (`pur_…`) in monospace. Default: `false`.
+   * Hosted-page parity for the MCP account surface.
+   */
+  showReference?: boolean
   /** Per-element classNames. */
   classNames?: CurrentPlanCardClassNames
   /**
@@ -148,6 +175,10 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   hideCancelButton,
   hideUpdatePaymentButton,
   hideUsageMeter,
+  hideHeading,
+  hideProductContext,
+  showStartDate,
+  showReference,
   classNames: overrides,
   className,
 }) => {
@@ -204,14 +235,16 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       data-plan-type={planType}
       data-solvapay-current-plan-ref={activePurchase.planRef ?? undefined}
     >
-      <h2
-        className={overrides?.heading ?? 'solvapay-current-plan-heading'}
-        data-solvapay-current-plan-heading=""
-      >
-        {copy.currentPlan.heading}
-      </h2>
+      {!hideHeading && (
+        <h2
+          className={overrides?.heading ?? 'solvapay-current-plan-heading'}
+          data-solvapay-current-plan-heading=""
+        >
+          {copy.currentPlan.heading}
+        </h2>
+      )}
 
-      {productContext && (
+      {productContext && !hideProductContext && (
         <div
           className={overrides?.productContext ?? 'solvapay-current-plan-product-context'}
           data-solvapay-current-plan-product-context=""
@@ -239,6 +272,28 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         formatDate={formatDate}
         className={overrides?.dateLine ?? 'solvapay-current-plan-date-line'}
       />
+
+      {showStartDate && (() => {
+        const started = formatDate(activePurchase.startDate)
+        if (!started) return null
+        return (
+          <span
+            className={overrides?.startedLine ?? 'solvapay-current-plan-started-line'}
+            data-solvapay-current-plan-started-line=""
+          >
+            {interpolate(copy.currentPlan.startedOn, { date: started })}
+          </span>
+        )
+      })()}
+
+      {showReference && activePurchase.reference && (
+        <span
+          className={overrides?.reference ?? 'solvapay-current-plan-reference'}
+          data-solvapay-current-plan-reference=""
+        >
+          {activePurchase.reference}
+        </span>
+      )}
 
       {isUsageBased && !hideUsageMeter && (
         <div

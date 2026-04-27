@@ -238,6 +238,27 @@ describe('<McpAppShell>', () => {
     expect(container.querySelector('.solvapay-mcp-shell-tagline')).toBeNull()
   })
 
+  it('threads bootstrap.product into the account view as the surface heading', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    renderShell(
+      {
+        view: 'account',
+        product: {
+          reference: 'prd_x',
+          name: 'Acme Knowledge Base',
+          description: 'Search Acme docs from anywhere.',
+        } as never,
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+      },
+      ctx,
+    )
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Acme Knowledge Base' }),
+    ).toBeTruthy()
+    expect(screen.getByText('Search Acme docs from anywhere.')).toBeTruthy()
+  })
+
   it('renders the SolvaPay legal footer with solvapay.com legal URLs', () => {
     const config = seedMerchant({
       displayName: 'Acme',

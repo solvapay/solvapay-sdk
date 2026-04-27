@@ -959,6 +959,29 @@
   font-size: 0.8125rem;
 }
 
+[data-solvapay-current-plan-started-line],
+.solvapay-current-plan-started-line {
+  display: block;
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.8125rem;
+}
+
+[data-solvapay-current-plan-reference],
+.solvapay-current-plan-reference {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 0.125rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  background: var(--solvapay-muted, #f1f5f9);
+  color: var(--solvapay-muted-foreground);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+}
+
 [data-solvapay-current-plan-balance-line],
 .solvapay-current-plan-balance-line {
   display: flex;

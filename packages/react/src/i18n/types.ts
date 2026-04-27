@@ -143,6 +143,8 @@ export interface SolvaPayCopy {
     nextBilling: string
     expiresOn: string
     validIndefinitely: string
+    /** "Started {date}" — purchase start-date line on `<CurrentPlanCard>`. */
+    startedOn: string
     paymentMethod: string
     paymentMethodExpires: string
     noPaymentMethod: string
@@ -165,6 +167,29 @@ export interface SolvaPayCopy {
       quarterly: string
       yearly: string
     }
+  }
+  /**
+   * MCP `<McpAccountView>` strings — the product/plan focus surface.
+   * Other surfaces continue to use surface-specific keys (`activation`,
+   * `paywall`, `usage`, etc.).
+   */
+  account: {
+    /** Section label above the active plan card. Uppercased in CSS. */
+    currentPlanAndUsage: string
+    /** aria-label for the inline refresh icon button. */
+    refreshLabel: string
+    /** Heading for the in-card pay-as-you-go credits state. */
+    payAsYouGoTitle: string
+    /** Body copy for the in-card pay-as-you-go credits state. */
+    payAsYouGoBody: string
+    /** Heading for the in-card "no active plan" state. */
+    noPlanTitle: string
+    /** Body copy for the in-card "no active plan" state. */
+    noPlanBody: string
+    /** Inline CTA on the pay-as-you-go state that switches to the Plan tab. */
+    seePlansButton: string
+    /** Primary CTA on the no-plan state that switches to the Plan tab. */
+    pickPlanButton: string
   }
   customerPortal: {
     launchButton: string
