@@ -15,6 +15,7 @@
 
 import React, { memo } from 'react'
 import { PlanSelector, usePlanSelector } from '../../../../primitives/PlanSelector'
+import { useCopy } from '../../../../hooks/useCopy'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
 import type { BootstrapPlanLike, Cx } from '../shared'
@@ -51,13 +52,14 @@ export const PlanStep = memo(function PlanStep({
 }: PlanStepProps) {
   const { selectedPlan, selectedPlanRef } = usePlanSelector()
   const locale = useHostLocale()
+  const copy = useCopy()
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
   const ctaLabel = formatContinueLabel(selectedPlanShape, locale)
   const showBanner = fromPaywall && !hideUpgradeBanner
 
   return (
     <>
-      {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
+      {onBack ? <BackLink label={copy.checkout.backToAccount} onClick={onBack} /> : null}
 
       {showBanner ? <UpgradeBanner kind={paywallKind} cx={cx} /> : null}
 

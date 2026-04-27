@@ -411,6 +411,50 @@ describe('<McpCheckoutView> — plan step', () => {
 })
 
 // ------------------------------------------------------------------
+// Back-to-account link — wired by `<McpAppShell>` whenever the shell
+// owns surface routing. The link only appears on the plan step.
+// ------------------------------------------------------------------
+
+describe('<McpCheckoutView> — back to my account link', () => {
+  it('renders the BackLink on the plan step when onBack is wired', () => {
+    const onBack = vi.fn()
+    renderView({ fromPaywall: true, onBack })
+    const link = screen.getByRole('button', { name: /back to my account/i })
+    expect(link).toBeTruthy()
+    act(() => {
+      fireEvent.click(link)
+    })
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not render the BackLink when onBack is omitted', () => {
+    renderView({ fromPaywall: true })
+    expect(
+      screen.queryByRole('button', { name: /back to my account/i }),
+    ).toBeNull()
+  })
+
+  it('hides the BackLink once the user advances past the plan step', async () => {
+    renderView({ fromPaywall: true, onBack: vi.fn() })
+    expect(
+      screen.getByRole('button', { name: /back to my account/i }),
+    ).toBeTruthy()
+    await waitFor(() =>
+      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+    )
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+      )
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+    expect(
+      screen.queryByRole('button', { name: /back to my account/i }),
+    ).toBeNull()
+  })
+})
+
+// ------------------------------------------------------------------
 // PAYG branch — plan → amount → payment → success
 // ------------------------------------------------------------------
 

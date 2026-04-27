@@ -195,6 +195,20 @@ export interface SolvaPayCopy {
     launchButton: string
     loadingLabel: string
   }
+  /**
+   * `<McpCheckoutView>` chrome strings that aren't owned by the
+   * sub-flows (`planSelector`, `activationFlow`, `paywall`). Currently
+   * only the in-iframe back-link surfaced when `<McpAppShell>` owns
+   * surface routing.
+   */
+  checkout: {
+    /**
+     * Label for the BackLink at the top of the plan-selector step.
+     * Wired by `<McpAppShell>` whenever the user reached checkout
+     * in-session (e.g. via `Pick a plan` on `<McpAccountView>`).
+     */
+    backToAccount: string
+  }
   legalFooter: {
     terms: string
     privacy: string

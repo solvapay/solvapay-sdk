@@ -189,6 +189,9 @@ export const enCopy: SolvaPayCopy = {
     launchButton: 'Manage account',
     loadingLabel: 'Loading portal…',
   },
+  checkout: {
+    backToAccount: 'Back to my account',
+  },
   legalFooter: {
     terms: 'Terms',
     privacy: 'Privacy',
