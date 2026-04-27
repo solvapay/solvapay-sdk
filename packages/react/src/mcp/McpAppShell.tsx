@@ -245,7 +245,6 @@ export function McpViewRouter({
           product={bootstrap.product}
           onTopup={goTopup}
           onChangePlan={goCheckout}
-          onRefresh={onRefreshBootstrap}
           hideDetailCards={suppressDetailCards}
         />
       )

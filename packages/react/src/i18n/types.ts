@@ -176,8 +176,6 @@ export interface SolvaPayCopy {
   account: {
     /** Section label above the active plan card. Uppercased in CSS. */
     currentPlanAndUsage: string
-    /** aria-label for the inline refresh icon button. */
-    refreshLabel: string
     /** Heading for the in-card pay-as-you-go credits state. */
     payAsYouGoTitle: string
     /** Body copy for the in-card pay-as-you-go credits state. */

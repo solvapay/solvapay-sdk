@@ -39,12 +39,8 @@ export interface McpViewClassNames {
   productName?: string
   /** `<p>` rendering the optional product description. */
   productDescription?: string
-  /** Row holding the section label + optional refresh icon button. */
-  sectionLabelRow?: string
   /** Uppercased muted label (e.g. `CURRENT PLAN AND USAGE`). */
   sectionLabel?: string
-  /** Refresh icon button on the section label row. */
-  refreshButton?: string
 }
 
 export const DEFAULT_MCP_CLASS_NAMES: Required<McpViewClassNames> = {
@@ -73,9 +69,7 @@ export const DEFAULT_MCP_CLASS_NAMES: Required<McpViewClassNames> = {
   productHeader: 'solvapay-mcp-product-header',
   productName: 'solvapay-mcp-product-name',
   productDescription: 'solvapay-mcp-product-description',
-  sectionLabelRow: 'solvapay-mcp-section-label-row',
   sectionLabel: 'solvapay-mcp-section-label',
-  refreshButton: 'solvapay-mcp-refresh-button',
 }
 
 /**

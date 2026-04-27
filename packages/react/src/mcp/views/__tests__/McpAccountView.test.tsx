@@ -244,18 +244,4 @@ describe('McpAccountView', () => {
     expect(screen.queryByRole('heading', { name: 'Credit balance' })).toBeNull()
   })
 
-  it('renders the refresh icon button only when onRefresh is provided', () => {
-    const ctx = buildCtx({}, [], 0)
-    const { rerender } = renderAccount(ctx)
-    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull()
-    const onRefresh = vi.fn()
-    rerender(
-      <SolvaPayContext.Provider value={ctx}>
-        <McpAccountView onRefresh={onRefresh} />
-      </SolvaPayContext.Provider>,
-    )
-    const button = screen.getByRole('button', { name: 'Refresh' })
-    button.click()
-    expect(onRefresh).toHaveBeenCalledTimes(1)
-  })
 })

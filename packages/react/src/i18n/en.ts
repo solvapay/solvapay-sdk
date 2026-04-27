@@ -176,7 +176,6 @@ export const enCopy: SolvaPayCopy = {
   },
   account: {
     currentPlanAndUsage: 'Current plan and usage',
-    refreshLabel: 'Refresh',
     payAsYouGoTitle: "You're on pay-as-you-go credits",
     payAsYouGoBody:
       'Top up to keep going, or pick a plan for predictable monthly billing.',

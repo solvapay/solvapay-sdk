@@ -25,6 +25,11 @@
  * The product header and section label render in every state so the
  * customer always sees which product they're managing — same framing
  * as the hosted page even when no purchase is in flight yet.
+ *
+ * Note: an inline refresh icon used to sit on the section label row.
+ * It was removed because `<McpAppShell>` already re-fetches the
+ * bootstrap once on mount, which is the only refresh moment that
+ * actually matters for re-opened iframes.
  */
 
 import React from 'react'
@@ -61,12 +66,6 @@ export interface McpAccountViewProps {
    */
   onChangePlan?: () => void
   /**
-   * Refresh the bootstrap snapshot when the user clicks the inline
-   * refresh icon on the section label row. Optional — when unset the
-   * icon button is hidden.
-   */
-  onRefresh?: () => void | Promise<void>
-  /**
    * Skip the Customer + Seller detail cards. `<McpAppShell>` sets this
    * to `true` at the wide-iframe breakpoint because the same cards
    * render in the persistent right-hand sidebar.
@@ -79,12 +78,11 @@ export function McpAccountView({
   classNames,
   onTopup,
   onChangePlan,
-  onRefresh,
   hideDetailCards,
 }: McpAccountViewProps) {
   const cx = resolveMcpClassNames(classNames)
   const copy = useCopy()
-  const { loading, isRefetching, hasPaidPurchase, activePurchase } = usePurchase()
+  const { loading, hasPaidPurchase, activePurchase } = usePurchase()
   const { shouldShowCancelledNotice } = usePurchaseStatus()
   const { credits } = useBalance()
 
@@ -114,7 +112,7 @@ export function McpAccountView({
   const productDescription = product?.description ?? null
 
   return (
-    <div className="solvapay-mcp-account" data-refreshing={isRefetching ? 'true' : undefined}>
+    <div className="solvapay-mcp-account">
       {productName ? (
         <header className={cx.productHeader} data-solvapay-mcp-product-header="">
           <h1 className={cx.productName}>{productName}</h1>
@@ -124,22 +122,9 @@ export function McpAccountView({
         </header>
       ) : null}
 
-      <div className={cx.sectionLabelRow}>
-        <span className={cx.sectionLabel} data-solvapay-mcp-section-label="">
-          {copy.account.currentPlanAndUsage}
-        </span>
-        {onRefresh ? (
-          <button
-            type="button"
-            className={cx.refreshButton}
-            onClick={() => void onRefresh()}
-            aria-label={copy.account.refreshLabel}
-            data-solvapay-mcp-refresh-button=""
-          >
-            <RefreshGlyph />
-          </button>
-        ) : null}
-      </div>
+      <span className={cx.sectionLabel} data-solvapay-mcp-section-label="">
+        {copy.account.currentPlanAndUsage}
+      </span>
 
       <div className={cx.card}>
         {hasPaidPurchase ? (
@@ -221,29 +206,5 @@ export function McpAccountView({
         </>
       ) : null}
     </div>
-  )
-}
-
-/**
- * Inline refresh icon — circular arrow. SVG-only so the SDK doesn't
- * pull a peer-dep on an icon library, and the stroke colour inherits
- * `currentColor` so theme tokens drive it.
- */
-function RefreshGlyph() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 12a9 9 0 1 1-3.5-7.1" />
-      <polyline points="21 4 21 10 15 10" />
-    </svg>
   )
 }
