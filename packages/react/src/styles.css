@@ -886,6 +886,22 @@
   line-height: 1.5;
 }
 
+/*
+ * Inline merchant terms / privacy links inside the mandate sentence.
+ * Stays visually quiet (color: inherit, no underline by default) so
+ * the legal-prose paragraph reads as a single sentence; underline
+ * only on hover/focus matches the LegalFooter primitive's styling.
+ */
+[data-solvapay-mandate-link] {
+  color: inherit;
+  text-decoration: none;
+}
+
+[data-solvapay-mandate-link]:hover,
+[data-solvapay-mandate-link]:focus-visible {
+  text-decoration: underline;
+}
+
 [data-solvapay-product-badge] {
   display: inline-flex;
   align-items: center;
@@ -1076,6 +1092,45 @@
 [data-solvapay-usage-meter-empty] {
   color: var(--solvapay-muted-foreground);
   font-style: italic;
+}
+
+/* -----------------------------------------------------------------------------
+ * LegalFooter
+ *
+ * Centered Terms · Privacy strip with optional `Provided by SolvaPay` /
+ * `Powered by SolvaPay` attribution underneath. Mirrors the hosted
+ * checkout's footer rhythm without bringing Chakra into the SDK.
+ * -------------------------------------------------------------------------- */
+
+[data-solvapay-legal-footer] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+[data-solvapay-legal-footer-links] {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+[data-solvapay-legal-footer-link],
+[data-solvapay-legal-footer-attribution] {
+  color: inherit;
+  text-decoration: none;
+}
+
+[data-solvapay-legal-footer-link]:hover,
+[data-solvapay-legal-footer-attribution]:hover {
+  text-decoration: underline;
+}
+
+[data-solvapay-legal-footer-attribution] {
+  font-weight: 500;
 }
 
 /* -----------------------------------------------------------------------------

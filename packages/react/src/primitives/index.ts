@@ -49,6 +49,7 @@ export {
   PaymentFormSubmitButton,
   PaymentFormLoading,
   PaymentFormError,
+  PaymentFormLegalFooter,
 } from './PaymentForm'
 
 export {
@@ -125,8 +126,12 @@ export {
   TopupFormSubmitButton,
   TopupFormLoading,
   TopupFormError,
+  TopupFormLegalFooter,
   useTopupForm,
 } from './TopupForm'
+
+export { LegalFooter } from './LegalFooter'
+export type { LegalFooterProps } from './LegalFooter'
 
 export {
   MandateText,

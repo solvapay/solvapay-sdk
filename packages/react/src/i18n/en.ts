@@ -177,6 +177,12 @@ export const enCopy: SolvaPayCopy = {
     launchButton: 'Manage account',
     loadingLabel: 'Loading portal…',
   },
+  legalFooter: {
+    terms: 'Terms',
+    privacy: 'Privacy',
+    providedBy: 'Provided by SolvaPay',
+    poweredBy: 'Powered by SolvaPay',
+  },
   errors: {
     paymentInitFailed: 'Payment initialization failed',
     topupInitFailed: 'Top-up initialization failed',

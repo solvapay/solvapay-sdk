@@ -72,11 +72,7 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
         <PaymentForm.Loading />
         <PaymentForm.PaymentElement />
         <PaymentForm.Error className={cx.error} />
-
-        <p className={`${cx.muted} solvapay-mcp-checkout-terms`.trim()}>
-          By subscribing, you agree {planName} renews {cycle} at{' '}
-          {formatPrice(amountMinor, currency, { locale })} until you cancel.
-        </p>
+        <PaymentForm.MandateText />
 
         <PaymentForm.SubmitButton className={cx.button}>
           Subscribe — {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}

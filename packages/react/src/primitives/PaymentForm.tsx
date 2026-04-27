@@ -33,6 +33,7 @@ import {
 import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
+import { LegalFooter } from './LegalFooter'
 import { withPaymentElementDefaults } from './paymentElementDefaults'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
@@ -956,6 +957,7 @@ export const PaymentFormTermsCheckbox = TermsCheckbox
 export const PaymentFormSubmitButton = SubmitButton
 export const PaymentFormLoading = Loading
 export const PaymentFormError = ErrorSlot
+export const PaymentFormLegalFooter = LegalFooter
 
 export const PaymentForm = {
   Root,
@@ -968,4 +970,5 @@ export const PaymentForm = {
   SubmitButton,
   Loading,
   Error: ErrorSlot,
+  LegalFooter,
 } as const

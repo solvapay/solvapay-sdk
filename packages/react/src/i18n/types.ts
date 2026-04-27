@@ -170,6 +170,12 @@ export interface SolvaPayCopy {
     launchButton: string
     loadingLabel: string
   }
+  legalFooter: {
+    terms: string
+    privacy: string
+    providedBy: string
+    poweredBy: string
+  }
   errors: {
     paymentInitFailed: string
     topupInitFailed: string

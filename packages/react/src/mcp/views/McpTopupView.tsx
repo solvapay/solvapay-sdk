@@ -36,6 +36,7 @@ import {
   useAmountPicker,
 } from '../../primitives/AmountPicker'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
+import { MandateText } from '../../primitives/MandateText'
 import { TopupForm } from '../../primitives/TopupForm'
 import { formatPrice } from '../../utils/format'
 import { useMcpBridge } from '../bridge'
@@ -182,6 +183,11 @@ function EmbeddedTopup({
           <TopupForm.Loading />
           <TopupForm.PaymentElement />
           <TopupForm.Error className={cx.error} />
+          <MandateText
+            mode="topup"
+            amountMinor={committedAmountMinor}
+            currency={currency}
+          />
           <TopupForm.SubmitButton className={cx.button} />
         </TopupForm.Root>
       </div>

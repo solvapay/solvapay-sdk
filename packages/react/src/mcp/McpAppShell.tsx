@@ -20,7 +20,6 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react'
-import { useMerchant } from '../hooks/useMerchant'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
@@ -38,7 +37,7 @@ import {
   type McpTopupViewProps,
 } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
-import { ExternalLinkGlyph } from '../components/ExternalLinkGlyph'
+import { LegalFooter } from '../primitives/LegalFooter'
 
 // Merchant branding is rendered once by `<McpApp>` as a chrome row
 // above the shell (see `packages/react/src/mcp/views/AppHeader.tsx`);
@@ -50,7 +49,7 @@ export interface McpAppShellProps {
   bootstrap: McpBootstrap
   views?: McpAppViewOverrides
   classNames?: McpViewClassNames
-  /** Render the footer? Defaults to `true` when the merchant has any of support/terms/privacy URLs. */
+  /** Render the SolvaPay legal footer? Defaults to `true`. */
   footer?: boolean
   /**
    * Refresh the bootstrap snapshot. Wired by `<McpApp>` to
@@ -100,7 +99,6 @@ export function McpAppShell({
   onRefreshBootstrap,
   onClose,
 }: McpAppShellProps) {
-  const { merchant } = useMerchant()
   // In-session surface swaps (no host re-invocation): the customer
   // clicks "Change plan" on the account view, "Top up" on the
   // customer-details card, or "Back" on the topup view. The paywall /
@@ -126,7 +124,7 @@ export function McpAppShell({
     })
   }, [onRefreshBootstrap, bootstrap.view])
 
-  const showFooter = footer ?? Boolean(merchant?.termsUrl || merchant?.privacyUrl)
+  const showFooter = footer ?? true
   // The sidebar (seller + customer details cards) shows only when
   // there's an authenticated customer to render details for.
   const isShellSidebarEligible = bootstrap.customer !== null
@@ -158,59 +156,16 @@ export function McpAppShell({
         ) : null}
       </div>
 
-      {showFooter ? <ShellFooter classNames={classNames} merchant={merchant} /> : null}
+      {showFooter ? <ShellFooter classNames={classNames} /> : null}
     </div>
   )
 }
 
-function ShellFooter({
-  classNames,
-  merchant,
-}: {
-  classNames?: McpViewClassNames
-  merchant: ReturnType<typeof useMerchant>['merchant']
-}) {
+function ShellFooter({ classNames }: { classNames?: McpViewClassNames }) {
   const cx = resolveMcpClassNames(classNames)
-  const termsUrl = merchant?.termsUrl
-  const privacyUrl = merchant?.privacyUrl
-
-  if (!termsUrl && !privacyUrl) {
-    return (
-      <footer className={`solvapay-mcp-shell-footer ${cx.muted}`.trim()}>
-        Provided by SolvaPay
-      </footer>
-    )
-  }
-
   return (
     <footer className={`solvapay-mcp-shell-footer ${cx.muted}`.trim()}>
-      {termsUrl ? (
-        <a
-          className="solvapay-mcp-shell-footer-link"
-          href={termsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Terms (opens in a new tab)"
-        >
-          Terms
-          <ExternalLinkGlyph />
-        </a>
-      ) : null}
-      {termsUrl && privacyUrl ? <span aria-hidden="true"> · </span> : null}
-      {privacyUrl ? (
-        <a
-          className="solvapay-mcp-shell-footer-link"
-          href={privacyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Privacy (opens in a new tab)"
-        >
-          Privacy
-          <ExternalLinkGlyph />
-        </a>
-      ) : null}
-      <span aria-hidden="true"> · </span>
-      <span>Provided by SolvaPay</span>
+      <LegalFooter attribution="provided" />
     </footer>
   )
 }

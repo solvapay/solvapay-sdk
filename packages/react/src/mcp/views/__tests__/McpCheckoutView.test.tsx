@@ -82,6 +82,7 @@ vi.mock('../../../primitives/PaymentForm', () => {
   const SubmitButton: React.FC<{ children?: React.ReactNode; className?: string }> = ({
     children,
   }) => <span data-testid="payment-submit-label">{children}</span>
+  const MandateText: React.FC = () => <p data-testid="payment-mandate-text" />
   return {
     PaymentForm: {
       Root,
@@ -89,9 +90,14 @@ vi.mock('../../../primitives/PaymentForm', () => {
       PaymentElement,
       Error: ErrorSlot,
       SubmitButton,
+      MandateText,
     },
   }
 })
+
+vi.mock('../../../primitives/MandateText', () => ({
+  MandateText: () => <p data-testid="mandate-text" />,
+}))
 
 vi.mock('../../useStripeProbe', () => ({
   useStripeProbe: () => 'ready',
