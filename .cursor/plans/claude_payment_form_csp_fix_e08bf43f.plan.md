@@ -177,3 +177,27 @@ Suite at 666/666 green at commit `7c656bb` (-5 when the McpApp icon-preload fix 
 
 - **Claude.ai** via local ngrok: widget shows hosted-checkout fallback UI ("Waiting for payment… Reopen checkout"). The `Framing 'https://js.stripe.com/'` cascade collapses from ~5 iframe attempts to a single violation event that the probe immediately acts on and tears down. (Clicking the "Reopen checkout" button itself is still blocked by Claude's iframe sandbox — follow-up in [`hosted_checkout_open_link_fallback.plan.md`](hosted_checkout_open_link_fallback.plan.md).)
 - **MCPJam**: embedded `PaymentElement` flow unchanged — no violation fires, `ready` lands, probe returns `'ready'`, form inputs render normally.
+
+## Verification state
+
+Branch `fix/mcp-host-ui-polish` ([PR #142](https://github.com/solvapay/solvapay-sdk/pull/142)) commits, oldest first:
+
+- `a41cbbd` `docs(plans): seed mcp-host ui polish fixes` — **in**
+- `8e20df9` `fix(react/mcp): gate McpApp icon preload on HOSTS_WITH_MERCHANT_CHROME` — **reverted by `dea0cc1`**
+- `2e09385` `fix(react/mcp): useStripeProbe now tests frame-src, not just script-src` — **in (probe v1)**
+- `7c656bb` `fix(react/mcp): gate useStripeProbe on SecurityPolicyViolationEvent, not \`ready\`` — **in (probe v2)**
+- `dea0cc1` `Revert "fix(react/mcp): gate McpApp icon preload…"` — **in**
+- `da5e4fc` `docs(plans): scope out favicon + openLink fallback as follow-ups` — **in**
+- `772d409` `docs(plans): record v2 useStripeProbe update and smoke outcome` — **in**
+
+Net source diff vs `dev` is confined to [`packages/react/src/mcp/useStripeProbe.ts`](solvapay-sdk/packages/react/src/mcp/useStripeProbe.ts) and its colocated test file. [`packages/react/src/mcp/McpApp.tsx`](solvapay-sdk/packages/react/src/mcp/McpApp.tsx) is back to pre-fix state after the revert.
+
+v2 scaffolding to grep for in source (line numbers drift with future edits, identifiers are stable):
+
+- `let cspBlockedStripeFrame = false` — the guard flag used by the `ready` handler.
+- `document.addEventListener('securitypolicyviolation', onCspViolation)` — listener attachment, paired with a removal in `teardown()`.
+- `if (cspBlockedStripeFrame) return` inside the `element.on('ready', …)` handler — the gate that makes `ready` a no-op when a stripe-domain `frame-src` violation has already fired.
+
+## Smoke-test bundle caveat
+
+[`examples/mcp-checkout-app/dist/mcp-app.html`](solvapay-sdk/examples/mcp-checkout-app/dist/mcp-app.html) is the widget bundle Claude fetches via ngrok. It only reflects source changes via `vite build --watch` (running as part of `pnpm dev` in the example) or a one-shot `pnpm -F @example/mcp-checkout-app exec cross-env INPUT=mcp-app.html vite build`. After any revert / force-push / fresh checkout, run the one-shot before smoke-testing on Claude to guarantee the dist matches current source — otherwise a stale bundle will look like a logic regression and send you down the wrong rabbit hole.
