@@ -293,6 +293,11 @@ body {
   gap: 12px;
 }
 
+.solvapay-mcp-balance-row .solvapay-mcp-button {
+  width: auto;
+  padding: 8px 18px;
+}
+
 /* Topup view */
 
 .solvapay-mcp-amount-picker {
@@ -681,15 +686,30 @@ body {
   color: var(--color-text-secondary, #475467);
   font-size: 13px;
   cursor: pointer;
+  transition: color 120ms ease;
 }
 
 .solvapay-mcp-back-link:hover {
   color: var(--color-text-primary, #101828);
+}
+
+/* Underline only the label on hover — applying `text-decoration` to
+ * the parent leaves a 6px gap under the flex `gap` between the glyph
+ * and the label. Targeting the label span keeps the underline as one
+ * continuous segment. */
+.solvapay-mcp-back-link:hover .solvapay-mcp-back-link-label {
   text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 .solvapay-mcp-back-link-glyph {
   font-weight: 500;
+  transition: transform 120ms ease;
+}
+
+.solvapay-mcp-back-link:hover .solvapay-mcp-back-link-glyph {
+  transform: translateX(-2px);
 }
 
 /* ---- External-link glyph ---- */

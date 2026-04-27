@@ -9,7 +9,10 @@
  *     Has a `← Back to my account` BackLink when `onBack` is wired.
  *  2. `TopupForm.Root` — mounts only once the amount is committed so
  *     we don't create a Stripe PaymentIntent per keystroke. Has a
- *     `← Change amount` BackLink + the outer `Back to my account`.
+ *     single `← Change amount` BackLink at the top of the card; the
+ *     outer "Back to my account" is intentionally dropped on this
+ *     step so users don't have two competing back affordances on the
+ *     same surface.
  *  3. Success state — "Credits added" + `[ Add more credits ]` +
  *     `Manage account ↗`, same `Back to my account` back-link.
  *
@@ -146,7 +149,7 @@ function EmbeddedTopup({
     const displayAmount = formatPrice(committedAmountMinor, currency, { locale, free: '' })
     return (
       <div className={cx.card}>
-        {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
+        <BackLink label="Change amount" onClick={() => setCommittedAmountMinor(null)} />
         <div className={cx.balanceRow}>
           <h2 className={cx.heading}>Pay with card</h2>
           <BalanceBadge />
@@ -181,10 +184,6 @@ function EmbeddedTopup({
           <TopupForm.Error className={cx.error} />
           <TopupForm.SubmitButton className={cx.button} />
         </TopupForm.Root>
-        <BackLink
-          label="Change amount"
-          onClick={() => setCommittedAmountMinor(null)}
-        />
       </div>
     )
   }
