@@ -1,6 +1,6 @@
-# @solvapay/next
+# solvapay
 
-## 1.0.9
+## 1.0.8
 
 ### Patch Changes
 
@@ -18,10 +18,3 @@
   - @solvapay/core@1.0.8
   - @solvapay/auth@1.0.8
   - @solvapay/server@1.0.10
-
-## 1.0.8
-
-### Patch Changes
-
-- Updated dependencies [0938625]
-  - @solvapay/server@1.0.9

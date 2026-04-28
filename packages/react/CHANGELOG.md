@@ -1,5 +1,12 @@
 # @solvapay/react changelog
 
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies [4b3de6a]
+  - @solvapay/mcp-core@0.2.2
+
 ## 1.1.0
 
 ### Minor Changes
