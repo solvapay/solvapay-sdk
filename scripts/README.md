@@ -28,6 +28,8 @@ See [`docs/documentation/DOC_LINK_VALIDATION.md`](../docs/documentation/DOC_LINK
 ## Release Gates
 
 - `validate-fetch-runtime.ts` — Pre-publish gate ensuring `@solvapay/server/fetch` and `@solvapay/mcp/fetch` (the Web-standards subpath exports) still import cleanly on a bare Node `fetch`-only runtime (no `express`, no `node:http`, no `supabase-js`). Wired into [`publish-preview.yml`](../.github/workflows/publish-preview.yml) so a broken Web-standards build blocks the preview channel. Usage: `pnpm validate:fetch-runtime`
+- `assert-stable-workspace-versions.mjs` — Pre-publish gate that fails if any non-`private`, non-changeset-ignored workspace `package.json` has a SemVer pre-release identifier (`-preview`, `-canary`, `-rc`, `-alpha`, `-beta`, `-next`, `-snapshot`) in its `version` field. Wired into [`publish.yml`](../.github/workflows/publish.yml) so `pnpm publish` never substitutes a leftover preview string into a freshly-published sibling's `dependencies` or `peerDependencies`. Usage: `node scripts/assert-stable-workspace-versions.mjs`
+- `verify-npm-publishes.mjs` — Post-publish verification. Polls the npm registry until each freshly-published `name@version` resolves and, for stable releases, additionally rejects any manifest whose `dependencies` or `peerDependencies` reference a SolvaPay sibling at a pre-release version. Wired into both publish workflows. Usage: `node scripts/verify-npm-publishes.mjs --packages='[…]'`
 
 ## Dependency + Repository Management
 
