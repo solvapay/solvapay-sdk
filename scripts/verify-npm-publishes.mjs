@@ -20,8 +20,15 @@
  *   2. For each `name@version`, poll `registry.npmjs.org` until the
  *      exact version manifest returns 200 (retries cover brand-new
  *      first-publish CDN lag; up to 60s per package).
- *   3. Exit non-zero if any package is still missing, with a clear
- *      summary of what's missing so CI fails loud.
+ *   3. For stable releases (no SemVer pre-release identifier on the
+ *      published version), inspect the manifest's `dependencies` and
+ *      `peerDependencies` and reject any entry whose `@solvapay/*`
+ *      reference resolves to a pre-release version. This catches the
+ *      April-2026 regression where `pnpm publish` substituted leftover
+ *      `1.0.8-preview.10` strings into every freshly-published
+ *      sibling's manifest.
+ *   4. Exit non-zero if any package is still missing or has poisoned
+ *      dep references, with a clear summary so CI fails loud.
  *
  * Usage:
  *
@@ -80,12 +87,12 @@ function parsePackagesFlag(value) {
   })
 }
 
-async function checkOne(name, version) {
+async function fetchManifest(name, version) {
   const url = `${REGISTRY}/${name}/${version}`
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const res = await fetch(url, { headers: { accept: 'application/json' } })
-      if (res.ok) return true
+      if (res.ok) return await res.json()
       if (res.status !== 404) {
         console.log(`  ${name}@${version}: unexpected ${res.status}, retrying...`)
       }
@@ -94,7 +101,36 @@ async function checkOne(name, version) {
     }
     if (attempt < MAX_ATTEMPTS) await sleep(RETRY_MS)
   }
-  return false
+  return null
+}
+
+const PRERELEASE_RE = /-(?:preview|canary|rc|alpha|beta|next|snapshot)\b/i
+
+function isPrereleaseVersion(version) {
+  return PRERELEASE_RE.test(version)
+}
+
+/**
+ * Walk a manifest's `dependencies` and `peerDependencies` and return any
+ * `@solvapay/*` (or `solvapay`) reference that resolves to a pre-release
+ * version. We only flag intra-org references because external packages
+ * may legitimately track pre-release tracks.
+ */
+function findPrereleaseDepRefs(manifest) {
+  const offenders = []
+  const fields = ['dependencies', 'peerDependencies']
+  for (const field of fields) {
+    const deps = manifest[field]
+    if (!deps || typeof deps !== 'object') continue
+    for (const [depName, range] of Object.entries(deps)) {
+      if (typeof range !== 'string') continue
+      if (depName !== 'solvapay' && !depName.startsWith('@solvapay/')) continue
+      if (isPrereleaseVersion(range)) {
+        offenders.push({ field, depName, range })
+      }
+    }
+  }
+  return offenders
 }
 
 async function main() {
@@ -123,13 +159,32 @@ async function main() {
 
   console.log(`Verifying ${expected.length} package(s) on ${REGISTRY}...`)
   const missing = []
+  const poisoned = []
   for (const pkg of expected) {
-    const ok = await checkOne(pkg.name, pkg.version)
-    if (ok) {
-      console.log(`  ok   ${pkg.name}@${pkg.version}`)
-    } else {
+    const manifest = await fetchManifest(pkg.name, pkg.version)
+    if (!manifest) {
       console.log(`  MISS ${pkg.name}@${pkg.version}`)
       missing.push(pkg)
+      continue
+    }
+
+    // Only enforce the stable-deps invariant for stable releases. A
+    // package whose own version is itself a pre-release is allowed to
+    // depend on other pre-release siblings (preview channel, etc.).
+    if (isPrereleaseVersion(pkg.version)) {
+      console.log(`  ok   ${pkg.name}@${pkg.version}  (pre-release; dep check skipped)`)
+      continue
+    }
+
+    const badRefs = findPrereleaseDepRefs(manifest)
+    if (badRefs.length === 0) {
+      console.log(`  ok   ${pkg.name}@${pkg.version}`)
+    } else {
+      console.log(`  POISONED ${pkg.name}@${pkg.version}`)
+      for (const ref of badRefs) {
+        console.log(`           ${ref.field}.${ref.depName} = ${ref.range}`)
+      }
+      poisoned.push({ pkg, refs: badRefs })
     }
   }
 
@@ -146,6 +201,35 @@ async function main() {
     console.error(
       'Likely causes: token lacks create-package permission, org package-creation restrictions, or an npm outage. Investigate before merging.',
     )
+    process.exit(1)
+  }
+
+  if (poisoned.length > 0) {
+    console.error(
+      `\nVerification failed: ${poisoned.length}/${expected.length} stable package(s) declare pre-release SolvaPay deps:`,
+    )
+    for (const { pkg, refs } of poisoned) {
+      console.error(`  - ${pkg.name}@${pkg.version}`)
+      for (const ref of refs) {
+        console.error(`      ${ref.field}.${ref.depName} = ${ref.range}`)
+      }
+    }
+    console.error(
+      '\nStable releases must not pin to pre-release versions of sibling',
+    )
+    console.error(
+      'packages — installers will resolve a non-`@latest` build. This',
+    )
+    console.error(
+      'usually means a workspace `package.json` carried a pre-release',
+    )
+    console.error(
+      '`version` string when `pnpm publish` substituted `workspace:*`',
+    )
+    console.error(
+      'references. Reset the offending package to a stable version and',
+    )
+    console.error('cut a follow-up release.')
     process.exit(1)
   }
 
