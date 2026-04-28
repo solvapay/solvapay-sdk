@@ -1,6 +1,6 @@
-# @solvapay/next
+# @solvapay/core
 
-## 1.0.9
+## 1.0.8
 
 ### Patch Changes
 
@@ -13,15 +13,3 @@
   - Forces a patch bump on `server`, `next`, `mcp-core`, and `mcp` so they re-publish with their workspace dep references substituted from the now-stable `1.0.8` siblings.
 
   The publish workflow has also been hardened to reject any workspace package that carries a pre-release version identifier on `main` before invoking `changesets/action`, and `scripts/verify-npm-publishes.mjs` now checks each freshly-published manifest for `dependencies` / `peerDependencies` values that resolve to pre-release identifiers — both of which would have caught this regression.
-
-- Updated dependencies [4b3de6a]
-  - @solvapay/core@1.0.8
-  - @solvapay/auth@1.0.8
-  - @solvapay/server@1.0.10
-
-## 1.0.8
-
-### Patch Changes
-
-- Updated dependencies [0938625]
-  - @solvapay/server@1.0.9
