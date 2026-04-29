@@ -10,6 +10,15 @@ name: Publish Stable Releases
 # an empty `.changeset/` directory and bumped versions, so
 # `changesets/action` takes the `publish` branch and ships to the
 # `@latest` dist-tag with matching git tags.
+#
+# The "open Version Packages PR" leg uses a token minted from the
+# `solvapay-release-bot` GitHub App rather than the default
+# `GITHUB_TOKEN`. The org has `can_approve_pull_request_reviews: false`
+# at the org level (and the corresponding repo-level toggle is grayed
+# out), which blocks `GITHUB_TOKEN` from creating PRs. App tokens are
+# governed by the App's own installation permissions and bypass that
+# restriction cleanly. Required repo secrets: `RELEASE_APP_ID`,
+# `RELEASE_APP_KEY` (full `.pem`), `NPM_TOKEN`.
 on:
   push:
     branches:
@@ -23,17 +32,35 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # The default `GITHUB_TOKEN` is held to read-only here. All
+    # write-side GitHub API calls (commit, branch push, "Version
+    # Packages" PR open/update) flow through the `solvapay-release-bot`
+    # GitHub App token minted in the first step below — that token
+    # bypasses the org policy that blocks `GITHUB_TOKEN` from creating
+    # PRs (`can_approve_pull_request_reviews: false`). `id-token: write`
+    # stays for npm provenance on the publish leg.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       id-token: write
 
     steps:
+      # Mints a short-lived (60-minute) installation token for the
+      # `solvapay-release-bot` GitHub App. PRs opened with this token are
+      # authored as `solvapay-release-bot[bot]` and are not subject to
+      # the org's "GitHub Actions cannot create or approve pull requests"
+      # restriction, which only governs the default `GITHUB_TOKEN`.
+      - name: Generate release-bot token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -105,7 +132,10 @@ jobs:
           commit: 'chore: version packages'
           title: 'chore: version packages'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use the App-installation token so `changesets/action` can
+          # create + update the "Version Packages" PR. `NPM_TOKEN` still
+          # authenticates the publish step against the npm registry.
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
