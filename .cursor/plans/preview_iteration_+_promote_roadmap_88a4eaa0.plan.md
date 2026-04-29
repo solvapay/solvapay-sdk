@@ -259,7 +259,9 @@ After the merge push, `publish.yml` fires on `main` and `changesets/action`:
 
 **⚠️ Known gotcha — the org disables "Allow GitHub Actions to create and approve pull requests"**, so step 2 fails with `HttpError: GitHub Actions is not permitted to create or approve pull requests`. The branch + commit are still pushed; the workflow run is marked `failure` only because the PR creation step errored.
 
-Recovery is one command:
+> **Superseded 2026-04-29.** [`publish.yml`](/.github/workflows/publish.yml) now mints a 60-minute installation token from the `solvapay-release-bot` GitHub App via `actions/create-github-app-token@v2` and passes it to `changesets/action` as `GITHUB_TOKEN`. App tokens bypass the org's `can_approve_pull_request_reviews: false` policy, so the Version Packages PR opens automatically as `solvapay-release-bot[bot]` with no manual recovery step. The recovery snippet below is kept for historical context — it should not be needed for future releases. See PR #155 for the workflow change and PR #157/#158 for the end-to-end validation run that proved the bot path.
+
+Historical recovery (no longer needed):
 
 ```bash
 gh pr create --base main --head changeset-release/main \
@@ -271,9 +273,9 @@ opening manually."
 
 Then merge that PR; `publish.yml` re-fires (now with empty `.changeset/`), `changesets/action` takes the `publish` branch, and ships to `@latest` with matching git tags. Post-publish a `verify-npm-publishes.mjs` step confirms every package landed on the registry.
 
-Long-term fix: either flip the org/repo setting (Settings → Actions → "Allow GitHub Actions to create and approve pull requests"), or grant a finer-grained PAT to the workflow.
+Long-term fix (now shipped): a GitHub App token. The org/repo setting (Settings → Actions → "Allow GitHub Actions to create and approve pull requests") was confirmed unflippable from the repo level — it's pinned by an org-level policy that grays out the toggle. The App-token approach is the standard workaround used by `pnpm/pnpm`, `vercel/turbo`, etc. and was preferred over a long-lived PAT to avoid annual rotation pressure.
 
-Pros: clean version numbers on `@latest`. Cons: two-merge dance + the manual `gh pr create` recovery step until the org setting is flipped.
+Pros: clean version numbers on `@latest`. Cons: two-merge dance — but the bot now does the second merge's PR-open step automatically.
 
 **Recommendation:** Option Y. The hand-set rescue was a one-time event; resuming the canonical flow means future releases read cleanly.
 
@@ -317,7 +319,7 @@ flowchart TD
   p2c["Phase 2c<br/>(optional) additional iterations"]
   p3a["Phase 3a<br/>pre-promote gates green?"]
   p3b["Phase 3b<br/>merge SDK + docs dev -> main<br/>(SDK opens Version Packages PR)"]
-  p3b1["Phase 3b.1<br/>manually open Version Packages PR<br/>(GH Actions can't open PRs in this org)"]
+  p3b1["Phase 3b.1<br/>(superseded 2026-04-29)<br/>solvapay-release-bot now opens<br/>the PR autonomously"]
   p3c["Phase 3c<br/>cleanup + docs index"]
 
   p1 --> p2a
