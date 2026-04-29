@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/mcp-core",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Framework-neutral MCP contracts for the SolvaPay SDK (tool names, descriptors, payable handler, paywall meta, CSP, bootstrap payload, OAuth discovery JSON builders, bearer/JWT helpers).",
   "type": "module",
   "main": "./dist/index.cjs",
