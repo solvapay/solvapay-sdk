@@ -76,7 +76,7 @@
     "@solvapay/test-utils": "workspace:^",
     "dotenv": "^17.3.1",
     "openapi-typescript": "^7.13.0",
-    "stripe": "^21.0.1",
+    "stripe": "^22.1.0",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
