@@ -83,4 +83,35 @@ describe('usePlan', () => {
     expect(result.current.plan).toBeNull()
     expect(result.current.error).toBeInstanceOf(Error)
   })
+
+  it('does not fire /api/list-plans when an MCP transport is configured (Goldberg regression)', async () => {
+    // Regression for the Goldberg ChatGPT topup failure
+    // (see solvapay-frontend/.cursor/plans/investigate_goldberg_topup_failure_ff1187a7.plan.md).
+    // The MCP adapter omits `transport.listPlans` after Phase 2c — plans
+    // arrive on the bootstrap snapshot and `seedMcpCaches` populates
+    // `plansCache`. Before this fix, `usePlan` called its own raw
+    // `fetch('/api/list-plans')` regardless, producing a 404 from inside
+    // the ChatGPT iframe sandbox. It should instead route through
+    // `defaultListPlans`, which echoes the seeded cache when the
+    // transport omits the method.
+    const fetchFn = vi.fn()
+    plansCache.set('prd_x', {
+      plans: [planA, planB],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    const { result } = renderHook(
+      () => usePlan({ planRef: 'pln_b', productRef: 'prd_x' }),
+      {
+        wrapper: wrapper({
+          fetch: fetchFn as unknown as typeof fetch,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          transport: { checkPurchase: vi.fn() } as any,
+        }),
+      },
+    )
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).toEqual(planB)
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
 })

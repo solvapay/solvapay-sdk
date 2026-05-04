@@ -210,6 +210,12 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
  *
  * The narrator is picked by the `tool` name; unknown tools fall back
  * to the JSON dump that `toolResult` produces today.
+ *
+ * Meta keys other than `ui` (notably `openai/widgetSessionId`, the
+ * ChatGPT MCP routing-bug workaround stamped by intent tools — see
+ * the descriptors.ts top-of-file comment) are preserved across all
+ * three modes. Don't strip additional `_meta` keys here without
+ * checking `descriptors.ts` first.
  */
 export function narratedToolResult(
   tool: IntentTool | string,

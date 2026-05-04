@@ -30,6 +30,17 @@ function buildEchoServer(): McpServer {
       content: [{ type: 'text' as const, text: message }],
     }),
   )
+  server.registerTool(
+    'reverse',
+    {
+      title: 'Reverse',
+      description: 'Reverses the provided message.',
+      inputSchema: { message: z.string() },
+    },
+    async ({ message }) => ({
+      content: [{ type: 'text' as const, text: message.split('').reverse().join('') }],
+    }),
+  )
   return server
 }
 
@@ -130,6 +141,75 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
     })
     expect(call.status).toBe(200)
     expect(call.json.result?.content?.[0]).toMatchObject({ type: 'text', text: 'hello' })
+  })
+
+  it('chains two tools/call requests in one session without minting Mcp-Session-Id (Goldberg regression)', async () => {
+    // Regression for the Goldberg ChatGPT topup failure
+    // (see solvapay-frontend/.cursor/plans/investigate_goldberg_topup_failure_ff1187a7.plan.md).
+    // ChatGPT's MCP connector was returning `-32000 MCP Resource not found`
+    // on the second `tools/call` of a session against a json-stateless
+    // Cloudflare Worker. The probe confirmed the worker itself routes
+    // every chained call cleanly; this test locks that SDK invariant in
+    // CI so a future handler refactor can't silently start dropping the
+    // second tools/call, even before any host-side bug is fixed.
+    const handler = buildHandler()
+
+    const init = await callRpc<InitializeResult>(handler, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'test-client', version: '0.0.0' },
+      },
+    })
+    expect(init.status).toBe(200)
+
+    // Stateless mode must never mint an Mcp-Session-Id — any value here
+    // would trick a stateful host into reusing it across stateless
+    // isolate restarts and reproducing the upstream failure shape.
+    const initHeaderRes = await handler(
+      rpcRequest({
+        jsonrpc: '2.0',
+        id: 10,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '0.0.0' },
+        },
+      }),
+    )
+    expect(initHeaderRes.headers.get('mcp-session-id')).toBeNull()
+
+    const initializedRes = await handler(
+      rpcRequest({
+        jsonrpc: '2.0',
+        method: 'notifications/initialized',
+      }),
+    )
+    expect(initializedRes.status).toBe(202)
+
+    const callA = await callRpc<ToolsCallResult>(handler, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: { name: 'echo', arguments: { message: 'hello' } },
+    })
+    expect(callA.status).toBe(200)
+    expect(callA.json.error).toBeUndefined()
+    expect(callA.json.result?.content?.[0]).toMatchObject({ type: 'text', text: 'hello' })
+
+    const callB = await callRpc<ToolsCallResult>(handler, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/call',
+      params: { name: 'reverse', arguments: { message: 'hello' } },
+    })
+    expect(callB.status).toBe(200)
+    expect(callB.json.error).toBeUndefined()
+    expect(callB.json.result?.content?.[0]).toMatchObject({ type: 'text', text: 'olleh' })
   })
 
   it('survives 50 concurrent tools/list calls without "Already connected" errors', async () => {
