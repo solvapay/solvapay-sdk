@@ -373,3 +373,60 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(String(sc.error)).toMatch(/planRef/)
   })
 })
+
+// Workaround coverage for the ChatGPT MCP connector's stale link_<id>
+// routing bug — see the top-of-file comment in
+// packages/mcp-core/src/descriptors.ts and the OpenAI Apps SDK
+// community thread cited there.
+describe('buildSolvaPayDescriptors → _meta["openai/widgetSessionId"] stamping', () => {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const WIDGET_KEY = 'openai/widgetSessionId'
+
+  function buildBundle() {
+    return buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+  }
+
+  function metaKey(result: { _meta?: Record<string, unknown> }): string | undefined {
+    const value = result._meta?.[WIDGET_KEY]
+    return typeof value === 'string' ? value : undefined
+  }
+
+  it.each([MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.manageAccount])(
+    '%s stamps a fresh UUID per invocation',
+    async toolName => {
+      const { tools } = buildBundle()
+      const tool = tools.find(t => t.name === toolName)!
+
+      const first = await tool.handler({}, {})
+      const second = await tool.handler({}, {})
+
+      const firstId = metaKey(first)
+      const secondId = metaKey(second)
+      expect(firstId).toMatch(UUID_RE)
+      expect(secondId).toMatch(UUID_RE)
+      expect(firstId).not.toBe(secondId)
+    },
+  )
+
+  it("preserves widgetSessionId when mode: 'text' strips _meta.ui", async () => {
+    const { tools } = buildBundle()
+    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
+    const result = await upgrade.handler({ mode: 'text' }, {})
+    expect(metaKey(result)).toMatch(UUID_RE)
+    // ui ref must be stripped in text mode (existing contract).
+    expect((result._meta as Record<string, unknown> | undefined)?.ui).toBeUndefined()
+  })
+
+  it('activate_plan picker bootstrap stamps widgetSessionId', async () => {
+    const { tools } = buildBundle()
+    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
+    const result = await activate.handler({}, {})
+    expect(metaKey(result)).toMatch(UUID_RE)
+  })
+})

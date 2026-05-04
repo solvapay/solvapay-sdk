@@ -9,6 +9,28 @@
  * mechanical difference: instead of calling `registerAppTool(server, ...)`,
  * we push `{ name, handler, ... }` onto a `tools[]` array the adapter
  * iterates.
+ *
+ * ----
+ *
+ * `_meta["openai/widgetSessionId"]` workaround. Every intent-tool
+ * response stamps a freshly-minted UUID on `_meta["openai/widgetSessionId"]`.
+ * This is a low-risk forward-looking workaround for the ChatGPT MCP
+ * connector's stale `link_<id>` routing bug, where the host returns
+ * `-32000 MCP Resource not found` on the second `tools/call` of a
+ * session even though the call never reaches the server. A fresh UUID
+ * per invocation gives the host a routing key that changes every call,
+ * which the OpenAI Apps SDK community thread reports unsticks the
+ * failure mode.
+ *
+ * Sources:
+ *   - https://community.openai.com/t/connector-tool-calls-generating-fresh-mcp-session-each-invocation/1364975
+ *   - https://github.com/openai/openai-apps-sdk-examples/issues/165
+ *   - https://developers.openai.com/apps-sdk/reference/ (`_meta` payload)
+ *   - openai/openai-apps-sdk-examples shopping_cart_python uses the
+ *     same `meta["openai/widgetSessionId"]` shape.
+ *
+ * Removable once the upstream bug ships a fix; safe on any host that
+ * doesn't consume the key.
  */
 
 import {
@@ -322,7 +344,10 @@ export function buildSolvaPayDescriptors(
         trace(name, args, extra, async () => {
           const mode = parseMode(args.mode)
           const data = await buildBootstrapPayload(view, extra)
-          return narratedToolResult(name as IntentTool, data, mode, toolMeta)
+          return narratedToolResult(name as IntentTool, data, mode, {
+            ...toolMeta,
+            'openai/widgetSessionId': crypto.randomUUID(),
+          })
         }),
     })
   }
@@ -601,7 +626,7 @@ export function buildSolvaPayDescriptors(
             MCP_TOOL_NAMES.activatePlan as IntentTool,
             await buildBootstrapPayload('checkout', extra),
             mode,
-            toolMeta,
+            { ...toolMeta, 'openai/widgetSessionId': crypto.randomUUID() },
           )
         }
 
