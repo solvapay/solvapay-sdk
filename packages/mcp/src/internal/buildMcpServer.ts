@@ -23,6 +23,7 @@ import {
   applyHideToolsByAudience,
   buildSolvaPayDescriptors,
   deriveIcons,
+  type ApplyHideToolsByAudienceOptions,
   type BuildSolvaPayDescriptorsOptions,
   type SolvaPayDescriptorBundle,
   type SolvaPayDocsResourceDescriptor,
@@ -35,7 +36,31 @@ export interface BuildSolvaPayMcpServerOptions extends BuildSolvaPayDescriptorsO
   registerDocsResources?: boolean
   serverName?: string
   serverVersion?: string
-  hideToolsByAudience?: string[]
+}
+
+export type HideToolsByAudienceConfig =
+  | readonly string[]
+  | {
+      audiences: readonly string[]
+      bypassWhen?: ApplyHideToolsByAudienceOptions['bypassWhen']
+    }
+
+/**
+ * Normalise the public `hideToolsByAudience` shape to the
+ * `(audiences, options)` pair `applyHideToolsByAudience` consumes.
+ * Splits the array shorthand from the object form so factories can
+ * accept either without each unwrapping by hand.
+ */
+export function normaliseHideToolsByAudience(
+  config: HideToolsByAudienceConfig | undefined,
+): { audiences: readonly string[] | undefined; options: ApplyHideToolsByAudienceOptions } {
+  if (!config) return { audiences: undefined, options: {} }
+  if (Array.isArray(config)) return { audiences: config, options: {} }
+  const obj = config as { audiences: readonly string[]; bypassWhen?: ApplyHideToolsByAudienceOptions['bypassWhen'] }
+  return {
+    audiences: obj.audiences,
+    options: obj.bypassWhen !== undefined ? { bypassWhen: obj.bypassWhen } : {},
+  }
 }
 
 export interface BuiltSolvaPayMcpServer {
@@ -145,7 +170,6 @@ export function buildSolvaPayMcpServer(
     registerDocsResources = true,
     serverName,
     serverVersion = '1.0.0',
-    hideToolsByAudience: _hideToolsByAudience,
     ...descriptorOptions
   } = options
 

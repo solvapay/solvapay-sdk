@@ -111,7 +111,16 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export { applyHideToolsByAudience } from './hideToolsByAudience'
+export {
+  applyHideToolsByAudience,
+  defaultIsChatGptRequest,
+} from './hideToolsByAudience'
+export type {
+  ApplyHideToolsByAudienceContext,
+  ApplyHideToolsByAudienceExtra,
+  ApplyHideToolsByAudienceOptions,
+  HideToolsByAudienceBypass,
+} from './hideToolsByAudience'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts, deriveIcons } from './descriptors'
 export type {
   BuildSolvaPayDescriptorsOptions,
