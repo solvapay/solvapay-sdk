@@ -1,27 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSolvaPay } from './useSolvaPay'
-import { buildRequestHeaders } from '../utils/headers'
+import { defaultListPlans } from '../transport/list-plans'
 import { plansCache, CACHE_DURATION } from './usePlans'
-import type { Plan, UsePlanOptions, UsePlanReturn, SolvaPayConfig } from '../types'
-
-async function listPlans(
-  productRef: string,
-  config: SolvaPayConfig | undefined,
-): Promise<Plan[]> {
-  const base = config?.api?.listPlans || '/api/list-plans'
-  const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-  const fetchFn = config?.fetch || fetch
-  const { headers } = await buildRequestHeaders(config)
-
-  const res = await fetchFn(url, { method: 'GET', headers })
-  if (!res.ok) {
-    const error = new Error(`Failed to fetch plans: ${res.statusText || res.status}`)
-    config?.onError?.(error, 'listPlans')
-    throw error
-  }
-  const data = (await res.json()) as { plans?: Plan[] }
-  return data.plans ?? []
-}
+import type { Plan, UsePlanOptions, UsePlanReturn } from '../types'
 
 /**
  * Hook to load a single plan by reference.
@@ -107,7 +88,7 @@ export function usePlan(options: UsePlanOptions): UsePlanReturn {
       try {
         setLoading(true)
         setError(null)
-        const promise = listPlans(productRef, _config)
+        const promise = defaultListPlans(productRef, _config)
         plansCache.set(productRef, { plans: [], timestamp: now, promise })
         const plans = await promise
         plansCache.set(productRef, { plans, timestamp: now, promise: null })
