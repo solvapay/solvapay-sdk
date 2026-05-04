@@ -3,8 +3,9 @@
  *
  * Single call into `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch`
  * gives us a paywalled MCP server over Deno with the full
- * `@modelcontextprotocol/sdk` wiring, `hideToolsByAudience` for
- * text-host clients, and the `WebStandardStreamableHTTPServerTransport`
+ * `@modelcontextprotocol/sdk` wiring, `hideToolsByAudience` for a
+ * trim LLM-facing catalogue (with auto-bypass on ChatGPT so the
+ * iframe still works), and the `WebStandardStreamableHTTPServerTransport`
  * stateless-JSON preset. The only things the Edge deployment still
  * hand-rolls are:
  *
@@ -91,10 +92,9 @@ const handler = createSolvaPayMcpFetch({
   publicBaseUrl,
   apiBaseUrl,
   mode: 'json-stateless',
-  // Hide UI-only virtual tools from `tools/list` for text-host clients
-  // (Claude Haiku via MCPJam, ChatGPT connector, etc.) that don't
-  // mount the iframe surface. Tools stay callable so the iframe can
-  // still invoke them server-side.
+  // Trim the LLM catalog to the four intent tools on text hosts
+  // (Claude Desktop, MCPJam, Cursor); the SDK auto-bypasses for
+  // ChatGPT so the iframe's transport tools stay callable.
   hideToolsByAudience: ['ui'],
   ...(demoToolsEnabled() ? { additionalTools: registerDemoTools } : {}),
 })

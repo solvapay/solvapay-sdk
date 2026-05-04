@@ -44,6 +44,7 @@ export { createSolvaPayMcpServer } from './server'
 export type {
   AdditionalToolsContext,
   CreateSolvaPayMcpServerOptions,
+  HideToolsByAudienceConfig,
 } from './server'
 
 export { registerPayableTool } from './registerPayableTool'

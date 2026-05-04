@@ -20,7 +20,11 @@ import type { SolvaPay } from '@solvapay/server'
 import {
   applyHideToolsByAudience,
   buildSolvaPayMcpServer,
+  normaliseHideToolsByAudience,
+  type HideToolsByAudienceConfig,
 } from './internal/buildMcpServer'
+
+export type { HideToolsByAudienceConfig } from './internal/buildMcpServer'
 import {
   registerPayableTool,
   type RegisterPayableToolOptions,
@@ -82,16 +86,36 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
    * tool whose `_meta.audience` matches one of these values. The
    * tools stay `enabled: true` so `tools/call` still reaches their
    * handlers — this option only affects the `tools/list` response
-   * shape. Pass `['ui']` when deploying to a text-host MCP client
-   * (Claude Desktop, MCPJam, ChatGPT connectors) that won't embed
-   * the SolvaPay iframe surface, so the LLM's tool catalogue only
-   * surfaces the intent tools (`upgrade` / `manage_account` /
-   * `activate_plan` / `topup`) and merchant-registered data tools.
-   * The hidden transport tools (`create_payment_intent`, etc.) stay
-   * callable so the iframe can still invoke them for server-side
-   * work.
+   * shape. Pass `['ui']` to keep the LLM-facing catalogue narrow to
+   * the four intent tools (`upgrade` / `manage_account` /
+   * `activate_plan` / `topup`) plus your own merchant-registered
+   * data tools, while leaving the seven UI transport tools
+   * (`create_payment_intent`, etc.) callable for the SolvaPay
+   * iframe.
+   *
+   * # ChatGPT auto-bypass
+   *
+   * ChatGPT's Custom Connector gateway re-validates iframe-initiated
+   * `tools/call` against the cached `tools/list` catalog, so any
+   * tool hidden by this option becomes uncallable from the embedded
+   * iframe and surfaces in the UI as `MCP error -32000: MCP Resource
+   * not found`. To preserve the cleaner LLM catalog on every other
+   * host while keeping the iframe working on ChatGPT, the SDK
+   * auto-detects ChatGPT-originated `tools/list` requests (matching
+   * `request.headers['user-agent']` and the post-`initialize`
+   * `clientInfo.name` against `/openai-mcp/i`) and returns the full
+   * catalog to them. The detection is verified live against
+   * `openai-mcp/1.0.0 (ChatGPT)` and the broad pattern survives a UA
+   * version bump.
+   *
+   * To extend the bypass to a future iframe-capable host, pass the
+   * object form: `{ audiences: ['ui'], bypassWhen: ctx => … }`.
+   *
+   * To disable the bypass and apply the filter unconditionally
+   * (e.g. on a known text-only deployment), pass `{ audiences:
+   * ['ui'], bypassWhen: () => false }`.
    */
-  hideToolsByAudience?: string[]
+  hideToolsByAudience?: HideToolsByAudienceConfig
 }
 
 /**
@@ -137,7 +161,8 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
 
   // Apply the tools/list audience filter last so it sees every tool
   // registered by the descriptor loop + `additionalTools` hook.
-  applyHideToolsByAudience(server, hideToolsByAudience)
+  const { audiences, options: filterOptions } = normaliseHideToolsByAudience(hideToolsByAudience)
+  applyHideToolsByAudience(server, audiences, filterOptions)
 
   return server
 }

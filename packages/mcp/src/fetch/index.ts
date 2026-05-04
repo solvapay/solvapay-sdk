@@ -20,6 +20,10 @@
  *     publicBaseUrl,
  *     apiBaseUrl,
  *     mode: 'json-stateless',
+ *     // Trim the LLM-facing catalogue to the four intent tools.
+ *     // The seven UI transport tools stay callable from the
+ *     // SolvaPay iframe; ChatGPT-originated tools/list requests are
+ *     // auto-detected and receive the full catalog.
  *     hideToolsByAudience: ['ui'],
  *   }),
  * )
@@ -68,7 +72,7 @@ export type { CreateSolvaPayMcpFetchHandlerOptions, McpHandlerMode } from './han
 
 export { createSolvaPayMcpFetch } from './createSolvaPayMcpFetch'
 export type { CreateSolvaPayMcpFetchOptions } from './createSolvaPayMcpFetch'
-export type { AdditionalToolsContext } from '../server'
+export type { AdditionalToolsContext, HideToolsByAudienceConfig } from '../server'
 
 // Convenience re-exports from @solvapay/mcp-core.
 export {
