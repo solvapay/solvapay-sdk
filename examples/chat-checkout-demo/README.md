@@ -1,27 +1,36 @@
 # Chat Checkout Demo
 
-A Vite-only chat app that demonstrates the SolvaPay React primitives for **three monetization scenarios** in a single chrome:
+A Vite-only chat app that demonstrates the SolvaPay React + server primitives for **three monetization scenarios** in a single chrome:
 
 - **Subscription** — recurring plan via `<PaymentForm.*>`
 - **Day Pass** — one-time plan via `<PaymentForm.*>`
 - **Top-up** — credit balance via `<TopupForm.*>` + `<AmountPicker>` styling
 
-The chat itself is powered by Google Gemini, and every browser gets an anonymous SolvaPay customer (random UUID in `localStorage`) so the demo runs without any login screen.
+The chat itself is powered by Google Gemini, proxied through a `/api/chat` route that gates each request with SolvaPay's `checkLimits` + 402 `payment_required` flow. Every browser gets an anonymous SolvaPay customer (random UUID in `localStorage`) so the demo runs without any login screen.
 
 ## Architecture
 
-The app is a single Vite process. SolvaPay API routes (`/api/list-plans`, `/api/create-payment-intent`, …) are mounted as Vite middleware in `vite.config.ts` and dispatch to the framework-agnostic `*Core` helpers from `@solvapay/server`. `SOLVAPAY_SECRET_KEY` stays server-side; the browser only forwards an `x-customer-ref` header.
+The app runs in two modes off a single source tree:
+
+- **Local dev** (`pnpm dev`) — Vite serves the SPA and mounts `/api/*` as connect-style middleware via `src/server/vitePlugin.ts`.
+- **Production** (`pnpm deploy`) — a Cloudflare Worker (`src/worker.ts`) serves the Vite build via Workers Assets and dispatches `/api/*` through the same handlers.
+
+The dispatcher itself (`src/server/handlers.ts`) is runtime-agnostic: it takes a Web `Request` and a `{ solvaPay, geminiApiKey }` deps object, so both runtimes share one routing table. SolvaPay routes (`/api/list-plans`, `/api/create-payment-intent`, …) dispatch to the framework-agnostic `*Core` helpers from `@solvapay/server` with `{ solvaPay }` passed through (no `process.env` reads inside). The chat route uses `solvaPay.checkLimits` to drive the paywall, then streams Gemini's response as NDJSON via a `ReadableStream`. Both `SOLVAPAY_SECRET_KEY` and `GEMINI_API_KEY` stay server-side; the browser only forwards an `x-customer-ref` header.
 
 ```
 Browser (App.tsx, components/*, SolvaPay primitives)
    │
    │  fetch /api/* with x-customer-ref header
    ▼
-Vite middleware (src/server/*)
-   │
-   │  @solvapay/server *Core helpers
-   ▼
-SolvaPay API
+Vite middleware  ──or──  Cloudflare Worker
+(src/server/middleware.ts)  (src/worker.ts)
+   │                        │
+   └────► handleApiRequest (src/server/handlers.ts) ◄────┘
+            │
+            │  /api/chat → checkLimits → (402 paywall | stream Gemini)
+            │  /api/*    → @solvapay/server *Core helpers
+            ▼
+        SolvaPay API + Gemini
 ```
 
 ## Setup
@@ -40,12 +49,27 @@ Required env vars:
 | Variable | Purpose |
 |---|---|
 | `SOLVAPAY_SECRET_KEY` | Secret API key (sandbox or live). Server-side only. |
-| `VITE_GEMINI_API_KEY` | Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey). |
-| `VITE_SUBSCRIPTION_PRODUCT_REF` | A product intended to back the subscription scenario (typically a **recurring** plan). |
-| `VITE_DAYPASS_PRODUCT_REF` | A product intended to back the day-pass scenario (typically a **one-time** plan). |
-| `VITE_TOPUP_PRODUCT_REF` | Optional product ref to scope top-up analytics. |
+| `GEMINI_API_KEY` | Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey). Server-side only — proxied through `/api/chat`. |
+| `VITE_SUBSCRIPTION_PRODUCT_REF` | A product intended to back the subscription scenario (typically a **recurring** paid plan). |
+| `VITE_DAYPASS_PRODUCT_REF` | A product intended to back the day-pass scenario (typically a **one-time** paid plan). |
+| `VITE_TOPUP_PRODUCT_REF` | A product intended to back the top-up scenario (a usage-based plan + one one-time plan per credit pack). |
 
-The demo lists plans for each product on demand and auto-picks when there's only one. Multiple plans render an inline picker so the user can choose before paying. Each scenario can be configured independently — the demo will display an inline notice when env vars are missing, so you can try the chat / paywall flow with just one scenario set up.
+The demo lists plans for each product on demand. Each scenario can be configured independently — the demo will display an inline notice when env vars are missing, so you can try the chat / paywall flow with just one scenario set up.
+
+## Plan setup
+
+The demo no longer hardcodes any pricing or free-tier limits — it reads them from the plans you configure on each product in the SolvaPay dashboard.
+
+| Scenario | Product needs | Each plan should set |
+|---|---|---|
+| Subscription | One recurring paid plan (and optionally one free plan). | `name`, `price`, `currency`, `billingCycle`. The free plan should set `freeUnits` to whatever message cap you want before the paywall trips. |
+| Day Pass | One one-time paid plan (and optionally one free plan). | `name`, `price`, `currency`. The free plan should set `freeUnits`. |
+| Top-up | One usage-based plan (drives the gate + meter) plus one one-time plan per credit pack. | Usage-based plan: `meterName: 'requests'`, `freeUnits`, `creditsPerUnit`. Pack plans: `name` (e.g. `"100 Credits"`), `price`, `currency`. |
+
+Tips:
+
+- Set the merchant's `termsUrl` and `privacyUrl` in the SolvaPay dashboard so they appear inline in the per-purchase mandate sentence rendered by `<PaymentForm.MandateText>`.
+- Give each plan a human-readable `name`. The `PlanPicker` falls back to the plan reference (`pln_…`) when no name is set, which doesn't read well.
 
 ## Run
 
@@ -73,20 +97,131 @@ Use any future expiry, any 3-digit CVC, any postcode.
 |---|---|---|---|
 | Subscription | `components/CheckoutForm.tsx` | `<PaymentForm.Root>` | `recurring` |
 | Day Pass | `components/DayPassForm.tsx` | `<PaymentForm.Root>` | `one-time` |
-| Top-up | `components/TopUpSelection.tsx` + `components/TopUpForm.tsx` | `<TopupForm.Root>` | n/a (balance) |
+| Top-up | `components/TopUpSelection.tsx` + `components/TopUpForm.tsx` | `<TopupForm.Root>` | usage-based + one-time packs |
 
 `App.tsx` derives the scenario state directly from SDK hooks:
 
 - `usePurchase()` → `isPremium` (any active recurring plan) and `hasDayPass` (any active one-time plan)
 - `useBalance()` → `credits` rendered in the header pill
+- `usePlans({ productRef })` → drives the header tooltip pricing and the `X / Y` free-message counter from the active plan's `freeUnits`
 
-The 2-message free tier is a demo-side business rule and lives in `App.tsx` (`FREE_MESSAGE_LIMIT`). It is intentionally not pushed into SolvaPay since we don't want plan resolution to block free chat.
+The free-message gate lives entirely on the backend. The browser POSTs each chat turn to `/api/chat`; the server resolves the customer, calls `checkLimits` with `meterName: 'requests'`, and either streams Gemini's response or replies `402 { kind: 'payment_required' | 'activation_required', … }`. The `Paywall` component consumes that payload directly.
 
 ## Anonymous customer flow
 
 There is no login. The first time the app loads it generates `anon_<uuid>` and stores it under `chat-checkout-demo:customerRef` in `localStorage`. Every API call sends this value as `x-customer-ref`; the Vite middleware rewrites it to `x-user-id`, which is what `getAuthenticatedUserCore` reads. The SolvaPay backend upserts the customer using this value as `externalRef`.
 
-Reset the demo by clearing the key in DevTools → Application → Local Storage.
+Reset the demo by clearing the key in DevTools → Application → Local Storage. Note that **free-tier usage now persists across reloads** (it lives on the SolvaPay backend, not in client state) — switching scenarios or refreshing the page won't reset the count, just like in production.
+
+## Deploy to Cloudflare Workers
+
+The `src/worker.ts` entrypoint pairs with `wrangler.jsonc` to deploy the demo as a single Worker that serves both the Vite SPA build (via the Workers Assets binding) and the `/api/*` routes. Mirrors the deploy ergonomics from `examples/cloudflare-workers-mcp` — public-safe placeholders in git, real values in a gitignored `.env` that `scripts/deploy.mjs` forwards as `--var` flags.
+
+> **Two value paths, two different homes.** Build-time vars (anything `VITE_*`) get baked into the SPA at `vite build` time and are read from the root `.env`. Server-side credentials (`SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY`) are Worker **secrets** — uploaded **once** via `wrangler secret put` and persisted on the Worker. `scripts/deploy.mjs` does NOT re-upload secrets on every deploy; that's by design (secrets out of deploy-time plaintext). If you skip the `wrangler secret put` step, every `/api/*` request returns 500 with `SOLVAPAY_SECRET_KEY is not set` and the page shows Cloudflare's `error code: 1101`.
+
+### Local Worker dev
+
+```bash
+# From the SDK monorepo root
+pnpm install
+pnpm -w build:packages
+
+cd examples/chat-checkout-demo
+cp .env.example .env
+# Fill in SOLVAPAY_SECRET_KEY and GEMINI_API_KEY in .env
+
+pnpm build              # produces dist/ from the Vite SPA
+pnpm serve:local        # wrangler dev on http://localhost:8787
+```
+
+`wrangler dev` reads `.env` directly, so no separate secret upload is needed locally.
+
+### Deploy to `*.workers.dev`
+
+**1. Upload the secrets** (one-time per Worker, persists across deploys):
+
+```bash
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY    # paste the value when prompted
+pnpm exec wrangler secret put GEMINI_API_KEY
+```
+
+Or pipe from your local `.env` to skip the prompt:
+
+```bash
+grep '^SOLVAPAY_SECRET_KEY=' .env | cut -d= -f2- | pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY
+grep '^GEMINI_API_KEY=' .env       | cut -d= -f2- | pnpm exec wrangler secret put GEMINI_API_KEY
+```
+
+Verify with `pnpm exec wrangler secret list` — should show both names.
+
+**2. Deploy:**
+
+```bash
+pnpm deploy   # runs `pnpm -w build:packages && pnpm build`, then `node scripts/deploy.mjs`
+```
+
+`scripts/deploy.mjs` sources `.env` and forwards `SOLVAPAY_API_BASE_URL` as a `--var` override. Output ends with the live `*.workers.dev` URL.
+
+### Production deploy (custom domain)
+
+The `[env.production]` block in `wrangler.jsonc` ships a placeholder hostname (`chat-demo.solvapay.app`). Edit it to your own zone (or remove the `routes` block entirely to serve on the default `*.workers.dev` URL).
+
+> **Production secrets are scoped to the production Worker.** They live in a different secret store from the `*.workers.dev` Worker — uploading once for non-prod does NOT cover prod. You always need `--env production` for the prod path.
+
+**1. Upload the prod secrets** (one-time):
+
+```bash
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
+pnpm exec wrangler secret put GEMINI_API_KEY --env production
+
+# Or pipe from .env.prod:
+grep '^SOLVAPAY_SECRET_KEY=' .env.prod | cut -d= -f2- | pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
+grep '^GEMINI_API_KEY=' .env.prod      | cut -d= -f2- | pnpm exec wrangler secret put GEMINI_API_KEY --env production
+```
+
+Verify with `pnpm exec wrangler secret list --env production`.
+
+**2. Configure prod overrides:**
+
+```bash
+cp .env.prod.example .env.prod
+$EDITOR .env.prod   # fill in SOLVAPAY_SECRET_KEY (matches what you just uploaded) and GEMINI_API_KEY
+```
+
+**3. Deploy:**
+
+```bash
+pnpm deploy:prod   # builds + deploys to the [env.production] Worker
+```
+
+`SOLVAPAY_API_BASE_URL` defaults to `https://api.solvapay.com` inside `src/worker.ts`. To point at a staging backend, uncomment it in `.env` (or `.env.prod`); `scripts/deploy.mjs` forwards it as a `--var` override.
+
+### Rotating or fixing secrets
+
+If you uploaded the wrong value, just `wrangler secret put` it again — the most recent value wins, and the Worker picks it up on the next request without a redeploy:
+
+```bash
+# Swap a sandbox key for a live key, prod target:
+echo -n "sk_live_..." | pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
+```
+
+### Tailing prod logs
+
+When the deployed app misbehaves, `wrangler tail` is the fastest way to see the actual error:
+
+```bash
+pnpm exec wrangler tail --env production --format=pretty
+```
+
+`requireEnv` errors (`SOLVAPAY_SECRET_KEY is not set` / `GEMINI_API_KEY is not set`) always mean a missing-secret issue — see step 1 of the matching deploy section above.
+
+### How the deploy overrides work
+
+`wrangler.jsonc` ships safe public-starter placeholders so anyone who clones this repo can run `pnpm deploy` without accidentally connecting to someone else's merchant. `scripts/deploy.mjs` sources `.env` (gitignored) and passes real values through to `wrangler deploy --var KEY:VALUE` for `SOLVAPAY_API_BASE_URL`. Worker secrets (`SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY`) are uploaded once with `wrangler secret put` and persist across deploys; the script intentionally does NOT re-upload them.
+
+### Vite build assets
+
+`VITE_SUBSCRIPTION_PRODUCT_REF`, `VITE_DAYPASS_PRODUCT_REF`, and `VITE_TOPUP_PRODUCT_REF` are baked into the SPA bundle by Vite at `pnpm build` time. They live in the existing root `.env` (alongside `SOLVAPAY_SECRET_KEY` for the Vite dev path) — the Worker never reads them. Changing one of these requires a fresh `pnpm deploy` so the SPA bundle is rebuilt.
 
 ## Caveats
 

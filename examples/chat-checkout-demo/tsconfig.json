@@ -17,5 +17,5 @@
     "types": ["node", "vite/client"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "src/worker.ts"]
 }

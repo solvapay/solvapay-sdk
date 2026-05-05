@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite --port 3011",
     "build": "vite build",
-    "preview": "vite preview --port 3011"
+    "preview": "vite preview --port 3011",
+    "serve:local": "wrangler dev",
+    "predeploy": "pnpm -w build:packages && pnpm build",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:prod": "pnpm -w build:packages && pnpm build && node scripts/deploy.mjs --prod"
   },
   "dependencies": {
     "@google/genai": "^1.21.0",
@@ -21,11 +25,14 @@
     "remark-gfm": "4.0.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251124.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "cross-env": "^10.1.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.6"
+    "vite": "^8.0.6",
+    "wrangler": "^4.47.0"
   }
 }
