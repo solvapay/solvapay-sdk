@@ -1,35 +1,66 @@
 import React, { useState } from 'react'
-import { TopUpAmount, TopUpSelection as TopUpSelectionType } from '../types'
+import { formatPrice, useLocale, type Plan } from '@solvapay/react'
+import { TopUpSelection as TopUpSelectionType } from '../types'
 import { CheckCircleIcon } from './icons/CheckCircleIcon'
 
-const priceFor = (amount: TopUpAmount) => (amount === 100 ? 2.0 : 4.0)
-
 interface TopUpSelectionProps {
+  packs: Plan[]
   initial: TopUpSelectionType
   onContinue: (selection: TopUpSelectionType) => void
   onCancel?: () => void
 }
 
+/**
+ * Pack picker for the top-up scenario.
+ *
+ * Each "pack" is a one-time plan on the top-up product. The plan's
+ * `name` doubles as the display label (e.g. `"100 Credits"`) and
+ * `price` / `currency` drive the price. Nothing about credit counts
+ * or pricing is hardcoded — set it all in the SolvaPay dashboard.
+ */
 export const TopUpSelection: React.FC<TopUpSelectionProps> = ({
+  packs,
   initial,
   onContinue,
   onCancel,
 }) => {
-  const [amount, setAmount] = useState<TopUpAmount>(initial.amount)
+  const locale = useLocale()
+  const [planRef, setPlanRef] = useState<string>(() => initial.planRef || packs[0]?.reference || '')
   const [autoTopUpEnabled, setAutoTopUpEnabled] = useState<boolean>(initial.autoTopUpEnabled)
+
+  const selected = packs.find(p => p.reference === planRef)
+
+  if (packs.length === 0) {
+    return (
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900 mb-2">Choose your top-up</h2>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
+          No credit packs configured. Add one or more one-time plans to the top-up product in
+          the SolvaPay dashboard, then refresh.
+        </div>
+        {onCancel && (
+          <button onClick={onCancel} className="mt-4 w-full py-2 rounded-full border text-sm">
+            Cancel
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
       <h2 className="text-lg font-semibold text-slate-900 mb-2">Choose your top-up</h2>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        {[100, 200].map(a => {
-          const isSelected = amount === a
+        {packs.map((pack, i) => {
+          const isSelected = pack.reference === planRef
+          const price = formatPrice(pack.price ?? 0, pack.currency ?? 'USD', { locale })
+          const isPopular = i === packs.length - 1 && packs.length > 1
           return (
             <button
-              key={a}
+              key={pack.reference}
               type="button"
-              onClick={() => setAmount(a as TopUpAmount)}
+              onClick={() => setPlanRef(pack.reference)}
               aria-pressed={isSelected}
               className={`relative p-4 rounded-xl border text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 ${
                 isSelected
@@ -37,7 +68,7 @@ export const TopUpSelection: React.FC<TopUpSelectionProps> = ({
                   : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
               } hover:scale-[1.01] active:scale-[0.99]`}
             >
-              {a === 200 && (
+              {isPopular && (
                 <span
                   className={`absolute -top-2 left-3 px-2 py-0.5 text-[10px] font-medium rounded-full border ${
                     isSelected
@@ -53,10 +84,8 @@ export const TopUpSelection: React.FC<TopUpSelectionProps> = ({
                   <CheckCircleIcon className="h-5 w-5" />
                 </span>
               )}
-              <div className="text-lg font-semibold tracking-tight">
-                ${priceFor(a as TopUpAmount).toFixed(2)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">{a} Credits</div>
+              <div className="text-lg font-semibold tracking-tight">{price}</div>
+              <div className="text-xs text-slate-500 mt-0.5">{pack.name ?? pack.reference}</div>
             </button>
           )
         })}
@@ -88,7 +117,11 @@ export const TopUpSelection: React.FC<TopUpSelectionProps> = ({
 
       <div className="flex justify-between items-center mb-4">
         <div className="text-sm text-slate-600">Total</div>
-        <div className="text-base font-semibold text-slate-900">${priceFor(amount).toFixed(2)}</div>
+        <div className="text-base font-semibold text-slate-900">
+          {selected
+            ? formatPrice(selected.price ?? 0, selected.currency ?? 'USD', { locale })
+            : '—'}
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -98,8 +131,9 @@ export const TopUpSelection: React.FC<TopUpSelectionProps> = ({
           </button>
         )}
         <button
-          onClick={() => onContinue({ amount, autoTopUpEnabled })}
-          className="flex-1 py-2 rounded-full bg-slate-900 text-white text-sm"
+          onClick={() => planRef && onContinue({ planRef, autoTopUpEnabled })}
+          disabled={!planRef}
+          className="flex-1 py-2 rounded-full bg-slate-900 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continue
         </button>

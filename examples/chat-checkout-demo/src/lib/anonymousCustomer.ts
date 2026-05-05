@@ -25,14 +25,42 @@ export function getAnonymousCustomerRef(): string {
  * Auth adapter that pretends every browser is a logged-in user identified
  * by the anonymous customer ref. The userId doubles as the SolvaPay
  * `externalRef` so visiting customers are deduplicated across reloads.
+ *
+ * `getToken` returns the customer ref instead of `null` because the SDK
+ * polls auth every 30s and a `null` token causes it to wipe the cached
+ * customer ref, which in turn nulls out the local balance state — the
+ * header pill would visibly snap back to "0 MSGS LEFT" between polls.
+ * The synthetic token is only used to keep the SDK's session-alive
+ * heuristic happy; the local `/api/*` handlers authenticate via the
+ * `x-customer-ref` → `x-user-id` middleware path, so an `Authorization:
+ * Bearer anon_<uuid>` header is harmless on the wire.
  */
 export function createAnonymousAuthAdapter(customerRef: string): AuthAdapter {
   return {
     async getToken() {
-      return null
+      return customerRef
     },
     async getUserId() {
       return customerRef
     },
   }
+}
+
+/**
+ * Clear the persisted anonymous customer ref. The next call to
+ * `getAnonymousCustomerRef()` (typically after a reload) mints a fresh one,
+ * letting the demo simulate switching between buyers.
+ */
+export function resetAnonymousCustomerRef(): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(STORAGE_KEY)
+}
+
+/**
+ * Render a customer ref as `anon_xxxx…` for compact display. Keeps the
+ * `anon_` prefix intact so it's obvious this is a demo identity.
+ */
+export function truncateRef(ref: string, head = 8): string {
+  if (ref.length <= head) return ref
+  return `${ref.slice(0, head)}…`
 }

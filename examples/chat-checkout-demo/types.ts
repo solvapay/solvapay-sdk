@@ -15,9 +15,12 @@ export enum ScenarioType {
   DAYPASS = 'daypass',
 }
 
-export type TopUpAmount = 100 | 200
-
+/**
+ * A user's choice in the top-up flow. The selected pack is identified
+ * by its plan reference — credit counts and prices come from the plan
+ * data fetched from SolvaPay, not hardcoded constants.
+ */
 export interface TopUpSelection {
-  amount: TopUpAmount
+  planRef: string
   autoTopUpEnabled: boolean
 }

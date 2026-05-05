@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { PaymentForm } from '@solvapay/react/primitives'
-import { usePlans, useTransport } from '@solvapay/react'
+import { useProduct, usePlans, useTransport } from '@solvapay/react'
 import { CheckCircleIcon } from './icons/CheckCircleIcon'
 import { LockIcon } from './icons/LockIcon'
 import { PlanPicker } from './PlanPicker'
+import { DrawerHeader } from './DrawerHeader'
 import { env } from '../src/lib/env'
 
 interface CheckoutFormProps {
@@ -25,12 +26,16 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
   )
   const productRef = env.subscription.productRef
   const { plans, loading, error } = usePlans({ productRef: productRef || undefined, fetcher })
+  const { product } = useProduct(productRef || undefined)
+
+  const paidPlans = plans.filter(p => p.requiresPayment !== false && (p.price ?? 0) > 0)
 
   useEffect(() => {
-    if (plans.length === 1 && !selectedRef) {
-      setSelectedRef(plans[0].reference)
+    if (selectedRef) return
+    if (paidPlans.length === 1) {
+      setSelectedRef(paidPlans[0].reference)
     }
-  }, [plans, selectedRef])
+  }, [paidPlans, selectedRef])
 
   const handlePaid = () => {
     setIsSuccess(true)
@@ -75,9 +80,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
     <div className="px-4 py-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/60 p-5">
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">Upgrade to Premium</h2>
+          <DrawerHeader />
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">
+            {product?.name ? `Upgrade to ${product.name}` : 'Upgrade to Premium'}
+          </h2>
           <p className="text-sm text-slate-600 mb-4">
-            Enter your payment details to unlock unlimited messages.
+            {product?.description ?? 'Enter your payment details to unlock unlimited messages.'}
           </p>
 
           {loading ? (
@@ -87,7 +95,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
               No plans found for this product. Add at least one plan in the SolvaPay dashboard, or
               double-check <code className="font-mono">VITE_SUBSCRIPTION_PRODUCT_REF</code>.
             </div>
-          ) : plans.length > 1 && !selectedRef ? (
+          ) : paidPlans.length === 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
+              This product only has free plans. Add a paid (recurring) plan in the SolvaPay
+              dashboard to enable subscription checkout.
+            </div>
+          ) : paidPlans.length > 1 && !selectedRef ? (
             <PlanPicker plans={plans} selectedRef={selectedRef} onSelect={setSelectedRef} />
           ) : selectedRef ? (
             <>
@@ -116,14 +129,16 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
 
                 <PaymentForm.Error className="mt-3 text-sm text-red-600" />
 
+                <PaymentForm.MandateText className="mt-4 text-xs text-slate-500" />
+
                 <div className="mt-5">
-                  <PaymentForm.SubmitButton asChild>
-                    <button className="group w-full flex justify-center items-center py-2.5 px-4 rounded-full text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" />
-                  </PaymentForm.SubmitButton>
+                  <PaymentForm.SubmitButton className="group w-full flex justify-center items-center py-2.5 px-4 rounded-full text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" />
                 </div>
               </PaymentForm.Root>
 
               {paymentError && <p className="mt-3 text-xs text-red-600">{paymentError}</p>}
+
+              <PaymentForm.LegalFooter className="mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500" />
             </>
           ) : null}
         </div>

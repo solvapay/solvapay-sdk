@@ -1,15 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { GoogleGenAI, type Chat } from '@google/genai'
-import { usePurchase, useBalance } from '@solvapay/react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
+import { usePurchase, useBalance, usePlans, useTransport } from '@solvapay/react'
+import type { PaywallStructuredContent } from '@solvapay/server'
 import { Message as MessageType, UserType, ScenarioType, TopUpSelection } from './types'
 import { useFocusBus } from './components/focus/FocusProvider'
 import { ChatWindow } from './components/ChatWindow'
 import { env } from './src/lib/env'
-
-const FREE_MESSAGE_LIMIT = 2
-
-const SYSTEM_INSTRUCTION =
-  "You are a helpful assistant. Keep responses brief and conversational. Only mention pricing if asked: Subscription $9.99/month, Credits $2/100 or $4/200 (1 credit = 1 message), Day Pass $5/24hrs. Otherwise, just answer the user's questions normally."
+import { getAnonymousCustomerRef } from './src/lib/anonymousCustomer'
 
 function getActivePurchaseFor(
   purchases: Array<{ planSnapshot?: { planType?: string }; status?: string; endDate?: string }>,
@@ -24,6 +20,17 @@ function getActivePurchaseFor(
   })
 }
 
+function productRefForScenario(scenario: ScenarioType): string {
+  switch (scenario) {
+    case ScenarioType.SUBSCRIPTION:
+      return env.subscription.productRef
+    case ScenarioType.DAYPASS:
+      return env.daypass.productRef
+    case ScenarioType.TOPUP:
+      return env.topup.productRef
+  }
+}
+
 const App: React.FC = () => {
   const [messages, setMessages] = useState<MessageType[]>([])
   const [isBotThinking, setIsBotThinking] = useState(false)
@@ -32,12 +39,12 @@ const App: React.FC = () => {
   const [isFirstMessage, setIsFirstMessage] = useState(true)
   const [currentScenario, setCurrentScenario] = useState<ScenarioType>(ScenarioType.SUBSCRIPTION)
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
+  const [paywallContent, setPaywallContent] = useState<PaywallStructuredContent | null>(null)
   const { requestChatInputFocus } = useFocusBus()
 
-  const chatRef = useRef<Chat | null>(null)
   const userMessageCount = useRef(0)
+  const customerRef = useMemo(() => getAnonymousCustomerRef(), [])
 
-  // Wire scenario state to live SolvaPay data via SDK hooks.
   const { purchases, refetch: refetchPurchase } = usePurchase()
   const { credits, refetch: refetchBalance } = useBalance()
 
@@ -45,113 +52,196 @@ const App: React.FC = () => {
   const hasDayPass = useMemo(() => getActivePurchaseFor(purchases, 'one-time'), [purchases])
   const creditCount = credits ?? 0
 
-  useEffect(() => {
-    try {
-      if (!env.geminiApiKey) {
-        throw new Error('VITE_GEMINI_API_KEY is not set. Add it to .env to enable chat.')
-      }
-      const ai = new GoogleGenAI({ apiKey: env.geminiApiKey })
-      chatRef.current = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        config: { systemInstruction: SYSTEM_INSTRUCTION },
-      })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to initialize Gemini chat')
-    }
-  }, [])
+  const productRef = productRefForScenario(currentScenario)
 
-  const resetChatSession = () => {
-    if (!env.geminiApiKey) return
-    try {
-      const ai = new GoogleGenAI({ apiKey: env.geminiApiKey })
-      chatRef.current = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        config: { systemInstruction: SYSTEM_INSTRUCTION },
-      })
+  // Pull the active scenario's plans so the header pill / tooltip can
+  // surface the *real* free-tier limit. The backend is authoritative
+  // for gating; this is purely UX so the user knows how many free
+  // messages remain in the current product.
+  const transport = useTransport()
+  const planFetcher = useCallback(
+    async (ref: string) => {
+      if (!transport.listPlans) throw new Error('Transport does not support listPlans')
+      return transport.listPlans(ref)
+    },
+    [transport],
+  )
+  const { plans } = usePlans({ productRef: productRef || undefined, fetcher: planFetcher })
+  const messageLimit = useMemo(() => {
+    const free = plans
+      .map(p => p.freeUnits ?? 0)
+      .filter(n => n > 0)
+      .sort((a, b) => b - a)[0]
+    return free ?? 0
+  }, [plans])
+
+  const processMessage = useCallback(
+    async (
+      message: string,
+      opts?: { historyOverride?: MessageType[]; retryOn402?: number },
+    ) => {
+      if (!productRef) {
+        setError(
+          `No product configured for the ${currentScenario} scenario. Set the matching VITE_*_PRODUCT_REF in .env.`,
+        )
+        return
+      }
+
+      setIsBotThinking(true)
       setError(null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to reset chat')
-    }
-  }
+
+      const history = opts?.historyOverride ?? messages
+      const wireMessages = [
+        ...history.map(m => ({
+          role: m.sender === UserType.BOT ? ('bot' as const) : ('user' as const),
+          text: m.text,
+        })),
+        { role: 'user' as const, text: message },
+      ]
+
+      const maxAttempts = (opts?.retryOn402 ?? 0) + 1
+
+      try {
+        let response: Response | null = null
+        let payload402: ({ kind?: string } & PaywallStructuredContent) | null = null
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-customer-ref': customerRef,
+            },
+            body: JSON.stringify({ productRef, messages: wireMessages }),
+          })
+
+          if (response.status !== 402) break
+
+          payload402 = (await response.json()) as { kind?: string } & PaywallStructuredContent
+
+          // Silent retry path: post-purchase replays may race the
+          // SolvaPay webhook that credits the customer. Wait with a
+          // small backoff and try again before falling back to the
+          // paywall UI. 1s + 2s + 3s + 4s = 10s of total wait covers
+          // typical webhook latency without surfacing a flicker.
+          if (attempt < maxAttempts - 1) {
+            await new Promise(r => setTimeout(r, (attempt + 1) * 1000))
+            response = null
+          }
+        }
+
+        if (response?.status === 402 && payload402) {
+          if (
+            payload402.kind === 'payment_required' ||
+            payload402.kind === 'activation_required'
+          ) {
+            setPaywallContent(payload402 as PaywallStructuredContent)
+          }
+          setPendingMessage(message)
+          setIsBotThinking(false)
+          return
+        }
+
+        if (!response || !response.ok || !response.body) {
+          throw new Error(`Chat request failed: ${response?.status ?? 'no response'}`)
+        }
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let botResponse = ''
+        const botMessageId = Date.now() + 1
+        let firstChunk = true
+
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            let event: { chunk?: string; error?: string }
+            try {
+              event = JSON.parse(line) as { chunk?: string; error?: string }
+            } catch {
+              continue
+            }
+            if (event.error) {
+              throw new Error(event.error)
+            }
+            if (!event.chunk) continue
+            botResponse += event.chunk
+            if (firstChunk) {
+              setMessages(prev => [
+                ...prev,
+                { id: botMessageId, text: botResponse, sender: UserType.BOT },
+              ])
+              firstChunk = false
+            } else {
+              setMessages(prev =>
+                prev.map(m => (m.id === botMessageId ? { ...m, text: botResponse } : m)),
+              )
+            }
+          }
+        }
+
+        // Each chat send debits `creditsPerUnit` from the wallet on
+        // the backend (via `trackUsage` in the chat handler). Refetch
+        // the balance so the header pill tracks the real remainder
+        // instead of going stale at the post-purchase value.
+        refetchBalance().catch(() => {})
+      } catch (e) {
+        const errorMessage = 'An error occurred while fetching the response. Please try again.'
+        setError(errorMessage)
+        setMessages(prev => [
+          ...prev,
+          { id: Date.now() + 1, text: errorMessage, sender: UserType.BOT },
+        ])
+        console.error(e)
+      } finally {
+        setIsBotThinking(false)
+      }
+    },
+    [productRef, currentScenario, messages, customerRef, refetchBalance],
+  )
 
   const handleSendMessage = async (message: string) => {
-    if (!chatRef.current) {
-      setError('Chat is not initialized. Please check your API key.')
-      return
-    }
-
-    const willShowPaywall =
-      currentScenario === ScenarioType.SUBSCRIPTION
-        ? !isPremium && userMessageCount.current + 1 > FREE_MESSAGE_LIMIT
-        : currentScenario === ScenarioType.TOPUP
-          ? userMessageCount.current + 1 > FREE_MESSAGE_LIMIT && creditCount <= 0
-          : userMessageCount.current + 1 > FREE_MESSAGE_LIMIT && !hasDayPass
-
     setMessages(prev => [...prev, { id: Date.now(), text: message, sender: UserType.USER }])
     userMessageCount.current += 1
     setIsFirstMessage(false)
-
-    if (willShowPaywall) {
-      setPendingMessage(message)
-      return
-    }
-
     await processMessage(message)
-  }
-
-  const processMessage = async (message: string) => {
-    if (!chatRef.current) return
-
-    setIsBotThinking(true)
-    setError(null)
-
-    try {
-      const stream = await chatRef.current.sendMessageStream({ message })
-      let botResponse = ''
-      const botMessageId = Date.now() + 1
-      let firstChunk = true
-
-      for await (const chunk of stream) {
-        const chunkText = chunk.text ?? ''
-        botResponse += chunkText
-
-        if (firstChunk) {
-          setMessages(prev => [
-            ...prev,
-            { id: botMessageId, text: botResponse, sender: UserType.BOT },
-          ])
-          firstChunk = false
-        } else {
-          setMessages(prev =>
-            prev.map(m => (m.id === botMessageId ? { ...m, text: botResponse } : m)),
-          )
-        }
-      }
-    } catch (e) {
-      const errorMessage = 'An error occurred while fetching the response. Please try again.'
-      setError(errorMessage)
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now() + 1, text: errorMessage, sender: UserType.BOT },
-      ])
-      console.error(e)
-    } finally {
-      setIsBotThinking(false)
-    }
   }
 
   const handleUnlock = () => setShowInlineForm(true)
 
   const handleFormSuccess = (_selection?: TopUpSelection) => {
     setShowInlineForm(false)
+    setPaywallContent(null)
 
-    // Refresh SolvaPay state so isPremium / hasDayPass / credits update.
     refetchPurchase().catch(() => {})
     refetchBalance().catch(() => {})
 
+    // Poll the balance for ~10s so the header pill converges on the
+    // real backend value once the webhook lands. `useBalance` only
+    // auto-fetches once on mount; without these follow-ups the badge
+    // can stick at 0 if the initial fetch raced ahead of the customer
+    // being created or the webhook crediting the wallet.
+    for (const ms of [1000, 3000, 6000, 10000]) {
+      window.setTimeout(() => {
+        refetchBalance().catch(() => {})
+      }, ms)
+    }
+
     if (pendingMessage) {
-      processMessage(pendingMessage)
+      const retry = pendingMessage
       setPendingMessage(null)
+      // The SolvaPay webhook that credits the customer fires async
+      // after Stripe confirms (typically 1–3s, occasionally longer).
+      // `/api/chat` is gated server-side via `checkLimits`, so we
+      // ride the silent 402-retry path in `processMessage` to wait
+      // out the webhook before falling back to the paywall.
+      processMessage(retry, { retryOn402: 4 }).catch(() => {})
     }
 
     requestChatInputFocus()
@@ -163,7 +253,7 @@ const App: React.FC = () => {
     userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
-    resetChatSession()
+    setPaywallContent(null)
     requestChatInputFocus()
   }
 
@@ -174,16 +264,11 @@ const App: React.FC = () => {
     userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
-    resetChatSession()
+    setPaywallContent(null)
     requestChatInputFocus()
   }
 
-  const showPaywall =
-    currentScenario === ScenarioType.SUBSCRIPTION
-      ? !isPremium && userMessageCount.current >= FREE_MESSAGE_LIMIT
-      : currentScenario === ScenarioType.TOPUP
-        ? userMessageCount.current >= FREE_MESSAGE_LIMIT && creditCount <= 0
-        : userMessageCount.current >= FREE_MESSAGE_LIMIT && !hasDayPass
+  const showPaywall = paywallContent !== null
 
   return (
     <div className="h-screen w-screen flex flex-col font-sans bg-gradient-to-br from-slate-50 to-slate-100/50">
@@ -217,7 +302,8 @@ const App: React.FC = () => {
             showPaywall={showPaywall}
             onUnlock={handleUnlock}
             userMessageCount={userMessageCount.current}
-            messageLimit={FREE_MESSAGE_LIMIT}
+            messageLimit={messageLimit}
+            productRef={productRef}
             onReset={handleReset}
             isFirstMessage={isFirstMessage}
             isPremium={isPremium}
@@ -225,6 +311,7 @@ const App: React.FC = () => {
             credits={creditCount}
             hasDayPass={hasDayPass}
             showInlineForm={showInlineForm}
+            paywallContent={paywallContent}
             onFormSuccess={handleFormSuccess}
           />
         </div>

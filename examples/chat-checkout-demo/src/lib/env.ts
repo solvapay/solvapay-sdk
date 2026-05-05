@@ -1,6 +1,10 @@
 /**
  * Vite exposes env vars prefixed with `VITE_` to the browser. This helper
- * provides typed access with a clear error when something is missing.
+ * provides typed access with a clear warning when something is missing.
+ *
+ * The Gemini API key is intentionally NOT exposed here — it lives on the
+ * server side (`GEMINI_API_KEY`, no `VITE_` prefix) and is consumed only
+ * by the `/api/chat` route handler in `src/server/chat.ts`.
  */
 function readEnv(name: string, required = true): string {
   const value = import.meta.env[name] as string | undefined
@@ -14,7 +18,6 @@ function readEnv(name: string, required = true): string {
 }
 
 export const env = {
-  geminiApiKey: readEnv('VITE_GEMINI_API_KEY', false),
   subscription: { productRef: readEnv('VITE_SUBSCRIPTION_PRODUCT_REF', false) },
   daypass: { productRef: readEnv('VITE_DAYPASS_PRODUCT_REF', false) },
   topup: { productRef: readEnv('VITE_TOPUP_PRODUCT_REF', false) },

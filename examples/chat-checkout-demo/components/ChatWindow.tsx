@@ -1,5 +1,11 @@
-import React, { useRef, useEffect, useState } from 'react'
-import { Message as MessageType, ScenarioType, TopUpSelection as SelectionType } from '../types'
+import React, { useCallback, useRef, useEffect, useState } from 'react'
+import { formatPrice, useCustomer, useLocale, usePlans, useTransport, type Plan } from '@solvapay/react'
+import type { PaywallStructuredContent } from '@solvapay/server'
+import {
+  Message as MessageType,
+  ScenarioType,
+  TopUpSelection as SelectionType,
+} from '../types'
 import { Message } from './Message'
 import { ChatInput } from './ChatInput'
 import { Paywall } from './Paywall'
@@ -8,7 +14,8 @@ import { CheckoutForm } from './CheckoutForm'
 import { DayPassForm } from './DayPassForm'
 import { ThinkingIndicator } from './ThinkingIndicator'
 import { RefreshIcon } from './icons/RefreshIcon'
-import { BotIcon } from './icons/BotIcon'
+import { IdentityStrip } from './IdentityStrip'
+import { CustomerChip } from './CustomerChip'
 import { useInputFocus } from './focus/useInputFocus'
 import { useFocusBus } from './focus/FocusProvider'
 
@@ -78,6 +85,7 @@ interface ChatWindowProps {
   onUnlock: () => void
   userMessageCount: number
   messageLimit: number
+  productRef: string
   onReset: () => void
   isFirstMessage: boolean
   isPremium: boolean
@@ -85,6 +93,7 @@ interface ChatWindowProps {
   credits: number
   hasDayPass: boolean
   showInlineForm: boolean
+  paywallContent: PaywallStructuredContent | null
   onFormSuccess: (selection?: SelectionType) => void
 }
 
@@ -96,6 +105,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onUnlock,
   userMessageCount,
   messageLimit,
+  productRef,
   onReset,
   isFirstMessage,
   isPremium,
@@ -103,9 +113,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   credits,
   hasDayPass,
   showInlineForm,
+  paywallContent,
   onFormSuccess,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const locale = useLocale()
+  const { customerRef } = useCustomer()
+  const transport = useTransport()
+  const fetcher = useCallback(
+    async (ref: string) => {
+      if (!transport.listPlans) throw new Error('Transport does not support listPlans')
+      return transport.listPlans(ref)
+    },
+    [transport],
+  )
+  const { plans } = usePlans({ productRef: productRef || undefined, fetcher })
+  const paidPlan = plans.find(p => p.requiresPayment !== false && (p.price ?? 0) > 0)
+  // The metered plan on a top-up product is the zero-cost usage-based
+  // one. Its `creditsPerUnit` (e.g. 10) tells us how many internal
+  // credit units a single chat message debits — used to convert the
+  // raw `credits` balance into a user-facing "messages remaining"
+  // count for the header pill and the tooltip.
+  const meteredPlan = plans.find(p => p.type === 'usage-based')
+  const creditsPerMessage = Math.max(meteredPlan?.creditsPerUnit ?? 1, 1)
+  const messagesRemaining = Math.floor((credits || 0) / creditsPerMessage)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -116,82 +147,78 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [messages, isBotThinking])
 
   const renderPricingTooltipContent = () => (
-    <>
-      {currentScenario === ScenarioType.SUBSCRIPTION ? (
-        <>
-          <div className="font-medium text-slate-800 mb-0.5">Pricing</div>
-          <div>Free up to {messageLimit} messages.</div>
-          <div>Upgrade for unlimited: $9.99.</div>
-        </>
-      ) : currentScenario === ScenarioType.TOPUP ? (
-        <>
-          <div className="font-medium text-slate-800 mb-0.5">Pricing</div>
-          <div>Free up to {messageLimit} messages.</div>
-          <div>Pay-as-you-go: 1 msg = 1 credit.</div>
-          <div>100 credits $2 · 200 credits $4.</div>
-        </>
-      ) : (
-        <>
-          <div className="font-medium text-slate-800 mb-0.5">Pricing</div>
-          <div>Free up to {messageLimit} messages.</div>
-          <div>Day pass: $5 for 24h unlimited.</div>
-        </>
-      )}
-    </>
+    <PricingTooltipContent
+      currentScenario={currentScenario}
+      messageLimit={messageLimit}
+      paidPlan={paidPlan}
+      plans={plans}
+      locale={locale}
+      creditsPerMessage={creditsPerMessage}
+    />
+  )
+
+  const statusPill = (
+    <span
+      className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
+        currentScenario === ScenarioType.SUBSCRIPTION
+          ? isPremium
+            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+            : 'bg-slate-100 text-slate-600 border border-slate-200'
+          : currentScenario === ScenarioType.TOPUP
+            ? credits > 0
+              ? 'bg-blue-100 text-blue-700 border border-blue-200'
+              : 'bg-red-100 text-red-700 border border-red-200'
+            : hasDayPass
+              ? 'bg-purple-100 text-purple-700 border border-purple-200'
+              : 'bg-slate-100 text-slate-600 border border-slate-200'
+      }`}
+    >
+      {currentScenario === ScenarioType.SUBSCRIPTION
+        ? isPremium
+          ? 'PAID'
+          : 'FREE'
+        : currentScenario === ScenarioType.TOPUP
+          ? `${messagesRemaining.toLocaleString()} MSG${messagesRemaining === 1 ? '' : 'S'} LEFT`
+          : hasDayPass
+            ? 'DAY PASS'
+            : 'FREE'}
+    </span>
+  )
+
+  const pricingTooltip = (
+    <div className="relative group/pricing inline-block align-middle">
+      <button
+        type="button"
+        aria-label="Pricing info"
+        className="w-5 h-5 rounded-full border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 flex items-center justify-center text-[10px]"
+      >
+        i
+      </button>
+      <div className="opacity-0 group-hover/pricing:opacity-100 focus-within:opacity-100 pointer-events-none group-hover/pricing:pointer-events-auto absolute left-1/2 -translate-x-1/2 mt-2 z-20 w-64 rounded-md border border-slate-200 bg-white shadow-lg p-3 text-xs text-slate-600 transition-opacity">
+        {renderPricingTooltipContent()}
+      </div>
+    </div>
   )
 
   const renderHeader = () => (
-    <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-sm rounded-t-2xl">
-      <div className="flex items-center space-x-2">
-        <BotIcon className="h-5 w-5 text-slate-600" />
-        <div className="leading-tight">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-slate-900 tracking-tight">Agent Chat</h1>
-            <span
-              className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
-                currentScenario === ScenarioType.SUBSCRIPTION
-                  ? isPremium
-                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                    : 'bg-slate-100 text-slate-600 border border-slate-200'
-                  : currentScenario === ScenarioType.TOPUP
-                    ? credits > 0
-                      ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                      : 'bg-red-100 text-red-700 border border-red-200'
-                    : hasDayPass
-                      ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                      : 'bg-slate-100 text-slate-600 border border-slate-200'
-              }`}
-            >
-              {currentScenario === ScenarioType.SUBSCRIPTION
-                ? isPremium
-                  ? 'PAID'
-                  : 'FREE'
-                : currentScenario === ScenarioType.TOPUP
-                  ? `${credits} CREDITS`
-                  : hasDayPass
-                    ? 'DAY PASS'
-                    : 'FREE'}
-            </span>
-            <div className="relative group/pricing inline-block align-middle">
-              <button
-                type="button"
-                aria-label="Pricing info"
-                className="w-5 h-5 rounded-full border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 flex items-center justify-center text-[10px]"
-              >
-                i
-              </button>
-              <div className="opacity-0 group-hover/pricing:opacity-100 focus-within:opacity-100 pointer-events-none group-hover/pricing:pointer-events-auto absolute left-1/2 -translate-x-1/2 mt-2 z-20 w-64 rounded-md border border-slate-200 bg-white shadow-lg p-3 text-xs text-slate-600 transition-opacity">
-                {renderPricingTooltipContent()}
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">Example end-user chat</p>
-        </div>
-      </div>
-      <div className="flex items-center space-x-4">
-        <span className="hidden sm:inline px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-          {Math.min(userMessageCount, messageLimit)} / {messageLimit}
-        </span>
+    <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-white/80 backdrop-blur-sm rounded-t-2xl">
+      <IdentityStrip
+        fallbackName="Agent Chat"
+        fallbackSubline="Example end-user chat"
+        trailing={
+          <>
+            {statusPill}
+            {pricingTooltip}
+          </>
+        }
+      />
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <CustomerChip customerRef={customerRef} />
+        {messageLimit > 0 && (
+          <span className="hidden sm:inline px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+            {Math.min(userMessageCount, messageLimit)} / {messageLimit}
+          </span>
+        )}
         <button
           onClick={onReset}
           className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-all duration-200"
@@ -248,10 +275,87 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <DayPassForm onSuccess={onFormSuccess} />
         )
       ) : showPaywall ? (
-        <Paywall onUnlock={onUnlock} currentScenario={currentScenario} />
+        <Paywall
+          onUnlock={onUnlock}
+          currentScenario={currentScenario}
+          productRef={productRef}
+          paywallContent={paywallContent}
+        />
       ) : (
         <ChatInput onSendMessage={onSendMessage} />
       )}
     </div>
+  )
+}
+
+interface PricingTooltipContentProps {
+  currentScenario: ScenarioType
+  messageLimit: number
+  paidPlan: Plan | undefined
+  plans: Plan[]
+  locale: string | undefined
+  creditsPerMessage: number
+}
+
+const PricingTooltipContent: React.FC<PricingTooltipContentProps> = ({
+  currentScenario,
+  messageLimit,
+  paidPlan,
+  plans,
+  locale,
+  creditsPerMessage,
+}) => {
+  const freeLine = messageLimit > 0 ? `Free up to ${messageLimit} messages.` : null
+
+  if (currentScenario === ScenarioType.SUBSCRIPTION) {
+    const price = paidPlan
+      ? formatPrice(paidPlan.price ?? 0, paidPlan.currency ?? 'USD', {
+          locale,
+          interval: paidPlan.billingCycle ?? paidPlan.interval,
+        })
+      : null
+    return (
+      <>
+        <div className="font-medium text-slate-800 mb-0.5">Pricing</div>
+        {freeLine && <div>{freeLine}</div>}
+        {price ? <div>Upgrade for unlimited: {price}.</div> : <div>Upgrade for unlimited.</div>}
+      </>
+    )
+  }
+
+  if (currentScenario === ScenarioType.TOPUP) {
+    const packs = plans
+      .filter(p => p.requiresPayment !== false && (p.price ?? 0) > 0)
+      .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+    const perMsg =
+      creditsPerMessage === 1
+        ? 'Pay-as-you-go: 1 credit per message.'
+        : `Pay-as-you-go: ${creditsPerMessage} credits per message.`
+    return (
+      <>
+        <div className="font-medium text-slate-800 mb-0.5">Pricing</div>
+        {freeLine && <div>{freeLine}</div>}
+        <div>{perMsg}</div>
+        {packs.length > 0 ? (
+          <div>
+            {packs
+              .map(p => `${p.name ?? p.reference} ${formatPrice(p.price ?? 0, p.currency ?? 'USD', { locale })}`)
+              .join(' · ')}
+          </div>
+        ) : null}
+      </>
+    )
+  }
+
+  // Day pass
+  const price = paidPlan
+    ? formatPrice(paidPlan.price ?? 0, paidPlan.currency ?? 'USD', { locale })
+    : null
+  return (
+    <>
+      <div className="font-medium text-slate-800 mb-0.5">Pricing</div>
+      {freeLine && <div>{freeLine}</div>}
+      {price ? <div>Day pass: {price} for 24h unlimited.</div> : <div>Day pass: unlimited.</div>}
+    </>
   )
 }

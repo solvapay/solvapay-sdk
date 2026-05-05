@@ -13,6 +13,7 @@ import {
   processPaymentIntentCore,
   reactivatePurchaseCore,
 } from '@solvapay/server'
+import { handleChatRequest } from './chat'
 
 /**
  * Dispatch table: HTTP route → core helper. Each handler takes a Web `Request`
@@ -96,6 +97,15 @@ export async function handleSolvaPayRequest(
   res: ServerResponse,
 ): Promise<void> {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
+
+  // Streaming chat path bypasses the JSON-response dispatcher because it
+  // writes NDJSON chunks directly. Auth/limit enforcement happens inside
+  // `handleChatRequest` via SolvaPay's `checkLimits` + 402 response.
+  if (url.pathname === '/api/chat') {
+    await handleChatRequest(req, res)
+    return
+  }
+
   const route = HANDLERS[url.pathname]
   if (!route) {
     sendJson(res, 404, { error: `Unknown SolvaPay route: ${url.pathname}` })
