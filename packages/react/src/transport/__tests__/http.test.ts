@@ -59,7 +59,7 @@ describe('createHttpTransport — default routes', () => {
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
     await transport.getProduct('prd with spaces')
-    await transport.listPlans('prd_api')
+    await transport.listPlans!('prd_api')
 
     expect(fetchFn).toHaveBeenNthCalledWith(
       1,
@@ -71,6 +71,29 @@ describe('createHttpTransport — default routes', () => {
       `${DEFAULT_ROUTES.listPlans}?productRef=prd_api`,
       expect.any(Object),
     )
+  })
+
+  it('listPlans unwraps `{ plans }` to Plan[]', async () => {
+    const plans = [
+      { reference: 'pln_a', price: 0, currency: 'USD' },
+      { reference: 'pln_b', price: 999, currency: 'USD' },
+    ]
+    const fetchFn = makeFetch({ plans, productRef: 'prd_api' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.listPlans!('prd_api')
+
+    expect(Array.isArray(result)).toBe(true)
+    expect(result).toEqual(plans)
+  })
+
+  it('listPlans returns [] when wire payload omits `plans`', async () => {
+    const fetchFn = makeFetch({})
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.listPlans!('prd_api')
+
+    expect(result).toEqual([])
   })
 
   it('throws with backend error message when response is not ok', async () => {

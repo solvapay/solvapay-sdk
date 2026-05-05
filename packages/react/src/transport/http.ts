@@ -5,7 +5,7 @@
  * `SolvaPayProvider`.
  */
 
-import type { SolvaPayConfig } from '../types'
+import type { Plan, SolvaPayConfig } from '../types'
 import type {
   SolvaPayTransport,
   TransportBalanceResult,
@@ -194,14 +194,20 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       })
     },
 
-    listPlans: productRef => {
+    listPlans: async productRef => {
       const base = routeFor(config, 'listPlans')
       const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-      return request(config, url, {
+      // The wire format is `{ plans, productRef }` (see `listPlansCore` in
+      // @solvapay/server). The transport contract is `Plan[]`, so unwrap
+      // here — same shape `defaultListPlans` returns from its non-transport
+      // path. Without this, `useTransport().listPlans()` accidentally
+      // surfaces the wrapped object.
+      const data = await request<{ plans?: Plan[] }>(config, url, {
         method: 'GET',
         onErrorContext: 'listPlans',
         errorPrefix: 'Failed to list plans',
       })
+      return data.plans ?? []
     },
 
     getPaymentMethod: () =>
