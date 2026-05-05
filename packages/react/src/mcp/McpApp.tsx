@@ -83,9 +83,9 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike, McpBridgeAp
    * back to the legacy `ontoolresult` setter.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  addEventListener?: (evt: string, handler: (params: any) => void) => void
+  addEventListener?: (evt: any, handler: (params: any) => void) => void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  removeEventListener?: (evt: string, handler: (params: any) => void) => void
+  removeEventListener?: (evt: any, handler: (params: any) => void) => void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ontoolresult?: any
   /**

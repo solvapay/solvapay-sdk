@@ -49,7 +49,7 @@
     "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:^",
@@ -61,7 +61,7 @@
     }
   },
   "devDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:*",
