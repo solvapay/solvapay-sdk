@@ -43,7 +43,6 @@ export interface EmbeddedCheckoutProps {
    * back to `PlanSelector`'s own `usePlans` fetch when omitted.
    */
   plans?: readonly BootstrapPlanLike[]
-  onRefreshBootstrap?: () => void | Promise<void>
   onClose?: () => void
   /**
    * Called when the user picks "Back to my account" on the plan
@@ -73,7 +72,6 @@ export function EmbeddedCheckout({
   paywallKind,
   hideUpgradeBanner,
   plans,
-  onRefreshBootstrap,
   onClose,
   onBack,
   cx,
@@ -158,7 +156,6 @@ export function EmbeddedCheckout({
           productRef={productRef}
           returnUrl={returnUrl}
           onPurchaseSuccess={onPurchaseSuccess}
-          onRefreshBootstrap={onRefreshBootstrap}
           onClose={onClose}
           onBack={onBack}
           cx={cx}
