@@ -78,13 +78,6 @@ body {
   gap: 12px;
   max-inline-size: 520px;
   margin-inline: auto;
-  /* Establish an inline-size container so the sidebar layout below
-   * fires on the shell's own width, not the iframe viewport. Without
-   * this, an `@media (min-width: 900px)` query would activate the
-   * `1fr + 320px` grid inside the 520px capped shell whenever the
-   * iframe was ≥900px (MCP Inspector full browser), squeezing the
-   * body column to ~184px and breaking payment forms. */
-  container-type: inline-size;
 }
 
 /* When the shell renders the sidebar (authenticated customers,
@@ -501,6 +494,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Inline-size container for the sidebar layout below
+   * (`.solvapay-mcp-shell-sidebar` / `.solvapay-mcp-shell-layout` use
+   * `@container (min-width: 900px)`). Scoped here rather than on
+   * `.solvapay-mcp-main` so dormant fixed-positioned overlays
+   * (`.solvapay-mcp-tour-overlay`, `.solvapay-mcp-tour-popover`) that
+   * render as siblings of `<McpAppShell>` inside `.solvapay-mcp-main`
+   * stay anchored to the iframe viewport — `container-type` makes the
+   * element a containing block for `position: fixed` descendants per
+   * the CSS containment spec, so we keep that scope tight. */
+  container-type: inline-size;
 }
 
 .solvapay-mcp-tablist {
