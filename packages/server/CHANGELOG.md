@@ -1,5 +1,11 @@
 # @solvapay/server changelog
 
+## 1.0.12
+
+### Patch Changes
+
+- 8dd8638: Bump runtime `dotenv` dependency from `^17.4.1` to `^17.4.2` (patch). No behaviour change — picks up upstream bug fixes.
+
 ## 1.0.11
 
 ### Patch Changes
