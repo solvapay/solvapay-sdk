@@ -78,6 +78,13 @@ body {
   gap: 12px;
   max-inline-size: 520px;
   margin-inline: auto;
+  /* Establish an inline-size container so the sidebar layout below
+   * fires on the shell's own width, not the iframe viewport. Without
+   * this, an `@media (min-width: 900px)` query would activate the
+   * `1fr + 320px` grid inside the 520px capped shell whenever the
+   * iframe was ≥900px (MCP Inspector full browser), squeezing the
+   * body column to ~184px and breaking payment forms. */
+  container-type: inline-size;
 }
 
 .solvapay-mcp-header h1 {
@@ -539,15 +546,21 @@ body {
   gap: 16px;
 }
 
-/* Wide-iframe sidebar: visible at >= 900px. Hosts with narrow iframes
- * (ChatGPT ~400px, compact Claude Desktop) fall through to the
- * single-column layout with Account in the tab strip. */
+/* Wide-shell sidebar: visible when `.solvapay-mcp-main` itself is
+ * ≥900px wide. Container query (not media query) so the layout fires
+ * on the shell's own size, not the iframe viewport — important
+ * because `.solvapay-mcp-main` is capped at 520px by default, and
+ * we don't want the sidebar grid activating inside that cap on wide
+ * iframes (MCP Inspector full browser, MCP Jam) which would squeeze
+ * the body column. Hosts with narrow iframes (ChatGPT ~400px,
+ * compact Claude Desktop) and the default capped shell fall through
+ * to the single-column layout with Account in the tab strip. */
 
 .solvapay-mcp-shell-sidebar {
   display: none;
 }
 
-@media (min-width: 900px) {
+@container (min-width: 900px) {
   .solvapay-mcp-shell-layout {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
@@ -558,9 +571,9 @@ body {
     gap: 12px;
   }
 
-  /* Account tab is hidden at wide viewports — its content lives in
-   * the sidebar. Stays in the DOM so the arrow-key nav is stable;
-   * CSS just takes it out of flow. */
+  /* Account tab is hidden in the wide-shell layout — its content
+   * lives in the sidebar. Stays in the DOM so the arrow-key nav is
+   * stable; CSS just takes it out of flow. */
   .solvapay-mcp-tab[data-hide-wide='true'] {
     display: none;
   }
