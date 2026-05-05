@@ -46,7 +46,7 @@ const App: React.FC = () => {
   const customerRef = useMemo(() => getAnonymousCustomerRef(), [])
 
   const { purchases, refetch: refetchPurchase } = usePurchase()
-  const { credits, refetch: refetchBalance } = useBalance()
+  const { credits, refetch: refetchBalance, adjustBalance } = useBalance()
 
   const isPremium = useMemo(() => getActivePurchaseFor(purchases, 'recurring'), [purchases])
   const hasDayPass = useMemo(() => getActivePurchaseFor(purchases, 'one-time'), [purchases])
@@ -75,6 +75,14 @@ const App: React.FC = () => {
     return free ?? 0
   }, [plans])
 
+  // The metered plan's `creditsPerUnit` is what the backend debits per
+  // chat send. Mirrors the same calculation in `ChatWindow` so the
+  // optimistic decrement matches what the badge will display.
+  const creditsPerMessage = useMemo(() => {
+    const meteredPlan = plans.find(p => p.type === 'usage-based')
+    return Math.max(meteredPlan?.creditsPerUnit ?? 1, 1)
+  }, [plans])
+
   const processMessage = useCallback(
     async (
       message: string,
@@ -85,6 +93,20 @@ const App: React.FC = () => {
           `No product configured for the ${currentScenario} scenario. Set the matching VITE_*_PRODUCT_REF in .env.`,
         )
         return
+      }
+
+      // Optimistically debit the wallet so the header pill ("X MSGS
+      // LEFT") updates the moment the user submits, instead of waiting
+      // for the streaming response to finish before `refetchBalance`
+      // pulls the real value. `adjustBalance` blocks `refetch` for an
+      // 8s grace period, so the existing reconcile call below stays
+      // consistent. We revert below on a 402 (gate fires before
+      // `trackUsage` server-side, so no debit happened); transient
+      // errors fall through and the post-grace refetch reconciles.
+      const shouldOptimisticDebit =
+        currentScenario === ScenarioType.TOPUP && creditsPerMessage > 0
+      if (shouldOptimisticDebit) {
+        adjustBalance(-creditsPerMessage)
       }
 
       setIsBotThinking(true)
@@ -131,6 +153,7 @@ const App: React.FC = () => {
         }
 
         if (response?.status === 402 && payload402) {
+          if (shouldOptimisticDebit) adjustBalance(creditsPerMessage)
           if (
             payload402.kind === 'payment_required' ||
             payload402.kind === 'activation_required'
@@ -203,7 +226,15 @@ const App: React.FC = () => {
         setIsBotThinking(false)
       }
     },
-    [productRef, currentScenario, messages, customerRef, refetchBalance],
+    [
+      productRef,
+      currentScenario,
+      messages,
+      customerRef,
+      refetchBalance,
+      adjustBalance,
+      creditsPerMessage,
+    ],
   )
 
   const handleSendMessage = async (message: string) => {
