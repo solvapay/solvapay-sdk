@@ -41,20 +41,43 @@ body {
   padding: 16px;
 }
 
+/* Cap the whole shell at a chat-card width so the AppHeader, body
+ * card stack, and LegalFooter all align as one visually unified
+ * block centred in the iframe. Capping individual children
+ * (`.solvapay-mcp-shell-body` only) leaves the merchant pill orphaned
+ * to the iframe-left and the footer's `space-between` splayed across
+ * the full iframe — both look disjointed on wide hosts.
+ *
+ * Why 520:
+ *   - SEP-1865 §"Container Dimensions" — when the host omits
+ *     `containerDimensions.width`/`maxWidth` (Unbounded mode) the
+ *     spec delegates the size choice to the View. We must pick.
+ *   - OpenAI Apps SDK guidelines mandate "set a max width and design
+ *     layouts that collapse gracefully on small screens".
+ *   - OpenAI's `apps-sdk-ui` reservation card uses `max-w-sm` (384px);
+ *     `openai-apps-sdk-examples` cluster sits at 220-360px.
+ *   - Anthropic's PRIMARY use case is Desktop Claude at 400-500px.
+ *     520 is a small composite-flow buffer above that range — our
+ *     PlanStep → AmountStep → PaymentStep → SuccessStep is slightly
+ *     larger than a single-tool inline card.
+ *   - At our 14px body, 520px ≈ 62ch — inside the 65-75ch optimal
+ *     reading line length.
+ *
+ * On hosts narrower than 520 (Claude Desktop ~400-500px, ChatGPT
+ * inline ~400px, Mobile Claude ~300-360px) the cap is a no-op and
+ * content fills, matching Anthropic's "apps fill the container
+ * width" guidance for the primary cases. The previous `@media
+ * (min-width: 900px) { max-width: 960px }` sidebar-mode override
+ * is intentionally NOT carried forward — it was the cause of the
+ * felt-cramped problem on 1200px+ iframes. Surfaces that genuinely
+ * need more horizontal room should request `displayMode: "fullscreen"`
+ * per Anthropic's design guidance, not stretch the inline shell. */
 .solvapay-mcp-main {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 520px;
-  margin: 0 auto;
-}
-
-/* Widen the container at the sidebar breakpoint so the two-column
- * layout has room to breathe. */
-@media (min-width: 900px) {
-  .solvapay-mcp-main {
-    max-width: 960px;
-  }
+  max-inline-size: 520px;
+  margin-inline: auto;
 }
 
 .solvapay-mcp-header h1 {
