@@ -66,6 +66,7 @@ interface JsonRpcResponse<T = unknown> {
 async function callRpc<T>(
   handler: (req: Request) => Promise<Response>,
   body: unknown,
+  extraHeaders: Record<string, string> = {},
 ): Promise<{ status: number; json: JsonRpcResponse<T> }> {
   const res = await handler(
     new Request(`${publicBaseUrl}/mcp`, {
@@ -73,11 +74,22 @@ async function callRpc<T>(
       headers: {
         'content-type': 'application/json',
         accept: 'application/json, text/event-stream',
+        ...extraHeaders,
       },
       body: JSON.stringify(body),
     }),
   )
   return { status: res.status, json: (await res.json()) as JsonRpcResponse<T> }
+}
+
+// Alias of `callRpc` for tests that want to be explicit they're
+// asserting on a 200 response shape.
+async function fetch200<T = unknown>(
+  handler: (req: Request) => Promise<Response>,
+  body: unknown,
+  extraHeaders: Record<string, string> = {},
+): Promise<{ status: number; json: JsonRpcResponse<T> }> {
+  return callRpc<T>(handler, body, extraHeaders)
 }
 
 async function initialize(handler: (req: Request) => Promise<Response>) {
@@ -186,6 +198,46 @@ describe('createSolvaPayMcpFetch', () => {
     }
     for (const uiTool of UI_TOOLS) {
       expect(names).not.toContain(uiTool)
+    }
+  })
+
+  it('tools/list bypasses hideToolsByAudience for ChatGPT-originated requests (User-Agent /openai-mcp/i)', async () => {
+    // Verified against `openai-mcp/1.0.0 (ChatGPT)` on goldberg-demo
+    // prod (Phase A probe, 2026-05-04). The fetch handler must
+    // propagate the User-Agent through `RequestHandlerExtra.requestInfo`
+    // so the audience filter can detect ChatGPT and serve the full
+    // catalog — without this, the iframe's transport tools would be
+    // uncallable on ChatGPT and the user sees `MCP error -32000`.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      const handler = buildHandler({ hideToolsByAudience: ['ui'] })
+      const initRes = await fetch200(handler, {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '0.0.0' },
+        },
+      })
+      expect(initRes.status).toBe(200)
+
+      const list = await fetch200<ToolsListResult>(
+        handler,
+        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+        { 'user-agent': 'openai-mcp/1.0.0 (ChatGPT)' },
+      )
+      expect(list.status).toBe(200)
+      const names = list.json.result?.tools?.map(t => t.name) ?? []
+      for (const tool of [...INTENT_TOOLS, ...UI_TOOLS]) {
+        expect(names).toContain(tool)
+      }
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/hideToolsByAudience filter bypassed/),
+      )
+    } finally {
+      warnSpy.mockRestore()
     }
   })
 

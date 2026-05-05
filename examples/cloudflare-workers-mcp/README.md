@@ -190,7 +190,7 @@ const handler = createSolvaPayMcpFetch({
 })
 ```
 
-`mode: 'json-stateless'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops UI-only virtual tools (`create_checkout_session`, `process_payment`, …) from `tools/list` so text-only hosts don't reason about transport tools meant for the embedded iframe.
+`mode: 'json-stateless'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the seven UI transport tools (`create_payment_intent`, `create_topup_payment_intent`, `process_payment`, `create_checkout_session`, `create_customer_session`, `cancel_renewal`, `reactivate_renewal`) from `tools/list` so the LLM only sees the four intent tools — `upgrade`, `manage_account`, `activate_plan`, `topup` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
 
 ## Swapping in your own tools
 
