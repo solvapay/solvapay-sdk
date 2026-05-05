@@ -93,195 +93,184 @@ type PaymentFormRootProps = PaymentFormProps & {
   children?: React.ReactNode
 }
 
-const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(function PaymentFormRoot(
-  props,
-  forwardedRef,
-) {
-  const {
-    planRef,
-    productRef,
-    onSuccess,
-    onResult,
-    onFreePlan,
-    onError,
-    returnUrl,
-    submitButtonText,
-    className,
-    buttonClassName,
-    prefillCustomer,
-    requireTermsAcceptance = false,
-    children,
-  } = props
+const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
+  function PaymentFormRoot(props, forwardedRef) {
+    const {
+      planRef,
+      productRef,
+      onSuccess,
+      onResult,
+      onFreePlan,
+      onError,
+      returnUrl,
+      submitButtonText,
+      className,
+      buttonClassName,
+      prefillCustomer,
+      requireTermsAcceptance = false,
+      children,
+    } = props
 
-  const solva = useContext(SolvaPayContext)
-  if (!solva) throw new MissingProviderError('PaymentForm')
+    const solva = useContext(SolvaPayContext)
+    if (!solva) throw new MissingProviderError('PaymentForm')
 
-  const copy = useCopy()
-  const locale = useLocale()
-  const planSelection = usePlanSelection()
-  const effectivePlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
-  const effectiveProductRef = productRef ?? planSelection?.productRef
+    const copy = useCopy()
+    const locale = useLocale()
+    const planSelection = usePlanSelection()
+    const effectivePlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
+    const effectiveProductRef = productRef ?? planSelection?.productRef
 
-  const { plan: resolvedPlan } = usePlan({
-    planRef: effectivePlanRef,
-    productRef: effectiveProductRef,
-  })
-  const isFreePlan = resolvedPlan?.requiresPayment === false
+    const { plan: resolvedPlan } = usePlan({
+      planRef: effectivePlanRef,
+      productRef: effectiveProductRef,
+    })
+    const isFreePlan = resolvedPlan?.requiresPayment === false
 
-  const {
-    loading: checkoutLoading,
-    error: checkoutError,
-    clientSecret,
-    startCheckout,
-    stripePromise,
-    resolvedPlanRef,
-  } = useCheckout({
-    planRef: effectivePlanRef,
-    productRef: effectiveProductRef,
-    customer: prefillCustomer,
-  })
+    const {
+      loading: checkoutLoading,
+      error: checkoutError,
+      clientSecret,
+      startCheckout,
+      stripePromise,
+      resolvedPlanRef,
+    } = useCheckout({
+      planRef: effectivePlanRef,
+      productRef: effectiveProductRef,
+      customer: prefillCustomer,
+    })
 
-  const hasInitializedRef = useRef(false)
-  const hasPlanOrProduct = !!(effectivePlanRef || effectiveProductRef)
+    const hasInitializedRef = useRef(false)
+    const hasPlanOrProduct = !!(effectivePlanRef || effectiveProductRef)
 
-  useEffect(() => {
-    if (isFreePlan) return
-    if (
-      !hasInitializedRef.current &&
-      hasPlanOrProduct &&
-      !checkoutLoading &&
-      !checkoutError &&
-      !clientSecret
-    ) {
-      hasInitializedRef.current = true
-      startCheckout().catch(() => {
-        hasInitializedRef.current = false
-      })
-    }
-    if (hasPlanOrProduct && clientSecret) {
-      hasInitializedRef.current = true
-    }
-  }, [
-    hasPlanOrProduct,
-    checkoutLoading,
-    checkoutError,
-    clientSecret,
-    startCheckout,
-    isFreePlan,
-  ])
+    useEffect(() => {
+      if (isFreePlan) return
+      if (
+        !hasInitializedRef.current &&
+        hasPlanOrProduct &&
+        !checkoutLoading &&
+        !checkoutError &&
+        !clientSecret
+      ) {
+        hasInitializedRef.current = true
+        startCheckout().catch(() => {
+          hasInitializedRef.current = false
+        })
+      }
+      if (hasPlanOrProduct && clientSecret) {
+        hasInitializedRef.current = true
+      }
+    }, [hasPlanOrProduct, checkoutLoading, checkoutError, clientSecret, startCheckout, isFreePlan])
 
-  const finalReturnUrl =
-    returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
+    const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
-  const elementsOptions = useMemo(() => {
-    if (!clientSecret) return undefined
-    return { clientSecret, locale: locale as StripeElementLocale | undefined }
-  }, [clientSecret, locale])
+    const elementsOptions = useMemo(() => {
+      if (!clientSecret) return undefined
+      return { clientSecret, locale: locale as StripeElementLocale | undefined }
+    }, [clientSecret, locale])
 
-  const shouldRenderElements = !!(stripePromise && clientSecret)
+    const shouldRenderElements = !!(stripePromise && clientSecret)
 
-  if (!hasPlanOrProduct) {
-    return (
-      <div
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-payment-form=""
-        data-state="error"
-      >
-        <div data-solvapay-payment-form-error="">{copy.errors.configMissingPlanOrProduct}</div>
-      </div>
-    )
-  }
-
-  if (checkoutError) {
-    return (
-      <div
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-payment-form=""
-        data-state="error"
-      >
-        <div data-solvapay-payment-form-error="">
-          {copy.errors.paymentInitFailed}
-          {' '}
-          {checkoutError.message || copy.errors.unknownError}
-        </div>
-      </div>
-    )
-  }
-
-  if (isFreePlan && resolvedPlan) {
-    return (
-      <div
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-payment-form=""
-        data-state="ready"
-        data-variant="free"
-      >
-        <FreeInner
-          planRef={effectivePlanRef}
-          productRef={effectiveProductRef}
-          plan={resolvedPlan}
-          resolvedPlanRef={resolvedPlanRef}
-          requireTermsAcceptance={requireTermsAcceptance}
-          submitButtonText={submitButtonText}
-          buttonClassName={buttonClassName}
-          onFreePlan={onFreePlan}
-          onResult={onResult}
-          onError={onError}
+    if (!hasPlanOrProduct) {
+      return (
+        <div
+          ref={forwardedRef}
+          className={className}
+          data-solvapay-payment-form=""
+          data-state="error"
         >
-          {children}
-        </FreeInner>
-      </div>
-    )
-  }
+          <div data-solvapay-payment-form-error="">{copy.errors.configMissingPlanOrProduct}</div>
+        </div>
+      )
+    }
 
-  if (shouldRenderElements && elementsOptions) {
-    return (
-      <div
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-payment-form=""
-        data-state="ready"
-        data-variant="paid"
-      >
-        <Elements key={clientSecret!} stripe={stripePromise} options={elementsOptions}>
-          <PaidInner
+    if (checkoutError) {
+      return (
+        <div
+          ref={forwardedRef}
+          className={className}
+          data-solvapay-payment-form=""
+          data-state="error"
+        >
+          <div data-solvapay-payment-form-error="">
+            {copy.errors.paymentInitFailed} {checkoutError.message || copy.errors.unknownError}
+          </div>
+        </div>
+      )
+    }
+
+    if (isFreePlan && resolvedPlan) {
+      return (
+        <div
+          ref={forwardedRef}
+          className={className}
+          data-solvapay-payment-form=""
+          data-state="ready"
+          data-variant="free"
+        >
+          <FreeInner
             planRef={effectivePlanRef}
             productRef={effectiveProductRef}
-            prefillCustomer={prefillCustomer}
+            plan={resolvedPlan}
             resolvedPlanRef={resolvedPlanRef}
-            plan={resolvedPlan ?? null}
-            clientSecret={clientSecret!}
-            returnUrl={finalReturnUrl}
+            requireTermsAcceptance={requireTermsAcceptance}
             submitButtonText={submitButtonText}
             buttonClassName={buttonClassName}
-            requireTermsAcceptance={requireTermsAcceptance}
-            onSuccess={onSuccess}
+            onFreePlan={onFreePlan}
             onResult={onResult}
             onError={onError}
           >
             {children}
-          </PaidInner>
-        </Elements>
+          </FreeInner>
+        </div>
+      )
+    }
+
+    if (shouldRenderElements && elementsOptions) {
+      return (
+        <div
+          ref={forwardedRef}
+          className={className}
+          data-solvapay-payment-form=""
+          data-state="ready"
+          data-variant="paid"
+        >
+          <Elements key={clientSecret!} stripe={stripePromise} options={elementsOptions}>
+            <PaidInner
+              planRef={effectivePlanRef}
+              productRef={effectiveProductRef}
+              prefillCustomer={prefillCustomer}
+              resolvedPlanRef={resolvedPlanRef}
+              plan={resolvedPlan ?? null}
+              clientSecret={clientSecret!}
+              returnUrl={finalReturnUrl}
+              submitButtonText={submitButtonText}
+              buttonClassName={buttonClassName}
+              requireTermsAcceptance={requireTermsAcceptance}
+              onSuccess={onSuccess}
+              onResult={onResult}
+              onError={onError}
+            >
+              {children}
+            </PaidInner>
+          </Elements>
+        </div>
+      )
+    }
+
+    return (
+      <div
+        ref={forwardedRef}
+        className={className}
+        data-solvapay-payment-form=""
+        data-state="loading"
+      >
+        <div data-solvapay-payment-form-loading="">
+          <Spinner size="md" />
+        </div>
       </div>
     )
-  }
-
-  return (
-    <div
-      ref={forwardedRef}
-      className={className}
-      data-solvapay-payment-form=""
-      data-state="loading"
-    >
-      <div data-solvapay-payment-form-loading="">
-        <Spinner size="md" />
-      </div>
-    </div>
-  )
-})
+  },
+)
 
 // ---------- Paid inner ----------
 
@@ -349,9 +338,7 @@ const PaidInner: React.FC<{
   const submit = useCallback(async () => {
     if (!stripe || !elements || !clientSecret || !elementKind) {
       const msg =
-        !stripe || !elements
-          ? copy.errors.stripeUnavailable
-          : copy.errors.paymentIntentUnavailable
+        !stripe || !elements ? copy.errors.stripeUnavailable : copy.errors.paymentIntentUnavailable
       setError(msg)
       onError?.(new Error(msg))
       return
@@ -409,10 +396,7 @@ const PaidInner: React.FC<{
       const CONFIRMATION_TIMEOUT_MS = 10_000
       const startedAt = Date.now()
       let attempt = 0
-      while (
-        !hasPaidPurchaseRef.current &&
-        Date.now() - startedAt < CONFIRMATION_TIMEOUT_MS
-      ) {
+      while (!hasPaidPurchaseRef.current && Date.now() - startedAt < CONFIRMATION_TIMEOUT_MS) {
         attempt += 1
         await new Promise(r => setTimeout(r, Math.min(500 * attempt, 1500)))
         if (hasPaidPurchaseRef.current) break
@@ -570,8 +554,7 @@ const FreeInner: React.FC<{
   }, [state, activationResult, onResult, refetch])
 
   const isProcessing = state === 'activating'
-  const canSubmit =
-    !isProcessing && (!requireTermsAcceptance || termsAccepted) && !!productRef
+  const canSubmit = !isProcessing && (!requireTermsAcceptance || termsAccepted) && !!productRef
 
   const submit = useCallback(async () => {
     if (!productRef) {
@@ -652,10 +635,7 @@ const FreeInner: React.FC<{
 
 // ---------- Subcomponents ----------
 
-type SummaryProps = Omit<
-  React.ComponentProps<typeof CheckoutSummaryShim>,
-  'planRef' | 'productRef'
->
+type SummaryProps = Omit<React.ComponentProps<typeof CheckoutSummaryShim>, 'planRef' | 'productRef'>
 
 const Summary: React.FC<SummaryProps> = props => {
   const ctx = usePaymentForm()
@@ -690,7 +670,10 @@ type CustomerFieldsProps = React.HTMLAttributes<HTMLDivElement> & {
 }
 
 const CustomerFields = forwardRef<HTMLDivElement, CustomerFieldsProps>(
-  function PaymentFormCustomerFields({ asChild, readOnly: _readOnly = true, children, ...rest }, ref) {
+  function PaymentFormCustomerFields(
+    { asChild, readOnly: _readOnly = true, children, ...rest },
+    ref,
+  ) {
     const copy = useCopy()
     const customer = useCustomer()
     const { prefillCustomer } = usePaymentForm()
@@ -780,10 +763,7 @@ const CardElementSlot: React.FC<CardElementProps> = ({ options }) => {
 
   return (
     <div data-solvapay-payment-form-card-element="">
-      <StripeCardElement
-        options={options}
-        onChange={e => setPaymentInputComplete(e.complete)}
-      />
+      <StripeCardElement options={options} onChange={e => setPaymentInputComplete(e.complete)} />
     </div>
   )
 }
@@ -807,12 +787,7 @@ const TermsCheckbox = forwardRef<HTMLLabelElement, TermsCheckboxProps>(
       )
     }
     return (
-      <label
-        ref={ref}
-        htmlFor={id}
-        data-solvapay-payment-form-terms=""
-        {...rest}
-      >
+      <label ref={ref} htmlFor={id} data-solvapay-payment-form-terms="" {...rest}>
         <input
           id={id}
           type="checkbox"
@@ -863,15 +838,11 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
       override: typeof children === 'string' ? children : ctx.submitButtonText,
     })
 
-    const content = ctx.isProcessing ? (
+    const processingContent = (
       <>
         <Spinner size="sm" />
         <span>{copy.cta.processing}</span>
       </>
-    ) : children && typeof children !== 'string' ? (
-      children
-    ) : (
-      label
     )
 
     const buttonProps = {
@@ -891,13 +862,32 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
     } satisfies React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
 
     if (asChild) {
+      // Preserve the consumer's wrapper element across idle→processing.
+      // See the matching comment in TopupForm.SubmitButton — replacing
+      // the wrapper with a Fragment when processing strips className,
+      // disabled, and onClick from the rendered DOM.
+      const slotChild =
+        ctx.isProcessing && React.isValidElement(children)
+          ? React.cloneElement(
+              children as React.ReactElement<{ children?: React.ReactNode }>,
+              undefined,
+              processingContent,
+            )
+          : children
       return (
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         <Slot ref={ref as any} {...(buttonProps as Record<string, unknown>)}>
-          {content}
+          {slotChild}
         </Slot>
       )
     }
+
+    const content = ctx.isProcessing
+      ? processingContent
+      : children && typeof children !== 'string'
+        ? children
+        : label
+
     return (
       <button ref={ref} type="submit" {...buttonProps}>
         {content}
