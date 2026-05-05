@@ -80,15 +80,21 @@ body {
   margin-inline: auto;
 }
 
-/* When the shell renders the sidebar (authenticated customers,
- * `isShellSidebarEligible` in McpAppShell.tsx), lift the cap so the
- * 1fr + 320px sidebar grid fits AND the `@container (min-width: 900px)`
- * query below can fire. 900 = body (520) + gap (16) + sidebar (320)
- * + small buffer. Without this lift, McpAppShell would suppress the
- * inline detail cards (assuming the sidebar takes them) while the
- * sidebar stays `display: none` (because the @container threshold is
- * never reached inside the 520 cap) — both copies hidden, customer
- * details invisible for every authed user. */
+/* On the `account` surface (and only there — see `showSidebar` in
+ * McpAppShell.tsx), the shell mounts a `.solvapay-mcp-shell-sidebar`
+ * aside carrying the seller + customer details cards. Lift the cap
+ * so the 1fr + 320px sidebar grid fits AND the
+ * `@container (min-width: 900px)` query below can fire.
+ * 900 = body (520) + gap (16) + sidebar (320) + small buffer.
+ * Without this lift, McpAppShell would suppress the inline detail
+ * cards (assuming the sidebar takes them) while the sidebar stays
+ * `display: none` (because the @container threshold is never reached
+ * inside the 520 cap) — both copies hidden, customer details
+ * invisible for every authed user.
+ *
+ * The `:has()` selector is intentionally view-agnostic — the shell
+ * controls when the aside actually mounts. `checkout` and `topup`
+ * surfaces never mount it, so they keep the 520px cap. */
 .solvapay-mcp-main:has(.solvapay-mcp-shell-sidebar) {
   max-inline-size: 900px;
 }
