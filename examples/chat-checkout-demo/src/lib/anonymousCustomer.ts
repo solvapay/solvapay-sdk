@@ -50,10 +50,18 @@ export function createAnonymousAuthAdapter(customerRef: string): AuthAdapter {
  * Clear the persisted anonymous customer ref. The next call to
  * `getAnonymousCustomerRef()` (typically after a reload) mints a fresh one,
  * letting the demo simulate switching between buyers.
+ *
+ * Also wipes the SolvaPay SDK's customer-ref cache so the post-reload
+ * `checkPurchase` doesn't send the stale `x-solvapay-customer-ref` header
+ * (which would resurrect the prior customer on the backend before the
+ * SDK's userId-mismatch invalidation has a chance to run).
  */
 export function resetAnonymousCustomerRef(): void {
   if (typeof window === 'undefined') return
   window.localStorage.removeItem(STORAGE_KEY)
+  window.localStorage.removeItem('solvapay_customerRef')
+  window.localStorage.removeItem('solvapay_customerRef_expiry')
+  window.localStorage.removeItem('solvapay_customerRef_userId')
 }
 
 /**
