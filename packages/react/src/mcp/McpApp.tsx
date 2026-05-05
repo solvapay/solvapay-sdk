@@ -137,8 +137,8 @@ export interface McpAppProps {
    * Override for the shell's "close this app" handler. Defaults to
    * `() => app.requestTeardown()`, which asks the host to unmount the
    * iframe (see `@modelcontextprotocol/ext-apps` `App.requestTeardown`).
-   * Used by the checkout view's `"Back to chat"` and `"Stay on Free"`
-   * affordances; passing `undefined` hides those affordances.
+   * Used by the checkout view's `"Stay on Free"` decline link; passing
+   * `undefined` hides that affordance.
    */
   onClose?: () => void
   /**

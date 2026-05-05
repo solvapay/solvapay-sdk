@@ -110,6 +110,7 @@ vi.mock('../../useStripeProbe', () => ({
 import { McpCheckoutView } from '../McpCheckoutView'
 import { plansCache } from '../../../hooks/usePlans'
 import { merchantCache } from '../../../hooks/useMerchant'
+import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type {
   Plan,
@@ -240,7 +241,10 @@ function buildCtx(
   } as any
 }
 
-function renderView(props: Partial<React.ComponentProps<typeof McpCheckoutView>> = {}) {
+function renderView(
+  props: Partial<React.ComponentProps<typeof McpCheckoutView>> = {},
+  options: { bridgeApp?: McpBridgeAppLike } = {},
+) {
   const transport = props.publishableKey
     ? makeTransport()
     : makeTransport({
@@ -254,18 +258,25 @@ function renderView(props: Partial<React.ComponentProps<typeof McpCheckoutView>>
     timestamp: Date.now(),
     promise: null,
   })
+  // Default bridge app — feature-detects every method as undefined so
+  // `useMcpBridge()` calls become no-ops, matching production wiring
+  // when the host doesn't implement a given capability.
+  const bridgeApp: McpBridgeAppLike = options.bridgeApp ?? {}
   return {
     ctx,
     transport,
+    bridgeApp,
     ...render(
       <SolvaPayContext.Provider value={ctx}>
-        <McpCheckoutView
-          productRef={productRef}
-          publishableKey="pk_test"
-          returnUrl="https://example.test/r"
-          plans={bootstrapPlans}
-          {...props}
-        />
+        <McpBridgeProvider app={bridgeApp}>
+          <McpCheckoutView
+            productRef={productRef}
+            publishableKey="pk_test"
+            returnUrl="https://example.test/r"
+            plans={bootstrapPlans}
+            {...props}
+          />
+        </McpBridgeProvider>
       </SolvaPayContext.Provider>,
     ),
   }
@@ -399,11 +410,25 @@ describe('<McpCheckoutView> — plan step', () => {
     expect(screen.getByText('Stay on Free')).toBeTruthy()
   })
 
-  it('"Stay on Free" click calls onClose without firing activatePlan', async () => {
+  it('"Stay on Free" click sends a chat message, calls onClose, and does not fire activatePlan', async () => {
+    // Spy on the bridge's `sendMessage` so we can assert the user-visible
+    // follow-up that signals the agent to continue without payment —
+    // critical on hosts that don't honor `app.requestTeardown()` (e.g.
+    // MCPJam), where `onClose` alone leaves the iframe stuck.
+    const sendMessage = vi.fn().mockResolvedValue({})
     const onClose = vi.fn()
-    const { transport } = renderView({ fromPaywall: true, onClose })
+    const { transport } = renderView(
+      { fromPaywall: true, onClose },
+      { bridgeApp: { sendMessage } },
+    )
     act(() => {
       fireEvent.click(screen.getByText('Stay on Free'))
+    })
+    expect(sendMessage).toHaveBeenCalledWith({
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Sticking with the free tier for now.' },
+      ],
     })
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(transport.activatePlan).not.toHaveBeenCalled()
@@ -540,8 +565,8 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     })
     await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
     // BackLink's arrow glyph is aria-hidden, so the accessible name is
-    // just "Back" (not "← Back"). Anchor the match so "Back to chat"
-    // or any other Back-* button doesn't false-match.
+    // just "Back" (not "← Back"). Anchor the match so any other
+    // Back-* button doesn't false-match.
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /^Back$/ }))
     })
@@ -579,10 +604,9 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(transport.activatePlan).toHaveBeenCalledTimes(1) // unchanged
   })
 
-  it('success step renders the PAYG receipt and "Back to chat" calls refresh then close', async () => {
-    const onRefreshBootstrap = vi.fn().mockResolvedValue(undefined)
+  it('success step renders the PAYG receipt with no CTA — agent continues from the auto-sent chat message', async () => {
     const onClose = vi.fn()
-    renderView({ fromPaywall: true, onRefreshBootstrap, onClose })
+    renderView({ fromPaywall: true, onClose })
     await waitFor(() =>
       screen.getByRole('button', { name: /Continue with Pay as you go/ }),
     )
@@ -617,13 +641,13 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(screen.getByText('Plan')).toBeTruthy()
     expect(screen.getByText('Rate')).toBeTruthy()
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Back to chat/ }))
-    })
-    await waitFor(() => {
-      expect(onRefreshBootstrap).toHaveBeenCalledTimes(1)
-      expect(onClose).toHaveBeenCalledTimes(1)
-    })
+    // Regression guard: the success step previously rendered a
+    // `Back to chat` button that called `app.requestTeardown()`,
+    // which silently no-ops on hosts that don't honor it (e.g.
+    // MCPJam). The agent already gets a follow-up via
+    // `notifySuccess`, so the receipt is now the terminal state.
+    expect(screen.queryByRole('button', { name: /Back to chat/ })).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   // Regression — the PAYG order summary and success receipt used to
@@ -718,10 +742,9 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     await waitFor(() => screen.getByText('Choose a plan'))
   })
 
-  it('success step renders the Recurring receipt + /manage_account pointer', async () => {
-    const onRefreshBootstrap = vi.fn().mockResolvedValue(undefined)
+  it('success step renders the Recurring receipt + /manage_account pointer with no CTA', async () => {
     const onClose = vi.fn()
-    renderView({ fromPaywall: true, onRefreshBootstrap, onClose })
+    renderView({ fromPaywall: true, onClose })
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
@@ -742,11 +765,11 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     expect(screen.getByText(/Manage from/)).toBeTruthy()
     expect(screen.getByText(/manage_account/)).toBeTruthy()
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Back to chat/ }))
-    })
-    expect(onRefreshBootstrap).toHaveBeenCalledTimes(1)
-    expect(onClose).toHaveBeenCalledTimes(1)
+    // Same regression guard as the PAYG branch: the receipt is the
+    // terminal state and the agent continues via the auto-sent
+    // `plan-activated` chat message.
+    expect(screen.queryByRole('button', { name: /Back to chat/ })).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
 

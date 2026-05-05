@@ -79,16 +79,21 @@ export interface McpCheckoutViewProps {
    */
   plans?: readonly BootstrapPlanLike[]
   /**
-   * Invoked at the end of a successful activation — chained before
-   * `onClose()` so the host sees a re-seeded bootstrap if it
-   * re-invokes the original tool.
+   * @deprecated No longer wired internally. Earlier revisions called
+   * this from the success step's `"Back to chat"` button to re-seed
+   * caches before requesting teardown; that button is gone (the
+   * agent already gets a follow-up message via `notifySuccess`), so
+   * this prop is now inert. Retained on the public type for
+   * backward compatibility with custom integrators that still pass
+   * it; the shell-level on-mount refresh is wired separately via
+   * `<McpAppShell>`.
    */
   onRefreshBootstrap?: () => void | Promise<void>
   /**
    * Ask the host to unmount the MCP app. Wired by `<McpApp>` to
-   * `app.requestTeardown()`. Used by `"Back to chat"` on the success
-   * surface and the `"Stay on Free"` dismiss link. When omitted,
-   * those affordances disappear.
+   * `app.requestTeardown()`. Used by the `"Stay on Free"` dismiss
+   * link on the plan-selection step (paywall-entry only). When
+   * omitted, that affordance disappears.
    */
   onClose?: () => void
   /**
@@ -113,7 +118,8 @@ export function McpCheckoutView({
   fromPaywall = false,
   paywallKind,
   plans,
-  onRefreshBootstrap,
+  // `onRefreshBootstrap` is accepted for backward compatibility but
+  // no longer consumed — see the JSDoc on the prop.
   onClose,
   onBack,
   classNames,
@@ -139,7 +145,6 @@ export function McpCheckoutView({
         fromPaywall={fromPaywall}
         paywallKind={paywallKind}
         plans={plans}
-        onRefreshBootstrap={onRefreshBootstrap}
         onClose={onClose}
         onBack={onBack}
         cx={cx}

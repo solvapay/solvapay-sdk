@@ -58,7 +58,6 @@ export interface StateMachineProps {
   productRef: string
   returnUrl: string
   onPurchaseSuccess?: () => void
-  onRefreshBootstrap?: () => void | Promise<void>
   onClose?: () => void
   /**
    * Called when the user picks "Back to my account" from the plan
@@ -86,7 +85,6 @@ export function CheckoutStateMachine(props: StateMachineProps) {
     productRef,
     returnUrl,
     onPurchaseSuccess,
-    onRefreshBootstrap,
     onClose,
     onBack,
     cx,
@@ -95,7 +93,7 @@ export function CheckoutStateMachine(props: StateMachineProps) {
   const { selectedPlan, selectedPlanRef, plans } = usePlanSelector()
   const transport = useTransport()
   const locale = useHostLocale()
-  const { notifyModelContext, notifySuccess } = useMcpBridge()
+  const { notifyModelContext, notifySuccess, sendMessage } = useMcpBridge()
   const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
 
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
@@ -258,20 +256,14 @@ export function CheckoutStateMachine(props: StateMachineProps) {
     setStep('amount')
   }, [setStep])
 
-  // Success → unmount.
-  const onBackToChat = useCallback(async () => {
-    try {
-      await Promise.resolve(onRefreshBootstrap?.())
-    } catch {
-      /* best-effort; the close path still fires. */
-    }
-    onClose?.()
-  }, [onClose, onRefreshBootstrap])
-
-  // "Stay on Free" dismiss.
+  // "Stay on Free" dismiss. Posts a user-visible chat message before
+  // attempting to close so the agent gets a clear signal even on hosts
+  // that don't honor `app.requestTeardown()` (e.g. MCPJam) — without
+  // the message, the iframe lingers and the conversation stalls.
   const onStayOnFree = useCallback(() => {
+    void sendMessage({ text: 'Sticking with the free tier for now.' })
     onClose?.()
-  }, [onClose])
+  }, [onClose, sendMessage])
 
   // No paid plans configured — defensive fallback; the server throws
   // in this case (see brief §2), but render a clear error anyway.
@@ -354,6 +346,6 @@ export function CheckoutStateMachine(props: StateMachineProps) {
       )
     case 'success':
       if (!successMeta) return null
-      return <SuccessStep meta={successMeta} onBackToChat={onBackToChat} cx={cx} />
+      return <SuccessStep meta={successMeta} cx={cx} />
   }
 }
