@@ -41,20 +41,56 @@ body {
   padding: 16px;
 }
 
+/* Cap the whole shell at a chat-card width so the AppHeader, body
+ * card stack, and LegalFooter all align as one visually unified
+ * block centred in the iframe. Capping individual children
+ * (`.solvapay-mcp-shell-body` only) leaves the merchant pill orphaned
+ * to the iframe-left and the footer's `space-between` splayed across
+ * the full iframe — both look disjointed on wide hosts.
+ *
+ * Why 520:
+ *   - SEP-1865 §"Container Dimensions" — when the host omits
+ *     `containerDimensions.width`/`maxWidth` (Unbounded mode) the
+ *     spec delegates the size choice to the View. We must pick.
+ *   - OpenAI Apps SDK guidelines mandate "set a max width and design
+ *     layouts that collapse gracefully on small screens".
+ *   - OpenAI's `apps-sdk-ui` reservation card uses `max-w-sm` (384px);
+ *     `openai-apps-sdk-examples` cluster sits at 220-360px.
+ *   - Anthropic's PRIMARY use case is Desktop Claude at 400-500px.
+ *     520 is a small composite-flow buffer above that range — our
+ *     PlanStep → AmountStep → PaymentStep → SuccessStep is slightly
+ *     larger than a single-tool inline card.
+ *   - At our 14px body, 520px ≈ 62ch — inside the 65-75ch optimal
+ *     reading line length.
+ *
+ * On hosts narrower than 520 (Claude Desktop ~400-500px, ChatGPT
+ * inline ~400px, Mobile Claude ~300-360px) the cap is a no-op and
+ * content fills, matching Anthropic's "apps fill the container
+ * width" guidance for the primary cases. The previous `@media
+ * (min-width: 900px) { max-width: 960px }` sidebar-mode override
+ * is intentionally NOT carried forward — it was the cause of the
+ * felt-cramped problem on 1200px+ iframes. Surfaces that genuinely
+ * need more horizontal room should request `displayMode: "fullscreen"`
+ * per Anthropic's design guidance, not stretch the inline shell. */
 .solvapay-mcp-main {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 520px;
-  margin: 0 auto;
+  max-inline-size: 520px;
+  margin-inline: auto;
 }
 
-/* Widen the container at the sidebar breakpoint so the two-column
- * layout has room to breathe. */
-@media (min-width: 900px) {
-  .solvapay-mcp-main {
-    max-width: 960px;
-  }
+/* When the shell renders the sidebar (authenticated customers,
+ * `isShellSidebarEligible` in McpAppShell.tsx), lift the cap so the
+ * 1fr + 320px sidebar grid fits AND the `@container (min-width: 900px)`
+ * query below can fire. 900 = body (520) + gap (16) + sidebar (320)
+ * + small buffer. Without this lift, McpAppShell would suppress the
+ * inline detail cards (assuming the sidebar takes them) while the
+ * sidebar stays `display: none` (because the @container threshold is
+ * never reached inside the 520 cap) — both copies hidden, customer
+ * details invisible for every authed user. */
+.solvapay-mcp-main:has(.solvapay-mcp-shell-sidebar) {
+  max-inline-size: 900px;
 }
 
 .solvapay-mcp-header h1 {
@@ -458,6 +494,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Inline-size container for the sidebar layout below
+   * (`.solvapay-mcp-shell-sidebar` / `.solvapay-mcp-shell-layout` use
+   * `@container (min-width: 900px)`). Scoped here rather than on
+   * `.solvapay-mcp-main` so dormant fixed-positioned overlays
+   * (`.solvapay-mcp-tour-overlay`, `.solvapay-mcp-tour-popover`) that
+   * render as siblings of `<McpAppShell>` inside `.solvapay-mcp-main`
+   * stay anchored to the iframe viewport — `container-type` makes the
+   * element a containing block for `position: fixed` descendants per
+   * the CSS containment spec, so we keep that scope tight. */
+  container-type: inline-size;
 }
 
 .solvapay-mcp-tablist {
@@ -516,15 +562,21 @@ body {
   gap: 16px;
 }
 
-/* Wide-iframe sidebar: visible at >= 900px. Hosts with narrow iframes
- * (ChatGPT ~400px, compact Claude Desktop) fall through to the
- * single-column layout with Account in the tab strip. */
+/* Wide-shell sidebar: visible when `.solvapay-mcp-main` itself is
+ * ≥900px wide. Container query (not media query) so the layout fires
+ * on the shell's own size, not the iframe viewport — important
+ * because `.solvapay-mcp-main` is capped at 520px by default, and
+ * we don't want the sidebar grid activating inside that cap on wide
+ * iframes (MCP Inspector full browser, MCP Jam) which would squeeze
+ * the body column. Hosts with narrow iframes (ChatGPT ~400px,
+ * compact Claude Desktop) and the default capped shell fall through
+ * to the single-column layout with Account in the tab strip. */
 
 .solvapay-mcp-shell-sidebar {
   display: none;
 }
 
-@media (min-width: 900px) {
+@container (min-width: 900px) {
   .solvapay-mcp-shell-layout {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
@@ -535,9 +587,9 @@ body {
     gap: 12px;
   }
 
-  /* Account tab is hidden at wide viewports — its content lives in
-   * the sidebar. Stays in the DOM so the arrow-key nav is stable;
-   * CSS just takes it out of flow. */
+  /* Account tab is hidden in the wide-shell layout — its content
+   * lives in the sidebar. Stays in the DOM so the arrow-key nav is
+   * stable; CSS just takes it out of flow. */
   .solvapay-mcp-tab[data-hide-wide='true'] {
     display: none;
   }
