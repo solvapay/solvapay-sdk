@@ -6,7 +6,7 @@ A Vite-only chat app that demonstrates the SolvaPay React + server primitives fo
 - **Lifetime Access** — one-time plan via `<PaymentForm.*>`
 - **Top-up** — credit balance via `<TopupForm.*>` + `<AmountPicker>` styling
 
-The chat itself is powered by Google Gemini, proxied through a `/api/chat` route that gates each request with SolvaPay's `checkLimits` + 402 `payment_required` flow. Every browser gets an anonymous SolvaPay customer (random UUID in `localStorage`) so the demo runs without any login screen.
+The chat itself is powered by Google Gemini, proxied through a `/api/chat` route that gates each request via the SDK's `payable.gate(req, { ctx })` primitive — the decision-shaped paywall for streaming flows. Every browser gets an anonymous SolvaPay customer (random UUID in `localStorage`, via `@solvapay/react`'s `getOrCreateAnonymousCustomerRef`) so the demo runs without any login screen.
 
 ## Architecture
 
@@ -15,10 +15,10 @@ The app runs in two modes off a single source tree:
 - **Local dev** (`pnpm dev`) — Vite serves the SPA and mounts `/api/*` as connect-style middleware via `src/server/vitePlugin.ts`.
 - **Production** (`pnpm deploy`) — a Cloudflare Worker (`src/worker.ts`) serves the Vite build via Workers Assets and dispatches `/api/*` through the same handlers.
 
-The dispatcher itself (`src/server/handlers.ts`) is runtime-agnostic: it takes a Web `Request` and a `{ solvaPay, geminiApiKey }` deps object, so both runtimes share one routing table. SolvaPay routes (`/api/list-plans`, `/api/create-payment-intent`, …) dispatch to the framework-agnostic `*Core` helpers from `@solvapay/server` with `{ solvaPay }` passed through (no `process.env` reads inside). The chat route uses `solvaPay.checkLimits` to drive the paywall, then streams Gemini's response as NDJSON via a `ReadableStream`. Both `SOLVAPAY_SECRET_KEY` and `GEMINI_API_KEY` stay server-side; the browser only forwards an `x-customer-ref` header.
+The dispatcher itself (`src/server/handlers.ts`) is runtime-agnostic: it takes a Web `Request` and a `{ solvaPay, geminiApiKey }` deps object, so both runtimes share one routing table. SolvaPay routes (`/api/list-plans`, `/api/create-payment-intent`, …) dispatch to the framework-agnostic `*Core` helpers from `@solvapay/server` with `{ solvaPay }` passed through (no `process.env` reads inside). The chat route uses `solvaPay.payable({ productRef }).gate(req, { ctx })` — the SDK's decision-shaped primitive for streaming flows — to gate the request, then streams Gemini's response as NDJSON via a `ReadableStream`. Both `SOLVAPAY_SECRET_KEY` and `GEMINI_API_KEY` stay server-side; the browser only forwards an `x-customer-ref` header.
 
 ```
-Browser (App.tsx, components/*, SolvaPay primitives)
+Browser (App.tsx, components/*, <PaywallNotice>)
    │
    │  fetch /api/* with x-customer-ref header
    ▼
@@ -27,7 +27,9 @@ Vite middleware  ──or──  Cloudflare Worker
    │                        │
    └────► handleApiRequest (src/server/handlers.ts) ◄────┘
             │
-            │  /api/chat → checkLimits → (402 paywall | stream Gemini)
+            │  /api/chat → payable.gate(req, { ctx })
+            │              ├── 402 (paywall) → JSON Response
+            │              └── allow → stream Gemini + trackSuccess on close
             │  /api/*    → @solvapay/server *Core helpers
             ▼
         SolvaPay API + Gemini
@@ -69,7 +71,7 @@ The demo no longer hardcodes any pricing or free-tier limits — it reads them f
 Tips:
 
 - Set the merchant's `termsUrl` and `privacyUrl` in the SolvaPay dashboard so they appear inline in the per-purchase mandate sentence rendered by `<PaymentForm.MandateText>`.
-- Give each plan a human-readable `name`. The `PlanPicker` falls back to the plan reference (`pln_…`) when no name is set, which doesn't read well.
+- Give each plan a human-readable `name`. `<PlanSelector>` falls back to the plan reference (`pln_…`) when no name is set, which doesn't read well.
 
 ## Run
 
@@ -93,25 +95,64 @@ Use any future expiry, any 3-digit CVC, any postcode.
 
 ## How the scenarios map to SolvaPay
 
-| Scenario | UI element | SolvaPay primitive | Plan type |
-|---|---|---|---|
-| Subscription | `components/CheckoutForm.tsx` | `<PaymentForm.Root>` | `recurring` |
-| Lifetime Access | `components/LifetimeAccessForm.tsx` | `<PaymentForm.Root>` | `one-time` |
-| Top-up | `components/TopUpSelection.tsx` + `components/TopUpForm.tsx` | `<TopupForm.Root>` | usage-based + one-time packs |
+| Scenario | Plan type | Checkout primitive (auto-selected by `<PaywallNotice.EmbeddedCheckout>`) |
+|---|---|---|
+| Subscription | `recurring` | `<PaymentForm.Root>` |
+| Lifetime Access | `one-time` | `<PaymentForm.Root>` |
+| Top-up | usage-based + one-time packs | `<AmountPicker>` → `<TopupForm.Root>` |
+
+All three scenarios share **one** drawer (`components/InlineCheckout.tsx`) that wraps `<PaywallNotice.Root>` + `<PaywallNotice.EmbeddedCheckout>`. The notice primitive branches on plan type — recurring plans get a `PaymentForm`, PAYG plans get an inline `AmountPicker` → `TopupForm` sequence — so we don't need a per-scenario form file in the demo.
 
 `App.tsx` derives the scenario state directly from SDK hooks:
 
 - `usePurchase()` → `isPremium` (any active recurring plan) and `hasLifetimeAccess` (any active one-time plan)
 - `useBalance()` → `credits` rendered in the header pill
-- `usePlans({ productRef })` → drives the header tooltip pricing and the `X / Y` free-message counter from the active plan's `freeUnits`
+- `usePlans({ productRef })` → drives the header tooltip pricing and the `X / Y` free-message counter from the active plan's `freeUnits`. No `fetcher` prop is required — `usePlans` defaults to `defaultListPlans` which routes through the SolvaPay transport.
 
-The free-message gate lives entirely on the backend. The browser POSTs each chat turn to `/api/chat`; the server resolves the customer, calls `checkLimits` with `meterName: 'requests'`, and either streams Gemini's response or replies `402 { kind: 'payment_required' | 'activation_required', … }`. The `Paywall` component consumes that payload directly.
+### The chat gate
+
+`/api/chat` uses the SDK's decision-shaped `payable.gate(req, { ctx })` primitive (`src/server/chat.ts`). It pre-checks limits, returns either a 402 `Response` (which the browser hands to `<PaywallNotice>` via `App.tsx`'s `paywallContent` state) or an `allow` decision with bound `trackSuccess` / `trackFail` closures. The closures fire once the Gemini stream finalises, with `ctx.waitUntil` keeping `trackUsage` alive past the response close on Workers.
+
+Once a 402 lands, the SDK's `usePaywallResolver` (mounted inside `<PaywallNotice.Root>`) watches `usePurchase` + `useBalance` and flips `resolved` the moment the customer's entitlement satisfies the gate. The notice's `onResolved` callback then dismisses the drawer and `App.tsx` replays the pending message — no manual 402 retry loop required.
 
 ## Anonymous customer flow
 
-There is no login. The first time the app loads it generates `anon_<uuid>` and stores it under `chat-checkout-demo:customerRef` in `localStorage`. Every API call sends this value as `x-customer-ref`; the Vite middleware rewrites it to `x-user-id`, which is what `getAuthenticatedUserCore` reads. The SolvaPay backend upserts the customer using this value as `externalRef`.
+There is no login. The first time the app loads it calls `getOrCreateAnonymousCustomerRef()` from `@solvapay/react/adapters/auth`, which mints `anon_<uuid>` and persists it in `localStorage`. The matching `createAnonymousAuthAdapter(ref)` is wired into `<SolvaPayProvider>` so the SDK's auth-poll heuristic stays happy. Every API call sends this value as `x-customer-ref`; the Vite middleware mirrors it to `x-user-id` for the framework-agnostic `*Core` helpers, while the chat path reads it directly via `payable.gate(req)`. The SolvaPay backend upserts the customer using this value as `externalRef`.
 
-Reset the demo by clearing the key in DevTools → Application → Local Storage. Note that **free-tier usage now persists across reloads** (it lives on the SolvaPay backend, not in client state) — switching scenarios or refreshing the page won't reset the count, just like in production.
+Reset the demo by clicking the customer chip in the header → "Reset identity" (or call `resetAnonymousCustomerRef()` in DevTools). Free-tier usage persists across reloads on the SolvaPay backend, so switching scenarios or refreshing won't reset the count — just like in production.
+
+### Swap to real auth
+
+When you wire a real identity provider (Clerk, Supabase, Auth0, …), drop the anonymous helpers and pass a JWT-aware `AuthAdapter` instead. The shape stays the same — only the resolver changes:
+
+```tsx
+// src/lib/Providers.tsx (real auth)
+import { SolvaPayProvider, type AuthAdapter } from '@solvapay/react'
+
+const jwtAuthAdapter: AuthAdapter = {
+  async getToken() { return await yourAuth.getAccessToken() ?? null },
+  async getUserId() { return (await yourAuth.getUser())?.id ?? null },
+}
+
+<SolvaPayProvider config={{ auth: { adapter: jwtAuthAdapter } }}>{…}</SolvaPayProvider>
+```
+
+On the server, drop the `x-customer-ref` middleware and let `payable.gate(req, { getCustomerRef })` resolve the customer from the bearer token:
+
+```ts
+// src/server/chat.ts (real auth)
+const gate = await payable.gate(req, {
+  ctx,
+  getCustomerRef: async req => {
+    const token = req.headers.get('authorization')?.slice(7)
+    if (!token) return 'anonymous'
+    const { sub } = await verifyJwt(token)
+    return sub
+  },
+})
+```
+
+The SolvaPay backend will dedupe the customer by `externalRef` (the JWT `sub`), so existing anonymous purchases migrate naturally if you map the anon id to the new account at sign-up.
 
 ## Deploy to Cloudflare Workers
 

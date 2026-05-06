@@ -16,7 +16,7 @@ import type {
   PaywallToolResult,
   SolvaPayClient,
 } from './types'
-import { buildGateMessage, classifyPaywallState } from './paywall-state'
+import { buildPaywallGate } from './paywall-gate'
 import { withRetry, createRequestDeduplicator } from './utils'
 
 // Re-export types for convenience
@@ -340,45 +340,17 @@ export class SolvaPayPaywall {
         latencyMs,
       )
 
-      // Pre-compute the structured gate fields (everything except
-      // `message`) so `buildGateMessage` sees a finished gate shape
-      // and the classifier runs against the authoritative
-      // `LimitResponseWithPlan`. The state engine owns the copy
-      // entirely — the old `"Pick a plan below..."` template collapsed
-      // distinct recovery states into a single widget-assuming
-      // nudge, which no longer matches the text-only paywall design.
-      const state = classifyPaywallState(lastLimitsCheck ?? null)
-      const preMessageGate: PaywallStructuredContent = lastLimitsCheck?.activationRequired
-        ? {
-            kind: 'activation_required',
-            product,
-            message: '',
-            checkoutUrl:
-              lastLimitsCheck.confirmationUrl || lastLimitsCheck.checkoutUrl || checkoutUrl || '',
-            ...(lastLimitsCheck.confirmationUrl !== undefined
-              ? { confirmationUrl: lastLimitsCheck.confirmationUrl }
-              : {}),
-            ...(lastLimitsCheck.plans !== undefined ? { plans: lastLimitsCheck.plans } : {}),
-            ...(lastLimitsCheck.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
-            ...(lastLimitsCheck.product !== undefined
-              ? { productDetails: lastLimitsCheck.product }
-              : {}),
-          }
-        : {
-            kind: 'payment_required',
-            product,
-            checkoutUrl: checkoutUrl || '',
-            message: '',
-            ...(lastLimitsCheck?.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
-            ...(lastLimitsCheck?.product !== undefined
-              ? { productDetails: lastLimitsCheck.product }
-              : {}),
-          }
-
-      const gate: PaywallStructuredContent = {
-        ...preMessageGate,
-        message: buildGateMessage(state, preMessageGate),
-      }
+      // Delegate gate construction to `buildPaywallGate` so adapter
+      // paths and `payable.gate()` produce byte-identical wire shapes.
+      const gate = buildPaywallGate(
+        product,
+        lastLimitsCheck ?? {
+          withinLimits: false,
+          remaining: 0,
+          plan: '',
+          ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
+        },
+      )
 
       return {
         outcome: 'gate',

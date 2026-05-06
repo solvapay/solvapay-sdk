@@ -1,6 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import React from 'react'
 import { usePlans, plansCache } from './usePlans'
+import { SolvaPayProvider } from '../SolvaPayProvider'
 import type { Plan } from '../types'
 
 const freePlan: Plan = { reference: 'plan_free', name: 'Free', price: 0, requiresPayment: false }
@@ -371,6 +373,69 @@ describe('usePlans', () => {
       await waitFor(() => expect(result.current.loading).toBe(false))
       // Sorted: free(0), basic(1000), pro(2000) -> first two: free, basic
       expect(result.current.plans).toEqual([freePlan, basicPlan])
+    })
+  })
+
+  describe('default fetcher (omitted)', () => {
+    function makeFetch(payload: unknown, status = 200) {
+      return vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(payload), {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+    }
+
+    function wrapper(config: Parameters<typeof SolvaPayProvider>[0]['config']) {
+      const Wrapper = ({ children }: { children: React.ReactNode }) => (
+        <SolvaPayProvider config={config}>{children}</SolvaPayProvider>
+      )
+      Wrapper.displayName = 'TestWrapper'
+      return Wrapper
+    }
+
+    it('falls back to defaultListPlans when fetcher is omitted (uses provider config)', async () => {
+      const fetchFn = makeFetch({ plans: allPlans })
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_default' }), {
+        wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+      })
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.plans).toEqual(allPlans)
+      expect(fetchFn).toHaveBeenCalledWith(
+        '/api/list-plans?productRef=prd_default',
+        expect.any(Object),
+      )
+    })
+
+    it('routes default fetcher through transport.listPlans when configured', async () => {
+      const transportListPlans = vi.fn().mockResolvedValue([proPlan])
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_t' }), {
+        wrapper: wrapper({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          transport: { listPlans: transportListPlans, checkPurchase: vi.fn() } as any,
+        }),
+      })
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(transportListPlans).toHaveBeenCalledWith('prd_t')
+      expect(result.current.plans).toEqual([proPlan])
+    })
+
+    it('explicit fetcher still overrides the default', async () => {
+      const fetchFn = makeFetch({ plans: [] })
+      const fetcher = createFetcher([basicPlan])
+      const { result } = renderHook(
+        () => usePlans({ productRef: 'prd_o', fetcher }),
+        {
+          wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+        },
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(fetcher).toHaveBeenCalledWith('prd_o')
+      expect(fetchFn).not.toHaveBeenCalled()
+      expect(result.current.plans).toEqual([basicPlan])
     })
   })
 })

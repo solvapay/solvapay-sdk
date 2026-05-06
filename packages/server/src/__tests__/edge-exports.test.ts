@@ -43,6 +43,8 @@ const REQUIRED_FUNCTIONS: ReadonlyArray<keyof typeof edgeEntry> = [
   'buildGateMessage',
   'buildNudgeMessage',
   'classifyPaywallState',
+  // Pure paywall-gate builder used by streaming integrators.
+  'buildPaywallGate',
   // Runtime type guards.
   'isPaywallStructuredContent',
   // Factory + client creation.

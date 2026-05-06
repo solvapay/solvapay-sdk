@@ -955,4 +955,35 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
     })
   })
+
+  describe('solvaPay.paywall.decide() (factory exposure)', () => {
+    it('exposes a decide() method on the factory return', () => {
+      expect(typeof solvaPay.paywall?.decide).toBe('function')
+    })
+
+    it('returns an allow decision when within limits', async () => {
+      const decision = await solvaPay.paywall.decide(
+        { auth: { customer_ref: 'factory_decide_ok' } },
+        { product: 'factory-decide-product' },
+      )
+      expect(decision.outcome).toBe('allow')
+      if (decision.outcome !== 'allow') throw new Error('unreachable')
+      expect(decision.customerRef).toBe('cus_factory_decide_ok')
+      expect(mockApiClient.trackUsageCalls).toHaveLength(0)
+    })
+
+    it('returns a gate decision when the customer is blocked', async () => {
+      mockApiClient.shouldBlock = true
+      const decision = await solvaPay.paywall.decide(
+        { auth: { customer_ref: 'factory_decide_blocked' } },
+        { product: 'factory-decide-blocked' },
+      )
+      expect(decision.outcome).toBe('gate')
+      if (decision.outcome !== 'gate') throw new Error('unreachable')
+      expect(decision.gate.kind).toBe('payment_required')
+      expect(decision.gate.product).toBe('factory-decide-blocked')
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+      expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
+    })
+  })
 })

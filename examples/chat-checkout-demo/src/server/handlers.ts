@@ -106,22 +106,22 @@ export async function handleApiRequest(
 ): Promise<Response> {
   const url = new URL(req.url)
 
-  // Anonymous-customer flow: rewrite x-customer-ref → x-user-id once, up
-  // front, so every downstream `*Core` helper (and the chat handler)
-  // sees the auth header SolvaPay's `getAuthenticatedUserCore` reads.
-  // `Request` is immutable, so we clone with new headers.
-  const normalised = withUserIdHeader(req)
-
   // The streaming chat path owns its own Response (NDJSON ReadableStream
   // body + 402 paywall short-circuit) — bypass the JSON dispatcher.
-  // `ctx` is forwarded so `handleChat` can keep `trackUsage` alive past
+  // `payable.gate()` reads `x-customer-ref` directly, so no header
+  // rewrite is required. `ctx` is forwarded so the SDK's bound
+  // `trackSuccess` / `trackFail` can keep usage tracking alive past
   // the response close on Workers via `ctx.waitUntil`. The Vite dev
   // plugin (Node) calls without `ctx`; the Node event loop keeps the
-  // promise alive without it.
+  // floated promise alive without it.
   if (url.pathname === '/api/chat') {
-    return handleChat(normalised, deps, ctx)
+    return handleChat(req, deps, ctx)
   }
 
+  // Non-chat routes still flow through the `*Core` helpers which auth
+  // via `x-user-id`. Mirror `x-customer-ref` once, up front, so each
+  // helper sees the header `getAuthenticatedUserCore` reads.
+  const normalised = withUserIdHeader(req)
   const route = HANDLERS[url.pathname]
   if (!route) {
     return jsonResponse(404, { error: `Unknown SolvaPay route: ${url.pathname}` })

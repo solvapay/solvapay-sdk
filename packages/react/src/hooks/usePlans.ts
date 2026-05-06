@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { SolvaPayContext } from '../SolvaPayProvider'
+import { defaultListPlans } from '../transport/list-plans'
 import type { Plan, UsePlansOptions, UsePlansReturn } from '../types'
 
 // Global cache for plans to prevent duplicate fetches across components
@@ -62,7 +64,19 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
     selectionReady = true,
   } = options
 
-  const fetcherRef = useRef(fetcher)
+  // Pull the provider config (if mounted) so we can default the fetcher
+  // to `defaultListPlans`. `useContext` returns null outside a provider,
+  // matching the existing test setup that calls `usePlans` without a
+  // provider when an explicit `fetcher` is supplied.
+  const solvaContext = useContext(SolvaPayContext)
+  const config = solvaContext?._config
+
+  const effectiveFetcher = useMemo<(ref: string) => Promise<Plan[]>>(
+    () => fetcher ?? ((ref: string) => defaultListPlans(ref, config)),
+    [fetcher, config],
+  )
+
+  const fetcherRef = useRef(effectiveFetcher)
   const filterRef = useRef(filter)
   const sortByRef = useRef(sortBy)
   const autoSelectFirstPaidRef = useRef(autoSelectFirstPaid)
@@ -99,8 +113,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
   const [loading, setLoading] = useState(() => plans.length === 0)
   const [error, setError] = useState<Error | null>(null)
 
-  // Keep refs in sync
-  useEffect(() => { fetcherRef.current = fetcher }, [fetcher])
+  useEffect(() => { fetcherRef.current = effectiveFetcher }, [effectiveFetcher])
   useEffect(() => { filterRef.current = filter }, [filter])
   useEffect(() => { sortByRef.current = sortBy }, [sortBy])
   useEffect(() => { autoSelectFirstPaidRef.current = autoSelectFirstPaid }, [autoSelectFirstPaid])

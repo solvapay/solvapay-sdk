@@ -1,13 +1,16 @@
 import React, { useMemo } from 'react'
-import { SolvaPayProvider } from '@solvapay/react'
-import { createAnonymousAuthAdapter, getAnonymousCustomerRef } from './anonymousCustomer'
+import {
+  SolvaPayProvider,
+  createAnonymousAuthAdapter,
+  getOrCreateAnonymousCustomerRef,
+} from '@solvapay/react'
 
 interface ProvidersProps {
   children: React.ReactNode
 }
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
-  const customerRef = useMemo(() => getAnonymousCustomerRef(), [])
+  const customerRef = useMemo(() => getOrCreateAnonymousCustomerRef(), [])
   const adapter = useMemo(() => createAnonymousAuthAdapter(customerRef), [customerRef])
 
   const headers = useMemo<Record<string, string>>(

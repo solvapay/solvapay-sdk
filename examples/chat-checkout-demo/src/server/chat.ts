@@ -1,13 +1,6 @@
 import type { ExecutionContext } from '@cloudflare/workers-types'
 import { GoogleGenAI, type Content } from '@google/genai'
-import {
-  PaywallError,
-  buildGateMessage,
-  classifyPaywallState,
-  paywallErrorToClientPayload,
-  type PaywallStructuredContent,
-  type SolvaPay,
-} from '@solvapay/server'
+import type { SolvaPay } from '@solvapay/server'
 
 const SYSTEM_INSTRUCTION_BASE =
   'You are a helpful assistant. Keep responses brief and conversational.'
@@ -29,25 +22,19 @@ interface ChatDeps {
  * `Response`. Same NDJSON wire format the browser already parses
  * (`{chunk}` lines + a final `{error}` line on failure).
  *
- * Flow:
- *   1. Resolve the anonymous customer ref (`anon_<uuid>`) to a backend
- *      `cus_*` ref via `solvaPay.ensureCustomer`.
- *   2. Pre-check usage via `solvaPay.checkLimits` keyed on the requested
- *      `productRef` and `meterName: 'requests'`. The product's plan
- *      `freeUnits` determines the free message cap — no client-side
- *      limit, no env var.
- *   3. On gate, return `402 Payment Required` with the standard
- *      `PaywallStructuredContent` payload. The browser's existing
- *      `Paywall` component already knows how to render this.
- *   4. On allow, build a fresh Gemini chat (history rebuilt from the
- *      caller's messages array — server is stateless), stream chunks
- *      back via a `ReadableStream`, and emit `trackUsage` once the
- *      stream finishes.
+ * Built on `solvaPay.payable({ productRef }).gate(req, { ctx })` —
+ * the SDK's decision-shaped primitive for streaming flows. The gate
+ * call returns either:
+ *  - `{ kind: 'paywall', response, content }` on a 402 — return the
+ *    pre-built response directly; or
+ *  - `{ kind: 'allow', customerRef, trackSuccess, trackFail }` on
+ *    allow — bind those closures to the stream lifecycle so usage is
+ *    recorded once the LLM stream finalises.
  *
- * `paywall.decide()` would consolidate steps 1–3, but it's optimised
- * for one-shot JSON responses; for streaming we use the lower-level
- * `checkLimits` + `trackUsage` pair so the response writer stays in
- * our hands.
+ * On Workers, `ctx.waitUntil` keeps `trackUsage` alive past the
+ * response close. On Node (Vite dev) `ctx` is `undefined` and the
+ * Node event loop keeps the floated promise alive without it — the
+ * SDK handles both transparently when a `ctx` is passed.
  */
 export async function handleChat(
   req: Request,
@@ -56,11 +43,6 @@ export async function handleChat(
 ): Promise<Response> {
   if (req.method !== 'POST') {
     return jsonResponse(405, { error: 'Method not allowed' })
-  }
-
-  const customerRef = req.headers.get('x-customer-ref')
-  if (!customerRef) {
-    return jsonResponse(401, { error: 'Missing x-customer-ref header' })
   }
 
   let body: ChatRequestBody
@@ -74,79 +56,6 @@ export async function handleChat(
     return jsonResponse(400, { error: 'productRef and a non-empty messages array are required' })
   }
 
-  let backendCustomerRef: string
-  try {
-    backendCustomerRef = await deps.solvaPay.ensureCustomer(customerRef, customerRef)
-  } catch (error) {
-    console.error('[chat] ensureCustomer failed:', error)
-    return jsonResponse(500, { error: 'Failed to resolve customer' })
-  }
-
-  // Use `apiClient.checkLimits` rather than the factory-wrapped
-  // `solvaPay.checkLimits`: the factory wrapper has a narrower return
-  // type that hides fields like `activationRequired`, `plans`, `balance`,
-  // and `confirmationUrl` we need to construct the gate. Underneath
-  // both call the same `/v1/sdk/limits` endpoint.
-  let limits: Awaited<ReturnType<typeof deps.solvaPay.apiClient.checkLimits>>
-  try {
-    limits = await deps.solvaPay.apiClient.checkLimits({
-      customerRef: backendCustomerRef,
-      productRef: body.productRef,
-      meterName: 'requests',
-    })
-  } catch (error) {
-    console.error('[chat] checkLimits failed:', error)
-    return jsonResponse(500, { error: 'Failed to check usage limits' })
-  }
-
-  console.warn(
-    `[chat] limits product=${body.productRef} customer=${backendCustomerRef} ` +
-      `withinLimits=${limits.withinLimits} remaining=${limits.remaining ?? 'n/a'} ` +
-      `activationRequired=${limits.activationRequired ?? false}`,
-  )
-
-  // Auto-activate the metered plan for top-up customers who've already
-  // funded a balance. Buying a one-time credit pack deposits credits but
-  // doesn't enrol the customer in the usage-based "Pay as you go" plan
-  // that drives the meter — so `checkLimits` keeps returning
-  // `activationRequired: true` even though the wallet has plenty to
-  // debit. We safely auto-activate iff the candidate plan costs nothing
-  // (no silent upgrade to a paid plan) and the customer has positive
-  // credits (clear signal they intended to use it).
-  if (!limits.withinLimits && limits.activationRequired) {
-    const meterPlan = limits.plans?.find(
-      p => p.type === 'usage-based' && (p.price ?? 0) === 0,
-    )
-    const creditBalance = limits.balance?.creditBalance ?? 0
-    if (meterPlan && creditBalance > 0 && deps.solvaPay.activatePlan) {
-      console.warn(
-        `[chat] auto-activating meter plan=${meterPlan.reference} for customer=${backendCustomerRef} ` +
-          `(creditBalance=${creditBalance})`,
-      )
-      try {
-        await deps.solvaPay.activatePlan({
-          customerRef: backendCustomerRef,
-          productRef: body.productRef,
-          planRef: meterPlan.reference,
-        })
-        limits = await deps.solvaPay.apiClient.checkLimits({
-          customerRef: backendCustomerRef,
-          productRef: body.productRef,
-          meterName: 'requests',
-        })
-      } catch (error) {
-        console.error('[chat] auto-activate failed:', error)
-      }
-    }
-  }
-
-  if (!limits.withinLimits) {
-    const gate = buildGate(body.productRef, limits)
-    const errorMessage =
-      gate.kind === 'activation_required' ? 'Activation required' : 'Payment required'
-    return jsonResponse(402, paywallErrorToClientPayload(new PaywallError(errorMessage, gate)))
-  }
-
   const lastMessage = body.messages[body.messages.length - 1]?.text ?? ''
   if (!lastMessage.trim()) {
     return jsonResponse(400, { error: 'Last message must be non-empty user text' })
@@ -154,6 +63,17 @@ export async function handleChat(
 
   if (!deps.geminiApiKey) {
     return jsonResponse(500, { error: 'Gemini unavailable: GEMINI_API_KEY not configured' })
+  }
+
+  const payable = deps.solvaPay.payable({ productRef: body.productRef })
+  // `getCustomerRef` reads the demo's `x-customer-ref` header. A
+  // production app would replace this with a JWT-shaped resolver
+  // (verify the bearer token, return the `sub` claim) — see the
+  // README for the swap pattern.
+  const gate = await payable.gate(req, { ctx })
+
+  if (gate.kind === 'paywall') {
+    return gate.response
   }
 
   const systemInstruction = await buildSystemInstruction(deps.solvaPay, body.productRef).catch(
@@ -175,18 +95,7 @@ export async function handleChat(
   })
 
   const startTime = Date.now()
-  const requestId = `chat_${startTime}_${Math.random().toString(36).slice(2, 8)}`
   const encoder = new TextEncoder()
-
-  // On Workers, the request lifecycle ends when the response stream
-  // closes — any in-flight `trackUsage` POST is cancelled unless held
-  // by `ctx.waitUntil`. On Node (Vite dev) `ctx` is undefined and the
-  // event loop keeps the floated promise alive without it.
-  const keepAlive = (p: Promise<unknown>) => {
-    const guarded = p.catch(error => console.error('[chat] trackUsage failed:', error))
-    if (ctx) ctx.waitUntil(guarded)
-    else void guarded
-  }
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -199,34 +108,12 @@ export async function handleChat(
           }
         }
         controller.close()
-        keepAlive(
-          deps.solvaPay.trackUsage({
-            customerRef: backendCustomerRef,
-            productRef: body.productRef,
-            actionType: 'api_call',
-            units: 1,
-            outcome: 'success',
-            duration: Date.now() - startTime,
-            metadata: { action: 'requests', requestId },
-            timestamp: new Date().toISOString(),
-          }),
-        )
+        gate.trackSuccess({ duration: Date.now() - startTime })
       } catch (error) {
         console.error('[chat] gemini stream error:', error)
         controller.enqueue(encoder.encode(JSON.stringify({ error: 'gemini_error' }) + '\n'))
         controller.close()
-        keepAlive(
-          deps.solvaPay.trackUsage({
-            customerRef: backendCustomerRef,
-            productRef: body.productRef,
-            actionType: 'api_call',
-            units: 1,
-            outcome: 'fail',
-            duration: Date.now() - startTime,
-            metadata: { action: 'requests', requestId },
-            timestamp: new Date().toISOString(),
-          }),
-        )
+        gate.trackFail(error, { duration: Date.now() - startTime })
       }
     },
   })
@@ -238,40 +125,6 @@ export async function handleChat(
       'cache-control': 'no-cache',
     },
   })
-}
-
-/**
- * Construct a `PaywallStructuredContent` gate from a `LimitResponse`,
- * mirroring the shape `paywall.decide()` returns. Hand-rolled here
- * because the streaming chat path can't use `payable.http`'s
- * single-response adapter contract.
- */
-function buildGate(
-  productRef: string,
-  limits: Awaited<ReturnType<SolvaPay['apiClient']['checkLimits']>>,
-): PaywallStructuredContent {
-  const preMessage: PaywallStructuredContent = limits.activationRequired
-    ? {
-        kind: 'activation_required',
-        product: productRef,
-        message: '',
-        checkoutUrl: limits.confirmationUrl || limits.checkoutUrl || '',
-        ...(limits.confirmationUrl !== undefined ? { confirmationUrl: limits.confirmationUrl } : {}),
-        ...(limits.plans !== undefined ? { plans: limits.plans } : {}),
-        ...(limits.balance !== undefined ? { balance: limits.balance } : {}),
-        ...(limits.product !== undefined ? { productDetails: limits.product } : {}),
-      }
-    : {
-        kind: 'payment_required',
-        product: productRef,
-        checkoutUrl: limits.checkoutUrl || '',
-        message: '',
-        ...(limits.balance !== undefined ? { balance: limits.balance } : {}),
-        ...(limits.product !== undefined ? { productDetails: limits.product } : {}),
-      }
-
-  const state = classifyPaywallState({ ...limits, plan: '' })
-  return { ...preMessage, message: buildGateMessage(state, preMessage) }
 }
 
 /**

@@ -8,6 +8,8 @@ import type {
   SolvaPayClient,
   PayableOptions,
   PaywallArgs,
+  PaywallDecision,
+  PaywallMetadata,
   HttpAdapterOptions,
   NextAdapterOptions,
   McpAdapterOptions,
@@ -19,11 +21,12 @@ import type {
   ConfigureMcpPlansResponse,
 } from './types'
 import { createSolvaPayClient } from './client'
-import { SolvaPayPaywall } from './paywall'
+import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
+import type { PaywallStructuredContent } from './types'
 import {
   registerVirtualToolsMcpImpl,
   type McpServerLike,
@@ -78,6 +81,97 @@ export interface CreateSolvaPayConfig {
 }
 
 /**
+ * Result of `payable.gate(req, opts)` when the customer is gated.
+ *
+ * Carries a fully-built 402 `Response` plus the structured content for
+ * callers that prefer to format their own response (alternate codecs,
+ * SSE preamble, etc.).
+ *
+ * @since 1.2.0
+ */
+export interface PayablePaywallResult {
+  kind: 'paywall'
+  /** Pre-built 402 response with `application/json` body. */
+  response: Response
+  /** Same content the response carries — for callers formatting their own response. */
+  content: PaywallStructuredContent
+}
+
+/**
+ * Result of `payable.gate(req, opts)` when the customer is allowed.
+ *
+ * Includes the raw decision (limits / customerRef) and bound usage
+ * trackers so the caller can record success / failure once the
+ * downstream response has finalised.
+ *
+ * @since 1.2.0
+ */
+export interface PayableAllowResult {
+  kind: 'allow'
+  decision: Extract<import('./types').PaywallDecision<PaywallArgs>, { outcome: 'allow' }>
+  customerRef: string
+  /**
+   * Record a successful usage event for this allowed request.
+   *
+   * Safe to call multiple times — each invocation is a separate
+   * `trackUsage` event. This is the canonical pattern for per-step
+   * metering in agent loops (AI SDK `onStepFinish`, LangChain
+   * `handleLLMEnd`, OpenAI `response.completed`).
+   *
+   * `metadata` is forwarded verbatim. Standardise on
+   * `inputTokens`, `outputTokens`, `totalTokens`, `finishReason`,
+   * `stepType` so cross-provider dashboards aggregate cleanly.
+   */
+  trackSuccess: (opts?: { duration?: number; metadata?: Record<string, unknown> }) => void
+  /**
+   * Record a failed usage event for this allowed request. The error
+   * is recorded on `metadata.error` (string-coerced) so dashboards can
+   * filter failure modes without losing the message.
+   */
+  trackFail: (
+    err: unknown,
+    opts?: { duration?: number; metadata?: Record<string, unknown> },
+  ) => void
+}
+
+/**
+ * Decision-shaped result returned from `payable.gate(req, opts)`.
+ *
+ * @since 1.2.0
+ */
+export type PayableGateResult = PayablePaywallResult | PayableAllowResult
+
+/**
+ * Options for `payable.gate(req, opts)`.
+ *
+ * @since 1.2.0
+ */
+export interface PayableGateOptions {
+  /**
+   * Resolve the customer ref from the incoming request. Overrides the
+   * default header-based lookup (`x-customer-ref` → `'anonymous'`).
+   * Useful for JWT-based auth, signed cookies, or app-specific header
+   * conventions.
+   */
+  getCustomerRef?: (req: Request) => string | Promise<string>
+  /**
+   * Workers `ExecutionContext` (or any object with a `waitUntil`
+   * method). When provided, `trackSuccess` / `trackFail` route their
+   * underlying `trackUsage` promise through `ctx.waitUntil` so the
+   * Workers runtime keeps the request alive past the response close.
+   * On Node, omit this — the event loop keeps the floated promise
+   * alive without it.
+   */
+  ctx?: { waitUntil(p: Promise<unknown>): void }
+  /**
+   * Optional adapter metadata override. Falls back to the
+   * `productRef` / `usageType` configured on `payable({ … })` when
+   * omitted.
+   */
+  metadata?: import('./types').PaywallMetadata
+}
+
+/**
  * Payable function that provides explicit adapters for different frameworks.
  *
  * Use the appropriate adapter method for your framework:
@@ -85,6 +179,7 @@ export interface CreateSolvaPayConfig {
  * - `next()` - Next.js App Router API routes
  * - `mcp()` - Model Context Protocol servers
  * - `function()` - Pure functions, background jobs, or testing
+ * - `gate()` - Decision-shaped primitive for streaming / SSE / multi-step flows
  *
  * @example
  * ```typescript
@@ -101,6 +196,11 @@ export interface CreateSolvaPayConfig {
  *
  * // Pure function
  * const protectedFn = await payable.function(createTask);
+ *
+ * // Streaming chatbot (decision-shaped)
+ * const result = await payable.gate(req);
+ * if (result.kind === 'paywall') return result.response;
+ * // … stream LLM output, then result.trackSuccess({ duration, metadata })
  * ```
  */
 export interface PayableFunction {
@@ -199,6 +299,44 @@ export interface PayableFunction {
     businessLogic: (args: any) => Promise<T>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<(args: any) => Promise<T>>
+
+  /**
+   * Decision-shaped primitive for streaming / SSE / multi-step flows.
+   *
+   * Unlike `http()` / `next()` / `mcp()` (handler-shaped — SDK runs
+   * your business logic and emits the protocol response), `gate()`
+   * returns the verdict and lets you own the response. This is the
+   * right shape when one request maps to many response chunks (LLM
+   * streams), many tool steps (agent loops), or a non-JSON wire
+   * format (SSE, NDJSON, multipart).
+   *
+   * @example
+   * ```typescript
+   * const payable = solvaPay.payable({ productRef: 'prd_chat' })
+   *
+   * export async function handleChat(req: Request, ctx?: ExecutionContext) {
+   *   const result = await payable.gate(req, { ctx })
+   *   if (result.kind === 'paywall') return result.response
+   *
+   *   const start = Date.now()
+   *   return new Response(new ReadableStream({
+   *     async start(controller) {
+   *       try {
+   *         for await (const chunk of llmStream) controller.enqueue(encode(chunk))
+   *         controller.close()
+   *         result.trackSuccess({ duration: Date.now() - start })
+   *       } catch (err) {
+   *         result.trackFail(err, { duration: Date.now() - start })
+   *         controller.error(err)
+   *       }
+   *     },
+   *   }), { headers: { 'content-type': 'application/x-ndjson' } })
+   * }
+   * ```
+   *
+   * @since 1.2.0
+   */
+  gate(req: Request, options?: PayableGateOptions): Promise<PayableGateResult>
 }
 
 /**
@@ -645,6 +783,26 @@ export interface SolvaPay {
   ): Promise<void>
 
   /**
+   * Decision-shaped paywall surface — exposes the kernel
+   * `decide(args, metadata)` routine so streaming / SSE / multi-step
+   * handlers can route gate outcomes themselves without going through
+   * the handler-shaped adapters (`http` / `next` / `mcp`).
+   *
+   * Prefer `solvaPay.payable({...}).gate(req)` for the common case —
+   * `paywall.decide()` is the lower-level primitive when you need raw
+   * `PaywallArgs` access.
+   *
+   * @since 1.2.0
+   */
+  paywall: {
+    decide<TArgs extends PaywallArgs>(
+      args: TArgs,
+      metadata?: PaywallMetadata,
+      getCustomerRef?: (args: TArgs) => string,
+    ): Promise<PaywallDecision<TArgs>>
+  }
+
+  /**
    * Direct access to the API client for advanced operations.
    *
    * Use this for operations not exposed by the SolvaPay interface,
@@ -730,6 +888,19 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
   return {
     // Direct access to API client for advanced operations
     apiClient,
+
+    // Decision-shaped paywall surface — exposes `decide()` directly so
+    // streaming / SSE / multi-step handlers can consume the kernel
+    // verdict without the handler-shaped adapter envelope.
+    paywall: {
+      decide<TArgs extends PaywallArgs>(
+        args: TArgs,
+        metadata?: PaywallMetadata,
+        getCustomerRef?: (args: TArgs) => string,
+      ): Promise<PaywallDecision<TArgs>> {
+        return paywall.decide<TArgs>(args, metadata, getCustomerRef)
+      },
+    },
 
     // Common API methods exposed directly for convenience
     ensureCustomer(
@@ -911,7 +1082,113 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           }
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },
+
+        async gate(
+          req: Request,
+          gateOptions: PayableGateOptions = {},
+        ): Promise<PayableGateResult> {
+          const inputCustomerRef = await resolveCustomerRefFromRequest(req, gateOptions)
+          const args: PaywallArgs = { auth: { customer_ref: inputCustomerRef } }
+
+          const decideMetadata = gateOptions.metadata ?? metadata
+          const decision = await paywall.decide(
+            args,
+            decideMetadata,
+            (a: PaywallArgs) => a.auth?.customer_ref || 'anonymous',
+          )
+
+          if (decision.outcome === 'gate') {
+            const errorMessage =
+              decision.gate.kind === 'activation_required'
+                ? 'Activation required'
+                : 'Payment required'
+            const body = paywallErrorToClientPayload(
+              new PaywallError(errorMessage, decision.gate),
+            )
+            const response = new Response(JSON.stringify(body), {
+              status: 402,
+              headers: { 'content-type': 'application/json' },
+            })
+            return { kind: 'paywall', response, content: decision.gate }
+          }
+
+          const productRef =
+            decideMetadata.product || metadata.product || product
+          const meterName = decision.limits.meterName || decideMetadata.usageType || 'requests'
+          const customerRef = decision.customerRef
+          const ctx = gateOptions.ctx
+
+          const keepAlive = (p: Promise<unknown>) => {
+            const guarded = p.catch(() => undefined)
+            if (ctx) {
+              ctx.waitUntil(guarded)
+            } else {
+              void guarded
+            }
+          }
+
+          const trackOnce = (
+            outcome: 'success' | 'fail',
+            opts?: { duration?: number; metadata?: Record<string, unknown>; error?: unknown },
+          ) => {
+            const requestId = `gate_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+            const errMeta =
+              opts?.error !== undefined
+                ? {
+                    error:
+                      opts.error instanceof Error
+                        ? opts.error.message
+                        : String(opts.error),
+                  }
+                : {}
+            const trackPromise = apiClient.trackUsage({
+              customerRef,
+              productRef,
+              actionType: 'api_call',
+              units: 1,
+              outcome,
+              ...(opts?.duration !== undefined ? { duration: opts.duration } : {}),
+              metadata: {
+                action: meterName,
+                requestId,
+                ...errMeta,
+                ...(opts?.metadata ?? {}),
+              },
+              timestamp: new Date().toISOString(),
+            })
+            keepAlive(trackPromise)
+          }
+
+          return {
+            kind: 'allow',
+            decision,
+            customerRef,
+            trackSuccess: (opts) => trackOnce('success', opts),
+            trackFail: (err, opts) => trackOnce('fail', { ...opts, error: err }),
+          }
+        },
       }
     },
   }
+}
+
+/**
+ * Resolve the customer ref for a `payable.gate(req)` call.
+ * Precedence: `options.getCustomerRef(req)` → `x-customer-ref` header
+ * → `'anonymous'`. Trims whitespace and treats empty strings as
+ * absent so a stray empty header doesn't masquerade as a real ref.
+ */
+async function resolveCustomerRefFromRequest(
+  req: Request,
+  options: PayableGateOptions,
+): Promise<string> {
+  if (options.getCustomerRef) {
+    const resolved = await options.getCustomerRef(req)
+    if (typeof resolved === 'string' && resolved.trim().length > 0) {
+      return resolved.trim()
+    }
+  }
+  const header = req.headers.get('x-customer-ref')
+  if (header && header.trim().length > 0) return header.trim()
+  return 'anonymous'
 }

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useCustomer } from '@solvapay/react'
 import { IdentityStrip } from './IdentityStrip'
-import { truncateRef } from '../src/lib/anonymousCustomer'
+import { truncateRef } from '../src/lib/truncateRef'
 
 /**
  * Header strip rendered at the top of every checkout drawer (subscription,

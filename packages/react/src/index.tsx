@@ -146,7 +146,12 @@ export type {
 
 // Adapters
 export type { AuthAdapter } from './adapters/auth'
-export { defaultAuthAdapter } from './adapters/auth'
+export {
+  defaultAuthAdapter,
+  createAnonymousAuthAdapter,
+  getOrCreateAnonymousCustomerRef,
+  resetAnonymousCustomerRef,
+} from './adapters/auth'
 
 // Utilities
 export {

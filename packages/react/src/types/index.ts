@@ -493,9 +493,16 @@ export interface Plan {
  */
 export interface UsePlansOptions {
   /**
-   * Fetcher function to retrieve plans
+   * Fetcher function to retrieve plans.
+   *
+   * Optional — when omitted, `usePlans` uses `defaultListPlans` which
+   * routes through the configured transport (`config.transport.listPlans`)
+   * if available, otherwise issues a `GET` to `config.api.listPlans`
+   * (default `/api/list-plans`). Provide an explicit `fetcher` only when
+   * you need to override that default (custom auth, alternate endpoint,
+   * etc.).
    */
-  fetcher: (productRef: string) => Promise<Plan[]>
+  fetcher?: (productRef: string) => Promise<Plan[]>
   /**
    * Product reference to fetch plans for
    */

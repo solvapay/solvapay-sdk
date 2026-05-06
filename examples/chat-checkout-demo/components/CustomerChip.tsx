@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { resetAnonymousCustomerRef } from '@solvapay/react'
 import { UserIcon } from './icons/UserIcon'
-import { resetAnonymousCustomerRef, truncateRef } from '../src/lib/anonymousCustomer'
+import { truncateRef } from '../src/lib/truncateRef'
 
 interface CustomerChipProps {
   customerRef: string | undefined

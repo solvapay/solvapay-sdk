@@ -4,14 +4,10 @@ import type { PaywallStructuredContent } from '@solvapay/server'
 import {
   Message as MessageType,
   ScenarioType,
-  TopUpSelection as SelectionType,
 } from '../types'
 import { Message } from './Message'
 import { ChatInput } from './ChatInput'
-import { Paywall } from './Paywall'
-import { TopUpForm } from './TopUpForm'
-import { CheckoutForm } from './CheckoutForm'
-import { LifetimeAccessForm } from './LifetimeAccessForm'
+import { InlineCheckout } from './InlineCheckout'
 import { ThinkingIndicator } from './ThinkingIndicator'
 import { RefreshIcon } from './icons/RefreshIcon'
 import { IdentityStrip } from './IdentityStrip'
@@ -82,44 +78,42 @@ interface ChatWindowProps {
   messages: MessageType[]
   isBotThinking: boolean
   onSendMessage: (message: string) => void
-  showPaywall: boolean
-  onUnlock: () => void
   onUpgrade: () => void
   userMessageCount: number
   messageLimit: number
   plans: Plan[]
   plansLoading: boolean
-  productRef: string
   onReset: () => void
   isFirstMessage: boolean
   isPremium: boolean
   currentScenario: ScenarioType
   credits: number
   hasLifetimeAccess: boolean
-  showInlineForm: boolean
+  /**
+   * `null` when the user is browsing free quota; a structured paywall
+   * content (either real, from a 402, or synthetic, minted client-side
+   * when the user clicks "Upgrade") when the inline checkout drawer
+   * should be visible.
+   */
   paywallContent: PaywallStructuredContent | null
-  onFormSuccess: (selection?: SelectionType) => void
+  onFormSuccess: () => void
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   messages,
   isBotThinking,
   onSendMessage,
-  showPaywall,
-  onUnlock,
   onUpgrade,
   userMessageCount,
   messageLimit,
   plans,
   plansLoading,
-  productRef,
   onReset,
   isFirstMessage,
   isPremium,
   currentScenario,
   credits,
   hasLifetimeAccess,
-  showInlineForm,
   paywallContent,
   onFormSuccess,
 }) => {
@@ -314,21 +308,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <div ref={messagesEndRef} />
         </div>
       </div>
-      {showInlineForm ? (
-        currentScenario === ScenarioType.SUBSCRIPTION ? (
-          <CheckoutForm onSuccess={onFormSuccess} />
-        ) : currentScenario === ScenarioType.TOPUP ? (
-          <TopUpForm onSuccess={selection => onFormSuccess(selection)} />
-        ) : (
-          <LifetimeAccessForm onSuccess={onFormSuccess} />
-        )
-      ) : showPaywall ? (
-        <Paywall
-          onUnlock={onUnlock}
-          currentScenario={currentScenario}
-          productRef={productRef}
-          paywallContent={paywallContent}
-        />
+      {paywallContent ? (
+        <InlineCheckout paywallContent={paywallContent} onSuccess={onFormSuccess} />
       ) : (
         <ChatInput onSendMessage={onSendMessage} />
       )}

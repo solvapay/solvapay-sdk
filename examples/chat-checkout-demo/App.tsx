@@ -1,11 +1,15 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { usePurchase, useBalance, usePlans, useTransport } from '@solvapay/react'
+import {
+  getOrCreateAnonymousCustomerRef,
+  usePurchase,
+  useBalance,
+  usePlans,
+} from '@solvapay/react'
 import type { PaywallStructuredContent } from '@solvapay/server'
-import { Message as MessageType, UserType, ScenarioType, TopUpSelection } from './types'
+import { Message as MessageType, UserType, ScenarioType } from './types'
 import { useFocusBus } from './components/focus/FocusProvider'
 import { ChatWindow } from './components/ChatWindow'
 import { env } from './src/lib/env'
-import { getAnonymousCustomerRef } from './src/lib/anonymousCustomer'
 
 function getActivePurchaseFor(
   purchases: Array<{ planSnapshot?: { planType?: string }; status?: string; endDate?: string }>,
@@ -35,7 +39,6 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<MessageType[]>([])
   const [isBotThinking, setIsBotThinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showInlineForm, setShowInlineForm] = useState(false)
   const [isFirstMessage, setIsFirstMessage] = useState(true)
   const [currentScenario, setCurrentScenario] = useState<ScenarioType>(ScenarioType.SUBSCRIPTION)
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
@@ -43,10 +46,10 @@ const App: React.FC = () => {
   const { requestChatInputFocus } = useFocusBus()
 
   const userMessageCount = useRef(0)
-  const customerRef = useMemo(() => getAnonymousCustomerRef(), [])
+  const customerRef = useMemo(() => getOrCreateAnonymousCustomerRef(), [])
 
-  const { purchases, refetch: refetchPurchase } = usePurchase()
-  const { credits, refetch: refetchBalance, adjustBalance } = useBalance()
+  const { purchases } = usePurchase()
+  const { credits, refetch: refetchBalance } = useBalance()
 
   const isPremium = useMemo(() => getActivePurchaseFor(purchases, 'recurring'), [purchases])
   const hasLifetimeAccess = useMemo(() => getActivePurchaseFor(purchases, 'one-time'), [purchases])
@@ -57,18 +60,12 @@ const App: React.FC = () => {
   // Pull the active scenario's plans so the header pill / tooltip can
   // surface the *real* free-tier limit. The backend is authoritative
   // for gating; this is purely UX so the user knows how many free
-  // messages remain in the current product.
-  const transport = useTransport()
-  const planFetcher = useCallback(
-    async (ref: string) => {
-      if (!transport.listPlans) throw new Error('Transport does not support listPlans')
-      return transport.listPlans(ref)
-    },
-    [transport],
-  )
+  // messages remain in the current product. `usePlans` defaults to
+  // `defaultListPlans` (which routes through the configured transport
+  // when present, or `/api/list-plans` otherwise), so no fetcher
+  // wiring is required here.
   const { plans, loading: plansLoading } = usePlans({
     productRef: productRef || undefined,
-    fetcher: planFetcher,
   })
   const messageLimit = useMemo(() => {
     const free = plans
@@ -78,19 +75,8 @@ const App: React.FC = () => {
     return free ?? 0
   }, [plans])
 
-  // The metered plan's `creditsPerUnit` is what the backend debits per
-  // chat send. Mirrors the same calculation in `ChatWindow` so the
-  // optimistic decrement matches what the badge will display.
-  const creditsPerMessage = useMemo(() => {
-    const meteredPlan = plans.find(p => p.type === 'usage-based')
-    return Math.max(meteredPlan?.creditsPerUnit ?? 1, 1)
-  }, [plans])
-
   const processMessage = useCallback(
-    async (
-      message: string,
-      opts?: { historyOverride?: MessageType[]; retryOn402?: number },
-    ) => {
+    async (message: string, history: MessageType[]) => {
       if (!productRef) {
         setError(
           `No product configured for the ${currentScenario} scenario. Set the matching VITE_*_PRODUCT_REF in .env.`,
@@ -98,24 +84,9 @@ const App: React.FC = () => {
         return
       }
 
-      // Optimistically debit the wallet so the header pill ("X MSGS
-      // LEFT") updates the moment the user submits, instead of waiting
-      // for the streaming response to finish before `refetchBalance`
-      // pulls the real value. `adjustBalance` blocks `refetch` for an
-      // 8s grace period, so the existing reconcile call below stays
-      // consistent. We revert below on a 402 (gate fires before
-      // `trackUsage` server-side, so no debit happened); transient
-      // errors fall through and the post-grace refetch reconciles.
-      const shouldOptimisticDebit =
-        currentScenario === ScenarioType.TOPUP && creditsPerMessage > 0
-      if (shouldOptimisticDebit) {
-        adjustBalance(-creditsPerMessage)
-      }
-
       setIsBotThinking(true)
       setError(null)
 
-      const history = opts?.historyOverride ?? messages
       const wireMessages = [
         ...history.map(m => ({
           role: m.sender === UserType.BOT ? ('bot' as const) : ('user' as const),
@@ -124,52 +95,30 @@ const App: React.FC = () => {
         { role: 'user' as const, text: message },
       ]
 
-      const maxAttempts = (opts?.retryOn402 ?? 0) + 1
-
       try {
-        let response: Response | null = null
-        let payload402: ({ kind?: string } & PaywallStructuredContent) | null = null
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-customer-ref': customerRef,
+          },
+          body: JSON.stringify({ productRef, messages: wireMessages }),
+        })
 
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              'x-customer-ref': customerRef,
-            },
-            body: JSON.stringify({ productRef, messages: wireMessages }),
-          })
-
-          if (response.status !== 402) break
-
-          payload402 = (await response.json()) as { kind?: string } & PaywallStructuredContent
-
-          // Silent retry path: post-purchase replays may race the
-          // SolvaPay webhook that credits the customer. Wait with a
-          // small backoff and try again before falling back to the
-          // paywall UI. 1s + 2s + 3s + 4s = 10s of total wait covers
-          // typical webhook latency without surfacing a flicker.
-          if (attempt < maxAttempts - 1) {
-            await new Promise(r => setTimeout(r, (attempt + 1) * 1000))
-            response = null
-          }
-        }
-
-        if (response?.status === 402 && payload402) {
-          if (shouldOptimisticDebit) adjustBalance(creditsPerMessage)
-          if (
-            payload402.kind === 'payment_required' ||
-            payload402.kind === 'activation_required'
-          ) {
-            setPaywallContent(payload402 as PaywallStructuredContent)
-          }
+        if (response.status === 402) {
+          // The server emitted a structured paywall — store it so the
+          // inline `<PaywallNotice>` checkout can take over and drive
+          // resolution via `usePaywallResolver`. The pending message
+          // replays automatically once `onResolved` fires.
+          const payload = (await response.json()) as PaywallStructuredContent
+          setPaywallContent(payload)
           setPendingMessage(message)
           setIsBotThinking(false)
           return
         }
 
-        if (!response || !response.ok || !response.body) {
-          throw new Error(`Chat request failed: ${response?.status ?? 'no response'}`)
+        if (!response.ok || !response.body) {
+          throw new Error(`Chat request failed: ${response.status}`)
         }
 
         const reader = response.body.getReader()
@@ -214,8 +163,9 @@ const App: React.FC = () => {
 
         // Each chat send debits `creditsPerUnit` from the wallet on
         // the backend (via `trackUsage` in the chat handler). Refetch
-        // the balance so the header pill tracks the real remainder
-        // instead of going stale at the post-purchase value.
+        // the balance so the header pill tracks the real remainder.
+        // The SDK's 8s `adjustBalance` grace window handles transient
+        // staleness during checkout; no extra polling needed.
         refetchBalance().catch(() => {})
       } catch (e) {
         const errorMessage = 'An error occurred while fetching the response. Please try again.'
@@ -229,64 +179,56 @@ const App: React.FC = () => {
         setIsBotThinking(false)
       }
     },
-    [
-      productRef,
-      currentScenario,
-      messages,
-      customerRef,
-      refetchBalance,
-      adjustBalance,
-      creditsPerMessage,
-    ],
+    [productRef, currentScenario, customerRef, refetchBalance],
   )
 
   const handleSendMessage = async (message: string) => {
-    setMessages(prev => [...prev, { id: Date.now(), text: message, sender: UserType.USER }])
+    setMessages(prev => {
+      const next = [...prev, { id: Date.now(), text: message, sender: UserType.USER }]
+      // `processMessage` reads history from the closure, so capture
+      // the pre-update value for the wire payload.
+      void processMessage(message, prev)
+      return next
+    })
     userMessageCount.current += 1
     setIsFirstMessage(false)
-    await processMessage(message)
   }
 
-  const handleUnlock = () => {
-    setShowInlineForm(true)
+  /**
+   * The user clicked "Upgrade" before hitting a real 402. Mint a
+   * synthetic `payment_required` content scoped to the current
+   * scenario's productRef so `<PaywallNotice.EmbeddedCheckout>` can
+   * mount the plan selector / payment form. Once payment completes,
+   * `usePaywallResolver` flips `resolved` and `handleFormSuccess`
+   * fires.
+   */
+  const handleUpgrade = () => {
+    if (!productRef) return
     setIsFirstMessage(false)
+    setPaywallContent({
+      kind: 'payment_required',
+      product: productRef,
+      checkoutUrl: '',
+      message: '',
+    })
   }
 
-  const handleFormSuccess = (_selection?: TopUpSelection) => {
-    setShowInlineForm(false)
+  const handleFormSuccess = () => {
     setPaywallContent(null)
-
-    refetchPurchase().catch(() => {})
-    refetchBalance().catch(() => {})
-
-    // Poll the balance for ~10s so the header pill converges on the
-    // real backend value once the webhook lands. `useBalance` only
-    // auto-fetches once on mount; without these follow-ups the badge
-    // can stick at 0 if the initial fetch raced ahead of the customer
-    // being created or the webhook crediting the wallet.
-    for (const ms of [1000, 3000, 6000, 10000]) {
-      window.setTimeout(() => {
-        refetchBalance().catch(() => {})
-      }, ms)
-    }
-
     if (pendingMessage) {
       const retry = pendingMessage
       setPendingMessage(null)
-      // The SolvaPay webhook that credits the customer fires async
-      // after Stripe confirms (typically 1–3s, occasionally longer).
-      // `/api/chat` is gated server-side via `checkLimits`, so we
-      // ride the silent 402-retry path in `processMessage` to wait
-      // out the webhook before falling back to the paywall.
-      processMessage(retry, { retryOn402: 4 }).catch(() => {})
+      // Replay using the most recent message history. By this point
+      // `usePaywallResolver` has already confirmed the customer's
+      // entitlement on the SDK side, so the server-side `checkLimits`
+      // will pass on the next call.
+      processMessage(retry, messages).catch(() => {})
     }
-
     requestChatInputFocus()
   }
 
   const handleReset = () => {
     setMessages([])
-    setShowInlineForm(false)
     userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
@@ -297,15 +239,12 @@ const App: React.FC = () => {
   const handleScenarioChange = (scenario: ScenarioType) => {
     setCurrentScenario(scenario)
     setMessages([])
-    setShowInlineForm(false)
     userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
     setPaywallContent(null)
     requestChatInputFocus()
   }
-
-  const showPaywall = paywallContent !== null
 
   return (
     <div className="h-screen w-screen flex flex-col font-sans bg-gradient-to-br from-slate-50 to-slate-100/50">
@@ -336,21 +275,17 @@ const App: React.FC = () => {
             messages={messages}
             isBotThinking={isBotThinking}
             onSendMessage={handleSendMessage}
-            showPaywall={showPaywall}
-            onUnlock={handleUnlock}
-            onUpgrade={handleUnlock}
+            onUpgrade={handleUpgrade}
             userMessageCount={userMessageCount.current}
             messageLimit={messageLimit}
             plans={plans}
             plansLoading={plansLoading}
-            productRef={productRef}
             onReset={handleReset}
             isFirstMessage={isFirstMessage}
             isPremium={isPremium}
             currentScenario={currentScenario}
             credits={creditCount}
             hasLifetimeAccess={hasLifetimeAccess}
-            showInlineForm={showInlineForm}
             paywallContent={paywallContent}
             onFormSuccess={handleFormSuccess}
           />
