@@ -3,7 +3,7 @@
 A Vite-only chat app that demonstrates the SolvaPay React + server primitives for **three monetization scenarios** in a single chrome:
 
 - **Subscription** — recurring plan via `<PaymentForm.*>`
-- **Day Pass** — one-time plan via `<PaymentForm.*>`
+- **Lifetime Access** — one-time plan via `<PaymentForm.*>`
 - **Top-up** — credit balance via `<TopupForm.*>` + `<AmountPicker>` styling
 
 The chat itself is powered by Google Gemini, proxied through a `/api/chat` route that gates each request with SolvaPay's `checkLimits` + 402 `payment_required` flow. Every browser gets an anonymous SolvaPay customer (random UUID in `localStorage`) so the demo runs without any login screen.
@@ -51,7 +51,7 @@ Required env vars:
 | `SOLVAPAY_SECRET_KEY` | Secret API key (sandbox or live). Server-side only. |
 | `GEMINI_API_KEY` | Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey). Server-side only — proxied through `/api/chat`. |
 | `VITE_SUBSCRIPTION_PRODUCT_REF` | A product intended to back the subscription scenario (typically a **recurring** paid plan). |
-| `VITE_DAYPASS_PRODUCT_REF` | A product intended to back the day-pass scenario (typically a **one-time** paid plan). |
+| `VITE_LIFETIME_PRODUCT_REF` | A product intended to back the lifetime access scenario (typically a **one-time** paid plan). |
 | `VITE_TOPUP_PRODUCT_REF` | A product intended to back the top-up scenario (a usage-based plan + one one-time plan per credit pack). |
 
 The demo lists plans for each product on demand. Each scenario can be configured independently — the demo will display an inline notice when env vars are missing, so you can try the chat / paywall flow with just one scenario set up.
@@ -63,7 +63,7 @@ The demo no longer hardcodes any pricing or free-tier limits — it reads them f
 | Scenario | Product needs | Each plan should set |
 |---|---|---|
 | Subscription | One recurring paid plan (and optionally one free plan). | `name`, `price`, `currency`, `billingCycle`. The free plan should set `freeUnits` to whatever message cap you want before the paywall trips. |
-| Day Pass | One one-time paid plan (and optionally one free plan). | `name`, `price`, `currency`. The free plan should set `freeUnits`. |
+| Lifetime Access | One one-time paid plan (and optionally one free plan). | `name`, `price`, `currency`. The free plan should set `freeUnits`. |
 | Top-up | One usage-based plan (drives the gate + meter) plus one one-time plan per credit pack. | Usage-based plan: `meterName: 'requests'`, `freeUnits`, `creditsPerUnit`. Pack plans: `name` (e.g. `"100 Credits"`), `price`, `currency`. |
 
 Tips:
@@ -96,12 +96,12 @@ Use any future expiry, any 3-digit CVC, any postcode.
 | Scenario | UI element | SolvaPay primitive | Plan type |
 |---|---|---|---|
 | Subscription | `components/CheckoutForm.tsx` | `<PaymentForm.Root>` | `recurring` |
-| Day Pass | `components/DayPassForm.tsx` | `<PaymentForm.Root>` | `one-time` |
+| Lifetime Access | `components/LifetimeAccessForm.tsx` | `<PaymentForm.Root>` | `one-time` |
 | Top-up | `components/TopUpSelection.tsx` + `components/TopUpForm.tsx` | `<TopupForm.Root>` | usage-based + one-time packs |
 
 `App.tsx` derives the scenario state directly from SDK hooks:
 
-- `usePurchase()` → `isPremium` (any active recurring plan) and `hasDayPass` (any active one-time plan)
+- `usePurchase()` → `isPremium` (any active recurring plan) and `hasLifetimeAccess` (any active one-time plan)
 - `useBalance()` → `credits` rendered in the header pill
 - `usePlans({ productRef })` → drives the header tooltip pricing and the `X / Y` free-message counter from the active plan's `freeUnits`
 
@@ -221,10 +221,10 @@ pnpm exec wrangler tail --env production --format=pretty
 
 ### Vite build assets
 
-`VITE_SUBSCRIPTION_PRODUCT_REF`, `VITE_DAYPASS_PRODUCT_REF`, and `VITE_TOPUP_PRODUCT_REF` are baked into the SPA bundle by Vite at `pnpm build` time. They live in the existing root `.env` (alongside `SOLVAPAY_SECRET_KEY` for the Vite dev path) — the Worker never reads them. Changing one of these requires a fresh `pnpm deploy` so the SPA bundle is rebuilt.
+`VITE_SUBSCRIPTION_PRODUCT_REF`, `VITE_LIFETIME_PRODUCT_REF`, and `VITE_TOPUP_PRODUCT_REF` are baked into the SPA bundle by Vite at `pnpm build` time. They live in the existing root `.env` (alongside `SOLVAPAY_SECRET_KEY` for the Vite dev path) — the Worker never reads them. Changing one of these requires a fresh `pnpm deploy` so the SPA bundle is rebuilt.
 
 ## Caveats
 
 - **Auto top-up toggle** is cosmetic only. The SolvaPay top-up payment intent doesn't accept an auto-flag yet.
-- **Day-pass expiry** uses the SolvaPay purchase's `endDate`. The mockup never expired the pass; here it expires whenever the backend says so.
+- **Lifetime access** is enforced server-side as long as the SolvaPay purchase remains active — no `endDate` is set, so it never expires.
 - **Tailwind via CDN** matches the original mockup. For a production app you'd swap to a real Tailwind v4 build.

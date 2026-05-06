@@ -88,7 +88,7 @@ describe('MandateText', () => {
     expect(terms.getAttribute('data-solvapay-mandate-link')).toBe('')
   })
 
-  it('renders only a Terms link when the merchant has no privacyUrl', async () => {
+  it('uses merchant Terms but falls back to SolvaPay Privacy when only termsUrl is set', async () => {
     merchantCache.set('/api/merchant', {
       merchant: {
         displayName: 'Acme',
@@ -103,11 +103,13 @@ describe('MandateText', () => {
         <MandateText mode="topup" amountMinor={500} currency="usd" />
       </SolvaPayProvider>,
     )
-    await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
-    expect(screen.queryByRole('link', { name: 'Privacy' })).toBeNull()
+    const terms = await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
+    const privacy = screen.getByRole('link', { name: 'Privacy' })
+    expect(terms.getAttribute('href')).toBe('https://acme.com/terms')
+    expect(privacy.getAttribute('href')).toBe('https://solvapay.com/legal/privacy')
   })
 
-  it('renders no <a> tags when the merchant has neither terms nor privacy URL', async () => {
+  it('falls back to SolvaPay-hosted Terms/Privacy when the merchant has neither URL', async () => {
     merchantCache.set('/api/merchant', {
       merchant: { displayName: 'Plain', legalName: 'Plain LLC' },
       promise: null,
@@ -118,8 +120,10 @@ describe('MandateText', () => {
         <MandateText mode="topup" amountMinor={500} currency="usd" />
       </SolvaPayProvider>,
     )
-    await waitFor(() => expect(screen.getByText(/Plain LLC/)).toBeTruthy())
-    expect(screen.queryByRole('link')).toBeNull()
+    const terms = await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
+    const privacy = screen.getByRole('link', { name: 'Privacy' })
+    expect(terms.getAttribute('href')).toBe('https://solvapay.com/legal/terms')
+    expect(privacy.getAttribute('href')).toBe('https://solvapay.com/legal/privacy')
   })
 
   it('renders one-time mandate without interval', async () => {
@@ -182,7 +186,7 @@ describe('MandateText', () => {
     await waitFor(() => expect(screen.getByText('Custom mandate text')).toBeTruthy())
   })
 
-  it('gracefully omits terms sentence when URLs are missing', async () => {
+  it('renders SolvaPay-hosted terms sentence when merchant URLs are missing', async () => {
     merchantCache.set('/api/merchant', {
       merchant: { displayName: 'Plain', legalName: 'Plain LLC' },
       promise: null,
@@ -202,6 +206,8 @@ describe('MandateText', () => {
     )
     await waitFor(() => expect(screen.getByText(/Plain LLC/)).toBeTruthy())
     const node = screen.getByText(/Plain LLC/)
-    expect(node.textContent).not.toContain('See ')
+    expect(node.textContent).toContain('See ')
+    const terms = screen.getByRole('link', { name: 'Terms' })
+    expect(terms.getAttribute('href')).toBe('https://solvapay.com/legal/terms')
   })
 })

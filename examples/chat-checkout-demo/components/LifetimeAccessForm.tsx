@@ -2,16 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { PaymentForm } from '@solvapay/react/primitives'
 import { useProduct, usePlans, useTransport, useLocale, formatPrice } from '@solvapay/react'
 import { CheckCircleIcon } from './icons/CheckCircleIcon'
-import { LockIcon } from './icons/LockIcon'
 import { PlanPicker } from './PlanPicker'
 import { DrawerHeader } from './DrawerHeader'
+import { CheckoutSummary } from './CheckoutSummary'
 import { env } from '../src/lib/env'
 
-interface DayPassFormProps {
+interface LifetimeAccessFormProps {
   onSuccess: () => void
 }
 
-export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
+export const LifetimeAccessForm: React.FC<LifetimeAccessFormProps> = ({ onSuccess }) => {
   const [isSuccess, setIsSuccess] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
@@ -24,7 +24,7 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
     },
     [transport],
   )
-  const productRef = env.daypass.productRef
+  const productRef = env.lifetime.productRef
   const { plans, loading, error } = usePlans({ productRef: productRef || undefined, fetcher })
   const { product } = useProduct(productRef || undefined)
   const locale = useLocale()
@@ -52,7 +52,7 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
   }
 
   const handleError = (e: Error) => {
-    console.error('[DayPassForm] payment error:', e)
+    console.error('[LifetimeAccessForm] payment error:', e)
     setPaymentError(e.message)
   }
 
@@ -64,8 +64,8 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
             <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100 border border-emerald-200">
               <CheckCircleIcon className="h-6 w-6 text-emerald-700" />
             </div>
-            <h2 className="text-xl font-semibold text-slate-900 mt-3">Day Pass activated</h2>
-            <p className="text-slate-500 mt-1">Unlimited messages for the pass duration.</p>
+            <h2 className="text-xl font-semibold text-slate-900 mt-3">Lifetime access activated</h2>
+            <p className="text-slate-500 mt-1">Unlimited messages.</p>
           </div>
         </div>
       </div>
@@ -77,15 +77,15 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
       <div className="px-4 py-4">
         <div className="max-w-2xl mx-auto">
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
-            Set <code className="font-mono">VITE_DAYPASS_PRODUCT_REF</code> in <code>.env</code> to
-            enable the day pass scenario.
+            Set <code className="font-mono">VITE_LIFETIME_PRODUCT_REF</code> in <code>.env</code> to
+            enable the lifetime access scenario.
           </div>
         </div>
       </div>
     )
   }
 
-  const planTitle = selectedPlan?.name ?? 'Day Pass'
+  const planTitle = selectedPlan?.name ?? 'Lifetime Access'
   const planSubtitle = selectedPlan?.description ?? 'Unlimited messages'
   const formattedPrice = selectedPlan
     ? formatPrice(selectedPlan.price ?? 0, selectedPlan.currency ?? 'USD', { locale })
@@ -97,9 +97,11 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/60 p-5">
           <DrawerHeader />
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">{product?.name ?? 'Day Pass'}</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">
+            {product?.name ?? 'Lifetime Access'}
+          </h2>
           <p className="text-sm text-slate-600 mb-4">
-            {product?.description ?? 'Get unlimited messages with our day pass.'}
+            {product?.description ?? 'Get unlimited messages with lifetime access.'}
           </p>
 
           {loading ? (
@@ -107,41 +109,24 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
           ) : error || plans.length === 0 ? (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
               No plans found for this product. Add at least one plan in the SolvaPay dashboard, or
-              double-check <code className="font-mono">VITE_DAYPASS_PRODUCT_REF</code>.
+              double-check <code className="font-mono">VITE_LIFETIME_PRODUCT_REF</code>.
             </div>
           ) : paidPlans.length === 0 ? (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
-              This product only has free plans. Add a paid (one-time) plan in the SolvaPay
-              dashboard to enable day pass checkout.
+              This product only has free plans. Add a paid (one-time) plan in the SolvaPay dashboard
+              to enable lifetime access checkout.
             </div>
           ) : paidPlans.length > 1 && !selectedRef ? (
             <PlanPicker plans={plans} selectedRef={selectedRef} onSelect={setSelectedRef} />
           ) : selectedPlan ? (
             <>
-              {plans.length > 1 && (
-                <div className="mb-5">
-                  <PlanPicker
-                    plans={plans}
-                    selectedRef={selectedRef}
-                    onSelect={setSelectedRef}
-                  />
-                </div>
-              )}
-
-              <div className="mb-5 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200/70">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">{planTitle}</h3>
-                    <p className="text-xs text-slate-600">{planSubtitle}</p>
-                  </div>
-                  <div className="text-right">
-                    {formattedPrice && (
-                      <div className="text-lg font-semibold text-slate-900">{formattedPrice}</div>
-                    )}
-                    <div className="text-[10px] text-slate-500">{currencyLabel}</div>
-                  </div>
-                </div>
-              </div>
+              <CheckoutSummary
+                title={planTitle}
+                subtitle={planSubtitle}
+                amount={formattedPrice ?? ''}
+                currency={currencyLabel}
+                onChange={paidPlans.length > 1 ? () => setSelectedRef(null) : undefined}
+              />
 
               <PaymentForm.Root
                 productRef={productRef}
@@ -149,13 +134,7 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
                 onSuccess={handlePaid}
                 onError={handleError}
               >
-                <div className="space-y-4">
-                  <PaymentForm.PaymentElement />
-                  <div className="flex items-center justify-end text-xs text-slate-500">
-                    <LockIcon className="h-3.5 w-3.5 mr-1" />
-                    Secured by Stripe
-                  </div>
-                </div>
+                <PaymentForm.PaymentElement />
 
                 <PaymentForm.Error className="mt-3 text-sm text-red-600" />
 
@@ -167,8 +146,6 @@ export const DayPassForm: React.FC<DayPassFormProps> = ({ onSuccess }) => {
               </PaymentForm.Root>
 
               {paymentError && <p className="mt-3 text-xs text-red-600">{paymentError}</p>}
-
-              <PaymentForm.LegalFooter className="mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500" />
             </>
           ) : null}
         </div>

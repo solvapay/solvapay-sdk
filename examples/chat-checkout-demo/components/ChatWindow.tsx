@@ -1,5 +1,5 @@
-import React, { useCallback, useRef, useEffect, useState } from 'react'
-import { formatPrice, useCustomer, useLocale, usePlans, useTransport, type Plan } from '@solvapay/react'
+import React, { useRef, useEffect, useState } from 'react'
+import { formatPrice, useCustomer, useLocale, type Plan } from '@solvapay/react'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import {
   Message as MessageType,
@@ -11,11 +11,12 @@ import { ChatInput } from './ChatInput'
 import { Paywall } from './Paywall'
 import { TopUpForm } from './TopUpForm'
 import { CheckoutForm } from './CheckoutForm'
-import { DayPassForm } from './DayPassForm'
+import { LifetimeAccessForm } from './LifetimeAccessForm'
 import { ThinkingIndicator } from './ThinkingIndicator'
 import { RefreshIcon } from './icons/RefreshIcon'
 import { IdentityStrip } from './IdentityStrip'
 import { CustomerChip } from './CustomerChip'
+import { StarterPrompts } from './StarterPrompts'
 import { useInputFocus } from './focus/useInputFocus'
 import { useFocusBus } from './focus/FocusProvider'
 
@@ -83,15 +84,18 @@ interface ChatWindowProps {
   onSendMessage: (message: string) => void
   showPaywall: boolean
   onUnlock: () => void
+  onUpgrade: () => void
   userMessageCount: number
   messageLimit: number
+  plans: Plan[]
+  plansLoading: boolean
   productRef: string
   onReset: () => void
   isFirstMessage: boolean
   isPremium: boolean
   currentScenario: ScenarioType
   credits: number
-  hasDayPass: boolean
+  hasLifetimeAccess: boolean
   showInlineForm: boolean
   paywallContent: PaywallStructuredContent | null
   onFormSuccess: (selection?: SelectionType) => void
@@ -103,15 +107,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onSendMessage,
   showPaywall,
   onUnlock,
+  onUpgrade,
   userMessageCount,
   messageLimit,
+  plans,
+  plansLoading,
   productRef,
   onReset,
   isFirstMessage,
   isPremium,
   currentScenario,
   credits,
-  hasDayPass,
+  hasLifetimeAccess,
   showInlineForm,
   paywallContent,
   onFormSuccess,
@@ -119,15 +126,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const locale = useLocale()
   const { customerRef } = useCustomer()
-  const transport = useTransport()
-  const fetcher = useCallback(
-    async (ref: string) => {
-      if (!transport.listPlans) throw new Error('Transport does not support listPlans')
-      return transport.listPlans(ref)
-    },
-    [transport],
-  )
-  const { plans } = usePlans({ productRef: productRef || undefined, fetcher })
+  // Plans flow down from App so both `messageLimit` and the tooltip /
+  // metered-plan derivations read from the same array. Two sibling
+  // `usePlans` calls would race on the shared module-level cache: the
+  // second caller hits the "fresh timestamp, in-flight promise" branch
+  // and locks itself at empty plans / loading=false, leaving its
+  // consumer stuck at "0 left".
   const paidPlan = plans.find(p => p.requiresPayment !== false && (p.price ?? 0) > 0)
   // The metered plan on a top-up product is the zero-cost usage-based
   // one. Its `creditsPerUnit` (e.g. 10) tells us how many internal
@@ -137,6 +141,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const meteredPlan = plans.find(p => p.type === 'usage-based')
   const creditsPerMessage = Math.max(meteredPlan?.creditsPerUnit ?? 1, 1)
   const messagesRemaining = Math.floor((credits || 0) / creditsPerMessage)
+
+  // Free-tier remaining for subscription / lifetime scenarios. Top-up
+  // doesn't have a "free" allowance the same way — it counts down the
+  // wallet (`messagesRemaining`) directly.
+  const subLifetimeFreeRemaining = Math.max(messageLimit - userMessageCount, 0)
+  const isFreeTier =
+    (currentScenario === ScenarioType.SUBSCRIPTION && !isPremium) ||
+    (currentScenario === ScenarioType.LIFETIME && !hasLifetimeAccess) ||
+    currentScenario === ScenarioType.TOPUP
+  const remaining =
+    currentScenario === ScenarioType.TOPUP ? messagesRemaining : subLifetimeFreeRemaining
+  const approaching = isFreeTier && remaining > 0 && remaining <= 2
+  const exhausted = isFreeTier && remaining <= 0
+  const showUpgradeCta = isFreeTier && (approaching || exhausted)
+  const upgradeLabel =
+    currentScenario === ScenarioType.TOPUP
+      ? 'Add credits'
+      : currentScenario === ScenarioType.LIFETIME
+        ? 'Get lifetime access'
+        : 'Upgrade'
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -157,33 +181,60 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     />
   )
 
+  // Status pill: when on a free tier we show the live remaining counter
+  // and ramp the color from slate → amber → red as the user approaches
+  // and then hits the limit. When on a paid tier (subscription premium
+  // or active lifetime access) we show the entitlement label instead.
+  const onPaidEntitlement =
+    (currentScenario === ScenarioType.SUBSCRIPTION && isPremium) ||
+    (currentScenario === ScenarioType.LIFETIME && hasLifetimeAccess)
+
+  // While plans are still in-flight on a free tier we don't actually
+  // know the real `freeUnits`. Render a neutral skeleton instead of
+  // the misleading "0 left" exhausted state, and suppress the upgrade
+  // CTA until we have real numbers to back it.
+  const showSkeletonPill = plansLoading && !onPaidEntitlement
+
+  const pillClass = onPaidEntitlement
+    ? currentScenario === ScenarioType.SUBSCRIPTION
+      ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+      : 'bg-purple-100 text-purple-700 border border-purple-200'
+    : showSkeletonPill
+      ? 'bg-slate-100 text-slate-400 border border-slate-200 animate-pulse'
+      : exhausted
+        ? 'bg-red-100 text-red-700 border border-red-200'
+        : approaching
+          ? 'bg-amber-100 text-amber-800 border border-amber-200'
+          : 'bg-slate-100 text-slate-600 border border-slate-200'
+
+  const pillText = onPaidEntitlement
+    ? currentScenario === ScenarioType.SUBSCRIPTION
+      ? 'Premium'
+      : 'Lifetime'
+    : showSkeletonPill
+      ? '\u2026 left'
+      : exhausted
+        ? '0 left'
+        : `${remaining.toLocaleString()} left`
+
   const statusPill = (
     <span
-      className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
-        currentScenario === ScenarioType.SUBSCRIPTION
-          ? isPremium
-            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-            : 'bg-slate-100 text-slate-600 border border-slate-200'
-          : currentScenario === ScenarioType.TOPUP
-            ? credits > 0
-              ? 'bg-blue-100 text-blue-700 border border-blue-200'
-              : 'bg-red-100 text-red-700 border border-red-200'
-            : hasDayPass
-              ? 'bg-purple-100 text-purple-700 border border-purple-200'
-              : 'bg-slate-100 text-slate-600 border border-slate-200'
-      }`}
+      className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${pillClass}`}
+      aria-busy={showSkeletonPill || undefined}
     >
-      {currentScenario === ScenarioType.SUBSCRIPTION
-        ? isPremium
-          ? 'PAID'
-          : 'FREE'
-        : currentScenario === ScenarioType.TOPUP
-          ? `${messagesRemaining.toLocaleString()} MSG${messagesRemaining === 1 ? '' : 'S'} LEFT`
-          : hasDayPass
-            ? 'DAY PASS'
-            : 'FREE'}
+      {pillText}
     </span>
   )
+
+  const upgradeButton = showUpgradeCta && !showSkeletonPill ? (
+    <button
+      type="button"
+      onClick={onUpgrade}
+      className="px-2.5 py-0.5 text-[10px] font-semibold rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+    >
+      {upgradeLabel}
+    </button>
+  ) : null
 
   const pricingTooltip = (
     <div className="relative group/pricing inline-block align-middle">
@@ -208,17 +259,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         trailing={
           <>
             {statusPill}
+            {upgradeButton}
             {pricingTooltip}
           </>
         }
       />
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <CustomerChip customerRef={customerRef} />
-        {messageLimit > 0 && (
-          <span className="hidden sm:inline px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-            {Math.min(userMessageCount, messageLimit)} / {messageLimit}
-          </span>
-        )}
         <button
           onClick={onReset}
           className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-all duration-200"
@@ -240,7 +287,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <h2 className="text-3xl md:text-4xl font-normal text-slate-900 mb-6 tracking-tight leading-tight">
               {currentScenario === ScenarioType.SUBSCRIPTION
                 ? 'Where should we begin?'
-                : currentScenario === ScenarioType.DAYPASS
+                : currentScenario === ScenarioType.LIFETIME
                   ? 'Ready to chat?'
                   : "Let's chat!"}
             </h2>
@@ -248,6 +295,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
           <div className="w-full max-w-3xl px-4">
             <CenteredInput onSendMessage={onSendMessage} />
+            <StarterPrompts onSelect={onSendMessage} />
           </div>
         </div>
       </div>
@@ -272,7 +320,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         ) : currentScenario === ScenarioType.TOPUP ? (
           <TopUpForm onSuccess={selection => onFormSuccess(selection)} />
         ) : (
-          <DayPassForm onSuccess={onFormSuccess} />
+          <LifetimeAccessForm onSuccess={onFormSuccess} />
         )
       ) : showPaywall ? (
         <Paywall
@@ -347,7 +395,6 @@ const PricingTooltipContent: React.FC<PricingTooltipContentProps> = ({
     )
   }
 
-  // Day pass
   const price = paidPlan
     ? formatPrice(paidPlan.price ?? 0, paidPlan.currency ?? 'USD', { locale })
     : null
@@ -355,7 +402,11 @@ const PricingTooltipContent: React.FC<PricingTooltipContentProps> = ({
     <>
       <div className="font-medium text-slate-800 mb-0.5">Pricing</div>
       {freeLine && <div>{freeLine}</div>}
-      {price ? <div>Day pass: {price} for 24h unlimited.</div> : <div>Day pass: unlimited.</div>}
+      {price ? (
+        <div>Lifetime access: {price}.</div>
+      ) : (
+        <div>Lifetime access: unlimited messages.</div>
+      )}
     </>
   )
 }

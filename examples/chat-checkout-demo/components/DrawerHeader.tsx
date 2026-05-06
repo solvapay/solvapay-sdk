@@ -5,7 +5,7 @@ import { truncateRef } from '../src/lib/anonymousCustomer'
 
 /**
  * Header strip rendered at the top of every checkout drawer (subscription,
- * day pass, top-up). Mirrors the chrome of a native payment sheet:
+ * lifetime access, top-up). Mirrors the chrome of a native payment sheet:
  * merchant on the left, buyer identity on the right.
  */
 export const DrawerHeader: React.FC = () => {

@@ -1,18 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { LegalFooter, MandateText, TopupForm } from '@solvapay/react/primitives'
-import {
-  formatPrice,
-  useBalance,
-  useLocale,
-  usePlans,
-  useProduct,
-  useTransport,
-} from '@solvapay/react'
+import { MandateText, TopupForm } from '@solvapay/react/primitives'
+import { formatPrice, useBalance, useLocale, usePlans, useTransport } from '@solvapay/react'
 import { CheckCircleIcon } from './icons/CheckCircleIcon'
-import { LockIcon } from './icons/LockIcon'
 import { TopUpSelection as SelectionType } from '../types'
 import { TopUpSelection } from './TopUpSelection'
 import { DrawerHeader } from './DrawerHeader'
+import { CheckoutSummary } from './CheckoutSummary'
 import { env } from '../src/lib/env'
 
 interface TopUpFormProps {
@@ -39,7 +32,6 @@ export const TopUpForm: React.FC<TopUpFormProps> = ({ onSuccess }) => {
     [transport],
   )
   const { plans, loading } = usePlans({ productRef: productRef || undefined, fetcher })
-  const { product } = useProduct(productRef || undefined)
 
   // Treat every plan with a positive price as a credit pack. Sorted by
   // price ascending so the cheapest pack renders first and the largest
@@ -59,9 +51,7 @@ export const TopUpForm: React.FC<TopUpFormProps> = ({ onSuccess }) => {
 
   const amountMinor = selectedPack?.price ?? 0
   const currency = (selectedPack?.currency || displayCurrency || 'USD').toUpperCase()
-  const formattedAmount = selectedPack
-    ? formatPrice(amountMinor, currency, { locale })
-    : '—'
+  const formattedAmount = selectedPack ? formatPrice(amountMinor, currency, { locale }) : '—'
 
   const handlePaid = () => {
     // Stripe just confirmed — credits land on the backend a moment later
@@ -147,24 +137,15 @@ export const TopUpForm: React.FC<TopUpFormProps> = ({ onSuccess }) => {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/60 p-5">
           <DrawerHeader />
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">{product?.name ?? 'Add Credits'}</h2>
-          <p className="text-sm text-slate-600 mb-4">
-            Pay {formattedAmount} for {selectedPack?.name ?? 'your top-up'}.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Add credits</h2>
 
-          <div className="mb-5 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/70">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">{formattedAmount}</h3>
-                <p className="text-xs text-slate-600">
-                  {selectedPack?.name ?? 'Top-up'} • Instant top-up
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-slate-500">{currency}</div>
-              </div>
-            </div>
-          </div>
+          <CheckoutSummary
+            title={selectedPack?.name ?? 'Top-up'}
+            subtitle="Instant top-up"
+            amount={formattedAmount}
+            currency={currency}
+            onChange={() => setStep('select')}
+          />
 
           <TopupForm.Root
             amount={amountMinor}
@@ -172,13 +153,7 @@ export const TopUpForm: React.FC<TopUpFormProps> = ({ onSuccess }) => {
             onSuccess={handlePaid}
             onError={handleError}
           >
-            <div className="space-y-4">
-              <TopupForm.PaymentElement />
-              <div className="flex items-center justify-end text-xs text-slate-500">
-                <LockIcon className="h-3.5 w-3.5 mr-1" />
-                Secured by Stripe
-              </div>
-            </div>
+            <TopupForm.PaymentElement />
 
             <TopupForm.Error className="mt-3 text-sm text-red-600" />
 
@@ -198,16 +173,7 @@ export const TopUpForm: React.FC<TopUpFormProps> = ({ onSuccess }) => {
             </div>
           </TopupForm.Root>
 
-          <button
-            onClick={() => setStep('select')}
-            className="mt-4 text-sm text-slate-600 hover:text-slate-900 block"
-          >
-            ← Change amount
-          </button>
-
           {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
-
-          <LegalFooter className="mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500" />
         </div>
       </div>
     </div>

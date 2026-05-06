@@ -1,11 +1,20 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { PaymentForm } from '@solvapay/react/primitives'
-import { useProduct, usePlans, useTransport } from '@solvapay/react'
+import { formatPrice, useLocale, useProduct, usePlans, useTransport } from '@solvapay/react'
 import { CheckCircleIcon } from './icons/CheckCircleIcon'
-import { LockIcon } from './icons/LockIcon'
 import { PlanPicker } from './PlanPicker'
 import { DrawerHeader } from './DrawerHeader'
+import { CheckoutSummary } from './CheckoutSummary'
 import { env } from '../src/lib/env'
+
+function describeInterval(interval?: string): string | undefined {
+  if (!interval) return undefined
+  if (interval === 'month') return 'Billed monthly'
+  if (interval === 'year') return 'Billed yearly'
+  if (interval === 'week') return 'Billed weekly'
+  if (interval === 'day') return 'Billed daily'
+  return `Billed every ${interval}`
+}
 
 interface CheckoutFormProps {
   onSuccess: () => void
@@ -27,8 +36,17 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
   const productRef = env.subscription.productRef
   const { plans, loading, error } = usePlans({ productRef: productRef || undefined, fetcher })
   const { product } = useProduct(productRef || undefined)
+  const locale = useLocale()
 
-  const paidPlans = plans.filter(p => p.requiresPayment !== false && (p.price ?? 0) > 0)
+  const paidPlans = useMemo(
+    () => plans.filter(p => p.requiresPayment !== false && (p.price ?? 0) > 0),
+    [plans],
+  )
+
+  const selectedPlan = useMemo(
+    () => (selectedRef ? plans.find(p => p.reference === selectedRef) : undefined),
+    [plans, selectedRef],
+  )
 
   useEffect(() => {
     if (selectedRef) return
@@ -56,7 +74,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
               <CheckCircleIcon className="h-6 w-6 text-emerald-700" />
             </div>
             <h2 className="text-xl font-semibold text-slate-900 mt-3">Payment successful</h2>
-            <p className="text-slate-500 mt-1">Welcome to Premium. You now have unlimited access.</p>
+            <p className="text-slate-500 mt-1">
+              Welcome to Premium. You now have unlimited access.
+            </p>
           </div>
         </div>
       </div>
@@ -102,30 +122,25 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
             </div>
           ) : paidPlans.length > 1 && !selectedRef ? (
             <PlanPicker plans={plans} selectedRef={selectedRef} onSelect={setSelectedRef} />
-          ) : selectedRef ? (
+          ) : selectedPlan ? (
             <>
-              {plans.length > 1 && (
-                <div className="mb-5">
-                  <PlanPicker
-                    plans={plans}
-                    selectedRef={selectedRef}
-                    onSelect={setSelectedRef}
-                  />
-                </div>
-              )}
+              <CheckoutSummary
+                title={selectedPlan.name ?? 'Plan'}
+                subtitle={describeInterval(selectedPlan.interval)}
+                amount={formatPrice(selectedPlan.price ?? 0, selectedPlan.currency ?? 'USD', {
+                  locale,
+                })}
+                currency={(selectedPlan.currency ?? 'USD').toUpperCase()}
+                onChange={paidPlans.length > 1 ? () => setSelectedRef(null) : undefined}
+              />
+
               <PaymentForm.Root
                 productRef={productRef}
-                planRef={selectedRef}
+                planRef={selectedPlan.reference}
                 onSuccess={handlePaid}
                 onError={handleError}
               >
-                <div className="space-y-4">
-                  <PaymentForm.PaymentElement />
-                  <div className="flex items-center justify-end text-xs text-slate-500">
-                    <LockIcon className="h-3.5 w-3.5 mr-1" />
-                    Secured by Stripe
-                  </div>
-                </div>
+                <PaymentForm.PaymentElement />
 
                 <PaymentForm.Error className="mt-3 text-sm text-red-600" />
 
@@ -137,8 +152,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
               </PaymentForm.Root>
 
               {paymentError && <p className="mt-3 text-xs text-red-600">{paymentError}</p>}
-
-              <PaymentForm.LegalFooter className="mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500" />
             </>
           ) : null}
         </div>

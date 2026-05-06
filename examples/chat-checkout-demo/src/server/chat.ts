@@ -1,3 +1,4 @@
+import type { ExecutionContext } from '@cloudflare/workers-types'
 import { GoogleGenAI, type Content } from '@google/genai'
 import {
   PaywallError,
@@ -48,7 +49,11 @@ interface ChatDeps {
  * `checkLimits` + `trackUsage` pair so the response writer stays in
  * our hands.
  */
-export async function handleChat(req: Request, deps: ChatDeps): Promise<Response> {
+export async function handleChat(
+  req: Request,
+  deps: ChatDeps,
+  ctx?: ExecutionContext,
+): Promise<Response> {
   if (req.method !== 'POST') {
     return jsonResponse(405, { error: 'Method not allowed' })
   }
@@ -173,6 +178,16 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
   const requestId = `chat_${startTime}_${Math.random().toString(36).slice(2, 8)}`
   const encoder = new TextEncoder()
 
+  // On Workers, the request lifecycle ends when the response stream
+  // closes — any in-flight `trackUsage` POST is cancelled unless held
+  // by `ctx.waitUntil`. On Node (Vite dev) `ctx` is undefined and the
+  // event loop keeps the floated promise alive without it.
+  const keepAlive = (p: Promise<unknown>) => {
+    const guarded = p.catch(error => console.error('[chat] trackUsage failed:', error))
+    if (ctx) ctx.waitUntil(guarded)
+    else void guarded
+  }
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
@@ -184,8 +199,8 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
           }
         }
         controller.close()
-        void deps.solvaPay
-          .trackUsage({
+        keepAlive(
+          deps.solvaPay.trackUsage({
             customerRef: backendCustomerRef,
             productRef: body.productRef,
             actionType: 'api_call',
@@ -194,14 +209,14 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
             duration: Date.now() - startTime,
             metadata: { action: 'requests', requestId },
             timestamp: new Date().toISOString(),
-          })
-          .catch(error => console.error('[chat] trackUsage(success) failed:', error))
+          }),
+        )
       } catch (error) {
         console.error('[chat] gemini stream error:', error)
         controller.enqueue(encoder.encode(JSON.stringify({ error: 'gemini_error' }) + '\n'))
         controller.close()
-        void deps.solvaPay
-          .trackUsage({
+        keepAlive(
+          deps.solvaPay.trackUsage({
             customerRef: backendCustomerRef,
             productRef: body.productRef,
             actionType: 'api_call',
@@ -210,8 +225,8 @@ export async function handleChat(req: Request, deps: ChatDeps): Promise<Response
             duration: Date.now() - startTime,
             metadata: { action: 'requests', requestId },
             timestamp: new Date().toISOString(),
-          })
-          .catch(() => {})
+          }),
+        )
       }
     },
   })

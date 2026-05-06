@@ -24,8 +24,8 @@ function productRefForScenario(scenario: ScenarioType): string {
   switch (scenario) {
     case ScenarioType.SUBSCRIPTION:
       return env.subscription.productRef
-    case ScenarioType.DAYPASS:
-      return env.daypass.productRef
+    case ScenarioType.LIFETIME:
+      return env.lifetime.productRef
     case ScenarioType.TOPUP:
       return env.topup.productRef
   }
@@ -49,7 +49,7 @@ const App: React.FC = () => {
   const { credits, refetch: refetchBalance, adjustBalance } = useBalance()
 
   const isPremium = useMemo(() => getActivePurchaseFor(purchases, 'recurring'), [purchases])
-  const hasDayPass = useMemo(() => getActivePurchaseFor(purchases, 'one-time'), [purchases])
+  const hasLifetimeAccess = useMemo(() => getActivePurchaseFor(purchases, 'one-time'), [purchases])
   const creditCount = credits ?? 0
 
   const productRef = productRefForScenario(currentScenario)
@@ -66,7 +66,10 @@ const App: React.FC = () => {
     },
     [transport],
   )
-  const { plans } = usePlans({ productRef: productRef || undefined, fetcher: planFetcher })
+  const { plans, loading: plansLoading } = usePlans({
+    productRef: productRef || undefined,
+    fetcher: planFetcher,
+  })
   const messageLimit = useMemo(() => {
     const free = plans
       .map(p => p.freeUnits ?? 0)
@@ -244,7 +247,10 @@ const App: React.FC = () => {
     await processMessage(message)
   }
 
-  const handleUnlock = () => setShowInlineForm(true)
+  const handleUnlock = () => {
+    setShowInlineForm(true)
+    setIsFirstMessage(false)
+  }
 
   const handleFormSuccess = (_selection?: TopUpSelection) => {
     setShowInlineForm(false)
@@ -308,7 +314,7 @@ const App: React.FC = () => {
           {[
             { id: ScenarioType.SUBSCRIPTION, label: 'Upgrade to Subscription' },
             { id: ScenarioType.TOPUP, label: 'Top Up Credits' },
-            { id: ScenarioType.DAYPASS, label: 'Day Pass' },
+            { id: ScenarioType.LIFETIME, label: 'Lifetime Access' },
           ].map(({ id, label }) => (
             <button
               key={id}
@@ -332,15 +338,18 @@ const App: React.FC = () => {
             onSendMessage={handleSendMessage}
             showPaywall={showPaywall}
             onUnlock={handleUnlock}
+            onUpgrade={handleUnlock}
             userMessageCount={userMessageCount.current}
             messageLimit={messageLimit}
+            plans={plans}
+            plansLoading={plansLoading}
             productRef={productRef}
             onReset={handleReset}
             isFirstMessage={isFirstMessage}
             isPremium={isPremium}
             currentScenario={currentScenario}
             credits={creditCount}
-            hasDayPass={hasDayPass}
+            hasLifetimeAccess={hasLifetimeAccess}
             showInlineForm={showInlineForm}
             paywallContent={paywallContent}
             onFormSuccess={handleFormSuccess}

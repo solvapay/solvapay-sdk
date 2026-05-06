@@ -12,7 +12,7 @@ export interface Message {
 export enum ScenarioType {
   SUBSCRIPTION = 'subscription',
   TOPUP = 'topup',
-  DAYPASS = 'daypass',
+  LIFETIME = 'lifetime',
 }
 
 /**

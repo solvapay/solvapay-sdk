@@ -29,7 +29,7 @@ export const Paywall: React.FC<PaywallProps> = ({
   paywallContent,
 }) => {
   const isTopUpScenario = currentScenario === ScenarioType.TOPUP
-  const isDayPassScenario = currentScenario === ScenarioType.DAYPASS
+  const isLifetimeScenario = currentScenario === ScenarioType.LIFETIME
 
   const transport = useTransport()
   const locale = useLocale()
@@ -69,15 +69,15 @@ export const Paywall: React.FC<PaywallProps> = ({
               <h3 className="text-base font-semibold text-slate-900 leading-tight">
                 {isTopUpScenario
                   ? 'Out of credits'
-                  : isDayPassScenario
+                  : isLifetimeScenario
                     ? 'Free use exceeded'
                     : 'Free limit reached'}
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 {isTopUpScenario
                   ? 'Top up to keep chatting'
-                  : isDayPassScenario
-                    ? 'Get a day pass to continue'
+                  : isLifetimeScenario
+                    ? 'Get lifetime access to continue'
                     : 'Upgrade for unlimited access'}
               </p>
             </div>
@@ -94,7 +94,7 @@ export const Paywall: React.FC<PaywallProps> = ({
             className="px-4 py-2.5 text-sm font-medium text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors group flex items-center space-x-2"
           >
             <span>
-              {isTopUpScenario ? 'Add Credits' : isDayPassScenario ? 'Get Day Pass' : 'Upgrade'}
+              {isTopUpScenario ? 'Add Credits' : isLifetimeScenario ? 'Get Lifetime Access' : 'Upgrade'}
             </span>
             <svg
               className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -161,13 +161,16 @@ function buildBullets(
     }))
   }
 
-  if (scenario === ScenarioType.DAYPASS) {
+  if (scenario === ScenarioType.LIFETIME) {
     if (!paidPlan) {
-      return [{ color: 'green', text: 'Unlimited messages' }]
+      return [
+        { color: 'purple', text: 'One-time payment' },
+        { color: 'green', text: 'Unlimited messages' },
+      ]
     }
     const price = formatPrice(paidPlan.price ?? 0, paidPlan.currency ?? 'USD', { locale })
     return [
-      { color: 'purple', text: `${price} for 24 hours` },
+      { color: 'purple', text: price },
       { color: 'green', text: 'Unlimited messages' },
     ]
   }

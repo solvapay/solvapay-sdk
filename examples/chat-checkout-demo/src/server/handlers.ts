@@ -1,3 +1,4 @@
+import type { ExecutionContext } from '@cloudflare/workers-types'
 import {
   cancelPurchaseCore,
   checkPurchaseCore,
@@ -98,7 +99,11 @@ const HANDLERS: Record<string, { method: 'GET' | 'POST'; handler: Handler }> = {
   },
 }
 
-export async function handleApiRequest(req: Request, deps: ApiDeps): Promise<Response> {
+export async function handleApiRequest(
+  req: Request,
+  deps: ApiDeps,
+  ctx?: ExecutionContext,
+): Promise<Response> {
   const url = new URL(req.url)
 
   // Anonymous-customer flow: rewrite x-customer-ref → x-user-id once, up
@@ -109,8 +114,12 @@ export async function handleApiRequest(req: Request, deps: ApiDeps): Promise<Res
 
   // The streaming chat path owns its own Response (NDJSON ReadableStream
   // body + 402 paywall short-circuit) — bypass the JSON dispatcher.
+  // `ctx` is forwarded so `handleChat` can keep `trackUsage` alive past
+  // the response close on Workers via `ctx.waitUntil`. The Vite dev
+  // plugin (Node) calls without `ctx`; the Node event loop keeps the
+  // promise alive without it.
   if (url.pathname === '/api/chat') {
-    return handleChat(normalised, deps)
+    return handleChat(normalised, deps, ctx)
   }
 
   const route = HANDLERS[url.pathname]

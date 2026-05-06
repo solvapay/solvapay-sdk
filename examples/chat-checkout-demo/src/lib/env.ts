@@ -19,6 +19,6 @@ function readEnv(name: string, required = true): string {
 
 export const env = {
   subscription: { productRef: readEnv('VITE_SUBSCRIPTION_PRODUCT_REF', false) },
-  daypass: { productRef: readEnv('VITE_DAYPASS_PRODUCT_REF', false) },
+  lifetime: { productRef: readEnv('VITE_LIFETIME_PRODUCT_REF', false) },
   topup: { productRef: readEnv('VITE_TOPUP_PRODUCT_REF', false) },
 }
