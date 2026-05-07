@@ -240,6 +240,26 @@ export interface SolvaPayCopy {
     balanceLine: string
     paymentRequiredMessage: string
     paymentRequiredMessageRemaining: string
+    /**
+     * Web-friendly fallback for `kind: 'payment_required'` when the
+     * paywall payload has no `balance` block (e.g. the merchant's
+     * server didn't surface remaining-units context). Replaces the
+     * previous "Call the `upgrade` tool…" copy that bled in from the
+     * MCP-flavored server `message`.
+     */
+    paymentRequiredMessageNoBalance: string
+    /**
+     * Web-friendly copy for `kind: 'activation_required'` — the tool
+     * needs an active paid plan and the customer has none.
+     */
+    activationRequiredMessage: string
+    /**
+     * Web-friendly copy for the topup variant of an activation gate
+     * (PAYG plan active, balance depleted). Reserved for future
+     * paywall responses that classify as "needs more credits"; the
+     * current shipping kinds resolve to one of the messages above.
+     */
+    topupRequiredMessage: string
     paymentRequiredProductSuffix: string
     retryButton: string
     hostedCheckoutButton: string

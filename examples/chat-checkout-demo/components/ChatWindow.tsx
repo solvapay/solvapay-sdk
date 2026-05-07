@@ -1,13 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { formatPrice, useCustomer, useLocale, type Plan } from '@solvapay/react'
-import type { PaywallStructuredContent } from '@solvapay/server'
-import {
-  Message as MessageType,
-  ScenarioType,
-} from '../types'
+import { Message as MessageType, ScenarioType } from '../types'
 import { Message } from './Message'
 import { ChatInput } from './ChatInput'
-import { InlineCheckout } from './InlineCheckout'
+import { InlineCheckout, type InlineCheckoutMode } from './InlineCheckout'
 import { ThinkingIndicator } from './ThinkingIndicator'
 import { RefreshIcon } from './icons/RefreshIcon'
 import { IdentityStrip } from './IdentityStrip'
@@ -90,12 +86,13 @@ interface ChatWindowProps {
   credits: number
   hasLifetimeAccess: boolean
   /**
-   * `null` when the user is browsing free quota; a structured paywall
-   * content (either real, from a 402, or synthetic, minted client-side
-   * when the user clicks "Upgrade") when the inline checkout drawer
-   * should be visible.
+   * `null` when the user is browsing free quota; a discriminated
+   * `InlineCheckoutMode` ({ mode: 'paywall' | 'upgrade', … }) when
+   * the inline checkout drawer should be visible. Routing on `mode`
+   * picks between the SDK's paywall surface (real 402) and the bare
+   * stepped checkout (proactive upgrade click).
    */
-  paywallContent: PaywallStructuredContent | null
+  checkoutState: InlineCheckoutMode | null
   onFormSuccess: () => void
 }
 
@@ -114,7 +111,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   currentScenario,
   credits,
   hasLifetimeAccess,
-  paywallContent,
+  checkoutState,
   onFormSuccess,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -220,15 +217,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     </span>
   )
 
-  const upgradeButton = showUpgradeCta && !showSkeletonPill ? (
-    <button
-      type="button"
-      onClick={onUpgrade}
-      className="px-2.5 py-0.5 text-[10px] font-semibold rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-colors"
-    >
-      {upgradeLabel}
-    </button>
-  ) : null
+  const upgradeButton =
+    showUpgradeCta && !showSkeletonPill ? (
+      <button
+        type="button"
+        onClick={onUpgrade}
+        className="px-2.5 py-0.5 text-[10px] font-semibold rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+      >
+        {upgradeLabel}
+      </button>
+    ) : null
 
   const pricingTooltip = (
     <div className="relative group/pricing inline-block align-middle">
@@ -308,8 +306,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <div ref={messagesEndRef} />
         </div>
       </div>
-      {paywallContent ? (
-        <InlineCheckout paywallContent={paywallContent} onSuccess={onFormSuccess} />
+      {checkoutState ? (
+        <InlineCheckout state={checkoutState} onSuccess={onFormSuccess} />
       ) : (
         <ChatInput onSendMessage={onSendMessage} />
       )}
@@ -368,7 +366,10 @@ const PricingTooltipContent: React.FC<PricingTooltipContentProps> = ({
         {packs.length > 0 ? (
           <div>
             {packs
-              .map(p => `${p.name ?? p.reference} ${formatPrice(p.price ?? 0, p.currency ?? 'USD', { locale })}`)
+              .map(
+                p =>
+                  `${p.name ?? p.reference} ${formatPrice(p.price ?? 0, p.currency ?? 'USD', { locale })}`,
+              )
               .join(' · ')}
           </div>
         ) : null}

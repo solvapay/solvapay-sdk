@@ -1,14 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import {
-  getOrCreateAnonymousCustomerRef,
-  usePurchase,
-  useBalance,
-  usePlans,
-} from '@solvapay/react'
+import { getOrCreateAnonymousCustomerRef, usePurchase, useBalance, usePlans } from '@solvapay/react'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { Message as MessageType, UserType, ScenarioType } from './types'
 import { useFocusBus } from './components/focus/FocusProvider'
 import { ChatWindow } from './components/ChatWindow'
+import type { InlineCheckoutMode } from './components/InlineCheckout'
 import { env } from './src/lib/env'
 
 function getActivePurchaseFor(
@@ -42,7 +38,12 @@ const App: React.FC = () => {
   const [isFirstMessage, setIsFirstMessage] = useState(true)
   const [currentScenario, setCurrentScenario] = useState<ScenarioType>(ScenarioType.SUBSCRIPTION)
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
-  const [paywallContent, setPaywallContent] = useState<PaywallStructuredContent | null>(null)
+  // Discriminated union — either a real 402 paywall (`paywall`) drives
+  // `<PaywallNotice.EmbeddedCheckout>`, or a proactive "Upgrade" click
+  // (`upgrade`) drives a bare `<CheckoutSteps.*>` composition. Earlier
+  // revisions minted a synthetic `payment_required` block for the
+  // upgrade case; routing on `mode` keeps the paywall surface honest.
+  const [checkoutState, setCheckoutState] = useState<InlineCheckoutMode | null>(null)
   const { requestChatInputFocus } = useFocusBus()
 
   const userMessageCount = useRef(0)
@@ -111,7 +112,7 @@ const App: React.FC = () => {
           // resolution via `usePaywallResolver`. The pending message
           // replays automatically once `onResolved` fires.
           const payload = (await response.json()) as PaywallStructuredContent
-          setPaywallContent(payload)
+          setCheckoutState({ mode: 'paywall', content: payload })
           setPendingMessage(message)
           setIsBotThinking(false)
           return
@@ -195,26 +196,20 @@ const App: React.FC = () => {
   }
 
   /**
-   * The user clicked "Upgrade" before hitting a real 402. Mint a
-   * synthetic `payment_required` content scoped to the current
-   * scenario's productRef so `<PaywallNotice.EmbeddedCheckout>` can
-   * mount the plan selector / payment form. Once payment completes,
-   * `usePaywallResolver` flips `resolved` and `handleFormSuccess`
-   * fires.
+   * The user clicked "Upgrade" before hitting a real 402. Open the
+   * stepped checkout drawer in `upgrade` mode — no synthetic
+   * paywall content needed. `<CheckoutSteps.*>` drives the plan →
+   * amount → payment flow and `onPurchaseSuccess` calls back into
+   * `handleFormSuccess`.
    */
   const handleUpgrade = () => {
     if (!productRef) return
     setIsFirstMessage(false)
-    setPaywallContent({
-      kind: 'payment_required',
-      product: productRef,
-      checkoutUrl: '',
-      message: '',
-    })
+    setCheckoutState({ mode: 'upgrade', productRef })
   }
 
   const handleFormSuccess = () => {
-    setPaywallContent(null)
+    setCheckoutState(null)
     if (pendingMessage) {
       const retry = pendingMessage
       setPendingMessage(null)
@@ -232,7 +227,7 @@ const App: React.FC = () => {
     userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
-    setPaywallContent(null)
+    setCheckoutState(null)
     requestChatInputFocus()
   }
 
@@ -242,7 +237,7 @@ const App: React.FC = () => {
     userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
-    setPaywallContent(null)
+    setCheckoutState(null)
     requestChatInputFocus()
   }
 
@@ -286,7 +281,7 @@ const App: React.FC = () => {
             currentScenario={currentScenario}
             credits={creditCount}
             hasLifetimeAccess={hasLifetimeAccess}
-            paywallContent={paywallContent}
+            checkoutState={checkoutState}
             onFormSuccess={handleFormSuccess}
           />
         </div>

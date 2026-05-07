@@ -38,10 +38,7 @@ export {
   usePaymentForm,
   PaymentFormProvider,
 } from './components/PaymentFormContext'
-export type {
-  PaymentFormContextValue,
-  PaymentElementKind,
-} from './components/PaymentFormContext'
+export type { PaymentFormContextValue, PaymentElementKind } from './components/PaymentFormContext'
 
 // Hooks
 export { usePurchase } from './hooks/usePurchase'
@@ -65,6 +62,21 @@ export { useUsage } from './hooks/useUsage'
 export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
 export { usePaywallResolver } from './hooks/usePaywallResolver'
 export type { UsePaywallResolverReturn } from './hooks/usePaywallResolver'
+
+// Stepped checkout — headless state engine + composable parts.
+// Pick `useCheckoutFlow` when you want full layout control, or
+// `<CheckoutSteps.*>` for the SDK's pre-styled stepped composition.
+// `<PaywallNotice.EmbeddedCheckout>` is the recommended default for
+// 402 paywall surfaces.
+export { useCheckoutFlow } from './hooks/useCheckoutFlow'
+export type {
+  UseCheckoutFlowOptions,
+  UseCheckoutFlowReturn,
+  CheckoutStatus,
+  CheckoutErrorPhase,
+} from './hooks/useCheckoutFlow'
+export { CheckoutSteps, useCheckoutStepsContext } from './primitives/checkout'
+export type { CheckoutStep, SuccessMeta, BootstrapPlanLike } from './primitives/checkout'
 
 // i18n primitives (for consumers who want to author copy bundles or mount
 // CopyProvider independently of SolvaPayProvider)
@@ -134,10 +146,7 @@ export type { ActivationFlowProps, ActivationFlowStep } from './components/Activ
 export type { CancelledPlanNoticeProps } from './components/CancelledPlanNotice'
 export type { CreditGateProps } from './components/CreditGate'
 export type { CheckoutVariant } from './utils/checkoutVariant'
-export type {
-  CurrentPlanCardProps,
-  CurrentPlanCardClassNames,
-} from './components/CurrentPlanCard'
+export type { CurrentPlanCardProps, CurrentPlanCardClassNames } from './components/CurrentPlanCard'
 export type { LaunchCustomerPortalButtonProps } from './components/LaunchCustomerPortalButton'
 export type {
   UpdatePaymentMethodButtonProps,

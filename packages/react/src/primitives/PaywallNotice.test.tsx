@@ -49,9 +49,7 @@ vi.mock('./PlanSelector', () => {
         'data-testid': 'plan-selector-root',
         'data-has-filter': props.filter ? 'true' : 'false',
         'data-filter-hides-free': props.filter
-          ? String(
-              props.filter({ reference: 'pln_free', requiresPayment: false }) === false,
-            )
+          ? String(props.filter({ reference: 'pln_free', requiresPayment: false }) === false)
           : 'n/a',
       },
       props.children,
@@ -83,11 +81,7 @@ vi.mock('./PlanSelector', () => {
 
 // `PaymentForm` is the recurring-only branch after the fix.
 vi.mock('./PaymentForm', () => {
-  const Root = (props: {
-    planRef?: string
-    productRef?: string
-    children?: React.ReactNode
-  }) =>
+  const Root = (props: { planRef?: string; productRef?: string; children?: React.ReactNode }) =>
     React.createElement(
       'div',
       {
@@ -117,11 +111,7 @@ vi.mock('./PaymentForm', () => {
 
 // `AmountPicker` + `TopupForm` replace `PaymentForm` on the PAYG branch.
 vi.mock('./AmountPicker', () => {
-  const Root = (props: {
-    currency?: string
-    emit?: string
-    children?: React.ReactNode
-  }) =>
+  const Root = (props: { currency?: string; emit?: string; children?: React.ReactNode }) =>
     React.createElement(
       'div',
       {
@@ -148,11 +138,7 @@ vi.mock('./AmountPicker', () => {
 })
 
 vi.mock('./TopupForm', () => {
-  const Root = (props: {
-    amount?: number
-    currency?: string
-    children?: React.ReactNode
-  }) =>
+  const Root = (props: { amount?: number; currency?: string; children?: React.ReactNode }) =>
     React.createElement(
       'div',
       {
@@ -180,29 +166,79 @@ vi.mock('./TopupForm', () => {
 
 // Load after mocks are registered.
 import { PaywallNotice } from './PaywallNotice'
+import { SolvaPayContext } from '../SolvaPayProvider'
 
 const baseProduct = 'prd_abc'
+
+// Minimal SolvaPay context for parts that read `useTransport` / balance.
+// The mocked PlanSelector and form roots short-circuit any real network
+// calls; we just need to satisfy the `useSolvaPay` provider check.
+function makeMinimalContext() {
+  return {
+    purchase: {
+      loading: false,
+      isRefetching: false,
+      error: null,
+      purchases: [],
+      hasProduct: () => false,
+      activePurchase: null,
+      hasPaidPurchase: false,
+      activePaidPurchase: null,
+      balanceTransactions: [],
+      customerRef: 'cus_test',
+      email: undefined,
+      name: undefined,
+    },
+    refetchPurchase: vi.fn(),
+    createPayment: vi.fn(),
+    createTopupPayment: vi.fn(),
+    cancelRenewal: vi.fn(),
+    reactivateRenewal: vi.fn(),
+    activatePlan: vi.fn(),
+    balance: {
+      loading: false,
+      credits: 0,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: null,
+      displayExchangeRate: null,
+      refetch: vi.fn(),
+      adjustBalance: vi.fn(),
+    },
+    _config: { transport: { activatePlan: vi.fn() } },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any
+}
+
+const renderWithProvider = (ui: React.ReactNode) =>
+  render(<SolvaPayContext.Provider value={makeMinimalContext()}>{ui}</SolvaPayContext.Provider>)
 
 beforeEach(() => {
   currentSelectedPlan = null
 })
 
 describe('PaywallNotice.Message', () => {
-  it('renders the server-provided message when the content has no balance', () => {
+  // Coverage matrix: (kind × balance presence × remaining > 0)
+  //   payment_required + balance.remaining=0   → paymentRequiredMessage
+  //   payment_required + balance.remaining=3   → paymentRequiredMessageRemaining
+  //   payment_required + no balance            → paymentRequiredMessageNoBalance (web-friendly)
+  //   activation_required (any balance)        → activationRequiredMessage (web-friendly)
+  //   unknown future kind                      → content.message (forward-compat)
+
+  it('uses paymentRequiredMessageNoBalance for payment_required without a balance block — never the MCP-flavored server message', () => {
     const content: PaywallStructuredContent = {
       kind: 'payment_required',
       product: baseProduct,
       checkoutUrl: 'https://example.test/c',
-      message: 'Purchase required. Remaining: 0',
+      message: 'Call the `upgrade` tool to keep going.',
     }
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Message data-testid="message" />
       </PaywallNotice.Root>,
     )
-    expect(screen.getByTestId('message').textContent).toBe(
-      'Purchase required. Remaining: 0',
-    )
+    const text = screen.getByTestId('message').textContent ?? ''
+    expect(text).not.toMatch(/`upgrade`/)
+    expect(text).toMatch(/Pick a plan|Choose a plan|keep chatting|keep going/i)
   })
 
   it('prefers client-side copy when the payment_required content carries balance', () => {
@@ -211,7 +247,7 @@ describe('PaywallNotice.Message', () => {
       product: baseProduct,
       checkoutUrl: '',
       message: 'Purchase required. Remaining: 0',
-      balance: { remainingUnits: 0 },
+      balance: { remainingUnits: 0, creditBalance: 0, creditsPerUnit: 1, currency: 'usd' },
       productDetails: { name: 'Knowledge API', reference: baseProduct },
     }
     render(
@@ -231,7 +267,7 @@ describe('PaywallNotice.Message', () => {
       product: baseProduct,
       checkoutUrl: '',
       message: 'Purchase required. Remaining: 3',
-      balance: { remainingUnits: 3 },
+      balance: { remainingUnits: 3, creditBalance: 3, creditsPerUnit: 1, currency: 'usd' },
     }
     render(
       <PaywallNotice.Root content={content}>
@@ -240,6 +276,25 @@ describe('PaywallNotice.Message', () => {
     )
     const text = screen.getByTestId('message').textContent ?? ''
     expect(text).toContain('3 calls left')
+  })
+
+  it('uses activationRequiredMessage for activation_required — never the MCP-flavored server message', () => {
+    const content: PaywallStructuredContent = {
+      kind: 'activation_required',
+      product: baseProduct,
+      checkoutUrl: '',
+      message: 'Call the `activate_plan` tool to continue.',
+      productDetails: { name: 'Knowledge API', reference: baseProduct },
+    }
+    render(
+      <PaywallNotice.Root content={content}>
+        <PaywallNotice.Message data-testid="message" />
+      </PaywallNotice.Root>,
+    )
+    const text = screen.getByTestId('message').textContent ?? ''
+    expect(text).not.toMatch(/`activate_plan`/)
+    expect(text).toMatch(/active plan/i)
+    expect(text).toContain('Knowledge API')
   })
 })
 
@@ -271,9 +326,9 @@ describe('PaywallNotice.EmbeddedCheckout', () => {
     message: 'Purchase required',
   }
 
-  it('passes a Free-hiding filter to PlanSelector', () => {
+  it('renders the stepped checkout with a Free-hiding filter', () => {
     currentSelectedPlan = null
-    render(
+    renderWithProvider(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
       </PaywallNotice.Root>,
@@ -283,53 +338,33 @@ describe('PaywallNotice.EmbeddedCheckout', () => {
     expect(selector.getAttribute('data-filter-hides-free')).toBe('true')
   })
 
-  it('mounts AmountPicker (not PaymentForm) when the selected plan is usage-based', () => {
+  it("doesn't mount Payment / Topup / AmountPicker on the plan step (stepped composition)", () => {
     currentSelectedPlan = {
       reference: 'pln_payg',
       type: 'usage-based',
       currency: 'sek',
       requiresPayment: true,
     }
-    render(
+    renderWithProvider(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
       </PaywallNotice.Root>,
     )
-    const picker = screen.getByTestId('amount-picker-root')
-    expect(picker.getAttribute('data-currency')).toBe('SEK')
-    expect(picker.getAttribute('data-emit')).toBe('minor')
+    expect(screen.queryByTestId('amount-picker-root')).toBeNull()
     expect(screen.queryByTestId('payment-form-root')).toBeNull()
-    // TopupForm only mounts *after* the amount is confirmed.
     expect(screen.queryByTestId('topup-form-root')).toBeNull()
   })
 
-  it('mounts PaymentForm for a recurring selected plan (regression guard)', () => {
-    currentSelectedPlan = {
-      reference: 'pln_rec',
-      type: 'recurring',
-      currency: 'usd',
-      price: 1000,
-      requiresPayment: true,
+  it('renders nothing when the paywall content has no product', () => {
+    const noProduct = {
+      ...content,
+      product: '',
     }
-    render(
-      <PaywallNotice.Root content={content}>
+    renderWithProvider(
+      <PaywallNotice.Root content={noProduct}>
         <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
       </PaywallNotice.Root>,
     )
-    expect(screen.getByTestId('payment-form-root')).toBeTruthy()
-    expect(screen.queryByTestId('amount-picker-root')).toBeNull()
-    expect(screen.queryByTestId('topup-form-root')).toBeNull()
-  })
-
-  it('renders nothing inside the gate until a plan is selected', () => {
-    currentSelectedPlan = null
-    render(
-      <PaywallNotice.Root content={content}>
-        <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
-      </PaywallNotice.Root>,
-    )
-    expect(screen.queryByTestId('amount-picker-root')).toBeNull()
-    expect(screen.queryByTestId('payment-form-root')).toBeNull()
-    expect(screen.queryByTestId('topup-form-root')).toBeNull()
+    expect(screen.queryByTestId('plan-selector-root')).toBeNull()
   })
 })

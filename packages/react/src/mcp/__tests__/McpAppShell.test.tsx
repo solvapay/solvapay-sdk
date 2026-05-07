@@ -206,7 +206,6 @@ describe('<McpAppShell>', () => {
     const ctx = buildCtx(config, [], 0)
     renderShell(
       {
-        // @ts-expect-error — stress the undefined fallback path.
         view: undefined,
         customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
       },

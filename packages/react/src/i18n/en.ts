@@ -144,8 +144,7 @@ export const enCopy: SolvaPayCopy = {
     expiresLabel: 'Purchase Expires: {date}',
     daysRemaining: '{days} days remaining',
     dayRemaining: '1 day remaining',
-    accessUntil:
-      "You'll continue to have access to {product} features until this date",
+    accessUntil: "You'll continue to have access to {product} features until this date",
     accessEnded: 'Your purchase access has ended',
     cancelledOn: 'Cancelled on {date}',
     reactivateButton: 'Undo Cancellation',
@@ -177,8 +176,7 @@ export const enCopy: SolvaPayCopy = {
   account: {
     currentPlanAndUsage: 'Current plan and usage',
     payAsYouGoTitle: "You're on pay-as-you-go credits",
-    payAsYouGoBody:
-      'Top up to keep going, or pick a plan for predictable monthly billing.',
+    payAsYouGoBody: 'Top up to keep going, or pick a plan for predictable monthly billing.',
     noPlanTitle: "You don't have an active plan",
     noPlanBody: 'Pick a plan — free, pay-as-you-go, or paid — to get started.',
     seePlansButton: 'See plans',
@@ -207,12 +205,10 @@ export const enCopy: SolvaPayCopy = {
     paymentIntentUnavailable: 'Payment intent not available. Please refresh the page.',
     cardElementMissing: 'Card element not found',
     paymentUnexpected: 'An unexpected error occurred.',
-    paymentProcessingFailed:
-      'Payment processing failed. Please try again or contact support.',
+    paymentProcessingFailed: 'Payment processing failed. Please try again or contact support.',
     paymentRequires3ds:
       'Payment requires additional authentication. Please complete the verification.',
-    paymentProcessingTimeout:
-      'Payment processing timed out — webhooks may not be configured',
+    paymentProcessingTimeout: 'Payment processing timed out — webhooks may not be configured',
     paymentConfirmationDelayed:
       'Payment succeeded but confirmation is taking longer than usual. Refresh in a moment to see your purchase.',
     paymentStatusPrefix: 'Payment status: {status}',
@@ -230,6 +226,11 @@ export const enCopy: SolvaPayCopy = {
       "You've used all your included calls{forProduct}. Choose a plan below to keep going.",
     paymentRequiredMessageRemaining:
       'Only {remaining} call{pluralSuffix} left{forProduct}. Choose a plan below to keep going.',
+    paymentRequiredMessageNoBalance:
+      "You've used your included messages{forProduct}. Pick a plan below to keep chatting.",
+    activationRequiredMessage:
+      'This tool needs an active plan{forProduct}. Pick one below to keep going.',
+    topupRequiredMessage: "You're out of credits{forProduct}. Add more below to keep going.",
     paymentRequiredProductSuffix: ' for {product}',
     retryButton: 'Continue',
     hostedCheckoutButton: 'Open checkout',

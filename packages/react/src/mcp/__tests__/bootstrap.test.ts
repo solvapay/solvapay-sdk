@@ -7,7 +7,7 @@ import {
   SOLVAPAY_TRANSPORT_TOOL_NAMES,
   waitForInitialToolResult,
 } from '../bootstrap'
-import type { McpAppBootstrapLike } from '../bootstrap'
+import type { McpAppBootstrapLike, ToolResultNotificationParams } from '../bootstrap'
 
 function mockApp(opts: {
   toolName?: string
@@ -251,24 +251,19 @@ describe('isTransportToolName / SOLVAPAY_TRANSPORT_TOOL_NAMES', () => {
 })
 
 describe('waitForInitialToolResult', () => {
+  type ToolResultHandler = (params: ToolResultNotificationParams) => void
   interface EventfulApp extends McpAppBootstrapLike {
-    addEventListener: (
-      evt: string,
-      handler: (params: unknown) => void,
-    ) => void
-    removeEventListener: (
-      evt: string,
-      handler: (params: unknown) => void,
-    ) => void
-    ontoolresult?: ((params: unknown) => void) | undefined
+    addEventListener: (evt: string, handler: ToolResultHandler) => void
+    removeEventListener: (evt: string, handler: ToolResultHandler) => void
+    ontoolresult?: ToolResultHandler | undefined
   }
 
   function mkEventfulApp(toolName: string): {
     app: EventfulApp
-    fire: (params: unknown) => void
-    listeners: Record<string, Array<(params: unknown) => void>>
+    fire: (params: ToolResultNotificationParams) => void
+    listeners: Record<string, Array<ToolResultHandler>>
   } {
-    const listeners: Record<string, Array<(params: unknown) => void>> = {}
+    const listeners: Record<string, Array<ToolResultHandler>> = {}
     const app: EventfulApp = {
       callServerTool: vi.fn(),
       getHostContext: () => ({ toolInfo: { tool: { name: toolName } } }),
@@ -281,7 +276,7 @@ describe('waitForInitialToolResult', () => {
         if (idx >= 0) bucket.splice(idx, 1)
       },
     }
-    const fire = (params: unknown) => {
+    const fire = (params: ToolResultNotificationParams) => {
       for (const h of listeners['toolresult'] ?? []) h(params)
     }
     return { app, fire, listeners }
@@ -349,7 +344,7 @@ describe('waitForInitialToolResult', () => {
   })
 
   it('falls back to the legacy `ontoolresult` setter when addEventListener is unavailable', async () => {
-    const app: McpAppBootstrapLike & { ontoolresult?: (params: unknown) => void } = {
+    const app: McpAppBootstrapLike & { ontoolresult?: ToolResultHandler } = {
       callServerTool: vi.fn(),
       getHostContext: () => ({ toolInfo: { tool: { name: 'search_knowledge' } } }),
     }

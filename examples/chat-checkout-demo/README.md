@@ -66,7 +66,9 @@ The demo no longer hardcodes any pricing or free-tier limits — it reads them f
 |---|---|---|
 | Subscription | One recurring paid plan (and optionally one free plan). | `name`, `price`, `currency`, `billingCycle`. The free plan should set `freeUnits` to whatever message cap you want before the paywall trips. |
 | Lifetime Access | One one-time paid plan (and optionally one free plan). | `name`, `price`, `currency`. The free plan should set `freeUnits`. |
-| Top-up | One usage-based plan (drives the gate + meter) plus one one-time plan per credit pack. | Usage-based plan: `meterName: 'requests'`, `freeUnits`, `creditsPerUnit`. Pack plans: `name` (e.g. `"100 Credits"`), `price`, `currency`. |
+| Top-up | One usage-based plan (and optionally one free plan). | Usage-based plan: `meterName: 'requests'`, `freeUnits`, `creditsPerUnit`. The SDK's `<AmountPicker>` handles credit-pack selection via currency presets (`$10` / `$50` / `$100` / `$500` for USD) plus a custom amount — **no separate pack plans needed**. |
+
+> **Migration note.** Earlier revisions of this README told you to set up the topup product with `"one one-time plan per credit pack"` (`100 Credits` at `$5`, `250 Credits` at `$10`, etc.). That was wrong — it doesn't match the hosted-checkout topup pattern in `solvapay-frontend/src/pages/customer/checkout/topup.tsx`. If your topup product carries those pack plans, delete them in the SolvaPay dashboard. The SDK's `<CheckoutSteps.AmountPicker>` covers their job and uses the same currency presets as the hosted page. Recent SDK versions also default to a smart plan filter that hides PAYG when the product still has pack plans, so the grid renders only the packs while you migrate.
 
 Tips:
 
@@ -95,13 +97,25 @@ Use any future expiry, any 3-digit CVC, any postcode.
 
 ## How the scenarios map to SolvaPay
 
-| Scenario | Plan type | Checkout primitive (auto-selected by `<PaywallNotice.EmbeddedCheckout>`) |
+| Scenario | Plan type | Checkout primitive (driven by `<CheckoutSteps.*>`) |
 |---|---|---|
 | Subscription | `recurring` | `<PaymentForm.Root>` |
 | Lifetime Access | `one-time` | `<PaymentForm.Root>` |
-| Top-up | usage-based + one-time packs | `<AmountPicker>` → `<TopupForm.Root>` |
+| Top-up | `usage-based` | `<AmountPicker>` → `<TopupForm.Root>` |
 
-All three scenarios share **one** drawer (`components/InlineCheckout.tsx`) that wraps `<PaywallNotice.Root>` + `<PaywallNotice.EmbeddedCheckout>`. The notice primitive branches on plan type — recurring plans get a `PaymentForm`, PAYG plans get an inline `AmountPicker` → `TopupForm` sequence — so we don't need a per-scenario form file in the demo.
+All three scenarios share **one** drawer (`components/InlineCheckout.tsx`). The drawer routes on a discriminated state:
+
+- **`{ mode: 'paywall', content }`** — fired when the chat hits a 402. Renders `<PaywallNotice.Root>` + `<PaywallNotice.Heading>` + `<PaywallNotice.Message>` + `<PaywallNotice.EmbeddedCheckout>`. The notice resolves a web-friendly i18n string for the message (no MCP-flavored "Call the `upgrade` tool…" copy) and `EmbeddedCheckout` ships a stepped `<CheckoutSteps.*>` composition under the hood.
+- **`{ mode: 'upgrade', productRef }`** — fired when the user clicks "Upgrade" before hitting a 402. Renders `<CheckoutSteps.Root>` directly with no paywall chrome. Drops the synthetic `payment_required` content the demo used to mint client-side.
+
+### Which component when
+
+| Use case | Import |
+|---|---|
+| Building any checkout UX (web, chatbot, custom) — want the state engine and pre-styled parts | `useCheckoutFlow` + `CheckoutSteps` from `@solvapay/react` |
+| Reacting to a 402 paywall response with the SDK's recommended stepped layout | `<PaywallNotice.EmbeddedCheckout>` |
+| Building an MCP App iframe | `<McpApp>` / `<McpCheckoutView>` from `@solvapay/react/mcp` |
+| Need full layout control or a custom step ordering | Compose `<CheckoutSteps.*>` parts in your own JSX, or drop to `<PlanSelector>` / `<PaymentForm>` / `<TopupForm>` directly |
 
 `App.tsx` derives the scenario state directly from SDK hooks:
 
@@ -111,7 +125,7 @@ All three scenarios share **one** drawer (`components/InlineCheckout.tsx`) that 
 
 ### The chat gate
 
-`/api/chat` uses the SDK's decision-shaped `payable.gate(req, { ctx })` primitive (`src/server/chat.ts`). It pre-checks limits, returns either a 402 `Response` (which the browser hands to `<PaywallNotice>` via `App.tsx`'s `paywallContent` state) or an `allow` decision with bound `trackSuccess` / `trackFail` closures. The closures fire once the Gemini stream finalises, with `ctx.waitUntil` keeping `trackUsage` alive past the response close on Workers.
+`/api/chat` uses the SDK's decision-shaped `payable.gate(req, { ctx })` primitive (`src/server/chat.ts`). It pre-checks limits, returns either a 402 `Response` (which the browser routes through `App.tsx`'s `checkoutState = { mode: 'paywall', content }` to `<InlineCheckout>`) or an `allow` decision with bound `trackSuccess` / `trackFail` closures. The closures fire once the Gemini stream finalises, with `ctx.waitUntil` keeping `trackUsage` alive past the response close on Workers.
 
 Once a 402 lands, the SDK's `usePaywallResolver` (mounted inside `<PaywallNotice.Root>`) watches `usePurchase` + `useBalance` and flips `resolved` the moment the customer's entitlement satisfies the gate. The notice's `onResolved` callback then dismisses the drawer and `App.tsx` replays the pending message — no manual 402 retry loop required.
 

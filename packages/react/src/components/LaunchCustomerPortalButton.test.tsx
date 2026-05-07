@@ -204,7 +204,6 @@ describe('LaunchCustomerPortalButton', () => {
         asChild: true,
         onLaunch,
         children: <button data-testid="custom-btn">Open portal</button>,
-        // @ts-expect-error — asChild intentionally accepts arbitrary child shells
       } as Parameters<typeof LaunchCustomerPortalButton>[0],
     )
 

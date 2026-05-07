@@ -47,7 +47,7 @@ describe('createHttpTransport — default routes', () => {
       api: { getMerchant: '/custom/merchant', createCheckoutSession: '/custom/checkout' },
     })
 
-    await transport.getMerchant()
+    await transport.getMerchant!()
     await transport.createCheckoutSession({ productRef: 'prd_api' })
 
     expect(fetchFn).toHaveBeenNthCalledWith(1, '/custom/merchant', expect.any(Object))
@@ -58,7 +58,7 @@ describe('createHttpTransport — default routes', () => {
     const fetchFn = makeFetch({})
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    await transport.getProduct('prd with spaces')
+    await transport.getProduct!('prd with spaces')
     await transport.listPlans!('prd_api')
 
     expect(fetchFn).toHaveBeenNthCalledWith(
@@ -105,7 +105,7 @@ describe('createHttpTransport — default routes', () => {
     )
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    await expect(transport.checkPurchase()).rejects.toThrow('Customer not found')
+    await expect(transport.checkPurchase!()).rejects.toThrow('Customer not found')
   })
 
   it('falls back to statusText when response has no JSON body', async () => {
@@ -114,7 +114,7 @@ describe('createHttpTransport — default routes', () => {
     )
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    await expect(transport.checkPurchase()).rejects.toThrow(/Internal Server Error|Failed to check purchase/)
+    await expect(transport.checkPurchase!()).rejects.toThrow(/Internal Server Error|Failed to check purchase/)
   })
 
   it('invokes config.onError with the right context key on failure', async () => {
@@ -127,7 +127,7 @@ describe('createHttpTransport — default routes', () => {
       onError,
     })
 
-    await expect(transport.getBalance()).rejects.toThrow()
+    await expect(transport.getBalance!()).rejects.toThrow()
     expect(onError).toHaveBeenCalledWith(expect.any(Error), 'getBalance')
   })
 })
