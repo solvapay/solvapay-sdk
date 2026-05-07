@@ -218,7 +218,8 @@ export const enCopy: SolvaPayCopy = {
   paywall: {
     header: 'Unlock access',
     paymentRequiredHeading: 'Upgrade to continue',
-    activationRequiredHeading: 'Add credits to continue',
+    activationRequiredHeading: 'Activate a plan to continue',
+    topupRequiredHeading: 'Add credits to continue',
     resolvedHeading: 'You can continue',
     productContext: 'For {product}',
     balanceLine: 'You have {available} credits, need {required}.',
@@ -229,7 +230,7 @@ export const enCopy: SolvaPayCopy = {
     paymentRequiredMessageNoBalance:
       "You've used your included messages{forProduct}. Pick a plan below to keep chatting.",
     activationRequiredMessage:
-      'This tool needs an active plan{forProduct}. Pick one below to keep going.',
+      'You need an active plan{forProduct} to continue. Pick one below.',
     topupRequiredMessage: "You're out of credits{forProduct}. Add more below to keep going.",
     paymentRequiredProductSuffix: ' for {product}',
     retryButton: 'Continue',

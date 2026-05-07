@@ -20,14 +20,18 @@
 import React, { createContext, forwardRef, useContext, useMemo } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { PlanSelector } from '../PlanSelector'
-import { AmountPicker as AmountPickerPrimitive, useAmountPicker } from '../AmountPicker'
+import {
+  AmountPicker as AmountPickerPrimitive,
+  useAmountPicker,
+  useAmountPickerCopy,
+} from '../AmountPicker'
 import { PaymentForm } from '../PaymentForm'
 import { TopupForm } from '../TopupForm'
 import { MandateText } from '../MandateText'
 import { useBalance } from '../../hooks/useBalance'
 import { useLocale } from '../../hooks/useCopy'
 import { useCheckoutFlow, type UseCheckoutFlowReturn } from '../../hooks/useCheckoutFlow'
-import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
+import { formatPrice } from '../../utils/format'
 import type { Plan } from '../../types'
 import { usePlans } from '../../hooks/usePlans'
 import {
@@ -74,6 +78,16 @@ interface RootProps {
    * `useCheckoutFlow`; see that hook for the trade-off note.
    */
   autoSkipSinglePlan?: boolean
+  /**
+   * Currency for the PAYG topup branch (`AmountPicker`, `TopupForm`,
+   * order summary, mandate text). Defaults to `merchant.defaultCurrency`.
+   * Pass an explicit value when integrators surface a per-customer
+   * currency picker (multi-currency topup, future). Recurring/one-time
+   * plans always settle in their own `plan.currency`; this prop only
+   * affects the topup branch. Plan currency is **never** used as a
+   * fallback for topups — credits are merchant-wide, not plan-specific.
+   */
+  topupCurrency?: string
   /** Forwarded to PlanSelector — already supports filtering Free. */
   filter?: (plan: Plan, index: number) => boolean
   /** Forwarded to PlanSelector — defaults to PAYG-first sort. */
@@ -98,6 +112,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CheckoutStepsRoot(pr
     initialAmountMinor,
     autoSelectFirstPaid = false,
     autoSkipSinglePlan = true,
+    topupCurrency,
     filter,
     sortBy = planSortByPaygFirstThenAsc,
     popularPlanRef,
@@ -132,6 +147,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CheckoutStepsRoot(pr
       initialStep={initialStep}
       initialAmountMinor={initialAmountMinor}
       autoSkipSinglePlan={autoSkipSinglePlan}
+      topupCurrency={topupCurrency}
       onPlanSelect={onPlanSelect}
       onAmountSelect={onAmountSelect}
       onPurchaseSuccess={onPurchaseSuccess}
@@ -154,6 +170,7 @@ interface RootWithPlanSelectorProps extends Pick<
   | 'initialStep'
   | 'initialAmountMinor'
   | 'autoSkipSinglePlan'
+  | 'topupCurrency'
   | 'onPlanSelect'
   | 'onAmountSelect'
   | 'onPurchaseSuccess'
@@ -184,6 +201,7 @@ function RootWithPlanSelector({
   initialStep,
   initialAmountMinor,
   autoSkipSinglePlan,
+  topupCurrency,
   onPlanSelect,
   onAmountSelect,
   onPurchaseSuccess,
@@ -212,6 +230,7 @@ function RootWithPlanSelector({
         initialStep={initialStep}
         initialAmountMinor={initialAmountMinor}
         autoSkipSinglePlan={autoSkipSinglePlan}
+        topupCurrency={topupCurrency}
         onPlanSelect={onPlanSelect}
         onAmountSelect={onAmountSelect}
         onPurchaseSuccess={onPurchaseSuccess}
@@ -229,6 +248,7 @@ interface FlowProviderProps extends Pick<
   | 'initialStep'
   | 'initialAmountMinor'
   | 'autoSkipSinglePlan'
+  | 'topupCurrency'
   | 'onPlanSelect'
   | 'onAmountSelect'
   | 'onPurchaseSuccess'
@@ -244,6 +264,7 @@ function FlowProvider({
   initialStep,
   initialAmountMinor,
   autoSkipSinglePlan,
+  topupCurrency,
   onPlanSelect,
   onAmountSelect,
   onPurchaseSuccess,
@@ -257,6 +278,7 @@ function FlowProvider({
     initialStep,
     initialAmountMinor,
     autoSkipSinglePlan,
+    topupCurrency,
     onPlanSelect,
     onAmountSelect,
     onPurchaseSuccess,
@@ -342,54 +364,84 @@ interface AmountPickerProps {
 
 function AmountPicker({ className, children }: AmountPickerProps) {
   const flow = useCheckoutContext('AmountPicker')
-  const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
-  const currency = (selectedPlanShape?.currency ?? 'USD').toUpperCase()
+  // Render a skeleton row while the topup currency is unresolved
+  // (`useMerchant` still in flight and no explicit `topupCurrency`
+  // prop on `<CheckoutSteps.Root>`). Painting USD presets here would
+  // mislead a SEK or EUR merchant; the skeleton reads as "loading"
+  // and disappears the moment merchant data arrives.
+  if (!flow.topupCurrencyReady || flow.topupCurrency == null) {
+    return (
+      <div
+        className={className ?? 'solvapay-amount-picker'}
+        data-state="loading"
+        aria-busy="true"
+      >
+        <div className="solvapay-amount-picker-pills">
+          {[0, 1, 2, 3].map(i => (
+            <span
+              key={i}
+              className="solvapay-amount-picker-pill"
+              data-state="disabled"
+              aria-hidden="true"
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
   return (
     <AmountPickerPrimitive.Root
-      currency={currency}
+      currency={flow.topupCurrency}
       emit="minor"
-      className={className ?? 'solvapay-checkout-amount-picker'}
+      className={className ?? 'solvapay-amount-picker'}
       onChange={value => {
         if (typeof value === 'number') {
           flow.selectAmount(value)
         }
       }}
     >
-      {children ?? (
-        <>
-          <PresetAmountRow />
-          <AmountPickerPrimitive.Custom
-            className="solvapay-checkout-amount-custom"
-            placeholder="or custom amount"
-          />
-        </>
-      )}
+      {children ?? <DefaultAmountTree />}
     </AmountPickerPrimitive.Root>
   )
 }
 
-function PresetAmountRow() {
-  const { quickAmounts, currency } = useAmountPicker()
-  const locale = useLocale()
-  const popularIndex = Math.min(1, quickAmounts.length - 1)
+// Mirrors the canonical `<AmountPicker>` shim's default tree
+// (`packages/react/src/components/AmountPicker.tsx`) so the stepped
+// checkout surface matches the hosted topup page: pills row +
+// labelled custom row with currency-symbol prefix + credit estimate.
+// Inlined rather than importing the shim because the shim mounts its
+// own `<Root>` and `<CheckoutSteps>` already owns the flow-driven one.
+function DefaultAmountTree() {
+  const ctx = useAmountPicker()
+  const { selectAmountLabel, customAmountLabel, creditEstimate } = useAmountPickerCopy()
   return (
-    <div className="solvapay-checkout-amount-options">
-      {quickAmounts.map((amount, i) => {
-        const label = formatPrice(amount * getMinorUnitsPerMajor(currency), currency, {
-          locale,
-          free: '',
-        })
-        return (
+    <>
+      <p className="solvapay-amount-picker-label">{selectAmountLabel}</p>
+      <div className="solvapay-amount-picker-pills">
+        {ctx.quickAmounts.map(amount => (
           <AmountPickerPrimitive.Option
             key={amount}
             amount={amount}
-            className="solvapay-checkout-amount-option"
-            data-popular={i === popularIndex ? '' : undefined}
-            aria-label={`${label}${i === popularIndex ? ' (popular)' : ''}`}
+            className="solvapay-amount-picker-pill"
           />
-        )
-      })}
-    </div>
+        ))}
+      </div>
+      <div className="solvapay-amount-picker-custom-wrapper">
+        <p className="solvapay-amount-picker-custom-label">{customAmountLabel}</p>
+        <div className="solvapay-amount-picker-custom-row">
+          <span className="solvapay-amount-picker-currency-symbol">{ctx.currencySymbol}</span>
+          <AmountPickerPrimitive.Custom
+            className="solvapay-amount-picker-custom-input"
+            placeholder="0.00"
+          />
+        </div>
+      </div>
+      {ctx.estimatedCredits != null && (
+        <p className="solvapay-amount-picker-credit-estimate">
+          {creditEstimate(ctx.estimatedCredits)}
+        </p>
+      )}
+    </>
   )
 }
 
@@ -401,28 +453,40 @@ const AmountContinueButton = forwardRef<HTMLButtonElement, AmountContinueButtonP
   function AmountContinueButton({ className, children, onClick, disabled, ...rest }, ref) {
     const flow = useCheckoutContext('AmountContinueButton')
     const locale = useLocale()
-    const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
-    const currency = (selectedPlanShape?.currency ?? 'USD').toUpperCase()
-    const isDisabled = disabled || flow.selectedAmountMinor == null
+    // Topup currency comes from the merchant (or explicit prop), never
+    // from the selected plan — credits are wallet-wide. The sibling
+    // `<AmountPicker>` pushes every selection back to the flow via
+    // `flow.selectAmount`, so this button only needs to call
+    // `flow.advance()`. We deliberately do NOT wrap `<AmountPicker.Confirm>`
+    // here — `<CheckoutSteps.AmountPicker>` and `AmountContinueButton`
+    // are siblings, so there is no `<AmountPicker.Root>` ancestor in
+    // scope and `Confirm` would throw.
+    const currency = flow.topupCurrency
+    const amountMinor = flow.selectedAmountMinor
+    const ready = flow.topupCurrencyReady && currency != null
+    const isDisabled = disabled || !ready || amountMinor == null
     const label =
       children ??
-      (flow.selectedAmountMinor != null
-        ? `Continue — ${formatPrice(flow.selectedAmountMinor, currency, { locale })}`
+      (ready && currency != null && amountMinor != null
+        ? `Continue — ${formatPrice(amountMinor, currency, { locale })}`
         : 'Continue')
     return (
-      <AmountPickerPrimitive.Confirm
+      <button
         ref={ref}
+        type="button"
         className={className ?? 'solvapay-checkout-continue-button'}
         disabled={isDisabled}
-        onConfirm={amount => {
-          flow.selectAmount(amount)
+        aria-disabled={isDisabled || undefined}
+        data-solvapay-checkout-continue=""
+        onClick={e => {
+          onClick?.(e)
+          if (e.defaultPrevented) return
           void flow.advance()
         }}
-        onClick={onClick}
         {...rest}
       >
         {label}
-      </AmountPickerPrimitive.Confirm>
+      </button>
     )
   },
 )
@@ -451,8 +515,12 @@ function PaygPayment({ className }: { className?: string }) {
   const returnUrl = useReturnUrl()
   const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
   const amountMinor = flow.selectedAmountMinor
-  if (!selectedPlanShape || amountMinor == null) return null
-  const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
+  // Topup currency comes from the merchant (or explicit prop). If it
+  // hasn't resolved we cannot mount the Stripe form (it needs a
+  // currency to create the topup PI), so render nothing — the
+  // `<AmountPicker>` skeleton above keeps the surface non-empty.
+  const currency = flow.topupCurrency
+  if (!selectedPlanShape || amountMinor == null || currency == null) return null
   const creditsAdded =
     creditsPerMinorUnit != null && creditsPerMinorUnit > 0
       ? Math.floor((amountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit)
@@ -498,18 +566,26 @@ function RecurringPayment({ className }: { className?: string }) {
   const productRef = useProductRef()
   const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
   if (!selectedPlanShape || !flow.selectedPlanRef) return null
+  // Recurring/one-time purchases settle in the *plan's* currency (the
+  // amount the merchant priced and Stripe charges). This is correct
+  // for plan purchases — distinct from credit topups, which settle
+  // into the merchant-wide wallet via `flow.topupCurrency`.
   const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
   const amountMinor = selectedPlanShape.price ?? 0
-  const cycle = selectedPlanShape.billingCycle ?? 'monthly'
+  const cycle = selectedPlanShape.billingCycle
   const planName = selectedPlanShape.name ?? 'Plan'
+  // A plan is recurring iff it carries a `billingCycle`. One-time /
+  // lifetime plans (no cycle) get `Pay $X` copy + a single-line order
+  // summary so they don't read as a subscription.
+  const isRecurring = !!cycle
+  const formattedAmount = formatPrice(amountMinor, currency, { locale })
+  const priceLine = isRecurring ? `${formattedAmount}/${shortCycle(cycle)}` : formattedAmount
   return (
     <div className={className ?? 'solvapay-checkout-payment'} data-branch="recurring">
       <div className="solvapay-checkout-order-summary" data-variant="recurring">
         <div className="solvapay-checkout-order-summary-row">
           <span>{planName}</span>
-          <span>
-            {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
-          </span>
+          <span>{priceLine}</span>
         </div>
       </div>
       <PaymentForm.Root
@@ -524,7 +600,7 @@ function RecurringPayment({ className }: { className?: string }) {
         <PaymentForm.Error className="solvapay-checkout-error" />
         <PaymentForm.MandateText />
         <PaymentForm.SubmitButton className="solvapay-checkout-pay-button">
-          Subscribe — {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
+          {isRecurring ? `Subscribe — ${priceLine}` : `Pay ${formattedAmount}`}
         </PaymentForm.SubmitButton>
       </PaymentForm.Root>
     </div>

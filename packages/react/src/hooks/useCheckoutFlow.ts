@@ -28,6 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { usePlanSelector } from '../primitives/PlanSelector'
 import { useBalance } from './useBalance'
+import { useMerchant } from './useMerchant'
 import { useTransport } from './useTransport'
 import { useLocale } from './useCopy'
 import type { Plan } from '../types'
@@ -66,6 +67,18 @@ export interface UseCheckoutFlowOptions {
    * bootstrap returns `[Free, Paid]`.
    */
   autoSkipSinglePlan?: boolean
+  /**
+   * Currency for the PAYG topup branch (`AmountPicker`, `TopupForm`,
+   * order summary, mandate text). Defaults to `merchant.defaultCurrency`
+   * — credit topups settle into the merchant-wide wallet, so the
+   * currency must come from the merchant, not the selected plan.
+   *
+   * Pass an explicit value when integrators surface a per-customer
+   * picker (multi-currency topup, future). Recurring/one-time plans
+   * always settle in their own `plan.currency`; this option only
+   * affects the topup branch.
+   */
+  topupCurrency?: string
   /** Fires when the user picks a plan (via `selectPlan`). */
   onPlanSelect?: (planRef: string, plan: Plan) => void
   /** Fires when the user picks a topup amount (PAYG branch only). */
@@ -86,6 +99,20 @@ export interface UseCheckoutFlowReturn {
   error: string | null
   /** Returns the active branch — `null` when no plan is selected. */
   branch: 'payg' | 'recurring' | null
+  /**
+   * Currency for the PAYG topup branch, resolved from the
+   * `topupCurrency` option (when set) or `merchant.defaultCurrency`.
+   * `null` while the merchant is still loading and no explicit
+   * option was passed. **Plan currency is never consulted** — credit
+   * topups are merchant-wide, not plan-specific.
+   */
+  topupCurrency: string | null
+  /**
+   * `true` once `topupCurrency` has resolved to a concrete code.
+   * Step components gate their UI on this so they never paint a
+   * misleading default while the merchant fetch is in flight.
+   */
+  topupCurrencyReady: boolean
   /**
    * Whether the current step has a meaningful previous step to return
    * to. `<CheckoutSteps.BackLink>` reads this to suppress itself when
@@ -131,7 +158,19 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   const planCtx = usePlanSelector()
   const transport = useTransport()
   const locale = useLocale()
-  const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const { creditsPerMinorUnit, displayExchangeRate, adjustBalance } = useBalance()
+  const { merchant } = useMerchant()
+
+  // Resolve PAYG topup currency strictly from the `topupCurrency` option
+  // (forwarded by `<CheckoutSteps.Root topupCurrency={…}>` and friends)
+  // or the merchant's `defaultCurrency`. Plan currency is intentionally
+  // never consulted: credit topups settle into the merchant-wide wallet,
+  // independent of which plan the customer picked. While the merchant
+  // fetch is in flight (and no explicit prop was passed), `topupCurrency`
+  // stays `null` and step components render a skeleton/disabled state.
+  const topupCurrency: string | null =
+    opts.topupCurrency?.toUpperCase() ?? merchant?.defaultCurrency?.toUpperCase() ?? null
+  const topupCurrencyReady = topupCurrency != null
 
   const [step, setStep] = useState<CheckoutStep>(initialStep)
   const [status, setStatus] = useState<CheckoutStatus>('idle')
@@ -189,10 +228,18 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     (amountMinor: number) => {
       selectedAmountMinorRef.current = amountMinor
       setSelectedAmountMinor(amountMinor)
-      const currency = (selectedPlanShape?.currency ?? 'USD').toUpperCase()
+      // Topup amount is denominated in the merchant's wallet currency,
+      // not the plan's. Forward the resolved `topupCurrency` to the
+      // lifecycle callback; consumers persisting the picked amount
+      // (analytics, MCP bridge) need the same code the picker rendered.
+      // Falls back to `'USD'` only when the merchant fetch hasn't
+      // resolved AND no explicit prop was passed — at which point step
+      // components are gated to a skeleton anyway, so the callback
+      // shouldn't fire in practice.
+      const currency = topupCurrency ?? 'USD'
       onAmountSelectRef.current?.(amountMinor, currency)
     },
-    [selectedPlanShape?.currency],
+    [topupCurrency],
   )
 
   const runActivate = useCallback(async (): Promise<boolean> => {
@@ -258,11 +305,20 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
 
   const recordPaygSuccess = useCallback(() => {
     if (!selectedPlanShape || selectedAmountMinor == null) return
-    const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
+    // PAYG topup currency comes from the merchant (or explicit
+    // `topupCurrency` opt) — never from the plan. Plan currency is
+    // wallet-irrelevant for credit topups.
+    const currency = topupCurrency ?? 'USD'
     const creditsAdded =
       creditsPerMinorUnit != null && creditsPerMinorUnit > 0
         ? Math.floor((selectedAmountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit)
         : 0
+    // Optimistically bump the local wallet so the header pill / balance
+    // badge reflect the topup before the Stripe webhook lands. The
+    // SolvaPayProvider's 8s grace window auto-reconciles via a
+    // `fetchBalance` once the timer elapses, so transient drift is
+    // self-healing.
+    if (creditsAdded > 0) adjustBalance(creditsAdded)
     const meta: SuccessMeta = {
       branch: 'payg',
       amountMinor: selectedAmountMinor,
@@ -274,7 +330,15 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setSuccessMeta(meta)
     setStep('success')
     onPurchaseSuccessRef.current?.(meta)
-  }, [creditsPerMinorUnit, displayExchangeRate, locale, selectedAmountMinor, selectedPlanShape])
+  }, [
+    adjustBalance,
+    creditsPerMinorUnit,
+    displayExchangeRate,
+    locale,
+    selectedAmountMinor,
+    selectedPlanShape,
+    topupCurrency,
+  ])
 
   const recordRecurringSuccess = useCallback(() => {
     if (!selectedPlanShape) return
@@ -372,6 +436,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       successMeta,
       error,
       branch,
+      topupCurrency,
+      topupCurrencyReady,
       canGoBack,
       selectPlan,
       selectAmount,
@@ -390,6 +456,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       successMeta,
       error,
       branch,
+      topupCurrency,
+      topupCurrencyReady,
       canGoBack,
       selectPlan,
       selectAmount,

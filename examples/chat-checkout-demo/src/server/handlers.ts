@@ -1,5 +1,6 @@
 import type { ExecutionContext } from '@cloudflare/workers-types'
 import {
+  activatePlanCore,
   cancelPurchaseCore,
   checkPurchaseCore,
   createPaymentIntentCore,
@@ -81,6 +82,13 @@ const HANDLERS: Record<string, { method: 'GET' | 'POST'; handler: Handler }> = {
         description?: string
       }
       return createTopupPaymentIntentCore(req, body, { solvaPay: deps.solvaPay })
+    },
+  },
+  '/api/activate-plan': {
+    method: 'POST',
+    handler: async (req, deps) => {
+      const body = (await req.json()) as { productRef: string; planRef: string }
+      return activatePlanCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
   '/api/cancel-renewal': {

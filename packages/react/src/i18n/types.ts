@@ -234,7 +234,19 @@ export interface SolvaPayCopy {
   paywall: {
     header: string
     paymentRequiredHeading: string
+    /**
+     * Heading for `kind: 'activation_required'` when the available
+     * plans include a recurring or one-time option — i.e. the user
+     * needs to activate a real plan, not just add credits.
+     */
     activationRequiredHeading: string
+    /**
+     * Heading for `kind: 'activation_required'` when every available
+     * plan is PAYG (`type: 'usage-based' | 'hybrid'`). Displayed as the
+     * topup variant of the activation gate so the user sees "Add
+     * credits" framing rather than generic "Activate a plan".
+     */
+    topupRequiredHeading: string
     resolvedHeading: string
     productContext: string
     balanceLine: string
@@ -249,15 +261,16 @@ export interface SolvaPayCopy {
      */
     paymentRequiredMessageNoBalance: string
     /**
-     * Web-friendly copy for `kind: 'activation_required'` — the tool
-     * needs an active paid plan and the customer has none.
+     * Web-friendly copy for `kind: 'activation_required'` when the
+     * available plans include non-PAYG options. The user needs to pick
+     * a real plan to continue.
      */
     activationRequiredMessage: string
     /**
-     * Web-friendly copy for the topup variant of an activation gate
-     * (PAYG plan active, balance depleted). Reserved for future
-     * paywall responses that classify as "needs more credits"; the
-     * current shipping kinds resolve to one of the messages above.
+     * Web-friendly copy for the topup variant of an activation gate —
+     * `kind: 'activation_required'` where every available plan is
+     * PAYG. `<PaywallNotice.Message>` resolves this when the gate's
+     * `plans` are all `type: 'usage-based' | 'hybrid'`.
      */
     topupRequiredMessage: string
     paymentRequiredProductSuffix: string

@@ -77,7 +77,7 @@ const App: React.FC = () => {
   }, [plans])
 
   const processMessage = useCallback(
-    async (message: string, history: MessageType[]) => {
+    async (message: string, history: MessageType[], opts?: { retryOn402?: number }) => {
       if (!productRef) {
         setError(
           `No product configured for the ${currentScenario} scenario. Set the matching VITE_*_PRODUCT_REF in .env.`,
@@ -96,30 +96,54 @@ const App: React.FC = () => {
         { role: 'user' as const, text: message },
       ]
 
-      try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-customer-ref': customerRef,
-          },
-          body: JSON.stringify({ productRef, messages: wireMessages }),
-        })
+      const maxAttempts = (opts?.retryOn402 ?? 0) + 1
 
-        if (response.status === 402) {
-          // The server emitted a structured paywall — store it so the
-          // inline `<PaywallNotice>` checkout can take over and drive
-          // resolution via `usePaywallResolver`. The pending message
-          // replays automatically once `onResolved` fires.
-          const payload = (await response.json()) as PaywallStructuredContent
-          setCheckoutState({ mode: 'paywall', content: payload })
+      try {
+        // Silent 402-retry loop. The post-purchase replay (see
+        // `handleFormSuccess`) races the SolvaPay webhook that credits
+        // the customer (~1-3s, occasionally longer) — without backoff
+        // the chat would flicker right back to the paywall notice
+        // before the wallet is fully credited server-side. 1+2+3+4s
+        // covers typical webhook latency. Non-replay sends pass no
+        // `retryOn402` and surface the gate immediately.
+        let response: Response | null = null
+        let payload402: PaywallStructuredContent | null = null
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-customer-ref': customerRef,
+            },
+            body: JSON.stringify({ productRef, messages: wireMessages }),
+          })
+
+          if (response.status !== 402) break
+
+          payload402 = (await response.json()) as PaywallStructuredContent
+
+          if (attempt < maxAttempts - 1) {
+            await new Promise(r => setTimeout(r, (attempt + 1) * 1000))
+            response = null
+          }
+        }
+
+        if (response?.status === 402 && payload402) {
+          // The server emitted a structured paywall — open the inline
+          // drawer at the `notice` stage so the user sees the
+          // educational "Out of credits" / "Free limit reached" /
+          // "Free use exceeded" strip first, then clicks the CTA to
+          // expand into `<PaywallNotice.EmbeddedCheckout>`. The
+          // pending message replays automatically once
+          // `usePaywallResolver` flips `resolved`.
+          setCheckoutState({ mode: 'paywall', stage: 'notice', content: payload402 })
           setPendingMessage(message)
           setIsBotThinking(false)
           return
         }
 
-        if (!response.ok || !response.body) {
-          throw new Error(`Chat request failed: ${response.status}`)
+        if (!response || !response.ok || !response.body) {
+          throw new Error(`Chat request failed: ${response?.status ?? 'no response'}`)
         }
 
         const reader = response.body.getReader()
@@ -183,14 +207,14 @@ const App: React.FC = () => {
     [productRef, currentScenario, customerRef, refetchBalance],
   )
 
-  const handleSendMessage = async (message: string) => {
-    setMessages(prev => {
-      const next = [...prev, { id: Date.now(), text: message, sender: UserType.USER }]
-      // `processMessage` reads history from the closure, so capture
-      // the pre-update value for the wire payload.
-      void processMessage(message, prev)
-      return next
-    })
+  const handleSendMessage = (message: string) => {
+    // Capture history from the component closure (pre-update value),
+    // then schedule the optimistic append. The network call MUST stay
+    // outside the `setMessages` updater — React Strict Mode
+    // double-invokes state updaters in dev, which would fire
+    // `/api/chat` twice and produce duplicate bot replies.
+    void processMessage(message, messages)
+    setMessages(prev => [...prev, { id: Date.now(), text: message, sender: UserType.USER }])
     userMessageCount.current += 1
     setIsFirstMessage(false)
   }
@@ -208,16 +232,43 @@ const App: React.FC = () => {
     setCheckoutState({ mode: 'upgrade', productRef })
   }
 
+  /**
+   * The user clicked the CTA on the pre-checkout notice strip. Flip
+   * the paywall drawer from `stage: 'notice'` to `stage: 'checkout'`
+   * so `<InlineCheckout>` mounts `<PaywallNotice.EmbeddedCheckout>`.
+   * No-op on the proactive `'upgrade'` branch (which goes straight
+   * to the form and never sits in `'notice'`).
+   */
+  const handleUnlock = useCallback(() => {
+    setCheckoutState(prev =>
+      prev && prev.mode === 'paywall' ? { ...prev, stage: 'checkout' } : prev,
+    )
+  }, [])
+
   const handleFormSuccess = () => {
     setCheckoutState(null)
+
+    // Poll the balance for ~10s so the header pill converges on the
+    // real backend value once the webhook lands. `useBalance`'s 8s
+    // optimistic-grace window can otherwise hide a slow webhook from
+    // the badge.
+    for (const ms of [1000, 3000, 6000, 10000]) {
+      window.setTimeout(() => {
+        refetchBalance().catch(() => {})
+      }, ms)
+    }
+
     if (pendingMessage) {
       const retry = pendingMessage
       setPendingMessage(null)
-      // Replay using the most recent message history. By this point
-      // `usePaywallResolver` has already confirmed the customer's
-      // entitlement on the SDK side, so the server-side `checkLimits`
-      // will pass on the next call.
-      processMessage(retry, messages).catch(() => {})
+      // The SolvaPay webhook that credits the customer fires async
+      // after Stripe confirms (typically 1-3s, occasionally longer).
+      // `/api/chat` is gated server-side via `checkLimits`, so the
+      // first replay can race the webhook and trip another 402. Ride
+      // the silent retry path in `processMessage` (~10s of total
+      // wait) instead of immediately flicking back to the paywall
+      // notice.
+      processMessage(retry, messages, { retryOn402: 4 }).catch(() => {})
     }
     requestChatInputFocus()
   }
@@ -283,6 +334,7 @@ const App: React.FC = () => {
             hasLifetimeAccess={hasLifetimeAccess}
             checkoutState={checkoutState}
             onFormSuccess={handleFormSuccess}
+            onUnlock={handleUnlock}
           />
         </div>
         {error && (

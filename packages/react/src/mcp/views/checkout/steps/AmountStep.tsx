@@ -49,7 +49,7 @@ export const AmountStep = memo(function AmountStep({
         onChange={value => setStagedAmountMinor(value)}
       >
         <PresetAmountRow cx={cx} />
-        <AmountPicker.Custom className={cx.amountCustom} placeholder="or custom amount" />
+        <CustomAmountRow rowClassName={cx.amountCustom} />
         <AmountPicker.Confirm
           className={cx.button}
           onConfirm={amountMinor => onContinue(amountMinor)}
@@ -86,6 +86,19 @@ function PresetAmountRow({ cx }: { cx: Cx }) {
           />
         )
       })}
+    </div>
+  )
+}
+
+// Bordered "$ 0.00" row mirroring the hosted topup page. `cx.amountCustom`
+// styles the row wrapper now (post-pill-refactor); the inner span carries the
+// merchant currency symbol, and the input renders unstyled inside.
+function CustomAmountRow({ rowClassName }: { rowClassName: string }) {
+  const { currencySymbol } = useAmountPicker()
+  return (
+    <div className={rowClassName}>
+      <span className="solvapay-mcp-amount-currency-symbol">{currencySymbol}</span>
+      <AmountPicker.Custom className="solvapay-mcp-amount-custom-input" placeholder="0.00" />
     </div>
   )
 }

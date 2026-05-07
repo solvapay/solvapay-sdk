@@ -70,6 +70,27 @@ The demo no longer hardcodes any pricing or free-tier limits — it reads them f
 
 > **Migration note.** Earlier revisions of this README told you to set up the topup product with `"one one-time plan per credit pack"` (`100 Credits` at `$5`, `250 Credits` at `$10`, etc.). That was wrong — it doesn't match the hosted-checkout topup pattern in `solvapay-frontend/src/pages/customer/checkout/topup.tsx`. If your topup product carries those pack plans, delete them in the SolvaPay dashboard. The SDK's `<CheckoutSteps.AmountPicker>` covers their job and uses the same currency presets as the hosted page. Recent SDK versions also default to a smart plan filter that hides PAYG when the product still has pack plans, so the grid renders only the packs while you migrate.
 
+### Topup currency
+
+The PAYG topup branch (`<CheckoutSteps.AmountPicker>` and the embedded `<TopupForm>`) drives currency off the **merchant's `defaultCurrency`** — credits are merchant-wide, not plan-specific, so plan currency is intentionally ignored on the topup path. The header pill and quick-amount presets follow the merchant currency automatically (USD → `[10, 50, 100, 500]`, SEK → `[100, 500, 1000, 5000]`, JPY → `[1000, 5000, 10000, 50000]`, etc.). When `useMerchant` is still in flight on first paint, the picker renders a brief skeleton instead of a misleading default — usually invisible thanks to the 5-minute cache.
+
+For multi-currency topups (a per-customer picker letting them pay in EUR, USD, etc. against the same merchant wallet), pass an explicit code via the new `topupCurrency` prop on `<CheckoutSteps.Root>` or `<PaywallNotice.EmbeddedCheckout>`:
+
+```tsx
+const [currency, setCurrency] = useState('EUR')
+
+<MyCurrencyPicker value={currency} onChange={setCurrency} />
+<CheckoutSteps.Root
+  productRef={productRef}
+  returnUrl={returnUrl}
+  topupCurrency={currency}
+>
+  …
+</CheckoutSteps.Root>
+```
+
+Recurring/one-time plans always settle in `plan.currency` regardless of the prop — the `topupCurrency` knob is scoped to the wallet-credit topup flow.
+
 Tips:
 
 - Set the merchant's `termsUrl` and `privacyUrl` in the SolvaPay dashboard so they appear inline in the per-purchase mandate sentence rendered by `<PaymentForm.MandateText>`.

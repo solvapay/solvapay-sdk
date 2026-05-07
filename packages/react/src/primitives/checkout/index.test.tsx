@@ -83,7 +83,14 @@ import { CheckoutSteps } from './index'
 import { plansCache } from '../../hooks/usePlans'
 import { merchantCache } from '../../hooks/useMerchant'
 import { SolvaPayContext } from '../../SolvaPayProvider'
-import type { Plan, PurchaseInfo, SolvaPayConfig, SolvaPayContextValue } from '../../types'
+import { createTransportCacheKey } from '../../transport/cache-key'
+import type {
+  Merchant,
+  Plan,
+  PurchaseInfo,
+  SolvaPayConfig,
+  SolvaPayContextValue,
+} from '../../types'
 
 const productRef = 'prd_test'
 
@@ -168,9 +175,18 @@ function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): Solva
   } as any
 }
 
+const defaultMerchant: Merchant = {
+  displayName: 'Acme',
+  legalName: 'Acme Inc.',
+  defaultCurrency: 'usd',
+}
+
 function renderWithProvider(
   ui: React.ReactNode,
-  opts: { transport?: NonNullable<SolvaPayConfig['transport']> } = {},
+  opts: {
+    transport?: NonNullable<SolvaPayConfig['transport']>
+    merchant?: Merchant | null
+  } = {},
 ) {
   const transport = opts.transport ?? makeTransport()
   const config: SolvaPayConfig = { transport }
@@ -180,6 +196,18 @@ function renderWithProvider(
     timestamp: Date.now(),
     promise: null,
   })
+  // Seed the merchant cache so `useCheckoutFlow.topupCurrency` resolves
+  // synchronously. The PAYG/topup branch gates rendering on
+  // `topupCurrencyReady`; without a merchant the AmountPicker /
+  // PaygPayment render skeletons or null.
+  const merchant = opts.merchant === undefined ? defaultMerchant : opts.merchant
+  if (merchant) {
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+  }
   return {
     transport,
     ...render(<SolvaPayContext.Provider value={ctx}>{ui}</SolvaPayContext.Provider>),
@@ -410,5 +438,190 @@ describe('default plan filter', () => {
     renderWithPlans([freePlan, paygPlan])
     await waitFor(() => screen.getByText('Pay as you go'))
     expect(screen.queryByText('Free')).toBeNull()
+  })
+})
+
+// ------------------------------------------------------------------
+// Phase 0 — PAYG topup currency comes from the merchant (or explicit
+// `topupCurrency` prop). Plan currency is never consulted for the
+// topup branch. Step components gate on `topupCurrencyReady` so they
+// never paint a misleading currency while the merchant fetch is in
+// flight.
+// ------------------------------------------------------------------
+
+describe('<CheckoutSteps> topup currency', () => {
+  it('renders skeleton AmountPicker when merchant is unresolved and no prop is passed', () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        autoSelectFirstPaid={true}
+        initialStep="amount"
+      >
+        <CheckoutSteps.AmountPicker />
+        <CheckoutSteps.AmountContinueButton data-testid="continue" />
+      </CheckoutSteps.Root>,
+      { merchant: null },
+    )
+    const picker = document.querySelector('[data-state="loading"]')
+    expect(picker).not.toBeNull()
+    expect(picker?.getAttribute('aria-busy')).toBe('true')
+    const continueButton = screen.getByTestId('continue') as HTMLButtonElement
+    expect(continueButton.disabled).toBe(true)
+  })
+
+  // Regression: `<CheckoutSteps.AmountPicker>` mounts the picker
+  // `Root` internally, so `<CheckoutSteps.AmountContinueButton>` is a
+  // *sibling* — not a descendant — of that `Root`. Wrapping the
+  // continue button in `<AmountPicker.Confirm>` (which calls
+  // `usePickerCtx`) would throw at runtime in this layout. Pin the
+  // sibling composition end-to-end: render, click a preset, verify
+  // the button enables and advances to the payment step.
+  it('AmountContinueButton works when rendered as a sibling of AmountPicker', async () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        autoSelectFirstPaid={true}
+        initialStep="amount"
+      >
+        <CheckoutSteps.IfStep step="amount">
+          <CheckoutSteps.AmountPicker />
+          <CheckoutSteps.AmountContinueButton data-testid="continue" />
+        </CheckoutSteps.IfStep>
+        <CheckoutSteps.IfStep step="payment">
+          <div data-testid="payment-content">payment</div>
+        </CheckoutSteps.IfStep>
+      </CheckoutSteps.Root>,
+    )
+    const continueButton = await waitFor(
+      () => screen.getByTestId('continue') as HTMLButtonElement,
+    )
+    expect(continueButton.disabled).toBe(true)
+    const preset = await waitFor(
+      () => document.querySelector('[data-amount="10"]') as HTMLElement | null,
+    )
+    expect(preset).not.toBeNull()
+    act(() => {
+      fireEvent.click(preset as HTMLElement)
+    })
+    await waitFor(() => expect(continueButton.disabled).toBe(false))
+    expect(continueButton.textContent).toMatch(/^Continue — /)
+    await act(async () => {
+      fireEvent.click(continueButton)
+    })
+    await waitFor(() => screen.getByTestId('payment-content'))
+  })
+
+  it('paints the merchant currency on the AmountPicker (no plan-currency leak)', async () => {
+    // Merchant settles in SEK; a SEK preset (100) must render — never
+    // a USD preset (10) — even though the PAYG fixture carries
+    // `currency: 'usd'`.
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        autoSelectFirstPaid={true}
+        initialStep="amount"
+      >
+        <CheckoutSteps.AmountPicker />
+      </CheckoutSteps.Root>,
+      {
+        merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'sek' },
+      },
+    )
+    const sekPreset = await waitFor(
+      () => document.querySelector('[data-amount="100"]') as HTMLElement | null,
+    )
+    expect(sekPreset).not.toBeNull()
+    // USD lowest preset is 10; in SEK mode it must not appear.
+    expect(document.querySelector('[data-amount="10"]')).toBeNull()
+  })
+
+  it('explicit `topupCurrency` prop overrides merchant currency', async () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        autoSelectFirstPaid={true}
+        initialStep="amount"
+        topupCurrency="EUR"
+      >
+        <CheckoutSteps.AmountPicker />
+      </CheckoutSteps.Root>,
+      {
+        merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'sek' },
+      },
+    )
+    // EUR uses the same defaults as USD `[10, 50, 100, 500]`. The
+    // `data-amount=50` preset is unique to EUR/USD and absent from SEK
+    // (`[100, 500, 1000, 5000]`); use it as a tie-breaker so this
+    // assertion can't pass against the SEK presets.
+    const eurPreset = await waitFor(
+      () => document.querySelector('[data-amount="50"]') as HTMLElement | null,
+    )
+    expect(eurPreset).not.toBeNull()
+  })
+})
+
+describe('<CheckoutSteps.Payment> recurring vs one-time copy', () => {
+  it('renders "Subscribe — $X/mo" for a recurring plan with billingCycle', async () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        initialPlanRef="pln_pro"
+        initialStep="payment"
+        filter={keepAllPaidPlans}
+      >
+        <CheckoutSteps.Payment />
+      </CheckoutSteps.Root>,
+    )
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    const label = screen.getByTestId('payment-submit-label')
+    expect(label.textContent).toMatch(/^Subscribe —/)
+    expect(label.textContent).toMatch(/\/mo$/)
+  })
+
+  it('renders "Pay $X" (no /cycle suffix) for a one-time plan with no billingCycle', async () => {
+    const lifetimePlan: Plan = {
+      reference: 'pln_lifetime',
+      name: 'Lifetime',
+      price: 9900,
+      currency: 'usd',
+      requiresPayment: true,
+      type: 'one-time',
+      creditsPerUnit: 0,
+    }
+    const transport = makeTransport({ listPlans: vi.fn().mockResolvedValue([lifetimePlan]) })
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config)
+    plansCache.set(productRef, {
+      plans: [lifetimePlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant: defaultMerchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayContext.Provider value={ctx}>
+        <CheckoutSteps.Root
+          productRef={productRef}
+          returnUrl="https://example.test/r"
+          initialPlanRef="pln_lifetime"
+          initialStep="payment"
+        >
+          <CheckoutSteps.Payment />
+        </CheckoutSteps.Root>
+      </SolvaPayContext.Provider>,
+    )
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    const label = screen.getByTestId('payment-submit-label')
+    expect(label.textContent).toMatch(/^Pay /)
+    expect(label.textContent).not.toMatch(/Subscribe/)
+    expect(label.textContent).not.toMatch(/\/(mo|yr|wk|d)$/)
   })
 })

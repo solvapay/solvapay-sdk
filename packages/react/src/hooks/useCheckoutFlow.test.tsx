@@ -24,7 +24,14 @@ import { PlanSelector } from '../primitives/PlanSelector'
 import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
 import { SolvaPayContext } from '../SolvaPayProvider'
-import type { Plan, PurchaseInfo, SolvaPayConfig, SolvaPayContextValue } from '../types'
+import { createTransportCacheKey } from '../transport/cache-key'
+import type {
+  Merchant,
+  Plan,
+  PurchaseInfo,
+  SolvaPayConfig,
+  SolvaPayContextValue,
+} from '../types'
 
 const productRef = 'prd_test'
 
@@ -120,6 +127,12 @@ function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): Solva
   } as any
 }
 
+const defaultMerchant: Merchant = {
+  displayName: 'Acme',
+  legalName: 'Acme Inc.',
+  defaultCurrency: 'usd',
+}
+
 interface WrapperOptions {
   transport?: NonNullable<SolvaPayConfig['transport']>
   purchases?: PurchaseInfo[]
@@ -129,6 +142,13 @@ interface WrapperOptions {
    * scenarios pass an explicit list.
    */
   plans?: Plan[]
+  /**
+   * Override the seeded merchant. Defaults to `{ defaultCurrency: 'usd' }`
+   * so legacy tests keep their `'USD'` topup currency expectation. Pass
+   * `null` to leave the merchant unresolved (exercises the
+   * `topupCurrencyReady === false` skeleton path).
+   */
+  merchant?: Merchant | null
 }
 
 function makeWrapper(opts: WrapperOptions = {}): {
@@ -143,6 +163,18 @@ function makeWrapper(opts: WrapperOptions = {}): {
     timestamp: Date.now(),
     promise: null,
   })
+  // Seed the merchant cache so `useCheckoutFlow.topupCurrency` resolves
+  // synchronously. The PAYG/topup branch is wallet-scoped (merchant
+  // currency, not plan currency); without a merchant the lifecycle
+  // assertions on `successMeta.currency` would observe `null`.
+  const merchant = opts.merchant === undefined ? defaultMerchant : opts.merchant
+  if (merchant) {
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+  }
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <SolvaPayContext.Provider value={ctx}>
       <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
@@ -777,5 +809,214 @@ describe('useCheckoutFlow — canGoBack', () => {
     })
     expect(result.current.step).toBe('payment')
     expect(result.current.canGoBack).toBe(true)
+  })
+})
+
+// ------------------------------------------------------------------
+// PAYG topup currency resolution — Phase 0 multi-currency hook.
+// Credits are merchant-wide; the `topupCurrency` option (or the
+// merchant's `defaultCurrency`) is the source of truth. Plan currency
+// is **never** consulted for the topup branch.
+// ------------------------------------------------------------------
+
+describe('useCheckoutFlow — topupCurrency', () => {
+  it('resolves to merchant.defaultCurrency when no option is passed', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'sek' },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    await waitFor(() => expect(result.current.topupCurrencyReady).toBe(true))
+    expect(result.current.topupCurrency).toBe('SEK')
+  })
+
+  it('explicit `topupCurrency` option wins over merchant.defaultCurrency', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'sek' },
+    })
+    const { result } = renderHook(
+      () => useCheckoutFlow({ productRef, topupCurrency: 'eur' }),
+      { wrapper: Wrapper },
+    )
+    expect(result.current.topupCurrency).toBe('EUR')
+    expect(result.current.topupCurrencyReady).toBe(true)
+  })
+
+  it('ignores plan.currency entirely (credits are wallet-wide, not plan-specific)', async () => {
+    // Merchant settles in SEK but the PAYG plan happens to carry
+    // `currency: 'usd'`. Plan currency must be ignored — using it
+    // would produce wrong amounts in the topup PI.
+    const { Wrapper } = makeWrapper({
+      merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'sek' },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    await waitFor(() => expect(result.current.topupCurrencyReady).toBe(true))
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    expect(result.current.topupCurrency).toBe('SEK')
+    // Plan currency is 'usd' on the fixture — verify it's not the
+    // observed topup currency under any code path.
+    expect(result.current.selectedPlan?.currency).toBe('usd')
+  })
+
+  it('stays null until merchant resolves (no option, no merchant)', async () => {
+    const { Wrapper } = makeWrapper({ merchant: null })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    expect(result.current.topupCurrency).toBeNull()
+    expect(result.current.topupCurrencyReady).toBe(false)
+  })
+
+  it('forwards `topupCurrency` to the onAmountSelect callback', async () => {
+    const onAmountSelect = vi.fn()
+    const { Wrapper } = makeWrapper({
+      merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'eur' },
+    })
+    const { result } = renderHook(
+      () => useCheckoutFlow({ productRef, onAmountSelect }),
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    act(() => {
+      result.current.selectAmount(2500)
+    })
+    expect(onAmountSelect).toHaveBeenCalledWith(2500, 'EUR')
+  })
+
+  it('successMeta.currency reflects merchant currency (not plan currency)', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'eur' },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'payg',
+      currency: 'EUR',
+    })
+  })
+})
+
+// ------------------------------------------------------------------
+// Optimistic balance bump — `recordPaygSuccess` mints the local
+// wallet so the header pill flips immediately on Stripe confirm,
+// without waiting for the topup webhook to land.
+// ------------------------------------------------------------------
+
+describe('useCheckoutFlow — optimistic adjustBalance on PAYG success', () => {
+  it('calls adjustBalance with computed creditsAdded after PAYG payment', async () => {
+    const adjustBalance = vi.fn()
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config, [])
+    // Override the default mock with a spy so we can assert call shape.
+    ctx.balance.adjustBalance = adjustBalance
+    plansCache.set(productRef, {
+      plans: [paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant: defaultMerchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+    const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <SolvaPayContext.Provider value={ctx}>
+        <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
+          {children}
+        </PlanSelector.Root>
+      </SolvaPayContext.Provider>
+    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    // creditsPerMinorUnit (100) * (1800 / displayExchangeRate (1)) = 180_000.
+    expect(adjustBalance).toHaveBeenCalledTimes(1)
+    expect(adjustBalance).toHaveBeenCalledWith(180_000)
+  })
+
+  it('does NOT call adjustBalance on recurring success', async () => {
+    const adjustBalance = vi.fn()
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config, [])
+    ctx.balance.adjustBalance = adjustBalance
+    plansCache.set(productRef, {
+      plans: [paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant: defaultMerchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+    const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <SolvaPayContext.Provider value={ctx}>
+        <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
+          {children}
+        </PlanSelector.Root>
+      </SolvaPayContext.Provider>
+    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_pro')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_pro'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    // Recurring success records the purchase server-side; no
+    // optimistic credit mint (the plan grants credits via webhook).
+    expect(adjustBalance).not.toHaveBeenCalled()
   })
 })

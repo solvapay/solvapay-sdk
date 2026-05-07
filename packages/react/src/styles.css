@@ -423,76 +423,19 @@
   color: var(--solvapay-accent);
 }
 
-.solvapay-checkout-amount-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.solvapay-checkout-amount-options {
-  display: grid;
-  gap: 0.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-}
-
-.solvapay-checkout-amount-option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  background: var(--solvapay-surface);
-  border: 1px solid var(--solvapay-border);
-  border-radius: var(--solvapay-radius);
-  padding: 0.625rem 0.75rem;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  font-variant-numeric: tabular-nums;
-  transition:
-    border-color 120ms ease,
-    box-shadow 120ms ease;
-}
-
-.solvapay-checkout-amount-option:hover:not(:disabled) {
-  border-color: var(--solvapay-accent);
-}
-
-.solvapay-checkout-amount-option:focus-visible {
-  outline: none;
-  border-color: var(--solvapay-accent);
-  box-shadow: 0 0 0 2px var(--solvapay-accent);
-}
-
-.solvapay-checkout-amount-option[data-state='selected'] {
-  border-color: var(--solvapay-accent);
-  box-shadow: 0 0 0 1px var(--solvapay-accent);
-}
-
-.solvapay-checkout-amount-option[data-popular]::after {
-  content: 'Popular';
-  margin-top: 0.25rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--solvapay-muted-foreground);
-}
-
-.solvapay-checkout-amount-custom {
-  width: 100%;
-  background: var(--solvapay-surface);
-  border: 1px solid var(--solvapay-border);
-  border-radius: var(--solvapay-radius);
-  padding: 0.625rem 0.75rem;
-  font: inherit;
-  color: inherit;
-  font-variant-numeric: tabular-nums;
-}
-
-.solvapay-checkout-amount-custom:focus {
-  outline: none;
-  border-color: var(--solvapay-accent);
-  box-shadow: 0 0 0 1px var(--solvapay-accent);
+/* `<CheckoutSteps.AmountPicker>` reuses the canonical `solvapay-amount-picker-*`
+ * rules (pills + labelled custom row with currency prefix) defined further
+ * down. The only checkout-specific tweak is the loading skeleton — the
+ * `<span>` placeholders share the pill's class but never receive the
+ * primitive's data-attribute, so the canonical disabled rule (which
+ * targets `[data-solvapay-amount-picker-option][data-state='disabled']`)
+ * doesn't reach them; cover that case explicitly and give the empty
+ * spans enough min-width to read as real pills. */
+.solvapay-amount-picker-pill[data-state='disabled'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  min-width: 3.5rem;
+  height: 2rem;
 }
 
 .solvapay-checkout-success {

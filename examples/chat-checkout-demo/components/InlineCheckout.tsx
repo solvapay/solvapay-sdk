@@ -3,22 +3,29 @@ import { CheckoutSteps, PlanSelector } from '@solvapay/react/primitives'
 import { PaywallNotice } from '@solvapay/react/primitives'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { DrawerHeader } from './DrawerHeader'
+import { PreCheckoutNotice } from './PreCheckoutNotice'
+import { ScenarioType } from '../types'
 
 export type InlineCheckoutMode =
-  | { mode: 'paywall'; content: PaywallStructuredContent }
+  | { mode: 'paywall'; stage: 'notice' | 'checkout'; content: PaywallStructuredContent }
   | { mode: 'upgrade'; productRef: string }
 
 interface InlineCheckoutProps {
   /**
    * Discriminated state for the drawer:
-   *  - `paywall`: the server returned a 402 — render the SDK's
-   *    paywall surface with `<PaywallNotice.EmbeddedCheckout>` so the
-   *    Heading + Message reflect the real gate reason.
+   *  - `paywall` + `stage: 'notice'`: the server returned a 402 —
+   *    render the inline pre-checkout strip first (educational moment
+   *    with scenario-tailored heading + bullets + CTA).
+   *  - `paywall` + `stage: 'checkout'`: user clicked the CTA — render
+   *    the SDK's paywall surface with `<PaywallNotice.EmbeddedCheckout>`
+   *    so the Heading + Message reflect the real gate reason.
    *  - `upgrade`: user clicked "Upgrade" before hitting a 402 — go
    *    straight to the stepped checkout primitive with no
    *    paywall-flavored copy.
    */
   state: InlineCheckoutMode
+  /** Active scenario tab — drives the pre-checkout notice copy. */
+  currentScenario: ScenarioType
   /**
    * Fired once the customer's entitlement matches what was needed —
    * either via `usePaywallResolver.resolved` (paywall path) or via
@@ -27,25 +34,56 @@ interface InlineCheckoutProps {
    * pending message.
    */
   onSuccess: () => void
+  /**
+   * Click handler for the pre-checkout notice CTA. Flips the drawer
+   * from `stage: 'notice'` to `stage: 'checkout'` so the embedded
+   * checkout mounts. Owned by the parent so the same callback can
+   * gate any future entry points without duplicating state here.
+   */
+  onUnlock: () => void
   /** Optional return URL forwarded to Stripe's confirmPayment step. */
   returnUrl?: string
 }
 
 /**
- * Inline checkout drawer rendered below the chat transcript. Two
- * shapes share the same drawer chrome:
+ * Inline checkout drawer rendered below the chat transcript. Three
+ * shapes share the drawer slot:
  *
- *  - `paywall` → `<PaywallNotice.Root>` + `Heading` + `Message` +
- *    `<PaywallNotice.EmbeddedCheckout>`. The notice resolves
- *    web-friendly copy via the SDK's i18n bundle and the embedded
- *    checkout is a stepped `<CheckoutSteps.*>` composition under the
- *    hood.
+ *  - `paywall` + `stage: 'notice'` → `<PreCheckoutNotice>` strip
+ *    (scenario-tailored heading + bullets + CTA). Click expands into
+ *    the next stage. No drawer chrome — the strip is its own surface.
+ *  - `paywall` + `stage: 'checkout'` → `<PaywallNotice.Root>` +
+ *    `Heading` + `Message` + `<PaywallNotice.EmbeddedCheckout>`. The
+ *    notice resolves web-friendly copy via the SDK's i18n bundle and
+ *    the embedded checkout is a stepped `<CheckoutSteps.*>`
+ *    composition under the hood.
  *  - `upgrade` → bare `<CheckoutSteps.*>` composition. No paywall
  *    chrome because the user proactively chose to upgrade — they
- *    don't need to be told why a gate appeared.
+ *    don't need to be told why a gate appeared, and they shouldn't
+ *    sit through a notice they triggered themselves.
  */
-export const InlineCheckout: React.FC<InlineCheckoutProps> = ({ state, onSuccess, returnUrl }) => {
+export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
+  state,
+  currentScenario,
+  onSuccess,
+  onUnlock,
+  returnUrl,
+}) => {
   const url = returnUrl ?? (typeof window !== 'undefined' ? window.location.href : '/')
+
+  if (state.mode === 'paywall' && state.stage === 'notice') {
+    // The strip is its own bordered surface — render it bare without
+    // the drawer chrome so the educational moment doesn't feel like
+    // an already-opened form.
+    return (
+      <PreCheckoutNotice
+        currentScenario={currentScenario}
+        productRef={state.content.product ?? ''}
+        paywallContent={state.content}
+        onUnlock={onUnlock}
+      />
+    )
+  }
 
   return (
     <div className="px-4 py-4">

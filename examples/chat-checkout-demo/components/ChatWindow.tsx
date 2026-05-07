@@ -94,6 +94,13 @@ interface ChatWindowProps {
    */
   checkoutState: InlineCheckoutMode | null
   onFormSuccess: () => void
+  /**
+   * Click handler for the pre-checkout notice CTA. Forwarded to
+   * `<InlineCheckout>` and fires when the user clicks "Add Credits"
+   * / "Upgrade" / "Get Lifetime Access" on the notice strip; flips
+   * the drawer from `stage: 'notice'` to `stage: 'checkout'`.
+   */
+  onUnlock: () => void
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -113,6 +120,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   hasLifetimeAccess,
   checkoutState,
   onFormSuccess,
+  onUnlock,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const locale = useLocale()
@@ -307,7 +315,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </div>
       </div>
       {checkoutState ? (
-        <InlineCheckout state={checkoutState} onSuccess={onFormSuccess} />
+        <InlineCheckout
+          state={checkoutState}
+          currentScenario={currentScenario}
+          onSuccess={onFormSuccess}
+          onUnlock={onUnlock}
+        />
       ) : (
         <ChatInput onSendMessage={onSendMessage} />
       )}

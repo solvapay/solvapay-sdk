@@ -293,8 +293,136 @@ describe('PaywallNotice.Message', () => {
     )
     const text = screen.getByTestId('message').textContent ?? ''
     expect(text).not.toMatch(/`activate_plan`/)
+    // Host-neutral second-person copy — no "tool", no MCP framing.
+    expect(text).not.toMatch(/\btool\b/i)
     expect(text).toMatch(/active plan/i)
+    expect(text).toMatch(/to continue/i)
     expect(text).toContain('Knowledge API')
+  })
+
+  it('uses topupRequiredMessage when activation_required carries only PAYG plans', () => {
+    const content: PaywallStructuredContent = {
+      kind: 'activation_required',
+      product: baseProduct,
+      checkoutUrl: '',
+      message: 'Call the `topup` tool to add credits.',
+      plans: [
+        {
+          reference: 'pln_payg',
+          type: 'usage-based',
+          price: 0,
+          currency: 'usd',
+          requiresPayment: true,
+        },
+      ],
+      productDetails: { name: 'Chat API', reference: baseProduct },
+    }
+    render(
+      <PaywallNotice.Root content={content}>
+        <PaywallNotice.Message data-testid="message" />
+      </PaywallNotice.Root>,
+    )
+    const text = screen.getByTestId('message').textContent ?? ''
+    expect(text).toMatch(/out of credits/i)
+    expect(text).not.toMatch(/\btool\b/i)
+    expect(text).toContain('Chat API')
+  })
+
+  it('uses activationRequiredMessage when activation_required carries a non-PAYG plan', () => {
+    const content: PaywallStructuredContent = {
+      kind: 'activation_required',
+      product: baseProduct,
+      checkoutUrl: '',
+      message: 'Activate to continue.',
+      plans: [
+        {
+          reference: 'pln_pro',
+          type: 'recurring',
+          price: 1900,
+          currency: 'usd',
+          requiresPayment: true,
+          billingCycle: 'monthly',
+        },
+      ],
+    }
+    render(
+      <PaywallNotice.Root content={content}>
+        <PaywallNotice.Message data-testid="message" />
+      </PaywallNotice.Root>,
+    )
+    const text = screen.getByTestId('message').textContent ?? ''
+    expect(text).toMatch(/active plan/i)
+    expect(text).toMatch(/to continue/i)
+    expect(text).not.toMatch(/out of credits/i)
+  })
+})
+
+describe('PaywallNotice.Heading', () => {
+  it('renders activationRequiredHeading for non-PAYG activation gates', () => {
+    const content: PaywallStructuredContent = {
+      kind: 'activation_required',
+      product: baseProduct,
+      checkoutUrl: '',
+      message: 'Activate to continue.',
+      plans: [
+        {
+          reference: 'pln_pro',
+          type: 'recurring',
+          price: 1900,
+          currency: 'usd',
+          requiresPayment: true,
+          billingCycle: 'monthly',
+        },
+      ],
+    }
+    render(
+      <PaywallNotice.Root content={content}>
+        <PaywallNotice.Heading data-testid="heading" />
+      </PaywallNotice.Root>,
+    )
+    const text = screen.getByTestId('heading').textContent ?? ''
+    expect(text).toBe('Activate a plan to continue')
+  })
+
+  it('renders topupRequiredHeading when every gate plan is PAYG', () => {
+    const content: PaywallStructuredContent = {
+      kind: 'activation_required',
+      product: baseProduct,
+      checkoutUrl: '',
+      message: 'Add credits to continue.',
+      plans: [
+        {
+          reference: 'pln_payg',
+          type: 'usage-based',
+          price: 0,
+          currency: 'usd',
+          requiresPayment: true,
+        },
+      ],
+    }
+    render(
+      <PaywallNotice.Root content={content}>
+        <PaywallNotice.Heading data-testid="heading" />
+      </PaywallNotice.Root>,
+    )
+    const text = screen.getByTestId('heading').textContent ?? ''
+    expect(text).toBe('Add credits to continue')
+  })
+
+  it('renders paymentRequiredHeading for payment_required gates', () => {
+    const content: PaywallStructuredContent = {
+      kind: 'payment_required',
+      product: baseProduct,
+      checkoutUrl: '',
+      message: 'Upgrade.',
+    }
+    render(
+      <PaywallNotice.Root content={content}>
+        <PaywallNotice.Heading data-testid="heading" />
+      </PaywallNotice.Root>,
+    )
+    const text = screen.getByTestId('heading').textContent ?? ''
+    expect(text).toBe('Upgrade to continue')
   })
 })
 

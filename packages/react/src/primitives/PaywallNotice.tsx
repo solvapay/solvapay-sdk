@@ -40,6 +40,7 @@ import { usePaywallResolver } from '../hooks/usePaywallResolver'
 import { usePlans } from '../hooks/usePlans'
 import { interpolate } from '../i18n/interpolate'
 import type { Plan } from '../types'
+import { isPaygPlan } from '../utils/isPayg'
 
 export interface PaywallNoticeClassNames {
   root?: string
@@ -138,7 +139,9 @@ const Heading = forwardRef<HTMLHeadingElement, LeafProps>(function PaywallNotice
     ? copy.paywall.resolvedHeading
     : ctx.content.kind === 'payment_required'
       ? copy.paywall.paymentRequiredHeading
-      : copy.paywall.activationRequiredHeading
+      : isTopupGate(ctx.content)
+        ? copy.paywall.topupRequiredHeading
+        : copy.paywall.activationRequiredHeading
   const Comp = asChild ? Slot : 'h2'
   return (
     <Comp
@@ -181,9 +184,11 @@ const Message = forwardRef<HTMLParagraphElement, LeafProps>(function PaywallNoti
  *      → `paymentRequiredMessage` ("You've used all your included calls…")
  *   3. `payment_required` + no balance block
  *      → `paymentRequiredMessageNoBalance` (web-friendly fallback)
- *   4. `activation_required`
- *      → `activationRequiredMessage` ("This tool needs an active plan…")
- *   5. Any future `kind`
+ *   4. `activation_required` + every available plan is PAYG
+ *      → `topupRequiredMessage` ("You're out of credits…")
+ *   5. `activation_required` (mixed or non-PAYG plans)
+ *      → `activationRequiredMessage` ("You need an active plan… to continue")
+ *   6. Any future `kind`
  *      → `content.message` (server-provided, forward-compat)
  *
  * The fallback path used to drop straight to `content.message`, which
@@ -197,7 +202,26 @@ type PaywallMessageCopy = {
   paymentRequiredMessageRemaining: string
   paymentRequiredMessageNoBalance: string
   activationRequiredMessage: string
+  topupRequiredMessage: string
   paymentRequiredProductSuffix: string
+}
+
+/**
+ * Discriminate the topup variant of an activation gate from a
+ * subscription/lifetime activation. PAYG-only gates (every available
+ * plan has `type: 'usage-based' | 'hybrid'`) get topup-flavored copy
+ * ("Add credits", "You're out of credits…"); anything else gets the
+ * generic "Activate a plan" framing.
+ *
+ * Returns `false` when `plans` is missing — without plan-shape
+ * information we can't safely promise the user "credits", so we keep
+ * the neutral activation copy.
+ */
+function isTopupGate(content: PaywallStructuredContent): boolean {
+  if (content.kind !== 'activation_required') return false
+  const plans = content.plans
+  if (!plans || plans.length === 0) return false
+  return plans.every(p => isPaygPlan(p))
 }
 
 function resolvePaywallMessage(
@@ -229,6 +253,9 @@ function resolvePaywallMessage(
   }
 
   if (content.kind === 'activation_required') {
+    if (isTopupGate(content)) {
+      return interpolate(paywallCopy.topupRequiredMessage, { forProduct })
+    }
     return interpolate(paywallCopy.activationRequiredMessage, { forProduct })
   }
 
@@ -363,6 +390,14 @@ interface EmbeddedCheckoutProps {
    * Return URL forwarded to Stripe's confirmPayment step.
    */
   returnUrl: string
+  /**
+   * Currency for the PAYG topup branch. Forwarded to
+   * `<CheckoutSteps.Root>`. Defaults to `merchant.defaultCurrency`.
+   * Pass an explicit value when integrators surface a per-customer
+   * currency picker (multi-currency topup, future). Plan currency is
+   * never used as a fallback — credit topups are merchant-wide.
+   */
+  topupCurrency?: string
   className?: string
 }
 
@@ -377,7 +412,7 @@ interface EmbeddedCheckoutProps {
  * want a different layout — extra chrome, alternate ordering, embedded
  * inside another widget — compose `<CheckoutSteps.*>` directly.
  */
-function EmbeddedCheckout({ returnUrl, className }: EmbeddedCheckoutProps) {
+function EmbeddedCheckout({ returnUrl, topupCurrency, className }: EmbeddedCheckoutProps) {
   const ctx = usePaywallNoticeCtx('EmbeddedCheckout')
   const productRef = ctx.content.product
   // Prefetch plans so the filter sees the full plan list. `usePlans`
@@ -394,6 +429,7 @@ function EmbeddedCheckout({ returnUrl, className }: EmbeddedCheckoutProps) {
       productRef={productRef}
       returnUrl={returnUrl}
       filter={filter}
+      topupCurrency={topupCurrency}
       onPurchaseSuccess={() => {
         void ctx.refetch()
       }}
