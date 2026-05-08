@@ -108,14 +108,33 @@ describe('usePlans', () => {
       expect(result.current.selectedPlan?.reference).toBe('plan_basic')
     })
 
-    it('defaults to index 0 when no initialPlanRef and autoSelectFirstPaid is false', async () => {
+    it('leaves selection empty when no initialPlanRef and autoSelectFirstPaid is false', async () => {
+      // Caller opted out of auto-selection; the hook must not silently
+      // pre-select the first card. `-1` surfaces as `selectedPlan: null`
+      // so consumers gating on `selectedPlanRef` (e.g. the Continue
+      // button) keep the disabled state until the user clicks a card.
       const fetcher = createFetcher()
       const { result } = renderHook(() =>
         usePlans({ productRef: 'prd_1', fetcher }),
       )
 
       await waitFor(() => expect(result.current.loading).toBe(false))
-      expect(result.current.selectedPlanIndex).toBe(0)
+      expect(result.current.selectedPlanIndex).toBe(-1)
+      expect(result.current.selectedPlan).toBeNull()
+    })
+
+    it('honours user pick after the no-selection default', async () => {
+      const fetcher = createFetcher()
+      const { result } = renderHook(() =>
+        usePlans({ productRef: 'prd_1', fetcher }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlan).toBeNull()
+
+      act(() => result.current.selectPlan('plan_basic'))
+      expect(result.current.selectedPlanIndex).toBe(1)
+      expect(result.current.selectedPlan?.reference).toBe('plan_basic')
     })
   })
 
@@ -326,6 +345,42 @@ describe('usePlans', () => {
       // Should have correct index from the cache init (no flash)
       expect(r2.current.selectedPlanIndex).toBe(2)
       expect(r2.current.isSelectionReady).toBe(true)
+    })
+
+    it('coalesces concurrent mounts onto a single in-flight fetch', async () => {
+      // Regression: previously the second caller would hit the
+      // fresh-cache branch (the in-flight slot carries `plans: []` +
+      // a fresh timestamp) and lock itself into "loading=false,
+      // plans=[]" until the TTL expired. The in-flight branch must
+      // win over the fresh-cache branch when `plans.length === 0`.
+      let resolveFetch: (plans: Plan[]) => void = () => {}
+      const pending = new Promise<Plan[]>(resolve => {
+        resolveFetch = resolve
+      })
+      const fetcher = vi.fn().mockReturnValue(pending)
+
+      const first = renderHook(() =>
+        usePlans({ productRef: 'prd_race', fetcher, selectionReady: true }),
+      )
+      // Mount #2 before mount #1's fetch resolves.
+      const second = renderHook(() =>
+        usePlans({ productRef: 'prd_race', fetcher, selectionReady: true }),
+      )
+
+      // Both should be loading and waiting on the same promise.
+      expect(first.result.current.loading).toBe(true)
+      expect(second.result.current.loading).toBe(true)
+      expect(fetcher).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        resolveFetch(allPlans)
+        await pending
+      })
+
+      await waitFor(() => expect(first.result.current.loading).toBe(false))
+      await waitFor(() => expect(second.result.current.loading).toBe(false))
+      expect(first.result.current.plans).toEqual(allPlans)
+      expect(second.result.current.plans).toEqual(allPlans)
     })
 
     it('preserves selection across refetch', async () => {

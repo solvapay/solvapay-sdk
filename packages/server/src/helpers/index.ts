@@ -42,6 +42,9 @@ export { getPaymentMethodCore } from './payment-method'
 // Export plans helpers
 export { listPlansCore } from './plans'
 
+// Export limits helpers
+export { checkLimitsCore } from './limits'
+
 // Export merchant/product helpers
 export { getMerchantCore } from './merchant'
 export { getProductCore } from './product'

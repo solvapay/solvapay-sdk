@@ -67,6 +67,7 @@ export const DEFAULT_ROUTES = {
   listPlans: '/api/list-plans',
   getPaymentMethod: '/api/payment-method',
   getUsage: '/api/usage',
+  getLimits: '/api/limits',
 } as const
 
 function routeFor(
@@ -223,5 +224,32 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         onErrorContext: 'getUsage',
         errorPrefix: 'Failed to load usage',
       }),
+
+    getLimits: async ({ productRef, meterName }) => {
+      const base = routeFor(config, 'getLimits')
+      const params = new URLSearchParams({ productRef })
+      if (meterName) params.set('meterName', meterName)
+      const url = `${base}?${params.toString()}`
+      // The wire format is the full `LimitResponseWithPlan` from
+      // `checkLimitsCore`. The transport contract is the narrower
+      // `TransportLimitsResult`, so project the fields the React
+      // surface actually consumes — the rest stays on the server side.
+      const data = await request<{
+        withinLimits: boolean
+        remaining: number
+        meterName?: string | null
+        activationRequired?: boolean
+      }>(config, url, {
+        method: 'GET',
+        onErrorContext: 'getLimits',
+        errorPrefix: 'Failed to fetch limits',
+      })
+      return {
+        withinLimits: data.withinLimits,
+        remaining: data.remaining,
+        meterName: data.meterName ?? null,
+        activationRequired: data.activationRequired ?? false,
+      }
+    },
   }
 }

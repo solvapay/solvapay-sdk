@@ -206,6 +206,37 @@ export interface SolvaPayCopy {
      * in-session (e.g. via `Pick a plan` on `<McpAccountView>`).
      */
     backToAccount: string
+    /**
+     * Step-aware heading copy rendered by `<CheckoutSteps.StepHeading>`.
+     * In paywall context, the `plan` step is overridden by the
+     * `paywall.{paymentRequiredHeading|activationRequiredHeading|topupRequiredHeading}`
+     * keys so the gate-reason framing is preserved at entry; the
+     * `amount` and `payment` steps always read from this block.
+     */
+    stepHeading: {
+      plan: string
+      amount: string
+      payment: string
+    }
+    /**
+     * Step-aware subheading copy rendered by `<CheckoutSteps.StepMessage>`.
+     * Payment-step copy is branch-aware:
+     *  - `paymentRecurring` interpolates `{planName}` for subscription
+     *    plans (with `billingCycle`),
+     *  - `paymentOneTime` is used for one-time / lifetime plans (no
+     *    `billingCycle`),
+     *  - `paymentPayg` covers credit-topup payments.
+     * In paywall context, the `plan` step is overridden by
+     * `resolvePaywallMessage` so the gate-reason / balance framing is
+     * preserved at entry.
+     */
+    stepMessage: {
+      plan: string
+      amount: string
+      paymentRecurring: string
+      paymentOneTime: string
+      paymentPayg: string
+    }
   }
   legalFooter: {
     terms: string

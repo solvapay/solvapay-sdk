@@ -36,7 +36,7 @@ export const enCopy: SolvaPayCopy = {
     },
     oneTime: (ctx: MandateContext) => {
       const product = ctx.product?.name ? ` for ${ctx.product.name}` : ''
-      return `By confirming, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${product}. Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      return `By confirming, you authorize ${ctx.merchant.legalName} to charge a one-time ${ctx.amountFormatted}${product}. Payments are processed by SolvaPay.${termsSentence(ctx)}`
     },
     topup: (ctx: MandateContext) => {
       const product = ctx.product?.name
@@ -188,6 +188,18 @@ export const enCopy: SolvaPayCopy = {
   },
   checkout: {
     backToAccount: 'Back to my account',
+    stepHeading: {
+      plan: 'Choose your plan',
+      amount: 'Add credits',
+      payment: 'Complete payment',
+    },
+    stepMessage: {
+      plan: 'Pick the option that fits your usage.',
+      amount: 'Pick or enter an amount to add to your balance.',
+      paymentRecurring: 'Confirm your card to start your {planName} plan.',
+      paymentOneTime: 'Confirm your card to complete the purchase.',
+      paymentPayg: 'Confirm your card to add credits to your balance.',
+    },
   },
   legalFooter: {
     terms: 'Terms',

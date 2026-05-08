@@ -158,6 +158,8 @@ export {
   CheckoutSteps,
   CheckoutStepsRoot,
   CheckoutStepsIfStep,
+  CheckoutStepsStepHeading,
+  CheckoutStepsStepMessage,
   CheckoutStepsPlanGrid,
   CheckoutStepsPlanContinueButton,
   CheckoutStepsAmountPicker,

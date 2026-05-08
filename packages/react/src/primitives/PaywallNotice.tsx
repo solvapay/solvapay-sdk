@@ -29,7 +29,15 @@
  *                           `usePaywallResolver.resolved`
  */
 
-import React, { createContext, forwardRef, useContext, useEffect, useMemo } from 'react'
+import React, {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { Slot } from './slot'
 import { PlanSelector } from './PlanSelector'
@@ -94,20 +102,46 @@ const Root = forwardRef<HTMLDivElement, PaywallNoticeRootProps>(function Paywall
   const { resolved, refetch } = usePaywallResolver(content)
   const classNamesResolved = useMemo(() => classNames ?? {}, [classNames])
 
-  // Fire `onResolved` exactly once on the `false → true` transition.
+  // Mirror the latest `onResolved` on a ref so `signalResolved` can stay
+  // referentially stable. A stable trigger keeps the resolver-driven
+  // effect from re-firing every time the parent re-renders with a new
+  // inline arrow.
+  const onResolvedRef = useRef(onResolved)
   useEffect(() => {
-    if (resolved) onResolved?.()
-  }, [resolved, onResolved])
+    onResolvedRef.current = onResolved
+  }, [onResolved])
+
+  // Fire `onResolved` at most once per mount. Both the resolver-driven
+  // path (effect below) and downstream parts that call
+  // `ctx.onResolved?.()` synchronously on payment success
+  // (`<EmbeddedCheckout>`) route through this dedupe so the parent
+  // never sees a double dismissal.
+  const hasResolvedRef = useRef(false)
+  const signalResolved = useCallback(() => {
+    if (hasResolvedRef.current) return
+    hasResolvedRef.current = true
+    onResolvedRef.current?.()
+  }, [])
+
+  // Resolver-driven path: dismiss once `usePaywallResolver` flips
+  // `resolved` to `true`. This handles the canonical case where the
+  // backend has caught up (purchase visible, balance replenished) and
+  // mirrors the pre-fix behaviour. It's no longer the only path —
+  // `<EmbeddedCheckout>` also calls `signalResolved` on payment
+  // success so the dismissal doesn't hang on slow webhook delivery.
+  useEffect(() => {
+    if (resolved) signalResolved()
+  }, [resolved, signalResolved])
 
   const ctx = useMemo<PaywallNoticeContextValue>(
     () => ({
       content,
       resolved,
       refetch,
-      onResolved,
+      onResolved: signalResolved,
       classNames: classNamesResolved,
     }),
-    [content, resolved, refetch, onResolved, classNamesResolved],
+    [content, resolved, refetch, signalResolved, classNamesResolved],
   )
 
   const Comp = asChild ? Slot : 'div'
@@ -197,7 +231,7 @@ const Message = forwardRef<HTMLParagraphElement, LeafProps>(function PaywallNoti
  * string first and only fall through when we genuinely can't recognise
  * the kind.
  */
-type PaywallMessageCopy = {
+export type PaywallMessageCopy = {
   paymentRequiredMessage: string
   paymentRequiredMessageRemaining: string
   paymentRequiredMessageNoBalance: string
@@ -216,15 +250,18 @@ type PaywallMessageCopy = {
  * Returns `false` when `plans` is missing — without plan-shape
  * information we can't safely promise the user "credits", so we keep
  * the neutral activation copy.
+ *
+ * Exported so `<CheckoutSteps.StepHeading>` can mirror the same
+ * gate-flavour decision for the in-flow heading at the plan step.
  */
-function isTopupGate(content: PaywallStructuredContent): boolean {
+export function isTopupGate(content: PaywallStructuredContent): boolean {
   if (content.kind !== 'activation_required') return false
   const plans = content.plans
   if (!plans || plans.length === 0) return false
   return plans.every(p => isPaygPlan(p))
 }
 
-function resolvePaywallMessage(
+export function resolvePaywallMessage(
   content: PaywallStructuredContent,
   paywallCopy: PaywallMessageCopy,
 ): string {
@@ -424,6 +461,14 @@ function EmbeddedCheckout({ returnUrl, topupCurrency, className }: EmbeddedCheck
   if (!productRef) return null
   const resolvedClassName =
     className ?? ctx.classNames.embeddedCheckout ?? 'solvapay-paywall-embedded-checkout'
+  // Surface the PaywallNotice consumer's `classNames.heading` /
+  // `classNames.message` overrides on the in-flow step heading +
+  // message. Lets integrators style the embedded surface the same way
+  // they would the outer `<PaywallNotice.Heading>` / `Message>` parts
+  // — falling back to the namespaced default so unstyled consumers
+  // still get a sensible CSS hook.
+  const headingClassName = ctx.classNames.heading ?? 'solvapay-paywall-step-heading'
+  const messageClassName = ctx.classNames.message ?? 'solvapay-paywall-step-message'
   return (
     <CheckoutSteps.Root
       productRef={productRef}
@@ -431,10 +476,25 @@ function EmbeddedCheckout({ returnUrl, topupCurrency, className }: EmbeddedCheck
       filter={filter}
       topupCurrency={topupCurrency}
       onPurchaseSuccess={() => {
+        // Refetch purchase + balance so any sibling SDK consumers
+        // (other paywalls, balance pills, plan grids) reflect the new
+        // entitlement.
         void ctx.refetch()
+        // Treat payment success as paywall resolution and signal the
+        // parent immediately. The resolver-driven effect in `<Root>`
+        // would normally pick up the refetched state and fire
+        // `onResolved`, but webhook lag (sandbox / dev) can leave the
+        // customer's purchase invisible to `usePurchase` for several
+        // seconds — long enough for the user to see the success card
+        // hang. The customer has demonstrably paid, so dismiss
+        // regardless. `<Root>` dedupes so the eventual resolver flip
+        // doesn't double-fire.
+        ctx.onResolved?.()
       }}
       className={resolvedClassName}
     >
+      <CheckoutSteps.StepHeading className={headingClassName} />
+      <CheckoutSteps.StepMessage className={messageClassName} />
       <CheckoutSteps.IfStep step="plan">
         <CheckoutSteps.PlanGrid />
         <PlanSelector.Loading />
@@ -507,4 +567,15 @@ export { Retry as PaywallNoticeRetry }
 
 export function usePaywallNotice(): PaywallNoticeContextValue {
   return usePaywallNoticeCtx('usePaywallNotice')
+}
+
+/**
+ * Non-throwing variant of `usePaywallNotice`. Returns `null` when called
+ * outside a `<PaywallNotice.Root>` so cross-cutting primitives (e.g.
+ * `<CheckoutSteps.StepHeading>`) can opportunistically gate-reason-flavor
+ * their copy when nested inside a paywall surface, while remaining usable
+ * standalone in the proactive-upgrade path.
+ */
+export function usePaywallNoticeOptional(): PaywallNoticeContextValue | null {
+  return useContext(PaywallNoticeContext)
 }

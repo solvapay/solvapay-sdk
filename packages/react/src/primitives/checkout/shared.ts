@@ -79,8 +79,9 @@ export function planSortByPaygFirstThenAsc(a: Plan, b: Plan): number {
  *     is the meter; surfacing it alongside one-time / recurring plans
  *     frames it as a sibling tier, which it isn't.
  *   - Keeps PAYG when it's the only paid option, so PAYG-only topup
- *     products auto-skip the plan step (via `autoSkipSinglePlan`) and
- *     land on the `AmountPicker` — the canonical hosted-checkout shape.
+ *     products surface a single PAYG card on the plan step that the
+ *     user clicks before continuing into the `AmountPicker` — the
+ *     canonical hosted-checkout shape.
  *
  * Built from the full plan list rather than as a per-plan predicate
  * because the PAYG decision depends on what else the product exposes.

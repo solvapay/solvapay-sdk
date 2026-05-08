@@ -56,17 +56,6 @@ const proPlan: Plan = {
   creditsPerUnit: 0,
 }
 
-const freePlan: Plan = {
-  reference: 'pln_free',
-  name: 'Free',
-  price: 0,
-  currency: 'usd',
-  requiresPayment: false,
-  type: 'recurring',
-  billingCycle: 'monthly',
-  creditsPerUnit: 0,
-}
-
 function makeTransport(
   overrides: Partial<NonNullable<SolvaPayConfig['transport']>> = {},
 ): NonNullable<SolvaPayConfig['transport']> {
@@ -656,134 +645,39 @@ describe('useCheckoutFlow — lifecycle ordering', () => {
 })
 
 // ------------------------------------------------------------------
-// Auto-skip single plan — the hook short-circuits the plan step when
-// the product exposes only one selectable plan. Web/paywall surfaces
-// inherit this default; the MCP wrapper opts out so its
-// "Stay on Free" affordance stays reachable.
-// ------------------------------------------------------------------
-
-describe('useCheckoutFlow — autoSkipSinglePlan', () => {
-  it('single recurring plan: auto-selects + lands on payment, no activatePlan', async () => {
-    const onPlanSelect = vi.fn()
-    const { Wrapper, transport } = makeWrapper({ plans: [proPlan] })
-    const { result } = renderHook(
-      () => useCheckoutFlow({ productRef, onPlanSelect }),
-      { wrapper: Wrapper },
-    )
-    await waitFor(() => expect(result.current.step).toBe('payment'))
-    expect(result.current.selectedPlanRef).toBe('pln_pro')
-    expect(result.current.branch).toBe('recurring')
-    expect(transport.activatePlan).not.toHaveBeenCalled()
-    expect(onPlanSelect).toHaveBeenCalledTimes(1)
-    expect(onPlanSelect).toHaveBeenCalledWith(
-      'pln_pro',
-      expect.objectContaining({ reference: 'pln_pro' }),
-    )
-  })
-
-  it('single PAYG plan: auto-selects, calls activatePlan, lands on amount', async () => {
-    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
-    const onPlanSelect = vi.fn()
-    const { Wrapper } = makeWrapper({
-      plans: [paygPlan],
-      transport: makeTransport({ activatePlan: activate }),
-    })
-    const { result } = renderHook(
-      () => useCheckoutFlow({ productRef, onPlanSelect }),
-      { wrapper: Wrapper },
-    )
-    await waitFor(() => expect(result.current.step).toBe('amount'))
-    expect(result.current.selectedPlanRef).toBe('pln_payg')
-    expect(activate).toHaveBeenCalledWith({ productRef, planRef: 'pln_payg' })
-    expect(activate).toHaveBeenCalledTimes(1)
-    expect(onPlanSelect).toHaveBeenCalledTimes(1)
-  })
-
-  it('[Free, Paid] still auto-skips — Free is not selectable', async () => {
-    const { Wrapper } = makeWrapper({ plans: [freePlan, proPlan] })
-    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
-      wrapper: Wrapper,
-    })
-    await waitFor(() => expect(result.current.step).toBe('payment'))
-    expect(result.current.selectedPlanRef).toBe('pln_pro')
-  })
-
-  it('all-Free product: stays on plan step (zero selectable plans)', async () => {
-    const onPlanSelect = vi.fn()
-    const { Wrapper } = makeWrapper({ plans: [freePlan] })
-    const { result } = renderHook(
-      () => useCheckoutFlow({ productRef, onPlanSelect }),
-      { wrapper: Wrapper },
-    )
-    await act(async () => {
-      await Promise.resolve()
-    })
-    expect(result.current.step).toBe('plan')
-    expect(onPlanSelect).not.toHaveBeenCalled()
-  })
-
-  it('multiple paid plans: stays on plan step, no auto-skip onPlanSelect', async () => {
-    const onPlanSelect = vi.fn()
-    const { Wrapper } = makeWrapper({
-      plans: [paygPlan, proPlan],
-      transport: makeTransport(),
-    })
-    const { result } = renderHook(
-      () => useCheckoutFlow({ productRef, onPlanSelect }),
-      { wrapper: Wrapper },
-    )
-    await act(async () => {
-      await Promise.resolve()
-    })
-    expect(result.current.step).toBe('plan')
-    // Auto-skip's `onPlanSelect` MUST NOT fire when more than one plan
-    // is selectable, even though `<PlanSelector.Root>` index-0
-    // defaults to "selecting" the first plan internally.
-    expect(onPlanSelect).not.toHaveBeenCalled()
-  })
-
-  it('autoSkipSinglePlan: false disables the behavior', async () => {
-    const onPlanSelect = vi.fn()
-    const { Wrapper, transport } = makeWrapper({ plans: [proPlan] })
-    const { result } = renderHook(
-      () =>
-        useCheckoutFlow({
-          productRef,
-          autoSkipSinglePlan: false,
-          onPlanSelect,
-        }),
-      { wrapper: Wrapper },
-    )
-    await act(async () => {
-      await Promise.resolve()
-    })
-    expect(result.current.step).toBe('plan')
-    expect(transport.activatePlan).not.toHaveBeenCalled()
-    expect(onPlanSelect).not.toHaveBeenCalled()
-  })
-})
-
-// ------------------------------------------------------------------
-// canGoBack — read by `<CheckoutSteps.BackLink>` to suppress itself
-// when a back action would land on a step the user can't act on.
+// canGoBack — read by `<CheckoutSteps.BackLink>` to suppress the link
+// when there's no meaningful previous step. With every plan
+// progression now driven by the user (no auto-skip), `payment` always
+// has a real previous step (`plan` for recurring, `amount` for PAYG),
+// so `canGoBack` is just `step === 'amount' || step === 'payment'`.
 // ------------------------------------------------------------------
 
 describe('useCheckoutFlow — canGoBack', () => {
-  it('single recurring plan + auto-skip: canGoBack is false on payment', async () => {
+  it('plan step: canGoBack is false (nothing to go back to)', async () => {
     const { Wrapper } = makeWrapper({ plans: [proPlan] })
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
       wrapper: Wrapper,
     })
-    await waitFor(() => expect(result.current.step).toBe('payment'))
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(result.current.step).toBe('plan')
     expect(result.current.canGoBack).toBe(false)
   })
 
-  it('single PAYG plan + auto-skip: canGoBack is true on amount and on payment', async () => {
+  it('amount and payment steps for PAYG: canGoBack is true throughout', async () => {
     const { Wrapper } = makeWrapper({ plans: [paygPlan] })
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
       wrapper: Wrapper,
     })
-    await waitFor(() => expect(result.current.step).toBe('amount'))
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    expect(result.current.step).toBe('amount')
     expect(result.current.canGoBack).toBe(true)
     act(() => {
       result.current.selectAmount(1800)
@@ -795,7 +689,7 @@ describe('useCheckoutFlow — canGoBack', () => {
     expect(result.current.canGoBack).toBe(true)
   })
 
-  it('multi-plan recurring: canGoBack is true on payment (real plan choice)', async () => {
+  it('payment step for recurring: canGoBack is true (back to plan grid)', async () => {
     const { Wrapper } = makeWrapper({ plans: [paygPlan, proPlan] })
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
       wrapper: Wrapper,

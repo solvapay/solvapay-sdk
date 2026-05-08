@@ -113,4 +113,121 @@ describe('buildPaywallGate', () => {
     })
     expect(gate.message.length).toBeGreaterThan(0)
   })
+
+  it('swaps to activation_required when state is topup_required and every paid plan is PAYG', () => {
+    // Regression for the chat-checkout-demo TOPUP scenario: customer hits
+    // a paywall on an active usage-based plan with zero credits, and the
+    // product only offers PAYG remediation. The gate must emit
+    // `activation_required` (with the PAYG plans attached) so the React
+    // SDK's `isTopupGate` discriminator picks the topup-flavored heading
+    // ("Add credits to continue") instead of the generic upgrade copy.
+    const paygPlan: LimitResponseWithPlan['plans'] extends Array<infer P> ? P : never = {
+      reference: 'pln_payg',
+      name: 'Pay as you go',
+      type: 'usage-based',
+      price: 1000,
+      currency: 'USD',
+      requiresPayment: true,
+    }
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [paygPlan],
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+      product: { name: 'TopupProduct', ref: 'prd_topup', provider: 'acme' },
+    }
+    const gate = buildPaywallGate('prd_topup', limits)
+    expect(gate.kind).toBe('activation_required')
+    if (gate.kind !== 'activation_required') return
+    expect(gate.plans).toEqual([paygPlan])
+    expect(gate.balance).toEqual(limits.balance)
+    expect(gate.productDetails).toEqual(limits.product)
+    // Narration text still drives off the topup state, so it names the
+    // `topup` recovery tool — unchanged by the kind swap.
+    expect(gate.message).toMatch(/topup/i)
+  })
+
+  it('keeps payment_required when state is topup_required but no plans are attached', () => {
+    // Without plan-shape information we cannot promise the user "credits"
+    // on the React side — `isTopupGate` would fall through to neutral
+    // activation copy, which is worse than the upgrade copy. Stay on
+    // `payment_required` so the message stays accurate.
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    }
+    const gate = buildPaywallGate('prd_x', limits)
+    expect(gate.kind).toBe('payment_required')
+  })
+
+  it('keeps payment_required when state is topup_required but a non-PAYG paid plan is offered', () => {
+    // Mixed-plan products (PAYG + recurring) leave the customer a real
+    // upgrade choice in addition to topup, so `payment_required` ("Upgrade
+    // to continue" / "Pick a plan") stays the right framing.
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [
+        {
+          reference: 'pln_payg',
+          name: 'Pay as you go',
+          type: 'usage-based',
+          price: 1000,
+          currency: 'USD',
+          requiresPayment: true,
+        },
+        {
+          reference: 'pln_pro',
+          name: 'Pro',
+          type: 'recurring',
+          price: 2000,
+          currency: 'USD',
+          requiresPayment: true,
+        },
+      ],
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    }
+    const gate = buildPaywallGate('prd_x', limits)
+    expect(gate.kind).toBe('payment_required')
+  })
+
+  it('ignores Free plans when checking PAYG-only — Free + PAYG still swaps to activation_required', () => {
+    // Free plans don't represent a paid remediation, so a product that
+    // offers Free + a single PAYG plan still counts as topup-only for the
+    // kind-swap check.
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [
+        {
+          reference: 'pln_free',
+          name: 'Free',
+          type: 'recurring',
+          price: 0,
+          currency: 'USD',
+          requiresPayment: false,
+        },
+        {
+          reference: 'pln_payg',
+          name: 'Pay as you go',
+          type: 'usage-based',
+          price: 1000,
+          currency: 'USD',
+          requiresPayment: true,
+        },
+      ],
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    }
+    const gate = buildPaywallGate('prd_x', limits)
+    expect(gate.kind).toBe('activation_required')
+  })
 })

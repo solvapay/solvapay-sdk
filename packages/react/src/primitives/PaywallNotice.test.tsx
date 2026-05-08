@@ -26,9 +26,14 @@ import type { PaywallStructuredContent } from '@solvapay/server'
 import type { Plan } from '../types'
 
 // Mock `usePaywallResolver` up front so the `Root` doesn't try to
-// subscribe to live provider state.
+// subscribe to live provider state. The state is module-level so
+// individual tests can flip `resolved` without re-mocking.
+let resolverState: { resolved: boolean; refetch: () => Promise<void> } = {
+  resolved: false,
+  refetch: vi.fn(async () => {}),
+}
 vi.mock('../hooks/usePaywallResolver', () => ({
-  usePaywallResolver: () => ({ resolved: false, refetch: vi.fn() }),
+  usePaywallResolver: () => resolverState,
 }))
 
 type SelectedPlanShape = Plan | null
@@ -164,6 +169,61 @@ vi.mock('./TopupForm', () => {
   }
 })
 
+// Mock `<CheckoutSteps.*>` so we can capture `onPurchaseSuccess` and
+// fire it from the test (simulating a successful payment) without
+// standing up Stripe Elements / `useCheckoutFlow`. The mock still
+// exposes a stub `plan-selector-root` carrying the `filter` prop so
+// existing assertions on Free-hiding behaviour keep working.
+let capturedOnPurchaseSuccess: (() => void) | null = null
+
+vi.mock('./checkout', () => {
+  type RootProps = {
+    productRef?: string
+    filter?: (plan: Plan, index: number) => boolean
+    onPurchaseSuccess?: (meta: unknown) => void
+    children?: React.ReactNode
+  }
+  const Root = (props: RootProps) => {
+    capturedOnPurchaseSuccess = props.onPurchaseSuccess
+      ? () => props.onPurchaseSuccess?.({})
+      : null
+    return React.createElement(
+      'div',
+      {
+        'data-testid': 'plan-selector-root',
+        'data-has-filter': props.filter ? 'true' : 'false',
+        'data-filter-hides-free': props.filter
+          ? String(
+              props.filter(
+                { reference: 'pln_free', requiresPayment: false } as Plan,
+                0,
+              ) === false,
+            )
+          : 'n/a',
+      },
+      props.children,
+    )
+  }
+  const Passthrough = (props: { children?: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, props.children)
+  const Empty = () => null
+  return {
+    CheckoutSteps: {
+      Root,
+      IfStep: Passthrough,
+      StepHeading: Empty,
+      StepMessage: Empty,
+      PlanGrid: Empty,
+      PlanContinueButton: Empty,
+      AmountPicker: Empty,
+      AmountContinueButton: Empty,
+      Payment: Empty,
+      BackLink: Empty,
+      Success: Empty,
+    },
+  }
+})
+
 // Load after mocks are registered.
 import { PaywallNotice } from './PaywallNotice'
 import { SolvaPayContext } from '../SolvaPayProvider'
@@ -214,6 +274,8 @@ const renderWithProvider = (ui: React.ReactNode) =>
 
 beforeEach(() => {
   currentSelectedPlan = null
+  resolverState = { resolved: false, refetch: vi.fn(async () => {}) }
+  capturedOnPurchaseSuccess = null
 })
 
 describe('PaywallNotice.Message', () => {
@@ -494,5 +556,91 @@ describe('PaywallNotice.EmbeddedCheckout', () => {
       </PaywallNotice.Root>,
     )
     expect(screen.queryByTestId('plan-selector-root')).toBeNull()
+  })
+})
+
+// Auto-dismiss / `onResolved` semantics. Pre-fix, dismissal hung on
+// `usePaywallResolver` flipping `resolved=true`, which depends on the
+// backend reflecting the new purchase. Sandbox / dev webhook lag could
+// leave the success card stuck for 10s+ even though Stripe had already
+// confirmed payment. The fix routes both the resolver-driven path AND
+// `<EmbeddedCheckout>`'s `onPurchaseSuccess` through a dedupe so the
+// parent dismisses on the earlier of the two signals.
+describe('PaywallNotice auto-dismiss / onResolved', () => {
+  const content: PaywallStructuredContent = {
+    kind: 'payment_required',
+    product: baseProduct,
+    checkoutUrl: '',
+    message: 'Purchase required',
+  }
+
+  it('fires onResolved when usePaywallResolver flips to resolved=true', () => {
+    resolverState = { resolved: true, refetch: vi.fn(async () => {}) }
+    const onResolved = vi.fn()
+    renderWithProvider(
+      <PaywallNotice.Root content={content} onResolved={onResolved}>
+        <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
+      </PaywallNotice.Root>,
+    )
+    expect(onResolved).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires onResolved synchronously when EmbeddedCheckout reports a successful purchase, even while resolved is still false', () => {
+    const onResolved = vi.fn()
+    renderWithProvider(
+      <PaywallNotice.Root content={content} onResolved={onResolved}>
+        <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
+      </PaywallNotice.Root>,
+    )
+    // Pre-condition: resolver is still pending (mocked default), so the
+    // resolver-driven path hasn't fired yet.
+    expect(onResolved).not.toHaveBeenCalled()
+    expect(capturedOnPurchaseSuccess).not.toBeNull()
+    // Simulate a successful payment from inside the embedded checkout.
+    capturedOnPurchaseSuccess?.()
+    expect(onResolved).toHaveBeenCalledTimes(1)
+  })
+
+  it('dedupes — onResolved fires exactly once even when both EmbeddedCheckout and the resolver signal completion', () => {
+    const onResolved = vi.fn()
+    const { rerender } = renderWithProvider(
+      <PaywallNotice.Root content={content} onResolved={onResolved}>
+        <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
+      </PaywallNotice.Root>,
+    )
+    capturedOnPurchaseSuccess?.()
+    expect(onResolved).toHaveBeenCalledTimes(1)
+    // Now flip the resolver — mirrors the eventual webhook landing
+    // after `<EmbeddedCheckout>` has already signalled success.
+    resolverState = { resolved: true, refetch: vi.fn(async () => {}) }
+    rerender(
+      <SolvaPayContext.Provider value={makeMinimalContext()}>
+        <PaywallNotice.Root content={content} onResolved={onResolved}>
+          <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
+        </PaywallNotice.Root>
+      </SolvaPayContext.Provider>,
+    )
+    expect(onResolved).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not re-fire onResolved when the parent passes a new inline arrow on every render', () => {
+    resolverState = { resolved: true, refetch: vi.fn(async () => {}) }
+    const inner = vi.fn()
+    function Wrapper() {
+      // Fresh inline arrow each render — pre-fix this would re-trigger
+      // the resolver effect via the deps array.
+      return (
+        <SolvaPayContext.Provider value={makeMinimalContext()}>
+          <PaywallNotice.Root content={content} onResolved={() => inner()}>
+            <PaywallNotice.EmbeddedCheckout returnUrl="https://example.test/r" />
+          </PaywallNotice.Root>
+        </SolvaPayContext.Provider>
+      )
+    }
+    const { rerender } = render(<Wrapper />)
+    expect(inner).toHaveBeenCalledTimes(1)
+    rerender(<Wrapper />)
+    rerender(<Wrapper />)
+    expect(inner).toHaveBeenCalledTimes(1)
   })
 })

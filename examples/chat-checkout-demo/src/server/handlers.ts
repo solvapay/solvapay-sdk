@@ -2,6 +2,7 @@ import type { ExecutionContext } from '@cloudflare/workers-types'
 import {
   activatePlanCore,
   cancelPurchaseCore,
+  checkLimitsCore,
   checkPurchaseCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
@@ -34,6 +35,10 @@ const HANDLERS: Record<string, { method: 'GET' | 'POST'; handler: Handler }> = {
   '/api/list-plans': {
     method: 'GET',
     handler: (req, deps) => listPlansCore(req, { solvaPay: deps.solvaPay }),
+  },
+  '/api/limits': {
+    method: 'GET',
+    handler: (req, deps) => checkLimitsCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/check-purchase': {
     method: 'GET',

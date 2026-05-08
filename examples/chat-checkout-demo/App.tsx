@@ -1,5 +1,11 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { getOrCreateAnonymousCustomerRef, usePurchase, useBalance, usePlans } from '@solvapay/react'
+import React, { useCallback, useMemo, useState } from 'react'
+import {
+  getOrCreateAnonymousCustomerRef,
+  useAutoActivateFreePlan,
+  useLimits,
+  usePlans,
+  usePurchase,
+} from '@solvapay/react'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { Message as MessageType, UserType, ScenarioType } from './types'
 import { useFocusBus } from './components/focus/FocusProvider'
@@ -46,25 +52,34 @@ const App: React.FC = () => {
   const [checkoutState, setCheckoutState] = useState<InlineCheckoutMode | null>(null)
   const { requestChatInputFocus } = useFocusBus()
 
-  const userMessageCount = useRef(0)
   const customerRef = useMemo(() => getOrCreateAnonymousCustomerRef(), [])
 
-  const { purchases } = usePurchase()
-  const { credits, refetch: refetchBalance } = useBalance()
+  const { purchases, loading: purchaseLoading } = usePurchase()
 
   const isPremium = useMemo(() => getActivePurchaseFor(purchases, 'recurring'), [purchases])
   const hasLifetimeAccess = useMemo(() => getActivePurchaseFor(purchases, 'one-time'), [purchases])
-  const creditCount = credits ?? 0
 
   const productRef = productRefForScenario(currentScenario)
 
-  // Pull the active scenario's plans so the header pill / tooltip can
-  // surface the *real* free-tier limit. The backend is authoritative
-  // for gating; this is purely UX so the user knows how many free
-  // messages remain in the current product. `usePlans` defaults to
-  // `defaultListPlans` (which routes through the configured transport
-  // when present, or `/api/list-plans` otherwise), so no fetcher
-  // wiring is required here.
+  // Backend-authoritative remaining for the active product/meter. Drives
+  // the "X left" pill across all three scenarios (subscription free tier,
+  // lifetime free tier, topup PAYG balance) — replaces both the local
+  // `userMessageCount` ref counter and the `floor(credits/creditsPerUnit)`
+  // derivation. `adjustRemaining(-1)` after each successful send applies
+  // an 8s optimistic grace window before refetching, matching the SDK's
+  // `adjustBalance` pattern.
+  const {
+    remaining: limitRemaining,
+    refetch: refetchLimits,
+    adjustRemaining,
+  } = useLimits({
+    productRef: productRef || undefined,
+    meterName: 'requests',
+  })
+
+  // Plans still drive the tooltip copy ("Free up to N messages",
+  // "Pay-as-you-go: N credits per message"). Limits is the *runtime*
+  // counter; plans are the *configuration*.
   const { plans, loading: plansLoading } = usePlans({
     productRef: productRef || undefined,
   })
@@ -75,6 +90,16 @@ const App: React.FC = () => {
       .sort((a, b) => b - a)[0]
     return free ?? 0
   }, [plans])
+
+  // Silently flip the customer onto the product's free plan when the
+  // backend reports `activationRequired`. Without this, fresh customers
+  // on a product whose default plan needs explicit activation see "0
+  // left" until they trip a 402 — the free tier is there, just not yet
+  // claimed. PAYG-only products (no free plan to activate) keep
+  // `pending: false` so the pill commits to the real backend value.
+  const { pending: autoActivatingFreePlan } = useAutoActivateFreePlan({
+    productRef: productRef || undefined,
+  })
 
   const processMessage = useCallback(
     async (message: string, history: MessageType[], opts?: { retryOn402?: number }) => {
@@ -186,12 +211,12 @@ const App: React.FC = () => {
           }
         }
 
-        // Each chat send debits `creditsPerUnit` from the wallet on
-        // the backend (via `trackUsage` in the chat handler). Refetch
-        // the balance so the header pill tracks the real remainder.
-        // The SDK's 8s `adjustBalance` grace window handles transient
-        // staleness during checkout; no extra polling needed.
-        refetchBalance().catch(() => {})
+        // Each chat send debits one unit from the active meter on the
+        // backend (via `trackUsage` in the chat handler). Optimistically
+        // nudge the local counter so the pill reacts instantly; the
+        // hook's 8s grace window then refetches to converge on the
+        // authoritative value.
+        adjustRemaining(-1)
       } catch (e) {
         const errorMessage = 'An error occurred while fetching the response. Please try again.'
         setError(errorMessage)
@@ -204,7 +229,7 @@ const App: React.FC = () => {
         setIsBotThinking(false)
       }
     },
-    [productRef, currentScenario, customerRef, refetchBalance],
+    [productRef, currentScenario, customerRef, adjustRemaining],
   )
 
   const handleSendMessage = (message: string) => {
@@ -215,7 +240,6 @@ const App: React.FC = () => {
     // `/api/chat` twice and produce duplicate bot replies.
     void processMessage(message, messages)
     setMessages(prev => [...prev, { id: Date.now(), text: message, sender: UserType.USER }])
-    userMessageCount.current += 1
     setIsFirstMessage(false)
   }
 
@@ -248,13 +272,12 @@ const App: React.FC = () => {
   const handleFormSuccess = () => {
     setCheckoutState(null)
 
-    // Poll the balance for ~10s so the header pill converges on the
-    // real backend value once the webhook lands. `useBalance`'s 8s
-    // optimistic-grace window can otherwise hide a slow webhook from
-    // the badge.
+    // Poll the limits for ~10s so the header pill converges on the
+    // real backend value once the webhook lands. The hook's 10s cache
+    // TTL can otherwise hide a slow webhook from the badge.
     for (const ms of [1000, 3000, 6000, 10000]) {
       window.setTimeout(() => {
-        refetchBalance().catch(() => {})
+        refetchLimits().catch(() => {})
       }, ms)
     }
 
@@ -274,8 +297,10 @@ const App: React.FC = () => {
   }
 
   const handleReset = () => {
+    // Transcript-only reset — backend usage is preserved (the customer
+    // is the same; only the visible chat clears). `useLimits` keeps its
+    // cached `remaining` so the pill stays honest across resets.
     setMessages([])
-    userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
     setCheckoutState(null)
@@ -283,9 +308,11 @@ const App: React.FC = () => {
   }
 
   const handleScenarioChange = (scenario: ScenarioType) => {
+    // `useLimits` re-keys on `productRef` change automatically, so each
+    // scenario picks up its own backend-authoritative remaining without
+    // any local plumbing.
     setCurrentScenario(scenario)
     setMessages([])
-    userMessageCount.current = 0
     setIsFirstMessage(true)
     setPendingMessage(null)
     setCheckoutState(null)
@@ -322,7 +349,9 @@ const App: React.FC = () => {
             isBotThinking={isBotThinking}
             onSendMessage={handleSendMessage}
             onUpgrade={handleUpgrade}
-            userMessageCount={userMessageCount.current}
+            limitRemaining={limitRemaining}
+            autoActivatingFreePlan={autoActivatingFreePlan}
+            purchaseLoading={purchaseLoading}
             messageLimit={messageLimit}
             plans={plans}
             plansLoading={plansLoading}
@@ -330,7 +359,6 @@ const App: React.FC = () => {
             isFirstMessage={isFirstMessage}
             isPremium={isPremium}
             currentScenario={currentScenario}
-            credits={creditCount}
             hasLifetimeAccess={hasLifetimeAccess}
             checkoutState={checkoutState}
             onFormSuccess={handleFormSuccess}

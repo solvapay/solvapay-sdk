@@ -4,7 +4,6 @@ import { PaywallNotice } from '@solvapay/react/primitives'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { DrawerHeader } from './DrawerHeader'
 import { PreCheckoutNotice } from './PreCheckoutNotice'
-import { ScenarioType } from '../types'
 
 export type InlineCheckoutMode =
   | { mode: 'paywall'; stage: 'notice' | 'checkout'; content: PaywallStructuredContent }
@@ -14,8 +13,8 @@ interface InlineCheckoutProps {
   /**
    * Discriminated state for the drawer:
    *  - `paywall` + `stage: 'notice'`: the server returned a 402 —
-   *    render the inline pre-checkout strip first (educational moment
-   *    with scenario-tailored heading + bullets + CTA).
+   *    render the generic pre-checkout strip first (educational
+   *    moment that says "free limit reached, upgrade to continue").
    *  - `paywall` + `stage: 'checkout'`: user clicked the CTA — render
    *    the SDK's paywall surface with `<PaywallNotice.EmbeddedCheckout>`
    *    so the Heading + Message reflect the real gate reason.
@@ -24,8 +23,6 @@ interface InlineCheckoutProps {
    *    paywall-flavored copy.
    */
   state: InlineCheckoutMode
-  /** Active scenario tab — drives the pre-checkout notice copy. */
-  currentScenario: ScenarioType
   /**
    * Fired once the customer's entitlement matches what was needed —
    * either via `usePaywallResolver.resolved` (paywall path) or via
@@ -50,13 +47,15 @@ interface InlineCheckoutProps {
  * shapes share the drawer slot:
  *
  *  - `paywall` + `stage: 'notice'` → `<PreCheckoutNotice>` strip
- *    (scenario-tailored heading + bullets + CTA). Click expands into
- *    the next stage. No drawer chrome — the strip is its own surface.
+ *    (generic "Free limit reached / Upgrade to continue" framing).
+ *    Click expands into the next stage. No drawer chrome — the strip
+ *    is its own surface.
  *  - `paywall` + `stage: 'checkout'` → `<PaywallNotice.Root>` +
  *    `Heading` + `Message` + `<PaywallNotice.EmbeddedCheckout>`. The
  *    notice resolves web-friendly copy via the SDK's i18n bundle and
  *    the embedded checkout is a stepped `<CheckoutSteps.*>`
- *    composition under the hood.
+ *    composition under the hood. Plan-specific disclosure (price,
+ *    cycle, plan name) lives here, not in the strip above.
  *  - `upgrade` → bare `<CheckoutSteps.*>` composition. No paywall
  *    chrome because the user proactively chose to upgrade — they
  *    don't need to be told why a gate appeared, and they shouldn't
@@ -64,7 +63,6 @@ interface InlineCheckoutProps {
  */
 export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
   state,
-  currentScenario,
   onSuccess,
   onUnlock,
   returnUrl,
@@ -75,14 +73,7 @@ export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
     // The strip is its own bordered surface — render it bare without
     // the drawer chrome so the educational moment doesn't feel like
     // an already-opened form.
-    return (
-      <PreCheckoutNotice
-        currentScenario={currentScenario}
-        productRef={state.content.product ?? ''}
-        paywallContent={state.content}
-        onUnlock={onUnlock}
-      />
-    )
+    return <PreCheckoutNotice onUnlock={onUnlock} />
   }
 
   return (
@@ -91,9 +82,14 @@ export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
         <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/60 p-5">
           <DrawerHeader />
           {state.mode === 'paywall' ? (
-            <PaywallNotice.Root content={state.content} onResolved={onSuccess}>
-              <PaywallNotice.Heading className="text-lg font-semibold text-slate-900 mb-1" />
-              <PaywallNotice.Message className="text-sm text-slate-600 mb-4" />
+            <PaywallNotice.Root
+              content={state.content}
+              onResolved={onSuccess}
+              classNames={{
+                heading: 'text-lg font-semibold text-slate-900 mb-1',
+                message: 'text-sm text-slate-600 mb-4',
+              }}
+            >
               <PaywallNotice.EmbeddedCheckout returnUrl={url} />
             </PaywallNotice.Root>
           ) : (
@@ -102,8 +98,8 @@ export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
               returnUrl={url}
               onPurchaseSuccess={onSuccess}
             >
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">Choose a plan</h3>
-              <p className="text-sm text-slate-600 mb-4">Pick a plan to keep going.</p>
+              <CheckoutSteps.StepHeading className="text-lg font-semibold text-slate-900 mb-1" />
+              <CheckoutSteps.StepMessage className="text-sm text-slate-600 mb-4" />
               <CheckoutSteps.IfStep step="plan">
                 <CheckoutSteps.PlanGrid />
                 <PlanSelector.Loading />

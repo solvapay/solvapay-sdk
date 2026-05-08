@@ -167,16 +167,9 @@ function McpCheckoutBody({
 
   const flow = useCheckoutFlow({
     productRef,
-    // Opt out of `useCheckoutFlow`'s single-plan auto-skip. MCP
-    // bootstraps routinely return `[Free, Paid]` — that's one
-    // selectable plan, so the default would auto-advance and bury
-    // the paywall-entry "Stay on Free" affordance rendered on the
-    // plan step below. Web/paywall surfaces compose `CheckoutSteps`
-    // directly and keep the default.
-    autoSkipSinglePlan: false,
     // `notifyModelContext` for plan commit fires from the explicit
-    // Continue handler below — not on `selectPlan` — so auto-selected
-    // plans don't burn a host emit before the user opts in.
+    // Continue handler below — not on `selectPlan` — so a stray
+    // selection doesn't burn a host emit before the user opts in.
     onPurchaseSuccess: meta => {
       if (meta.branch === 'payg') {
         void bridge.notifyModelContext({

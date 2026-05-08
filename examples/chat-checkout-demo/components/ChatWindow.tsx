@@ -75,7 +75,39 @@ interface ChatWindowProps {
   isBotThinking: boolean
   onSendMessage: (message: string) => void
   onUpgrade: () => void
-  userMessageCount: number
+  /**
+   * Backend-authoritative remaining for the active scenario, sourced
+   * from `useLimits` in the parent. `null` while the initial fetch is
+   * in flight — falls back to `messageLimit` so the pill doesn't flash
+   * a misleading "0 left" before real numbers land.
+   */
+  limitRemaining: number | null
+  /**
+   * True only when the parent is silently activating a free plan in
+   * the background (`useLimits.activationRequired === true` AND a
+   * free plan is configured for the active product). Keeps the pill
+   * on skeleton during the activation round-trip so the user doesn't
+   * see a "0 left" flash before the post-activate refetch lands.
+   *
+   * Critically, when the product has no free plan to activate (e.g. a
+   * PAYG-only TOPUP product whose default plan needs activation but
+   * is paid), this stays false — the pill commits to the backend's
+   * actual `remaining` (`0 left` + upgrade CTA) instead of stalling
+   * on a skeleton that would never resolve.
+   */
+  autoActivatingFreePlan: boolean
+  /**
+   * `usePurchase().loading` — true while the customer's purchases are
+   * loading. Feeds the unified skeleton gate so the pill doesn't
+   * commit to "X left" before snapping to "Premium" / "Lifetime"
+   * once entitlement resolves.
+   */
+  purchaseLoading: boolean
+  /**
+   * Free-tier ceiling from `usePlans` — drives the tooltip's "Free up
+   * to N messages" copy and the loading-state fallback for the pill.
+   * Static configuration; not the runtime counter.
+   */
   messageLimit: number
   plans: Plan[]
   plansLoading: boolean
@@ -83,7 +115,6 @@ interface ChatWindowProps {
   isFirstMessage: boolean
   isPremium: boolean
   currentScenario: ScenarioType
-  credits: number
   hasLifetimeAccess: boolean
   /**
    * `null` when the user is browsing free quota; a discriminated
@@ -108,7 +139,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   isBotThinking,
   onSendMessage,
   onUpgrade,
-  userMessageCount,
+  limitRemaining,
+  autoActivatingFreePlan,
+  purchaseLoading,
   messageLimit,
   plans,
   plansLoading,
@@ -116,7 +149,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   isFirstMessage,
   isPremium,
   currentScenario,
-  credits,
   hasLifetimeAccess,
   checkoutState,
   onFormSuccess,
@@ -132,25 +164,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // and locks itself at empty plans / loading=false, leaving its
   // consumer stuck at "0 left".
   const paidPlan = plans.find(p => p.requiresPayment !== false && (p.price ?? 0) > 0)
-  // The metered plan on a top-up product is the zero-cost usage-based
-  // one. Its `creditsPerUnit` (e.g. 10) tells us how many internal
-  // credit units a single chat message debits — used to convert the
-  // raw `credits` balance into a user-facing "messages remaining"
-  // count for the header pill and the tooltip.
+  // `creditsPerMessage` is configuration sourced from the topup product's
+  // usage-based plan. Used purely for the pricing tooltip's
+  // "Pay-as-you-go: N credits per message" copy — the runtime counter
+  // (`limitRemaining`) comes from `useLimits` and already accounts for
+  // this conversion server-side.
   const meteredPlan = plans.find(p => p.type === 'usage-based')
   const creditsPerMessage = Math.max(meteredPlan?.creditsPerUnit ?? 1, 1)
-  const messagesRemaining = Math.floor((credits || 0) / creditsPerMessage)
 
-  // Free-tier remaining for subscription / lifetime scenarios. Top-up
-  // doesn't have a "free" allowance the same way — it counts down the
-  // wallet (`messagesRemaining`) directly.
-  const subLifetimeFreeRemaining = Math.max(messageLimit - userMessageCount, 0)
   const isFreeTier =
     (currentScenario === ScenarioType.SUBSCRIPTION && !isPremium) ||
     (currentScenario === ScenarioType.LIFETIME && !hasLifetimeAccess) ||
     currentScenario === ScenarioType.TOPUP
-  const remaining =
-    currentScenario === ScenarioType.TOPUP ? messagesRemaining : subLifetimeFreeRemaining
+  // While `useLimits` is loading the very first response, fall back to
+  // the configured ceiling so the pill doesn't flash "0 left". Once the
+  // backend value lands, `limitRemaining` becomes the source of truth
+  // for all three scenarios — no per-scenario branching.
+  //
+  // When the parent is auto-activating a free plan, prefer the ceiling
+  // for the same reason (avoid a misleading "0 left" between the
+  // limits fetch and the post-activation refetch). Pure paywall states
+  // with no auto-activation in progress fall through to `limitRemaining`,
+  // which the skeleton gate below masks while still resolving.
+  const remaining = autoActivatingFreePlan ? messageLimit : (limitRemaining ?? messageLimit)
   const approaching = isFreeTier && remaining > 0 && remaining <= 2
   const exhausted = isFreeTier && remaining <= 0
   const showUpgradeCta = isFreeTier && (approaching || exhausted)
@@ -188,30 +224,47 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     (currentScenario === ScenarioType.SUBSCRIPTION && isPremium) ||
     (currentScenario === ScenarioType.LIFETIME && hasLifetimeAccess)
 
-  // While plans are still in-flight on a free tier we don't actually
-  // know the real `freeUnits`. Render a neutral skeleton instead of
-  // the misleading "0 left" exhausted state, and suppress the upgrade
-  // CTA until we have real numbers to back it.
-  const showSkeletonPill = plansLoading && !onPaidEntitlement
+  // Unified skeleton gate. Only triggers BEFORE the first real value
+  // lands — once `limitRemaining` is non-null, the pill keeps showing
+  // it even while a refetch is in flight (no flash on adjustRemaining
+  // → 8s grace → trailing refetch). The SDK's key-change effect clears
+  // `limitRemaining` back to null on a productRef switch, which
+  // re-arms the skeleton until the new tab's value lands.
+  //
+  // `autoActivatingFreePlan` is the only `activationRequired`-related
+  // signal we gate on: it's true only when the parent will actually
+  // auto-activate. When the backend asks for activation but the demo
+  // can't satisfy it (no free plan configured), this stays false so
+  // the pill commits to the real `remaining` — typically "0 left" +
+  // upgrade CTA — instead of stalling on a never-resolving skeleton.
+  const usageResolving =
+    plansLoading ||
+    purchaseLoading ||
+    limitRemaining === null ||
+    autoActivatingFreePlan
+  // Once `purchase` confirms the customer is on a paid tier, we can
+  // commit to "Premium" / "Lifetime" even if other inputs are still
+  // settling — the runtime counter doesn't apply to paid entitlements.
+  const showSkeletonPill = usageResolving && !(onPaidEntitlement && !purchaseLoading)
 
-  const pillClass = onPaidEntitlement
-    ? currentScenario === ScenarioType.SUBSCRIPTION
-      ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-      : 'bg-purple-100 text-purple-700 border border-purple-200'
-    : showSkeletonPill
-      ? 'bg-slate-100 text-slate-400 border border-slate-200 animate-pulse'
+  const pillClass = showSkeletonPill
+    ? 'bg-slate-100 text-slate-400 border border-slate-200 animate-pulse'
+    : onPaidEntitlement
+      ? currentScenario === ScenarioType.SUBSCRIPTION
+        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+        : 'bg-purple-100 text-purple-700 border border-purple-200'
       : exhausted
         ? 'bg-red-100 text-red-700 border border-red-200'
         : approaching
           ? 'bg-amber-100 text-amber-800 border border-amber-200'
           : 'bg-slate-100 text-slate-600 border border-slate-200'
 
-  const pillText = onPaidEntitlement
-    ? currentScenario === ScenarioType.SUBSCRIPTION
-      ? 'Premium'
-      : 'Lifetime'
-    : showSkeletonPill
-      ? '\u2026 left'
+  const pillText = showSkeletonPill
+    ? '\u2026 left'
+    : onPaidEntitlement
+      ? currentScenario === ScenarioType.SUBSCRIPTION
+        ? 'Premium'
+        : 'Lifetime'
       : exhausted
         ? '0 left'
         : `${remaining.toLocaleString()} left`
@@ -317,7 +370,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       {checkoutState ? (
         <InlineCheckout
           state={checkoutState}
-          currentScenario={currentScenario}
           onSuccess={onFormSuccess}
           onUnlock={onUnlock}
         />

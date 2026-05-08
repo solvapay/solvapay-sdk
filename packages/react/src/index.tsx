@@ -60,6 +60,13 @@ export { usePaymentMethod } from './hooks/usePaymentMethod'
 export { useTransport } from './hooks/useTransport'
 export { useUsage } from './hooks/useUsage'
 export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
+export { useLimits } from './hooks/useLimits'
+export type { UseLimitsOptions, UseLimitsReturn } from './hooks/useLimits'
+export { useAutoActivateFreePlan } from './hooks/useAutoActivateFreePlan'
+export type {
+  UseAutoActivateFreePlanOptions,
+  UseAutoActivateFreePlanReturn,
+} from './hooks/useAutoActivateFreePlan'
 export { usePaywallResolver } from './hooks/usePaywallResolver'
 export type { UsePaywallResolverReturn } from './hooks/usePaywallResolver'
 
@@ -192,4 +199,5 @@ export type {
   TransportBalanceResult,
   TransportCheckoutSessionResult,
   TransportCustomerSessionResult,
+  TransportLimitsResult,
 } from './transport'

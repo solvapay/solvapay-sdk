@@ -24,7 +24,7 @@
  * pending-message replays, etc.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { usePlanSelector } from '../primitives/PlanSelector'
 import { useBalance } from './useBalance'
@@ -58,15 +58,6 @@ export interface UseCheckoutFlowOptions {
    * decided up front). Pure state seed — does not fire `onAmountSelect`.
    */
   initialAmountMinor?: number
-  /**
-   * When the product exposes only one selectable plan
-   * (`requiresPayment !== false`), auto-select it on mount and advance
-   * past the plan step — the grid would just be a one-card formality.
-   * Defaults to `true`. The MCP wrapper opts out (`false`) so its
-   * paywall-entry "Stay on Free" affordance stays reachable when the
-   * bootstrap returns `[Free, Paid]`.
-   */
-  autoSkipSinglePlan?: boolean
   /**
    * Currency for the PAYG topup branch (`AmountPicker`, `TopupForm`,
    * order summary, mandate text). Defaults to `merchant.defaultCurrency`
@@ -144,7 +135,6 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     productRef,
     initialStep = 'plan',
     initialAmountMinor = null,
-    autoSkipSinglePlan = true,
   } = opts
   const onPlanSelectRef = useRef(opts.onPlanSelect)
   const onAmountSelectRef = useRef(opts.onAmountSelect)
@@ -182,9 +172,6 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   // `AmountPicker.Confirm.onConfirm` handler that pairs them) read
   // the post-update value instead of the closed-over null.
   const selectedAmountMinorRef = useRef<number | null>(initialAmountMinor)
-  // One-shot guard so the auto-skip effect doesn't re-trigger after
-  // the user navigates back to the plan step manually.
-  const hasAutoSkippedRef = useRef(false)
 
   const selectedPlan = planCtx.selectedPlan
   const selectedPlanRef = planCtx.selectedPlanRef
@@ -196,22 +183,12 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       : 'recurring'
     : null
 
-  // Defensive against partial `usePlanSelector()` mocks in tests
-  // (e.g. PaywallNotice.test omits `plans`) — treat missing as empty.
-  const selectablePlans = useMemo(
-    () => (planCtx.plans ?? []).filter(p => p.requiresPayment !== false),
-    [planCtx.plans],
-  )
-
-  // Recurring `payment → plan` only has a useful target when there's
-  // a real plan choice to return to. PAYG `payment → amount` is
-  // always useful (change the topup amount).
-  const canGoBack =
-    step === 'amount' ||
-    (step === 'payment' && branch === 'payg') ||
-    (step === 'payment' &&
-      branch === 'recurring' &&
-      !(autoSkipSinglePlan && selectablePlans.length <= 1))
+  // The user reaches `payment` by deliberately picking a plan and
+  // pressing Continue, so a back step always lands somewhere they can
+  // act on. PAYG `payment → amount` is the topup amount picker;
+  // recurring/onetime `payment → plan` is the plan grid they came
+  // from.
+  const canGoBack = step === 'amount' || step === 'payment'
 
   const selectPlan = useCallback(
     (ref: string) => {
@@ -269,39 +246,6 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setError(null)
     setStep('payment')
   }, [branch, runActivate, selectedPlanRef, selectedPlanShape])
-
-  // Auto-skip the plan step when the product exposes only one
-  // selectable plan. Two-phase via early return: phase 1 commits the
-  // selection if `<PlanSelector.Root>` hasn't already (waits for the
-  // next render so `selectedPlan` propagates through `usePlans`),
-  // phase 2 fires `onPlanSelect` and advances. Firing `onPlanSelect`
-  // in phase 2 (not phase 1) keeps it consistent across both paths —
-  // PlanSelector's default index-0 selection means phase 1 is often a
-  // no-op. The `hasAutoSkippedRef` guard prevents re-triggering after
-  // the user navigates back.
-  useEffect(() => {
-    if (!autoSkipSinglePlan) return
-    if (hasAutoSkippedRef.current) return
-    if (planCtx.loading || selectablePlans.length !== 1) return
-    if (step !== 'plan' || status === 'activating') return
-
-    const single = selectablePlans[0]
-    if (planCtx.selectedPlanRef !== single.reference) {
-      planCtx.select(single.reference)
-      return
-    }
-
-    hasAutoSkippedRef.current = true
-    onPlanSelectRef.current?.(single.reference, single)
-    void advanceFromPlan()
-  }, [
-    autoSkipSinglePlan,
-    planCtx,
-    selectablePlans,
-    step,
-    status,
-    advanceFromPlan,
-  ])
 
   const recordPaygSuccess = useCallback(() => {
     if (!selectedPlanShape || selectedAmountMinor == null) return

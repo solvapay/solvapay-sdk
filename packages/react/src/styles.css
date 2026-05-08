@@ -736,11 +736,17 @@
   gap: 0.5rem;
 }
 
+.solvapay-amount-picker-pills > [data-solvapay-amount-picker-option],
+.solvapay-amount-picker-pills > .solvapay-amount-picker-pill {
+  flex: 1;
+  min-width: 0;
+}
+
 [data-solvapay-amount-picker-option],
 .solvapay-amount-picker-pill {
   background: var(--solvapay-surface);
   border: 1px solid var(--solvapay-border);
-  border-radius: 999px;
+  border-radius: 8px;
   color: var(--solvapay-accent);
   cursor: pointer;
   font: inherit;

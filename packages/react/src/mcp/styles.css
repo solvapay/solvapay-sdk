@@ -365,7 +365,7 @@ body {
   gap: 12px;
 }
 
-/* Pill-shaped quick-amount chips. Mirrors the `.solvapay-amount-picker-pill`
+/* Rounded-rectangle quick-amount chips. Mirrors the `.solvapay-amount-picker-pill`
  * shape used by the web SDK and the hosted topup page so the topup look is
  * consistent across surfaces. Colors come from host theme tokens
  * (`--color-*`) so Claude Desktop / ChatGPT / VSCode dark themes adapt
@@ -378,7 +378,7 @@ body {
 
 .solvapay-mcp-amount-option {
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid var(--color-border-secondary, #e2e8f0);
   background: var(--color-background-primary, #ffffff);
   color: var(--color-text-primary, #0f172a);

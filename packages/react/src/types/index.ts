@@ -277,6 +277,7 @@ export interface SolvaPayConfig {
     createCustomerSession?: string // Default: '/api/create-customer-session'
     getPaymentMethod?: string // Default: '/api/payment-method'
     getUsage?: string // Default: '/api/usage'
+    getLimits?: string // Default: '/api/limits'
   }
 
   /**

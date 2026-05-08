@@ -79,7 +79,18 @@ vi.mock('../MandateText', () => ({
   MandateText: () => null,
 }))
 
+// `<PaywallNotice.Root>` calls `usePaywallResolver` which spins up
+// transport polling against the real provider. The `<StepHeading>` /
+// `<StepMessage>` paywall-context tests don't care about resolution
+// state — they only need the PaywallNoticeContext to be populated. Stub
+// the resolver to a stable, no-op value so the tests stay hermetic.
+vi.mock('../../hooks/usePaywallResolver', () => ({
+  usePaywallResolver: () => ({ resolved: false, refetch: () => Promise.resolve() }),
+}))
+
 import { CheckoutSteps } from './index'
+import { PaywallNotice } from '../PaywallNotice'
+import type { PaywallStructuredContent } from '@solvapay/server'
 import { plansCache } from '../../hooks/usePlans'
 import { merchantCache } from '../../hooks/useMerchant'
 import { SolvaPayContext } from '../../SolvaPayProvider'
@@ -412,11 +423,7 @@ describe('default plan filter', () => {
     plansCache.set(productRef, { plans, timestamp: Date.now(), promise: null })
     return render(
       <SolvaPayContext.Provider value={ctx}>
-        <CheckoutSteps.Root
-          productRef={productRef}
-          returnUrl="https://example.test/r"
-          autoSkipSinglePlan={false}
-        >
+        <CheckoutSteps.Root productRef={productRef} returnUrl="https://example.test/r">
           <CheckoutSteps.IfStep step="plan">
             <CheckoutSteps.PlanGrid />
           </CheckoutSteps.IfStep>
@@ -426,7 +433,6 @@ describe('default plan filter', () => {
   }
 
   it('hides PAYG when the product also exposes non-PAYG paid plans (legacy topup-with-packs config)', async () => {
-    // Two packs so the plan step renders even with `autoSkipSinglePlan` defaults.
     renderWithPlans([freePlan, paygPlan, pack100, pack250])
     await waitFor(() => screen.getByText('100 Credits'))
     expect(screen.getByText('250 Credits')).toBeTruthy()
@@ -623,5 +629,235 @@ describe('<CheckoutSteps.Payment> recurring vs one-time copy', () => {
     expect(label.textContent).toMatch(/^Pay /)
     expect(label.textContent).not.toMatch(/Subscribe/)
     expect(label.textContent).not.toMatch(/\/(mo|yr|wk|d)$/)
+  })
+})
+
+// ------------------------------------------------------------------
+// `<CheckoutSteps.StepHeading>` + `<StepMessage>` — step-aware copy.
+// ------------------------------------------------------------------
+//
+// These primitives drive the heading/subheading at the top of the
+// embedded checkout drawer (proactive upgrade path) and the paywall
+// surface (`<PaywallNotice.EmbeddedCheckout>`). Pin the matrix so
+// integrators can rely on the copy reflecting where the user actually
+// is in the flow:
+//
+//   step       branch     plan billingCycle    paywall context  -> copy
+//   plan       —          —                     none             -> "Choose your plan"
+//   plan       —          —                     payment_required -> paywall.paymentRequiredHeading
+//   plan       —          —                     activation+payg  -> paywall.topupRequiredHeading
+//   amount     —          —                     —                -> "Add credits"
+//   payment    payg       —                     —                -> "Confirm your card to add credits..."
+//   payment    recurring  monthly               —                -> "Confirm your card to start your {planName} plan."
+//   payment    recurring  none (one-time)       —                -> "Confirm your card to complete the purchase."
+//   success    —          —                     —                -> renders nothing
+
+describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
+  it('renders "Choose your plan" / plan message at the plan step outside paywall context', async () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        filter={keepAllPaidPlans}
+      >
+        <CheckoutSteps.StepHeading data-testid="heading" />
+        <CheckoutSteps.StepMessage data-testid="message" />
+      </CheckoutSteps.Root>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('heading').textContent).toBe('Choose your plan'),
+    )
+    expect(screen.getByTestId('message').textContent).toBe(
+      'Pick the option that fits your usage.',
+    )
+    expect(screen.getByTestId('heading').getAttribute('data-step')).toBe('plan')
+  })
+
+  it('renders "Add credits" at the amount step', async () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        autoSelectFirstPaid={true}
+        initialStep="amount"
+      >
+        <CheckoutSteps.StepHeading data-testid="heading" />
+        <CheckoutSteps.StepMessage data-testid="message" />
+      </CheckoutSteps.Root>,
+    )
+    await waitFor(() => expect(screen.getByTestId('heading').textContent).toBe('Add credits'))
+    expect(screen.getByTestId('message').textContent).toBe(
+      'Pick or enter an amount to add to your balance.',
+    )
+  })
+
+  it('renders "Complete payment" + payg message at the payment step on the PAYG branch', async () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        initialPlanRef="pln_payg"
+        initialAmountMinor={500}
+        initialStep="payment"
+        filter={keepAllPaidPlans}
+      >
+        <CheckoutSteps.StepHeading data-testid="heading" />
+        <CheckoutSteps.StepMessage data-testid="message" />
+      </CheckoutSteps.Root>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('heading').textContent).toBe('Complete payment'),
+    )
+    expect(screen.getByTestId('message').textContent).toBe(
+      'Confirm your card to add credits to your balance.',
+    )
+  })
+
+  it('interpolates plan name into recurring payment message when billingCycle is set', async () => {
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        initialPlanRef="pln_pro"
+        initialStep="payment"
+        filter={keepAllPaidPlans}
+      >
+        <CheckoutSteps.StepHeading data-testid="heading" />
+        <CheckoutSteps.StepMessage data-testid="message" />
+      </CheckoutSteps.Root>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('heading').textContent).toBe('Complete payment'),
+    )
+    expect(screen.getByTestId('message').textContent).toBe(
+      'Confirm your card to start your Pro plan.',
+    )
+  })
+
+  it('renders one-time payment message when the recurring plan has no billingCycle', async () => {
+    const lifetimePlan: Plan = {
+      reference: 'pln_lifetime',
+      name: 'Lifetime',
+      price: 9900,
+      currency: 'usd',
+      requiresPayment: true,
+      type: 'one-time',
+      creditsPerUnit: 0,
+    }
+    const transport = makeTransport({ listPlans: vi.fn().mockResolvedValue([lifetimePlan]) })
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config)
+    plansCache.set(productRef, {
+      plans: [lifetimePlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant: defaultMerchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+    render(
+      <SolvaPayContext.Provider value={ctx}>
+        <CheckoutSteps.Root
+          productRef={productRef}
+          returnUrl="https://example.test/r"
+          initialPlanRef="pln_lifetime"
+          initialStep="payment"
+        >
+          <CheckoutSteps.StepHeading data-testid="heading" />
+          <CheckoutSteps.StepMessage data-testid="message" />
+        </CheckoutSteps.Root>
+      </SolvaPayContext.Provider>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('heading').textContent).toBe('Complete payment'),
+    )
+    expect(screen.getByTestId('message').textContent).toBe(
+      'Confirm your card to complete the purchase.',
+    )
+  })
+
+  it('uses paywall gate-reason heading at the plan step inside payment_required paywall', async () => {
+    const paywallContent: PaywallStructuredContent = {
+      kind: 'payment_required',
+      message: 'server-flavored copy',
+      product: productRef,
+      productDetails: { name: 'Acme API' },
+    } as PaywallStructuredContent
+    renderWithProvider(
+      <PaywallNotice.Root content={paywallContent}>
+        <CheckoutSteps.Root
+          productRef={productRef}
+          returnUrl="https://example.test/r"
+          filter={keepAllPaidPlans}
+        >
+          <CheckoutSteps.StepHeading data-testid="heading" />
+          <CheckoutSteps.StepMessage data-testid="message" />
+        </CheckoutSteps.Root>
+      </PaywallNotice.Root>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('heading').textContent).toBe('Upgrade to continue'),
+    )
+    // `paymentRequiredMessageNoBalance` interpolates the product
+    // suffix; assert the canonical sentence is rendered.
+    expect(screen.getByTestId('message').textContent).toContain(
+      "You've used your included messages",
+    )
+    expect(screen.getByTestId('message').textContent).toContain('Acme API')
+  })
+
+  it('uses topup gate-reason heading when every paywall plan is PAYG (activation_required)', async () => {
+    const paywallContent: PaywallStructuredContent = {
+      kind: 'activation_required',
+      message: 'server-flavored copy',
+      product: productRef,
+      plans: [
+        // PAYG-only — every plan has a usage-based / hybrid type.
+        { reference: 'pln_payg', type: 'usage-based', name: 'PAYG', price: 0, currency: 'usd' },
+      ],
+    } as unknown as PaywallStructuredContent
+    renderWithProvider(
+      <PaywallNotice.Root content={paywallContent}>
+        <CheckoutSteps.Root
+          productRef={productRef}
+          returnUrl="https://example.test/r"
+          filter={keepAllPaidPlans}
+        >
+          <CheckoutSteps.StepHeading data-testid="heading" />
+          <CheckoutSteps.StepMessage data-testid="message" />
+        </CheckoutSteps.Root>
+      </PaywallNotice.Root>,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('heading').textContent).toBe('Add credits to continue'),
+    )
+    expect(screen.getByTestId('message').textContent).toContain("You're out of credits")
+  })
+
+  it('renders nothing at the success step', async () => {
+    // `flow.step` lands on `success` once the payment form reports
+    // success; the heading + message are noise once the receipt is on
+    // screen, so they unmount.
+    renderWithProvider(
+      <CheckoutSteps.Root
+        productRef={productRef}
+        returnUrl="https://example.test/r"
+        initialPlanRef="pln_pro"
+        initialStep="payment"
+        filter={keepAllPaidPlans}
+      >
+        <CheckoutSteps.StepHeading data-testid="heading" />
+        <CheckoutSteps.StepMessage data-testid="message" />
+        <CheckoutSteps.Payment />
+      </CheckoutSteps.Root>,
+    )
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-form-submit'))
+    })
+    await waitFor(() => expect(screen.queryByTestId('heading')).toBeNull())
+    expect(screen.queryByTestId('message')).toBeNull()
   })
 })

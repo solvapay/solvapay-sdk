@@ -144,6 +144,7 @@ describe('MandateText', () => {
     const node = screen.getByText(/confirming/)
     expect(node.textContent).toContain('$49.99')
     expect(node.textContent).toContain('Widget API')
+    expect(node.textContent).toContain('a one-time')
     expect(node.textContent).not.toContain('every')
   })
 

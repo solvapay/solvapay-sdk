@@ -19,6 +19,7 @@
 
 import React, { createContext, forwardRef, useContext, useMemo } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
+import type { PaywallStructuredContent } from '@solvapay/server'
 import { PlanSelector } from '../PlanSelector'
 import {
   AmountPicker as AmountPickerPrimitive,
@@ -28,9 +29,17 @@ import {
 import { PaymentForm } from '../PaymentForm'
 import { TopupForm } from '../TopupForm'
 import { MandateText } from '../MandateText'
+import {
+  isTopupGate,
+  resolvePaywallMessage,
+  usePaywallNoticeOptional,
+} from '../PaywallNotice'
+import { Slot } from '../slot'
 import { useBalance } from '../../hooks/useBalance'
-import { useLocale } from '../../hooks/useCopy'
+import { useCopy, useLocale } from '../../hooks/useCopy'
 import { useCheckoutFlow, type UseCheckoutFlowReturn } from '../../hooks/useCheckoutFlow'
+import { interpolate } from '../../i18n/interpolate'
+import type { SolvaPayCopy } from '../../i18n/types'
 import { formatPrice } from '../../utils/format'
 import type { Plan } from '../../types'
 import { usePlans } from '../../hooks/usePlans'
@@ -73,12 +82,6 @@ interface RootProps {
   /** Forwarded to PlanSelector — defaults to `false` so the hook owns selection. */
   autoSelectFirstPaid?: boolean
   /**
-   * When the product exposes only one selectable plan, auto-select it
-   * and advance past the plan step. Defaults to `true`. Forwarded to
-   * `useCheckoutFlow`; see that hook for the trade-off note.
-   */
-  autoSkipSinglePlan?: boolean
-  /**
    * Currency for the PAYG topup branch (`AmountPicker`, `TopupForm`,
    * order summary, mandate text). Defaults to `merchant.defaultCurrency`.
    * Pass an explicit value when integrators surface a per-customer
@@ -111,7 +114,6 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CheckoutStepsRoot(pr
     initialPlanRef,
     initialAmountMinor,
     autoSelectFirstPaid = false,
-    autoSkipSinglePlan = true,
     topupCurrency,
     filter,
     sortBy = planSortByPaygFirstThenAsc,
@@ -146,7 +148,6 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CheckoutStepsRoot(pr
       className={className}
       initialStep={initialStep}
       initialAmountMinor={initialAmountMinor}
-      autoSkipSinglePlan={autoSkipSinglePlan}
       topupCurrency={topupCurrency}
       onPlanSelect={onPlanSelect}
       onAmountSelect={onAmountSelect}
@@ -169,7 +170,6 @@ interface RootWithPlanSelectorProps extends Pick<
   | 'className'
   | 'initialStep'
   | 'initialAmountMinor'
-  | 'autoSkipSinglePlan'
   | 'topupCurrency'
   | 'onPlanSelect'
   | 'onAmountSelect'
@@ -200,7 +200,6 @@ function RootWithPlanSelector({
   className,
   initialStep,
   initialAmountMinor,
-  autoSkipSinglePlan,
   topupCurrency,
   onPlanSelect,
   onAmountSelect,
@@ -229,7 +228,6 @@ function RootWithPlanSelector({
         className={className}
         initialStep={initialStep}
         initialAmountMinor={initialAmountMinor}
-        autoSkipSinglePlan={autoSkipSinglePlan}
         topupCurrency={topupCurrency}
         onPlanSelect={onPlanSelect}
         onAmountSelect={onAmountSelect}
@@ -247,7 +245,6 @@ interface FlowProviderProps extends Pick<
   | 'productRef'
   | 'initialStep'
   | 'initialAmountMinor'
-  | 'autoSkipSinglePlan'
   | 'topupCurrency'
   | 'onPlanSelect'
   | 'onAmountSelect'
@@ -263,7 +260,6 @@ function FlowProvider({
   productRef,
   initialStep,
   initialAmountMinor,
-  autoSkipSinglePlan,
   topupCurrency,
   onPlanSelect,
   onAmountSelect,
@@ -277,7 +273,6 @@ function FlowProvider({
     productRef,
     initialStep,
     initialAmountMinor,
-    autoSkipSinglePlan,
     topupCurrency,
     onPlanSelect,
     onAmountSelect,
@@ -301,6 +296,138 @@ function IfStep({ step, children }: IfStepProps) {
   const matches = Array.isArray(step) ? step.includes(flow.step) : flow.step === step
   if (!matches) return null
   return <>{children}</>
+}
+
+type StepLeafProps = Omit<React.HTMLAttributes<HTMLElement>, 'children'> & {
+  asChild?: boolean
+  children?: React.ReactNode
+}
+
+/**
+ * Step-aware heading rendered at the top of a `<CheckoutSteps.Root>` tree.
+ * Reads the active `flow.step` and resolves localized copy:
+ *
+ *  - `plan` — when nested inside `<PaywallNotice.Root>`, mirrors the
+ *    gate-reason heading (`paywall.{paymentRequired,activationRequired,topupRequired}Heading`)
+ *    so the entry framing is preserved. Outside paywall context, uses
+ *    `checkout.stepHeading.plan` ("Choose your plan").
+ *  - `amount` — `checkout.stepHeading.amount` ("Add credits").
+ *  - `payment` — `checkout.stepHeading.payment` ("Complete payment").
+ *  - `success` — renders nothing; the `<Success>` card owns its own
+ *    heading, and a stale "Complete payment" above it would read as a
+ *    pending action.
+ *
+ * Pass `children` to override the resolved text entirely (the consumer
+ * stays responsible for keeping their override step-aware).
+ */
+const StepHeading = forwardRef<HTMLHeadingElement, StepLeafProps>(function CheckoutStepsStepHeading(
+  { asChild, children, className, ...rest },
+  forwardedRef,
+) {
+  const flow = useCheckoutContext('StepHeading')
+  const copy = useCopy()
+  const paywallCtx = usePaywallNoticeOptional()
+  if (flow.step === 'success') return null
+  const defaultText = resolveStepHeading(flow.step, copy, paywallCtx?.content ?? null)
+  const Comp = asChild ? Slot : 'h3'
+  return (
+    <Comp
+      ref={forwardedRef}
+      data-solvapay-checkout-step-heading=""
+      data-step={flow.step}
+      className={className ?? 'solvapay-checkout-step-heading'}
+      {...rest}
+    >
+      {children ?? defaultText}
+    </Comp>
+  )
+})
+
+/**
+ * Step-aware subheading rendered alongside `<StepHeading>`. Resolves
+ * branch- and plan-aware copy:
+ *
+ *  - `plan` inside paywall — defers to `resolvePaywallMessage` so the
+ *    structured-balance / product-suffix wording surfaced by the
+ *    server is preserved verbatim.
+ *  - `plan` outside paywall — `checkout.stepMessage.plan`.
+ *  - `amount` — `checkout.stepMessage.amount`.
+ *  - `payment` — branch- and plan-shape-aware:
+ *    - `payg` -> `paymentPayg`,
+ *    - `recurring` with `billingCycle` -> `paymentRecurring`
+ *      (interpolates `{planName}`),
+ *    - `recurring` without `billingCycle` (one-time / lifetime) ->
+ *      `paymentOneTime`.
+ *  - `success` — renders nothing.
+ */
+const StepMessage = forwardRef<HTMLParagraphElement, StepLeafProps>(function CheckoutStepsStepMessage(
+  { asChild, children, className, ...rest },
+  forwardedRef,
+) {
+  const flow = useCheckoutContext('StepMessage')
+  const copy = useCopy()
+  const paywallCtx = usePaywallNoticeOptional()
+  if (flow.step === 'success') return null
+  const defaultText = resolveStepMessage(flow, copy, paywallCtx?.content ?? null)
+  if (!defaultText && children == null) return null
+  const Comp = asChild ? Slot : 'p'
+  return (
+    <Comp
+      ref={forwardedRef}
+      data-solvapay-checkout-step-message=""
+      data-step={flow.step}
+      className={className ?? 'solvapay-checkout-step-message'}
+      {...rest}
+    >
+      {children ?? defaultText}
+    </Comp>
+  )
+})
+
+function resolveStepHeading(
+  step: CheckoutStep,
+  copy: SolvaPayCopy,
+  content: PaywallStructuredContent | null,
+): string {
+  if (step === 'amount') return copy.checkout.stepHeading.amount
+  if (step === 'payment') return copy.checkout.stepHeading.payment
+  if (step === 'plan') {
+    if (content) {
+      if (content.kind === 'payment_required') return copy.paywall.paymentRequiredHeading
+      if (content.kind === 'activation_required') {
+        return isTopupGate(content)
+          ? copy.paywall.topupRequiredHeading
+          : copy.paywall.activationRequiredHeading
+      }
+    }
+    return copy.checkout.stepHeading.plan
+  }
+  return ''
+}
+
+function resolveStepMessage(
+  flow: UseCheckoutFlowReturn,
+  copy: SolvaPayCopy,
+  content: PaywallStructuredContent | null,
+): string {
+  if (flow.step === 'plan') {
+    if (content) return resolvePaywallMessage(content, copy.paywall)
+    return copy.checkout.stepMessage.plan
+  }
+  if (flow.step === 'amount') return copy.checkout.stepMessage.amount
+  if (flow.step === 'payment') {
+    if (flow.branch === 'payg') return copy.checkout.stepMessage.paymentPayg
+    const plan = flow.selectedPlan
+    if (flow.branch === 'recurring' && plan) {
+      const planName = plan.name ?? 'your'
+      if (plan.billingCycle) {
+        return interpolate(copy.checkout.stepMessage.paymentRecurring, { planName })
+      }
+      return copy.checkout.stepMessage.paymentOneTime
+    }
+    return copy.checkout.stepMessage.paymentOneTime
+  }
+  return ''
 }
 
 interface PlanGridProps {
@@ -436,11 +563,12 @@ function DefaultAmountTree() {
           />
         </div>
       </div>
-      {ctx.estimatedCredits != null && (
-        <p className="solvapay-amount-picker-credit-estimate">
-          {creditEstimate(ctx.estimatedCredits)}
-        </p>
-      )}
+      <p
+        className="solvapay-amount-picker-credit-estimate"
+        aria-hidden={ctx.estimatedCredits == null || undefined}
+      >
+        {ctx.estimatedCredits != null ? creditEstimate(ctx.estimatedCredits) : '\u00a0'}
+      </p>
     </>
   )
 }
@@ -636,10 +764,10 @@ const BackLink = forwardRef<HTMLButtonElement, BackLinkProps>(function CheckoutS
   ref,
 ) {
   const flow = useCheckoutContext('BackLink')
-  // Suppress the link when there's nowhere meaningful to go back to —
-  // e.g. recurring single-plan payment after `autoSkipSinglePlan`
-  // landed the user there. Avoids dropping the user into a one-card
-  // grid they can't act on.
+  // `canGoBack` is `true` on amount/payment steps under the default
+  // flow; we still gate render on it so a custom flow injected via
+  // `<CheckoutSteps.Root flow={…}>` can suppress the link when its
+  // own state has no meaningful previous step.
   if (!flow.canGoBack) return null
   const resolvedLabel =
     label ??
@@ -766,6 +894,8 @@ const RootWithEnv = forwardRef<HTMLDivElement, RootProps>(
 export const CheckoutSteps = {
   Root: RootWithEnv,
   IfStep,
+  StepHeading,
+  StepMessage,
   PlanGrid,
   PlanContinueButton,
   AmountPicker,
@@ -783,6 +913,8 @@ export type { CheckoutStatus } from '../../hooks/useCheckoutFlow'
 // Tree-shake-friendly individual exports.
 export const CheckoutStepsRoot = RootWithEnv
 export const CheckoutStepsIfStep = IfStep
+export const CheckoutStepsStepHeading = StepHeading
+export const CheckoutStepsStepMessage = StepMessage
 export const CheckoutStepsPlanGrid = PlanGrid
 export const CheckoutStepsPlanContinueButton = PlanContinueButton
 export const CheckoutStepsAmountPicker = AmountPicker

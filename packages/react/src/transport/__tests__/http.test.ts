@@ -96,6 +96,85 @@ describe('createHttpTransport — default routes', () => {
     expect(result).toEqual([])
   })
 
+  it('getLimits encodes productRef + meterName as query params', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 12, meterName: 'requests' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    await transport.getLimits!({ productRef: 'prd_api', meterName: 'tokens' })
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      `${DEFAULT_ROUTES.getLimits}?productRef=prd_api&meterName=tokens`,
+      expect.objectContaining({ method: 'GET' }),
+    )
+  })
+
+  it('getLimits omits meterName when undefined', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 5, meterName: 'requests' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      `${DEFAULT_ROUTES.getLimits}?productRef=prd_api`,
+      expect.any(Object),
+    )
+  })
+
+  it('getLimits projects the wire response down to TransportLimitsResult', async () => {
+    // The backend returns the full LimitResponseWithPlan; the transport
+    // strips everything but the projection consumed by useLimits.
+    const fetchFn = makeFetch({
+      withinLimits: false,
+      remaining: 0,
+      meterName: 'requests',
+      checkoutUrl: 'https://pay.example.com/co',
+      plans: [{ reference: 'pln_pro' }],
+      balance: { creditBalance: 0 },
+    })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result).toEqual({
+      withinLimits: false,
+      remaining: 0,
+      meterName: 'requests',
+      activationRequired: false,
+    })
+  })
+
+  it('getLimits maps an absent meterName on the wire to null', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 3 })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result.meterName).toBeNull()
+  })
+
+  it('getLimits passes through `activationRequired: true` when the backend reports it', async () => {
+    const fetchFn = makeFetch({
+      withinLimits: false,
+      remaining: 0,
+      meterName: 'requests',
+      activationRequired: true,
+    })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result.activationRequired).toBe(true)
+  })
+
+  it('getLimits defaults `activationRequired` to false when the wire field is absent', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 5, meterName: 'requests' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result.activationRequired).toBe(false)
+  })
+
   it('throws with backend error message when response is not ok', async () => {
     const fetchFn = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: 'Customer not found' }), {

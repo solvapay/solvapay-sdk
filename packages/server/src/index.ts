@@ -202,6 +202,7 @@ export {
   trackUsageCore,
   getUsageCore,
   listPlansCore,
+  checkLimitsCore,
   getMerchantCore,
   getProductCore,
   isErrorResult,
