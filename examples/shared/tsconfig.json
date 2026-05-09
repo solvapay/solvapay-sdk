@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["."],
+  "compilerOptions": {
+    "composite": false,
+    "skipLibCheck": true,
+    "paths": {
+      "@solvapay/core": ["../../packages/core/dist/index.d.ts"],
+      "@solvapay/server": ["../../packages/server/dist/index.d.ts"]
+    }
+  }
+}
