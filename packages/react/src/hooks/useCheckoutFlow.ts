@@ -240,12 +240,22 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   const advanceFromPlan = useCallback(async () => {
     if (!selectedPlanShape || !selectedPlanRef) return
     if (branch === 'payg') {
+      // PAYG re-activation is a no-op on the backend (the plan is
+      // already the customer's current plan), and the round-trip
+      // adds latency + a transient `status: 'activating'` flicker
+      // for no behavior change. Skip the call and step straight to
+      // the amount picker so the user can top up.
+      if (planCtx.currentPlanRef === selectedPlanRef) {
+        setError(null)
+        setStep('amount')
+        return
+      }
       await runActivate()
       return
     }
     setError(null)
     setStep('payment')
-  }, [branch, runActivate, selectedPlanRef, selectedPlanShape])
+  }, [branch, planCtx.currentPlanRef, runActivate, selectedPlanRef, selectedPlanShape])
 
   const recordPaygSuccess = useCallback(() => {
     if (!selectedPlanShape || selectedAmountMinor == null) return

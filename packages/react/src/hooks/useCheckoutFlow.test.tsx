@@ -279,6 +279,44 @@ describe('useCheckoutFlow — PAYG branch', () => {
     expect(transport.createTopupPayment).not.toHaveBeenCalled()
   })
 
+  it('skips activatePlan when the selected PAYG plan is already the customer\'s current plan', async () => {
+    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
+    const purchases: PurchaseInfo[] = [
+      {
+        reference: 'prc_payg_active',
+        productName: 'Widget API',
+        productRef,
+        status: 'active',
+        startDate: new Date().toISOString(),
+        planSnapshot: { reference: 'pln_payg' },
+      },
+    ]
+    const { Wrapper, transport } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+      purchases,
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    // <PlanSelector.Root> auto-selects the PAYG-current plan; we still
+    // explicitly call selectPlan to keep the test independent of the
+    // auto-select effect's timing.
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+
+    await act(async () => {
+      await result.current.advance()
+    })
+
+    expect(activate).not.toHaveBeenCalled()
+    expect(transport.activatePlan).not.toHaveBeenCalled()
+    expect(result.current.step).toBe('amount')
+    expect(result.current.status).toBe('idle')
+    expect(result.current.error).toBeNull()
+  })
+
   it('flips status to "activating" while the plan→amount transition is in flight', async () => {
     let resolveActivate!: (v: { status: 'activated' }) => void
     const activate = vi.fn(
