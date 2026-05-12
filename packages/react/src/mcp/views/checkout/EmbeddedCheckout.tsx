@@ -1,20 +1,36 @@
 'use client'
 
 /**
- * `<EmbeddedCheckout>` — owns the `PlanSelector` root, the step state
- * for the activation flow, and wires both up via
- * `<CheckoutStateMachine>`. Rendered when Stripe's JS is reachable;
- * the hosted-checkout fallback in `McpCheckoutView` handles the
- * CSP-blocked path.
+ * `<EmbeddedCheckout>` — MCP-flavored layout wrapper around the
+ * shared `useCheckoutFlow` state engine.
+ *
+ * Owns the MCP-specific chrome that doesn't belong in the headless
+ * primitive (paywall banner, "Stay on Free" affordance, bridge
+ * wiring) and delegates step rendering to the existing MCP step
+ * components so the surface keeps its `solvapay-mcp-*` CSS hooks.
+ *
+ * State (step, transitions, activation, success meta) lives in
+ * `useCheckoutFlow`. Bridge calls — `notifyModelContext`,
+ * `notifySuccess`, `sendMessage` — fire from the lifecycle callbacks
+ * on the hook so non-MCP integrators can reuse the same flow without
+ * paying the bridge cost.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { PlanSelector } from '../../../primitives/PlanSelector'
+import { useCheckoutFlow } from '../../../hooks/useCheckoutFlow'
 import { usePurchase } from '../../../hooks/usePurchase'
+import { useMcpBridge } from '../../bridge'
+import { formatPrice } from '../../../utils/format'
+import { useHostLocale } from '../../useHostLocale'
 import type { Plan } from '../../../types'
 import type { McpViewClassNames } from '../types'
-import { CheckoutStateMachine } from './CheckoutStateMachine'
-import type { BootstrapPlanLike, Cx, Step, SuccessMeta } from './shared'
+import { PlanStep } from './steps/PlanStep'
+import { AmountStep } from './steps/AmountStep'
+import { PaygPaymentStep } from './steps/PaygPaymentStep'
+import { RecurringPaymentStep } from './steps/RecurringPaymentStep'
+import { SuccessStep } from './steps/SuccessStep'
+import type { BootstrapPlanLike, Cx } from './shared'
 import { isPayg, planSortByPaygFirstThenAsc } from './shared'
 
 export interface EmbeddedCheckoutProps {
@@ -22,19 +38,16 @@ export interface EmbeddedCheckoutProps {
   returnUrl: string
   onPurchaseSuccess?: () => void
   /**
-   * `true` when the view was reached via the paywall takeover. Drives
-   * the `UpgradeBanner` and the `"Stay on Free"` dismiss link on the
-   * plan-selection step.
+   * `true` when the view was reached via the paywall takeover.
+   * Drives the `UpgradeBanner` and the `"Stay on Free"` dismiss link
+   * on the plan-selection step.
    */
   fromPaywall: boolean
   paywallKind?: 'payment_required' | 'activation_required'
   /**
    * Suppress the inline `UpgradeBanner` on the plan step even when
    * `fromPaywall` is true. Set by surfaces that already provide
-   * "you hit a paywall" reason copy outside the state machine —
-   * custom integrators who wrap the state machine in their own
-   * `<PaywallNotice>` chrome set this so the banner doesn't
-   * duplicate the heading + message.
+   * "you hit a paywall" reason copy outside the state machine.
    */
   hideUpgradeBanner?: boolean
   /**
@@ -46,19 +59,14 @@ export interface EmbeddedCheckoutProps {
   onClose?: () => void
   /**
    * Called when the user picks "Back to my account" on the plan
-   * picker. Forwarded by `<McpCheckoutView>` from the shell when
-   * the customer reached checkout via an in-session surface swap.
+   * picker. Forwarded by `<McpCheckoutView>` from the shell.
    */
   onBack?: () => void
   cx: Cx
   /**
    * Accepted for API stability — earlier revisions rendered
    * `<AppHeader>` inside this surface and forwarded slot class names
-   * to it. `<McpApp>` now paints `<AppHeader>` once above the shell,
-   * so the per-surface `classNames` never need to reach that header
-   * from here; the prop is kept on the interface so existing callers
-   * (notably `<McpCheckoutView>`) compile without churn and the
-   * option stays available for future surface-scoped styling.
+   * to it. Today `<McpApp>` paints the header once above the shell.
    */
   classNames?: McpViewClassNames
   children?: React.ReactNode
@@ -75,20 +83,12 @@ export function EmbeddedCheckout({
   onClose,
   onBack,
   cx,
-  // `classNames` is accepted on the interface for API stability but
-  // not consumed inside this surface — see the JSDoc on the prop.
   children,
 }: EmbeddedCheckoutProps) {
   const { loading, isRefetching, activePurchase } = usePurchase()
 
-  // Keep the customer's current plan in the grid even when it's Free
-  // so the picker doubles as a "here's what you have now" summary.
-  // The grid marks it `data-state=current` and disables selection.
   const currentPlanRef = activePurchase?.planSnapshot?.reference ?? null
 
-  // Memoised sort + popular resolution over the bootstrap plans so
-  // `PlanSelector` gets a stable reference and the PAYG card renders
-  // with the `"recommended"` tag without extra round-trips.
   const paidPlans = useMemo(() => {
     const list = (plans ?? []) as BootstrapPlanLike[]
     return list.filter(p => p.requiresPayment !== false)
@@ -98,20 +98,10 @@ export function EmbeddedCheckout({
     return payg?.reference
   }, [paidPlans])
 
-  // Filter keeps every paid plan and additionally lets the currently
-  // active plan through even when it's Free — the grid renders it
-  // disabled with a `Current` badge rather than hiding it outright.
   const planFilter = useMemo(
-    () => (plan: Plan) =>
-      plan.requiresPayment !== false || plan.reference === currentPlanRef,
+    () => (plan: Plan) => plan.requiresPayment !== false || plan.reference === currentPlanRef,
     [currentPlanRef],
   )
-
-  const [step, setStep] = useState<Step>('plan')
-  const [selectedAmountMinor, setSelectedAmountMinor] = useState<number | null>(null)
-  const [successMeta, setSuccessMeta] = useState<SuccessMeta | null>(null)
-  const [activationError, setActivationError] = useState<string | null>(null)
-  const [isActivating, setIsActivating] = useState(false)
 
   if (loading) {
     return (
@@ -125,37 +115,20 @@ export function EmbeddedCheckout({
     <div className={cx.card} data-refreshing={isRefetching ? 'true' : undefined}>
       <PlanSelector.Root
         productRef={productRef}
-        // Paid plans + the current plan (even if Free) so the picker
-        // also surfaces "you're on X today" as a disabled card.
         filter={planFilter}
-        // PAYG first, then recurring ascending by price.
         sortBy={planSortByPaygFirstThenAsc}
         popularPlanRef={paygPlanRef}
         currentPlanRef={currentPlanRef}
-        // Don't auto-select on recurring-only shapes; the brief's
-        // wireframe shows a neutral initial state with a
-        // "Continue with …" CTA that only lights up once a plan is
-        // selected.
         autoSelectFirstPaid={Boolean(paygPlanRef)}
         className="solvapay-plan-selector"
       >
-        <CheckoutStateMachine
-          step={step}
-          setStep={setStep}
-          selectedAmountMinor={selectedAmountMinor}
-          setSelectedAmountMinor={setSelectedAmountMinor}
-          successMeta={successMeta}
-          setSuccessMeta={setSuccessMeta}
-          activationError={activationError}
-          setActivationError={setActivationError}
-          isActivating={isActivating}
-          setIsActivating={setIsActivating}
-          fromPaywall={fromPaywall}
-          paywallKind={paywallKind}
-          hideUpgradeBanner={hideUpgradeBanner}
+        <McpCheckoutBody
           productRef={productRef}
           returnUrl={returnUrl}
           onPurchaseSuccess={onPurchaseSuccess}
+          fromPaywall={fromPaywall}
+          paywallKind={paywallKind}
+          hideUpgradeBanner={hideUpgradeBanner}
           onClose={onClose}
           onBack={onBack}
           cx={cx}
@@ -164,4 +137,155 @@ export function EmbeddedCheckout({
       {children}
     </div>
   )
+}
+
+interface McpCheckoutBodyProps {
+  productRef: string
+  returnUrl: string
+  onPurchaseSuccess?: () => void
+  fromPaywall: boolean
+  paywallKind?: 'payment_required' | 'activation_required'
+  hideUpgradeBanner?: boolean
+  onClose?: () => void
+  onBack?: () => void
+  cx: Cx
+}
+
+function McpCheckoutBody({
+  productRef,
+  returnUrl,
+  onPurchaseSuccess,
+  fromPaywall,
+  paywallKind,
+  hideUpgradeBanner,
+  onClose,
+  onBack,
+  cx,
+}: McpCheckoutBodyProps) {
+  const bridge = useMcpBridge()
+  const locale = useHostLocale()
+
+  const flow = useCheckoutFlow({
+    productRef,
+    // `notifyModelContext` for plan commit fires from the explicit
+    // Continue handler below — not on `selectPlan` — so a stray
+    // selection doesn't burn a host emit before the user opts in.
+    onPurchaseSuccess: meta => {
+      if (meta.branch === 'payg') {
+        void bridge.notifyModelContext({
+          text: `Activated ${meta.plan.name ?? 'plan'} with ${formatPrice(
+            meta.amountMinor,
+            meta.currency,
+            { locale },
+          )} in credits.`,
+        })
+        void bridge.notifySuccess({
+          kind: 'topup',
+          amountMinor: meta.amountMinor,
+          currency: meta.currency,
+        })
+      } else {
+        void bridge.notifyModelContext({
+          text: `Activated ${meta.plan.name ?? 'plan'}.`,
+        })
+        void bridge.notifySuccess({
+          kind: 'plan-activated',
+          planName: meta.plan.name ?? null,
+        })
+      }
+      onPurchaseSuccess?.()
+    },
+  })
+
+  const onStayOnFree = useCallback(() => {
+    void bridge.sendMessage({ text: 'Sticking with the free tier for now.' })
+    onClose?.()
+  }, [bridge, onClose])
+
+  const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
+
+  const onPlanContinue = useCallback(() => {
+    if (selectedPlanShape) {
+      void bridge.notifyModelContext({
+        text: `User selected ${selectedPlanShape.name ?? 'a plan'}.`,
+      })
+    }
+    void flow.advance()
+  }, [bridge, flow, selectedPlanShape])
+
+  if (flow.step === 'plan') {
+    return (
+      <PlanStep
+        fromPaywall={fromPaywall}
+        paywallKind={paywallKind}
+        hideUpgradeBanner={hideUpgradeBanner}
+        // Plan-step Continue: triggers `flow.advance()`, which fires
+        // `transport.activatePlan` for PAYG and routes recurring
+        // straight to the payment step. We emit the model-context
+        // signal first so the host always sees the plan commit even
+        // if `activatePlan` is slow.
+        onContinue={onPlanContinue}
+        // Per brief invariant: "Stay on Free" is paywall-entry only.
+        // Re-entries from `<McpAccountView>` leave it hidden so
+        // "switching plans" doesn't double as "downgrade to Free."
+        onStayOnFree={fromPaywall && onClose ? onStayOnFree : undefined}
+        onBack={onBack}
+        isActivating={flow.status === 'activating'}
+        activationError={flow.error}
+        cx={cx}
+      />
+    )
+  }
+
+  if (flow.step === 'amount') {
+    if (!selectedPlanShape) {
+      return null
+    }
+    return (
+      <AmountStep
+        plan={selectedPlanShape}
+        onBack={() => flow.back()}
+        onContinue={amountMinor => {
+          flow.selectAmount(amountMinor)
+          void flow.advance()
+        }}
+        cx={cx}
+      />
+    )
+  }
+
+  if (flow.step === 'payment') {
+    if (flow.branch === 'payg' && selectedPlanShape && flow.selectedAmountMinor != null) {
+      return (
+        <PaygPaymentStep
+          plan={selectedPlanShape}
+          amountMinor={flow.selectedAmountMinor}
+          returnUrl={returnUrl}
+          onBack={() => flow.back()}
+          onSuccess={() => flow.notifyPaymentSuccess()}
+          cx={cx}
+        />
+      )
+    }
+    if (flow.branch === 'recurring' && selectedPlanShape && flow.selectedPlanRef) {
+      return (
+        <RecurringPaymentStep
+          plan={selectedPlanShape}
+          planRef={flow.selectedPlanRef}
+          productRef={productRef}
+          returnUrl={returnUrl}
+          onBack={() => flow.back()}
+          onSuccess={intent => flow.notifyPaymentSuccess(intent)}
+          cx={cx}
+        />
+      )
+    }
+    return null
+  }
+
+  if (flow.step === 'success' && flow.successMeta) {
+    return <SuccessStep meta={flow.successMeta} cx={cx} />
+  }
+
+  return null
 }

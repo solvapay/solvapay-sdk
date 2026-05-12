@@ -222,6 +222,7 @@ function buildCtx(
       name: 'Demo',
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),
@@ -535,7 +536,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(transport.activatePlan).toHaveBeenCalledTimes(1)
 
     // Pick an amount and continue to payment.
-    const customInput = screen.getByPlaceholderText('or custom amount')
+    const customInput = screen.getByPlaceholderText('0.00')
     act(() => {
       fireEvent.change(customInput, { target: { value: '18' } })
     })
@@ -586,7 +587,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
       )
     })
     const customInput = await waitFor(() =>
-      screen.getByPlaceholderText('or custom amount'),
+      screen.getByPlaceholderText('0.00'),
     )
     act(() => {
       fireEvent.change(customInput, { target: { value: '18' } })
@@ -616,7 +617,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
       )
     })
     const amountInput = await waitFor(() =>
-      screen.getByPlaceholderText('or custom amount'),
+      screen.getByPlaceholderText('0.00'),
     )
     act(() => {
       fireEvent.change(amountInput, {
@@ -670,7 +671,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
       )
     })
     const amountInput = await waitFor(() =>
-      screen.getByPlaceholderText('or custom amount'),
+      screen.getByPlaceholderText('0.00'),
     )
     act(() => {
       fireEvent.change(amountInput, {
@@ -797,7 +798,7 @@ describe('<McpCheckoutView> — CSS hooks', () => {
   async function advanceToPaygPayment() {
     const utils = await advanceToAmountStep()
     act(() => {
-      fireEvent.change(screen.getByPlaceholderText('or custom amount'), {
+      fireEvent.change(screen.getByPlaceholderText('0.00'), {
         target: { value: '18' },
       })
     })

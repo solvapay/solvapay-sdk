@@ -365,15 +365,20 @@ body {
   gap: 12px;
 }
 
+/* Rounded-rectangle quick-amount chips. Mirrors the `.solvapay-amount-picker-pill`
+ * shape used by the web SDK and the hosted topup page so the topup look is
+ * consistent across surfaces. Colors come from host theme tokens
+ * (`--color-*`) so Claude Desktop / ChatGPT / VSCode dark themes adapt
+ * automatically. */
 .solvapay-mcp-amount-options {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .solvapay-mcp-amount-option {
-  padding: 10px;
-  border-radius: var(--border-radius-md, 8px);
+  padding: 6px 14px;
+  border-radius: 8px;
   border: 1px solid var(--color-border-secondary, #e2e8f0);
   background: var(--color-background-primary, #ffffff);
   color: var(--color-text-primary, #0f172a);
@@ -402,14 +407,42 @@ body {
   color: var(--color-text-on-accent, #ffffff);
 }
 
+/* `.solvapay-mcp-amount-custom` now wraps the bordered row — currency
+ * prefix + input — instead of being applied directly to the `<input>`.
+ * Lets us prefix the merchant currency symbol the same way the hosted
+ * page does. The actual `<input>` carries `.solvapay-mcp-amount-custom-input`. */
 .solvapay-mcp-amount-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding: 10px 12px;
   border-radius: var(--border-radius-md, 8px);
   border: 1px solid var(--color-border-secondary, #e2e8f0);
   background: var(--color-background-primary, #ffffff);
+  transition: border-color 120ms ease;
+}
+
+.solvapay-mcp-amount-custom:focus-within {
+  border-color: var(--color-text-primary, #0f172a);
+  box-shadow: 0 0 0 1px var(--color-text-primary, #0f172a);
+}
+
+.solvapay-mcp-amount-currency-symbol {
+  color: var(--color-text-secondary, #475569);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.solvapay-mcp-amount-custom-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
   color: var(--color-text-primary, #0f172a);
   font-size: 14px;
+  min-width: 0;
+  padding: 0;
 }
 
 .solvapay-mcp-topup-form {

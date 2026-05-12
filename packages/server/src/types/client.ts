@@ -7,7 +7,24 @@
 import type { components, operations } from './generated'
 
 export type UsageMeterType = 'requests' | 'tokens'
-export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
+export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
+  /**
+   * When `true`, the backend mints a checkout session (or customer
+   * portal session for activation flows) and returns its URL / id on
+   * the response. Default `false` so read-only callers like
+   * `useLimits` / `checkLimitsCore` stop creating orphan
+   * `CheckoutSession` documents and firing spurious
+   * `checkout_session.created` webhooks on every refetch.
+   *
+   * `paywall.decide()` opts in because it bakes the URL into the
+   * 402 `PaywallStructuredContent`.
+   *
+   * NOTE: this intersection is a temporary stand-in until the
+   * backend OpenAPI spec is republished and `generated.ts` is
+   * regenerated to include the field natively.
+   */
+  includeCheckoutSession?: boolean
+}
 
 /**
  * Extended LimitResponse with SDK-added plan field
@@ -49,14 +66,35 @@ export interface OneTimePurchaseInfo {
 }
 
 /**
- * Result from processing a payment intent
+ * Result from processing a payment intent.
+ *
+ * Mirrors the backend's discriminated `oneOf` response. The `succeeded`
+ * branches are further discriminated on `type` so consumers can route to
+ * recurring vs one-time purchase handling without guarding against
+ * `purchase === undefined`. A bare `{ status: 'succeeded' }` is returned
+ * when the webhook race means the backend can't yet enrich the response
+ * with the created purchase — callers should fall back to refetching.
+ *
+ * `failed` and `cancelled` are returned by the backend when the Stripe
+ * PaymentIntent is in a terminal non-success state and are routed to
+ * `onError` by `reconcilePayment`. `timeout` carries a retry hint and is
+ * routed to the timeout branch.
  */
-export interface ProcessPaymentResult {
-  type: 'recurring' | 'one-time'
-  purchase?: components['schemas']['PurchaseInfo']
-  oneTimePurchase?: OneTimePurchaseInfo
-  status: 'completed'
-}
+export type ProcessPaymentResult =
+  | {
+      status: 'succeeded'
+      type: 'recurring'
+      purchase: components['schemas']['PurchaseInfo']
+    }
+  | {
+      status: 'succeeded'
+      type: 'one-time'
+      oneTimePurchase: OneTimePurchaseInfo
+    }
+  | { status: 'succeeded' }
+  | { status: 'timeout'; message?: string }
+  | { status: 'failed' }
+  | { status: 'cancelled' }
 
 export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 
@@ -90,16 +128,19 @@ export type SdkPlatformConfigResponse = components['schemas']['SdkPlatformConfig
 /** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
 export type SdkProductResponse = components['schemas']['SdkProductResponse']
 
-export type McpBootstrapPlanInput =
-  NonNullable<components['schemas']['McpBootstrapDto']['plans']>[number]
+export type McpBootstrapPlanInput = NonNullable<
+  components['schemas']['McpBootstrapDto']['plans']
+>[number]
 
-export type ToolPlanMappingInput =
-  NonNullable<components['schemas']['McpBootstrapDto']['tools']>[number]
+export type ToolPlanMappingInput = NonNullable<
+  components['schemas']['McpBootstrapDto']['tools']
+>[number]
 
 export type McpBootstrapRequest = components['schemas']['McpBootstrapDto']
 
-export type McpToolPlanMappingInput =
-  NonNullable<components['schemas']['ConfigureMcpPlansDto']['toolMapping']>[number]
+export type McpToolPlanMappingInput = NonNullable<
+  components['schemas']['ConfigureMcpPlansDto']['toolMapping']
+>[number]
 
 export interface McpBootstrapResponse {
   product: components['schemas']['SdkProductResponse']
@@ -240,7 +281,10 @@ export interface SolvaPayClient {
   deleteProduct?(productRef: string): Promise<void>
 
   // POST: /v1/sdk/products/{productRef}/clone
-  cloneProduct?(productRef: string, overrides?: { name?: string }): Promise<{
+  cloneProduct?(
+    productRef: string,
+    overrides?: { name?: string },
+  ): Promise<{
     reference: string
     name: string
   }>
@@ -318,7 +362,13 @@ export interface SolvaPayClient {
   // GET: /v1/sdk/customers/:customerRef/credits
   getCustomerBalance?(params: {
     customerRef: string
-  }): Promise<{ customerRef: string; credits: number; displayCurrency: string; creditsPerMinorUnit: number; displayExchangeRate: number }>
+  }): Promise<{
+    customerRef: string
+    credits: number
+    displayCurrency: string
+    creditsPerMinorUnit: number
+    displayExchangeRate: number
+  }>
 
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
@@ -331,9 +381,7 @@ export interface SolvaPayClient {
   ): Promise<components['schemas']['CreateCustomerSessionResponse']>
 
   // POST: /v1/sdk/activate
-  activatePlan?(
-    params: components['schemas']['ActivatePlanDto'],
-  ): Promise<ActivatePlanResult>
+  activatePlan?(params: components['schemas']['ActivatePlanDto']): Promise<ActivatePlanResult>
 
   // GET: /v1/sdk/payment-method?customerRef=...
   getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>

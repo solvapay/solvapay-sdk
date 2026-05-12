@@ -11,7 +11,15 @@ import type { WebhookEvent } from './types/webhook'
 
 // Main factory for unified API
 export { createSolvaPay } from './factory'
-export type { CreateSolvaPayConfig, SolvaPay, PayableFunction } from './factory'
+export type {
+  CreateSolvaPayConfig,
+  SolvaPay,
+  PayableFunction,
+  PayableGateOptions,
+  PayableGateResult,
+  PayablePaywallResult,
+  PayableAllowResult,
+} from './factory'
 
 // Re-export client creation (for advanced use cases)
 export { createSolvaPayClient } from './client'
@@ -114,6 +122,11 @@ export { PaywallError, paywallErrorToClientPayload } from './paywall'
 export type { ProtectHandlerContext } from './paywall'
 export { isPaywallStructuredContent } from './types/paywall'
 
+// Pure helper to build paywall gates from a `LimitResponse(WithPlan)`.
+// Useful for streaming / SSE / multi-step handlers that can't fit the
+// one-shot adapter shape but still want the SDK's gate copy.
+export { buildPaywallGate } from './paywall-gate'
+
 // Pure paywall state engine — classifier + gate / nudge copy builder.
 // Exposed so transport adapters (`@solvapay/mcp-core`) can produce the
 // same text-only copy off a `LimitResponseWithPlan` they already hold.
@@ -189,6 +202,7 @@ export {
   trackUsageCore,
   getUsageCore,
   listPlansCore,
+  checkLimitsCore,
   getMerchantCore,
   getProductCore,
   isErrorResult,

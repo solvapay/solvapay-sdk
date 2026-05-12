@@ -277,6 +277,7 @@ export interface SolvaPayConfig {
     createCustomerSession?: string // Default: '/api/create-customer-session'
     getPaymentMethod?: string // Default: '/api/payment-method'
     getUsage?: string // Default: '/api/usage'
+    getLimits?: string // Default: '/api/limits'
   }
 
   /**
@@ -393,6 +394,17 @@ export interface UsePaymentMethodReturn {
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
+  /**
+   * Synchronously merge a `PurchaseInfo`-shaped row into the provider's
+   * `purchases` array. Idempotent on `purchase.reference` so re-fires
+   * from a later `refetchPurchase` are no-ops. Runs through the same
+   * `filterPurchases` active-row policy as the HTTP and bootstrap
+   * paths, so callers can hand in a fresh purchase from
+   * `processPaymentIntent` and have consumers (`hasPaidPurchase`,
+   * `activePurchase`, …) see it on the next render — no wait for a
+   * background refetch to land.
+   */
+  upsertPurchase: (purchase: PurchaseInfo) => void
   createPayment: (params: {
     planRef?: string
     productRef?: string
@@ -493,9 +505,16 @@ export interface Plan {
  */
 export interface UsePlansOptions {
   /**
-   * Fetcher function to retrieve plans
+   * Fetcher function to retrieve plans.
+   *
+   * Optional — when omitted, `usePlans` uses `defaultListPlans` which
+   * routes through the configured transport (`config.transport.listPlans`)
+   * if available, otherwise issues a `GET` to `config.api.listPlans`
+   * (default `/api/list-plans`). Provide an explicit `fetcher` only when
+   * you need to override that default (custom auth, alternate endpoint,
+   * etc.).
    */
-  fetcher: (productRef: string) => Promise<Plan[]>
+  fetcher?: (productRef: string) => Promise<Plan[]>
   /**
    * Product reference to fetch plans for
    */

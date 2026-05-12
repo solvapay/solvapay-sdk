@@ -78,10 +78,7 @@ type RootProps = TopupFormProps & {
   children?: React.ReactNode
 }
 
-const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
-  props,
-  forwardedRef,
-) {
+const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props, forwardedRef) {
   const {
     amount,
     currency,
@@ -101,7 +98,13 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
 
   const copy = useCopy()
   const locale = useLocale()
-  const { loading, error: topupError, clientSecret, startTopup, stripePromise } = useTopup({
+  const {
+    loading,
+    error: topupError,
+    clientSecret,
+    startTopup,
+    stripePromise,
+  } = useTopup({
     amount,
     currency,
   })
@@ -110,13 +113,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
   const hasAmount = amount > 0
 
   useEffect(() => {
-    if (
-      !hasInitializedRef.current &&
-      hasAmount &&
-      !loading &&
-      !topupError &&
-      !clientSecret
-    ) {
+    if (!hasInitializedRef.current && hasAmount && !loading && !topupError && !clientSecret) {
       hasInitializedRef.current = true
       startTopup().catch(() => {
         hasInitializedRef.current = false
@@ -125,8 +122,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
     if (hasAmount && clientSecret) hasInitializedRef.current = true
   }, [hasAmount, loading, topupError, clientSecret, startTopup])
 
-  const finalReturnUrl =
-    returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
+  const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
@@ -368,56 +364,68 @@ type SubmitButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   asChild?: boolean
 }
 
-const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(function TopupFormSubmitButton(
-  { asChild, onClick, children, ...rest },
-  forwardedRef,
-) {
-  const ctx = useTopupCtx('SubmitButton')
-  const copy = useCopy()
-  const dataState: SubmitState = ctx.isProcessing
-    ? 'processing'
-    : !ctx.canSubmit
-      ? 'disabled'
-      : 'idle'
+const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
+  function TopupFormSubmitButton({ asChild, onClick, children, ...rest }, forwardedRef) {
+    const ctx = useTopupCtx('SubmitButton')
+    const copy = useCopy()
+    const dataState: SubmitState = ctx.isProcessing
+      ? 'processing'
+      : !ctx.canSubmit
+        ? 'disabled'
+        : 'idle'
 
-  const content = ctx.isProcessing ? (
-    <>
-      <Spinner size="sm" />
-      <span>{copy.cta.processing}</span>
-    </>
-  ) : children ? (
-    children
-  ) : (
-    copy.cta.topUp
-  )
-
-  const commonProps = {
-    'data-solvapay-topup-form-submit': '',
-    'data-state': dataState,
-    'aria-busy': ctx.isProcessing,
-    'aria-disabled': !ctx.canSubmit,
-    disabled: !ctx.canSubmit,
-    onClick: composeEventHandlers(onClick, e => {
-      e.preventDefault()
-      void ctx.submit()
-    }),
-    ...rest,
-  } satisfies React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
-
-  if (asChild) {
-    return (
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
-        {content}
-      </Slot>
+    const processingContent = (
+      <>
+        <Spinner size="sm" />
+        <span>{copy.cta.processing}</span>
+      </>
     )
-  }
-  return (
-    <button ref={forwardedRef} type="submit" {...commonProps}>
-      {content}
-    </button>
-  )
-})
+
+    const commonProps = {
+      'data-solvapay-topup-form-submit': '',
+      'data-state': dataState,
+      'aria-busy': ctx.isProcessing,
+      'aria-disabled': !ctx.canSubmit,
+      disabled: !ctx.canSubmit,
+      onClick: composeEventHandlers(onClick, e => {
+        e.preventDefault()
+        void ctx.submit()
+      }),
+      ...rest,
+    } satisfies React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
+
+    if (asChild) {
+      // The consumer's element is the wrapper that carries their styling.
+      // Preserve it across the idle→processing transition by cloning and
+      // swapping its children, never replacing it with a Fragment. The
+      // previous behaviour passed a Fragment to <Slot> when processing, so
+      // className/disabled/onClick landed on a Fragment (which React does
+      // not render to DOM) and the button visually broke on click.
+      const slotChild =
+        ctx.isProcessing && React.isValidElement(children)
+          ? React.cloneElement(
+              children as React.ReactElement<{ children?: React.ReactNode }>,
+              undefined,
+              processingContent,
+            )
+          : children
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
+          {slotChild}
+        </Slot>
+      )
+    }
+
+    const content = ctx.isProcessing ? processingContent : children ? children : copy.cta.topUp
+
+    return (
+      <button ref={forwardedRef} type="submit" {...commonProps}>
+        {content}
+      </button>
+    )
+  },
+)
 
 type SlotProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
 

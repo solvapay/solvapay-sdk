@@ -1,0 +1,86 @@
+/**
+ * Wrangler config for the SolvaPay chat-checkout demo.
+ *
+ * - `main` points at the Worker fetch handler that dispatches `/api/*`
+ *   through `src/server/handlers.ts` (the same dispatcher the Vite dev
+ *   plugin uses) and forwards everything else to the Workers Assets
+ *   binding.
+ * - `[assets]` serves the Vite SPA build (`dist/`) directly. The
+ *   `not_found_handling: "single-page-application"` option makes
+ *   client-side routes fall through to `index.html`.
+ * - `nodejs_compat` is a defensive flag — `@solvapay/server` and
+ *   `@google/genai` are fetch-first, but a transitive Node-ish path
+ *   could surface; the flag costs nothing at runtime.
+ * - Secrets (`SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY`) are uploaded
+ *   once via `wrangler secret put` and persist across deploys.
+ *   `SOLVAPAY_API_BASE_URL` is a `var` so anyone can override it
+ *   per-environment without touching git history.
+ *
+ * The committed values are PUBLIC-SAFE PLACEHOLDERS so anyone who
+ * clones this repo can run `pnpm deploy` without accidentally
+ * connecting to someone else's merchant or backend environment.
+ * Override at deploy time with a local (gitignored) `.env` —
+ * `scripts/deploy.mjs` reads it and forwards real values via
+ * `wrangler deploy --var KEY:VALUE` flags.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "solvapay-chat-checkout-demo",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-04-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+  },
+  "vars": {
+    // `SOLVAPAY_API_BASE_URL` is intentionally not committed here —
+    // src/worker.ts defaults to https://api.solvapay.com (production).
+    // Override at deploy time via `wrangler secret put SOLVAPAY_API_BASE_URL`
+    // (or the `--var` flow in scripts/deploy.mjs) when you need to
+    // point at a staging backend.
+  },
+  "observability": {
+    "enabled": true,
+  },
+  // Prod env override — invoked via `pnpm deploy:prod`
+  // (`scripts/deploy.mjs --prod` -> `wrangler deploy --env production`).
+  // `assets`, `vars`, and `routes` are intentionally redeclared here
+  // because wrangler does NOT inherit them from the top-level config;
+  // setting `name` explicitly avoids wrangler's auto-suffix (which
+  // would produce `solvapay-chat-checkout-demo-production`).
+  //
+  // Real `SOLVAPAY_API_BASE_URL` comes from `.env.prod` via
+  // deploy.mjs's `--var KEY:VALUE` overrides at deploy time. The
+  // placeholder route below is a no-op until you swap in your own
+  // hostname (or remove the `routes` block entirely to serve on the
+  // default `*.workers.dev` URL).
+  //
+  // Secrets are scoped per worker name:
+  //   wrangler secret put SOLVAPAY_SECRET_KEY --env production
+  //   wrangler secret put GEMINI_API_KEY --env production
+  "env": {
+    "production": {
+      "name": "solvapay-chat-checkout-demo-prod",
+      "routes": [
+        {
+          "pattern": "chat-demo.solvapay.app",
+          "custom_domain": true,
+        },
+      ],
+      "assets": {
+        "directory": "./dist",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+      },
+      "vars": {
+        // SOLVAPAY_API_BASE_URL omitted — src/worker.ts defaults to
+        // https://api.solvapay.com.
+      },
+      "observability": {
+        "enabled": true,
+      },
+    },
+  },
+}

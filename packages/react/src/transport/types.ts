@@ -30,6 +30,29 @@ export interface TransportBalanceResult {
   displayExchangeRate: number
 }
 
+/**
+ * Runtime allowance projection consumed by `useLimits`. Mirrors the
+ * subset of `@solvapay/server`'s `LimitResponse` that the React side
+ * actually renders — `plans` / `balance` / `product` are deliberately
+ * omitted because they duplicate fields other hooks (`usePlans`,
+ * `useBalance`) already surface.
+ */
+export interface TransportLimitsResult {
+  withinLimits: boolean
+  remaining: number
+  meterName: string | null
+  /**
+   * True when the backend's default plan requires explicit activation
+   * (free or paid). Customer has zero entitlement until `activatePlan`
+   * runs. Distinguishes "exhausted free tier" (`activationRequired:
+   * false, remaining: 0`) from "free tier waiting to be claimed"
+   * (`activationRequired: true, remaining: 0`). Free recurring plans
+   * with `default: true` skip this — the backend treats them as
+   * auto-allocated.
+   */
+  activationRequired: boolean
+}
+
 /** Re-exported from `@solvapay/server` for transport consumers. */
 export type TransportUsageResult = GetUsageResult
 
@@ -78,6 +101,19 @@ export interface SolvaPayTransport {
    * reading the usage field out of `checkPurchase`.
    */
   getUsage?: () => Promise<GetUsageResult>
+  /**
+   * Optional: fetch the customer's runtime allowance for a (product, meter)
+   * pair. HTTP transports implement via
+   * `GET /api/limits?productRef=…&meterName=…`. MCP adapters typically omit
+   * — the value lives on the bootstrap payload and refreshes via
+   * `refreshBootstrap()`. When undefined, `useLimits()` returns `null` for
+   * `remaining` / `withinLimits` with `loading: false` (graceful fallback,
+   * matching `useUsage`'s behaviour when `getUsage` is absent).
+   */
+  getLimits?: (params: {
+    productRef: string
+    meterName?: string
+  }) => Promise<TransportLimitsResult>
 
   createPayment: (params: {
     planRef?: string

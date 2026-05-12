@@ -256,16 +256,17 @@ export function parseBootstrapFromToolResult(
 /**
  * Shape of the `ui/notifications/tool-result` params we care about.
  * Loose on purpose — `McpUiToolResultNotification['params']` is
- * structurally compatible.
+ * structurally compatible. Exported so tests can mock listeners with
+ * the matching parameter type.
  */
-interface ToolResultNotificationParams {
+export interface ToolResultNotificationParams {
   isError?: boolean
   content?: Array<{ type: string; text?: string }>
   structuredContent?: unknown
   _meta?: unknown
 }
 
-type ToolResultListener = (params: ToolResultNotificationParams) => void
+export type ToolResultListener = (params: ToolResultNotificationParams) => void
 
 /**
  * Subset of `@modelcontextprotocol/ext-apps` `App` events that
