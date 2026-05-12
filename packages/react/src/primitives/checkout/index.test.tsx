@@ -167,6 +167,7 @@ function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): Solva
       name: 'Demo',
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),

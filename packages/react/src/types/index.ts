@@ -394,6 +394,17 @@ export interface UsePaymentMethodReturn {
 export interface SolvaPayContextValue {
   purchase: PurchaseStatus
   refetchPurchase: () => Promise<void>
+  /**
+   * Synchronously merge a `PurchaseInfo`-shaped row into the provider's
+   * `purchases` array. Idempotent on `purchase.reference` so re-fires
+   * from a later `refetchPurchase` are no-ops. Runs through the same
+   * `filterPurchases` active-row policy as the HTTP and bootstrap
+   * paths, so callers can hand in a fresh purchase from
+   * `processPaymentIntent` and have consumers (`hasPaidPurchase`,
+   * `activePurchase`, …) see it on the next render — no wait for a
+   * background refetch to land.
+   */
+  upsertPurchase: (purchase: PurchaseInfo) => void
   createPayment: (params: {
     planRef?: string
     productRef?: string

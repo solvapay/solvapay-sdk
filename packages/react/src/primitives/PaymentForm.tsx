@@ -57,6 +57,7 @@ import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
 import { confirmPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
+import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { resolveCta } from '../utils/checkoutCta'
 import { formatPrice } from '../utils/format'
@@ -309,13 +310,8 @@ const PaidInner: React.FC<{
   const elements = useElements()
   const copy = useCopy()
   const customer = useCustomer()
-  const { processPayment } = useSolvaPay()
-  const { refetch, hasPaidPurchase } = usePurchase()
-
-  const hasPaidPurchaseRef = useRef(hasPaidPurchase)
-  useEffect(() => {
-    hasPaidPurchaseRef.current = hasPaidPurchase
-  }, [hasPaidPurchase])
+  const { processPayment, upsertPurchase } = useSolvaPay()
+  const { refetch } = usePurchase()
 
   const [elementKind, setElementKind] = useState<PaymentElementKind>(
     children ? null : 'payment-element',
@@ -346,96 +342,91 @@ const PaidInner: React.FC<{
     setError(null)
     setIsProcessing(true)
 
-    const result = await confirmPayment({
-      stripe: stripe as Stripe,
-      elements: elements as StripeElements,
-      clientSecret,
-      mode: elementKind,
-      returnUrl,
-      billingDetails: {
-        name: customer.name ?? prefillCustomer?.name,
-        email: customer.email ?? prefillCustomer?.email,
-      },
-      copy,
-    })
+    // Wrap the entire post-`setIsProcessing(true)` block in try/finally so
+    // any thrown error in confirmPayment, reconcilePayment, upsertPurchase,
+    // or onSuccess/onResult can't wedge the button in the processing state.
+    // The previous fire-and-forget submit() returned a rejected promise on
+    // an unexpected backend shape (e.g. bare `{ status: 'succeeded' }`
+    // hitting `normalizeOneTimePurchase(undefined)`) and the caller never
+    // re-enabled the button. The `try/finally` is the actual fix for the
+    // stuck button — the `'type' in r` guard below stops the specific
+    // current crash, but future contract drift can't wedge the form.
+    try {
+      const result = await confirmPayment({
+        stripe: stripe as Stripe,
+        elements: elements as StripeElements,
+        clientSecret,
+        mode: elementKind,
+        returnUrl,
+        billingDetails: {
+          name: customer.name ?? prefillCustomer?.name,
+          email: customer.email ?? prefillCustomer?.email,
+        },
+        copy,
+      })
 
-    if (result.status === 'error') {
-      setError(result.message)
-      setIsProcessing(false)
-      onError?.(new Error(result.message))
-      return
-    }
-
-    if (result.status === 'requires_action' || result.status === 'other') {
-      setError(result.message)
-      setIsProcessing(false)
-      return
-    }
-
-    const paymentIntent = result.paymentIntent
-    const reconcileResult = await reconcilePayment({
-      paymentIntentId: paymentIntent.id as string,
-      productRef,
-      planRef: planRef || resolvedPlanRef || undefined,
-      processPayment,
-      refetchPurchase: refetch,
-      copy,
-    })
-
-    if (reconcileResult.status === 'success') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pi = paymentIntent as any
-      onSuccess?.(pi)
-      const paid: PaymentResult = { kind: 'paid', paymentIntent: pi }
-      onResult?.(paid)
-
-      // Hold isProcessing=true until the provider observes the paid purchase,
-      // or a ceiling elapses. Prevents a flicker back to the idle Subscribe
-      // button on consumers (e.g. MCP embedded checkout) that gate the view
-      // swap on `hasPaidPurchase`. See close_mcp_checkout_success_gap plan.
-      const CONFIRMATION_TIMEOUT_MS = 10_000
-      const startedAt = Date.now()
-      let attempt = 0
-      while (!hasPaidPurchaseRef.current && Date.now() - startedAt < CONFIRMATION_TIMEOUT_MS) {
-        attempt += 1
-        await new Promise(r => setTimeout(r, Math.min(500 * attempt, 1500)))
-        if (hasPaidPurchaseRef.current) break
-        try {
-          await refetch()
-        } catch {
-          // Swallow transient refetch errors; the ceiling will surface a
-          // retryable timeout if the purchase never materialises.
-        }
-      }
-
-      if (!hasPaidPurchaseRef.current) {
-        // The backend already confirmed the payment (reconcileResult.status
-        // === 'success') — this ceiling only fires when our local purchase
-        // snapshot hasn't caught up yet. Use the softer "confirmation
-        // delayed" copy instead of the harder "webhooks may not be
-        // configured" message, which would blame configuration that is
-        // demonstrably working.
-        const confirmationMsg = copy.errors.paymentConfirmationDelayed
-        setError(confirmationMsg)
-        setIsProcessing(false)
-        onError?.(new Error(confirmationMsg))
+      if (result.status === 'error') {
+        setError(result.message)
+        onError?.(new Error(result.message))
         return
       }
 
-      // Defensive: consumers that gate view on `hasPaidPurchase` typically
-      // unmount this form on the same render, so this may never execute.
+      if (result.status === 'requires_action' || result.status === 'other') {
+        setError(result.message)
+        return
+      }
+
+      const paymentIntent = result.paymentIntent
+      const reconcileResult = await reconcilePayment({
+        paymentIntentId: paymentIntent.id as string,
+        productRef,
+        planRef: planRef || resolvedPlanRef || undefined,
+        processPayment,
+        refetchPurchase: refetch,
+        copy,
+      })
+
+      if (reconcileResult.status === 'success') {
+        // Synchronously merge the authoritative purchase from
+        // `processPaymentIntent` into provider state so consumers that
+        // gate on `hasPaidPurchase` / `activePurchase` see the new row on
+        // the same render this form unmounts. No flicker, no post-confirm
+        // polling loop. The backend invariant (webhook handler finalizes
+        // BEFORE flipping PI.status to 'succeeded') makes the bare
+        // `{ status: 'succeeded' }` shape unreachable in normal operation —
+        // we keep this branch as belt-and-braces defensive refetch for
+        // resilience against backend invariant violations and for the
+        // legacy `!processPayment` compat path.
+        const r = reconcileResult.result
+        if (r && 'type' in r && r.type === 'recurring') {
+          upsertPurchase(r.purchase)
+        } else if (r && 'type' in r && r.type === 'one-time') {
+          upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
+        } else {
+          try {
+            await refetch()
+          } catch {
+            // Compat shim already refetched; swallow secondary failure.
+          }
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pi = paymentIntent as any
+        onSuccess?.(pi)
+        const paid: PaymentResult = { kind: 'paid', paymentIntent: pi }
+        onResult?.(paid)
+        return
+      }
+
+      const msg =
+        reconcileResult.status === 'timeout'
+          ? reconcileResult.error.message
+          : copy.errors.paymentProcessingFailed
+      setError(msg)
+      onError?.(reconcileResult.error)
+    } finally {
       setIsProcessing(false)
-      return
     }
-
-    setIsProcessing(false)
-
-    const msg =
-      reconcileResult.status === 'timeout'
-        ? reconcileResult.error.message
-        : copy.errors.paymentProcessingFailed
-    setError(msg)
-    onError?.(reconcileResult.error)
   }, [
     stripe,
     elements,
@@ -450,6 +441,7 @@ const PaidInner: React.FC<{
     planRef,
     resolvedPlanRef,
     refetch,
+    upsertPurchase,
     onSuccess,
     onResult,
     onError,

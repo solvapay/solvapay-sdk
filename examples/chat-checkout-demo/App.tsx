@@ -67,12 +67,10 @@ const App: React.FC = () => {
   // `userMessageCount` ref counter and the `floor(credits/creditsPerUnit)`
   // derivation. `adjustRemaining(-1)` after each successful send applies
   // an 8s optimistic grace window before refetching, matching the SDK's
-  // `adjustBalance` pattern.
-  const {
-    remaining: limitRemaining,
-    refetch: refetchLimits,
-    adjustRemaining,
-  } = useLimits({
+  // `adjustBalance` pattern. The hook also auto-refetches when
+  // `usePurchase().purchases` flips (post-payment / post-topup), so the
+  // pill converges on the new allowance without a demo-side polling loop.
+  const { remaining: limitRemaining, adjustRemaining } = useLimits({
     productRef: productRef || undefined,
     meterName: 'requests',
   })
@@ -272,14 +270,12 @@ const App: React.FC = () => {
   const handleFormSuccess = () => {
     setCheckoutState(null)
 
-    // Poll the limits for ~10s so the header pill converges on the
-    // real backend value once the webhook lands. The hook's 10s cache
-    // TTL can otherwise hide a slow webhook from the badge.
-    for (const ms of [1000, 3000, 6000, 10000]) {
-      window.setTimeout(() => {
-        refetchLimits().catch(() => {})
-      }, ms)
-    }
+    // No explicit refetch — the SDK now drives convergence end-to-end:
+    // `processPaymentIntent` returns the freshly-created `PurchaseInfo`
+    // on the wire, the provider's `upsertPurchase` merges it into
+    // `purchases` synchronously, and `useLimits` auto-refetches on
+    // that array reference change. The "X left" pill flips on the
+    // very next render without a polling trampoline.
 
     if (pendingMessage) {
       const retry = pendingMessage

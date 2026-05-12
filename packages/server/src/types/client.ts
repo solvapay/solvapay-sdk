@@ -49,14 +49,35 @@ export interface OneTimePurchaseInfo {
 }
 
 /**
- * Result from processing a payment intent
+ * Result from processing a payment intent.
+ *
+ * Mirrors the backend's discriminated `oneOf` response. The `succeeded`
+ * branches are further discriminated on `type` so consumers can route to
+ * recurring vs one-time purchase handling without guarding against
+ * `purchase === undefined`. A bare `{ status: 'succeeded' }` is returned
+ * when the webhook race means the backend can't yet enrich the response
+ * with the created purchase — callers should fall back to refetching.
+ *
+ * `failed` and `cancelled` are returned by the backend when the Stripe
+ * PaymentIntent is in a terminal non-success state and are routed to
+ * `onError` by `reconcilePayment`. `timeout` carries a retry hint and is
+ * routed to the timeout branch.
  */
-export interface ProcessPaymentResult {
-  type: 'recurring' | 'one-time'
-  purchase?: components['schemas']['PurchaseInfo']
-  oneTimePurchase?: OneTimePurchaseInfo
-  status: 'completed'
-}
+export type ProcessPaymentResult =
+  | {
+      status: 'succeeded'
+      type: 'recurring'
+      purchase: components['schemas']['PurchaseInfo']
+    }
+  | {
+      status: 'succeeded'
+      type: 'one-time'
+      oneTimePurchase: OneTimePurchaseInfo
+    }
+  | { status: 'succeeded' }
+  | { status: 'timeout'; message?: string }
+  | { status: 'failed' }
+  | { status: 'cancelled' }
 
 export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 

@@ -6,6 +6,7 @@ import type {
   PurchaseStatus,
   CustomerPurchaseData,
   PaymentIntentResult,
+  PurchaseInfo,
   TopupPaymentResult,
   BalanceStatus,
   CancelResult,
@@ -370,6 +371,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   // by a `useEffect` below once `applyInitial` is constructed.
   const applyInitialRef = useRef<((next: SolvaPayProviderInitial) => void) | null>(null)
 
+  const upsertPurchase = useCallback((incoming: PurchaseInfo) => {
+    setPurchaseData(prev => {
+      const next = prev.purchases.filter(p => p.reference !== incoming.reference)
+      next.push(incoming)
+      return { ...prev, purchases: filterPurchases(next) }
+    })
+  }, [])
+
   const refetchPurchase = useCallback(async () => {
     inFlightRef.current = null
 
@@ -576,6 +585,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     () => ({
       purchase,
       refetchPurchase,
+      upsertPurchase,
       createPayment,
       processPayment,
       createTopupPayment,
@@ -591,6 +601,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     [
       purchase,
       refetchPurchase,
+      upsertPurchase,
       createPayment,
       processPayment,
       createTopupPayment,

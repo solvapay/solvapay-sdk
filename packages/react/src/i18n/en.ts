@@ -221,8 +221,6 @@ export const enCopy: SolvaPayCopy = {
     paymentRequires3ds:
       'Payment requires additional authentication. Please complete the verification.',
     paymentProcessingTimeout: 'Payment processing timed out — webhooks may not be configured',
-    paymentConfirmationDelayed:
-      'Payment succeeded but confirmation is taking longer than usual. Refresh in a moment to see your purchase.',
     paymentStatusPrefix: 'Payment status: {status}',
     paywallInvalidContent: 'Paywall content is missing or malformed.',
     usageLoadFailed: 'Failed to load usage',

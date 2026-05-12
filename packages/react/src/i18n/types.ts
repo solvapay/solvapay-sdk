@@ -257,7 +257,6 @@ export interface SolvaPayCopy {
     paymentProcessingFailed: string
     paymentRequires3ds: string
     paymentProcessingTimeout: string
-    paymentConfirmationDelayed: string
     paymentStatusPrefix: string
     paywallInvalidContent: string
     usageLoadFailed: string

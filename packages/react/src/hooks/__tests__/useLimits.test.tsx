@@ -3,6 +3,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { useLimits, limitsCache, OPTIMISTIC_GRACE_MS } from '../useLimits'
 import { useCustomer } from '../useCustomer'
 import { useTransport } from '../useTransport'
+import { useSolvaPay } from '../useSolvaPay'
+import type { PurchaseInfo } from '../../types'
 
 vi.mock('../useCustomer', () => ({
   useCustomer: vi.fn(),
@@ -10,9 +12,25 @@ vi.mock('../useCustomer', () => ({
 vi.mock('../useTransport', () => ({
   useTransport: vi.fn(),
 }))
+vi.mock('../useSolvaPay', () => ({
+  useSolvaPay: vi.fn(),
+}))
 
 const mockedUseCustomer = vi.mocked(useCustomer)
 const mockedUseTransport = vi.mocked(useTransport)
+const mockedUseSolvaPay = vi.mocked(useSolvaPay)
+
+function setPurchases(purchases: PurchaseInfo[] = []) {
+  // Only the `purchases` array reference matters for the auto-refetch
+  // effect — every other context field is stubbed minimally. Returning
+  // the full `SolvaPayContextValue` shape would couple this mock to
+  // provider internals; the cast keeps the test focused.
+  mockedUseSolvaPay.mockReturnValue({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    purchase: { purchases } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any)
+}
 
 function setCustomer(customerRef: string | undefined = 'cus_test') {
   mockedUseCustomer.mockReturnValue({
@@ -48,6 +66,7 @@ beforeEach(() => {
   limitsCache.clear()
   vi.clearAllMocks()
   setCustomer()
+  setPurchases([])
 })
 
 afterEach(() => {
@@ -537,6 +556,88 @@ describe('useLimits', () => {
 
       expect(result.current.loading).toBe(true)
       expect(result.current.remaining).toBeNull()
+    })
+  })
+
+  describe('auto-refetch on purchase change', () => {
+    // After a successful payment the provider's `upsertPurchase` bumps
+    // the `purchases` array reference. `useLimits` must observe that
+    // and force a fresh fetch so consumers like the chat-checkout demo
+    // header pill ("X left") converge on the post-topup allowance
+    // without ad-hoc consumer-level polling.
+
+    it('does NOT refetch on the initial mount (no prior purchases snapshot)', async () => {
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: 5,
+        meterName: 'requests',
+        activationRequired: false,
+      })
+      setTransport({ getLimits })
+      setPurchases([{ reference: 'pur_existing' } as PurchaseInfo])
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+      await waitFor(() => expect(result.current.remaining).toBe(5))
+
+      // Only the standard mount fetch — the purchases-change effect
+      // ran but its previous-ref was null so it short-circuited.
+      expect(getLimits).toHaveBeenCalledTimes(1)
+    })
+
+    it('forces a refetch when the purchases array reference changes after mount', async () => {
+      const getLimits = vi
+        .fn()
+        .mockResolvedValueOnce({
+          withinLimits: true,
+          remaining: 5,
+          meterName: 'requests',
+          activationRequired: false,
+        })
+        .mockResolvedValueOnce({
+          withinLimits: true,
+          remaining: 100,
+          meterName: 'requests',
+          activationRequired: false,
+        })
+      setTransport({ getLimits })
+
+      const initialPurchases: PurchaseInfo[] = []
+      setPurchases(initialPurchases)
+
+      const { result, rerender } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+      await waitFor(() => expect(result.current.remaining).toBe(5))
+      expect(getLimits).toHaveBeenCalledTimes(1)
+
+      // Simulate the provider's `upsertPurchase` landing a fresh
+      // purchase: the array reference flips and the consumer rerenders.
+      setPurchases([{ reference: 'pur_fresh_topup' } as PurchaseInfo])
+      rerender()
+
+      await waitFor(() => expect(result.current.remaining).toBe(100))
+      expect(getLimits).toHaveBeenCalledTimes(2)
+    })
+
+    it('skips refetch when the purchases array reference is stable across rerenders', async () => {
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: 5,
+        meterName: 'requests',
+        activationRequired: false,
+      })
+      setTransport({ getLimits })
+
+      const stablePurchases: PurchaseInfo[] = [{ reference: 'pur_existing' } as PurchaseInfo]
+      setPurchases(stablePurchases)
+
+      const { result, rerender } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+      await waitFor(() => expect(result.current.remaining).toBe(5))
+
+      // Re-mocking with the SAME reference must NOT trigger a refetch.
+      setPurchases(stablePurchases)
+      rerender()
+      rerender()
+
+      expect(getLimits).toHaveBeenCalledTimes(1)
     })
   })
 })

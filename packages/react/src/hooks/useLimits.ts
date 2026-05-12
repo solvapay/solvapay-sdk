@@ -27,6 +27,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTransport } from './useTransport'
 import { useCustomer } from './useCustomer'
+import { useSolvaPay } from './useSolvaPay'
 import type { TransportLimitsResult } from '../transport/types'
 
 const CACHE_TTL_MS = 10_000
@@ -107,6 +108,7 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
 
   const transport = useTransport()
   const { customerRef } = useCustomer()
+  const { purchase } = useSolvaPay()
 
   // Current cache key for this render — `null` when the hook is
   // disabled or `productRef` is missing. Used both for the in-render
@@ -227,6 +229,22 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
   useEffect(() => {
     fetchLimits(false)
   }, [fetchLimits])
+
+  // Auto-refetch when the customer's purchases array reference changes.
+  // The provider's `upsertPurchase` (fired after a successful payment)
+  // and `fetchPurchase` (background refresh) both bump this reference,
+  // so "X left" pills reconverge on the new entitlement without
+  // ad-hoc consumer-level polling. Skips the initial mount — the
+  // `fetchLimits(false)` effect above already handles first load.
+  // `fetchLimits(true)`'s in-flight coalescing absorbs the overlap if
+  // the bootstrap fetch is still running.
+  const prevPurchasesRef = useRef<typeof purchase.purchases | null>(null)
+  useEffect(() => {
+    if (prevPurchasesRef.current !== null && prevPurchasesRef.current !== purchase.purchases) {
+      fetchLimits(true).catch(() => {})
+    }
+    prevPurchasesRef.current = purchase.purchases
+  }, [purchase.purchases, fetchLimits])
 
   const refetch = useCallback(() => fetchLimits(true), [fetchLimits])
 
