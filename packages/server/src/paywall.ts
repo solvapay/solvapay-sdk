@@ -271,8 +271,7 @@ export class SolvaPayPaywall {
     let resolvedMeterName: string | undefined
     let lastLimitsCheck: LimitResponseWithPlan | undefined
 
-    const hasFreshCachedLimits =
-      cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
+    const hasFreshCachedLimits = cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
 
     if (hasFreshCachedLimits) {
       checkoutUrl = cachedLimits.checkoutUrl
@@ -303,6 +302,14 @@ export class SolvaPayPaywall {
         customerRef: backendCustomerRef,
         productRef: product,
         meterName: usageType,
+        // `paywall.decide()` bakes `checkoutUrl` into the 402
+        // `PaywallStructuredContent` (consumed by
+        // `<PaywallNotice.HostedCheckoutLink>`), so we opt in. Other
+        // callers of `apiClient.checkLimits` (notably
+        // `checkLimitsCore`, which powers the React `useLimits` hook)
+        // leave this unset and the backend skips the session-creation
+        // side effect.
+        includeCheckoutSession: true,
       })
 
       lastLimitsCheck = limitsCheck
