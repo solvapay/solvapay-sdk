@@ -436,10 +436,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'ctx-test' })
       const mcpHandler = payable.mcp(handler)
 
-      await mcpHandler(
-        { input: 'test' },
-        { authInfo: { extra: { customer_ref: 'ctx_user' } } },
-      )
+      await mcpHandler({ input: 'test' }, { authInfo: { extra: { customer_ref: 'ctx_user' } } })
 
       expect(handler).toHaveBeenCalledTimes(1)
       const [, handlerContext] = handler.mock.calls[0]
@@ -458,14 +455,8 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'ctx-cache-test' })
       const mcpHandler = payable.mcp(handler)
 
-      await mcpHandler(
-        { a: 1 },
-        { authInfo: { extra: { customer_ref: 'cache_user' } } },
-      )
-      await mcpHandler(
-        { a: 2 },
-        { authInfo: { extra: { customer_ref: 'cache_user' } } },
-      )
+      await mcpHandler({ a: 1 }, { authInfo: { extra: { customer_ref: 'cache_user' } } })
+      await mcpHandler({ a: 2 }, { authInfo: { extra: { customer_ref: 'cache_user' } } })
 
       expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
       expect(handler).toHaveBeenCalledTimes(2)
@@ -485,7 +476,9 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       await mcpHandler({ hello: 'world' }, extra)
 
       const [, handlerContext] = handler.mock.calls[0]
-      expect(handlerContext.extra).toEqual(expect.objectContaining({ authInfo: expect.any(Object) }))
+      expect(handlerContext.extra).toEqual(
+        expect.objectContaining({ authInfo: expect.any(Object) }),
+      )
     })
 
     it('supports legacy one-arg handlers (backwards compatible)', async () => {
@@ -688,6 +681,27 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         expect.objectContaining({ productRef: 'prd_no_plan', meterName: 'requests' }),
       )
       expect(callArgs).not.toHaveProperty('planRef')
+    })
+
+    it('opts into checkout-session creation so the 402 carries a hosted URL', async () => {
+      // `paywall.decide()` embeds `checkoutUrl` in the 402
+      // `PaywallStructuredContent` (consumed by
+      // `<PaywallNotice.HostedCheckoutLink>`), so it must opt in to
+      // the backend's `includeCheckoutSession` flag. Other callers of
+      // `apiClient.checkLimits` (notably `checkLimitsCore` powering
+      // `useLimits`) deliberately do NOT opt in — they discard the
+      // URL and were causing orphan `CheckoutSession` documents +
+      // spurious `checkout_session.created` webhooks on every
+      // refetch. Pinning this here guards against accidental drift.
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ ok: true })
+      const payable = solvaPay.payable({ product: 'prd_with_url' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_with_url' } })
+
+      const callArgs = checkLimitsSpy.mock.calls[0][0]
+      expect(callArgs).toMatchObject({ includeCheckoutSession: true })
     })
   })
 
