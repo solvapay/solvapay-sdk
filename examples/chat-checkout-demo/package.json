@@ -20,7 +20,7 @@
     "@solvapay/server": "workspace:*",
     "@stripe/react-stripe-js": "^6.0.0",
     "@stripe/stripe-js": "^9.0.0",
-    "react": "^19.2.5",
+    "react": "^19.2.6",
     "react-dom": "^19.2.5",
     "react-markdown": "9.0.1",
     "remark-gfm": "4.0.0"
