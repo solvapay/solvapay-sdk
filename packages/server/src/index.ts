@@ -167,6 +167,7 @@ export type {
 export type {
   OneTimePurchaseInfo,
   ProcessPaymentResult,
+  TopupProcessResult,
   CustomerResponseMapped,
   ActivatePlanResult,
   PaymentMethodInfo,
@@ -192,6 +193,7 @@ export {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
+  processTopupPaymentIntentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,

@@ -96,6 +96,37 @@ export type ProcessPaymentResult =
   | { status: 'failed' }
   | { status: 'cancelled' }
 
+/**
+ * Result from processing a credit-topup payment intent.
+ *
+ * Narrower projection of {@link ProcessPaymentResult} — topups don't
+ * create a `PurchaseInfo` row (they book a `TOPUP` credit transaction
+ * via the webhook handler), so the `type: 'recurring' | 'one-time'`
+ * branches are stripped. The remaining four statuses match the
+ * backend's `/sdk/payment-intents/:id/process` response verbatim and
+ * are what the SDK's `processTopupPayment` exposes to `TopupForm`.
+ *
+ * `succeeded` means the backend observed the PI reach succeeded AND
+ * the credit transaction has been booked (see step 5 of
+ * `stripe-payment-webhook.handler.ts` — credit booking happens in the
+ * same handler invocation that flips PI status). `timeout` carries a
+ * soft retry hint; `failed` / `cancelled` route to the error branch.
+ *
+ * `creditsAdded` is the wallet delta observed by the backend helper's
+ * post-process balance poll (`processTopupPaymentIntentCore`). When
+ * present, the React side bumps `balance.adjustBalance(creditsAdded)`
+ * for an instant optimistic UI before the deterministic
+ * `refetchPurchase()` lands. Absent when the helper's poll budget
+ * exhausted (rare — the webhook was genuinely stalled) OR when the
+ * baseline capture failed (legacy `SolvaPayClient` adapters without
+ * `getCustomerBalance`); callers fall back to refetch-only.
+ */
+export type TopupProcessResult =
+  | { status: 'succeeded'; creditsAdded?: number }
+  | { status: 'timeout'; message?: string }
+  | { status: 'failed' }
+  | { status: 'cancelled' }
+
 export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto']
 
 /**
@@ -346,9 +377,12 @@ export interface SolvaPayClient {
   }): Promise<components['schemas']['PurchaseInfo']>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
+  // `productRef` is optional because credit-topup PIs (no product) are
+  // processed through the same route — the backend controller ignores
+  // the body entirely and drives off the PI id + authenticated provider.
   processPaymentIntent?(params: {
     paymentIntentId: string
-    productRef: string
+    productRef?: string
     customerRef: string
     planRef?: string
   }): Promise<ProcessPaymentResult>

@@ -15,7 +15,11 @@ import type {
   SolvaPayConfig,
   SolvaPayProviderInitial,
 } from './types'
-import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
+import type {
+  ProcessPaymentResult,
+  TopupProcessResult,
+  ActivatePlanResult,
+} from '@solvapay/server'
 import {
   filterPurchases,
   isPaidPurchase,
@@ -136,10 +140,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
 
   const configRef = useRef(config)
   const transportRef = useRef<SolvaPayTransport>(resolveTransport(config))
+  const [hasProcessTopupPayment, setHasProcessTopupPayment] = useState<boolean>(
+    () => !!transportRef.current.processTopupPayment,
+  )
 
   useEffect(() => {
     configRef.current = config
     transportRef.current = resolveTransport(config)
+    setHasProcessTopupPayment(!!transportRef.current.processTopupPayment)
   }, [config])
 
   const fetchBalanceImpl = useCallback(async () => {
@@ -231,6 +239,16 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     [],
   )
 
+  // Pure transport bridge — no state, no timers, no refs. Exists so
+  // `TopupForm.Inner.submit` can wait for backend confirmation
+  // (`status: 'succeeded'` plus the webhook handler's credit booking,
+  // which lands in the same invocation) before declaring success and
+  // closing the drawer.
+  const processTopupPayment = useCallback(
+    (params: { paymentIntentId: string }): Promise<TopupProcessResult> =>
+      transportRef.current.processTopupPayment!(params),
+    [],
+  )
   useEffect(() => {
     // MCP mode: identity already resolved by the OAuth bridge and carried
     // on `config.initial`. Skip the polling auth loop — nothing would
@@ -589,6 +607,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       createPayment,
       processPayment,
       createTopupPayment,
+      processTopupPayment: hasProcessTopupPayment ? processTopupPayment : undefined,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,
@@ -605,6 +624,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       createPayment,
       processPayment,
       createTopupPayment,
+      processTopupPayment,
+      hasProcessTopupPayment,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,

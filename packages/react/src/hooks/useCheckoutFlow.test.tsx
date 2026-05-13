@@ -96,7 +96,7 @@ function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): Solva
       email: 'demo@acme.test',
       name: 'Demo',
     },
-    refetchPurchase: vi.fn(),
+    refetchPurchase: vi.fn().mockResolvedValue(undefined),
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
@@ -858,19 +858,74 @@ describe('useCheckoutFlow — topupCurrency', () => {
 })
 
 // ------------------------------------------------------------------
-// Optimistic balance bump — `recordPaygSuccess` mints the local
-// wallet so the header pill flips immediately on Stripe confirm,
-// without waiting for the topup webhook to land.
+// Synchronous refetch on PAYG success — `recordPaygSuccess` drives a
+// single deterministic `refetchPurchase()` once `TopupForm` has
+// awaited backend confirmation (`processTopupPayment`). When the
+// backend's post-success balance poll surfaces a `creditsAdded`
+// delta, we additionally bump `balance.adjustBalance` for an instant
+// optimistic UI before the refetch lands. Without that hint, we
+// skip the optimistic bump (price-based estimates can drift from
+// the true credit count) and rely on the refetch alone.
 // ------------------------------------------------------------------
 
-describe('useCheckoutFlow — optimistic adjustBalance on PAYG success', () => {
-  it('calls adjustBalance with computed creditsAdded after PAYG payment', async () => {
+describe('useCheckoutFlow — synchronous refetch on PAYG success', () => {
+  it('calls refetchPurchase once and does NOT call adjustBalance after PAYG payment', async () => {
     const adjustBalance = vi.fn()
+    const refetchPurchase = vi.fn().mockResolvedValue(undefined)
     const transport = makeTransport()
     const config: SolvaPayConfig = { transport }
     const ctx = buildCtx(config, [])
-    // Override the default mock with a spy so we can assert call shape.
     ctx.balance.adjustBalance = adjustBalance
+    ctx.refetchPurchase = refetchPurchase
+    plansCache.set(productRef, {
+      plans: [paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant: defaultMerchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+    const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <SolvaPayContext.Provider value={ctx}>
+        <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
+          {children}
+        </PlanSelector.Root>
+      </SolvaPayContext.Provider>
+    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    // Topup is backend-confirmed before the form fires onSuccess
+    // (TopupForm.Inner.submit awaits `processTopupPayment`), so the
+    // post-confirm step refetches once instead of mint-and-grace.
+    expect(refetchPurchase).toHaveBeenCalledTimes(1)
+    expect(adjustBalance).not.toHaveBeenCalled()
+  })
+
+  it('preserves the computed creditsAdded on successMeta for the receipt UI', async () => {
+    const refetchPurchase = vi.fn().mockResolvedValue(undefined)
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config, [])
+    ctx.refetchPurchase = refetchPurchase
     plansCache.set(productRef, {
       plans: [paygPlan, proPlan],
       timestamp: Date.now(),
@@ -908,16 +963,137 @@ describe('useCheckoutFlow — optimistic adjustBalance on PAYG success', () => {
       await result.current.advance()
     })
     // creditsPerMinorUnit (100) * (1800 / displayExchangeRate (1)) = 180_000.
-    expect(adjustBalance).toHaveBeenCalledTimes(1)
-    expect(adjustBalance).toHaveBeenCalledWith(180_000)
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'payg',
+      creditsAdded: 180_000,
+      amountMinor: 1800,
+    })
   })
 
-  it('does NOT call adjustBalance on recurring success', async () => {
+  it('feeds backend creditsAdded to adjustBalance and reflects it on successMeta', async () => {
     const adjustBalance = vi.fn()
+    const refetchPurchase = vi.fn().mockResolvedValue(undefined)
     const transport = makeTransport()
     const config: SolvaPayConfig = { transport }
     const ctx = buildCtx(config, [])
     ctx.balance.adjustBalance = adjustBalance
+    ctx.refetchPurchase = refetchPurchase
+    plansCache.set(productRef, {
+      plans: [paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant: defaultMerchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+    const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <SolvaPayContext.Provider value={ctx}>
+        <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
+          {children}
+        </PlanSelector.Root>
+      </SolvaPayContext.Provider>
+    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    // Simulate `TopupForm.onSuccess(intent, { creditsAdded: 12_345 })`.
+    // The backend's post-success balance poll observed a +12_345
+    // wallet delta — that exact number drives `adjustBalance` and
+    // shows up on `successMeta.creditsAdded` for the receipt UI,
+    // overriding the price-based local estimate.
+    act(() => {
+      result.current.notifyPaymentSuccess(undefined, { creditsAdded: 12_345 })
+    })
+    expect(adjustBalance).toHaveBeenCalledTimes(1)
+    expect(adjustBalance).toHaveBeenCalledWith(12_345)
+    expect(refetchPurchase).toHaveBeenCalledTimes(1)
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'payg',
+      creditsAdded: 12_345,
+      amountMinor: 1800,
+    })
+  })
+
+  it('does not call adjustBalance when extras carry creditsAdded: 0', async () => {
+    // Edge case: an explicit zero from the backend (no credits granted —
+    // unusual but technically permitted by the type) should NOT trigger
+    // the optimistic bump. `adjustBalance(0)` would be a no-op anyway,
+    // but skipping it keeps the side-effect telemetry clean.
+    const adjustBalance = vi.fn()
+    const refetchPurchase = vi.fn().mockResolvedValue(undefined)
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config, [])
+    ctx.balance.adjustBalance = adjustBalance
+    ctx.refetchPurchase = refetchPurchase
+    plansCache.set(productRef, {
+      plans: [paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant: defaultMerchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+    const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <SolvaPayContext.Provider value={ctx}>
+        <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
+          {children}
+        </PlanSelector.Root>
+      </SolvaPayContext.Provider>
+    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    act(() => {
+      result.current.notifyPaymentSuccess(undefined, { creditsAdded: 0 })
+    })
+    expect(adjustBalance).not.toHaveBeenCalled()
+    expect(refetchPurchase).toHaveBeenCalledTimes(1)
+    // successMeta.creditsAdded reflects the backend value (0) verbatim.
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'payg',
+      creditsAdded: 0,
+    })
+  })
+
+  it('does NOT call refetchPurchase or adjustBalance on recurring success', async () => {
+    const adjustBalance = vi.fn()
+    const refetchPurchase = vi.fn().mockResolvedValue(undefined)
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config, [])
+    ctx.balance.adjustBalance = adjustBalance
+    ctx.refetchPurchase = refetchPurchase
     plansCache.set(productRef, {
       plans: [paygPlan, proPlan],
       timestamp: Date.now(),
@@ -948,8 +1124,10 @@ describe('useCheckoutFlow — optimistic adjustBalance on PAYG success', () => {
     await act(async () => {
       await result.current.advance()
     })
-    // Recurring success records the purchase server-side; no
-    // optimistic credit mint (the plan grants credits via webhook).
+    // Recurring success records the purchase server-side via
+    // `processPayment` + `upsertPurchase` — the recurring branch
+    // doesn't refetch (and never optimistically minted credits).
     expect(adjustBalance).not.toHaveBeenCalled()
+    expect(refetchPurchase).not.toHaveBeenCalled()
   })
 })

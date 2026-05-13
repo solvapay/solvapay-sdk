@@ -673,7 +673,7 @@ function PaygPayment({ className }: { className?: string }) {
         currency={currency}
         returnUrl={returnUrl}
         className="solvapay-checkout-topup-form"
-        onSuccess={() => flow.notifyPaymentSuccess()}
+        onSuccess={(intent, extras) => flow.notifyPaymentSuccess(intent, extras)}
       >
         <TopupForm.Loading />
         <TopupForm.PaymentElement />

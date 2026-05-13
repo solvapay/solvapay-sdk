@@ -56,6 +56,7 @@ export const DEFAULT_ROUTES = {
   createPayment: '/api/create-payment-intent',
   processPayment: '/api/process-payment',
   createTopupPayment: '/api/create-topup-payment-intent',
+  processTopupPayment: '/api/process-topup-payment',
   customerBalance: '/api/customer-balance',
   cancelRenewal: '/api/cancel-renewal',
   reactivateRenewal: '/api/reactivate-renewal',
@@ -116,6 +117,14 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         body: { amount: params.amount, currency: params.currency },
         onErrorContext: 'createTopupPayment',
         errorPrefix: 'Failed to create topup payment',
+      }),
+
+    processTopupPayment: params =>
+      request(config, routeFor(config, 'processTopupPayment'), {
+        method: 'POST',
+        body: { paymentIntentId: params.paymentIntentId },
+        onErrorContext: 'processTopupPayment',
+        errorPrefix: 'Failed to process topup payment',
       }),
 
     getBalance: () =>

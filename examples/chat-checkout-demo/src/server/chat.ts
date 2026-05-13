@@ -7,6 +7,25 @@ const SYSTEM_INSTRUCTION_BASE =
 
 const GEMINI_MODEL = 'gemini-3-flash-preview'
 
+// Gemini 3 Flash defaults to an internal "thinking" pass before emitting
+// the first output token, which adds several seconds of dead air for a
+// brief conversational assistant. `thinkingBudget: 0` disables thinking
+// so streaming starts immediately. Raise to a small positive number
+// (e.g. 128) if a richer reply is worth the latency.
+const GEMINI_THINKING_BUDGET = 0
+
+// Plans drive the system instruction's pricing snippet; they change on
+// merchant-action timescales, not per-message. Cache the resolved
+// instruction per `productRef` so we don't pay a `listPlans` roundtrip
+// on every chat send. The TTL caps drift if a merchant edits plans
+// while the worker/server is warm.
+const SYSTEM_INSTRUCTION_TTL_MS = 60_000
+
+const systemInstructionCache = new Map<
+  string,
+  { value: Promise<string>; expiresAt: number }
+>()
+
 interface ChatRequestBody {
   productRef: string
   messages: Array<{ role: 'user' | 'bot'; text: string }>
@@ -70,18 +89,20 @@ export async function handleChat(
   // production app would replace this with a JWT-shaped resolver
   // (verify the bearer token, return the `sub` claim) — see the
   // README for the swap pattern.
-  const gate = await payable.gate(req, { ctx })
+  //
+  // Run the gate decision and the (usually cached) system instruction
+  // fetch in parallel. On a cache hit the instruction promise is
+  // already resolved and this collapses to a single roundtrip; on a
+  // cold cache we overlap the two SolvaPay calls instead of paying
+  // them serially.
+  const [gate, systemInstruction] = await Promise.all([
+    payable.gate(req, { ctx }),
+    getSystemInstruction(deps.solvaPay, body.productRef),
+  ])
 
   if (gate.kind === 'paywall') {
     return gate.response
   }
-
-  const systemInstruction = await buildSystemInstruction(deps.solvaPay, body.productRef).catch(
-    error => {
-      console.warn('[chat] system instruction build failed; falling back to base:', error)
-      return SYSTEM_INSTRUCTION_BASE
-    },
-  )
 
   const ai = new GoogleGenAI({ apiKey: deps.geminiApiKey })
   const history: Content[] = body.messages.slice(0, -1).map(m => ({
@@ -90,7 +111,10 @@ export async function handleChat(
   }))
   const chat = ai.chats.create({
     model: GEMINI_MODEL,
-    config: { systemInstruction },
+    config: {
+      systemInstruction,
+      thinkingConfig: { thinkingBudget: GEMINI_THINKING_BUDGET },
+    },
     history,
   })
 
@@ -125,6 +149,32 @@ export async function handleChat(
       'cache-control': 'no-cache',
     },
   })
+}
+
+/**
+ * Cached accessor for the per-product system instruction. Caches the
+ * in-flight `Promise` (not the resolved value) so concurrent first
+ * requests share a single `listPlans` roundtrip. Failures evict the
+ * entry so the next request retries instead of being pinned to the
+ * fallback for the TTL window.
+ */
+function getSystemInstruction(solvaPay: SolvaPay, productRef: string): Promise<string> {
+  const now = Date.now()
+  const cached = systemInstructionCache.get(productRef)
+  if (cached && cached.expiresAt > now) return cached.value
+  const value = buildSystemInstruction(solvaPay, productRef).catch(error => {
+    const current = systemInstructionCache.get(productRef)
+    if (current?.value === value) {
+      systemInstructionCache.delete(productRef)
+    }
+    console.warn('[chat] system instruction build failed; falling back to base:', error)
+    return SYSTEM_INSTRUCTION_BASE
+  })
+  systemInstructionCache.set(productRef, {
+    value,
+    expiresAt: now + SYSTEM_INSTRUCTION_TTL_MS,
+  })
+  return value
 }
 
 /**

@@ -496,7 +496,7 @@ export interface SolvaPay {
    */
   processPaymentIntent(params: {
     paymentIntentId: string
-    productRef: string
+    productRef?: string
     customerRef: string
     planRef?: string
   }): Promise<import('./types/client').ProcessPaymentResult>

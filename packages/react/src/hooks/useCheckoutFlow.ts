@@ -29,6 +29,7 @@ import type { PaymentIntent } from '@stripe/stripe-js'
 import { usePlanSelector } from '../primitives/PlanSelector'
 import { useBalance } from './useBalance'
 import { useMerchant } from './useMerchant'
+import { useSolvaPay } from './useSolvaPay'
 import { useTransport } from './useTransport'
 import { useLocale } from './useCopy'
 import type { Plan } from '../types'
@@ -126,8 +127,17 @@ export interface UseCheckoutFlowReturn {
    * Commit a completed payment. Useful when integrators wire the
    * Stripe form directly (bypassing `<CheckoutSteps.Payment>`); the
    * default parts call this internally on the form's `onSuccess`.
+   *
+   * `extras.creditsAdded` (PAYG only) is the wallet delta observed by
+   * the backend's post-success balance poll, surfaced through
+   * `TopupForm.onSuccess`. When present, the flow prefers it over the
+   * locally-computed estimate and bumps `balance.adjustBalance` for
+   * an instant UI update.
    */
-  notifyPaymentSuccess: (intent?: PaymentIntent) => void
+  notifyPaymentSuccess: (
+    intent?: PaymentIntent,
+    extras?: { creditsAdded?: number },
+  ) => void
 }
 
 export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowReturn {
@@ -148,7 +158,9 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   const planCtx = usePlanSelector()
   const transport = useTransport()
   const locale = useLocale()
-  const { creditsPerMinorUnit, displayExchangeRate, adjustBalance } = useBalance()
+  const balance = useBalance()
+  const { creditsPerMinorUnit, displayExchangeRate, adjustBalance } = balance
+  const { refetchPurchase } = useSolvaPay()
   const { merchant } = useMerchant()
 
   // Resolve PAYG topup currency strictly from the `topupCurrency` option
@@ -257,42 +269,70 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setStep('payment')
   }, [branch, planCtx.currentPlanRef, runActivate, selectedPlanRef, selectedPlanShape])
 
-  const recordPaygSuccess = useCallback(() => {
-    if (!selectedPlanShape || selectedAmountMinor == null) return
-    // PAYG topup currency comes from the merchant (or explicit
-    // `topupCurrency` opt) — never from the plan. Plan currency is
-    // wallet-irrelevant for credit topups.
-    const currency = topupCurrency ?? 'USD'
-    const creditsAdded =
-      creditsPerMinorUnit != null && creditsPerMinorUnit > 0
-        ? Math.floor((selectedAmountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit)
-        : 0
-    // Optimistically bump the local wallet so the header pill / balance
-    // badge reflect the topup before the Stripe webhook lands. The
-    // SolvaPayProvider's 8s grace window auto-reconciles via a
-    // `fetchBalance` once the timer elapses, so transient drift is
-    // self-healing.
-    if (creditsAdded > 0) adjustBalance(creditsAdded)
-    const meta: SuccessMeta = {
-      branch: 'payg',
-      amountMinor: selectedAmountMinor,
-      currency,
-      creditsAdded,
-      plan: selectedPlanShape,
-      rateLabel: formatPaygRate(selectedPlanShape, locale),
-    }
-    setSuccessMeta(meta)
-    setStep('success')
-    onPurchaseSuccessRef.current?.(meta)
-  }, [
-    adjustBalance,
-    creditsPerMinorUnit,
-    displayExchangeRate,
-    locale,
-    selectedAmountMinor,
-    selectedPlanShape,
-    topupCurrency,
-  ])
+  const recordPaygSuccess = useCallback(
+    (creditsAddedFromBackend?: number) => {
+      if (!selectedPlanShape || selectedAmountMinor == null) return
+      // PAYG topup currency comes from the merchant (or explicit
+      // `topupCurrency` opt) — never from the plan. Plan currency is
+      // wallet-irrelevant for credit topups.
+      const currency = topupCurrency ?? 'USD'
+      // Prefer the backend's authoritative wallet delta over the
+      // local price-based estimate. `processTopupPaymentIntentCore`
+      // captures a balance baseline before `/process` and polls
+      // post-success until the wallet observes the topup — when it
+      // does, that delta is the exact credit count the customer was
+      // granted, including any merchant-specific rounding or fee
+      // adjustments the local estimate can't model. Falls back to
+      // the local computation when the backend omits it (legacy
+      // adapters, exhausted poll budget).
+      const computedCreditsAdded =
+        creditsPerMinorUnit != null && creditsPerMinorUnit > 0
+          ? Math.floor((selectedAmountMinor / (displayExchangeRate ?? 1)) * creditsPerMinorUnit)
+          : 0
+      const creditsAdded =
+        creditsAddedFromBackend !== undefined ? creditsAddedFromBackend : computedCreditsAdded
+
+      // Instant optimistic UI: when the backend has surfaced the
+      // wallet delta, bump the in-memory balance immediately so
+      // dependent surfaces (BalanceBadge, useLimits-driven gates)
+      // observe the post-topup state on the next render — before the
+      // deterministic `refetchPurchase()` round-trip lands. Without a
+      // backend delta we skip the optimistic step: a phantom bump
+      // computed from price could drift from the true credit count.
+      if (creditsAddedFromBackend !== undefined && creditsAddedFromBackend > 0) {
+        adjustBalance(creditsAddedFromBackend)
+      }
+      // Drive `useLimits` (it auto-refetches on `purchases` ref change)
+      // and the balance side-effect (it picks up the credit via the
+      // `purchases-change` effect inside `useBalance`'s caller). One
+      // round-trip, deterministic, no timer chain. `Promise.resolve()`
+      // wraps the call so a stub `refetchPurchase` that returns
+      // undefined (legacy tests, partial transport mocks) doesn't NPE
+      // on `.catch`.
+      Promise.resolve(refetchPurchase()).catch(() => {})
+      const meta: SuccessMeta = {
+        branch: 'payg',
+        amountMinor: selectedAmountMinor,
+        currency,
+        creditsAdded,
+        plan: selectedPlanShape,
+        rateLabel: formatPaygRate(selectedPlanShape, locale),
+      }
+      setSuccessMeta(meta)
+      setStep('success')
+      onPurchaseSuccessRef.current?.(meta)
+    },
+    [
+      adjustBalance,
+      creditsPerMinorUnit,
+      displayExchangeRate,
+      locale,
+      refetchPurchase,
+      selectedAmountMinor,
+      selectedPlanShape,
+      topupCurrency,
+    ],
+  )
 
   const recordRecurringSuccess = useCallback(() => {
     if (!selectedPlanShape) return
@@ -370,9 +410,9 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   }, [branch, runActivate, status, step])
 
   const notifyPaymentSuccess = useCallback(
-    (_intent?: PaymentIntent) => {
+    (_intent?: PaymentIntent, extras?: { creditsAdded?: number }) => {
       if (branch === 'payg') {
-        recordPaygSuccess()
+        recordPaygSuccess(extras?.creditsAdded)
       } else if (branch === 'recurring') {
         recordRecurringSuccess()
       }

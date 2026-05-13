@@ -14,6 +14,7 @@ import { TopupForm } from '../../../../primitives/TopupForm'
 import { formatPrice } from '../../../../utils/format'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
+import type { TopupFormSuccessExtras } from '../../../../types'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
 interface PaygPaymentStepProps {
@@ -21,7 +22,7 @@ interface PaygPaymentStepProps {
   amountMinor: number
   returnUrl: string
   onBack: () => void
-  onSuccess: () => void
+  onSuccess: (extras?: TopupFormSuccessExtras) => void
   cx: Cx
 }
 
@@ -73,7 +74,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
         currency={currency}
         returnUrl={returnUrl}
         className={cx.topupForm}
-        onSuccess={() => onSuccess()}
+        onSuccess={(_intent, extras) => onSuccess(extras)}
       >
         <TopupForm.Loading />
         <TopupForm.PaymentElement />
