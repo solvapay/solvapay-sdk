@@ -244,13 +244,13 @@ const App: React.FC = () => {
   /**
    * The user clicked "Upgrade" before hitting a real 402. Open the
    * stepped checkout drawer in `upgrade` mode — no synthetic
-   * paywall content needed. `<CheckoutSteps.*>` drives the plan →
-   * amount → payment flow and `onPurchaseSuccess` calls back into
-   * `handleFormSuccess`.
+   * paywall content needed. Keep `isFirstMessage` unchanged: the
+   * render prop below suppresses the welcome screen only while the
+   * drawer is open, so a proactive top-up with no chat transcript
+   * returns to the starter prompt instead of an empty chat shell.
    */
   const handleUpgrade = () => {
     if (!productRef) return
-    setIsFirstMessage(false)
     setCheckoutState({ mode: 'upgrade', productRef })
   }
 
@@ -270,24 +270,35 @@ const App: React.FC = () => {
   const handleFormSuccess = () => {
     setCheckoutState(null)
 
-    // No explicit refetch — the SDK now drives convergence end-to-end:
-    // `processPaymentIntent` returns the freshly-created `PurchaseInfo`
-    // on the wire, the provider's `upsertPurchase` merges it into
-    // `purchases` synchronously, and `useLimits` auto-refetches on
-    // that array reference change. The "X left" pill flips on the
-    // very next render without a polling trampoline.
-
+    // The SDK gates `onSuccess` on `processTopupPayment` returning,
+    // and `processTopupPaymentIntentCore` now waits for the wallet
+    // to observe the credit booking (baseline + post-success balance
+    // poll) before resolving. By the time this handler runs, the
+    // customer is fully credited — `paywall.decide()` on the next
+    // `/api/chat` send sees the post-topup state on the first call.
+    // Plans take the same shape: `processPaymentIntent` returns the
+    // freshly-created `PurchaseInfo` and `upsertPurchase` merges it
+    // synchronously.
+    //
+    // The `retryOn402` budget below stays as a defence-in-depth net
+    // for the rare soft-success case (backend's post-success poll
+    // exhausted while the webhook was genuinely stalled). 1+2+3+4s
+    // of backoff converges without spamming the gate.
     if (pendingMessage) {
       const retry = pendingMessage
       setPendingMessage(null)
-      // The SolvaPay webhook that credits the customer fires async
-      // after Stripe confirms (typically 1-3s, occasionally longer).
-      // `/api/chat` is gated server-side via `checkLimits`, so the
-      // first replay can race the webhook and trip another 402. Ride
-      // the silent retry path in `processMessage` (~10s of total
-      // wait) instead of immediately flicking back to the paywall
-      // notice.
-      processMessage(retry, messages, { retryOn402: 4 }).catch(() => {})
+      // `messages` already contains the user's pending turn — it was
+      // appended in `handleSendMessage` before the 402 came back, and
+      // `ChatInput` is hidden while `checkoutState` is set, so nothing
+      // else can land at the tail. `processMessage` then appends the
+      // `message` arg to its `history`, which would replay the user
+      // turn twice. Gemini's chat protocol requires alternating
+      // user/model roles; two consecutive identical user turns make
+      // it close the stream without emitting a chunk, and the UI is
+      // left visually stuck on the user message with no bot reply.
+      // Strip the trailing copy so history ends on a real model turn
+      // (or is empty on the first message).
+      processMessage(retry, messages.slice(0, -1), { retryOn402: 4 }).catch(() => {})
     }
     requestChatInputFocus()
   }
@@ -352,7 +363,7 @@ const App: React.FC = () => {
             plans={plans}
             plansLoading={plansLoading}
             onReset={handleReset}
-            isFirstMessage={isFirstMessage}
+            isFirstMessage={isFirstMessage && !checkoutState}
             isPremium={isPremium}
             currentScenario={currentScenario}
             hasLifetimeAccess={hasLifetimeAccess}

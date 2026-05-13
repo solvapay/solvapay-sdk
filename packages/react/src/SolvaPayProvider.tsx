@@ -15,7 +15,11 @@ import type {
   SolvaPayConfig,
   SolvaPayProviderInitial,
 } from './types'
-import type { ProcessPaymentResult, ActivatePlanResult } from '@solvapay/server'
+import type {
+  ProcessPaymentResult,
+  TopupProcessResult,
+  ActivatePlanResult,
+} from '@solvapay/server'
 import {
   filterPurchases,
   isPaidPurchase,
@@ -230,6 +234,22 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       transportRef.current.createTopupPayment(params),
     [],
   )
+
+  // Pure transport bridge — no state, no timers, no refs. Exists so
+  // `TopupForm.Inner.submit` can wait for backend confirmation
+  // (`status: 'succeeded'` plus the webhook handler's credit booking,
+  // which lands in the same invocation) before declaring success and
+  // closing the drawer.
+  const processTopupPayment = useCallback(
+    (params: { paymentIntentId: string }): Promise<TopupProcessResult> =>
+      transportRef.current.processTopupPayment!(params),
+    [],
+  )
+  // Whether the current transport supports `processTopupPayment` —
+  // exposed to consumers as the presence of the method on the context
+  // value. Custom transports that omit it fall through to the legacy
+  // immediate-onSuccess path (no backend gate).
+  const hasProcessTopupPayment = !!transportRef.current.processTopupPayment
 
   useEffect(() => {
     // MCP mode: identity already resolved by the OAuth bridge and carried
@@ -589,6 +609,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       createPayment,
       processPayment,
       createTopupPayment,
+      processTopupPayment: hasProcessTopupPayment ? processTopupPayment : undefined,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,
@@ -605,6 +626,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       createPayment,
       processPayment,
       createTopupPayment,
+      processTopupPayment,
+      hasProcessTopupPayment,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,

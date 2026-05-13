@@ -65,6 +65,7 @@ const REQUIRED_FUNCTIONS: ReadonlyArray<keyof typeof edgeEntry> = [
   'createPaymentIntentCore',
   'createTopupPaymentIntentCore',
   'processPaymentIntentCore',
+  'processTopupPaymentIntentCore',
   'createCheckoutSessionCore',
   'createCustomerSessionCore',
   'cancelPurchaseCore',

@@ -262,7 +262,7 @@ function McpCheckoutBody({
           amountMinor={flow.selectedAmountMinor}
           returnUrl={returnUrl}
           onBack={() => flow.back()}
-          onSuccess={() => flow.notifyPaymentSuccess()}
+          onSuccess={extras => flow.notifyPaymentSuccess(undefined, extras)}
           cx={cx}
         />
       )

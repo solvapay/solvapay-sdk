@@ -59,13 +59,18 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
       activePaidPurchase: null,
       balanceTransactions: [],
     },
-    refetchPurchase: vi.fn(),
+    refetchPurchase: vi.fn().mockResolvedValue(undefined),
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn().mockResolvedValue({
       clientSecret: 'pi_topup_secret',
       publishableKey: 'pk_test_123',
     }),
+    // Default `processTopupPayment` impl resolves to `succeeded` so the
+    // happy-path tests below get the production gating behaviour
+    // without manually wiring it on every render. Tests covering the
+    // failed / cancelled / timeout / absent branches override.
+    processTopupPayment: vi.fn().mockResolvedValue({ status: 'succeeded' }),
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
@@ -255,6 +260,306 @@ describe('TopupForm primitive', () => {
 // SolvaPay-owned "Save card for future top-ups" affordance, so the
 // primitive must pass `wallets.link = 'never'` to Stripe by default
 // while still letting callers override via `options`.
+
+// ---------- Backend gate on onSuccess ----------
+//
+// Regression guard for the topup badge-stale / slow LLM reply bug:
+// `TopupForm.onSuccess` previously fired the instant Stripe's
+// `confirmPayment` resolved, racing the SolvaPay webhook that books
+// the credit. The fix gates `onSuccess` on `processTopupPayment`
+// completing, so by the time the drawer closes the customer is
+// fully credited.
+
+describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
+  it('awaits processTopupPayment before firing onSuccess', async () => {
+    const onSuccess = vi.fn()
+    const processTopupPayment = vi.fn().mockResolvedValue({ status: 'succeeded' })
+
+    render(
+      <Wrap value={ctx({ processTopupPayment })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+
+    // Flip paymentInputComplete=true so the submit button enables.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+
+    expect(processTopupPayment).toHaveBeenCalledTimes(1)
+    expect(processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_test_123' })
+    // onSuccess fires AFTER processTopupPayment resolves — verify call order.
+    expect(processTopupPayment.mock.invocationCallOrder[0]).toBeLessThan(
+      onSuccess.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('routes status: failed to onError and surfaces an error message', async () => {
+    const onSuccess = vi.fn()
+    const onError = vi.fn()
+    const processTopupPayment = vi.fn().mockResolvedValue({ status: 'failed' })
+
+    render(
+      <Wrap value={ctx({ processTopupPayment })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+          <TopupForm.Error data-testid="error" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect((onError.mock.calls[0][0] as Error).message).toBe('Topup failed')
+    expect(screen.getByTestId('error')).toBeTruthy()
+    // isProcessing resets so the button is interactive again.
+    expect(screen.getByTestId('submit').getAttribute('data-state')).not.toBe('processing')
+  })
+
+  it('routes status: cancelled to onError', async () => {
+    const onSuccess = vi.fn()
+    const onError = vi.fn()
+    const processTopupPayment = vi.fn().mockResolvedValue({ status: 'cancelled' })
+
+    render(
+      <Wrap value={ctx({ processTopupPayment })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect((onError.mock.calls[0][0] as Error).message).toBe('Topup cancelled')
+  })
+
+  it('treats status: timeout as a soft success — fires onSuccess', async () => {
+    // The backend confirms the PI hasn't been observed succeeded within
+    // its 10s poll window. Stripe already confirmed though, so the
+    // credit will land via webhook shortly — fall through and let the
+    // downstream `refetchPurchase` converge.
+    const onSuccess = vi.fn()
+    const onError = vi.fn()
+    const processTopupPayment = vi.fn().mockResolvedValue({
+      status: 'timeout',
+      message: 'Webhook delayed',
+    })
+
+    render(
+      <Wrap value={ctx({ processTopupPayment })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('routes thrown errors from processTopupPayment to onError', async () => {
+    const onSuccess = vi.fn()
+    const onError = vi.fn()
+    const processTopupPayment = vi.fn().mockRejectedValue(new Error('Network blew up'))
+
+    render(
+      <Wrap value={ctx({ processTopupPayment })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect((onError.mock.calls[0][0] as Error).message).toBe('Network blew up')
+  })
+
+  it('forwards backend creditsAdded to onSuccess via the extras argument', async () => {
+    const onSuccess = vi.fn()
+    const processTopupPayment = vi.fn().mockResolvedValue({
+      status: 'succeeded',
+      creditsAdded: 250,
+    })
+
+    render(
+      <Wrap value={ctx({ processTopupPayment })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'pi_test_123' }),
+      { creditsAdded: 250 },
+    )
+  })
+
+  it('omits the extras argument when the backend does not surface creditsAdded', async () => {
+    // Soft-success path: backend confirmed PI but post-success poll
+    // exhausted before the wallet observed the delta. `onSuccess`
+    // fires without the optimistic hint; downstream `refetchPurchase`
+    // still converges the UI.
+    const onSuccess = vi.fn()
+    const processTopupPayment = vi.fn().mockResolvedValue({ status: 'succeeded' })
+
+    render(
+      <Wrap value={ctx({ processTopupPayment })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'pi_test_123' }),
+      undefined,
+    )
+  })
+
+  it('falls through to legacy fire-on-confirm when processTopupPayment is absent', async () => {
+    // Legacy / partial transports without `processTopupPayment` keep
+    // the pre-fix behaviour: onSuccess fires immediately on Stripe
+    // confirm. Not the recommended path (the customer can be
+    // momentarily uncredited) but preserved for backwards compat.
+    const onSuccess = vi.fn()
+
+    render(
+      <Wrap value={ctx({ processTopupPayment: undefined })}>
+        <TopupForm.Root amount={1000} onSuccess={onSuccess}>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+  })
+})
 
 describe('TopupForm.PaymentElement default options', () => {
   it('disables Stripe Link by default when the caller passes no options', async () => {

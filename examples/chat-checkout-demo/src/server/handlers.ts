@@ -13,6 +13,7 @@ import {
   isErrorResult,
   listPlansCore,
   processPaymentIntentCore,
+  processTopupPaymentIntentCore,
   reactivatePurchaseCore,
   type SolvaPay,
 } from '@solvapay/server'
@@ -87,6 +88,13 @@ const HANDLERS: Record<string, { method: 'GET' | 'POST'; handler: Handler }> = {
         description?: string
       }
       return createTopupPaymentIntentCore(req, body, { solvaPay: deps.solvaPay })
+    },
+  },
+  '/api/process-topup-payment': {
+    method: 'POST',
+    handler: async (req, deps) => {
+      const body = (await req.json()) as { paymentIntentId: string }
+      return processTopupPaymentIntentCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
   '/api/activate-plan': {

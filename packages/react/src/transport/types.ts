@@ -21,7 +21,12 @@ import type {
   Product,
   Plan,
 } from '../types'
-import type { GetUsageResult, ProcessPaymentResult, PaymentMethodInfo } from '@solvapay/server'
+import type {
+  GetUsageResult,
+  ProcessPaymentResult,
+  TopupProcessResult,
+  PaymentMethodInfo,
+} from '@solvapay/server'
 
 export interface TransportBalanceResult {
   credits: number
@@ -131,6 +136,22 @@ export interface SolvaPayTransport {
     amount: number
     currency?: string
   }) => Promise<TopupPaymentResult>
+
+  /**
+   * Process a credit-topup payment intent after Stripe's `confirmPayment`
+   * resolves. Mirrors `processPayment` but for the topup branch — by the
+   * time this resolves, the backend has observed the PI reach
+   * `succeeded` AND the webhook handler has booked the credit transaction.
+   *
+   * Optional: transports that can't run the synchronous round-trip
+   * (e.g. early MCP adapter builds, custom integrations) omit this and
+   * `TopupForm.onSuccess` fires immediately on Stripe confirm — the
+   * legacy behaviour. The HTTP transport always implements it; new
+   * transports SHOULD too.
+   */
+  processTopupPayment?: (params: {
+    paymentIntentId: string
+  }) => Promise<TopupProcessResult>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 

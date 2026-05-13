@@ -5,6 +5,7 @@
 import type { PaymentIntent } from '@stripe/stripe-js'
 import type {
   ProcessPaymentResult,
+  TopupProcessResult,
   ActivatePlanResult,
   PaymentMethodInfo,
   CustomerBalanceResult,
@@ -175,10 +176,31 @@ export interface UseTopupReturn {
   reset: () => void
 }
 
+/**
+ * Optional context forwarded by `TopupForm` to `onSuccess` when the
+ * backend-authoritative topup helper observes the wallet delta. The
+ * checkout flow uses `creditsAdded` to bump `balance.adjustBalance`
+ * for an instant optimistic UI while `refetchPurchase()` lands.
+ * Absent on legacy transports or when the backend's poll budget
+ * exhausted before the credit booking was visible.
+ */
+export interface TopupFormSuccessExtras {
+  creditsAdded?: number
+}
+
 export interface TopupFormProps {
   amount: number
   currency?: string
-  onSuccess?: (paymentIntent: PaymentIntent) => void
+  /**
+   * Fires once the customer is fully credited. `extras.creditsAdded`
+   * carries the wallet delta observed by the backend helper's
+   * post-success poll, when available. The second argument is
+   * optional — legacy consumers ignoring it still compile cleanly.
+   */
+  onSuccess?: (
+    paymentIntent: PaymentIntent,
+    extras?: TopupFormSuccessExtras,
+  ) => void | Promise<void>
   onError?: (error: Error) => void
   returnUrl?: string
   submitButtonText?: string
@@ -266,6 +288,7 @@ export interface SolvaPayConfig {
     createPayment?: string // Default: '/api/create-payment-intent'
     processPayment?: string // Default: '/api/process-payment'
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
+    processTopupPayment?: string // Default: '/api/process-topup-payment'
     customerBalance?: string // Default: '/api/customer-balance'
     cancelRenewal?: string // Default: '/api/cancel-renewal'
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
@@ -419,6 +442,22 @@ export interface SolvaPayContextValue {
     amount: number
     currency?: string
   }) => Promise<TopupPaymentResult>
+  /**
+   * Process a credit-topup payment intent after Stripe's `confirmPayment`
+   * resolves. Resolves once the backend observes the PI reach
+   * `succeeded` AND the webhook handler has booked the credit
+   * transaction — eliminates the confirm-to-webhook race that left the
+   * customer momentarily uncredited at the moment `TopupForm.onSuccess`
+   * fired.
+   *
+   * Optional: transports that can't run the synchronous round-trip
+   * omit this, and `TopupForm.onSuccess` fires immediately on Stripe
+   * confirm (legacy behaviour). The default HTTP transport always
+   * implements it.
+   */
+  processTopupPayment?: (params: {
+    paymentIntentId: string
+  }) => Promise<TopupProcessResult>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
   activatePlan: (params: {
