@@ -18,6 +18,13 @@
  * `copy.legalFooter.{terms, privacy}` ("Terms" / "Privacy"). Keeps the
  * i18n template signature untouched while lifting the legal commitment
  * to the point of charge.
+ *
+ * When the merchant record omits `termsUrl` / `privacyUrl`, we fall back
+ * to SolvaPay's hosted legal pages so the mandate sentence always carries
+ * working links. SolvaPay is the underlying processor on every charge, so
+ * its terms always apply — using them as the universal fallback keeps the
+ * SCA disclosure complete even for merchants who haven't published their
+ * own pages yet.
  */
 
 import React, { forwardRef, useContext, useMemo } from 'react'
@@ -31,6 +38,7 @@ import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { usePlanSelection } from '../components/PlanSelectionContext'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
+import { SOLVAPAY_PRIVACY_URL, SOLVAPAY_TERMS_URL } from '../constants/legal'
 import type { MandateContext, SolvaPayCopy } from '../i18n/types'
 
 export type MandateTextProps = {
@@ -87,8 +95,8 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(
           legalName: merchant?.legalName ?? merchant?.displayName ?? '',
           displayName: merchant?.displayName,
           supportEmail: merchant?.supportEmail,
-          termsUrl: merchant?.termsUrl,
-          privacyUrl: merchant?.privacyUrl,
+          termsUrl: merchant?.termsUrl ?? SOLVAPAY_TERMS_URL,
+          privacyUrl: merchant?.privacyUrl ?? SOLVAPAY_PRIVACY_URL,
         },
         plan: plan
           ? {

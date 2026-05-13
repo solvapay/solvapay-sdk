@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { loadStripe, Stripe } from '@stripe/stripe-js'
+import { loadStripe, Stripe, StripeConstructorOptions } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
 import { buildRequestHeaders } from '../utils/headers'
 import type { Plan, PrefillCustomer, SolvaPayConfig } from '../types'
@@ -159,7 +159,10 @@ export function useCheckout(options: {
         updateCustomerRef(result.customerRef)
       }
 
-      const stripeOptions = result.accountId ? { stripeAccount: result.accountId } : {}
+      const stripeOptions: StripeConstructorOptions = {
+        ...(result.accountId ? { stripeAccount: result.accountId } : {}),
+        developerTools: { assistant: { enabled: false } },
+      }
 
       const cacheKey = getStripeCacheKey(result.publishableKey, result.accountId)
       let stripe = stripePromiseCache.get(cacheKey)

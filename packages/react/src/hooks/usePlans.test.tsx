@@ -1,6 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import React from 'react'
 import { usePlans, plansCache } from './usePlans'
+import { SolvaPayProvider } from '../SolvaPayProvider'
 import type { Plan } from '../types'
 
 const freePlan: Plan = { reference: 'plan_free', name: 'Free', price: 0, requiresPayment: false }
@@ -106,14 +108,33 @@ describe('usePlans', () => {
       expect(result.current.selectedPlan?.reference).toBe('plan_basic')
     })
 
-    it('defaults to index 0 when no initialPlanRef and autoSelectFirstPaid is false', async () => {
+    it('leaves selection empty when no initialPlanRef and autoSelectFirstPaid is false', async () => {
+      // Caller opted out of auto-selection; the hook must not silently
+      // pre-select the first card. `-1` surfaces as `selectedPlan: null`
+      // so consumers gating on `selectedPlanRef` (e.g. the Continue
+      // button) keep the disabled state until the user clicks a card.
       const fetcher = createFetcher()
       const { result } = renderHook(() =>
         usePlans({ productRef: 'prd_1', fetcher }),
       )
 
       await waitFor(() => expect(result.current.loading).toBe(false))
-      expect(result.current.selectedPlanIndex).toBe(0)
+      expect(result.current.selectedPlanIndex).toBe(-1)
+      expect(result.current.selectedPlan).toBeNull()
+    })
+
+    it('honours user pick after the no-selection default', async () => {
+      const fetcher = createFetcher()
+      const { result } = renderHook(() =>
+        usePlans({ productRef: 'prd_1', fetcher }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlan).toBeNull()
+
+      act(() => result.current.selectPlan('plan_basic'))
+      expect(result.current.selectedPlanIndex).toBe(1)
+      expect(result.current.selectedPlan?.reference).toBe('plan_basic')
     })
   })
 
@@ -326,6 +347,42 @@ describe('usePlans', () => {
       expect(r2.current.isSelectionReady).toBe(true)
     })
 
+    it('coalesces concurrent mounts onto a single in-flight fetch', async () => {
+      // Regression: previously the second caller would hit the
+      // fresh-cache branch (the in-flight slot carries `plans: []` +
+      // a fresh timestamp) and lock itself into "loading=false,
+      // plans=[]" until the TTL expired. The in-flight branch must
+      // win over the fresh-cache branch when `plans.length === 0`.
+      let resolveFetch: (plans: Plan[]) => void = () => {}
+      const pending = new Promise<Plan[]>(resolve => {
+        resolveFetch = resolve
+      })
+      const fetcher = vi.fn().mockReturnValue(pending)
+
+      const first = renderHook(() =>
+        usePlans({ productRef: 'prd_race', fetcher, selectionReady: true }),
+      )
+      // Mount #2 before mount #1's fetch resolves.
+      const second = renderHook(() =>
+        usePlans({ productRef: 'prd_race', fetcher, selectionReady: true }),
+      )
+
+      // Both should be loading and waiting on the same promise.
+      expect(first.result.current.loading).toBe(true)
+      expect(second.result.current.loading).toBe(true)
+      expect(fetcher).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        resolveFetch(allPlans)
+        await pending
+      })
+
+      await waitFor(() => expect(first.result.current.loading).toBe(false))
+      await waitFor(() => expect(second.result.current.loading).toBe(false))
+      expect(first.result.current.plans).toEqual(allPlans)
+      expect(second.result.current.plans).toEqual(allPlans)
+    })
+
     it('preserves selection across refetch', async () => {
       const fetcher = createFetcher()
       const { result } = renderHook(() =>
@@ -371,6 +428,69 @@ describe('usePlans', () => {
       await waitFor(() => expect(result.current.loading).toBe(false))
       // Sorted: free(0), basic(1000), pro(2000) -> first two: free, basic
       expect(result.current.plans).toEqual([freePlan, basicPlan])
+    })
+  })
+
+  describe('default fetcher (omitted)', () => {
+    function makeFetch(payload: unknown, status = 200) {
+      return vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(payload), {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+    }
+
+    function wrapper(config: Parameters<typeof SolvaPayProvider>[0]['config']) {
+      const Wrapper = ({ children }: { children: React.ReactNode }) => (
+        <SolvaPayProvider config={config}>{children}</SolvaPayProvider>
+      )
+      Wrapper.displayName = 'TestWrapper'
+      return Wrapper
+    }
+
+    it('falls back to defaultListPlans when fetcher is omitted (uses provider config)', async () => {
+      const fetchFn = makeFetch({ plans: allPlans })
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_default' }), {
+        wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+      })
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.plans).toEqual(allPlans)
+      expect(fetchFn).toHaveBeenCalledWith(
+        '/api/list-plans?productRef=prd_default',
+        expect.any(Object),
+      )
+    })
+
+    it('routes default fetcher through transport.listPlans when configured', async () => {
+      const transportListPlans = vi.fn().mockResolvedValue([proPlan])
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_t' }), {
+        wrapper: wrapper({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          transport: { listPlans: transportListPlans, checkPurchase: vi.fn() } as any,
+        }),
+      })
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(transportListPlans).toHaveBeenCalledWith('prd_t')
+      expect(result.current.plans).toEqual([proPlan])
+    })
+
+    it('explicit fetcher still overrides the default', async () => {
+      const fetchFn = makeFetch({ plans: [] })
+      const fetcher = createFetcher([basicPlan])
+      const { result } = renderHook(
+        () => usePlans({ productRef: 'prd_o', fetcher }),
+        {
+          wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+        },
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(fetcher).toHaveBeenCalledWith('prd_o')
+      expect(fetchFn).not.toHaveBeenCalled()
+      expect(result.current.plans).toEqual([basicPlan])
     })
   })
 })

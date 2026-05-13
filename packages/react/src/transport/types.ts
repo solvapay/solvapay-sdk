@@ -21,13 +21,41 @@ import type {
   Product,
   Plan,
 } from '../types'
-import type { GetUsageResult, ProcessPaymentResult, PaymentMethodInfo } from '@solvapay/server'
+import type {
+  GetUsageResult,
+  ProcessPaymentResult,
+  TopupProcessResult,
+  PaymentMethodInfo,
+} from '@solvapay/server'
 
 export interface TransportBalanceResult {
   credits: number
   displayCurrency: string
   creditsPerMinorUnit: number
   displayExchangeRate: number
+}
+
+/**
+ * Runtime allowance projection consumed by `useLimits`. Mirrors the
+ * subset of `@solvapay/server`'s `LimitResponse` that the React side
+ * actually renders — `plans` / `balance` / `product` are deliberately
+ * omitted because they duplicate fields other hooks (`usePlans`,
+ * `useBalance`) already surface.
+ */
+export interface TransportLimitsResult {
+  withinLimits: boolean
+  remaining: number
+  meterName: string | null
+  /**
+   * True when the backend's default plan requires explicit activation
+   * (free or paid). Customer has zero entitlement until `activatePlan`
+   * runs. Distinguishes "exhausted free tier" (`activationRequired:
+   * false, remaining: 0`) from "free tier waiting to be claimed"
+   * (`activationRequired: true, remaining: 0`). Free recurring plans
+   * with `default: true` skip this — the backend treats them as
+   * auto-allocated.
+   */
+  activationRequired: boolean
 }
 
 /** Re-exported from `@solvapay/server` for transport consumers. */
@@ -78,6 +106,19 @@ export interface SolvaPayTransport {
    * reading the usage field out of `checkPurchase`.
    */
   getUsage?: () => Promise<GetUsageResult>
+  /**
+   * Optional: fetch the customer's runtime allowance for a (product, meter)
+   * pair. HTTP transports implement via
+   * `GET /api/limits?productRef=…&meterName=…`. MCP adapters typically omit
+   * — the value lives on the bootstrap payload and refreshes via
+   * `refreshBootstrap()`. When undefined, `useLimits()` returns `null` for
+   * `remaining` / `withinLimits` with `loading: false` (graceful fallback,
+   * matching `useUsage`'s behaviour when `getUsage` is absent).
+   */
+  getLimits?: (params: {
+    productRef: string
+    meterName?: string
+  }) => Promise<TransportLimitsResult>
 
   createPayment: (params: {
     planRef?: string
@@ -95,6 +136,22 @@ export interface SolvaPayTransport {
     amount: number
     currency?: string
   }) => Promise<TopupPaymentResult>
+
+  /**
+   * Process a credit-topup payment intent after Stripe's `confirmPayment`
+   * resolves. Mirrors `processPayment` but for the topup branch — by the
+   * time this resolves, the backend has observed the PI reach
+   * `succeeded` AND the webhook handler has booked the credit transaction.
+   *
+   * Optional: transports that can't run the synchronous round-trip
+   * (e.g. early MCP adapter builds, custom integrations) omit this and
+   * `TopupForm.onSuccess` fires immediately on Stripe confirm — the
+   * legacy behaviour. The HTTP transport always implements it; new
+   * transports SHOULD too.
+   */
+  processTopupPayment?: (params: {
+    paymentIntentId: string
+  }) => Promise<TopupProcessResult>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 

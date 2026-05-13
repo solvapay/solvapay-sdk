@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { SolvaPayContext } from '../SolvaPayProvider'
+import { defaultListPlans } from '../transport/list-plans'
 import type { Plan, UsePlansOptions, UsePlansReturn } from '../types'
 
 // Global cache for plans to prevent duplicate fetches across components
@@ -39,7 +41,12 @@ function computeInitialIndex(
     return idx >= 0 ? idx : 0
   }
 
-  return 0
+  // No `initialPlanRef`, no `autoSelectFirstPaid` -> caller wants no
+  // auto-selection. Returning 0 here would silently pre-select the
+  // first card and enable Continue, defeating the opt-out. `-1`
+  // surfaces as `selectedPlan === null`; consumers (the Continue
+  // button included) gate on selection state.
+  return -1
 }
 
 /**
@@ -62,7 +69,19 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
     selectionReady = true,
   } = options
 
-  const fetcherRef = useRef(fetcher)
+  // Pull the provider config (if mounted) so we can default the fetcher
+  // to `defaultListPlans`. `useContext` returns null outside a provider,
+  // matching the existing test setup that calls `usePlans` without a
+  // provider when an explicit `fetcher` is supplied.
+  const solvaContext = useContext(SolvaPayContext)
+  const config = solvaContext?._config
+
+  const effectiveFetcher = useMemo<(ref: string) => Promise<Plan[]>>(
+    () => fetcher ?? ((ref: string) => defaultListPlans(ref, config)),
+    [fetcher, config],
+  )
+
+  const fetcherRef = useRef(effectiveFetcher)
   const filterRef = useRef(filter)
   const sortByRef = useRef(sortBy)
   const autoSelectFirstPaidRef = useRef(autoSelectFirstPaid)
@@ -99,8 +118,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
   const [loading, setLoading] = useState(() => plans.length === 0)
   const [error, setError] = useState<Error | null>(null)
 
-  // Keep refs in sync
-  useEffect(() => { fetcherRef.current = fetcher }, [fetcher])
+  useEffect(() => { fetcherRef.current = effectiveFetcher }, [effectiveFetcher])
   useEffect(() => { filterRef.current = filter }, [filter])
   useEffect(() => { sortByRef.current = sortBy }, [sortBy])
   useEffect(() => { autoSelectFirstPaidRef.current = autoSelectFirstPaid }, [autoSelectFirstPaid])
@@ -139,19 +157,11 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
       const cached = plansCache.get(productRef)
       const now = Date.now()
 
-      if (!force && cached && now - cached.timestamp < CACHE_DURATION) {
-        const processedPlans = processPlans(
-          cached.plans,
-          filterRef.current,
-          sortByRef.current,
-        )
-        setPlans(processedPlans)
-        setLoading(false)
-        setError(null)
-        applyInitialSelection(processedPlans)
-        return
-      }
-
+      // Coalesce on an existing in-flight fetch BEFORE checking the
+      // fresh-cache branch — an in-flight slot carries `plans: []` as
+      // a placeholder + a fresh timestamp, so the fresh-cache branch
+      // would otherwise lock the second caller into "loading=false,
+      // plans=[]" until the TTL expires.
       if (cached?.promise) {
         try {
           setLoading(true)
@@ -169,6 +179,24 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         } finally {
           setLoading(false)
         }
+        return
+      }
+
+      if (
+        !force &&
+        cached &&
+        cached.plans.length > 0 &&
+        now - cached.timestamp < CACHE_DURATION
+      ) {
+        const processedPlans = processPlans(
+          cached.plans,
+          filterRef.current,
+          sortByRef.current,
+        )
+        setPlans(processedPlans)
+        setLoading(false)
+        setError(null)
+        applyInitialSelection(processedPlans)
         return
       }
 

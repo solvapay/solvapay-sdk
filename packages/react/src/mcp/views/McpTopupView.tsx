@@ -220,7 +220,7 @@ function EmbeddedTopup({
       </div>
       <AmountPicker.Root currency={currency} emit="minor" className={cx.amountPicker}>
         <QuickAmountOptions className={cx.amountOptions} optionClassName={cx.amountOption} />
-        <AmountPicker.Custom className={cx.amountCustom} />
+        <CustomAmountRow rowClassName={cx.amountCustom} />
         <AmountPicker.Confirm
           className={cx.button}
           onConfirm={amountMinor => {
@@ -256,6 +256,20 @@ function QuickAmountOptions({
       {quickAmounts.map(amount => (
         <AmountPicker.Option key={amount} amount={amount} className={optionClassName} />
       ))}
+    </div>
+  )
+}
+
+// Bordered "$ 0.00" row matching the hosted topup page. The `cx.amountCustom`
+// class now styles the wrapping `<div>` (was the `<input>` pre-refactor); the
+// inner span carries the merchant currency symbol pulled from the picker
+// context, and the input itself renders unstyled inside the row.
+function CustomAmountRow({ rowClassName }: { rowClassName: string }) {
+  const { currencySymbol } = useAmountPicker()
+  return (
+    <div className={rowClassName}>
+      <span className="solvapay-mcp-amount-currency-symbol">{currencySymbol}</span>
+      <AmountPicker.Custom className="solvapay-mcp-amount-custom-input" placeholder="0.00" />
     </div>
   )
 }
