@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite --port 3011",
     "build": "vite build",
+    "build:prod": "vite build --mode prod",
     "preview": "vite preview --port 3011",
     "serve:local": "wrangler dev",
     "predeploy": "pnpm -w build:packages && pnpm build",
     "deploy": "node scripts/deploy.mjs",
-    "deploy:prod": "pnpm -w build:packages && pnpm build && node scripts/deploy.mjs --prod"
+    "deploy:prod": "pnpm -w build:packages && pnpm build:prod && node scripts/deploy.mjs --prod"
   },
   "dependencies": {
     "@google/genai": "^1.21.0",

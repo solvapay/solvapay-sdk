@@ -191,7 +191,7 @@ The SolvaPay backend will dedupe the customer by `externalRef` (the JWT `sub`), 
 
 ## Deploy to Cloudflare Workers
 
-The `src/worker.ts` entrypoint pairs with `wrangler.jsonc` to deploy the demo as a single Worker that serves both the Vite SPA build (via the Workers Assets binding) and the `/api/*` routes. Mirrors the deploy ergonomics from `examples/cloudflare-workers-mcp` — public-safe placeholders in git, real values in a gitignored `.env` that `scripts/deploy.mjs` forwards as `--var` flags.
+The `src/worker.ts` entrypoint pairs with `wrangler.jsonc` to deploy the demo as a single Worker that serves both the Vite SPA build (via the Workers Assets binding) and the `/api/*` routes. Mirrors the deploy ergonomics from `examples/cloudflare-workers-mcp` — public-safe placeholders in git, real values in a gitignored `.env` that `scripts/deploy.mjs` forwards as `--var` flags. The canonical SolvaPay-owned deploy runs at [chat-demo.solvapay.app](https://chat-demo.solvapay.app) (sandbox backend, anyone can poke at the paywall with `4242 4242 4242 4242`).
 
 > **Two value paths, two different homes.** Build-time vars (anything `VITE_*`) get baked into the SPA at `vite build` time and are read from the root `.env`. Server-side credentials (`SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY`) are Worker **secrets** — uploaded **once** via `wrangler secret put` and persisted on the Worker. `scripts/deploy.mjs` does NOT re-upload secrets on every deploy; that's by design (secrets out of deploy-time plaintext). If you skip the `wrangler secret put` step, every `/api/*` request returns 500 with `SOLVAPAY_SECRET_KEY is not set` and the page shows Cloudflare's `error code: 1101`.
 
@@ -238,9 +238,9 @@ pnpm deploy   # runs `pnpm -w build:packages && pnpm build`, then `node scripts/
 
 `scripts/deploy.mjs` sources `.env` and forwards `SOLVAPAY_API_BASE_URL` as a `--var` override. Output ends with the live `*.workers.dev` URL.
 
-### Production deploy (custom domain)
+### Deploy the live demo
 
-The `[env.production]` block in `wrangler.jsonc` ships a placeholder hostname (`chat-demo.solvapay.app`). Edit it to your own zone (or remove the `routes` block entirely to serve on the default `*.workers.dev` URL).
+The same example also ships a prod target for the canonical `chat-demo.solvapay.app` deploy, gated behind a separate Worker name (`solvapay-chat-checkout-demo-prod`) and Cloudflare account ID so its secrets and observability are isolated from the public-safe `*.workers.dev` example deploy above. The prod config lives in the `[env.production]` block of `wrangler.jsonc`. To target a different hostname in your fork, edit the `routes` entry (or drop it entirely to serve on the default `*.workers.dev` URL), and replace the SolvaPay `account_id` with your own.
 
 > **Production secrets are scoped to the production Worker.** They live in a different secret store from the `*.workers.dev` Worker — uploading once for non-prod does NOT cover prod. You always need `--env production` for the prod path.
 
@@ -297,7 +297,17 @@ pnpm exec wrangler tail --env production --format=pretty
 
 ### Vite build assets
 
-`VITE_SUBSCRIPTION_PRODUCT_REF`, `VITE_LIFETIME_PRODUCT_REF`, and `VITE_TOPUP_PRODUCT_REF` are baked into the SPA bundle by Vite at `pnpm build` time. They live in the existing root `.env` (alongside `SOLVAPAY_SECRET_KEY` for the Vite dev path) — the Worker never reads them. Changing one of these requires a fresh `pnpm deploy` so the SPA bundle is rebuilt.
+`VITE_SUBSCRIPTION_PRODUCT_REF`, `VITE_LIFETIME_PRODUCT_REF`, and `VITE_TOPUP_PRODUCT_REF` are baked into the SPA bundle by Vite at build time — the Worker never reads them. Changing one of these requires a fresh `pnpm deploy` so the SPA bundle is rebuilt.
+
+Which file Vite reads depends on the deploy target:
+
+| Command       | Vite mode    | Env files (later wins per Vite's load order)         |
+|---------------|--------------|------------------------------------------------------|
+| `pnpm dev`    | `development`| `.env` → `.env.local` → `.env.development` (none)    |
+| `pnpm build`  | `production` | `.env` → `.env.local` → `.env.production` (none)     |
+| `pnpm build:prod` / `pnpm deploy:prod` | `prod` | `.env` → `.env.local` → `.env.prod` |
+
+`pnpm deploy:prod` runs `vite build --mode prod` (not the default `production`) so the same `.env.prod` that drives `scripts/deploy.mjs` ALSO drives the SPA bundle — one source of truth for the prod target. This is the only reason the build:prod step exists; if you forget and run `pnpm build` for a deploy, Vite picks up `.env.local` (your local sandbox merchant) and the deployed SPA ends up with product refs that don't match the Worker's `SOLVAPAY_SECRET_KEY`, manifesting as `Product not found: prd_…` 404s on `/api/limits` (and any other `/api/*` route that takes a `productRef`).
 
 ## Caveats
 
