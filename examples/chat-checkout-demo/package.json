@@ -26,14 +26,14 @@
     "remark-gfm": "4.0.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251124.0",
-    "@types/node": "^25.5.0",
+    "@cloudflare/workers-types": "^4.20260511.1",
+    "@types/node": "^25.7.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "cross-env": "^10.1.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.6",
-    "wrangler": "^4.47.0"
+    "vite": "^8.0.12",
+    "wrangler": "^4.90.1"
   }
 }
