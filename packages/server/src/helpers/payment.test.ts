@@ -296,6 +296,26 @@ describe('processTopupPaymentIntentCore — post-success balance polling', () =>
     expect(result).toEqual({ status: 'failed' })
   })
 
+  it('fails closed when processPaymentIntent returns an unknown or missing status', async () => {
+    mockGetCustomerBalance.mockResolvedValue({
+      customerRef: 'cus_ABC',
+      credits: 100,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    })
+    mockProcessPaymentIntent.mockResolvedValue({})
+
+    const result = await processTopupPaymentIntentCore(fakeRequest(), {
+      paymentIntentId: 'pi_test_123',
+    })
+
+    // Baseline is captured, but unknown status must not enter the
+    // post-success polling path.
+    expect(mockGetCustomerBalance).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ status: 'failed' })
+  })
+
   it('falls back to legacy succeeded branch when baseline capture throws', async () => {
     // Transient backend hiccup on the baseline call. We still want
     // the topup to succeed (the PI itself processed fine) — just

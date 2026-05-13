@@ -428,13 +428,18 @@ export async function processTopupPaymentIntentCore(
     // strip the plan-shaped branches. A topup never returns
     // `type: 'recurring' | 'one-time'`, but the backend response type
     // permits them, so narrow defensively.
-    const status = (result as { status: string }).status
+    const status = (result as { status?: string }).status
     if (status === 'timeout') {
       const message = (result as { message?: string }).message
       return message !== undefined ? { status: 'timeout', message } : { status: 'timeout' }
     }
     if (status === 'failed') return { status: 'failed' }
     if (status === 'cancelled') return { status: 'cancelled' }
+    if (status !== 'succeeded') {
+      // Defensive fallback: if the backend returns an unknown or missing
+      // status, fail closed instead of misreporting success.
+      return { status: 'failed' }
+    }
 
     // Succeeded: PI is in terminal state but the webhook handler may
     // still be writing the credit transaction. Without a baseline we

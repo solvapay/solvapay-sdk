@@ -163,7 +163,10 @@ function getSystemInstruction(solvaPay: SolvaPay, productRef: string): Promise<s
   const cached = systemInstructionCache.get(productRef)
   if (cached && cached.expiresAt > now) return cached.value
   const value = buildSystemInstruction(solvaPay, productRef).catch(error => {
-    systemInstructionCache.delete(productRef)
+    const current = systemInstructionCache.get(productRef)
+    if (current?.value === value) {
+      systemInstructionCache.delete(productRef)
+    }
     console.warn('[chat] system instruction build failed; falling back to base:', error)
     return SYSTEM_INSTRUCTION_BASE
   })
