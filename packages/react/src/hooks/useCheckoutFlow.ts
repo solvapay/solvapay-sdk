@@ -159,7 +159,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   const transport = useTransport()
   const locale = useLocale()
   const balance = useBalance()
-  const { creditsPerMinorUnit, displayExchangeRate } = balance
+  const { creditsPerMinorUnit, displayExchangeRate, adjustBalance } = balance
   const { refetchPurchase } = useSolvaPay()
   const { merchant } = useMerchant()
 
@@ -300,7 +300,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       // backend delta we skip the optimistic step: a phantom bump
       // computed from price could drift from the true credit count.
       if (creditsAddedFromBackend !== undefined && creditsAddedFromBackend > 0) {
-        balance.adjustBalance(creditsAddedFromBackend)
+        adjustBalance(creditsAddedFromBackend)
       }
       // Drive `useLimits` (it auto-refetches on `purchases` ref change)
       // and the balance side-effect (it picks up the credit via the
@@ -323,7 +323,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       onPurchaseSuccessRef.current?.(meta)
     },
     [
-      balance,
+      adjustBalance,
       creditsPerMinorUnit,
       displayExchangeRate,
       locale,

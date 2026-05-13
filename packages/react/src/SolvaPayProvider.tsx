@@ -140,10 +140,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
 
   const configRef = useRef(config)
   const transportRef = useRef<SolvaPayTransport>(resolveTransport(config))
+  const [hasProcessTopupPayment, setHasProcessTopupPayment] = useState<boolean>(
+    () => !!transportRef.current.processTopupPayment,
+  )
 
   useEffect(() => {
     configRef.current = config
     transportRef.current = resolveTransport(config)
+    setHasProcessTopupPayment(!!transportRef.current.processTopupPayment)
   }, [config])
 
   const fetchBalanceImpl = useCallback(async () => {
@@ -245,12 +249,6 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       transportRef.current.processTopupPayment!(params),
     [],
   )
-  // Whether the current transport supports `processTopupPayment` —
-  // exposed to consumers as the presence of the method on the context
-  // value. Custom transports that omit it fall through to the legacy
-  // immediate-onSuccess path (no backend gate).
-  const hasProcessTopupPayment = !!transportRef.current.processTopupPayment
-
   useEffect(() => {
     // MCP mode: identity already resolved by the OAuth bridge and carried
     // on `config.initial`. Skip the polling auth loop — nothing would
