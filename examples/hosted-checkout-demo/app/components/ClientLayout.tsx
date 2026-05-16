@@ -7,12 +7,19 @@ import { Auth } from './Auth'
 import { Navigation } from './Navigation'
 import { Providers } from './Providers'
 
+const isSupabaseConfigured =
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder') &&
+  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'placeholder'
+
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured)
 
-  // Initialize auth state
   useEffect(() => {
+    if (!isSupabaseConfigured) return
+
     let cancelled = false
 
     const initializeAuth = async () => {
@@ -35,7 +42,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Subscribe to auth state changes
     const {
       data: { subscription },
     } = onAuthStateChange((event, session) => {
@@ -49,6 +55,16 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
+
+  // Dev mode: no Supabase project configured — skip auth gate and render directly.
+  if (!isSupabaseConfigured) {
+    return (
+      <Providers>
+        <Navigation />
+        {children}
+      </Providers>
+    )
+  }
 
   if (isLoading) {
     return (
