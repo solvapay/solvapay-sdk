@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { usePurchase, usePurchaseStatus } from '@solvapay/react'
 import { getAccessToken } from './lib/supabase'
+import { acquireCheckoutLock, releaseCheckoutLock, useCheckoutInProgress } from './lib/checkout-guard'
 
 export default function HomePage() {
   const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
-  const [isRedirecting, setIsRedirecting] = useState(false)
+  const isRedirecting = useCheckoutInProgress()
   const [error, setError] = useState<string | null>(null)
 
   // Get purchase helpers from SDK
@@ -39,12 +40,13 @@ export default function HomePage() {
   // Handle redirect to hosted checkout page
   const handleViewPlans = useCallback(
     async (planRef?: string) => {
+      if (!acquireCheckoutLock()) return
       if (!productRef) {
+        releaseCheckoutLock()
         setError('Product reference is not configured')
         return
       }
 
-      setIsRedirecting(true)
       setError(null)
 
       try {
@@ -90,7 +92,7 @@ export default function HomePage() {
       } catch (err) {
         console.error('Failed to redirect to checkout:', err)
         setError(err instanceof Error ? err.message : 'Failed to redirect to checkout')
-        setIsRedirecting(false)
+        releaseCheckoutLock()
       }
     },
     [productRef],
@@ -98,7 +100,7 @@ export default function HomePage() {
 
   // Handle redirect to hosted customer management page
   const handleManagePurchase = useCallback(async () => {
-    setIsRedirecting(true)
+    if (!acquireCheckoutLock()) return
     setError(null)
 
     try {
@@ -135,7 +137,7 @@ export default function HomePage() {
     } catch (err) {
       console.error('Failed to redirect to customer management:', err)
       setError(err instanceof Error ? err.message : 'Failed to redirect to customer management')
-      setIsRedirecting(false)
+      releaseCheckoutLock()
     }
   }, [])
 
