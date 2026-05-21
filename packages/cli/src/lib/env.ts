@@ -5,6 +5,11 @@ import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 
 const SOLVAPAY_SECRET_KEY = 'SOLVAPAY_SECRET_KEY'
+const SOLVAPAY_PRODUCT_REF = 'SOLVAPAY_PRODUCT_REF'
+
+export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = '__SOLVAPAY_PRODUCT_REF__'
+
+const envValueRegex = (key: string) => new RegExp(`^\\s*${key}\\s*=\\s*(.*)$`, 'm')
 
 export type EnvWriteResult = {
   filePath: string
@@ -21,7 +26,18 @@ type EnvWriteOptions = {
   confirmOverwrite?: () => Promise<boolean>
 }
 
-const envKeyRegex = new RegExp(`^\\s*${SOLVAPAY_SECRET_KEY}\\s*=`, 'm')
+const secretKeyRegex = envValueRegex(SOLVAPAY_SECRET_KEY)
+
+const parseEnvValue = (raw: string): string => {
+  const trimmed = raw.trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim()
+  }
+  return trimmed
+}
 
 const normalizeTrailingNewline = (content: string): string =>
   content.endsWith('\n') ? content : `${content}\n`
@@ -87,7 +103,7 @@ export const writeSolvaPaySecretToEnv = async (
 
   const currentContent = await readFile(envPath, 'utf8')
 
-  if (!envKeyRegex.test(currentContent)) {
+  if (!secretKeyRegex.test(currentContent)) {
     const next = `${normalizeTrailingNewline(currentContent)}${keyLine}\n`
     await writeFile(envPath, next, 'utf8')
     return { filePath: envPath, action: 'appended' }
@@ -104,6 +120,58 @@ export const writeSolvaPaySecretToEnv = async (
     /^\s*SOLVAPAY_SECRET_KEY\s*=.*$/m,
     keyLine,
   )
+  await writeFile(envPath, updatedContent, 'utf8')
+  return { filePath: envPath, action: 'updated' }
+}
+
+export const readSolvaPayProductRefFromEnv = async (
+  cwd: string = process.cwd(),
+): Promise<string | undefined> => {
+  const envPath = path.join(cwd, '.env')
+  const exists = await envFileExists(envPath)
+  if (!exists) {
+    return undefined
+  }
+
+  const content = await readFile(envPath, 'utf8')
+  const match = content.match(envValueRegex(SOLVAPAY_PRODUCT_REF))
+  if (!match?.[1]) {
+    return undefined
+  }
+
+  const value = parseEnvValue(match[1])
+  return value.length > 0 ? value : undefined
+}
+
+export const writeSolvaPayProductRefToEnv = async (
+  productRef: string,
+  options: { cwd?: string } = {},
+): Promise<EnvWriteResult> => {
+  const envPath = path.join(options.cwd || process.cwd(), '.env')
+  const keyLine = `${SOLVAPAY_PRODUCT_REF}=${productRef}`
+
+  const exists = await envFileExists(envPath)
+  if (!exists) {
+    await writeFile(envPath, `${keyLine}\n`, 'utf8')
+    return { filePath: envPath, action: 'created' }
+  }
+
+  const currentContent = await readFile(envPath, 'utf8')
+  const productRefRegex = envValueRegex(SOLVAPAY_PRODUCT_REF)
+
+  if (!productRefRegex.test(currentContent)) {
+    const next = `${normalizeTrailingNewline(currentContent)}${keyLine}\n`
+    await writeFile(envPath, next, 'utf8')
+    return { filePath: envPath, action: 'appended' }
+  }
+
+  const match = currentContent.match(productRefRegex)
+  const currentValue = match?.[1] ? parseEnvValue(match[1]) : ''
+  if (currentValue === productRef) {
+    return { filePath: envPath, action: 'unchanged' }
+  }
+
+  const updatedContent = currentContent.replace(/^\s*SOLVAPAY_PRODUCT_REF\s*=.*$/m, keyLine)
   await writeFile(envPath, updatedContent, 'utf8')
   return { filePath: envPath, action: 'updated' }
 }

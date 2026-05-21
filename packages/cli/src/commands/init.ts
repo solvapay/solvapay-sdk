@@ -1,11 +1,24 @@
 import {
   createInitSession,
   openAuthUrl,
+  verifyProductRef,
   verifySecretKey,
   waitForExchange,
 } from '../lib/browser-auth'
 import chalk from 'chalk'
-import { ensureEnvInGitignore, writeSolvaPaySecretToEnv } from '../lib/env'
+import {
+  ensureEnvInGitignore,
+  readSolvaPayProductRefFromEnv,
+  SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+  writeSolvaPayProductRefToEnv,
+  writeSolvaPaySecretToEnv,
+} from '../lib/env'
+import {
+  askKeepConfiguredProduct,
+  formatConfiguredProductLabel,
+  pickProductInteractive,
+} from '../lib/product-picker'
+import { listProducts } from '../lib/products'
 import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from '../lib/install'
 import { detectPackageManager, ensureNodeProject, waitForEnter } from '../lib/project'
 
@@ -62,6 +75,68 @@ const finishInstallProgressReporter = (): void => {
 
 export type InitCommandOptions = {
   yes?: boolean
+}
+
+const configureProductRef = async (
+  apiBaseUrl: string,
+  secretKey: string,
+  cwd: string,
+  options: InitCommandOptions,
+): Promise<void> => {
+  const existing = await readSolvaPayProductRefFromEnv(cwd)
+
+  if (existing && existing !== SOLVAPAY_PRODUCT_REF_PLACEHOLDER) {
+    const verified = await verifyProductRef(apiBaseUrl, secretKey, existing)
+    if (verified.status === 'ok') {
+      if (options.yes) {
+        process.stdout.write(`✅ Product ref verified (${existing})\n`)
+        return
+      }
+
+      const listResult = await listProducts(apiBaseUrl, secretKey)
+      const label =
+        listResult.ok && listResult.products.length > 0
+          ? formatConfiguredProductLabel(existing, listResult.products)
+          : existing
+
+      const keep = await askKeepConfiguredProduct(label)
+      if (keep) {
+        process.stdout.write(`✅ Product ref verified (${existing})\n`)
+        return
+      }
+    } else if (verified.status === 'error') {
+      process.stdout.write(
+        `⚠️ Product ref verification failed, but setup can still continue. Details: ${verified.message}\n`,
+      )
+    }
+  }
+
+  const pick = await pickProductInteractive(apiBaseUrl, secretKey, {
+    yes: options.yes ?? false,
+  })
+
+  switch (pick.action) {
+    case 'picked': {
+      const writeResult = await writeSolvaPayProductRefToEnv(pick.product.reference, { cwd })
+      if (writeResult.action === 'created' || writeResult.action === 'updated') {
+        process.stdout.write(
+          `📝 Product configured: ${pick.product.name} (${pick.product.reference})\n`,
+        )
+      } else if (writeResult.action === 'appended') {
+        process.stdout.write(
+          `📝 Product ref saved: ${pick.product.name} (${pick.product.reference})\n`,
+        )
+      } else {
+        process.stdout.write(`✅ Product ref verified (${pick.product.reference})\n`)
+      }
+      break
+    }
+    case 'declined':
+      process.stdout.write('Skipped — set SOLVAPAY_PRODUCT_REF in .env later.\n')
+      break
+    case 'skipped':
+      break
+  }
 }
 
 export const runInitCommand = async (options: InitCommandOptions = {}): Promise<void> => {
@@ -152,6 +227,8 @@ export const runInitCommand = async (options: InitCommandOptions = {}): Promise<
       `⚠️ Verification failed, but setup can still continue. Details: ${verified.warning}\n`,
     )
   }
+
+  await configureProductRef(apiBaseUrl, exchange.secretKey, cwd, options)
 
   process.stdout.write('\n')
   printQuickStart()

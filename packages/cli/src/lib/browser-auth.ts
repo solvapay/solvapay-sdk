@@ -113,6 +113,57 @@ export const waitForExchange = async (
   }
 }
 
+const PRODUCT_REF_PLACEHOLDER = '__SOLVAPAY_PRODUCT_REF__'
+
+export type VerifyProductRefResult =
+  | { status: 'skipped' }
+  | { status: 'ok' }
+  | { status: 'invalid_placeholder' }
+  | { status: 'not_found'; body: string }
+  | { status: 'error'; message: string }
+
+export const verifyProductRef = async (
+  apiBaseUrl: string,
+  secretKey: string,
+  productRef: string,
+): Promise<VerifyProductRefResult> => {
+  if (productRef === PRODUCT_REF_PLACEHOLDER) {
+    return { status: 'invalid_placeholder' }
+  }
+
+  try {
+    const response = await fetch(
+      `${apiBaseUrl}/v1/sdk/products/${encodeURIComponent(productRef)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+        },
+      },
+    )
+
+    if (response.ok) {
+      return { status: 'ok' }
+    }
+
+    const body = await response.text()
+    if (response.status === 404) {
+      return { status: 'not_found', body }
+    }
+
+    return {
+      status: 'error',
+      message: `Product lookup failed (${response.status}): ${body}`,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Network error'
+    return {
+      status: 'error',
+      message: `Product lookup failed due to network error: ${message}`,
+    }
+  }
+}
+
 export const verifySecretKey = async (
   apiBaseUrl: string,
   secretKey: string,

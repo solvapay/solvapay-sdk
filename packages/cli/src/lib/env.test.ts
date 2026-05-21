@@ -2,7 +2,12 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { ensureEnvInGitignore, writeSolvaPaySecretToEnv } from './env'
+import {
+  ensureEnvInGitignore,
+  readSolvaPayProductRefFromEnv,
+  writeSolvaPayProductRefToEnv,
+  writeSolvaPaySecretToEnv,
+} from './env'
 
 describe('writeSolvaPaySecretToEnv', () => {
   const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-'))
@@ -111,6 +116,90 @@ describe('ensureEnvInGitignore', () => {
 
       expect(result.action).toBe('unchanged')
       expect(content).toBe('node_modules\n.env\n')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('readSolvaPayProductRefFromEnv', () => {
+  const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-'))
+
+  it('reads quoted and unquoted product ref from .env', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(
+        path.join(cwd, '.env'),
+        'SOLVAPAY_PRODUCT_REF="prd_QUOTED"\nSOLVAPAY_SECRET_KEY=sk_test\n',
+        'utf8',
+      )
+      const quoted = await readSolvaPayProductRefFromEnv(cwd)
+      expect(quoted).toBe('prd_QUOTED')
+
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_PRODUCT_REF=prd_plain\n', 'utf8')
+      const plain = await readSolvaPayProductRefFromEnv(cwd)
+      expect(plain).toBe('prd_plain')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('returns undefined when product ref is missing from .env', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_test\n', 'utf8')
+      const value = await readSolvaPayProductRefFromEnv(cwd)
+      expect(value).toBeUndefined()
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('writeSolvaPayProductRefToEnv', () => {
+  const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-'))
+
+  it('creates .env when it does not exist', async () => {
+    const cwd = await makeTempDir()
+    try {
+      const result = await writeSolvaPayProductRefToEnv('prd_new', { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('created')
+      expect(content).toBe('SOLVAPAY_PRODUCT_REF=prd_new\n')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('replaces the scaffold placeholder without prompting', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(
+        path.join(cwd, '.env'),
+        'SOLVAPAY_PRODUCT_REF=__SOLVAPAY_PRODUCT_REF__\nSOLVAPAY_SECRET_KEY=sk_test\n',
+        'utf8',
+      )
+      const result = await writeSolvaPayProductRefToEnv('prd_real', { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toContain('SOLVAPAY_PRODUCT_REF=prd_real')
+      expect(content).toContain('SOLVAPAY_SECRET_KEY=sk_test')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('replaces an existing real product ref', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_PRODUCT_REF=prd_old\n', 'utf8')
+      const result = await writeSolvaPayProductRefToEnv('prd_new', { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toBe('SOLVAPAY_PRODUCT_REF=prd_new\n')
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
