@@ -13,6 +13,8 @@ export type ExchangeResponse = {
   status: 'pending' | 'complete' | 'expired' | 'cancelled'
   secretKey?: string
   email?: string
+  environment?: 'sandbox' | 'live'
+  warning?: string
 }
 
 type SpinnerController = {

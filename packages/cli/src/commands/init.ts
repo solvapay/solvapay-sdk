@@ -192,10 +192,14 @@ export const runInitCommand = async (options: InitCommandOptions = {}): Promise<
   }
 
   const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey)
+  const environmentLabel = exchange.environment ? ` (${exchange.environment})` : ''
   if (envWrite.action === 'created' || envWrite.action === 'appended' || envWrite.action === 'updated') {
-    process.stdout.write('📝 Secret key saved to .env\n')
+    process.stdout.write(`📝 Secret key saved to .env${environmentLabel}\n`)
   } else {
-    process.stdout.write('📝 Kept existing SOLVAPAY_SECRET_KEY in .env\n')
+    process.stdout.write(`📝 Kept existing SOLVAPAY_SECRET_KEY in .env${environmentLabel}\n`)
+  }
+  if (exchange.warning) {
+    process.stdout.write(`⚠️ ${exchange.warning}\n`)
   }
 
   const gitignoreWrite = await ensureEnvInGitignore(cwd)
