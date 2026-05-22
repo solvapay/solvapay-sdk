@@ -3,7 +3,11 @@ import { confirmPayment } from './confirmPayment'
 import { enCopy } from '../i18n/en'
 import type { Stripe, StripeElements } from '@stripe/stripe-js'
 
-function makeStripe(overrides: Partial<Stripe>): Stripe {
+// Loose `unknown` overrides because the Stripe types for confirmPayment /
+// confirmCardPayment carry an exact discriminated union (`{ paymentIntent }`
+// XOR `{ error }`) that's awkward to satisfy in tests; the cast at the
+// return is what makes this safe inside the file.
+function makeStripe(overrides: Record<string, unknown>): Stripe {
   return {
     confirmPayment: vi.fn(),
     confirmCardPayment: vi.fn(),

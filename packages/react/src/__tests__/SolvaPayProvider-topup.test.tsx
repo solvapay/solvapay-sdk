@@ -4,6 +4,7 @@ import React from 'react'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { useSolvaPay } from '../hooks/useSolvaPay'
 import type { TopupPaymentResult } from '../types'
+import type { TopupProcessResult } from '@solvapay/server'
 
 // Minimal mock for auth adapter
 const mockAdapter = {
@@ -128,6 +129,90 @@ describe('SolvaPayProvider - createTopupPayment', () => {
     )
     expect(topupCalls).toHaveLength(1)
     expect(topupCalls[0][1].headers['x-solvapay-customer-ref']).toBe('cus_cached')
+  })
+
+  it('exposes processTopupPayment posting to default route /api/process-topup-payment', async () => {
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'succeeded' } satisfies TopupProcessResult),
+    })
+    const { result } = renderHook(() => useSolvaPay(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.processTopupPayment).toBeDefined()
+
+    await act(async () => {
+      const res = await result.current.processTopupPayment!({ paymentIntentId: 'pi_test_123' })
+      expect(res).toEqual({ status: 'succeeded' })
+    })
+
+    const processCalls = fetchSpy.mock.calls.filter(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('/api/process-topup-payment'),
+    )
+    expect(processCalls).toHaveLength(1)
+    expect(processCalls[0][1].method).toBe('POST')
+    expect(JSON.parse(processCalls[0][1].body)).toEqual({ paymentIntentId: 'pi_test_123' })
+  })
+
+  it('processTopupPayment posts to a custom route when configured', async () => {
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'succeeded' } satisfies TopupProcessResult),
+    })
+    const { result } = renderHook(() => useSolvaPay(), {
+      wrapper: createWrapper({
+        config: {
+          auth: { adapter: mockAdapter },
+          api: { processTopupPayment: '/custom/process-topup' },
+        },
+      }),
+    })
+
+    await act(async () => {
+      await result.current.processTopupPayment!({ paymentIntentId: 'pi_test_123' })
+    })
+
+    const processCalls = fetchSpy.mock.calls.filter(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('/custom/process-topup'),
+    )
+    expect(processCalls).toHaveLength(1)
+  })
+
+  it('processTopupPayment is undefined when the custom transport omits it', () => {
+    // Partial transport: implements `createTopupPayment` but NOT
+    // `processTopupPayment`. Provider exposes `undefined` on the
+    // context so `TopupForm` can feature-detect and fall through to
+    // the legacy fire-on-confirm path.
+    const transport = {
+      checkPurchase: vi.fn(),
+      createPayment: vi.fn(),
+      processPayment: vi.fn(),
+      createTopupPayment: vi.fn().mockResolvedValue({
+        clientSecret: 'cs_x',
+        publishableKey: 'pk_x',
+      }),
+      getBalance: vi.fn(),
+      cancelRenewal: vi.fn(),
+      reactivateRenewal: vi.fn(),
+      activatePlan: vi.fn(),
+      createCheckoutSession: vi.fn(),
+      createCustomerSession: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
+
+    const { result } = renderHook(() => useSolvaPay(), {
+      wrapper: createWrapper({
+        config: {
+          auth: { adapter: mockAdapter },
+          transport,
+        },
+      }),
+    })
+
+    expect(result.current.processTopupPayment).toBeUndefined()
   })
 
   it('config.transport overrides the default topup implementation', async () => {

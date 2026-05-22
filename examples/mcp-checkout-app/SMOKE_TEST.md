@@ -3,8 +3,8 @@
 One reproducible scenario that exercises every layer of the MCP App
 (tools, UI shell, prompts, docs resource, demo paywalled tools) and
 walks the paid-plan activation UX end-to-end: **Free quota → paywall
-→ plan selection → PAYG top-up or recurring subscription → success →
-"Back to chat"**.
+→ plan selection → PAYG top-up or recurring subscription → success
+receipt + auto-sent chat follow-up**.
 
 ## Product setup (one-time)
 
@@ -107,10 +107,13 @@ the gate narration.
 - PAYG is auto-selected with the `recommended` badge.
 - CTA at the bottom reads `Continue with Pay as you go`. Clicking a
   Recurring card flips the CTA to `Continue with Pro — $18/mo`.
-- `Stay on Free` text link sits below the CTA. Clicking it calls
-  `app.requestTeardown()` — the iframe closes and the customer
-  stays on Free (the triggering call stays failed, but future
-  within-quota calls continue to work).
+- `Stay on Free` text link sits below the CTA. Clicking it sends a
+  user message `Sticking with the free tier for now.` to the chat
+  and best-effort calls `app.requestTeardown()` — on hosts that
+  honor it the iframe closes; on hosts that don't (e.g. MCPJam) the
+  iframe lingers but the chat message still signals the agent that
+  the customer declined. The triggering call stays failed; future
+  within-quota calls continue to work.
 
 ### 5a. PAYG branch — activate → top up → confirm
 
@@ -133,11 +136,12 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
 - Complete the card. SDK fires `create_topup_payment_intent`
   (purpose: `credit_topup`) then `process_payment`. `step: 'success'`.
 - Success surface: green check, `Credits added` heading, receipt
-  grid (Amount / Credits / Plan / Rate), `Back to chat` CTA.
-- Click `Back to chat`. SDK fires `onRefreshBootstrap()` then
-  `app.requestTeardown()`. The host unmounts the iframe; the chat
-  re-invokes the original `/search_knowledge` call and it runs
-  silently.
+  grid (Amount / Credits / Plan / Rate). No CTA — the receipt is
+  the terminal state.
+- The SDK has already fired `notifySuccess({ kind: 'topup' })` ->
+  `app.sendMessage` posting `Topped up $18.00. Ready to keep
+  working.` to the chat. The agent picks that up and re-invokes
+  the original `/search_knowledge` call automatically.
 
 ### 5b. Recurring branch — pay → confirm
 
@@ -155,10 +159,12 @@ Alternative path: select **Pro** in step 4 instead of PAYG.
 - Click `Subscribe — $18.00 / monthly`. SDK fires
   `create_payment_intent` (subscription flag) then `process_payment`.
 - Success surface: green check, `Pro active` heading, receipt grid
-  (Plan / Credits / Charged today / Next renewal), a muted
-  `Manage from /manage_account` pointer (not a CTA), and `Back to
-  chat`.
-- `Back to chat` → refresh + teardown as in 5a.
+  (Plan / Credits / Charged today / Next renewal), and a muted
+  `Manage from /manage_account` pointer. No CTA.
+- The SDK has already fired
+  `notifySuccess({ kind: 'plan-activated' })` -> `app.sendMessage`
+  posting `Activated Pro.` to the chat, so the agent continues
+  the conversation as in 5a.
 
 ### 6. Change-plan re-entry — no banner
 
@@ -216,9 +222,10 @@ Run any intent tool from Claude Code or the basic-host stdout mode
   `topup_required` (via `paywall-state.ts`), not
   `activation_required` — so the LLM recovers with `topup`, not
   another round of plan picking.
-- Step 5a/5b: `app.requestTeardown()` gets called on `Back to chat`
-  after `onRefreshBootstrap` finishes, so the host sees a fresh
-  bootstrap before unmounting.
+- Step 5a/5b: the success surface has no CTA. The auto-sent
+  `notifySuccess` chat message (`Topped up …` / `Activated …`) is
+  what continues the conversation, so the flow works on every
+  host — including ones that don't honor `app.requestTeardown()`.
 - Step 6: change-plan re-entry renders the same surface with the
   banner suppressed — verifies the one-flag invariant from the
   brief's §6.

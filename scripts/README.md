@@ -34,6 +34,7 @@ See [`docs/documentation/DOC_LINK_VALIDATION.md`](../docs/documentation/DOC_LINK
 ## Dependency + Repository Management
 
 - `check-dependency-health.ts` — `pnpm deps:check`
+- `count-loc.ts` — `pnpm loc`. Walks every workspace under `packages/` and prints a per-package breakdown of files / code / comment / blank / total lines, with `src` and `tests` rows separated. Pass `--include-examples`, `--include-scripts`, `--include-docs` to widen the scope, or `--json` for machine-readable output.
 - `cleanup-for-public.sh` — one-off helper for preparing the repo for public release
 - `setup-pre-commit-hook.sh` — sets up the doc-link pre-commit hook
 - `create-missing-tag.sh` — legacy, kept for creating git tags manually (e.g. historical releases that predate changesets)

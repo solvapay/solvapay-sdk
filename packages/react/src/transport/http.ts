@@ -5,7 +5,7 @@
  * `SolvaPayProvider`.
  */
 
-import type { SolvaPayConfig } from '../types'
+import type { Plan, SolvaPayConfig } from '../types'
 import type {
   SolvaPayTransport,
   TransportBalanceResult,
@@ -56,6 +56,7 @@ export const DEFAULT_ROUTES = {
   createPayment: '/api/create-payment-intent',
   processPayment: '/api/process-payment',
   createTopupPayment: '/api/create-topup-payment-intent',
+  processTopupPayment: '/api/process-topup-payment',
   customerBalance: '/api/customer-balance',
   cancelRenewal: '/api/cancel-renewal',
   reactivateRenewal: '/api/reactivate-renewal',
@@ -67,6 +68,7 @@ export const DEFAULT_ROUTES = {
   listPlans: '/api/list-plans',
   getPaymentMethod: '/api/payment-method',
   getUsage: '/api/usage',
+  getLimits: '/api/limits',
 } as const
 
 function routeFor(
@@ -115,6 +117,14 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         body: { amount: params.amount, currency: params.currency },
         onErrorContext: 'createTopupPayment',
         errorPrefix: 'Failed to create topup payment',
+      }),
+
+    processTopupPayment: params =>
+      request(config, routeFor(config, 'processTopupPayment'), {
+        method: 'POST',
+        body: { paymentIntentId: params.paymentIntentId },
+        onErrorContext: 'processTopupPayment',
+        errorPrefix: 'Failed to process topup payment',
       }),
 
     getBalance: () =>
@@ -194,14 +204,20 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       })
     },
 
-    listPlans: productRef => {
+    listPlans: async productRef => {
       const base = routeFor(config, 'listPlans')
       const url = `${base}?productRef=${encodeURIComponent(productRef)}`
-      return request(config, url, {
+      // The wire format is `{ plans, productRef }` (see `listPlansCore` in
+      // @solvapay/server). The transport contract is `Plan[]`, so unwrap
+      // here — same shape `defaultListPlans` returns from its non-transport
+      // path. Without this, `useTransport().listPlans()` accidentally
+      // surfaces the wrapped object.
+      const data = await request<{ plans?: Plan[] }>(config, url, {
         method: 'GET',
         onErrorContext: 'listPlans',
         errorPrefix: 'Failed to list plans',
       })
+      return data.plans ?? []
     },
 
     getPaymentMethod: () =>
@@ -217,5 +233,32 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         onErrorContext: 'getUsage',
         errorPrefix: 'Failed to load usage',
       }),
+
+    getLimits: async ({ productRef, meterName }) => {
+      const base = routeFor(config, 'getLimits')
+      const params = new URLSearchParams({ productRef })
+      if (meterName) params.set('meterName', meterName)
+      const url = `${base}?${params.toString()}`
+      // The wire format is the full `LimitResponseWithPlan` from
+      // `checkLimitsCore`. The transport contract is the narrower
+      // `TransportLimitsResult`, so project the fields the React
+      // surface actually consumes — the rest stays on the server side.
+      const data = await request<{
+        withinLimits: boolean
+        remaining: number
+        meterName?: string | null
+        activationRequired?: boolean
+      }>(config, url, {
+        method: 'GET',
+        onErrorContext: 'getLimits',
+        errorPrefix: 'Failed to fetch limits',
+      })
+      return {
+        withinLimits: data.withinLimits,
+        remaining: data.remaining,
+        meterName: data.meterName ?? null,
+        activationRequired: data.activationRequired ?? false,
+      }
+    },
   }
 }

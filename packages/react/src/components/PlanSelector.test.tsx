@@ -119,6 +119,67 @@ describe('PlanSelector (default-tree shim)', () => {
     expect(badge.getAttribute('data-variant')).toBe('current')
   })
 
+  it('keeps a PAYG plan marked currentPlanRef selectable and auto-selects it', async () => {
+    const payg: Plan = {
+      reference: 'pln_payg',
+      name: 'Pay as you go',
+      price: 0,
+      currency: 'usd',
+      type: 'usage-based',
+      creditsPerUnit: 1,
+    }
+    seed([payg])
+    const onSelect = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <ShimPlanSelector
+          productRef="prd_x"
+          currentPlanRef="pln_payg"
+          // Mirrors the topup checkout config (`<CheckoutSteps.Root>`'s
+          // default) where `usePlans` does NOT pre-select. The new
+          // PAYG-current auto-select effect on `<PlanSelector.Root>`
+          // is the one that should engage.
+          autoSelectFirstPaid={false}
+          onSelect={onSelect}
+        />
+      </SolvaPayProvider>,
+    )
+    const card = (await screen.findByText('Pay as you go')).closest('button') as HTMLButtonElement
+    // The "Current" badge still renders so the customer knows this is
+    // their active plan, but the card itself stays clickable so they
+    // can step into the amount picker for a top up.
+    expect(screen.getByText('Current')).toBeTruthy()
+    expect(card.disabled).toBe(false)
+    // <PlanSelector.Root> auto-selects the PAYG-current plan so the
+    // outer Continue button is enabled without an extra click.
+    await waitFor(() => expect(card.getAttribute('data-state')).toBe('selected'))
+    expect(onSelect).toHaveBeenCalledWith(
+      'pln_payg',
+      expect.objectContaining({ reference: 'pln_payg' }),
+    )
+  })
+
+  it('does not auto-select a non-PAYG current plan (recurring stays opt-in)', async () => {
+    seed([monthly, yearly])
+    const onSelect = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <ShimPlanSelector
+          productRef="prd_x"
+          currentPlanRef="pln_monthly"
+          autoSelectFirstPaid={false}
+          onSelect={onSelect}
+        />
+      </SolvaPayProvider>,
+    )
+    const monthlyCard = (
+      await screen.findByText('Monthly')
+    ).closest('button') as HTMLButtonElement
+    expect(monthlyCard.disabled).toBe(true)
+    expect(monthlyCard.getAttribute('data-state')).toBe('current')
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
   it('renders the Popular badge with data-variant=popular on popularPlanRef', async () => {
     seed([monthly, yearly])
     render(

@@ -16,10 +16,11 @@
 import React, { forwardRef } from 'react'
 import { Slot } from './slot'
 import { useCopy } from '../hooks/useCopy'
-
-const SOLVAPAY_TERMS_URL = 'https://solvapay.com/legal/terms'
-const SOLVAPAY_PRIVACY_URL = 'https://solvapay.com/legal/privacy'
-const SOLVAPAY_WEBSITE_URL = 'https://solvapay.com'
+import {
+  SOLVAPAY_PRIVACY_URL,
+  SOLVAPAY_TERMS_URL,
+  SOLVAPAY_WEBSITE_URL,
+} from '../constants/legal'
 
 export type LegalFooterProps = {
   /**

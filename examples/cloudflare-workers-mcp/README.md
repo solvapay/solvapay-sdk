@@ -45,6 +45,17 @@ Then point an MCP client at `http://localhost:8787/`. Good candidates for a firs
 - **MCPJam** — hosted web client with a chat UI.
 - **Claude Desktop** — edit `claude_desktop_config.json` to add an HTTP MCP server entry.
 
+## Troubleshooting
+
+### `Invalid redirect_uri` during OAuth
+
+Your MCP client is sending an authorization request with a cached `client_id` whose registered redirect URIs don't include the callback it's trying to use right now. The fix is to reset the client's OAuth state so it re-runs Dynamic Client Registration — the SDK's DCR endpoint will merge the new redirect URI onto the same provider-level client, and every subsequent request works.
+
+- **MCP Inspector**: disconnect, open the **Auth** panel, and clear the saved OAuth state (or clear `localStorage` for `localhost:6274` in DevTools). Then upgrade to the latest: `npx @modelcontextprotocol/inspector@latest`. Versions before 0.17.3 had a [DCR bug](https://github.com/modelcontextprotocol/inspector/issues/930) where the registered redirect URI didn't match the one sent on `/authorize`.
+- **Claude Desktop / MCPJam**: remove and re-add the server so the client drops its cached registration.
+
+Note: SolvaPay's OAuth server accepts any port on loopback (`127.0.0.1`, `::1`, `localhost`) per RFC 8252, so once a loopback redirect URI is registered for your client, any Inspector port works without re-registering. Non-loopback hosts (MCPJam, Claude, custom domains) still require an exact match.
+
 ## Deploy
 
 ```bash
@@ -66,6 +77,34 @@ $EDITOR .env
 pnpm run deploy
 ```
 
+### Deploy the live demo
+
+The same example also ships a prod target for the canonical
+`goldberg-demo.solvapay.app` deploy, gated behind a separate Worker
+name (`solvapay-mcp-goldberg-prod`) so its secrets and observability
+are isolated from the public-safe example deploy above. The prod
+config lives in the `[env.production]` block of `wrangler.jsonc`.
+
+```bash
+# One-time per prod Worker — secret is scoped to the env-block-named
+# worker (solvapay-mcp-goldberg-prod), separate from the example
+# Worker's secret store.
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
+
+# Copy .env.prod.example -> .env.prod and fill in your live values
+# (sk_live_…, live prd_…, canonical MCP_PUBLIC_BASE_URL).
+cp .env.prod.example .env.prod
+$EDITOR .env.prod
+
+pnpm run deploy:prod   # builds + deploys to goldberg-demo.solvapay.app
+```
+
+`pnpm run deploy:prod` runs `node scripts/deploy.mjs --prod`, which
+sources `.env.prod` instead of `.env` and passes `--env production`
+to `wrangler deploy`. Everything else (the `--var` override
+mechanism, secret separation) works the same way as the regular
+deploy.
+
 ### How the deploy overrides work
 
 `wrangler.jsonc` intentionally ships public-safe placeholder values
@@ -73,7 +112,8 @@ pnpm run deploy
 `SOLVAPAY_API_BASE_URL` override — src/worker.ts falls back to
 `https://api.solvapay.com`). This means anyone who clones the repo
 can run `pnpm run deploy` without accidentally connecting to someone
-else's merchant or backend environment.
+else's merchant or backend environment. The `[env.production]` block
+ships its own placeholders for the same reason.
 
 `pnpm run deploy` runs [`scripts/deploy.mjs`](./scripts/deploy.mjs),
 which sources `.env` (gitignored) and passes your real values
@@ -83,22 +123,29 @@ through to `wrangler deploy --var KEY:VALUE` for:
 - `MCP_PUBLIC_BASE_URL`
 - `SOLVAPAY_API_BASE_URL` (optional)
 
-Your `SOLVAPAY_SECRET_KEY` stays in `.env` for `wrangler dev`
-but is *not* re-uploaded on every deploy — it lives on the Worker as
-a proper Secret (via the one-time `wrangler secret put` above) and
-persists across deploys. Rotating it is a single `wrangler secret
-put` + editing `.env`.
+`pnpm run deploy:prod` does the same thing but sources `.env.prod`
+and adds `--env production` to the wrangler invocation, so the
+overrides land on the prod Worker's vars instead of the example
+Worker's.
+
+Your `SOLVAPAY_SECRET_KEY` stays in `.env` (or `.env.prod`) for
+`wrangler dev` but is *not* re-uploaded on every deploy — it lives
+on the Worker as a proper Secret (via the one-time `wrangler secret
+put` above; use `--env production` for the prod target) and persists
+across deploys. Rotating it is a single `wrangler secret put` +
+editing the dotenv file.
 
 ## File layout
 
 ```
 examples/cloudflare-workers-mcp/
 ├── package.json              // deps: @solvapay/server, @solvapay/mcp; devDeps: wrangler, vite, typescript, …
-├── wrangler.jsonc            // Workers config; routes, vars, Text rule for *.html
+├── wrangler.jsonc            // Workers config; routes, vars, Text rule for *.html, plus `[env.production]` for goldberg-demo.solvapay.app
 ├── tsconfig.json             // ES2022, Bundler, @cloudflare/workers-types
 ├── vite.config.ts            // Builds src/mcp-app.tsx -> dist/mcp-app.html (duplicated from supabase-edge-mcp)
 ├── mcp-app.html              // top-level HTML entry
-├── .env.example
+├── .env.example              // dev/example deploy template
+├── .env.prod.example         // goldberg-demo prod deploy template
 ├── .gitignore
 └── src/
     ├── worker.ts             // ~60-line entrypoint: createSolvaPayMcpFetch + CORS mirror
@@ -143,7 +190,7 @@ const handler = createSolvaPayMcpFetch({
 })
 ```
 
-`mode: 'json-stateless'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops UI-only virtual tools (`create_checkout_session`, `process_payment`, …) from `tools/list` so text-only hosts don't reason about transport tools meant for the embedded iframe.
+`mode: 'json-stateless'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the seven UI transport tools (`create_payment_intent`, `create_topup_payment_intent`, `process_payment`, `create_checkout_session`, `create_customer_session`, `cancel_renewal`, `reactivate_renewal`) from `tools/list` so the LLM only sees the four intent tools — `upgrade`, `manage_account`, `activate_plan`, `topup` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
 
 ## Swapping in your own tools
 

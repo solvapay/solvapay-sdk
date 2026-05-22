@@ -47,6 +47,7 @@ function buildCtx(transport: NonNullable<SolvaPayConfig['transport']>): SolvaPay
       balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),

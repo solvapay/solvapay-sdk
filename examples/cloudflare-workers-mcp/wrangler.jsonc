@@ -48,4 +48,42 @@
   "observability": {
     "enabled": true,
   },
+  // Prod env override — invoked via `pnpm deploy:prod`
+  // (`scripts/deploy.mjs --prod` -> `wrangler deploy --env production`).
+  // `vars` and `routes` are intentionally redeclared here because
+  // wrangler does NOT inherit them from the top-level config; setting
+  // `name` explicitly avoids wrangler's auto-suffix (which would
+  // produce `solvapay-mcp-workers-example-production`). `account_id`
+  // is set defensively even though it inherits.
+  //
+  // Real `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` /
+  // `SOLVAPAY_API_BASE_URL` come from `.env.prod` via deploy.mjs's
+  // `--var KEY:VALUE` overrides at deploy time. Placeholders below
+  // keep a bare `wrangler deploy --env production` (no .env.prod) from
+  // accidentally connecting to someone else's merchant.
+  //
+  // Secrets are scoped per worker name:
+  //   wrangler secret put SOLVAPAY_SECRET_KEY --env production
+  "env": {
+    "production": {
+      "name": "solvapay-mcp-goldberg-prod",
+      "account_id": "98aefe33182e11a1b0e5d7fa89a12a6d",
+      "routes": [
+        {
+          "pattern": "goldberg-demo.solvapay.app",
+          "custom_domain": true,
+        },
+      ],
+      "vars": {
+        "SOLVAPAY_PRODUCT_REF": "prd_replace_me",
+        "MCP_PUBLIC_BASE_URL": "https://goldberg-demo.solvapay.app",
+        "DEMO_TOOLS": "1",
+        // SOLVAPAY_API_BASE_URL omitted — src/worker.ts defaults to
+        // https://api.solvapay.com.
+      },
+      "observability": {
+        "enabled": true,
+      },
+    },
+  },
 }

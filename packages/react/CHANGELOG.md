@@ -1,5 +1,32 @@
 # @solvapay/react changelog
 
+## 1.1.4
+
+### Patch Changes
+
+- 8dd8638: Fix `McpAppFull.addEventListener`/`removeEventListener` types to accept the tighter `K extends keyof AppEventMap` shape introduced in `@modelcontextprotocol/ext-apps@^1.7`. Previously the loose `(evt: string, …)` signature on the interface didn't match what ext-apps exposes from 1.7+, so consumers seeing types from both `@solvapay/react` and `ext-apps@^1.7` would hit `TS2322: Type 'App' is not assignable to type 'McpAppFull'` at every `<McpApp app={...} />` mount site.
+
+  The interface now declares `(evt: any, …)` for both event-listener fields, which is permissive enough to satisfy the new tightened generic without giving up the legacy `ontoolresult` setter fallback. Fixes [PR #169](https://github.com/solvapay/solvapay-sdk/pull/169).
+  - @solvapay/mcp-core@0.2.4
+
+## 1.1.3
+
+### Patch Changes
+
+- 9c66d68: Fix `usePlan` so it no longer fires a raw `fetch('/api/list-plans')` when an MCP transport is configured. The hook now routes through `defaultListPlans`, which is transport-aware and falls back to the seeded `plansCache` when the MCP adapter omits `listPlans` (the Phase 2c shape, where plans arrive in the bootstrap snapshot).
+
+  This was the second symptom on Goldberg's ChatGPT App: the iframe sandbox returned 404 for `/api/list-plans` because the MCP origin doesn't serve that route. New regression test in `usePlan.test.tsx` covers the iframe-sandbox 404 pattern, and `ActivationFlow.test.tsx` was updated to seed `plansCache` directly to match the production MCP bootstrap pattern.
+
+- Updated dependencies [36ac2ad]
+- Updated dependencies [9c66d68]
+  - @solvapay/mcp-core@0.2.4
+
+## 1.1.2
+
+### Patch Changes
+
+- @solvapay/mcp-core@0.2.3
+
 ## 1.1.1
 
 ### Patch Changes

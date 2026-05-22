@@ -25,6 +25,7 @@ function buildCtx(
       balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),
@@ -62,7 +63,7 @@ function makeTransport(
     getProduct: vi.fn(),
     listPlans: vi.fn(),
     getPaymentMethod: vi
-      .fn<[], Promise<PaymentMethodInfo>>()
+      .fn<() => Promise<PaymentMethodInfo>>()
       .mockResolvedValue({ kind: 'none' }),
     ...overrides,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

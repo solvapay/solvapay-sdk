@@ -4,7 +4,10 @@ node_modules/
 .wrangler/
 .env
 .env.local
+.env.prod
+.env.prod.local
 !.env.example
+!.env.prod.example
 # Legacy pre-rename: ignore `.dev.vars*` too so any developer who
 # followed earlier instructions (copy .dev.vars.example -> .dev.vars
 # and fill in SOLVAPAY_SECRET_KEY) doesn't accidentally stage their

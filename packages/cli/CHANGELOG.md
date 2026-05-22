@@ -1,5 +1,13 @@
 # solvapay
 
+## 1.0.9
+
+### Patch Changes
+
+- 8dd8638: Bump runtime `inquirer` dependency from `^13.3.2` to `^13.4.2` (patch). No behaviour change — picks up upstream bug fixes.
+- Updated dependencies [8dd8638]
+  - @solvapay/server@1.0.12
+
 ## 1.0.8
 
 ### Patch Changes

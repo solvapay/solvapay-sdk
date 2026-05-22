@@ -16,11 +16,11 @@
     "@solvapay/react-supabase": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@stripe/react-stripe-js": "^6.0.0",
-    "@supabase/supabase-js": "^2.100.1",
+    "@supabase/supabase-js": "^2.105.1",
     "jose": "^6.2.2",
-    "next": "^16.2.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",

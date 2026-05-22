@@ -83,9 +83,9 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike, McpBridgeAp
    * back to the legacy `ontoolresult` setter.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  addEventListener?: (evt: string, handler: (params: any) => void) => void
+  addEventListener?: (evt: any, handler: (params: any) => void) => void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  removeEventListener?: (evt: string, handler: (params: any) => void) => void
+  removeEventListener?: (evt: any, handler: (params: any) => void) => void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ontoolresult?: any
   /**
@@ -137,8 +137,8 @@ export interface McpAppProps {
    * Override for the shell's "close this app" handler. Defaults to
    * `() => app.requestTeardown()`, which asks the host to unmount the
    * iframe (see `@modelcontextprotocol/ext-apps` `App.requestTeardown`).
-   * Used by the checkout view's `"Back to chat"` and `"Stay on Free"`
-   * affordances; passing `undefined` hides those affordances.
+   * Used by the checkout view's `"Stay on Free"` decline link; passing
+   * `undefined` hides that affordance.
    */
   onClose?: () => void
   /**

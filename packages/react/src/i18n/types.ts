@@ -206,6 +206,37 @@ export interface SolvaPayCopy {
      * in-session (e.g. via `Pick a plan` on `<McpAccountView>`).
      */
     backToAccount: string
+    /**
+     * Step-aware heading copy rendered by `<CheckoutSteps.StepHeading>`.
+     * In paywall context, the `plan` step is overridden by the
+     * `paywall.{paymentRequiredHeading|activationRequiredHeading|topupRequiredHeading}`
+     * keys so the gate-reason framing is preserved at entry; the
+     * `amount` and `payment` steps always read from this block.
+     */
+    stepHeading: {
+      plan: string
+      amount: string
+      payment: string
+    }
+    /**
+     * Step-aware subheading copy rendered by `<CheckoutSteps.StepMessage>`.
+     * Payment-step copy is branch-aware:
+     *  - `paymentRecurring` interpolates `{planName}` for subscription
+     *    plans (with `billingCycle`),
+     *  - `paymentOneTime` is used for one-time / lifetime plans (no
+     *    `billingCycle`),
+     *  - `paymentPayg` covers credit-topup payments.
+     * In paywall context, the `plan` step is overridden by
+     * `resolvePaywallMessage` so the gate-reason / balance framing is
+     * preserved at entry.
+     */
+    stepMessage: {
+      plan: string
+      amount: string
+      paymentRecurring: string
+      paymentOneTime: string
+      paymentPayg: string
+    }
   }
   legalFooter: {
     terms: string
@@ -226,7 +257,6 @@ export interface SolvaPayCopy {
     paymentProcessingFailed: string
     paymentRequires3ds: string
     paymentProcessingTimeout: string
-    paymentConfirmationDelayed: string
     paymentStatusPrefix: string
     paywallInvalidContent: string
     usageLoadFailed: string
@@ -234,12 +264,45 @@ export interface SolvaPayCopy {
   paywall: {
     header: string
     paymentRequiredHeading: string
+    /**
+     * Heading for `kind: 'activation_required'` when the available
+     * plans include a recurring or one-time option — i.e. the user
+     * needs to activate a real plan, not just add credits.
+     */
     activationRequiredHeading: string
+    /**
+     * Heading for `kind: 'activation_required'` when every available
+     * plan is PAYG (`type: 'usage-based' | 'hybrid'`). Displayed as the
+     * topup variant of the activation gate so the user sees "Add
+     * credits" framing rather than generic "Activate a plan".
+     */
+    topupRequiredHeading: string
     resolvedHeading: string
     productContext: string
     balanceLine: string
     paymentRequiredMessage: string
     paymentRequiredMessageRemaining: string
+    /**
+     * Web-friendly fallback for `kind: 'payment_required'` when the
+     * paywall payload has no `balance` block (e.g. the merchant's
+     * server didn't surface remaining-units context). Replaces the
+     * previous "Call the `upgrade` tool…" copy that bled in from the
+     * MCP-flavored server `message`.
+     */
+    paymentRequiredMessageNoBalance: string
+    /**
+     * Web-friendly copy for `kind: 'activation_required'` when the
+     * available plans include non-PAYG options. The user needs to pick
+     * a real plan to continue.
+     */
+    activationRequiredMessage: string
+    /**
+     * Web-friendly copy for the topup variant of an activation gate —
+     * `kind: 'activation_required'` where every available plan is
+     * PAYG. `<PaywallNotice.Message>` resolves this when the gate's
+     * `plans` are all `type: 'usage-based' | 'hybrid'`.
+     */
+    topupRequiredMessage: string
     paymentRequiredProductSuffix: string
     retryButton: string
     hostedCheckoutButton: string
