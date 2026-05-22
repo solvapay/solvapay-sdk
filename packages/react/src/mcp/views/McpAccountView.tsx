@@ -140,6 +140,7 @@ export function McpAccountView({
               hideProductContext
               hideUpdatePaymentButton
               hideCancelButton
+              hideCancelledNotice
               showStartDate
               showReference
             />
