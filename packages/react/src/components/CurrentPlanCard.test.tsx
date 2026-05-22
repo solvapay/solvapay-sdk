@@ -407,4 +407,32 @@ describe('CurrentPlanCard', () => {
     expect(screen.queryByText('Cancel plan')).toBeNull()
     expect(screen.queryByText('Update card')).toBeNull()
   })
+
+  it('hides cancel and shows reactivate notice when renewal is pending cancellation', async () => {
+    const pendingCancel: PurchaseInfo = {
+      ...recurringPurchase,
+      cancelledAt: '2026-05-01T00:00:00Z',
+      endDate: '2026-06-01T00:00:00Z',
+    }
+    const ctx = buildCtx(pendingCancel, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    expect(screen.queryByText('Cancel plan')).toBeNull()
+    expect(document.querySelector('[data-solvapay-cancelled-notice]')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Undo Cancellation/i })).toBeTruthy()
+  })
+
+  it('honours hideCancelledNotice when a parent surface renders its own notice', async () => {
+    const pendingCancel: PurchaseInfo = {
+      ...recurringPurchase,
+      cancelledAt: '2026-05-01T00:00:00Z',
+      endDate: '2026-06-01T00:00:00Z',
+    }
+    const ctx = buildCtx(pendingCancel, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} props={{ hideCancelledNotice: true }} />)
+
+    await screen.findByText('Your plan')
+    expect(document.querySelector('[data-solvapay-cancelled-notice]')).toBeNull()
+  })
 })

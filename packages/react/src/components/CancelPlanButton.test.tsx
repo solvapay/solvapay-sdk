@@ -150,4 +150,18 @@ describe('CancelPlanButton', () => {
     expect(() => render(<CancelPlanButton />)).toThrow(MissingProviderError)
     spy.mockRestore()
   })
+
+  it('renders nothing when the active purchase is pending cancellation', () => {
+    const pendingCancel: PurchaseInfo = {
+      ...recurringActivePurchase,
+      cancelledAt: new Date().toISOString(),
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    }
+    const { container } = render(
+      <Wrap ctx={buildCtx([pendingCancel])}>
+        <CancelPlanButton />
+      </Wrap>,
+    )
+    expect(container.firstChild).toBeNull()
+  })
 })

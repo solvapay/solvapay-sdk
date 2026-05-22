@@ -77,6 +77,12 @@ export const CancelPlanButton = forwardRef<HTMLButtonElement, CancelPlanButtonPr
 
     const effectiveRef = purchaseRef ?? effectivePurchase?.reference
 
+    // Pending cancellation: renewal is already stopped; reactivate via
+    // CancelledPlanNotice instead of offering cancel again.
+    if (effectivePurchase?.status === 'active' && effectivePurchase.cancelledAt) {
+      return null
+    }
+
     const cancel = useCallback(async () => {
       if (!effectiveRef) return
       const confirmText = resolveConfirmText(confirm, effectivePurchase, {
