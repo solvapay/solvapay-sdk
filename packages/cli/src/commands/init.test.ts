@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { runInitCommand } from './init'
 
-vi.mock('@solvapay/cli-core', () => ({
+vi.mock('@solvapay/init', () => ({
   runInitInDirectory: vi.fn(),
 }))
 
-import { runInitInDirectory } from '@solvapay/cli-core'
+import { runInitInDirectory } from '@solvapay/init'
 
 describe('runInitCommand', () => {
   beforeEach(() => {
