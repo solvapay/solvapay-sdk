@@ -38,7 +38,7 @@ function requireEnv(env: Env, name: keyof Env): string {
   const value = env[name]
   if (!value) {
     throw new Error(
-      `${name} is not set — check wrangler.jsonc \`vars\` block or run \`wrangler secret put ${name}\``,
+      `${name} is not set — check wrangler.jsonc \`vars\` block or run \`npx wrangler secret put ${name}\``,
     )
   }
   return value

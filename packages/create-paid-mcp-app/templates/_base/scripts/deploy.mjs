@@ -12,14 +12,15 @@
  * This script sources `.env` (gitignored) and passes the overridable
  * keys as `--var KEY:VALUE` to `wrangler deploy`. Worker Secrets
  * (`SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`) are not passed via
- * `--var`. `UPSTREAM_API_KEY` is uploaded from `.env` automatically
- * when present and not already on the worker (see `ensureUpstreamApiKeySecret`).
- * `SOLVAPAY_SECRET_KEY` still requires a one-time manual
- * `wrangler secret put SOLVAPAY_SECRET_KEY`.
+ * `--var`. Both are uploaded from `.env` automatically on the first
+ * deploy when present and not already on the worker (see
+ * `ensureSolvaPaySecretKey` and `ensureUpstreamApiKeySecret`).
  *
  * Single environment by design. Go-live is a key swap, not a separate
  * `--env`: replace `SOLVAPAY_SECRET_KEY` in `.env` with the live key,
- * re-run `wrangler secret put SOLVAPAY_SECRET_KEY`, redeploy.
+ * push the new value with `npx wrangler secret put SOLVAPAY_SECRET_KEY`
+ * (the first-deploy auto-upload won't fire because the worker already
+ * has a secret), then redeploy.
  *
  * Pass-through: any extra CLI args (e.g. `--dry-run`) are forwarded to
  * `wrangler deploy`. `--yes` / `-y` are consumed by this script (to skip
@@ -371,16 +372,28 @@ async function runDeployPreflight({ dryRun = false } = {}) {
   }
 }
 
-function ensureUpstreamApiKeySecret(localEnv, { dryRun = false } = {}) {
+function ensureUpstreamApiKeySecret(localEnv, { dryRun = false, force = false } = {}) {
   const value = localEnv.UPSTREAM_API_KEY?.trim()
   if (!value) return
 
   const existing = listWorkerSecretNames()
   if (existing?.includes('UPSTREAM_API_KEY')) {
-    console.log(
-      'UPSTREAM_API_KEY already set on worker — skipping upload. Run `wrangler secret put UPSTREAM_API_KEY` to rotate.',
-    )
+    console.log('UPSTREAM_API_KEY already set on worker — skipping upload.')
     return
+  }
+
+  if (looksLikePlaceholderUpstreamKey(value) && !force) {
+    console.warn(
+      [
+        '',
+        `⚠  UPSTREAM_API_KEY in .env looks like a placeholder ("${value}").`,
+        '   Uploading it as a Worker secret will let paid tools call the',
+        '   upstream API with an invalid key. Update .env with the real',
+        '   value and re-run `npm run deploy`. Pass --force to upload anyway.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
   }
 
   if (dryRun) {
@@ -390,6 +403,69 @@ function ensureUpstreamApiKeySecret(localEnv, { dryRun = false } = {}) {
 
   console.log('Uploading UPSTREAM_API_KEY from .env to Worker Secrets…')
   putWorkerSecret('UPSTREAM_API_KEY', value)
+}
+
+// Conservative heuristic: catches the typical scaffold/agent placeholders
+// ("api-key-petstore", "your-api-key", "test-key", "todo", etc.) without
+// false-positiving on real API keys (which are typically >= 20 chars and
+// look like hex / base64 / UUIDs).
+function looksLikePlaceholderUpstreamKey(value) {
+  if (value.length < 10) return true
+  if (/^api[-_]?key[-_]/i.test(value)) return true
+  if (/^(your|placeholder|example|sample|test|demo|todo|fake|dummy)[-_]/i.test(value)) return true
+  if (/^(your|placeholder|example|sample|test|demo|todo|fake|dummy)-api-key$/i.test(value)) return true
+  if (/^changeme/i.test(value)) return true
+  return false
+}
+
+// Print copy-paste connection snippets for Cursor / Claude Desktop /
+// ChatGPT / MCP Inspector pointing at the resolved deployed URL.
+// Mirrors the scaffold-time snippet but inlined here because the
+// scaffolded project owns deploy.mjs after copy and can't import
+// from the SDK package.
+function printDeployedConnectionSnippets(publicUrl, workerName) {
+  const url = publicUrl.replace(/\/+$/, '')
+  const name = workerName || 'solvapay-mcp'
+  const out = (line) => process.stdout.write(`${line}\n`)
+  out('')
+  out('Connect an MCP client to the deployed worker:')
+  out('')
+  out('  Cursor (~/.cursor/mcp.json):')
+  out(`    { "mcpServers": { "${name}": { "url": "${url}/" } } }`)
+  out('')
+  out('  Claude Desktop (claude_desktop_config.json):')
+  out(
+    `    { "mcpServers": { "${name}": { "command": "npx", "args": ["mcp-remote", "${url}/"] } } }`,
+  )
+  out('')
+  out(`  ChatGPT Custom MCP Connector URL:  ${url}/`)
+  out('')
+  out(`  MCP Inspector:  npx @modelcontextprotocol/inspector  (set URL to ${url}/)`)
+  out('')
+}
+
+// Mirror of ensureUpstreamApiKeySecret for the SolvaPay merchant key.
+// Symmetric "first deploy auto-uploads, subsequent deploys skip" pattern.
+// Go-live (sandbox→live key swap) does not hit this branch because the
+// worker already has a secret; the user pushes the new value with
+// `npx wrangler secret put SOLVAPAY_SECRET_KEY` before redeploying.
+function ensureSolvaPaySecretKey(localEnv, { dryRun = false } = {}) {
+  const value = localEnv.SOLVAPAY_SECRET_KEY?.trim()
+  if (!value) return
+
+  const existing = listWorkerSecretNames()
+  if (existing?.includes('SOLVAPAY_SECRET_KEY')) {
+    console.log('SOLVAPAY_SECRET_KEY already set on worker — skipping upload.')
+    return
+  }
+
+  if (dryRun) {
+    console.log('[dry-run] would upload SOLVAPAY_SECRET_KEY from .env to Worker Secrets')
+    return
+  }
+
+  console.log('Uploading SOLVAPAY_SECRET_KEY from .env to Worker Secrets…')
+  putWorkerSecret('SOLVAPAY_SECRET_KEY', value)
 }
 
 function normalizeBaseUrl(value) {
@@ -573,9 +649,8 @@ if (!existsSync(dotEnvPath)) {
       '',
       `⚠  ${dotEnvPath} not found — deploying with placeholder vars from wrangler.jsonc.`,
       '   Run `npx solvapay init` (which writes SOLVAPAY_SECRET_KEY) and verify the other',
-      '   keys in .env match your merchant. Then set the secret once with:',
-      '     wrangler secret put SOLVAPAY_SECRET_KEY',
-      '   and re-run `npm run deploy`.',
+      '   keys in .env match your merchant, then re-run `npm run deploy` — it uploads',
+      '   SOLVAPAY_SECRET_KEY from .env as a Worker secret on the first deploy.',
       '',
     ].join('\n'),
   )
@@ -586,6 +661,7 @@ const yesFlag =
   passthrough.includes('--yes') ||
   passthrough.includes('-y') ||
   process.env.SOLVAPAY_DEPLOY_YES === '1'
+const forceFlag = passthrough.includes('--force')
 
 const preflight = await runDeployPreflight({ dryRun })
 const resolvedPublicUrl = ensureMcpPublicBaseUrl(localEnv, preflight, { dryRun })
@@ -593,9 +669,12 @@ const resolvedPublicUrl = ensureMcpPublicBaseUrl(localEnv, preflight, { dryRun }
 const confirmation = await confirmDeploymentUrl(localEnv, preflight, { dryRun, yes: yesFlag })
 if (confirmation === 'abort') process.exit(1)
 
-ensureUpstreamApiKeySecret(localEnv, { dryRun })
+ensureSolvaPaySecretKey(localEnv, { dryRun })
+ensureUpstreamApiKeySecret(localEnv, { dryRun, force: forceFlag })
 
-const wranglerPassthrough = passthrough.filter(arg => arg !== '--yes' && arg !== '-y')
+const wranglerPassthrough = passthrough.filter(
+  arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',
+)
 const wranglerArgs = ['deploy']
 for (const name of OVERRIDABLE_VARS) {
   const value = localEnv[name]
@@ -608,6 +687,14 @@ printCapturedWranglerOutput(result)
 
 if (resolvedPublicUrl && !dryRun) {
   verifyDeployedWorkersDevUrl(resolvedPublicUrl, `${result.stdout ?? ''}\n${result.stderr ?? ''}`)
+}
+
+if (!dryRun && (result.status ?? 1) === 0) {
+  const finalUrl = localEnv.MCP_PUBLIC_BASE_URL?.trim()
+  if (finalUrl) {
+    const { name } = readWranglerConfig()
+    printDeployedConnectionSnippets(finalUrl, name)
+  }
 }
 
 process.exit(result.status ?? 1)

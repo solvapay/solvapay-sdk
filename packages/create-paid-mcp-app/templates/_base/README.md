@@ -79,14 +79,12 @@ Point an MCP client (MCP Inspector, MCPJam, Claude Desktop, ChatGPT Custom Conne
 ## Deploy
 
 ```bash
-# One-time per worker
-wrangler secret put SOLVAPAY_SECRET_KEY     # paste the value from .env
-
 npm run deploy
-# UPSTREAM_API_KEY (when present in .env) is uploaded automatically by deploy.mjs
+# Uploads SOLVAPAY_SECRET_KEY and UPSTREAM_API_KEY (when present in .env)
+# from .env as Worker secrets on the first deploy.
 ```
 
-`scripts/deploy.mjs` reads `.env` and forwards `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` / `SOLVAPAY_API_BASE_URL` as `--var` overrides to `wrangler deploy`. `UPSTREAM_API_KEY` is uploaded from `.env` on first deploy when scaffold wrote it. `SOLVAPAY_SECRET_KEY` is set via `wrangler secret put` and is **not** re-uploaded on every deploy.
+`scripts/deploy.mjs` reads `.env` and forwards `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` / `SOLVAPAY_API_BASE_URL` as `--var` overrides to `wrangler deploy`. `SOLVAPAY_SECRET_KEY` and `UPSTREAM_API_KEY` are uploaded from `.env` as Worker secrets on the first deploy; subsequent deploys log "already set on worker — skipping upload" and leave them alone.
 
 `npm run deploy` confirms the resolved `*.workers.dev` URL with `[Y/n]` before deploying. Add `--yes` (or set `SOLVAPAY_DEPLOY_YES=1`) to skip the prompt in CI; it's also skipped when a `custom_domain` route is configured or stdin is not a TTY.
 
@@ -106,7 +104,7 @@ Then redeploy.
 
 1. Generate a live key in the SolvaPay Console (API Keys → Live).
 2. Replace `SOLVAPAY_SECRET_KEY=sk_test_…` with `SOLVAPAY_SECRET_KEY=sk_live_…` in `.env`.
-3. `wrangler secret put SOLVAPAY_SECRET_KEY` (paste the new value).
+3. The first-deploy auto-upload only runs when no `SOLVAPAY_SECRET_KEY` is present on the worker. Since one is already there, push the new value explicitly: `npx wrangler secret put SOLVAPAY_SECRET_KEY`.
 4. `npm run deploy`.
 
 One worker, one environment, one secret slot. No `--env production`, no `.env.prod`.

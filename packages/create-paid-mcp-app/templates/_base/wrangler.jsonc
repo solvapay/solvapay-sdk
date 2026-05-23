@@ -13,10 +13,9 @@
  *   in `@modelcontextprotocol/sdk`. The SolvaPay MCP surface itself is
  *   fetch-first; this flag prevents runtime surprises.
  * - `SOLVAPAY_SECRET_KEY` and `UPSTREAM_API_KEY` are Worker Secrets,
- *   not vars. Set `SOLVAPAY_SECRET_KEY` with:
- *     wrangler secret put SOLVAPAY_SECRET_KEY
- *   `UPSTREAM_API_KEY` is uploaded from `.env` by `scripts/deploy.mjs`
- *   on first deploy when scaffold wrote it (authenticated upstream).
+ *   not vars. Both are uploaded from `.env` by `scripts/deploy.mjs`
+ *   on first deploy. `UPSTREAM_API_KEY` is only present when scaffold
+ *   wrote it (authenticated upstream).
  *
  * The `vars` block ships placeholders that look obviously wrong so a
  * bare `wrangler deploy` (without `npm run deploy`'s `--var` overrides)
