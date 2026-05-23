@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SolvaPay checkout</title>
+    <!--
+      The MCP host chrome shows the merchant's mark next to the active
+      tool name. `<McpApp>` upserts a `<link rel="icon" data-solvapay-favicon>`
+      into `<head>` once the merchant bootstrap lands — hosts that read
+      the iframe favicon pick up the same asset. The placeholder below
+      prevents browser 404s during startup; the SDK replaces its `href`
+      as soon as the bootstrap resolves.
+    -->
+    <link rel="icon" href="data:," data-solvapay-favicon />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/mcp-app.tsx"></script>
+  </body>
+</html>

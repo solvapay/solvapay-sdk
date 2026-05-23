@@ -7,8 +7,9 @@ description: "This document describes the automated publishing and release proce
 
 The SolvaPay SDK uses an automated publishing workflow that:
 
-- Publishes seven packages: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `solvapay`
-- Uses **fixed versioning** - all packages share the same version number
+- Publishes the SDK packages on a shared version line: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `solvapay`
+- Also publishes two CLI packages on **independent semver lines** (no fixed versioning): `@solvapay/cli-core` (the shared lib consumed by `solvapay init` and `create-paid-mcp-app`) and `create-paid-mcp-app` (the `npm create paid-mcp-app` scaffolder)
+- Uses **fixed versioning** for the SDK packages - they share the same version number
 - Auto-increments the **patch** version on every push to `main` branch
 - Generates changelogs using conventional commits
 - Publishes to npm automatically via GitHub Actions
@@ -274,12 +275,21 @@ All packages are published with **public access**:
 - `@solvapay/server`
 - `@solvapay/auth`
 - `@solvapay/next`
+- `@solvapay/cli-core`
 - `solvapay`
+- `create-paid-mcp-app`
 
-### CLI package name
+### CLI package names
 
-The CLI npm package is `solvapay`.
-The CLI command is `solvapay`.
+| npm package | binary | invocation |
+| --- | --- | --- |
+| `solvapay` | `solvapay` | `npx solvapay init` — auth + env + product picker in an existing project |
+| `create-paid-mcp-app` | `create-paid-mcp-app` | `npm create paid-mcp-app <name>` — scaffold a fresh paid MCP server |
+| `@solvapay/cli-core` | _(library, no bin)_ | internal — shared lib consumed by the two CLIs above |
+
+### CLI release lines
+
+`solvapay`, `@solvapay/cli-core`, and `create-paid-mcp-app` evolve on **independent semver lines** (no `linked` entry in `.changeset/config.json`). The SDK fixed-version workflow does not apply to them — bump them via changesets only when the corresponding `packages/cli*` or `packages/create-paid-mcp-app/` directory changes.
 
 ## SDK internals (maintainers)
 
@@ -298,6 +308,11 @@ solvapay-sdk/
 │  ├─ react-supabase
 │  ├─ auth
 │  ├─ next
+│  ├─ mcp
+│  ├─ mcp-core
+│  ├─ cli                  (published as `solvapay`)
+│  ├─ cli-core             (published as `@solvapay/cli-core`)
+│  ├─ create-paid-mcp-app  (published as `create-paid-mcp-app`)
 │  ├─ demo-services
 │  ├─ test-utils
 │  └─ tsconfig
@@ -318,7 +333,7 @@ solvapay-sdk/
 
 - `@solvapay/demo-services`, `@solvapay/test-utils`, and `@solvapay/tsconfig` are private helper
   packages used for examples, testing, and shared config
-- Published packages are limited to the six SDK packages plus the `solvapay` CLI
+- Published packages are the six SDK packages plus three CLI-side packages (`solvapay`, `@solvapay/cli-core`, `create-paid-mcp-app`)
 
 ### Documentation sync model
 

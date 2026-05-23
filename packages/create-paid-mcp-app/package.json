@@ -1,13 +1,15 @@
 {
-  "name": "solvapay",
-  "version": "1.0.9",
-  "description": "SolvaPay CLI",
+  "name": "create-paid-mcp-app",
+  "version": "0.1.0",
+  "description": "Scaffold a SolvaPay-monetized MCP server on Cloudflare Workers, from an OpenAPI spec or from scratch.",
   "type": "module",
   "bin": {
-    "solvapay": "./dist/cli.js"
+    "create-paid-mcp-app": "./dist/cli.js"
   },
   "files": [
     "dist",
+    "templates",
+    "scripts",
     "README.md"
   ],
   "publishConfig": {
@@ -16,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/solvapay/solvapay-sdk.git",
-    "directory": "packages/cli"
+    "directory": "packages/create-paid-mcp-app"
   },
   "engines": {
     "node": ">=18.17"
