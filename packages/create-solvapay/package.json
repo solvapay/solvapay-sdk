@@ -10,6 +10,7 @@
     "dist",
     "templates",
     "scripts",
+    "!scripts/**/node_modules",
     "README.md"
   ],
   "publishConfig": {
