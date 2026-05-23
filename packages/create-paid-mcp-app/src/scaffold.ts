@@ -26,11 +26,32 @@ export const SCAFFOLD_SCRIPT_PATH = join(PACKAGE_ROOT, 'scripts', 'scaffold.mjs'
 export const PLACEHOLDERS = Object.freeze({
   WORKER_NAME: '__WORKER_NAME__',
   RESOURCE_URI_SLUG: '__RESOURCE_URI_SLUG__',
+  SERVER_NAME: '__SERVER_NAME__',
   PRODUCT_REF: '__SOLVAPAY_PRODUCT_REF__',
   PUBLIC_BASE_URL: '__MCP_PUBLIC_BASE_URL__',
   TOOL_NAME: '__TOOL_NAME__',
   TOOL_NAME_PASCAL: '__TOOL_NAME_PASCAL__',
 })
+
+/**
+ * Derive the MCP `server.info.name` from the project slug. We keep
+ * this close to the user's input — lower-case it, swap separators for
+ * dashes, drop trailing punctuation — but do not invent extra branding
+ * (icon, website, display name). The SDK has a real `branding` option
+ * for merchant `brandName` / `iconUrl` / `logoUrl`; we surface that
+ * separately so users provide real values rather than scaffold-time
+ * placeholders.
+ */
+export function deriveServerName(projectName: string): string {
+  const cleaned = projectName
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return cleaned || 'solvapay-mcp-server'
+}
 
 /**
  * Capitalize the first character — used to derive `TOOL_NAME_PASCAL`
@@ -254,6 +275,86 @@ export async function writeBootstrapEnv(target: string, productRef: string): Pro
     'MCP_PUBLIC_BASE_URL=http://localhost:8787',
   ]
   await writeFile(envPath, `${lines.join('\n')}\n`, 'utf8')
+}
+
+/**
+ * Initialize a git repo in `target` if one is not already present.
+ * Best-effort: missing `git` binary or any failure is logged and
+ * swallowed — the rest of the scaffold flow does not depend on this.
+ *
+ * Skips when `target/.git` exists, when running inside an existing
+ * git work tree, or when the user passed `--no-git` (handled at the
+ * call site by simply not calling this).
+ */
+export async function gitInit(target: string): Promise<void> {
+  try {
+    await stat(join(target, '.git'))
+    return
+  } catch {
+    // .git missing — proceed.
+  }
+
+  await new Promise<void>(resolve => {
+    const child = spawn('git', ['init', '--quiet'], {
+      cwd: target,
+      stdio: 'ignore',
+      shell: process.platform === 'win32',
+    })
+    child.once('error', () => resolve())
+    child.once('close', () => resolve())
+  })
+}
+
+const LOCAL_WORKER_URL = 'http://localhost:8787'
+
+type ConnectionSnippetsOptions = {
+  projectName: string
+  workerUrl?: string
+}
+
+/**
+ * Print copy-paste connection snippets for the four common MCP clients
+ * after a scaffold finishes. Native-scheme hosts (Cursor, Claude Desktop)
+ * can point at `http://localhost:8787/` directly; remote / browser
+ * hosts (ChatGPT, Inspector web UI) need a reachable URL — we call that
+ * out rather than pretending localhost works everywhere.
+ */
+export function printConnectionSnippets(options: ConnectionSnippetsOptions): void {
+  const { projectName, workerUrl = LOCAL_WORKER_URL } = options
+  const out = (line: string): void => {
+    process.stdout.write(`${line}\n`)
+  }
+
+  out('')
+  out('🔌 Connect an MCP client:')
+  out('')
+  out(`   Cursor — add to \`~/.cursor/mcp.json\` (or the workspace's \`.cursor/mcp.json\`):`)
+  out('     {')
+  out('       "mcpServers": {')
+  out(`         "${projectName}": { "url": "${workerUrl}/" }`)
+  out('       }')
+  out('     }')
+  out('')
+  out(`   Claude Desktop — add to \`claude_desktop_config.json\`:`)
+  out('     {')
+  out('       "mcpServers": {')
+  out(`         "${projectName}": {`)
+  out('           "command": "npx",')
+  out(`           "args": ["mcp-remote", "${workerUrl}/"]`)
+  out('         }')
+  out('       }')
+  out('     }')
+  out('')
+  out('   ChatGPT (Custom Connectors) — add a Custom MCP Connector with:')
+  out(`     URL: ${workerUrl}/`)
+  out('     Note: ChatGPT needs a reachable (deployed or tunneled) URL —')
+  out('     localhost only works for native-scheme hosts. Use `npm run deploy`')
+  out('     and point ChatGPT at the *.workers.dev URL once available.')
+  out('')
+  out('   MCP Inspector — explore tools locally:')
+  out('     npx @modelcontextprotocol/inspector')
+  out(`     (set the server URL to ${workerUrl}/)`)
+  out('')
 }
 
 export type InstallProgress = (message: string) => void

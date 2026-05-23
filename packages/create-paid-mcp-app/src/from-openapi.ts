@@ -20,8 +20,11 @@ import { detectPackageManager, runInitInDirectory } from '@solvapay/cli-core'
 import type { InitCommandOptions } from '@solvapay/cli-core'
 import {
   assertTargetDirAbsent,
+  deriveServerName,
+  gitInit,
   installProjectDependencies,
   PLACEHOLDERS,
+  printConnectionSnippets,
   SCAFFOLD_SCRIPT_PATH,
 } from './scaffold'
 
@@ -36,6 +39,7 @@ export type FromOpenapiInput = {
 
 type Selections = {
   workerName: string
+  serverName: string
   mcpPublicBaseUrl: string
   solvapayProductRef?: string
   mode: 'one-to-one'
@@ -69,6 +73,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   const authChoice = await chooseAuth(securitySchemes, nonInteractive)
   const selections: Selections = {
     workerName: projectName,
+    serverName: deriveServerName(projectName),
     mcpPublicBaseUrl: 'http://localhost:8787',
     solvapayProductRef: productRef ?? PLACEHOLDERS.PRODUCT_REF,
     mode: 'one-to-one',
@@ -115,9 +120,15 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   process.stdout.write('\n')
   await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
 
+  await gitInit(target)
+
   process.stdout.write(`\n🎉 Done. Next steps:\n`)
   process.stdout.write(`   cd ${projectName}\n`)
-  process.stdout.write(`   ${packageManager === 'npm' ? 'npm run' : packageManager} dev\n`)
+  process.stdout.write(
+    `   ${packageManager === 'npm' ? 'npm run' : packageManager} dev   # widget watch + wrangler dev on http://localhost:8787\n`,
+  )
+
+  printConnectionSnippets({ projectName })
 }
 
 async function chooseAuth(

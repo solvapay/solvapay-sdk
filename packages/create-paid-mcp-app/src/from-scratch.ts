@@ -12,10 +12,13 @@ import {
   assertTargetDirAbsent,
   BASE_TEMPLATE_DIR,
   copyDir,
+  deriveServerName,
   FROM_SCRATCH_OVERLAY_DIR,
+  gitInit,
   PLACEHOLDERS,
   pascalize,
   installProjectDependencies,
+  printConnectionSnippets,
   writeBootstrapEnv,
 } from './scaffold'
 
@@ -35,6 +38,7 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   const substitutions = new Map<string, string>([
     [PLACEHOLDERS.WORKER_NAME, projectName],
     [PLACEHOLDERS.RESOURCE_URI_SLUG, projectName],
+    [PLACEHOLDERS.SERVER_NAME, deriveServerName(projectName)],
     [PLACEHOLDERS.PRODUCT_REF, productRef ?? PLACEHOLDERS.PRODUCT_REF],
     [PLACEHOLDERS.PUBLIC_BASE_URL, 'http://localhost:8787'],
     [PLACEHOLDERS.TOOL_NAME_PASCAL, pascalize(toolName)],
@@ -71,8 +75,14 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   process.stdout.write('\n')
   await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
 
+  await gitInit(target)
+
   process.stdout.write(`\n🎉 Done. Next steps:\n`)
   process.stdout.write(`   cd ${projectName}\n`)
-  process.stdout.write(`   ${packageManager === 'npm' ? 'npm run' : packageManager} dev\n`)
+  process.stdout.write(
+    `   ${packageManager === 'npm' ? 'npm run' : packageManager} dev   # widget watch + wrangler dev on http://localhost:8787\n`,
+  )
   process.stdout.write(`   # Edit src/tools/${toolName}.ts to replace the placeholder.\n`)
+
+  printConnectionSnippets({ projectName })
 }

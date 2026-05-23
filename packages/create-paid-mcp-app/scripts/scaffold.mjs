@@ -75,9 +75,14 @@ async function main() {
     enforceAuthSupport(selectedOps, schemes, selections.upstreamAuth)
   }
 
+  const serverName =
+    typeof selections.serverName === 'string' && selections.serverName.length > 0
+      ? selections.serverName
+      : deriveServerNameFromWorkerName(selections.workerName)
   const substitutions = new Map([
     [PLACEHOLDERS.WORKER_NAME, selections.workerName],
     [PLACEHOLDERS.RESOURCE_URI_SLUG, selections.workerName],
+    [PLACEHOLDERS.SERVER_NAME, serverName],
     [PLACEHOLDERS.PUBLIC_BASE_URL, selections.mcpPublicBaseUrl],
   ])
   if (typeof selections.solvapayProductRef === 'string') {
@@ -347,6 +352,24 @@ function pickServerUrl(spec) {
   return urls[0] ?? 'https://upstream.example.com'
 }
 
+/**
+ * Fallback used when callers invoke scaffold.mjs directly without
+ * passing `serverName` in selections (kept for back-compat with the
+ * agent path that authors selections.json by hand). Mirrors the
+ * package-side `deriveServerName` so the placeholder substitution
+ * stays consistent across the two scaffold paths.
+ */
+function deriveServerNameFromWorkerName(workerName) {
+  const cleaned = String(workerName ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return cleaned || 'solvapay-mcp-server'
+}
+
 function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl }) {
   const fnName = `register${capitalize(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
@@ -392,18 +415,47 @@ function renderSchemaFields(operation, indent) {
 // Zod v4 record signature is `z.record(keyType, valueType)`. The v3
 // single-argument form (`z.record(z.unknown())`) errors with "Expected
 // 2-3 arguments, but got 1" under the template's pinned zod ^4.3.6.
+//
+// We preserve two pieces of spec fidelity here:
+//   - Scalar string `enum`s become `z.enum([...])` (Zod's tagged union
+//     form) so the LLM-facing tool schema lists the allowed values.
+//   - Parameter `description` becomes a `.describe(...)` suffix so MCP
+//     hosts can surface it in tool tooltips and `tools/list`.
+// Complex bodies still fall through to the conservative
+// `z.record(z.string(), z.unknown())` — chasing per-property fidelity
+// for arbitrary JSON request bodies is intentionally out of scope; the
+// description on the body parameter is still preserved.
 function zodForParam(param) {
-  const { type, format, required } = param
+  const { type, format, required, enum: enumValues, description } = param
   let z
   if (type === 'integer') z = 'z.number().int()'
   else if (type === 'number') z = 'z.number()'
   else if (type === 'boolean') z = 'z.boolean()'
   else if (type === 'array') z = 'z.array(z.unknown())'
   else if (type === 'object') z = 'z.record(z.string(), z.unknown())'
+  else if (isScalarStringEnum(enumValues, type)) z = `z.enum(${JSON.stringify(enumValues)})`
   else if (format === 'uuid') z = 'z.string().uuid()'
   else if (format === 'email') z = 'z.string().email()'
   else z = 'z.string()'
+
+  if (description) {
+    // Truncate to keep generated tool schemas readable. Long-form prose
+    // belongs in the spec's `description` field, not inline in Zod.
+    const shortened = shortenDescription(description)
+    z = `${z}.describe(${JSON.stringify(shortened)})`
+  }
   return required ? z : `${z}.optional()`
+}
+
+function isScalarStringEnum(enumValues, type) {
+  if (!Array.isArray(enumValues) || enumValues.length === 0) return false
+  if (type !== undefined && type !== 'string') return false
+  return enumValues.every(v => typeof v === 'string')
+}
+
+function shortenDescription(text) {
+  const collapsed = text.replace(/\s+/g, ' ').trim()
+  return collapsed.length > 200 ? `${collapsed.slice(0, 197)}…` : collapsed
 }
 
 function renderUrlTemplate(baseUrl, operation) {

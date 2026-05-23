@@ -44,9 +44,26 @@ __WORKER_NAME__/
 
 ```bash
 npm install
-npm run build             # bundles src/mcp-app.tsx into src/assets/mcp-app.html
-npm run serve:local       # wrangler dev on http://localhost:8787
+npm run dev               # vite watch + wrangler dev on http://localhost:8787
 ```
+
+`npm run dev` does an initial widget build, then starts `vite build --watch` (rebuilds `src/assets/mcp-app.html` on widget edits) and `wrangler dev` in parallel under one process. Ctrl+C tears both down.
+
+Useful URLs printed at startup:
+
+| What | URL |
+| --- | --- |
+| Worker MCP endpoint | `http://localhost:8787/` |
+| OAuth discovery | `http://localhost:8787/.well-known/oauth-protected-resource` |
+| OAuth metadata | `http://localhost:8787/.well-known/oauth-authorization-server` |
+
+Inspect tools with: `npx @modelcontextprotocol/inspector` and point it at `http://localhost:8787/`.
+
+Other scripts:
+
+- `npm run build` — one-shot widget build (`src/assets/mcp-app.html`).
+- `npm run dev:widget` — widget watch only, no worker.
+- `npm run serve:local` — `wrangler dev` only, no widget watch.
 
 `.env` (gitignored) is what `wrangler dev` reads:
 

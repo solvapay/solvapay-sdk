@@ -30,6 +30,7 @@ import { dirname, join, relative } from 'node:path'
 export const PLACEHOLDERS = Object.freeze({
   WORKER_NAME: '__WORKER_NAME__',
   RESOURCE_URI_SLUG: '__RESOURCE_URI_SLUG__',
+  SERVER_NAME: '__SERVER_NAME__',
   PRODUCT_REF: '__SOLVAPAY_PRODUCT_REF__',
   PUBLIC_BASE_URL: '__MCP_PUBLIC_BASE_URL__',
 })

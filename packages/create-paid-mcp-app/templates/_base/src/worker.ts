@@ -92,6 +92,12 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
       apiBaseUrl,
     }),
     productRef: requireEnv(env, 'SOLVAPAY_PRODUCT_REF'),
+    // `serverName` brands the MCP handshake (`server.info.name`) so
+    // clients show the project name instead of the default
+    // `solvapay-mcp-server`. Set to the scaffolder-derived project
+    // slug; you can change this later — it's user-facing identity, not
+    // routing.
+    serverName: '__SERVER_NAME__',
     resourceUri: 'ui://__RESOURCE_URI_SLUG__/mcp-app.html',
     readHtml: async () => mcpAppHtml,
     publicBaseUrl: requireEnv(env, 'MCP_PUBLIC_BASE_URL'),

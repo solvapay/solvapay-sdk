@@ -258,10 +258,22 @@ function mergeParameters(pathLevel, opLevel) {
 
 function normaliseParameter(param) {
   const schema = param.schema ?? {}
+  // Parameter-level `description` takes precedence over the inner
+  // `schema.description` (OpenAPI 3 allows both; the parameter one is
+  // the author's primary intent — schema-level usually describes the
+  // shared component). Fall back to schema-level when only that is
+  // present.
+  const description =
+    typeof param.description === 'string' && param.description.length > 0
+      ? param.description
+      : typeof schema.description === 'string' && schema.description.length > 0
+        ? schema.description
+        : null
   return {
     name: param.name,
     in: param.in,
     required: param.required === true || param.in === 'path',
+    description,
     type: schema.type ?? 'string',
     format: schema.format ?? null,
     enum: Array.isArray(schema.enum) ? schema.enum : null,
