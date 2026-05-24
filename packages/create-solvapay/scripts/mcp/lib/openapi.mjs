@@ -122,9 +122,15 @@ export function listOperations(spec) {
  * `supported` flag. v1 supports only `http` bearer and `apiKey` in
  * header. Anything else carries `supported: false` and routes through
  * the advisories path.
+ *
+ * Reads OpenAPI 3.x `components.securitySchemes` first and falls back
+ * to Swagger 2.0's `securityDefinitions` so v2 specs surface their
+ * auth shape too (the two locations carry the same per-scheme object
+ * shape for `apiKey`/`oauth2`; `basic` is v2-only and routes to the
+ * unsupported branch below).
  */
 export function resolveSecuritySchemes(spec) {
-  const schemes = spec.components?.securitySchemes ?? {}
+  const schemes = spec.components?.securitySchemes ?? spec.securityDefinitions ?? {}
   const resolved = []
   for (const [name, scheme] of Object.entries(schemes)) {
     if (!scheme || typeof scheme !== 'object') continue

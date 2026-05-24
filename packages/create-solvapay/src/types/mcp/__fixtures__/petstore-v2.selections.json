@@ -1,0 +1,13 @@
+{
+  "workerName": "petstore-v2-smoke",
+  "mcpPublicBaseUrl": "http://localhost:8787",
+  "upstreamAuth": { "kind": "none" },
+  "mode": "one-to-one",
+  "operations": [
+    { "operationId": "getPetById", "tier": "free" },
+    { "operationId": "findPetsByStatus", "tier": "free" },
+    { "operationId": "getInventory", "tier": "free" },
+    { "operationId": "addPet", "tier": "paid" },
+    { "operationId": "updatePet", "tier": "paid" }
+  ]
+}
