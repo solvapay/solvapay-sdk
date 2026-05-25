@@ -47,6 +47,14 @@ type Selections = {
     | { kind: 'none' }
     | { kind: 'bearer'; key: string }
     | { kind: 'apiKey'; in: 'header'; name: string; key: string }
+    | {
+        kind: 'oauth2-client-credentials'
+        tokenUrl: string
+        clientId: string
+        clientSecret: string
+        scope?: string
+        audience?: string
+      }
   operations: Array<{ operationId: string; tier: 'free' | 'paid' | 'skip' }>
 }
 
@@ -136,19 +144,26 @@ async function chooseAuth(
     supported?: boolean
     kind?: string
     headerName?: string
+    tokenUrl?: string
   }>,
   nonInteractive: boolean,
 ): Promise<Selections['upstreamAuth']> {
-  const firstSupported = schemes.find(s => s.supported === true && (s.kind === 'http-bearer' || s.kind === 'apiKey-header'))
+  const firstSupported = schemes.find(
+    s =>
+      s.supported === true &&
+      (s.kind === 'http-bearer' ||
+        s.kind === 'apiKey-header' ||
+        s.kind === 'oauth2-clientCredentials'),
+  )
   if (!firstSupported) {
     return { kind: 'none' }
   }
 
-  const askKey = async (prompt: string): Promise<string> => {
+  const askValue = async (prompt: string): Promise<string> => {
     if (nonInteractive) {
       throw new Error(
-        `Spec requires upstream auth (${firstSupported.kind}); pass --non-interactive only after setting ` +
-          `the key via UPSTREAM_API_KEY in the generated .env. Run interactively for the guided flow.`,
+        `Spec requires upstream auth (${firstSupported.kind}); pass --non-interactive only after ` +
+          `setting the upstream secret(s) in the generated .env. Run interactively for the guided flow.`,
       )
     }
     if (!stdin.isTTY || !stdout.isTTY) {
@@ -164,19 +179,45 @@ async function chooseAuth(
   }
 
   if (firstSupported.kind === 'http-bearer') {
-    const key = await askKey(
+    const key = await askValue(
       'Spec requires bearer auth. Paste the upstream API key (skips into .env, blank = skip): ',
     )
     if (!key) return { kind: 'none' }
     return { kind: 'bearer', key }
   }
 
-  const headerName = firstSupported.headerName ?? 'X-API-Key'
-  const key = await askKey(
-    `Spec requires apiKey auth (${headerName}). Paste the upstream API key (blank = skip): `,
+  if (firstSupported.kind === 'apiKey-header') {
+    const headerName = firstSupported.headerName ?? 'X-API-Key'
+    const key = await askValue(
+      `Spec requires apiKey auth (${headerName}). Paste the upstream API key (blank = skip): `,
+    )
+    if (!key) return { kind: 'none' }
+    return { kind: 'apiKey', in: 'header', name: headerName, key }
+  }
+
+  // oauth2-clientCredentials. `tokenUrl` comes from the spec; the
+  // user supplies `client_id` and `client_secret`. `scope` / `audience`
+  // are optional and skipped when blank.
+  const tokenUrl = firstSupported.tokenUrl
+  if (!tokenUrl) return { kind: 'none' }
+  process.stdout.write(
+    `Spec requires OAuth 2.0 client_credentials (token endpoint ${tokenUrl}).\n`,
   )
-  if (!key) return { kind: 'none' }
-  return { kind: 'apiKey', in: 'header', name: headerName, key }
+  const clientId = await askValue('OAuth client_id (blank = skip OAuth setup): ')
+  if (!clientId) return { kind: 'none' }
+  const clientSecret = await askValue('OAuth client_secret: ')
+  if (!clientSecret) return { kind: 'none' }
+  const scope = await askValue('OAuth scope (optional, space-delimited; press Enter to skip): ')
+  const audience = await askValue('OAuth audience (optional, e.g. Auth0 audience; press Enter to skip): ')
+  const auth: Extract<Selections['upstreamAuth'], { kind: 'oauth2-client-credentials' }> = {
+    kind: 'oauth2-client-credentials',
+    tokenUrl,
+    clientId,
+    clientSecret,
+  }
+  if (scope) auth.scope = scope
+  if (audience) auth.audience = audience
+  return auth
 }
 
 async function ensureScriptDepsInstalled(): Promise<void> {

@@ -20,7 +20,12 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const SUPPORTED_AUTH_KINDS = new Set(['http-bearer', 'apiKey-header', 'none'])
+const SUPPORTED_AUTH_KINDS = new Set([
+  'http-bearer',
+  'apiKey-header',
+  'oauth2-clientCredentials',
+  'none',
+])
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -119,15 +124,19 @@ export function listOperations(spec) {
 
 /**
  * Resolve the spec's `securitySchemes` to a normalised list with a
- * `supported` flag. v1 supports only `http` bearer and `apiKey` in
- * header. Anything else carries `supported: false` and routes through
- * the advisories path.
+ * `supported` flag. v1 supports `http` bearer, `apiKey` in header, and
+ * `oauth2` with the `clientCredentials` flow. Anything else (other
+ * oauth2 flows, openIdConnect, apiKey in query/cookie, http basic)
+ * carries `supported: false` and routes through the advisories path.
  *
  * Reads OpenAPI 3.x `components.securitySchemes` first and falls back
  * to Swagger 2.0's `securityDefinitions` so v2 specs surface their
  * auth shape too (the two locations carry the same per-scheme object
  * shape for `apiKey`/`oauth2`; `basic` is v2-only and routes to the
- * unsupported branch below).
+ * unsupported branch below). Swagger 2.0 `oauth2` definitions encode
+ * the flow as `flow: 'application' | 'accessCode' | 'implicit' | 'password'`
+ * and the token URL as a sibling `tokenUrl` — `application` is the v2
+ * spelling of OpenAPI 3's `clientCredentials`.
  */
 export function resolveSecuritySchemes(spec) {
   const schemes = spec.components?.securitySchemes ?? spec.securityDefinitions ?? {}
@@ -151,8 +160,18 @@ export function resolveSecuritySchemes(spec) {
       entry.headerName = scheme.name
       entry.reason = `apiKey \`in: ${scheme.in}\` is not supported in v1 (only \`header\` is)`
     } else if (scheme.type === 'oauth2') {
-      entry.kind = 'oauth2'
-      entry.reason = 'oauth2 is not supported in v1'
+      const clientCredentials = resolveOauth2ClientCredentialsFlow(scheme)
+      if (clientCredentials) {
+        entry.supported = true
+        entry.kind = 'oauth2-clientCredentials'
+        entry.flow = 'clientCredentials'
+        entry.tokenUrl = clientCredentials.tokenUrl
+        entry.scopes = clientCredentials.scopes
+      } else {
+        entry.kind = 'oauth2'
+        entry.reason =
+          'oauth2 is supported only for the `clientCredentials` flow in v1; this scheme uses a different flow.'
+      }
     } else if (scheme.type === 'openIdConnect') {
       entry.kind = 'openIdConnect'
       entry.reason = 'openIdConnect is not supported in v1'
@@ -162,6 +181,35 @@ export function resolveSecuritySchemes(spec) {
     resolved.push(entry)
   }
   return resolved
+}
+
+/**
+ * Pick the `clientCredentials` flow out of an `oauth2` scheme,
+ * normalising the two-shape input:
+ *
+ *   - OpenAPI 3.x: `flows: { clientCredentials: { tokenUrl, scopes } }`.
+ *   - Swagger 2.0: top-level `flow: 'application'` with `tokenUrl` and
+ *     `scopes` siblings (v2 calls this flow "application" rather than
+ *     "clientCredentials").
+ *
+ * Returns `null` when no client-credentials flow is declared so the
+ * caller can fall through to the unsupported branch.
+ */
+function resolveOauth2ClientCredentialsFlow(scheme) {
+  const flow = scheme.flows?.clientCredentials
+  if (flow && typeof flow === 'object' && typeof flow.tokenUrl === 'string') {
+    return {
+      tokenUrl: flow.tokenUrl,
+      scopes: flow.scopes && typeof flow.scopes === 'object' ? flow.scopes : {},
+    }
+  }
+  if (scheme.flow === 'application' && typeof scheme.tokenUrl === 'string') {
+    return {
+      tokenUrl: scheme.tokenUrl,
+      scopes: scheme.scopes && typeof scheme.scopes === 'object' ? scheme.scopes : {},
+    }
+  }
+  return null
 }
 
 /**
