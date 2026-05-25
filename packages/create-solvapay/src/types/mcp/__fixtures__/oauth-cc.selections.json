@@ -1,0 +1,16 @@
+{
+  "workerName": "oauth-cc-smoke",
+  "mcpPublicBaseUrl": "http://localhost:8787",
+  "upstreamAuth": {
+    "kind": "oauth2-client-credentials",
+    "tokenUrl": "https://api.example-roaring.test/token",
+    "clientId": "smoke-client-id",
+    "clientSecret": "smoke-client-secret",
+    "scope": "company:read company:write"
+  },
+  "mode": "one-to-one",
+  "operations": [
+    { "operationId": "getCompany", "tier": "free" },
+    { "operationId": "addCompanyNote", "tier": "paid" }
+  ]
+}

@@ -11,10 +11,12 @@
  *
  * This script sources `.env` (gitignored) and passes the overridable
  * keys as `--var KEY:VALUE` to `wrangler deploy`. Worker Secrets
- * (`SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`) are not passed via
- * `--var`. Both are uploaded from `.env` automatically on the first
- * deploy when present and not already on the worker (see
- * `ensureSolvaPaySecretKey` and `ensureUpstreamApiKeySecret`).
+ * (`SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, and the
+ * `UPSTREAM_OAUTH_*` family) are not passed via `--var`. All are
+ * uploaded from `.env` automatically on the first deploy when
+ * present and not already on the worker (see
+ * `ensureSolvaPaySecretKey`, `ensureUpstreamApiKeySecret`, and
+ * `ensureUpstreamOAuthSecrets`).
  *
  * Single environment by design. Go-live is a key swap, not a separate
  * `--env`: replace `SOLVAPAY_SECRET_KEY` in `.env` with the live key,
@@ -498,6 +500,49 @@ function ensureUpstreamApiKeySecret(localEnv, { dryRun = false, force = false } 
   putWorkerSecret('UPSTREAM_API_KEY', value)
 }
 
+// `UPSTREAM_OAUTH_*` mirrors `UPSTREAM_API_KEY` semantics: scaffold writes
+// these when `selections.json.upstreamAuth.kind` is
+// `oauth2-client-credentials`. Uploaded once on first deploy, skipped if
+// already present on the worker. `scope` and `audience` are optional —
+// the deploy script only uploads them when scaffold wrote them.
+const OAUTH_REQUIRED_SECRETS = ['UPSTREAM_OAUTH_TOKEN_URL', 'UPSTREAM_OAUTH_CLIENT_ID', 'UPSTREAM_OAUTH_CLIENT_SECRET']
+const OAUTH_OPTIONAL_SECRETS = ['UPSTREAM_OAUTH_SCOPE', 'UPSTREAM_OAUTH_AUDIENCE']
+
+function ensureUpstreamOAuthSecrets(localEnv, { dryRun = false } = {}) {
+  const present = OAUTH_REQUIRED_SECRETS.filter(name => (localEnv[name] ?? '').trim().length > 0)
+  if (present.length === 0) return
+
+  if (present.length < OAUTH_REQUIRED_SECRETS.length) {
+    const missing = OAUTH_REQUIRED_SECRETS.filter(name => !(localEnv[name] ?? '').trim())
+    console.error(
+      [
+        '',
+        `❌ OAuth upstream auth is partially configured in .env. Missing: ${missing.join(', ')}.`,
+        '   Either populate all three required keys or remove the OAuth block from .env.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
+  }
+
+  const existing = listWorkerSecretNames()
+  const allKeys = [...OAUTH_REQUIRED_SECRETS, ...OAUTH_OPTIONAL_SECRETS]
+  for (const name of allKeys) {
+    const value = (localEnv[name] ?? '').trim()
+    if (!value) continue
+    if (existing?.includes(name)) {
+      console.log(`${name} already set on worker — skipping upload.`)
+      continue
+    }
+    if (dryRun) {
+      console.log(`[dry-run] would upload ${name} from .env to Worker Secrets`)
+      continue
+    }
+    console.log(`Uploading ${name} from .env to Worker Secrets…`)
+    putWorkerSecret(name, value)
+  }
+}
+
 // Conservative heuristic: catches the typical scaffold/agent placeholders
 // ("api-key-petstore", "your-api-key", "test-key", "todo", etc.) without
 // false-positiving on real API keys (which are typically >= 20 chars and
@@ -774,6 +819,7 @@ await runSolvaPayPreflight({
 
 ensureSolvaPaySecretKey(localEnv, { dryRun })
 ensureUpstreamApiKeySecret(localEnv, { dryRun, force: forceFlag })
+ensureUpstreamOAuthSecrets(localEnv, { dryRun })
 
 const wranglerPassthrough = passthrough.filter(
   arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',
