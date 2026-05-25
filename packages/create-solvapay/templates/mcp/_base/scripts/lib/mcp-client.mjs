@@ -29,8 +29,15 @@ let nextId = 1
  * @param {string} workerUrl - base URL of the worker (no trailing slash).
  * @param {string} method - JSON-RPC method (e.g. `tools/list`).
  * @param {object} params - JSON-RPC params (defaults to {}).
+ * @param {object} [options]
+ * @param {string} [options.bearerToken] - OAuth bearer token. When
+ *   present, the call is sent with `Authorization: Bearer <token>` so
+ *   it can reach a worker running with the SDK default
+ *   `requireAuth: true`. Without it, anonymous calls are gated with a
+ *   `WWW-Authenticate` challenge (the well-formed-401 path
+ *   `verify.mjs` / `test.mjs` treat as a soft skip).
  */
-export async function rpc(workerUrl, method, params = {}) {
+export async function rpc(workerUrl, method, params = {}, options = {}) {
   const body = {
     jsonrpc: '2.0',
     id: nextId++,
@@ -38,12 +45,16 @@ export async function rpc(workerUrl, method, params = {}) {
     params,
   }
   const url = toMcpEndpoint(workerUrl)
+  const headers = {
+    'content-type': 'application/json',
+    accept: 'application/json, text/event-stream',
+  }
+  if (options.bearerToken) {
+    headers.authorization = `Bearer ${options.bearerToken}`
+  }
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      accept: 'application/json, text/event-stream',
-    },
+    headers,
     body: JSON.stringify(body),
   })
   if (!res.ok) {
@@ -72,9 +83,18 @@ function toMcpEndpoint(workerUrl) {
 /**
  * GET a public endpoint (used for the `/.well-known/...` OAuth metadata
  * checks in verify.mjs). Returns the parsed JSON body or throws.
+ *
+ * Accepts an optional `bearerToken` for symmetry with `rpc()`. The
+ * OAuth discovery endpoints are public so the token is not used today,
+ * but keeping the signature symmetric lets callers pass a single
+ * options object through every helper.
  */
-export async function getJson(url) {
-  const res = await fetch(url, { headers: { accept: 'application/json' } })
+export async function getJson(url, options = {}) {
+  const headers = { accept: 'application/json' }
+  if (options.bearerToken) {
+    headers.authorization = `Bearer ${options.bearerToken}`
+  }
+  const res = await fetch(url, { headers })
   if (!res.ok) {
     throw new RpcError(`HTTP ${res.status} from ${url}`, { httpStatus: res.status })
   }
@@ -83,19 +103,21 @@ export async function getJson(url) {
 
 /**
  * `tools/list` convenience — returns the array of tool descriptors.
+ * Pass `{ bearerToken }` to reach a worker with the SDK default
+ * `requireAuth: true`.
  */
-export async function listTools(workerUrl) {
-  const result = await rpc(workerUrl, 'tools/list')
+export async function listTools(workerUrl, options = {}) {
+  const result = await rpc(workerUrl, 'tools/list', {}, options)
   return Array.isArray(result?.tools) ? result.tools : []
 }
 
 /**
  * `tools/call` convenience — returns the full result envelope so the
  * caller can introspect `content[0].text`, `structuredContent`, and
- * `isError`.
+ * `isError`. Pass `{ bearerToken }` to call protected tools.
  */
-export async function callTool(workerUrl, name, args) {
-  return rpc(workerUrl, 'tools/call', { name, arguments: args })
+export async function callTool(workerUrl, name, args, options = {}) {
+  return rpc(workerUrl, 'tools/call', { name, arguments: args }, options)
 }
 
 export class RpcError extends Error {

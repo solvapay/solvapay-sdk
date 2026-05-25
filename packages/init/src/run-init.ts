@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import {
   createInitSession,
   openAuthUrl,
+  verifyMerchant,
   verifyProductRef,
   verifySecretKey,
   waitForExchange,
@@ -248,6 +249,41 @@ export const runInitInDirectory = async ({
   } else {
     process.stdout.write(
       `⚠️ Verification failed, but setup can still continue. Details: ${verified.warning}\n`,
+    )
+  }
+
+  // Hard-block when the SolvaPay backend has no merchant record for this
+  // secret key. `verifySecretKey` only asserts the key authenticates —
+  // a key without a merchant still passes that check but every paid-MCP
+  // bootstrap call would fail with `Provider not found (404)` post-deploy.
+  // The hard-fail here moves that error to setup time where the recovery
+  // path (re-running `solvapay init` once the user finishes onboarding)
+  // is obvious.
+  const merchant = await verifyMerchant(apiBaseUrl, exchange.secretKey)
+  if (merchant.status === 'not_found') {
+    process.stdout.write(
+      [
+        '',
+        '❌ Provider account not found on this SolvaPay deployment.',
+        '',
+        '   The secret key was saved to `.env`, but the SolvaPay backend',
+        '   has no merchant record for it. Finish provider onboarding in',
+        '   the SolvaPay Console (https://app.solvapay.com), then re-run',
+        '   `npx solvapay init` to pick up the new credentials.',
+        '',
+      ].join('\n'),
+    )
+    throw new Error(
+      'Provider account not found — finish onboarding in the SolvaPay Console and re-run `npx solvapay init`.',
+    )
+  }
+  if (merchant.status === 'unauthorized') {
+    process.stdout.write(
+      '⚠️ Merchant lookup unauthorized — continuing, but paid tools may fail until the secret key is fixed.\n',
+    )
+  } else if (merchant.status === 'error') {
+    process.stdout.write(
+      `⚠️ Merchant lookup failed, but setup can still continue. Details: ${merchant.message}\n`,
     )
   }
 
