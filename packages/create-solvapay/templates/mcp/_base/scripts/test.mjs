@@ -19,6 +19,7 @@
  *     --spec path/to/openapi.json
  */
 
+import { readFileSync } from 'node:fs'
 import {
   loadSpec,
   listOperations,
@@ -32,10 +33,38 @@ const INTENT_TOOLS = new Set(['upgrade', 'topup', 'activate_plan', 'manage_accou
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   if (!args.workerUrl || !args.specPath) {
-    console.error('Usage: test.mjs <worker-url> --spec <openapi-path>')
+    console.error('Usage: test.mjs <worker-url> --spec <openapi-path> [--credentials-file <path>]')
     process.exit(2)
   }
   const base = args.workerUrl.replace(/\/$/, '')
+
+  // `--credentials-file` accepts an MCPJam `oauth login --credentials-out`
+  // dump and pulls `accessToken` off it. The file's other fields
+  // (`refreshToken`, `expiresAt`, ...) are ignored — refresh-only flows
+  // are documented as a separate cycle here. If the file exists but
+  // has no `accessToken`, exit 2 with a hint so the human knows to
+  // re-run `mcpjam oauth login`.
+  let bearerToken
+  if (args.credentialsFile) {
+    try {
+      const raw = readFileSync(args.credentialsFile, 'utf8')
+      const parsed = JSON.parse(raw)
+      bearerToken = typeof parsed?.accessToken === 'string' ? parsed.accessToken : undefined
+    } catch (err) {
+      console.error(
+        `Failed to read --credentials-file (${args.credentialsFile}): ${err?.message ?? err}`,
+      )
+      process.exit(2)
+    }
+    if (!bearerToken) {
+      console.error(
+        `--credentials-file (${args.credentialsFile}) is missing \`accessToken\`. Re-run \`mcpjam oauth login --credentials-out <file>\` and retry.`,
+      )
+      process.exit(2)
+    }
+  }
+
+  const rpcOptions = bearerToken ? { bearerToken } : {}
 
   const { spec } = await loadSpec(args.specPath)
   const operations = listOperations(spec)
@@ -45,10 +74,11 @@ async function main() {
   // signal `verify.mjs` treats as a pass — here we surface it as a
   // structured `overall: "skipped"` so the human sees a one-line reason
   // instead of a stack trace and knows to either pass a bearer token
-  // out-of-band or temporarily flip the worker to `requireAuth: false`.
+  // via `--credentials-file` or temporarily flip the worker to
+  // `requireAuth: false`.
   let exposedTools
   try {
-    exposedTools = new Set((await listTools(base)).map(t => t.name))
+    exposedTools = new Set((await listTools(base, rpcOptions)).map(t => t.name))
   } catch (err) {
     if (err instanceof RpcError && err.info?.httpStatus === 401) {
       const challenge = err.info.wwwAuthenticate ?? ''
@@ -58,7 +88,9 @@ async function main() {
           specPath: args.specPath,
           results: [],
           overall: 'skipped',
-          reason: 'worker requires bearer auth; anonymous probe cannot enumerate tools',
+          reason: bearerToken
+            ? 'worker rejected bearer token; credentials may be expired — re-run `mcpjam oauth login`'
+            : 'worker requires bearer auth; pass `--credentials-file <path>` from `mcpjam oauth login --credentials-out`',
           wwwAuthenticate: challenge,
         }
         process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`)
@@ -95,7 +127,7 @@ async function main() {
       continue
     }
     try {
-      const response = await callTool(base, op.operationId, inputs)
+      const response = await callTool(base, op.operationId, inputs, rpcOptions)
       if (response?.isError) {
         results.push({
           operationId: op.operationId,
@@ -138,7 +170,7 @@ async function main() {
     })
   }
 
-  const paywallGate = await runPaywallGateProbe(base, exposedTools)
+  const paywallGate = await runPaywallGateProbe(base, exposedTools, rpcOptions)
 
   const summary = {
     workerUrl: base,
@@ -154,15 +186,18 @@ async function main() {
 function parseArgs(argv) {
   let workerUrl
   let specPath
+  let credentialsFile
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '--spec') {
       specPath = argv[++i]
+    } else if (arg === '--credentials-file') {
+      credentialsFile = argv[++i]
     } else if (!workerUrl) {
       workerUrl = arg
     }
   }
-  return { workerUrl, specPath }
+  return { workerUrl, specPath, credentialsFile }
 }
 
 /**
@@ -172,7 +207,7 @@ function parseArgs(argv) {
  * balance (the call succeeds), or when the worker's auth surface
  * refuses anonymous calls (401).
  */
-async function runPaywallGateProbe(base, exposedTools) {
+async function runPaywallGateProbe(base, exposedTools, rpcOptions = {}) {
   const candidates = Array.from(exposedTools).filter(name => !INTENT_TOOLS.has(name))
   if (candidates.length === 0) {
     return { status: 'skipped', reason: 'no candidate tools exposed' }
@@ -180,7 +215,7 @@ async function runPaywallGateProbe(base, exposedTools) {
   for (const name of candidates) {
     let response
     try {
-      response = await callTool(base, name, {})
+      response = await callTool(base, name, {}, rpcOptions)
     } catch {
       continue
     }

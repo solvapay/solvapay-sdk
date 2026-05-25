@@ -320,6 +320,99 @@ function failSubdomainNotRegistered(accountId) {
   process.exit(1)
 }
 
+/**
+ * Hit `GET /v1/sdk/merchant` with the deployer's `SOLVAPAY_SECRET_KEY`
+ * to confirm the SolvaPay backend has a merchant record for it before
+ * `wrangler deploy` uploads the secret. Without this check, a key
+ * without a merchant still authenticates, gets uploaded as a Worker
+ * secret, and then every paid tool's bootstrap fails post-deploy with
+ * `Provider not found (404)`. Catching it here makes the deploy a no-op
+ * instead of a half-success.
+ *
+ * Behaviour:
+ *   - 200          → return (preflight passes).
+ *   - 404          → print recovery message + `process.exit(1)`.
+ *   - 401          → print `npx solvapay init` hint + `process.exit(1)`.
+ *   - other / err  → soft warning; deploy continues. Network errors
+ *                    are common in CI runners and shouldn't block deploys.
+ *
+ * Skips cleanly when `SOLVAPAY_SECRET_KEY` is absent from `.env` (the
+ * worker likely already has it as a secret, set out-of-band).
+ */
+async function runSolvaPayPreflight({ secretKey, apiBaseUrl, dryRun = false } = {}) {
+  if (!secretKey) {
+    console.warn(
+      '⚠  Skipping SolvaPay merchant preflight — SOLVAPAY_SECRET_KEY missing from .env. The worker may still have a secret set out-of-band; redeploy with the key in .env if you want this check to run.',
+    )
+    return
+  }
+
+  const base = (apiBaseUrl ?? 'https://api.solvapay.com').replace(/\/+$/, '')
+  const url = `${base}/v1/sdk/merchant`
+
+  if (dryRun) {
+    console.log(`[dry-run] would verify SolvaPay merchant at ${url}`)
+  }
+
+  let response
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${secretKey}` },
+    })
+  } catch (err) {
+    console.warn(
+      `⚠  SolvaPay merchant preflight failed (network error: ${err?.message ?? err}). Continuing deploy — paid tools may fail at runtime if the secret key is wrong.`,
+    )
+    return
+  }
+
+  if (response.ok) {
+    console.log('SolvaPay merchant ok — proceeding with deploy.')
+    return
+  }
+
+  if (response.status === 404) {
+    console.error(
+      [
+        '',
+        '❌ SolvaPay merchant preflight failed: Provider not found (404).',
+        '',
+        '   The SOLVAPAY_SECRET_KEY in .env authenticates against SolvaPay,',
+        '   but no merchant record exists for it. Every paid tool on the',
+        '   deployed worker would fail with `Provider not found` post-deploy.',
+        '',
+        '   To recover:',
+        '     1. Run `npx solvapay init` in the project root to create the',
+        '        merchant and write a valid key to .env.',
+        '     2. Re-run `npm run deploy` once the key in .env is for an',
+        '        existing merchant.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
+  }
+
+  if (response.status === 401) {
+    console.error(
+      [
+        '',
+        '❌ SolvaPay merchant preflight failed: Unauthorized (401).',
+        '',
+        '   The SOLVAPAY_SECRET_KEY in .env was rejected by the SolvaPay API.',
+        '   Run `npx solvapay init` to refresh credentials and retry.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
+  }
+
+  const detail = await response.text().catch(() => '')
+  console.warn(
+    `⚠  SolvaPay merchant preflight returned ${response.status}. Continuing deploy. Detail: ${detail}`,
+  )
+}
+
 async function runDeployPreflight({ dryRun = false } = {}) {
   const whoami = getWranglerWhoami()
   if (!whoami) {
@@ -668,6 +761,16 @@ const resolvedPublicUrl = ensureMcpPublicBaseUrl(localEnv, preflight, { dryRun }
 
 const confirmation = await confirmDeploymentUrl(localEnv, preflight, { dryRun, yes: yesFlag })
 if (confirmation === 'abort') process.exit(1)
+
+// Verify the merchant exists on the SolvaPay backend before uploading
+// the secret key. Otherwise a 404-from-the-backend deploy looks like a
+// success at the `wrangler deploy` level but every paid tool fails at
+// runtime.
+await runSolvaPayPreflight({
+  secretKey: localEnv.SOLVAPAY_SECRET_KEY?.trim(),
+  apiBaseUrl: localEnv.SOLVAPAY_API_BASE_URL?.trim(),
+  dryRun,
+})
 
 ensureSolvaPaySecretKey(localEnv, { dryRun })
 ensureUpstreamApiKeySecret(localEnv, { dryRun, force: forceFlag })

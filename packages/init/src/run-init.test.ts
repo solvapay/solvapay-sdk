@@ -7,6 +7,7 @@ vi.mock('./browser-auth', () => ({
   waitForExchange: vi.fn(),
   verifySecretKey: vi.fn(),
   verifyProductRef: vi.fn(),
+  verifyMerchant: vi.fn(),
 }))
 
 vi.mock('./env', () => ({
@@ -42,6 +43,7 @@ vi.mock('./project', () => ({
 import {
   createInitSession,
   openAuthUrl,
+  verifyMerchant,
   verifyProductRef,
   verifySecretKey,
   waitForExchange,
@@ -97,6 +99,7 @@ describe('runInitInDirectory', () => {
       action: 'created',
     })
     vi.mocked(verifySecretKey).mockResolvedValue({ ok: true })
+    vi.mocked(verifyMerchant).mockResolvedValue({ status: 'ok' })
   }
 
   beforeEach(() => {
@@ -412,5 +415,51 @@ describe('runInitInDirectory', () => {
     expect(installSolvaPaySdk).not.toHaveBeenCalled()
     expect(output.join('')).not.toContain('SolvaPay SDK packages installed')
     expect(output.join('')).toContain("You're all set!")
+  })
+
+  it('hard-fails when verifyMerchant returns not_found', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(verifyMerchant).mockResolvedValue({ status: 'not_found' })
+
+    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow(
+      /Provider account not found/i,
+    )
+
+    // Product picker must not run after a hard-fail.
+    expect(pickProductInteractive).not.toHaveBeenCalled()
+    // The hard-fail message names the recovery path.
+    const text = output.join('')
+    expect(text).toMatch(/Provider account not found/i)
+  })
+
+  it('soft-warns and continues when verifyMerchant returns unauthorized', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(verifyMerchant).mockResolvedValue({ status: 'unauthorized' })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
+
+    await runInitInDirectory({ cwd: TEST_CWD })
+
+    expect(output.join('')).toMatch(/Merchant lookup unauthorized/i)
+    expect(output.join('')).toContain("You're all set! Here's how to get started:")
+  })
+
+  it('soft-warns and continues when verifyMerchant returns a network error', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(verifyMerchant).mockResolvedValue({
+      status: 'error',
+      message: 'network unavailable',
+    })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
+
+    await runInitInDirectory({ cwd: TEST_CWD })
+
+    expect(output.join('')).toMatch(/Merchant lookup failed/i)
+    expect(output.join('')).toContain("You're all set! Here's how to get started:")
   })
 })

@@ -166,6 +166,58 @@ export const verifyProductRef = async (
   }
 }
 
+export type VerifyMerchantResult =
+  | { status: 'ok' }
+  | { status: 'not_found' }
+  | { status: 'unauthorized' }
+  | { status: 'error'; message: string }
+
+/**
+ * Hit `GET /v1/sdk/merchant` to confirm the SolvaPay backend has a
+ * merchant record for the secret key. Distinct from `verifySecretKey`
+ * (which only asserts the key authenticates) because a valid key with
+ * no merchant fails every paid-MCP bootstrap call with
+ * `Provider not found (404)`. Catching that here lets `solvapay init`
+ * hard-block before the user wires up a doomed deploy.
+ */
+export const verifyMerchant = async (
+  apiBaseUrl: string,
+  secretKey: string,
+): Promise<VerifyMerchantResult> => {
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/sdk/merchant`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+      },
+    })
+
+    if (response.ok) {
+      return { status: 'ok' }
+    }
+
+    if (response.status === 404) {
+      return { status: 'not_found' }
+    }
+
+    if (response.status === 401) {
+      return { status: 'unauthorized' }
+    }
+
+    const body = await response.text().catch(() => '')
+    return {
+      status: 'error',
+      message: `Merchant lookup failed (${response.status}): ${body}`,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Network error'
+    return {
+      status: 'error',
+      message: `Merchant lookup failed due to network error: ${message}`,
+    }
+  }
+}
+
 export const verifySecretKey = async (
   apiBaseUrl: string,
   secretKey: string,
