@@ -228,17 +228,73 @@ describe('verifyMerchant', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sk_test')
   })
 
-  it('returns not_found on 404', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-        text: async () => 'Provider not found',
+  it('returns not_found on a flat 404', async () => {
+    // Older deployments still return a string body with no `code` field —
+    // we keep the bare `not_found` result so the CLI stays backwards-compat.
+    const response = {
+      ok: false,
+      status: 404,
+      text: async () => 'Provider not found',
+      clone: () => ({
+        json: async () => {
+          throw new Error('not json')
+        },
       }),
-    )
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
     const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')
     expect(result.status).toBe('not_found')
+    if (result.status === 'not_found') {
+      expect(result.environment).toBeUndefined()
+      expect(result.providerExistsInSandbox).toBeUndefined()
+    }
+  })
+
+  it('parses the structured provider_not_found_in_environment 404 body', async () => {
+    const payload = {
+      message: {
+        code: 'provider_not_found_in_environment',
+        message: 'Provider not found in live environment',
+        requestedEnvironment: 'live',
+        providerExistsInSandbox: true,
+      },
+    }
+    const response = {
+      ok: false,
+      status: 404,
+      text: async () => JSON.stringify(payload),
+      clone: () => ({ json: async () => payload }),
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')
+    expect(result.status).toBe('not_found')
+    if (result.status === 'not_found') {
+      expect(result.environment).toBe('live')
+      expect(result.providerExistsInSandbox).toBe(true)
+    }
+  })
+
+  it('parses the key_env_mismatch 403 body', async () => {
+    const payload = {
+      message: {
+        code: 'key_env_mismatch',
+        keyEnvironment: 'live',
+        providerEnvironment: 'sandbox',
+      },
+    }
+    const response = {
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify(payload),
+      clone: () => ({ json: async () => payload }),
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_live_x')
+    expect(result.status).toBe('env_mismatch')
+    if (result.status === 'env_mismatch') {
+      expect(result.keyEnvironment).toBe('live')
+      expect(result.providerEnvironment).toBe('sandbox')
+    }
   })
 
   it('returns unauthorized on 401', async () => {

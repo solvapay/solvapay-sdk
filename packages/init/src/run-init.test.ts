@@ -164,7 +164,7 @@ describe('runInitInDirectory', () => {
     expect(output.join('')).toContain('Detected npm project (package.json found)')
     expect(output.join('')).toContain('Browser authentication URL:')
     expect(output.join('')).toContain("If it doesn't open, visit:")
-    expect(output.join('')).toContain('✅ Secret key verified with SolvaPay')
+    expect(output.join('')).toContain('✅ Secret key authenticates')
     expect(output.join('')).toContain("You're all set! Here's how to get started:")
     expect(waitForEnter).toHaveBeenCalledWith(
       'Press Enter to open your browser to authenticate and set up your account if you do not already have one. ',
@@ -172,6 +172,19 @@ describe('runInitInDirectory', () => {
     const waitForEnterCallOrder = vi.mocked(waitForEnter).mock.invocationCallOrder[0]
     const openAuthCallOrder = vi.mocked(openAuthUrl).mock.invocationCallOrder[0]
     expect(waitForEnterCallOrder).toBeLessThan(openAuthCallOrder)
+  })
+
+  it('runs verifyMerchant before .env write and SDK install', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(verifyMerchant).mockResolvedValue({ status: 'not_found' })
+
+    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow(/Provider account not found/i)
+
+    // Hard-fail must skip the destructive setup steps — the project
+    // should be untouched when the merchant probe fails.
+    expect(writeSolvaPaySecretToEnv).not.toHaveBeenCalled()
+    expect(ensureEnvInGitignore).not.toHaveBeenCalled()
+    expect(installSolvaPaySdk).not.toHaveBeenCalled()
   })
 
   it('keeps success flow when verify fails', async () => {
@@ -430,6 +443,61 @@ describe('runInitInDirectory', () => {
     // The hard-fail message names the recovery path.
     const text = output.join('')
     expect(text).toMatch(/Provider account not found/i)
+  })
+
+  it('names the environment in the not_found message when the backend reports it', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(waitForExchange).mockResolvedValue({
+      status: 'complete',
+      secretKey: 'sk_live_123',
+      email: 'dev@example.com',
+      environment: 'live',
+    })
+    vi.mocked(verifyMerchant).mockResolvedValue({
+      status: 'not_found',
+      environment: 'live',
+      providerExistsInSandbox: true,
+    })
+
+    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow(
+      /Provider account not found in the live environment/i,
+    )
+
+    const text = output.join('')
+    expect(text).toMatch(/Provider account not found in the live environment/i)
+    expect(text).toMatch(/sandbox account exists/i)
+    expect(text).toMatch(/Switch to live in the SolvaPay/i)
+  })
+
+  it('falls back to the exchange environment when the backend body omits it', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(waitForExchange).mockResolvedValue({
+      status: 'complete',
+      secretKey: 'sk_live_123',
+      email: 'dev@example.com',
+      environment: 'live',
+    })
+    vi.mocked(verifyMerchant).mockResolvedValue({ status: 'not_found' })
+
+    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow(
+      /Provider account not found in the live environment/i,
+    )
+  })
+
+  it('hard-fails when verifyMerchant reports an env_mismatch', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(verifyMerchant).mockResolvedValue({
+      status: 'env_mismatch',
+      keyEnvironment: 'live',
+      providerEnvironment: 'sandbox',
+    })
+
+    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow(
+      /Secret key environment .* does not match the provider environment/i,
+    )
+
+    expect(writeSolvaPaySecretToEnv).not.toHaveBeenCalled()
+    expect(pickProductInteractive).not.toHaveBeenCalled()
   })
 
   it('soft-warns and continues when verifyMerchant returns unauthorized', async () => {
