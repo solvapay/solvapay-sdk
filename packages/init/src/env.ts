@@ -6,6 +6,7 @@ import { stdin, stdout } from 'node:process'
 
 const SOLVAPAY_SECRET_KEY = 'SOLVAPAY_SECRET_KEY'
 const SOLVAPAY_PRODUCT_REF = 'SOLVAPAY_PRODUCT_REF'
+const SOLVAPAY_API_BASE_URL = 'SOLVAPAY_API_BASE_URL'
 
 export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = '__SOLVAPAY_PRODUCT_REF__'
 
@@ -174,4 +175,57 @@ export const writeSolvaPayProductRefToEnv = async (
   const updatedContent = currentContent.replace(/^\s*SOLVAPAY_PRODUCT_REF\s*=.*$/m, keyLine)
   await writeFile(envPath, updatedContent, 'utf8')
   return { filePath: envPath, action: 'updated' }
+}
+
+/**
+ * Persist `SOLVAPAY_API_BASE_URL=<url>` to the project's `.env`. Append-safe
+ * and idempotent — mirrors `writeSolvaPaySecretToEnv` / `writeSolvaPayProductRefToEnv`:
+ *   - creates `.env` if missing,
+ *   - appends the line if the key is absent,
+ *   - replaces the existing value in place when different,
+ *   - no-ops when the value already matches.
+ *
+ * Honors any leading `#` comment marker on existing lines (e.g. the
+ * `.env.example` placeholder `# SOLVAPAY_API_BASE_URL=…`) by replacing the
+ * entire commented line — so re-running `solvapay init --dev` flips the
+ * placeholder to a live override without leaving a stale commented copy
+ * above it.
+ */
+export const writeSolvaPayApiBaseUrlToEnv = async (
+  url: string,
+  options: { cwd?: string } = {},
+): Promise<EnvWriteResult> => {
+  const envPath = path.join(options.cwd || process.cwd(), '.env')
+  const keyLine = `${SOLVAPAY_API_BASE_URL}=${url}`
+
+  const exists = await envFileExists(envPath)
+  if (!exists) {
+    await writeFile(envPath, `${keyLine}\n`, 'utf8')
+    return { filePath: envPath, action: 'created' }
+  }
+
+  const currentContent = await readFile(envPath, 'utf8')
+  const liveRegex = new RegExp(`^\\s*${SOLVAPAY_API_BASE_URL}\\s*=\\s*(.*)$`, 'm')
+  const commentedRegex = new RegExp(`^\\s*#\\s*${SOLVAPAY_API_BASE_URL}\\s*=.*$`, 'm')
+
+  if (liveRegex.test(currentContent)) {
+    const match = currentContent.match(liveRegex)
+    const currentValue = match?.[1] ? parseEnvValue(match[1]) : ''
+    if (currentValue === url) {
+      return { filePath: envPath, action: 'unchanged' }
+    }
+    const updatedContent = currentContent.replace(liveRegex, keyLine)
+    await writeFile(envPath, updatedContent, 'utf8')
+    return { filePath: envPath, action: 'updated' }
+  }
+
+  if (commentedRegex.test(currentContent)) {
+    const updatedContent = currentContent.replace(commentedRegex, keyLine)
+    await writeFile(envPath, updatedContent, 'utf8')
+    return { filePath: envPath, action: 'updated' }
+  }
+
+  const next = `${normalizeTrailingNewline(currentContent)}${keyLine}\n`
+  await writeFile(envPath, next, 'utf8')
+  return { filePath: envPath, action: 'appended' }
 }

@@ -18,7 +18,9 @@ import {
   PLACEHOLDERS,
   pascalize,
   installProjectDependencies,
+  patchSolvapayVersions,
   printConnectionSnippets,
+  resolveLatestSolvapayVersions,
   writeBootstrapEnv,
 } from './scaffold'
 
@@ -30,10 +32,17 @@ export type FromScratchInput = {
   productRef?: string
   skipInstall?: boolean
   skipInit?: boolean
+  /**
+   * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
+   * into the scaffolded `.env`. Propagated separately from `options.dev`
+   * because the bootstrap file lands before `solvapay init` runs — both
+   * need the flag for the dev-mode story to hold end-to-end.
+   */
+  dev?: boolean
 }
 
 export async function runFromScratch(input: FromScratchInput): Promise<void> {
-  const { target, projectName, toolName, options, productRef, skipInstall, skipInit } = input
+  const { target, projectName, toolName, options, productRef, skipInstall, skipInit, dev } = input
 
   await assertTargetDirAbsent(target)
 
@@ -58,7 +67,11 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   ])
   await applyOverlay(FROM_SCRATCH_OVERLAY_DIR, target, { substitutions, renameMap })
 
-  await writeBootstrapEnv(target, productRef ?? PLACEHOLDERS.PRODUCT_REF)
+  await writeBootstrapEnv(target, productRef ?? PLACEHOLDERS.PRODUCT_REF, { dev })
+
+  process.stdout.write('🔄 Resolving latest @solvapay/* versions from npm registry…\n')
+  const versionMap = await resolveLatestSolvapayVersions()
+  await patchSolvapayVersions(target, versionMap)
 
   const packageManager = await detectPackageManager(target)
   if (skipInstall) {
@@ -95,7 +108,9 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
     )
   }
   if (skipInit) {
-    process.stdout.write(`   npx solvapay init   # --skip-init was set; run to wire up auth + product\n`)
+    process.stdout.write(
+      `   npx -y solvapay@latest init   # --skip-init was set; run to wire up auth + product\n`,
+    )
   }
   process.stdout.write(
     `   ${packageManager === 'npm' ? 'npm run' : packageManager} dev   # widget watch + wrangler dev on http://localhost:8787\n`,

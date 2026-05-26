@@ -11,6 +11,7 @@ import {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+  writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
@@ -24,9 +25,16 @@ import { listProducts } from './products'
 import { detectPackageManager, ensureNodeProject, waitForEnter } from './project'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
+const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
-const resolveApiBaseUrl = (): string =>
-  (process.env.SOLVAPAY_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
+const resolveApiBaseUrl = (opts: InitCommandOptions): string => {
+  // `--dev` is the highest-priority signal — when set, it overrides any
+  // leaked `SOLVAPAY_API_BASE_URL` in the shell so the dev-mode story
+  // ("one flag, every layer hits api-dev") holds even on machines that
+  // have an old override lingering in `~/.zshrc` / `.envrc`.
+  if (opts.dev) return DEV_API_BASE_URL
+  return (process.env.SOLVAPAY_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
+}
 
 const ASCII_BANNER = ` ____        _            ____
 / ___|  ___ | |_   ____ _|  _ \\ __ _ _   _
@@ -76,6 +84,15 @@ const finishInstallProgressReporter = (): void => {
 
 export type InitCommandOptions = {
   yes?: boolean
+  /**
+   * Target the SolvaPay dev backend (`https://api-dev.solvapay.com`) for
+   * the browser-auth flow + every downstream `.env`-driven SDK call.
+   * Internal testing only — production secret keys are rejected by
+   * `api-dev`. Persisted to `.env` as `SOLVAPAY_API_BASE_URL` so
+   * `wrangler dev` and `scripts/deploy.mjs` pick the same origin without
+   * any further user action.
+   */
+  dev?: boolean
 }
 
 export type RunInitInDirectoryOptions = {
@@ -159,8 +176,14 @@ export const runInitInDirectory = async ({
   options = {},
   skipSdkInstall = false,
 }: RunInitInDirectoryOptions): Promise<void> => {
-  const apiBaseUrl = resolveApiBaseUrl()
+  const apiBaseUrl = resolveApiBaseUrl(options)
   printBanner()
+
+  if (options.dev) {
+    process.stdout.write(
+      `🧪 Targeting SolvaPay dev backend (${DEV_API_BASE_URL}) — internal testing only.\n`,
+    )
+  }
 
   const projectCheck = await ensureNodeProject({ cwd, autoCreate: options.yes })
   if (projectCheck.action === 'cancelled') {
@@ -306,6 +329,19 @@ export const runInitInDirectory = async ({
   }
   if (exchange.warning) {
     process.stdout.write(`⚠️ ${exchange.warning}\n`)
+  }
+
+  // Persist `SOLVAPAY_API_BASE_URL=…` when `--dev` is set so subsequent
+  // `wrangler dev` / `scripts/deploy.mjs` preflight + `--var` upload all
+  // hit api-dev without the user re-passing the flag or exporting the
+  // variable. Production (`opts.dev === false`) deliberately does NOT
+  // touch this — leaving the line absent / commented-out keeps the
+  // worker on its built-in `https://api.solvapay.com` default.
+  if (options.dev) {
+    const apiBaseWrite = await writeSolvaPayApiBaseUrlToEnv(DEV_API_BASE_URL, { cwd })
+    if (apiBaseWrite.action !== 'unchanged') {
+      process.stdout.write(`📝 SOLVAPAY_API_BASE_URL pinned to ${DEV_API_BASE_URL} in .env\n`)
+    }
   }
 
   const gitignoreWrite = await ensureEnvInGitignore(cwd)

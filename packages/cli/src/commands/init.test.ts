@@ -23,6 +23,17 @@ describe('runInitCommand', () => {
     })
   })
 
+  it('forwards --dev through to runInitInDirectory', async () => {
+    vi.mocked(runInitInDirectory).mockResolvedValue()
+
+    await runInitCommand({ yes: false, dev: true })
+
+    expect(runInitInDirectory).toHaveBeenCalledWith({
+      cwd: process.cwd(),
+      options: { yes: false, dev: true },
+    })
+  })
+
   it('defaults options to {} when none are provided', async () => {
     vi.mocked(runInitInDirectory).mockResolvedValue()
 

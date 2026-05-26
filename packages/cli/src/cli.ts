@@ -1,4 +1,5 @@
 import { runInitCommand } from './commands/init'
+import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
 const HELP_TEXT = `SolvaPay CLI
 
@@ -10,6 +11,9 @@ Commands:
 
 Flags for init:
   -y, --yes    Auto-create package.json and skip browser confirmation prompt
+  --dev        Target the SolvaPay dev backend (api-dev.solvapay.com).
+               Internal testing only — production secret keys are rejected
+               by api-dev. Persisted to .env as SOLVAPAY_API_BASE_URL.
 `
 
 const main = async () => {
@@ -20,10 +24,17 @@ const main = async () => {
     return
   }
 
+  if (command === '--version' || command === '-v') {
+    process.stdout.write(`${PACKAGE_VERSION}\n`)
+    return
+  }
+
   if (command === 'init') {
+    printVersionBanner()
     const initFlags = new Set(process.argv.slice(3))
     const yes = initFlags.has('--yes') || initFlags.has('-y')
-    await runInitCommand({ yes })
+    const dev = initFlags.has('--dev')
+    await runInitCommand({ yes, dev })
     return
   }
 
