@@ -13,7 +13,7 @@
  */
 
 import { spawn } from 'node:child_process'
-import { mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -216,6 +216,54 @@ describe('scaffold.mjs against cached fixtures', () => {
     // the overlay rendered correctly.
     const wrangler = await readFile(path.join(target, 'wrangler.jsonc'), 'utf8')
     expect(wrangler).toContain('"name": "petstore-v2-smoke"')
+  })
+
+  it('--dev seeds SOLVAPAY_API_BASE_URL=api-dev when selections omit apiBaseUrl', async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), 'create-solvapay-dev-'))
+    cleanupTargets.push(parent)
+    const target = path.join(parent, 'petstore-v2-dev')
+
+    await spawnScriptJson('scaffold.mjs', [
+      FIXTURE_PATHS.petstoreV2,
+      target,
+      '--selections',
+      PETSTORE_V2_SELECTIONS,
+      '--dev',
+    ])
+
+    const env = await readFile(path.join(target, '.env'), 'utf8')
+    expect(env).toContain('SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com')
+  })
+
+  it('explicit selections.apiBaseUrl wins over --dev', async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), 'create-solvapay-dev-explicit-'))
+    cleanupTargets.push(parent)
+    const target = path.join(parent, 'petstore-v2-explicit')
+
+    // Pin apiBaseUrl in a temp selections file so the explicit > implicit
+    // precedence is exercised end-to-end.
+    const baseSelections = JSON.parse(await readFile(PETSTORE_V2_SELECTIONS, 'utf8')) as Record<
+      string,
+      unknown
+    >
+    const selectionsPath = path.join(parent, 'selections.json')
+    await writeFile(
+      selectionsPath,
+      JSON.stringify({ ...baseSelections, apiBaseUrl: 'https://example.test/api' }),
+      'utf8',
+    )
+
+    await spawnScriptJson('scaffold.mjs', [
+      FIXTURE_PATHS.petstoreV2,
+      target,
+      '--selections',
+      selectionsPath,
+      '--dev',
+    ])
+
+    const env = await readFile(path.join(target, '.env'), 'utf8')
+    expect(env).toContain('SOLVAPAY_API_BASE_URL=https://example.test/api')
+    expect(env).not.toContain('api-dev.solvapay.com')
   })
 
   // Opt-in: install deps in the scaffolded project and run `tsc --noEmit` to
