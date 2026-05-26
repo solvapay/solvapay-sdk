@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 /**
- * `scaffold.mjs <spec> <target-dir> --selections <path>` — generate a
+ * `scaffold.mjs <spec> <target-dir> --selections <path> [--dev]` — generate a
  * SolvaPay-wired Cloudflare Workers MCP server from an OpenAPI spec.
  *
  * Destructive: refuses to overwrite an existing `target-dir`. Reads
@@ -9,6 +9,13 @@
  * writes it to `/tmp/selections-<uuid>.json` and deletes after; see
  * `scaffold.md`). The file contains the upstream API key, so it must
  * never land inside the project a follow-up `git add .` would catch.
+ *
+ * Flags:
+ *   --dev   Seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com` in
+ *           the generated `.env` so deploy/preflight/worker all route to
+ *           the SolvaPay dev backend. Internal testing only — production
+ *           keys are rejected by api-dev. Explicit `selections.apiBaseUrl`
+ *           wins over this default.
  *
  * Output (on stdout, JSON):
  *   {
@@ -46,10 +53,11 @@ const OPENAPI_OVERLAY_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'from-
 const VALID_AUTH_KINDS = new Set(['none', 'bearer', 'apiKey', 'oauth2-client-credentials'])
 const VALID_TIERS = new Set(['free', 'paid', 'skip'])
 const VALID_MODES = new Set(['one-to-one', 'intent-driven'])
+const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  const { specPath, targetDir, selectionsPath } = args
+  const { specPath, targetDir, selectionsPath, dev } = args
 
   const target = resolve(targetDir)
   const selectionsAbs = resolve(selectionsPath)
@@ -58,6 +66,12 @@ async function main() {
   await assertTemplatePresent(BASE_TEMPLATE_DIR)
 
   const selections = await readSelections(selectionsAbs)
+  // Explicit `selections.apiBaseUrl` wins over the `--dev` default. The
+  // flag only fills the gap when the caller didn't pin a base URL — same
+  // precedence the published CLI's `--dev` uses (see args.ts).
+  if (dev && (typeof selections.apiBaseUrl !== 'string' || selections.apiBaseUrl.length === 0)) {
+    selections.apiBaseUrl = DEV_API_BASE_URL
+  }
   const mode = selections.mode ?? 'one-to-one'
   const { spec } = await loadSpec(specPath)
   const operations = listOperations(spec)
@@ -144,10 +158,13 @@ function parseArgs(argv) {
   let specPath
   let targetDir
   let selectionsPath
+  let dev = false
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '--selections') {
       selectionsPath = argv[++i]
+    } else if (arg === '--dev') {
+      dev = true
     } else if (!specPath) {
       specPath = arg
     } else if (!targetDir) {
@@ -155,13 +172,13 @@ function parseArgs(argv) {
     }
   }
   if (!specPath || !targetDir || !selectionsPath) {
-    console.error('Usage: scaffold.mjs <spec> <target-dir> --selections <path>')
+    console.error('Usage: scaffold.mjs <spec> <target-dir> --selections <path> [--dev]')
     process.exit(2)
   }
   if (!isAbsolute(selectionsPath) && !selectionsPath.startsWith('.')) {
     // Accept either; resolve happens later. This is a soft hint, not a fail.
   }
-  return { specPath, targetDir, selectionsPath }
+  return { specPath, targetDir, selectionsPath, dev }
 }
 
 function assertSelectionsOutsideTarget(selectionsAbs, targetAbs) {
