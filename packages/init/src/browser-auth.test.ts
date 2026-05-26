@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createInitSession,
   openAuthUrl,
+  verifyMerchant,
   verifyProductRef,
   verifySecretKey,
   waitForExchange,
@@ -203,5 +204,134 @@ describe('verifyProductRef', () => {
     )
     const result = await verifyProductRef('https://api.solvapay.com', 'sk_test', 'prd_missing')
     expect(result.status).toBe('not_found')
+  })
+})
+
+describe('verifyMerchant', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok on 2xx response', async () => {
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) })
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')
+
+    expect(result.status).toBe('ok')
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://api.solvapay.com/v1/sdk/merchant')
+    expect(init.method).toBe('GET')
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sk_test')
+  })
+
+  it('returns not_found on a flat 404', async () => {
+    // Older deployments still return a string body with no `code` field —
+    // we keep the bare `not_found` result so the CLI stays backwards-compat.
+    const response = {
+      ok: false,
+      status: 404,
+      text: async () => 'Provider not found',
+      clone: () => ({
+        json: async () => {
+          throw new Error('not json')
+        },
+      }),
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')
+    expect(result.status).toBe('not_found')
+    if (result.status === 'not_found') {
+      expect(result.environment).toBeUndefined()
+      expect(result.providerExistsInSandbox).toBeUndefined()
+    }
+  })
+
+  it('parses the structured provider_not_found_in_environment 404 body', async () => {
+    const payload = {
+      message: {
+        code: 'provider_not_found_in_environment',
+        message: 'Provider not found in live environment',
+        requestedEnvironment: 'live',
+        providerExistsInSandbox: true,
+      },
+    }
+    const response = {
+      ok: false,
+      status: 404,
+      text: async () => JSON.stringify(payload),
+      clone: () => ({ json: async () => payload }),
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')
+    expect(result.status).toBe('not_found')
+    if (result.status === 'not_found') {
+      expect(result.environment).toBe('live')
+      expect(result.providerExistsInSandbox).toBe(true)
+    }
+  })
+
+  it('parses the key_env_mismatch 403 body', async () => {
+    const payload = {
+      message: {
+        code: 'key_env_mismatch',
+        keyEnvironment: 'live',
+        providerEnvironment: 'sandbox',
+      },
+    }
+    const response = {
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify(payload),
+      clone: () => ({ json: async () => payload }),
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_live_x')
+    expect(result.status).toBe('env_mismatch')
+    if (result.status === 'env_mismatch') {
+      expect(result.keyEnvironment).toBe('live')
+      expect(result.providerEnvironment).toBe('sandbox')
+    }
+  })
+
+  it('returns unauthorized on 401', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        text: async () => 'unauthorized',
+      }),
+    )
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_bad')
+    expect(result.status).toBe('unauthorized')
+  })
+
+  it('returns error with message on other non-2xx', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'boom',
+      }),
+    )
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.message).toContain('500')
+    }
+  })
+
+  it('returns error on network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ENOTFOUND')))
+    const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.message).toMatch(/ENOTFOUND|network/i)
+    }
   })
 })

@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import {
   createInitSession,
   openAuthUrl,
+  verifyMerchant,
   verifyProductRef,
   verifySecretKey,
   waitForExchange,
@@ -10,6 +11,7 @@ import {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+  writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
@@ -23,9 +25,16 @@ import { listProducts } from './products'
 import { detectPackageManager, ensureNodeProject, waitForEnter } from './project'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
+const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
-const resolveApiBaseUrl = (): string =>
-  (process.env.SOLVAPAY_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
+const resolveApiBaseUrl = (opts: InitCommandOptions): string => {
+  // `--dev` is the highest-priority signal — when set, it overrides any
+  // leaked `SOLVAPAY_API_BASE_URL` in the shell so the dev-mode story
+  // ("one flag, every layer hits api-dev") holds even on machines that
+  // have an old override lingering in `~/.zshrc` / `.envrc`.
+  if (opts.dev) return DEV_API_BASE_URL
+  return (process.env.SOLVAPAY_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
+}
 
 const ASCII_BANNER = ` ____        _            ____
 / ___|  ___ | |_   ____ _|  _ \\ __ _ _   _
@@ -75,6 +84,15 @@ const finishInstallProgressReporter = (): void => {
 
 export type InitCommandOptions = {
   yes?: boolean
+  /**
+   * Target the SolvaPay dev backend (`https://api-dev.solvapay.com`) for
+   * the browser-auth flow + every downstream `.env`-driven SDK call.
+   * Internal testing only — production secret keys are rejected by
+   * `api-dev`. Persisted to `.env` as `SOLVAPAY_API_BASE_URL` so
+   * `wrangler dev` and `scripts/deploy.mjs` pick the same origin without
+   * any further user action.
+   */
+  dev?: boolean
 }
 
 export type RunInitInDirectoryOptions = {
@@ -158,8 +176,14 @@ export const runInitInDirectory = async ({
   options = {},
   skipSdkInstall = false,
 }: RunInitInDirectoryOptions): Promise<void> => {
-  const apiBaseUrl = resolveApiBaseUrl()
+  const apiBaseUrl = resolveApiBaseUrl(options)
   printBanner()
+
+  if (options.dev) {
+    process.stdout.write(
+      `🧪 Targeting SolvaPay dev backend (${DEV_API_BASE_URL}) — internal testing only.\n`,
+    )
+  }
 
   const projectCheck = await ensureNodeProject({ cwd, autoCreate: options.yes })
   if (projectCheck.action === 'cancelled') {
@@ -208,6 +232,94 @@ export const runInitInDirectory = async ({
     process.stdout.write('✅ Authenticated\n')
   }
 
+  // Probe the backend BEFORE touching the project. Two checks run here:
+  //   1. `verifySecretKey` — asserts the key authenticates (says nothing
+  //      about whether a merchant record exists).
+  //   2. `verifyMerchant`  — asserts a merchant record exists in the key's
+  //      environment. Without it, every paid-MCP bootstrap call would 404
+  //      post-deploy. Failing here keeps the project clean instead of
+  //      leaving a half-scaffolded `.env` + `node_modules` behind.
+  const verified = await verifySecretKey(apiBaseUrl, exchange.secretKey)
+  if (verified.ok) {
+    process.stdout.write('✅ Secret key authenticates\n')
+  } else {
+    process.stdout.write(
+      `⚠️ Verification failed, but setup can still continue. Details: ${verified.warning}\n`,
+    )
+  }
+
+  // Hard-block when the SolvaPay backend has no merchant record for this
+  // secret key. `verifySecretKey` only asserts the key authenticates —
+  // a key without a merchant still passes that check but every paid-MCP
+  // bootstrap call would fail with `Provider not found (404)` post-deploy.
+  // The hard-fail here moves that error to setup time where the recovery
+  // path (re-running `solvapay init` once the user finishes onboarding)
+  // is obvious.
+  const merchant = await verifyMerchant(apiBaseUrl, exchange.secretKey)
+  if (merchant.status === 'not_found') {
+    const env = merchant.environment ?? exchange.environment
+    const envLabel = env ? ` in the ${env} environment` : ''
+    // When the backend confirms a sandbox provider doc exists for this
+    // key but the requested env is missing, the user's recovery path is
+    // "finish live promotion in the Console" — not "complete onboarding".
+    const isLivePromotionGap = env === 'live' && merchant.providerExistsInSandbox === true
+    const recoveryLines = isLivePromotionGap
+      ? [
+          '   Your sandbox account exists, but your live environment',
+          '   isn\'t fully promoted yet. Switch to live in the SolvaPay',
+          '   Console (https://app.solvapay.com), then re-run',
+          '   `npx solvapay init` to pick up the live credentials.',
+          '',
+          '   Or re-run with the sandbox key for now to keep testing.',
+        ]
+      : [
+          '   No merchant record was found for this secret key.',
+          '   Finish provider onboarding in the SolvaPay Console',
+          '   (https://app.solvapay.com), then re-run `npx solvapay init`',
+          '   to pick up the new credentials.',
+        ]
+    process.stdout.write(
+      [
+        '',
+        `❌ Provider account not found${envLabel}.`,
+        '',
+        ...recoveryLines,
+        '',
+      ].join('\n'),
+    )
+    throw new Error(
+      `Provider account not found${envLabel} — finish onboarding in the SolvaPay Console and re-run \`npx solvapay init\`.`,
+    )
+  }
+  if (merchant.status === 'env_mismatch') {
+    process.stdout.write(
+      [
+        '',
+        '❌ Secret key environment does not match the provider environment.',
+        '',
+        `   Key is for: ${merchant.keyEnvironment ?? 'unknown'}`,
+        `   Provider is currently: ${merchant.providerEnvironment ?? 'unknown'}`,
+        '',
+        '   Switch the provider environment in the SolvaPay Console',
+        '   (https://app.solvapay.com) to match this key, or re-run',
+        '   `npx solvapay init` to issue a key for the active env.',
+        '',
+      ].join('\n'),
+    )
+    throw new Error(
+      `Secret key environment (${merchant.keyEnvironment ?? 'unknown'}) does not match the provider environment (${merchant.providerEnvironment ?? 'unknown'}).`,
+    )
+  }
+  if (merchant.status === 'unauthorized') {
+    process.stdout.write(
+      '⚠️ Merchant lookup unauthorized — continuing, but paid tools may fail until the secret key is fixed.\n',
+    )
+  } else if (merchant.status === 'error') {
+    process.stdout.write(
+      `⚠️ Merchant lookup failed, but setup can still continue. Details: ${merchant.message}\n`,
+    )
+  }
+
   const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, { cwd })
   const environmentLabel = exchange.environment ? ` (${exchange.environment})` : ''
   if (envWrite.action === 'created' || envWrite.action === 'appended' || envWrite.action === 'updated') {
@@ -217,6 +329,19 @@ export const runInitInDirectory = async ({
   }
   if (exchange.warning) {
     process.stdout.write(`⚠️ ${exchange.warning}\n`)
+  }
+
+  // Persist `SOLVAPAY_API_BASE_URL=…` when `--dev` is set so subsequent
+  // `wrangler dev` / `scripts/deploy.mjs` preflight + `--var` upload all
+  // hit api-dev without the user re-passing the flag or exporting the
+  // variable. Production (`opts.dev === false`) deliberately does NOT
+  // touch this — leaving the line absent / commented-out keeps the
+  // worker on its built-in `https://api.solvapay.com` default.
+  if (options.dev) {
+    const apiBaseWrite = await writeSolvaPayApiBaseUrlToEnv(DEV_API_BASE_URL, { cwd })
+    if (apiBaseWrite.action !== 'unchanged') {
+      process.stdout.write(`📝 SOLVAPAY_API_BASE_URL pinned to ${DEV_API_BASE_URL} in .env\n`)
+    }
   }
 
   const gitignoreWrite = await ensureEnvInGitignore(cwd)
@@ -240,15 +365,6 @@ export const runInitInDirectory = async ({
         `⚠️ Install failed (${installResult.warning || 'unknown error'}). Run manually: ${manualInstallCommand}\n`,
       )
     }
-  }
-
-  const verified = await verifySecretKey(apiBaseUrl, exchange.secretKey)
-  if (verified.ok) {
-    process.stdout.write('✅ Secret key verified with SolvaPay\n')
-  } else {
-    process.stdout.write(
-      `⚠️ Verification failed, but setup can still continue. Details: ${verified.warning}\n`,
-    )
   }
 
   await configureProductRef(apiBaseUrl, exchange.secretKey, cwd, options)

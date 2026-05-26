@@ -108,10 +108,31 @@ describe('toolResult / toolErrorResult', () => {
     expect(result.content).toEqual([{ type: 'text', text: JSON.stringify({ hello: 'world' }) }])
   })
 
-  it('marks error results with isError', () => {
+  it('marks error results with isError and keeps the payload on structuredContent', () => {
     const result = toolErrorResult({ error: 'boom', status: 500 })
     expect(result.isError).toBe(true)
     expect(result.structuredContent).toEqual({ error: 'boom', status: 500 })
+  })
+
+  it('puts the human-readable short message in content[0].text when details is absent', () => {
+    const result = toolErrorResult({ error: 'boom', status: 500 })
+    expect(result.content).toEqual([{ type: 'text', text: 'boom' }])
+  })
+
+  it('prefers details over error in content[0].text when both are present', () => {
+    const result = toolErrorResult({
+      error: 'merchant lookup failed',
+      status: 404,
+      details:
+        'Provider not found. Run `npx solvapay init` to create a merchant before deploying.',
+    })
+    expect(result.content).toEqual([
+      {
+        type: 'text',
+        text:
+          'Provider not found. Run `npx solvapay init` to create a merchant before deploying.',
+      },
+    ])
   })
 })
 

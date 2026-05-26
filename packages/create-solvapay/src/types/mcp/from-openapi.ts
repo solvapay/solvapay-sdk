@@ -23,8 +23,10 @@ import {
   deriveServerName,
   gitInit,
   installProjectDependencies,
+  patchSolvapayVersions,
   PLACEHOLDERS,
   printConnectionSnippets,
+  resolveLatestSolvapayVersions,
   SCAFFOLD_SCRIPT_PATH,
 } from './scaffold'
 
@@ -35,23 +37,54 @@ export type FromOpenapiInput = {
   options: InitCommandOptions
   productRef?: string
   nonInteractive: boolean
+  skipInstall?: boolean
+  skipInit?: boolean
+  /**
+   * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
+   * into the scaffolded `.env` (via the `apiBaseUrl` field in
+   * `selections.json`). Mirrors the from-scratch `dev` plumbing so
+   * `wrangler dev` and `scripts/deploy.mjs` hit api-dev before
+   * `solvapay init --dev` runs.
+   */
+  dev?: boolean
 }
+
+const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
 type Selections = {
   workerName: string
   serverName: string
   mcpPublicBaseUrl: string
   solvapayProductRef?: string
+  apiBaseUrl?: string
   mode: 'one-to-one'
   upstreamAuth:
     | { kind: 'none' }
     | { kind: 'bearer'; key: string }
     | { kind: 'apiKey'; in: 'header'; name: string; key: string }
+    | {
+        kind: 'oauth2-client-credentials'
+        tokenUrl: string
+        clientId: string
+        clientSecret: string
+        scope?: string
+        audience?: string
+      }
   operations: Array<{ operationId: string; tier: 'free' | 'paid' | 'skip' }>
 }
 
 export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
-  const { target, projectName, spec, options, productRef, nonInteractive } = input
+  const {
+    target,
+    projectName,
+    spec,
+    options,
+    productRef,
+    nonInteractive,
+    skipInstall,
+    skipInit,
+    dev,
+  } = input
 
   await assertTargetDirAbsent(target)
 
@@ -83,6 +116,9 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
       tier: op.suggestedTier,
     })),
   }
+  if (dev) {
+    selections.apiBaseUrl = DEV_API_BASE_URL
+  }
 
   const tmpSelectionsPath = join(
     tmpdir(),
@@ -103,27 +139,49 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     await rm(tmpSelectionsPath, { force: true })
   }
 
+  process.stdout.write('🔄 Resolving latest @solvapay/* versions from npm registry…\n')
+  const versionMap = await resolveLatestSolvapayVersions()
+  await patchSolvapayVersions(target, versionMap)
+
   const packageManager = await detectPackageManager(target)
-  process.stdout.write(`📦 Installing dependencies with ${packageManager}...\n`)
-  const installResult = await installProjectDependencies(packageManager, target, message => {
-    process.stdout.write(`   ${message}\n`)
-  })
-  if (!installResult.ok) {
-    process.stdout.write(
-      `⚠️  ${installResult.command} failed (${installResult.warning ?? 'unknown error'}). ` +
-        `Run \`${packageManager} install\` manually inside ${target} before deploying.\n`,
-    )
+  if (skipInstall) {
+    process.stdout.write('⏭  Skipping dependency install (--skip-install)\n')
   } else {
-    process.stdout.write('✅ Dependencies installed\n')
+    process.stdout.write(`📦 Installing dependencies with ${packageManager}...\n`)
+    const installResult = await installProjectDependencies(packageManager, target, message => {
+      process.stdout.write(`   ${message}\n`)
+    })
+    if (!installResult.ok) {
+      process.stdout.write(
+        `⚠️  ${installResult.command} failed (${installResult.warning ?? 'unknown error'}). ` +
+          `Run \`${packageManager} install\` manually inside ${target} before deploying.\n`,
+      )
+    } else {
+      process.stdout.write('✅ Dependencies installed\n')
+    }
   }
 
   process.stdout.write('\n')
-  await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
+  if (skipInit) {
+    process.stdout.write('⏭  Skipping `solvapay init` (--skip-init)\n')
+  } else {
+    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
+  }
 
   await gitInit(target)
 
   process.stdout.write(`\n🎉 Done. Next steps:\n`)
   process.stdout.write(`   cd ${projectName}\n`)
+  if (skipInstall) {
+    process.stdout.write(
+      `   ${packageManager} install   # --skip-install was set; install before running dev\n`,
+    )
+  }
+  if (skipInit) {
+    process.stdout.write(
+      `   npx -y solvapay@latest init   # --skip-init was set; run to wire up auth + product\n`,
+    )
+  }
   process.stdout.write(
     `   ${packageManager === 'npm' ? 'npm run' : packageManager} dev   # widget watch + wrangler dev on http://localhost:8787\n`,
   )
@@ -136,19 +194,26 @@ async function chooseAuth(
     supported?: boolean
     kind?: string
     headerName?: string
+    tokenUrl?: string
   }>,
   nonInteractive: boolean,
 ): Promise<Selections['upstreamAuth']> {
-  const firstSupported = schemes.find(s => s.supported === true && (s.kind === 'http-bearer' || s.kind === 'apiKey-header'))
+  const firstSupported = schemes.find(
+    s =>
+      s.supported === true &&
+      (s.kind === 'http-bearer' ||
+        s.kind === 'apiKey-header' ||
+        s.kind === 'oauth2-clientCredentials'),
+  )
   if (!firstSupported) {
     return { kind: 'none' }
   }
 
-  const askKey = async (prompt: string): Promise<string> => {
+  const askValue = async (prompt: string): Promise<string> => {
     if (nonInteractive) {
       throw new Error(
-        `Spec requires upstream auth (${firstSupported.kind}); pass --non-interactive only after setting ` +
-          `the key via UPSTREAM_API_KEY in the generated .env. Run interactively for the guided flow.`,
+        `Spec requires upstream auth (${firstSupported.kind}); pass --non-interactive only after ` +
+          `setting the upstream secret(s) in the generated .env. Run interactively for the guided flow.`,
       )
     }
     if (!stdin.isTTY || !stdout.isTTY) {
@@ -164,19 +229,45 @@ async function chooseAuth(
   }
 
   if (firstSupported.kind === 'http-bearer') {
-    const key = await askKey(
+    const key = await askValue(
       'Spec requires bearer auth. Paste the upstream API key (skips into .env, blank = skip): ',
     )
     if (!key) return { kind: 'none' }
     return { kind: 'bearer', key }
   }
 
-  const headerName = firstSupported.headerName ?? 'X-API-Key'
-  const key = await askKey(
-    `Spec requires apiKey auth (${headerName}). Paste the upstream API key (blank = skip): `,
+  if (firstSupported.kind === 'apiKey-header') {
+    const headerName = firstSupported.headerName ?? 'X-API-Key'
+    const key = await askValue(
+      `Spec requires apiKey auth (${headerName}). Paste the upstream API key (blank = skip): `,
+    )
+    if (!key) return { kind: 'none' }
+    return { kind: 'apiKey', in: 'header', name: headerName, key }
+  }
+
+  // oauth2-clientCredentials. `tokenUrl` comes from the spec; the
+  // user supplies `client_id` and `client_secret`. `scope` / `audience`
+  // are optional and skipped when blank.
+  const tokenUrl = firstSupported.tokenUrl
+  if (!tokenUrl) return { kind: 'none' }
+  process.stdout.write(
+    `Spec requires OAuth 2.0 client_credentials (token endpoint ${tokenUrl}).\n`,
   )
-  if (!key) return { kind: 'none' }
-  return { kind: 'apiKey', in: 'header', name: headerName, key }
+  const clientId = await askValue('OAuth client_id (blank = skip OAuth setup): ')
+  if (!clientId) return { kind: 'none' }
+  const clientSecret = await askValue('OAuth client_secret: ')
+  if (!clientSecret) return { kind: 'none' }
+  const scope = await askValue('OAuth scope (optional, space-delimited; press Enter to skip): ')
+  const audience = await askValue('OAuth audience (optional, e.g. Auth0 audience; press Enter to skip): ')
+  const auth: Extract<Selections['upstreamAuth'], { kind: 'oauth2-client-credentials' }> = {
+    kind: 'oauth2-client-credentials',
+    tokenUrl,
+    clientId,
+    clientSecret,
+  }
+  if (scope) auth.scope = scope
+  if (audience) auth.audience = audience
+  return auth
 }
 
 async function ensureScriptDepsInstalled(): Promise<void> {

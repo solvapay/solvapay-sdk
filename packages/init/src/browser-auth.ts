@@ -166,6 +166,124 @@ export const verifyProductRef = async (
   }
 }
 
+export type VerifyMerchantResult =
+  | { status: 'ok' }
+  | {
+      status: 'not_found'
+      /**
+       * Environment the secret key resolved to. Mirrors the exchange
+       * response when the backend returns a structured
+       * `provider_not_found_in_environment` body; falls back to undefined
+       * for older deployments that still return a flat 404.
+       */
+      environment?: 'sandbox' | 'live'
+      /**
+       * True when the backend confirms a sandbox `Provider` doc exists
+       * for this provider even though the requested env doesn't. Lets
+       * the CLI suggest "finish live promotion in the Console" instead
+       * of the generic onboarding prompt.
+       */
+      providerExistsInSandbox?: boolean
+    }
+  | { status: 'unauthorized' }
+  | { status: 'env_mismatch'; keyEnvironment?: 'sandbox' | 'live'; providerEnvironment?: 'sandbox' | 'live' }
+  | { status: 'error'; message: string }
+
+const parseJsonSafe = async (response: Response): Promise<unknown> => {
+  try {
+    return await response.clone().json()
+  } catch {
+    return undefined
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const pickEnv = (value: unknown): 'sandbox' | 'live' | undefined => {
+  return value === 'sandbox' || value === 'live' ? value : undefined
+}
+
+/**
+ * Hit `GET /v1/sdk/merchant` to confirm the SolvaPay backend has a
+ * merchant record for the secret key. Distinct from `verifySecretKey`
+ * (which only asserts the key authenticates) because a valid key with
+ * no merchant fails every paid-MCP bootstrap call with
+ * `Provider not found (404)`. Catching that here lets `solvapay init`
+ * hard-block before the user wires up a doomed deploy.
+ */
+export const verifyMerchant = async (
+  apiBaseUrl: string,
+  secretKey: string,
+): Promise<VerifyMerchantResult> => {
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/sdk/merchant`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+      },
+    })
+
+    if (response.ok) {
+      return { status: 'ok' }
+    }
+
+    if (response.status === 404) {
+      const payload = await parseJsonSafe(response)
+      const message = isRecord(payload) ? payload.message : undefined
+      const detail = isRecord(message) ? message : payload
+      const detailRecord = isRecord(detail) ? detail : undefined
+      const code = detailRecord?.code
+      if (code === 'provider_not_found_in_environment') {
+        return {
+          status: 'not_found',
+          environment: pickEnv(detailRecord?.requestedEnvironment),
+          providerExistsInSandbox:
+            typeof detailRecord?.providerExistsInSandbox === 'boolean'
+              ? detailRecord.providerExistsInSandbox
+              : undefined,
+        }
+      }
+      return { status: 'not_found' }
+    }
+
+    if (response.status === 403) {
+      const payload = await parseJsonSafe(response)
+      const message = isRecord(payload) ? payload.message : undefined
+      const detail = isRecord(message) ? message : payload
+      const detailRecord = isRecord(detail) ? detail : undefined
+      if (detailRecord?.code === 'key_env_mismatch') {
+        return {
+          status: 'env_mismatch',
+          keyEnvironment: pickEnv(detailRecord?.keyEnvironment),
+          providerEnvironment: pickEnv(detailRecord?.providerEnvironment),
+        }
+      }
+      const body = await response.text().catch(() => '')
+      return {
+        status: 'error',
+        message: `Merchant lookup failed (403): ${body}`,
+      }
+    }
+
+    if (response.status === 401) {
+      return { status: 'unauthorized' }
+    }
+
+    const body = await response.text().catch(() => '')
+    return {
+      status: 'error',
+      message: `Merchant lookup failed (${response.status}): ${body}`,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Network error'
+    return {
+      status: 'error',
+      message: `Merchant lookup failed due to network error: ${message}`,
+    }
+  }
+}
+
 export const verifySecretKey = async (
   apiBaseUrl: string,
   secretKey: string,

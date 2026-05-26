@@ -15,6 +15,7 @@ export {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+  writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'

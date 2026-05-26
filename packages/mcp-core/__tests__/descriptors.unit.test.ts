@@ -356,6 +356,49 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(sc.plans).toBeTruthy()
   })
 
+  it('returns a recovery-oriented tool error when getMerchant 404s', async () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: createSolvaPay({
+        apiClient: {
+          checkLimits: vi
+            .fn()
+            .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
+          trackUsage: vi.fn(),
+          createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
+          getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
+          getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: null }),
+          // Mimic the live SDK: getMerchant throws a SolvaPayError with status: 404
+          getMerchant: vi.fn().mockImplementation(async () => {
+            const { SolvaPayError } = await import('@solvapay/core')
+            throw new SolvaPayError('Get merchant failed (404): Provider not found', {
+              status: 404,
+            })
+          }),
+          getProduct: vi
+            .fn()
+            .mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
+          listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),
+        } as unknown as SolvaPayClient,
+      }),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
+    const result = await upgrade.handler({}, {})
+
+    expect(result.isError).toBe(true)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.status).toBe(404)
+    const text = (result.content as Array<{ text?: string }>)?.[0]?.text ?? ''
+    // The recovery text must mention the next step and not be a JSON dump.
+    expect(text).toMatch(/Provider/i)
+    expect(text).toMatch(/solvapay init/)
+    // Make sure we did not stringify a JSON envelope into content[0].text.
+    expect(text.trim().startsWith('{')).toBe(false)
+  })
+
   it('activate_plan without planRef errors when checkout view is disabled', async () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),

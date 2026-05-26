@@ -14,6 +14,7 @@ vi.mock('./browser-auth', () => ({
   waitForExchange: vi.fn(),
   verifySecretKey: vi.fn(),
   verifyProductRef: vi.fn(),
+  verifyMerchant: vi.fn(),
 }))
 
 vi.mock('./install', () => ({
@@ -45,6 +46,7 @@ vi.mock('./project', async () => {
 import {
   createInitSession,
   openAuthUrl,
+  verifyMerchant,
   verifySecretKey,
   waitForExchange,
 } from './browser-auth'
@@ -71,6 +73,7 @@ describe('runInitInDirectory (integration)', () => {
       email: 'dev@example.com',
     })
     vi.mocked(verifySecretKey).mockResolvedValue({ ok: true })
+    vi.mocked(verifyMerchant).mockResolvedValue({ status: 'ok' })
     vi.mocked(installSolvaPaySdk).mockResolvedValue({
       ok: true,
       command: 'npm install ...',

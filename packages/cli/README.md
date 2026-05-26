@@ -10,7 +10,18 @@ npx solvapay init
 
 # Skip browser confirmation prompt
 npx solvapay init --yes
+
+# Target the SolvaPay dev backend (api-dev.solvapay.com). Internal
+# testing only — production keys are rejected by api-dev.
+npx solvapay init --dev
 ```
+
+## Flags
+
+| Flag | Description |
+| --- | --- |
+| `-y`, `--yes` | Auto-create `package.json` and skip the browser confirmation prompt. |
+| `--dev` | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`) for browser-auth and all downstream `.env`-driven SDK calls. Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only. |
 
 ## What `solvapay init` does
 
