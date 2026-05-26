@@ -13,6 +13,7 @@ export type ParsedCommonArgs = {
   type?: string
   product?: string
   yes: boolean
+  dev: boolean
   nonInteractive: boolean
   help: boolean
   version: boolean
@@ -53,6 +54,7 @@ const COMMON_SKIP_FLAGS = new Set([
   '--product',
   '--skip-install',
   '--skip-init',
+  '--dev',
 ])
 
 const COMMON_VALUE_FLAGS = new Set(['--type', '--product'])
@@ -64,6 +66,7 @@ const COMMON_BOOLEAN_FLAGS = new Set([
   '--list-types',
   '--skip-install',
   '--skip-init',
+  '--dev',
 ])
 
 const MCP_VALUE_FLAGS = new Set(['--openapi', '--tool-name'])
@@ -74,6 +77,7 @@ export const MCP_SPECIFIC_FLAGS = new Set(['--openapi', '--no-openapi', '--tool-
 export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
   const out: ParsedCommonArgs = {
     yes: false,
+    dev: false,
     nonInteractive: false,
     help: false,
     version: false,
@@ -119,6 +123,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--list-types') out.listTypes = true
       if (arg === '--skip-install') out.skipInstall = true
       if (arg === '--skip-init') out.skipInit = true
+      if (arg === '--dev') out.dev = true
       continue
     }
 
@@ -201,7 +206,7 @@ export function inferMcpMode(args: ParsedMcpArgs): McpMode | null {
 }
 
 export function toInitOptions(common: ParsedCommonArgs): InitCommandOptions {
-  return { yes: common.yes }
+  return { yes: common.yes, dev: common.dev }
 }
 
 const KEBAB_RE = /^[a-z][a-z0-9-]*$/
@@ -252,6 +257,10 @@ Common flags:
   --list-types           List available project types and exit
   --skip-install         Skip the post-scaffold dependency install (run \`npm install\` manually)
   --skip-init            Skip the post-scaffold \`solvapay init\` step (no browser OAuth)
+  --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
+                         Internal testing only — production keys are rejected
+                         by api-dev. Seeds .env and forwards through to
+                         \`solvapay init --dev\`.
   -h, --help             Show this help (bare) or per-type help (with --type)
   --version              Print package version
 
@@ -270,6 +279,10 @@ MCP flags:
   --openapi <url|path>   Spec URL or local path. Implies from-openapi sub-mode.
   --no-openapi           Skip OpenAPI; scaffold from-scratch.
   --tool-name <camel>    Placeholder tool name in from-scratch mode (default: helloTool).
+  --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
+                         Internal testing only. Seeds .env with
+                         SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+                         and forwards through to \`solvapay init --dev\`.
   -h, --help             Show this help.
 
 For intent-driven tool clustering (one MCP tool spanning multiple upstream

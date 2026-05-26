@@ -257,6 +257,9 @@ function validateSelections(selections) {
   ) {
     throw new Error('selections.json: `solvapayProductRef` must be a string when provided.')
   }
+  if (selections.apiBaseUrl !== undefined && typeof selections.apiBaseUrl !== 'string') {
+    throw new Error('selections.json: `apiBaseUrl` must be a string when provided.')
+  }
   if (selections.mode !== undefined && !VALID_MODES.has(selections.mode)) {
     throw new Error(
       `selections.json: \`mode\` must be one of ${[...VALID_MODES].join(', ')} when provided.`,
@@ -733,6 +736,9 @@ async function writeDotEnv(target, selections) {
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
     `MCP_PUBLIC_BASE_URL=${selections.mcpPublicBaseUrl}`,
   ]
+  if (typeof selections.apiBaseUrl === 'string' && selections.apiBaseUrl.length > 0) {
+    lines.push(`SOLVAPAY_API_BASE_URL=${selections.apiBaseUrl}`)
+  }
   const auth = selections.upstreamAuth
   if (auth.kind === 'bearer' || auth.kind === 'apiKey') {
     lines.push(`UPSTREAM_API_KEY=${auth.key}`)
