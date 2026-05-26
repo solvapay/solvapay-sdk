@@ -279,6 +279,16 @@ export function narratedToolResult(
 /**
  * Wrap an error payload (typically the result of `handleRouteError`) in a
  * `SolvaPayCallToolResult` with `isError: true`.
+ *
+ * `content[0].text` carries a human-readable message — `details` when
+ * present (typically the full multi-line recovery text from
+ * `handleRouteError`), falling back to the short `error`. MCP clients
+ * that show tool errors verbatim therefore display recovery guidance
+ * instead of a stringified JSON blob.
+ *
+ * `structuredContent` still carries the full `{ error, status, details }`
+ * envelope so programmatic consumers (verify.mjs, test.mjs, the
+ * paywall transport) can branch on `status` without parsing text.
  */
 export function toolErrorResult(error: {
   error: string
@@ -287,7 +297,7 @@ export function toolErrorResult(error: {
 }): SolvaPayCallToolResult {
   return {
     isError: true,
-    content: [{ type: 'text', text: JSON.stringify(error) }],
+    content: [{ type: 'text', text: error.details ?? error.error }],
     structuredContent: error as unknown as Record<string, unknown>,
   }
 }

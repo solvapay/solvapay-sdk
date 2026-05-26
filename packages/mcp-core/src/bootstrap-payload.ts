@@ -49,6 +49,60 @@ const okOrNull = <T>(result: T | ErrorResult): T | null =>
   isErrorResult(result) ? null : (result as T)
 
 /**
+ * Multi-line recovery text shown when `getMerchantCore` returns 404 —
+ * i.e. the deployed worker holds a valid `SOLVAPAY_SECRET_KEY` but
+ * the SolvaPay backend has no merchant on file for it. This happens
+ * when the deploy preflights are bypassed (raw `wrangler deploy`) or
+ * when a user manually pushed a stale key. The message names the
+ * exact recovery step (`npx solvapay init`) and the redeploy follow-up
+ * so the agent / human can self-serve out of it.
+ */
+const buildProviderNotFoundMessage = (): string =>
+  [
+    'Provider account not found on this SolvaPay deployment.',
+    '',
+    'The Worker secret key authenticates against SolvaPay, but no merchant',
+    'record exists for it. This usually means the secret key was created',
+    'manually (without running `solvapay init`) or the merchant was deleted.',
+    '',
+    'To recover:',
+    '  1. Run `npx solvapay init` in the project root. It will create the',
+    '     merchant on the backend and write a valid secret key to `.env`.',
+    '  2. Redeploy with `npm run deploy` to push the corrected secret to',
+    '     the Worker.',
+    '',
+    'No tool calls will succeed until the merchant exists.',
+  ].join('\n')
+
+/**
+ * Throw an Error carrying `{ status, details }` so the `trace` wrapper
+ * in `descriptors.ts` can surface the upstream HTTP status verbatim
+ * and put the human-readable recovery text on `content[0].text`.
+ *
+ * A plain `Error` is used (rather than `SolvaPayError`) so the helper
+ * stays usable from `@solvapay/mcp-core` without re-exporting the
+ * class from `@solvapay/core` through a runtime dep cycle. The trace
+ * wrapper duck-types `status` / `details` and doesn't care about
+ * `instanceof`.
+ */
+const createBootstrapMerchantError = (merchantResult: ErrorResult): Error => {
+  const details =
+    merchantResult.status === 404
+      ? buildProviderNotFoundMessage()
+      : `bootstrap: merchant lookup failed: ${merchantResult.error}`
+  const err = new Error(details)
+  Object.assign(err, { status: merchantResult.status, details })
+  return err
+}
+
+const createBootstrapProductError = (productResult: ErrorResult): Error => {
+  const details = `bootstrap: product lookup failed: ${productResult.error}`
+  const err = new Error(details)
+  Object.assign(err, { status: productResult.status, details })
+  return err
+}
+
+/**
  * Produce a reusable `buildBootstrapPayload(view, extra)` closure
  * wired against the same SolvaPay instance + product as a
  * `buildSolvaPayDescriptors` bundle.
@@ -117,10 +171,10 @@ export function createBuildBootstrapPayload(
     ])
 
     if (isErrorResult(merchantResult)) {
-      throw new Error(`bootstrap: merchant lookup failed: ${merchantResult.error}`)
+      throw createBootstrapMerchantError(merchantResult)
     }
     if (isErrorResult(productResult)) {
-      throw new Error(`bootstrap: product lookup failed: ${productResult.error}`)
+      throw createBootstrapProductError(productResult)
     }
 
     const plans = isErrorResult(plansResult) ? [] : plansResult.plans

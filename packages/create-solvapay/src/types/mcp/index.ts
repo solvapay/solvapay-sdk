@@ -55,6 +55,9 @@ async function run(opts: RunOptions): Promise<void> {
       options: initOptions,
       productRef: common.product,
       nonInteractive,
+      skipInstall: common.skipInstall,
+      skipInit: common.skipInit,
+      dev: common.dev,
     })
     return
   }
@@ -66,6 +69,9 @@ async function run(opts: RunOptions): Promise<void> {
     toolName,
     options: initOptions,
     productRef: common.product,
+    skipInstall: common.skipInstall,
+    skipInit: common.skipInit,
+    dev: common.dev,
   })
 }
 

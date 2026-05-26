@@ -307,10 +307,30 @@ export function buildSolvaPayDescriptors(
       if (onToolResult) onToolResult(name, result, { durationMs: Date.now() - started })
       return result
     } catch (err) {
+      // Errors thrown from `buildBootstrapPayload` and downstream
+      // helpers can carry an upstream HTTP `status` and a
+      // human-readable `details` string (see
+      // `createBootstrapMerchantError` in `bootstrap-payload.ts`).
+      // Read them off the caught value when present so the recovery
+      // message reaches `content[0].text` and `structuredContent.status`
+      // matches the upstream — otherwise both used to collapse to 500
+      // / `previewJson(err)`.
+      const carrier =
+        err && typeof err === 'object'
+          ? (err as { status?: unknown; details?: unknown })
+          : undefined
+      const status = typeof carrier?.status === 'number' ? carrier.status : 500
+      const message = err instanceof Error ? err.message : String(err)
+      const details =
+        typeof carrier?.details === 'string' && carrier.details.length > 0
+          ? carrier.details
+          : err instanceof Error
+            ? err.message
+            : previewJson(err)
       const errorResult = toolErrorResult({
-        error: err instanceof Error ? err.message : String(err),
-        status: 500,
-        details: previewJson(err),
+        error: message,
+        status,
+        details,
       })
       if (onToolResult) onToolResult(name, errorResult, { durationMs: Date.now() - started })
       return errorResult

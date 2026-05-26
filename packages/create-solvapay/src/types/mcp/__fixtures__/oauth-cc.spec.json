@@ -1,0 +1,104 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Roaring-style OAuth Client Credentials API",
+    "version": "1.0.0",
+    "description": "Minimal OpenAPI fixture exercising oauth2 with the clientCredentials flow. Used by smoke + unit tests for the create-mcp-app oauth2 client_credentials path."
+  },
+  "servers": [
+    { "url": "https://api.example-roaring.test" }
+  ],
+  "paths": {
+    "/companies/{orgnr}": {
+      "get": {
+        "operationId": "getCompany",
+        "summary": "Fetch a company by Swedish org number.",
+        "parameters": [
+          {
+            "name": "orgnr",
+            "in": "path",
+            "required": true,
+            "description": "Swedish company registration number.",
+            "schema": { "type": "string", "example": "5566778899" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Company details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgnr": { "type": "string" },
+                    "name": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "oauthCc": ["company:read"] }]
+      }
+    },
+    "/companies/{orgnr}/notes": {
+      "post": {
+        "operationId": "addCompanyNote",
+        "summary": "Attach a note to a company.",
+        "parameters": [
+          {
+            "name": "orgnr",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "example": "5566778899" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string", "example": "Renewal due Q3." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Note created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "oauthCc": ["company:write"] }]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauthCc": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://api.example-roaring.test/token",
+            "scopes": {
+              "company:read": "Read company records",
+              "company:write": "Write notes against companies"
+            }
+          }
+        }
+      }
+    }
+  }
+}

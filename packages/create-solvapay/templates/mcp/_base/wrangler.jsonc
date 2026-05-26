@@ -12,10 +12,13 @@
  * - `nodejs_compat` is a safety net for any transitively Node-ish path
  *   in `@modelcontextprotocol/sdk`. The SolvaPay MCP surface itself is
  *   fetch-first; this flag prevents runtime surprises.
- * - `SOLVAPAY_SECRET_KEY` and `UPSTREAM_API_KEY` are Worker Secrets,
- *   not vars. Both are uploaded from `.env` by `scripts/deploy.mjs`
- *   on first deploy. `UPSTREAM_API_KEY` is only present when scaffold
- *   wrote it (authenticated upstream).
+ * - `SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, and the
+ *   `UPSTREAM_OAUTH_*` keys (`TOKEN_URL` / `CLIENT_ID` / `CLIENT_SECRET`
+ *   / `SCOPE` / `AUDIENCE`) are Worker Secrets, not vars. All of them
+ *   are uploaded from `.env` by `scripts/deploy.mjs` on first deploy.
+ *   `UPSTREAM_API_KEY` is present only when scaffold wrote it
+ *   (bearer / apiKey upstream); the OAuth keys are present only when
+ *   scaffold wrote them (`oauth2-client-credentials` upstream).
  *
  * The `vars` block ships placeholders that look obviously wrong so a
  * bare `wrangler deploy` (without `npm run deploy`'s `--var` overrides)

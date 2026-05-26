@@ -11,10 +11,12 @@
  *
  * This script sources `.env` (gitignored) and passes the overridable
  * keys as `--var KEY:VALUE` to `wrangler deploy`. Worker Secrets
- * (`SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`) are not passed via
- * `--var`. Both are uploaded from `.env` automatically on the first
- * deploy when present and not already on the worker (see
- * `ensureSolvaPaySecretKey` and `ensureUpstreamApiKeySecret`).
+ * (`SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, and the
+ * `UPSTREAM_OAUTH_*` family) are not passed via `--var`. All are
+ * uploaded from `.env` automatically on the first deploy when
+ * present and not already on the worker (see
+ * `ensureSolvaPaySecretKey`, `ensureUpstreamApiKeySecret`, and
+ * `ensureUpstreamOAuthSecrets`).
  *
  * Single environment by design. Go-live is a key swap, not a separate
  * `--env`: replace `SOLVAPAY_SECRET_KEY` in `.env` with the live key,
@@ -320,6 +322,99 @@ function failSubdomainNotRegistered(accountId) {
   process.exit(1)
 }
 
+/**
+ * Hit `GET /v1/sdk/merchant` with the deployer's `SOLVAPAY_SECRET_KEY`
+ * to confirm the SolvaPay backend has a merchant record for it before
+ * `wrangler deploy` uploads the secret. Without this check, a key
+ * without a merchant still authenticates, gets uploaded as a Worker
+ * secret, and then every paid tool's bootstrap fails post-deploy with
+ * `Provider not found (404)`. Catching it here makes the deploy a no-op
+ * instead of a half-success.
+ *
+ * Behaviour:
+ *   - 200          → return (preflight passes).
+ *   - 404          → print recovery message + `process.exit(1)`.
+ *   - 401          → print `npx solvapay init` hint + `process.exit(1)`.
+ *   - other / err  → soft warning; deploy continues. Network errors
+ *                    are common in CI runners and shouldn't block deploys.
+ *
+ * Skips cleanly when `SOLVAPAY_SECRET_KEY` is absent from `.env` (the
+ * worker likely already has it as a secret, set out-of-band).
+ */
+async function runSolvaPayPreflight({ secretKey, apiBaseUrl, dryRun = false } = {}) {
+  if (!secretKey) {
+    console.warn(
+      '⚠  Skipping SolvaPay merchant preflight — SOLVAPAY_SECRET_KEY missing from .env. The worker may still have a secret set out-of-band; redeploy with the key in .env if you want this check to run.',
+    )
+    return
+  }
+
+  const base = (apiBaseUrl ?? 'https://api.solvapay.com').replace(/\/+$/, '')
+  const url = `${base}/v1/sdk/merchant`
+
+  if (dryRun) {
+    console.log(`[dry-run] would verify SolvaPay merchant at ${url}`)
+  }
+
+  let response
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${secretKey}` },
+    })
+  } catch (err) {
+    console.warn(
+      `⚠  SolvaPay merchant preflight failed (network error: ${err?.message ?? err}). Continuing deploy — paid tools may fail at runtime if the secret key is wrong.`,
+    )
+    return
+  }
+
+  if (response.ok) {
+    console.log('SolvaPay merchant ok — proceeding with deploy.')
+    return
+  }
+
+  if (response.status === 404) {
+    console.error(
+      [
+        '',
+        '❌ SolvaPay merchant preflight failed: Provider not found (404).',
+        '',
+        '   The SOLVAPAY_SECRET_KEY in .env authenticates against SolvaPay,',
+        '   but no merchant record exists for it. Every paid tool on the',
+        '   deployed worker would fail with `Provider not found` post-deploy.',
+        '',
+        '   To recover:',
+        '     1. Run `npx solvapay init` in the project root to create the',
+        '        merchant and write a valid key to .env.',
+        '     2. Re-run `npm run deploy` once the key in .env is for an',
+        '        existing merchant.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
+  }
+
+  if (response.status === 401) {
+    console.error(
+      [
+        '',
+        '❌ SolvaPay merchant preflight failed: Unauthorized (401).',
+        '',
+        '   The SOLVAPAY_SECRET_KEY in .env was rejected by the SolvaPay API.',
+        '   Run `npx solvapay init` to refresh credentials and retry.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
+  }
+
+  const detail = await response.text().catch(() => '')
+  console.warn(
+    `⚠  SolvaPay merchant preflight returned ${response.status}. Continuing deploy. Detail: ${detail}`,
+  )
+}
+
 async function runDeployPreflight({ dryRun = false } = {}) {
   const whoami = getWranglerWhoami()
   if (!whoami) {
@@ -403,6 +498,49 @@ function ensureUpstreamApiKeySecret(localEnv, { dryRun = false, force = false } 
 
   console.log('Uploading UPSTREAM_API_KEY from .env to Worker Secrets…')
   putWorkerSecret('UPSTREAM_API_KEY', value)
+}
+
+// `UPSTREAM_OAUTH_*` mirrors `UPSTREAM_API_KEY` semantics: scaffold writes
+// these when `selections.json.upstreamAuth.kind` is
+// `oauth2-client-credentials`. Uploaded once on first deploy, skipped if
+// already present on the worker. `scope` and `audience` are optional —
+// the deploy script only uploads them when scaffold wrote them.
+const OAUTH_REQUIRED_SECRETS = ['UPSTREAM_OAUTH_TOKEN_URL', 'UPSTREAM_OAUTH_CLIENT_ID', 'UPSTREAM_OAUTH_CLIENT_SECRET']
+const OAUTH_OPTIONAL_SECRETS = ['UPSTREAM_OAUTH_SCOPE', 'UPSTREAM_OAUTH_AUDIENCE']
+
+function ensureUpstreamOAuthSecrets(localEnv, { dryRun = false } = {}) {
+  const present = OAUTH_REQUIRED_SECRETS.filter(name => (localEnv[name] ?? '').trim().length > 0)
+  if (present.length === 0) return
+
+  if (present.length < OAUTH_REQUIRED_SECRETS.length) {
+    const missing = OAUTH_REQUIRED_SECRETS.filter(name => !(localEnv[name] ?? '').trim())
+    console.error(
+      [
+        '',
+        `❌ OAuth upstream auth is partially configured in .env. Missing: ${missing.join(', ')}.`,
+        '   Either populate all three required keys or remove the OAuth block from .env.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
+  }
+
+  const existing = listWorkerSecretNames()
+  const allKeys = [...OAUTH_REQUIRED_SECRETS, ...OAUTH_OPTIONAL_SECRETS]
+  for (const name of allKeys) {
+    const value = (localEnv[name] ?? '').trim()
+    if (!value) continue
+    if (existing?.includes(name)) {
+      console.log(`${name} already set on worker — skipping upload.`)
+      continue
+    }
+    if (dryRun) {
+      console.log(`[dry-run] would upload ${name} from .env to Worker Secrets`)
+      continue
+    }
+    console.log(`Uploading ${name} from .env to Worker Secrets…`)
+    putWorkerSecret(name, value)
+  }
 }
 
 // Conservative heuristic: catches the typical scaffold/agent placeholders
@@ -669,8 +807,19 @@ const resolvedPublicUrl = ensureMcpPublicBaseUrl(localEnv, preflight, { dryRun }
 const confirmation = await confirmDeploymentUrl(localEnv, preflight, { dryRun, yes: yesFlag })
 if (confirmation === 'abort') process.exit(1)
 
+// Verify the merchant exists on the SolvaPay backend before uploading
+// the secret key. Otherwise a 404-from-the-backend deploy looks like a
+// success at the `wrangler deploy` level but every paid tool fails at
+// runtime.
+await runSolvaPayPreflight({
+  secretKey: localEnv.SOLVAPAY_SECRET_KEY?.trim(),
+  apiBaseUrl: localEnv.SOLVAPAY_API_BASE_URL?.trim(),
+  dryRun,
+})
+
 ensureSolvaPaySecretKey(localEnv, { dryRun })
 ensureUpstreamApiKeySecret(localEnv, { dryRun, force: forceFlag })
+ensureUpstreamOAuthSecrets(localEnv, { dryRun })
 
 const wranglerPassthrough = passthrough.filter(
   arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',

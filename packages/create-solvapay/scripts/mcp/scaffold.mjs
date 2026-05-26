@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 /**
- * `scaffold.mjs <spec> <target-dir> --selections <path>` — generate a
+ * `scaffold.mjs <spec> <target-dir> --selections <path> [--dev]` — generate a
  * SolvaPay-wired Cloudflare Workers MCP server from an OpenAPI spec.
  *
  * Destructive: refuses to overwrite an existing `target-dir`. Reads
@@ -9,6 +9,13 @@
  * writes it to `/tmp/selections-<uuid>.json` and deletes after; see
  * `scaffold.md`). The file contains the upstream API key, so it must
  * never land inside the project a follow-up `git add .` would catch.
+ *
+ * Flags:
+ *   --dev   Seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com` in
+ *           the generated `.env` so deploy/preflight/worker all route to
+ *           the SolvaPay dev backend. Internal testing only — production
+ *           keys are rejected by api-dev. Explicit `selections.apiBaseUrl`
+ *           wins over this default.
  *
  * Output (on stdout, JSON):
  *   {
@@ -43,13 +50,14 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_TEMPLATE_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', '_base')
 const OPENAPI_OVERLAY_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'from-openapi')
 
-const VALID_AUTH_KINDS = new Set(['none', 'bearer', 'apiKey'])
+const VALID_AUTH_KINDS = new Set(['none', 'bearer', 'apiKey', 'oauth2-client-credentials'])
 const VALID_TIERS = new Set(['free', 'paid', 'skip'])
 const VALID_MODES = new Set(['one-to-one', 'intent-driven'])
+const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  const { specPath, targetDir, selectionsPath } = args
+  const { specPath, targetDir, selectionsPath, dev } = args
 
   const target = resolve(targetDir)
   const selectionsAbs = resolve(selectionsPath)
@@ -58,6 +66,12 @@ async function main() {
   await assertTemplatePresent(BASE_TEMPLATE_DIR)
 
   const selections = await readSelections(selectionsAbs)
+  // Explicit `selections.apiBaseUrl` wins over the `--dev` default. The
+  // flag only fills the gap when the caller didn't pin a base URL — same
+  // precedence the published CLI's `--dev` uses (see args.ts).
+  if (dev && (typeof selections.apiBaseUrl !== 'string' || selections.apiBaseUrl.length === 0)) {
+    selections.apiBaseUrl = DEV_API_BASE_URL
+  }
   const mode = selections.mode ?? 'one-to-one'
   const { spec } = await loadSpec(specPath)
   const operations = listOperations(spec)
@@ -144,10 +158,13 @@ function parseArgs(argv) {
   let specPath
   let targetDir
   let selectionsPath
+  let dev = false
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '--selections') {
       selectionsPath = argv[++i]
+    } else if (arg === '--dev') {
+      dev = true
     } else if (!specPath) {
       specPath = arg
     } else if (!targetDir) {
@@ -155,13 +172,13 @@ function parseArgs(argv) {
     }
   }
   if (!specPath || !targetDir || !selectionsPath) {
-    console.error('Usage: scaffold.mjs <spec> <target-dir> --selections <path>')
+    console.error('Usage: scaffold.mjs <spec> <target-dir> --selections <path> [--dev]')
     process.exit(2)
   }
   if (!isAbsolute(selectionsPath) && !selectionsPath.startsWith('.')) {
     // Accept either; resolve happens later. This is a soft hint, not a fail.
   }
-  return { specPath, targetDir, selectionsPath }
+  return { specPath, targetDir, selectionsPath, dev }
 }
 
 function assertSelectionsOutsideTarget(selectionsAbs, targetAbs) {
@@ -240,6 +257,9 @@ function validateSelections(selections) {
   ) {
     throw new Error('selections.json: `solvapayProductRef` must be a string when provided.')
   }
+  if (selections.apiBaseUrl !== undefined && typeof selections.apiBaseUrl !== 'string') {
+    throw new Error('selections.json: `apiBaseUrl` must be a string when provided.')
+  }
   if (selections.mode !== undefined && !VALID_MODES.has(selections.mode)) {
     throw new Error(
       `selections.json: \`mode\` must be one of ${[...VALID_MODES].join(', ')} when provided.`,
@@ -269,6 +289,9 @@ function validateSelections(selections) {
         'selections.json: `upstreamAuth.name` and `upstreamAuth.key` are required when `kind` is "apiKey".',
       )
     }
+  }
+  if (auth.kind === 'oauth2-client-credentials') {
+    validateOauth2ClientCredentialsSelection(auth)
   }
   // Intent-driven mode owns its own `src/tools/*.ts` files, so no
   // per-op selections are needed. One-to-one mode (default) still
@@ -304,6 +327,49 @@ function validateSelections(selections) {
 function requireString(obj, key) {
   if (typeof obj[key] !== 'string' || obj[key].length === 0) {
     throw new Error(`selections.json: \`${key}\` is required and must be a non-empty string.`)
+  }
+}
+
+function validateOauth2ClientCredentialsSelection(auth) {
+  if (typeof auth.tokenUrl !== 'string' || auth.tokenUrl.length === 0) {
+    throw new Error(
+      'selections.json: `upstreamAuth.tokenUrl` is required when `kind` is "oauth2-client-credentials".',
+    )
+  }
+  let parsed
+  try {
+    parsed = new URL(auth.tokenUrl)
+  } catch {
+    throw new Error(
+      `selections.json: \`upstreamAuth.tokenUrl\` must be a valid URL (got \`${auth.tokenUrl}\`).`,
+    )
+  }
+  // Allow `http://localhost` (and 127.0.0.1) so unit tests can exercise
+  // the flow against a mock token server without HTTPS. Anything else
+  // must be HTTPS — leaking client credentials over plain HTTP would
+  // defeat the whole point of using OAuth.
+  const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
+  if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && isLocalhost)) {
+    throw new Error(
+      `selections.json: \`upstreamAuth.tokenUrl\` must use https:// (got \`${auth.tokenUrl}\`). ` +
+        'Only `http://localhost` and `http://127.0.0.1` are permitted for local tests.',
+    )
+  }
+  if (typeof auth.clientId !== 'string' || auth.clientId.length === 0) {
+    throw new Error(
+      'selections.json: `upstreamAuth.clientId` is required when `kind` is "oauth2-client-credentials".',
+    )
+  }
+  if (typeof auth.clientSecret !== 'string' || auth.clientSecret.length === 0) {
+    throw new Error(
+      'selections.json: `upstreamAuth.clientSecret` is required when `kind` is "oauth2-client-credentials".',
+    )
+  }
+  if (auth.scope !== undefined && typeof auth.scope !== 'string') {
+    throw new Error('selections.json: `upstreamAuth.scope` must be a string when provided.')
+  }
+  if (auth.audience !== undefined && typeof auth.audience !== 'string') {
+    throw new Error('selections.json: `upstreamAuth.audience` must be a string when provided.')
   }
 }
 
@@ -375,13 +441,14 @@ function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl }) {
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
   const includesEnv = headerLines.length > 0
+  const needsAccessToken = auth.kind === 'oauth2-client-credentials'
   const signature = includesEnv
     ? `${fnName}(ctx: AdditionalToolsContext, env: Env)`
     : `${fnName}(ctx: AdditionalToolsContext)`
   const fetchInit = renderFetchInit(operation, headerLines)
   const body = tier === 'paid'
-    ? renderPayableBody({ operation, urlTemplate, fetchInit })
-    : renderFreeBody({ operation, urlTemplate, fetchInit })
+    ? renderPayableBody({ operation, urlTemplate, fetchInit, needsAccessToken })
+    : renderFreeBody({ operation, urlTemplate, fetchInit, needsAccessToken })
 
   // `upstreamFetchJson` is the template-shipped helper at
   // `src/lib/upstreamFetch.ts`. It sends `Accept: application/json`,
@@ -394,6 +461,7 @@ function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl }) {
     "import type { AdditionalToolsContext } from '@solvapay/mcp'",
     "import { upstreamFetchJson } from '../lib/upstreamFetch'",
   ]
+  if (needsAccessToken) importLines.push("import { getAccessToken } from '../lib/upstreamOAuth'")
   if (includesEnv) importLines.push("import type { Env } from '../worker'")
 
   return `${importLines.join('\n')}\n\nexport function ${signature} {\n${body}\n}\n`
@@ -492,18 +560,25 @@ function renderHeaderLines(auth, schemes, operation) {
   // to the top-level auth kind when the spec has no operation-level
   // security override.
   //
-  // Both branches wrap `env.UPSTREAM_API_KEY` (typed `string | undefined`
+  // The static branches wrap `env.UPSTREAM_API_KEY` (typed `string | undefined`
   // in the template's `Env` interface) in a template literal so the
   // header value is `string`. If the secret is missing the worker still
-  // sends the header with literal "undefined" — the recovery path is
-  // runtime safety net is UPSTREAM_API_KEY on the Worker — uploaded from
-  // `.env` by deploy.mjs on first deploy (see deploy.md), not a
-  // compile-time guard.
+  // sends the header with literal "undefined" — the recovery path
+  // is uploading `UPSTREAM_API_KEY` to the Worker from `.env` via
+  // deploy.mjs on first deploy (see deploy.md), not a compile-time
+  // guard.
+  //
+  // The oauth2-client-credentials branch references a `token` variable
+  // that the renderer injects right before URL construction in the
+  // handler body (see renderPayableBody / renderFreeBody) via
+  // `const token = await getAccessToken(env)`.
   const headerEntries = []
   if (auth.kind === 'bearer') {
     headerEntries.push("authorization: `Bearer ${env.UPSTREAM_API_KEY}`")
   } else if (auth.kind === 'apiKey') {
     headerEntries.push(`'${auth.name.toLowerCase()}': \`\${env.UPSTREAM_API_KEY}\``)
+  } else if (auth.kind === 'oauth2-client-credentials') {
+    headerEntries.push('authorization: `Bearer ${token}`')
   }
   if (operation.requestBody?.schema) {
     headerEntries.push("'content-type': 'application/json'")
@@ -511,18 +586,19 @@ function renderHeaderLines(auth, schemes, operation) {
   return headerEntries
 }
 
-function renderPayableBody({ operation, urlTemplate, fetchInit }) {
+function renderPayableBody({ operation, urlTemplate, fetchInit, needsAccessToken }) {
   const schemaFields = renderSchemaFields(operation, 6)
   const schemaBlock = schemaFields ? `\n${schemaFields}\n    ` : ''
   const annotations = renderAnnotations(annotationsFor(operation), 4)
   const narration = JSON.stringify(`${operation.operationId} returned upstream data.`)
+  const tokenLine = needsAccessToken ? '      const token = await getAccessToken(env)\n' : ''
   return `  ctx.registerPayable('${operation.operationId}', {
     title: ${JSON.stringify(operation.summary ?? operation.operationId)},
     description: ${JSON.stringify(buildDescription(operation))},
     schema: {${schemaBlock}},
     annotations: ${annotations},
     handler: async (input, c) => {
-      const url = new URL(${urlTemplate})
+${tokenLine}      const url = new URL(${urlTemplate})
 ${fetchInit.queryAssign}
       const data = await upstreamFetchJson<Record<string, unknown>>(url, {
 ${fetchInit.methodBlock}${fetchInit.headersBlock}${fetchInit.bodyBlock}      })
@@ -531,11 +607,12 @@ ${fetchInit.methodBlock}${fetchInit.headersBlock}${fetchInit.bodyBlock}      })
   })`
 }
 
-function renderFreeBody({ operation, urlTemplate, fetchInit }) {
+function renderFreeBody({ operation, urlTemplate, fetchInit, needsAccessToken }) {
   const schemaFields = renderSchemaFields(operation, 8)
   const schemaBlock = schemaFields ? `\n${schemaFields}\n      ` : ''
   const annotations = renderAnnotations(annotationsFor(operation), 6)
   const narration = JSON.stringify(`${operation.operationId} returned upstream data.`)
+  const tokenLine = needsAccessToken ? '      const token = await getAccessToken(env)\n' : ''
   return `  ctx.server.registerTool(
     '${operation.operationId}',
     {
@@ -545,7 +622,7 @@ function renderFreeBody({ operation, urlTemplate, fetchInit }) {
       annotations: ${annotations},
     },
     async input => {
-      const url = new URL(${urlTemplate})
+${tokenLine}      const url = new URL(${urlTemplate})
 ${fetchInit.queryAssign}
       const data = await upstreamFetchJson<Record<string, unknown>>(url, {
 ${fetchInit.methodBlock}${fetchInit.headersBlock}${fetchInit.bodyBlock}      })
@@ -659,8 +736,22 @@ async function writeDotEnv(target, selections) {
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
     `MCP_PUBLIC_BASE_URL=${selections.mcpPublicBaseUrl}`,
   ]
-  if (selections.upstreamAuth.kind !== 'none') {
-    lines.push(`UPSTREAM_API_KEY=${selections.upstreamAuth.key}`)
+  if (typeof selections.apiBaseUrl === 'string' && selections.apiBaseUrl.length > 0) {
+    lines.push(`SOLVAPAY_API_BASE_URL=${selections.apiBaseUrl}`)
+  }
+  const auth = selections.upstreamAuth
+  if (auth.kind === 'bearer' || auth.kind === 'apiKey') {
+    lines.push(`UPSTREAM_API_KEY=${auth.key}`)
+  } else if (auth.kind === 'oauth2-client-credentials') {
+    lines.push(`UPSTREAM_OAUTH_TOKEN_URL=${auth.tokenUrl}`)
+    lines.push(`UPSTREAM_OAUTH_CLIENT_ID=${auth.clientId}`)
+    lines.push(`UPSTREAM_OAUTH_CLIENT_SECRET=${auth.clientSecret}`)
+    if (typeof auth.scope === 'string' && auth.scope.length > 0) {
+      lines.push(`UPSTREAM_OAUTH_SCOPE=${auth.scope}`)
+    }
+    if (typeof auth.audience === 'string' && auth.audience.length > 0) {
+      lines.push(`UPSTREAM_OAUTH_AUDIENCE=${auth.audience}`)
+    }
   }
   await writeFile(path, `${lines.join('\n')}\n`, 'utf8')
   return path
@@ -668,7 +759,19 @@ async function writeDotEnv(target, selections) {
 
 function secretsSeededFor(auth) {
   const out = []
-  if (auth.kind !== 'none') out.push({ name: 'UPSTREAM_API_KEY', location: '.env' })
+  if (auth.kind === 'bearer' || auth.kind === 'apiKey') {
+    out.push({ name: 'UPSTREAM_API_KEY', location: '.env' })
+  } else if (auth.kind === 'oauth2-client-credentials') {
+    out.push({ name: 'UPSTREAM_OAUTH_TOKEN_URL', location: '.env' })
+    out.push({ name: 'UPSTREAM_OAUTH_CLIENT_ID', location: '.env' })
+    out.push({ name: 'UPSTREAM_OAUTH_CLIENT_SECRET', location: '.env' })
+    if (typeof auth.scope === 'string' && auth.scope.length > 0) {
+      out.push({ name: 'UPSTREAM_OAUTH_SCOPE', location: '.env' })
+    }
+    if (typeof auth.audience === 'string' && auth.audience.length > 0) {
+      out.push({ name: 'UPSTREAM_OAUTH_AUDIENCE', location: '.env' })
+    }
+  }
   out.push({ name: 'SOLVAPAY_PRODUCT_REF', location: '.env' })
   out.push({ name: 'MCP_PUBLIC_BASE_URL', location: '.env (localhost placeholder; auto-resolved on deploy)' })
   return out

@@ -32,6 +32,16 @@ export interface Env {
   MCP_PUBLIC_BASE_URL: string
   SOLVAPAY_API_BASE_URL?: string
   UPSTREAM_API_KEY?: string
+  // OAuth 2.0 client_credentials — populated when scaffold detected
+  // `upstreamAuth.kind: "oauth2-client-credentials"`. Consumed by
+  // `src/lib/upstreamOAuth.ts` when a generated tool calls
+  // `getAccessToken(env)`. All five are typed optional because not
+  // every project uses them.
+  UPSTREAM_OAUTH_TOKEN_URL?: string
+  UPSTREAM_OAUTH_CLIENT_ID?: string
+  UPSTREAM_OAUTH_CLIENT_SECRET?: string
+  UPSTREAM_OAUTH_SCOPE?: string
+  UPSTREAM_OAUTH_AUDIENCE?: string
 }
 
 function requireEnv(env: Env, name: keyof Env): string {

@@ -8,7 +8,6 @@
  * (e.g. `npm create solvapay my-app -- --type mcp --yes`).
  */
 
-import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
@@ -21,16 +20,14 @@ import {
   sanitizeProjectName,
 } from './args'
 import { PROJECT_TYPE_IDS, PROJECT_TYPES } from './types/registry'
-
-const require = createRequire(import.meta.url)
-const pkg = require('../package.json') as { version: string }
+import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
 async function main(): Promise<void> {
   const rawArgv = process.argv.slice(2)
   const args = parseArgs(rawArgv)
 
   if (args.version) {
-    process.stdout.write(`${pkg.version}\n`)
+    process.stdout.write(`${PACKAGE_VERSION}\n`)
     return
   }
 
@@ -100,6 +97,7 @@ async function main(): Promise<void> {
   }
 
   const type = await factory()
+  printVersionBanner()
   await type.run({ target, projectName, common: args, raw: rawArgv })
 }
 
