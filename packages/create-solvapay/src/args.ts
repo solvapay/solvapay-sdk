@@ -17,6 +17,8 @@ export type ParsedCommonArgs = {
   help: boolean
   version: boolean
   listTypes: boolean
+  skipInstall: boolean
+  skipInit: boolean
   unknownFlag?: string
 }
 
@@ -44,7 +46,14 @@ const FLAG_ALIASES: Record<string, string> = {
   '-h': '--help',
 }
 
-const COMMON_SKIP_FLAGS = new Set(['--type', '--yes', '--non-interactive', '--product'])
+const COMMON_SKIP_FLAGS = new Set([
+  '--type',
+  '--yes',
+  '--non-interactive',
+  '--product',
+  '--skip-install',
+  '--skip-init',
+])
 
 const COMMON_VALUE_FLAGS = new Set(['--type', '--product'])
 const COMMON_BOOLEAN_FLAGS = new Set([
@@ -53,6 +62,8 @@ const COMMON_BOOLEAN_FLAGS = new Set([
   '--help',
   '--version',
   '--list-types',
+  '--skip-install',
+  '--skip-init',
 ])
 
 const MCP_VALUE_FLAGS = new Set(['--openapi', '--tool-name'])
@@ -67,6 +78,8 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
     help: false,
     version: false,
     listTypes: false,
+    skipInstall: false,
+    skipInit: false,
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -104,6 +117,8 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--help') out.help = true
       if (arg === '--version') out.version = true
       if (arg === '--list-types') out.listTypes = true
+      if (arg === '--skip-install') out.skipInstall = true
+      if (arg === '--skip-init') out.skipInit = true
       continue
     }
 
@@ -235,6 +250,8 @@ Common flags:
   --product <ref>        Pre-fill SOLVAPAY_PRODUCT_REF (skip the picker)
   --non-interactive      Alias for --yes; fail fast on any missing prompt input
   --list-types           List available project types and exit
+  --skip-install         Skip the post-scaffold dependency install (run \`npm install\` manually)
+  --skip-init            Skip the post-scaffold \`solvapay init\` step (no browser OAuth)
   -h, --help             Show this help (bare) or per-type help (with --type)
   --version              Print package version
 

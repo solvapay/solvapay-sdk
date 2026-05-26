@@ -28,10 +28,12 @@ export type FromScratchInput = {
   toolName: string
   options: InitCommandOptions
   productRef?: string
+  skipInstall?: boolean
+  skipInit?: boolean
 }
 
 export async function runFromScratch(input: FromScratchInput): Promise<void> {
-  const { target, projectName, toolName, options, productRef } = input
+  const { target, projectName, toolName, options, productRef, skipInstall, skipInit } = input
 
   await assertTargetDirAbsent(target)
 
@@ -59,26 +61,42 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   await writeBootstrapEnv(target, productRef ?? PLACEHOLDERS.PRODUCT_REF)
 
   const packageManager = await detectPackageManager(target)
-  process.stdout.write(`📦 Installing dependencies with ${packageManager}...\n`)
-  const installResult = await installProjectDependencies(packageManager, target, message => {
-    process.stdout.write(`   ${message}\n`)
-  })
-  if (!installResult.ok) {
-    process.stdout.write(
-      `⚠️  ${installResult.command} failed (${installResult.warning ?? 'unknown error'}). ` +
-        `Run \`${packageManager} install\` manually inside ${target} before deploying.\n`,
-    )
+  if (skipInstall) {
+    process.stdout.write('⏭  Skipping dependency install (--skip-install)\n')
   } else {
-    process.stdout.write('✅ Dependencies installed\n')
+    process.stdout.write(`📦 Installing dependencies with ${packageManager}...\n`)
+    const installResult = await installProjectDependencies(packageManager, target, message => {
+      process.stdout.write(`   ${message}\n`)
+    })
+    if (!installResult.ok) {
+      process.stdout.write(
+        `⚠️  ${installResult.command} failed (${installResult.warning ?? 'unknown error'}). ` +
+          `Run \`${packageManager} install\` manually inside ${target} before deploying.\n`,
+      )
+    } else {
+      process.stdout.write('✅ Dependencies installed\n')
+    }
   }
 
   process.stdout.write('\n')
-  await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
+  if (skipInit) {
+    process.stdout.write('⏭  Skipping `solvapay init` (--skip-init)\n')
+  } else {
+    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
+  }
 
   await gitInit(target)
 
   process.stdout.write(`\n🎉 Done. Next steps:\n`)
   process.stdout.write(`   cd ${projectName}\n`)
+  if (skipInstall) {
+    process.stdout.write(
+      `   ${packageManager} install   # --skip-install was set; install before running dev\n`,
+    )
+  }
+  if (skipInit) {
+    process.stdout.write(`   npx solvapay init   # --skip-init was set; run to wire up auth + product\n`)
+  }
   process.stdout.write(
     `   ${packageManager === 'npm' ? 'npm run' : packageManager} dev   # widget watch + wrangler dev on http://localhost:8787\n`,
   )

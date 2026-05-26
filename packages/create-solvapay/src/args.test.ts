@@ -41,6 +41,14 @@ describe('parseArgs', () => {
     expect(result.product).toBe('prd_abc')
   })
 
+  it('parses --skip-install', () => {
+    expect(parseArgs(['--skip-install']).skipInstall).toBe(true)
+  })
+
+  it('parses --skip-init', () => {
+    expect(parseArgs(['--skip-init']).skipInit).toBe(true)
+  })
+
   it('parses --help and -h', () => {
     expect(parseArgs(['--help']).help).toBe(true)
     expect(parseArgs(['-h']).help).toBe(true)

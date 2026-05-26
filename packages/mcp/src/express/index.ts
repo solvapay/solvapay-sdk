@@ -1,3 +1,14 @@
+// TODO(solvapay-sdk): add a turnkey `createSolvaPayMcpExpress` factory
+// here (parity with `createSolvaPayMcpFetch` from `./fetch`: it should
+// bundle the OAuth bridge below, a `StreamableHTTPServerTransport`, and
+// the `McpServer` returned by `createSolvaPayMcpServer` into one
+// `app.use(...)`-mountable middleware stack). Until that ships, the only
+// Express surface this subpath exposes is the OAuth bridge middleware,
+// which is why Node + Express is currently absent from the `create-mcp-app`
+// skill's hosting matrix. Once the factory lands, restore the Node +
+// Express row in `skills/solvapay/create-mcp-app/hosting/alternatives.md`
+// (and its cursor-plugin mirror).
+
 /**
  * `@solvapay/mcp/express` — Node `(req, res, next)` OAuth bridge
  * middleware for the SolvaPay MCP server.
