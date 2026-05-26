@@ -285,13 +285,32 @@ function resolveOverlayDestName(name: string): string {
   return name
 }
 
-export async function writeBootstrapEnv(target: string, productRef: string): Promise<void> {
+export type WriteBootstrapEnvOptions = {
+  /**
+   * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
+   * into the bootstrap `.env`. Lets `wrangler dev` and the deploy
+   * preflight hit the dev backend immediately — before `solvapay init`
+   * runs — so the `--dev` story holds even between scaffold and init.
+   */
+  dev?: boolean
+}
+
+const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
+
+export async function writeBootstrapEnv(
+  target: string,
+  productRef: string,
+  options: WriteBootstrapEnvOptions = {},
+): Promise<void> {
   const envPath = join(target, '.env')
   const lines = [
     '# Created by create-solvapay. Secrets land here from `solvapay init`.',
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
     'MCP_PUBLIC_BASE_URL=http://localhost:8787',
   ]
+  if (options.dev) {
+    lines.push(`SOLVAPAY_API_BASE_URL=${DEV_API_BASE_URL}`)
+  }
   await writeFile(envPath, `${lines.join('\n')}\n`, 'utf8')
 }
 

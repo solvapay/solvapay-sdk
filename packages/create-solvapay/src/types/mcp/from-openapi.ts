@@ -37,13 +37,24 @@ export type FromOpenapiInput = {
   nonInteractive: boolean
   skipInstall?: boolean
   skipInit?: boolean
+  /**
+   * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
+   * into the scaffolded `.env` (via the `apiBaseUrl` field in
+   * `selections.json`). Mirrors the from-scratch `dev` plumbing so
+   * `wrangler dev` and `scripts/deploy.mjs` hit api-dev before
+   * `solvapay init --dev` runs.
+   */
+  dev?: boolean
 }
+
+const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
 type Selections = {
   workerName: string
   serverName: string
   mcpPublicBaseUrl: string
   solvapayProductRef?: string
+  apiBaseUrl?: string
   mode: 'one-to-one'
   upstreamAuth:
     | { kind: 'none' }
@@ -61,7 +72,17 @@ type Selections = {
 }
 
 export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
-  const { target, projectName, spec, options, productRef, nonInteractive, skipInstall, skipInit } = input
+  const {
+    target,
+    projectName,
+    spec,
+    options,
+    productRef,
+    nonInteractive,
+    skipInstall,
+    skipInit,
+    dev,
+  } = input
 
   await assertTargetDirAbsent(target)
 
@@ -92,6 +113,9 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
       operationId: op.operationId,
       tier: op.suggestedTier,
     })),
+  }
+  if (dev) {
+    selections.apiBaseUrl = DEV_API_BASE_URL
   }
 
   const tmpSelectionsPath = join(

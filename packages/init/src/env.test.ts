@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
+  writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
@@ -200,6 +201,87 @@ describe('writeSolvaPayProductRefToEnv', () => {
 
       expect(result.action).toBe('updated')
       expect(content).toBe('SOLVAPAY_PRODUCT_REF=prd_new\n')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('writeSolvaPayApiBaseUrlToEnv', () => {
+  const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-'))
+  const DEV_URL = 'https://api-dev.solvapay.com'
+  const PROD_URL = 'https://api.solvapay.com'
+
+  it('creates .env when it does not exist', async () => {
+    const cwd = await makeTempDir()
+    try {
+      const result = await writeSolvaPayApiBaseUrlToEnv(DEV_URL, { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('created')
+      expect(content).toBe(`SOLVAPAY_API_BASE_URL=${DEV_URL}\n`)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('appends the line when .env exists without the key', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_test\n', 'utf8')
+      const result = await writeSolvaPayApiBaseUrlToEnv(DEV_URL, { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('appended')
+      expect(content).toContain('SOLVAPAY_SECRET_KEY=sk_test\n')
+      expect(content).toContain(`SOLVAPAY_API_BASE_URL=${DEV_URL}\n`)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('replaces a commented placeholder line in place', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(
+        path.join(cwd, '.env'),
+        'SOLVAPAY_SECRET_KEY=sk_test\n# SOLVAPAY_API_BASE_URL=https://api-staging.solvapay.com\n',
+        'utf8',
+      )
+      const result = await writeSolvaPayApiBaseUrlToEnv(DEV_URL, { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toContain(`SOLVAPAY_API_BASE_URL=${DEV_URL}\n`)
+      expect(content).not.toContain('# SOLVAPAY_API_BASE_URL=')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('replaces an existing live value in place', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), `SOLVAPAY_API_BASE_URL=${PROD_URL}\n`, 'utf8')
+      const result = await writeSolvaPayApiBaseUrlToEnv(DEV_URL, { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toBe(`SOLVAPAY_API_BASE_URL=${DEV_URL}\n`)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('is a no-op when the value already matches', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), `SOLVAPAY_API_BASE_URL=${DEV_URL}\n`, 'utf8')
+      const result = await writeSolvaPayApiBaseUrlToEnv(DEV_URL, { cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('unchanged')
+      expect(content).toBe(`SOLVAPAY_API_BASE_URL=${DEV_URL}\n`)
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }

@@ -10,6 +10,7 @@ import {
   deriveServerName,
   PLACEHOLDERS,
   substitute,
+  writeBootstrapEnv,
 } from './scaffold'
 
 const makeTempDir = (): Promise<string> => mkdtemp(path.join(os.tmpdir(), 'create-solvapay-'))
@@ -83,6 +84,32 @@ describe('assertTargetDirAbsent', () => {
       await expect(assertTargetDirAbsent(cwd)).rejects.toThrow(/non-empty/)
     } finally {
       await rm(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('writeBootstrapEnv', () => {
+  it('writes the minimal .env without SOLVAPAY_API_BASE_URL by default', async () => {
+    const target = await makeTempDir()
+    try {
+      await writeBootstrapEnv(target, 'prd_abc')
+      const content = await readFile(path.join(target, '.env'), 'utf8')
+      expect(content).toContain('SOLVAPAY_PRODUCT_REF=prd_abc')
+      expect(content).toContain('MCP_PUBLIC_BASE_URL=http://localhost:8787')
+      expect(content).not.toContain('SOLVAPAY_API_BASE_URL=')
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  it('appends SOLVAPAY_API_BASE_URL=api-dev when dev is true', async () => {
+    const target = await makeTempDir()
+    try {
+      await writeBootstrapEnv(target, 'prd_abc', { dev: true })
+      const content = await readFile(path.join(target, '.env'), 'utf8')
+      expect(content).toContain('SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com')
+    } finally {
+      await rm(target, { recursive: true, force: true })
     }
   })
 })

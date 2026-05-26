@@ -5,6 +5,7 @@ import {
   parseArgs,
   parseMcpArgs,
   sanitizeProjectName,
+  toInitOptions,
   validateToolName,
 } from './args'
 
@@ -47,6 +48,11 @@ describe('parseArgs', () => {
 
   it('parses --skip-init', () => {
     expect(parseArgs(['--skip-init']).skipInit).toBe(true)
+  })
+
+  it('parses --dev and defaults to false', () => {
+    expect(parseArgs([]).dev).toBe(false)
+    expect(parseArgs(['--dev']).dev).toBe(true)
   })
 
   it('parses --help and -h', () => {
@@ -146,6 +152,16 @@ describe('sanitizeProjectName', () => {
   it('rejects names that resolve to only punctuation', () => {
     const result = sanitizeProjectName('___')
     expect(result.ok).toBe(false)
+  })
+})
+
+describe('toInitOptions', () => {
+  it('forwards yes and dev to the init options', () => {
+    expect(toInitOptions(parseArgs(['--yes', '--dev']))).toEqual({ yes: true, dev: true })
+  })
+
+  it('defaults dev to false when --dev is absent', () => {
+    expect(toInitOptions(parseArgs([]))).toEqual({ yes: false, dev: false })
   })
 })
 
