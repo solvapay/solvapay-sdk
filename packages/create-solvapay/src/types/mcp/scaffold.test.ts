@@ -1,14 +1,17 @@
 import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   applyOverlay,
   assertTargetDirAbsent,
   BASE_TEMPLATE_DIR,
   copyDir,
   deriveServerName,
+  patchSolvapayVersions,
   PLACEHOLDERS,
+  resolveLatestSolvapayVersions,
+  SOLVAPAY_RUNTIME_DEPS,
   substitute,
   writeBootstrapEnv,
 } from './scaffold'
@@ -204,5 +207,216 @@ describe('copyDir + applyOverlay (round-trip)', () => {
     } finally {
       await rm(overlay, { recursive: true, force: true })
     }
+  })
+})
+
+describe('SOLVAPAY_RUNTIME_DEPS', () => {
+  it('covers the three @solvapay/* runtime packages with non-empty fallbacks', () => {
+    const names = SOLVAPAY_RUNTIME_DEPS.map(d => d.name).sort()
+    expect(names).toEqual(['@solvapay/mcp', '@solvapay/react', '@solvapay/server'])
+    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
+      expect(dep.fallback).toMatch(/^\d+\.\d+\.\d+/)
+    }
+  })
+
+  it('fallbacks match the caret pins in templates/mcp/_base/package.json', async () => {
+    const raw = await readFile(path.join(BASE_TEMPLATE_DIR, 'package.json'), 'utf8')
+    const pkg = JSON.parse(raw) as { dependencies: Record<string, string> }
+    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
+      const declared = pkg.dependencies[dep.name]
+      expect(declared, `${dep.name} should be present in _base/package.json`).toBeDefined()
+      // Template pin is `^<version>`; fallback drops the caret.
+      expect(declared.replace(/^[~^]/, '')).toBe(dep.fallback)
+    }
+  })
+})
+
+describe('resolveLatestSolvapayVersions', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    vi.restoreAllMocks()
+  })
+
+  it('returns registry-reported versions when fetch succeeds', async () => {
+    const versions: Record<string, string> = {
+      '@solvapay/mcp': '0.9.9',
+      '@solvapay/server': '2.0.0',
+      '@solvapay/react': '3.1.4',
+    }
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      const name = decodeURIComponent(url.replace('https://registry.npmjs.org/', '').replace('/latest', ''))
+      return new Response(JSON.stringify({ version: versions[name] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as typeof fetch
+
+    const onResolve = vi.fn()
+    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve })
+
+    expect(map.get('@solvapay/mcp')).toBe('0.9.9')
+    expect(map.get('@solvapay/server')).toBe('2.0.0')
+    expect(map.get('@solvapay/react')).toBe('3.1.4')
+    expect(onResolve).toHaveBeenCalledTimes(SOLVAPAY_RUNTIME_DEPS.length)
+    for (const call of onResolve.mock.calls) {
+      expect(call[0].source).toBe('registry')
+    }
+  })
+
+  it('falls back to hardcoded versions when fetch throws (offline)', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error('ENETUNREACH')
+    }) as typeof fetch
+
+    const onResolve = vi.fn()
+    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve })
+
+    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
+      expect(map.get(dep.name)).toBe(dep.fallback)
+    }
+    for (const call of onResolve.mock.calls) {
+      expect(call[0].source).toBe('fallback')
+    }
+  })
+
+  it('falls back when the registry returns a non-2xx response', async () => {
+    globalThis.fetch = vi.fn(
+      async () => new Response('not found', { status: 404 }),
+    ) as typeof fetch
+
+    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })
+    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
+      expect(map.get(dep.name)).toBe(dep.fallback)
+    }
+  })
+
+  it('falls back when the registry returns malformed JSON', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ notVersion: 'oops' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+    ) as typeof fetch
+
+    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })
+    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
+      expect(map.get(dep.name)).toBe(dep.fallback)
+    }
+  })
+})
+
+describe('patchSolvapayVersions', () => {
+  let target: string
+
+  beforeEach(async () => {
+    target = await makeTempDir()
+  })
+
+  afterEach(async () => {
+    await rm(target, { recursive: true, force: true })
+  })
+
+  it('rewrites @solvapay/* deps to exact pins and preserves other deps', async () => {
+    const original = {
+      name: 'demo-mcp',
+      private: true,
+      dependencies: {
+        '@modelcontextprotocol/sdk': '^1.29.0',
+        '@solvapay/mcp': '^0.2.5',
+        '@solvapay/react': '^1.2.0',
+        '@solvapay/server': '^1.1.0',
+        zod: '^4.3.6',
+      },
+    }
+    await writeFile(path.join(target, 'package.json'), `${JSON.stringify(original, null, 2)}\n`, 'utf8')
+
+    await patchSolvapayVersions(
+      target,
+      new Map([
+        ['@solvapay/mcp', '0.3.7'],
+        ['@solvapay/server', '1.2.0'],
+        ['@solvapay/react', '1.3.0'],
+      ]),
+    )
+
+    const patched = JSON.parse(await readFile(path.join(target, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+    }
+    expect(patched.dependencies).toEqual({
+      '@modelcontextprotocol/sdk': '^1.29.0',
+      '@solvapay/mcp': '0.3.7',
+      '@solvapay/react': '1.3.0',
+      '@solvapay/server': '1.2.0',
+      zod: '^4.3.6',
+    })
+  })
+
+  it('writes pre-1.0 snapshot tags verbatim (no caret)', async () => {
+    const original = {
+      dependencies: { '@solvapay/mcp': '^0.2.5' },
+    }
+    await writeFile(path.join(target, 'package.json'), `${JSON.stringify(original, null, 2)}\n`, 'utf8')
+
+    await patchSolvapayVersions(target, new Map([['@solvapay/mcp', '0.0.0-preview-abcdef1']]))
+
+    const patched = JSON.parse(await readFile(path.join(target, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+    }
+    expect(patched.dependencies['@solvapay/mcp']).toBe('0.0.0-preview-abcdef1')
+  })
+
+  it('skips entries that are not present in the dependencies block', async () => {
+    const original = {
+      dependencies: { '@solvapay/mcp': '^0.2.5' },
+    }
+    await writeFile(path.join(target, 'package.json'), `${JSON.stringify(original, null, 2)}\n`, 'utf8')
+
+    await patchSolvapayVersions(
+      target,
+      new Map([
+        ['@solvapay/mcp', '0.3.0'],
+        ['@solvapay/server', '1.2.0'],
+      ]),
+    )
+
+    const patched = JSON.parse(await readFile(path.join(target, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+    }
+    expect(patched.dependencies['@solvapay/mcp']).toBe('0.3.0')
+    expect(patched.dependencies['@solvapay/server']).toBeUndefined()
+  })
+
+  it('end-to-end: scaffold + patch produces the expected dependency snapshot', async () => {
+    const substitutions = new Map<string, string>([
+      [PLACEHOLDERS.WORKER_NAME, 'snapshot-mcp'],
+      [PLACEHOLDERS.RESOURCE_URI_SLUG, 'snapshot-mcp'],
+      [PLACEHOLDERS.SERVER_NAME, 'snapshot-mcp'],
+      [PLACEHOLDERS.PRODUCT_REF, 'prd_test_456'],
+      [PLACEHOLDERS.PUBLIC_BASE_URL, 'http://localhost:8787'],
+    ])
+    await copyDir(BASE_TEMPLATE_DIR, target, { substitutions })
+
+    await patchSolvapayVersions(
+      target,
+      new Map([
+        ['@solvapay/mcp', '0.3.1'],
+        ['@solvapay/react', '1.3.0'],
+        ['@solvapay/server', '1.2.0'],
+      ]),
+    )
+
+    const pkg = JSON.parse(await readFile(path.join(target, 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>
+    }
+    expect(pkg.dependencies['@solvapay/mcp']).toBe('0.3.1')
+    expect(pkg.dependencies['@solvapay/react']).toBe('1.3.0')
+    expect(pkg.dependencies['@solvapay/server']).toBe('1.2.0')
+    // Unrelated deps stay on their caret ranges (resolved at npm install time).
+    expect(pkg.dependencies['@modelcontextprotocol/sdk']).toMatch(/^\^/)
+    expect(pkg.dependencies['zod']).toMatch(/^\^/)
   })
 })

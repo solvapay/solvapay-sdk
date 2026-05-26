@@ -1,4 +1,5 @@
 import { runInitCommand } from './commands/init'
+import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
 const HELP_TEXT = `SolvaPay CLI
 
@@ -23,7 +24,13 @@ const main = async () => {
     return
   }
 
+  if (command === '--version' || command === '-v') {
+    process.stdout.write(`${PACKAGE_VERSION}\n`)
+    return
+  }
+
   if (command === 'init') {
+    printVersionBanner()
     const initFlags = new Set(process.argv.slice(3))
     const yes = initFlags.has('--yes') || initFlags.has('-y')
     const dev = initFlags.has('--dev')

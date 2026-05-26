@@ -23,8 +23,10 @@ import {
   deriveServerName,
   gitInit,
   installProjectDependencies,
+  patchSolvapayVersions,
   PLACEHOLDERS,
   printConnectionSnippets,
+  resolveLatestSolvapayVersions,
   SCAFFOLD_SCRIPT_PATH,
 } from './scaffold'
 
@@ -137,6 +139,10 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     await rm(tmpSelectionsPath, { force: true })
   }
 
+  process.stdout.write('🔄 Resolving latest @solvapay/* versions from npm registry…\n')
+  const versionMap = await resolveLatestSolvapayVersions()
+  await patchSolvapayVersions(target, versionMap)
+
   const packageManager = await detectPackageManager(target)
   if (skipInstall) {
     process.stdout.write('⏭  Skipping dependency install (--skip-install)\n')
@@ -172,7 +178,9 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     )
   }
   if (skipInit) {
-    process.stdout.write(`   npx solvapay init   # --skip-init was set; run to wire up auth + product\n`)
+    process.stdout.write(
+      `   npx -y solvapay@latest init   # --skip-init was set; run to wire up auth + product\n`,
+    )
   }
   process.stdout.write(
     `   ${packageManager === 'npm' ? 'npm run' : packageManager} dev   # widget watch + wrangler dev on http://localhost:8787\n`,

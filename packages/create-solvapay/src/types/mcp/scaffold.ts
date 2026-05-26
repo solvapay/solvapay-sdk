@@ -394,6 +394,113 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
   out('')
 }
 
+/**
+ * Runtime dependencies whose versions we resolve against the npm
+ * registry at scaffold time so each new scaffold picks up the latest
+ * `@solvapay/*` publish without republishing `create-solvapay`. The
+ * `fallback` is used when the registry call fails (offline, blocked
+ * network, registry outage) — it mirrors the caret pin currently in
+ * `templates/mcp/_base/package.json` so the generated project is still
+ * installable in that case.
+ */
+export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<{ name: string; fallback: string }> =
+  Object.freeze([
+    { name: '@solvapay/mcp', fallback: '0.2.5' },
+    { name: '@solvapay/server', fallback: '1.1.0' },
+    { name: '@solvapay/react', fallback: '1.2.0' },
+  ])
+
+export type ResolveLatestVersionsOptions = {
+  /** Per-package timeout in milliseconds. Defaults to 3000ms. */
+  timeoutMs?: number
+  /** Optional logger. Defaults to writing one line per package to stdout. */
+  onResolve?: (entry: { name: string; version: string; source: 'registry' | 'fallback' }) => void
+}
+
+/**
+ * Resolve the current `latest` dist-tag for each dep against the npm
+ * registry. Runs all lookups in parallel with a per-package abort
+ * timeout. Any failure (network error, non-2xx response, malformed
+ * payload, timeout) silently falls back to the dep's hardcoded
+ * `fallback` so offline scaffolds still produce an installable
+ * `package.json`.
+ */
+export async function resolveLatestSolvapayVersions(
+  deps: ReadonlyArray<{ name: string; fallback: string }> = SOLVAPAY_RUNTIME_DEPS,
+  options: ResolveLatestVersionsOptions = {},
+): Promise<Map<string, string>> {
+  const timeoutMs = options.timeoutMs ?? 3000
+  const onResolve =
+    options.onResolve ??
+    (entry => {
+      const suffix = entry.source === 'fallback' ? ' (offline fallback)' : ''
+      process.stdout.write(`   ${entry.name}@${entry.version}${suffix}\n`)
+    })
+
+  const settled = await Promise.all(
+    deps.map(async dep => {
+      try {
+        const url = `https://registry.npmjs.org/${encodeURIComponent(dep.name)}/latest`
+        const response = await fetch(url, {
+          headers: { accept: 'application/json' },
+          signal: AbortSignal.timeout(timeoutMs),
+        })
+        if (!response.ok) {
+          return { dep, version: dep.fallback, source: 'fallback' as const }
+        }
+        const body = (await response.json()) as { version?: unknown }
+        if (typeof body.version !== 'string' || body.version.length === 0) {
+          return { dep, version: dep.fallback, source: 'fallback' as const }
+        }
+        return { dep, version: body.version, source: 'registry' as const }
+      } catch {
+        return { dep, version: dep.fallback, source: 'fallback' as const }
+      }
+    }),
+  )
+
+  const result = new Map<string, string>()
+  for (const entry of settled) {
+    result.set(entry.dep.name, entry.version)
+    onResolve({ name: entry.dep.name, version: entry.version, source: entry.source })
+  }
+  return result
+}
+
+/**
+ * Rewrite `dependencies[<name>]` entries in `<target>/package.json` to
+ * the resolved versions. Writes exact pins (no `^` / `~`) so the user
+ * has a clear surface to bump and pre-1.0 snapshots (`0.0.0-…`)
+ * remain reproducible. Keys missing from the package's `dependencies`
+ * block are skipped silently — same `package.json` shape isn't a
+ * promise we make to overlays.
+ */
+export async function patchSolvapayVersions(
+  target: string,
+  versionMap: Map<string, string>,
+): Promise<void> {
+  const pkgPath = join(target, 'package.json')
+  const raw = await readFile(pkgPath, 'utf8')
+  const pkg = JSON.parse(raw) as { dependencies?: Record<string, string> } & Record<string, unknown>
+  if (!pkg.dependencies || typeof pkg.dependencies !== 'object') return
+
+  let changed = false
+  for (const [name, version] of versionMap) {
+    if (Object.prototype.hasOwnProperty.call(pkg.dependencies, name)) {
+      if (pkg.dependencies[name] !== version) {
+        pkg.dependencies[name] = version
+        changed = true
+      }
+    }
+  }
+  if (!changed) return
+
+  // Preserve trailing newline from the original file so the write is
+  // a minimal diff under git.
+  const trailingNewline = raw.endsWith('\n') ? '\n' : ''
+  await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}${trailingNewline}`, 'utf8')
+}
+
 export type InstallProgress = (message: string) => void
 
 export type InstallProjectResult = {
