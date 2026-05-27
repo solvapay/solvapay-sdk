@@ -35,7 +35,7 @@ function mockDefaults() {
       planSnapshot: { creditsPerUnit: 1000 },
     },
     loading: false,
-  } as any)
+  } as ReturnType<typeof usePurchase>)
 }
 
 describe('UsageSimulator', () => {
