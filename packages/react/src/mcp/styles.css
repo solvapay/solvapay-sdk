@@ -73,7 +73,7 @@ body {
  * mounts a `.solvapay-mcp-shell-sidebar` aside (seller + customer
  * details cards) on every surface — account, checkout, and topup —
  * so the frame does not reshape mid-flow. Lift the cap so the
- * 480 body + 16 gap + 320 sidebar grid fits AND the matching
+ * 320 sidebar + 16 gap + 480 body grid fits AND the matching
  * `@container (min-width: 816px)` query below can fire.
  *
  * The lift is gated behind `@media (min-width: 816px)` so it only
@@ -621,19 +621,24 @@ body {
 }
 
 @container (min-width: 816px) {
-  /* Body track is `minmax(0, 480px)` and the sidebar sits flush
-   * right at 320px. The outer `.solvapay-mcp-main` is already
-   * `margin-inline: auto` capped at 816, so the 480+16+320 = 816px
+  /* Sidebar track sits at 320px on the left and the body track is
+   * `minmax(0, 480px)` on the right. `order: -1` on the sidebar
+   * bumps it to the front of grid auto-placement so DOM order stays
+   * body-first (primary action first for screen readers on the
+   * checkout/topup payment surfaces) while visual order is
+   * sidebar-left. The outer `.solvapay-mcp-main` is already
+   * `margin-inline: auto` capped at 816, so the 320+16+480 = 816px
    * composition lands centred in the iframe without any extra
    * `justify-content` on the grid. */
   .solvapay-mcp-shell-layout {
-    grid-template-columns: minmax(0, 480px) 320px;
+    grid-template-columns: 320px minmax(0, 480px);
   }
 
   .solvapay-mcp-shell-sidebar {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    order: -1;
   }
 
   /* Account tab is hidden in the wide-shell layout — its content
