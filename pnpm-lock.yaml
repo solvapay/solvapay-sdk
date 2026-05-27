@@ -57,8 +57,8 @@ importers:
         specifier: ^13.0.6
         version: 13.0.6
       jose:
-        specifier: ^6.2.2
-        version: 6.2.2
+        specifier: ^6.2.3
+        version: 6.2.3
       nodemon:
         specifier: ^3.1.14
         version: 3.1.14
@@ -181,8 +181,8 @@ importers:
         specifier: ^2.105.1
         version: 2.105.1
       jose:
-        specifier: ^6.2.2
-        version: 6.2.2
+        specifier: ^6.2.3
+        version: 6.2.3
       next:
         specifier: ^16.2.4
         version: 16.2.4(@babel/core@7.29.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -360,8 +360,8 @@ importers:
         specifier: ^2.105.1
         version: 2.105.1
       jose:
-        specifier: ^6.2.2
-        version: 6.2.2
+        specifier: ^6.2.3
+        version: 6.2.3
       next:
         specifier: ^16.2.4
         version: 16.2.4(@babel/core@7.29.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -3131,6 +3131,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@vitejs/plugin-react@6.0.1':
     resolution: {integrity: sha512-l9X/E3cDb+xY3SWzlG1MOGt2usfEHGMNIaegaUGFsLkb3RCn/k8/TOXBcab+OndDI4TBtktT8/9BwwW8Vi9KUQ==}
@@ -4475,6 +4476,9 @@ packages:
 
   jose@6.2.2:
     resolution: {integrity: sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==}
+
+  jose@6.2.3:
+    resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
 
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
@@ -7232,7 +7236,7 @@ snapshots:
       express: 5.2.1
       express-rate-limit: 8.3.2(express@5.2.1)
       hono: 4.12.12
-      jose: 6.2.2
+      jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
@@ -9645,6 +9649,8 @@ snapshots:
   jiti@2.6.1: {}
 
   jose@6.2.2: {}
+
+  jose@6.2.3: {}
 
   joycon@3.1.1: {}
 
