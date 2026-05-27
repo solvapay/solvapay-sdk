@@ -13,7 +13,11 @@ import { PaymentForm, PlanSelector } from '@solvapay/react/primitives'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
-const PRODUCT_REF = process.env.NEXT_PUBLIC_PRODUCT_REF || 'prd_demo'
+const PRODUCT_REF = process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+
+if (!PRODUCT_REF) {
+  throw new Error("Could not find the solvapay product key. Make sure that you've run the init script, and that you have a product on your solvapay account before you try out the demos")
+}
 
 export default function CheckoutPage() {
   return (
