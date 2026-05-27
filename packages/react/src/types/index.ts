@@ -37,6 +37,8 @@ export interface PurchaseInfo {
   nextBillingDate?: string
   billingCycle?: string
   planRef?: string
+  /** How the purchase was created — `free_default` for auto-enrolled free tiers. */
+  origin?: 'paid' | 'free_default' | 'manual' | 'one_time' | 'credit_topup'
   planSnapshot?: {
     reference?: string
     name?: string | null
