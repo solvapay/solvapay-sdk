@@ -7,8 +7,10 @@ import { createMcpOAuthBridge } from '@solvapay/mcp/express'
 import type { SolvaPayMerchantBranding } from '@solvapay/mcp-core'
 import { createServer, fetchBranding } from './server'
 import {
+  host,
   mcpAssetOrigins,
   mcpPublicBaseUrl,
+  port,
   solvapayApiBaseUrl,
   solvapayProductRef,
 } from './config'
@@ -124,8 +126,6 @@ app.delete('/mcp', async (req: Request, res: Response) => {
   await sessions[sessionId].transport.handleRequest(req, res)
 })
 
-const port = parseInt(process.env.MCP_PORT || '3006', 10)
-const host = process.env.MCP_HOST || 'localhost'
 
 // Warm the branding cache before accepting traffic so the very first
 // `initialize` handshake carries merchant identity (brand name on the

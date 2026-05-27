@@ -4,17 +4,27 @@
  * assigned trycloudflare.com URL, then launches the MCP server with
  * MCP_PUBLIC_BASE_URL pointing at the tunnel.
  *
- * Usage:
- *   node tunnel.mjs          # uses MCP_PORT from env or defaults to 3006
- *   pnpm tunnel              # same via package.json script
+ * Usage (from any example package):
+ *   node ../shared/tunnel.mjs          # uses MCP_PORT from env or defaults to 3000
+ *   pnpm tunnel                        # same via package.json script
  */
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const PORT = process.env.MCP_PORT ?? '3006'
+const PKG_DIR = process.cwd()
+
+// Read MCP_PORT from .env if not already in the environment, so the tunnel
+// binds to the same port the server will use without requiring a manual export.
+if (!process.env.MCP_PORT) {
+  try {
+    const env = readFileSync(join(PKG_DIR, '.env'), 'utf8')
+    const m = env.match(/^MCP_PORT=(\d+)/m)
+    if (m) process.env.MCP_PORT = m[1]
+  } catch { /* no .env file — fall through to default */ }
+}
+
+const PORT = process.env.MCP_PORT ?? '3000'
 const TUNNEL_RE = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/
 
 /**
@@ -22,7 +32,7 @@ const TUNNEL_RE = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/
  * .aube/.ignored_* virtual store convention used in this monorepo.
  */
 function findTsxCli() {
-  const roots = [__dirname, resolve(__dirname, '../..')]
+  const roots = [PKG_DIR, resolve(PKG_DIR, '../..')]
   for (const root of roots) {
     const candidates = [
       join(root, 'node_modules', '.bin', 'tsx'),
@@ -86,7 +96,7 @@ console.error(`\n[tunnel] public URL: ${url}`)
 console.error(`[tunnel] MCP endpoint: ${url}/mcp\n`)
 
 const server = spawn(cmd, args, {
-  cwd: __dirname,
+  cwd: PKG_DIR,
   env: { ...process.env, MCP_PUBLIC_BASE_URL: url },
   stdio: 'inherit',
 })
