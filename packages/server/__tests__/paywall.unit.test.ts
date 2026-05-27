@@ -232,6 +232,88 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls).toHaveLength(1)
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('fail')
     })
+
+    // Regression: on request-scoped runtimes (Cloudflare Workers,
+    // Vercel Edge, Supabase Edge) a floated `trackUsage` fetch is
+    // killed when the Response returns. Without an `await`, the usage
+    // event never reaches the backend, `sumForMeter` stays at 0, and
+    // the paywall never decrements free-quota. The protectedHandler's
+    // returned promise MUST resolve only after `trackUsage` settles.
+    it('awaits trackUsage before resolving (Workers / Edge keep-alive)', async () => {
+      let resolveTrack!: () => void
+      const trackingGate = new Promise<void>(r => {
+        resolveTrack = r
+      })
+      const trackUsageSpy = vi.fn(async () => {
+        await trackingGate
+        mockApiClient.trackUsageCalls.push({ outcome: 'success' })
+      })
+      mockApiClient.trackUsage = trackUsageSpy as unknown as typeof mockApiClient.trackUsage
+
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'test' })
+      const protectedHandler = await payable.function(handler)
+
+      const inflight = protectedHandler({ auth: { customer_ref: 'test_user' } })
+
+      // The handler ran but trackUsage is gated — protectedHandler
+      // must not have resolved yet.
+      await new Promise(r => setTimeout(r, 10))
+      expect(handler).toHaveBeenCalledOnce()
+      expect(mockApiClient.trackUsageCalls).toHaveLength(0)
+
+      const settled = Promise.race([
+        inflight.then(() => 'resolved' as const),
+        new Promise<'pending'>(r => setTimeout(() => r('pending'), 20)),
+      ])
+      expect(await settled).toBe('pending')
+
+      resolveTrack()
+      await expect(inflight).resolves.toEqual({ success: true })
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+    })
+
+    it('awaits trackUsage on paywall outcome (gate keep-alive)', async () => {
+      mockApiClient.shouldBlock = true
+      let resolveTrack!: () => void
+      const trackingGate = new Promise<void>(r => {
+        resolveTrack = r
+      })
+      mockApiClient.trackUsage = (async () => {
+        await trackingGate
+        mockApiClient.trackUsageCalls.push({ outcome: 'paywall' })
+      }) as unknown as typeof mockApiClient.trackUsage
+
+      const handler = vi.fn()
+      const payable = solvaPay.payable({ product: 'test' })
+      const protectedHandler = await payable.function(handler)
+
+      const inflight = protectedHandler({ auth: { customer_ref: 'blocked' } }).catch(
+        (err: unknown) => err,
+      )
+
+      await new Promise(r => setTimeout(r, 10))
+      expect(mockApiClient.trackUsageCalls).toHaveLength(0)
+
+      resolveTrack()
+      const err = await inflight
+      expect(err).toBeInstanceOf(PaywallError)
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+    })
+
+    it('swallows trackUsage errors so tool calls never fail on tracking outages', async () => {
+      mockApiClient.trackUsage = (async () => {
+        throw new Error('backend 503')
+      }) as unknown as typeof mockApiClient.trackUsage
+
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'test' })
+      const protectedHandler = await payable.function(handler)
+
+      await expect(
+        protectedHandler({ auth: { customer_ref: 'test_user' } }),
+      ).resolves.toEqual({ success: true })
+    })
   })
 
   describe('HTTP Adapter - Express/Fastify Style', () => {
