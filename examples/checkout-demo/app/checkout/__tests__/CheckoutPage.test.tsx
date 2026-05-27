@@ -32,7 +32,7 @@ import CheckoutPage from '../page'
 
 beforeEach(() => {
   layoutCalls.length = 0
-  process.env.NEXT_PUBLIC_PRODUCT_REF = 'prd_smoke'
+  process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
 })
 
 describe('CheckoutPage (smoke)', () => {
