@@ -91,6 +91,9 @@ const handler = createSolvaPayMcpFetch({
   readHtml: async () => html,
   publicBaseUrl,
   apiBaseUrl,
+  // rewriteRequestPath strips FUNCTION_MOUNT_PREFIX ('/mcp') before the
+  // handler sees the request, so the effective MCP root is '/' not '/mcp'.
+  mcpPath: '/',
   mode: 'json-stateless',
   // Trim the LLM catalog to the four intent tools on text hosts
   // (Claude Desktop, MCPJam, Cursor); the SDK auto-bypasses for
