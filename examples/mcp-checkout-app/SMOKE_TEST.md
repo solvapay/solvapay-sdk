@@ -55,12 +55,14 @@ Fresh customer opens the MCP App in `basic-host`.
 
 **Expect**:
 
-- Shell header shows the **product name** (`bootstrap.product.name`)
-  as `<h1>`; the merchant logo + display name sit above as the
-  brand marker.
+- `<AppHeader>` shows the merchant logo + display name when the host
+  does not paint its own chrome mark. Product name/description are
+  **not** repeated inside the account iframe.
 - `bootstrap.view === 'account'` by default → `<McpAccountView>`
-  renders: current-plan card showing `Free`, balance / usage row,
-  `See plans` link to upgrade.
+  renders one primary card (current plan, credits, or pick-a-plan
+  empty state). Seller + **Your account** detail cards sit in the
+  persistent sidebar on wide iframes (or inline below the card on
+  narrow frames).
 - Text-only hosts (Claude Code, basic-host stdout) see the narrated
   markdown summary instead of the UI iframe — same data, different
   render.
@@ -179,13 +181,17 @@ plan card.
 
 ### 7. Sidebar stability check
 
-Open the app on a **wide** iframe (>=900px) from the account view.
+Open the app on a **wide** iframe (>=816px) from the account view.
+Switch **Account → Top up → Account**.
 
 **Expect**:
 
-- Seller details + Your details persistent in the right-hand
-  sidebar. Resize to narrow (<900px): sidebar hides, the detail
-  cards inline into the account body.
+- **Seller** + **Your account** cards stay in the left sidebar on
+  wide frames — widgets do not jump when swapping surfaces.
+- Resize to narrow (<816px): sidebar hides; the primary action card
+  renders first, then **Your account**, then **Seller** inline below.
+- No account screen shows product description or a `Current plan and
+  usage` overline.
 
 ### Narrated text fallback (any step, text-only host)
 

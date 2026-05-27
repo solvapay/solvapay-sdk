@@ -2,13 +2,13 @@
 
 /**
  * `<McpCustomerDetailsCard>` / `<McpSellerDetailsCard>` — two small
- * identity cards shared between the `Account` tab body and the
+ * identity cards shared between the account surface body and the
  * persistent wide-iframe sidebar.
  *
  * Kept intentionally primitive: no hooks beyond `useCustomer` /
  * `useMerchant`, no new CSS dependencies beyond the `solvapay-mcp-*`
  * convention. Callers stack them in either orientation (sidebar puts
- * Seller on top, Account tab on narrow iframes puts Customer on top).
+ * Seller on top, narrow iframes put Customer on top).
  */
 
 import React from 'react'
@@ -23,7 +23,7 @@ export interface McpCustomerDetailsCardProps {
   classNames?: McpViewClassNames
   /**
    * When provided, a "Top up" text button is rendered next to the
-   * Credit balance row. Typically wired to switch the active tab in
+   * credit balance row. Typically wired to switch the active surface in
    * the `<McpAppShell>` so the in-iframe navigation stays shell-local.
    */
   onTopup?: () => void
@@ -81,7 +81,7 @@ export function McpCustomerDetailsCard({
   if (loading && !customerRef) {
     return (
       <div className={cx.card} aria-busy="true">
-        <h2 className={cx.heading}>Your details</h2>
+        <h2 className={cx.heading}>Your account</h2>
         <p className={cx.muted}>Loading…</p>
       </div>
     )
@@ -100,11 +100,11 @@ export function McpCustomerDetailsCard({
       : null
 
   return (
-    <section className={cx.card} aria-label="Your details">
-      <h2 className={cx.heading}>Your details</h2>
+    <section className={`${cx.card} solvapay-mcp-customer-card`.trim()} aria-label="Your account">
+      <h2 className={cx.heading}>Your account</h2>
       <div className="solvapay-mcp-detail-grid">
         <DetailRow value={displayName} muted={cx.muted} />
-        {email ? <DetailRow label="Email" value={email} labelMuted={cx.muted} /> : null}
+        {email ? <DetailRow value={email} muted={cx.muted} /> : null}
         {customerRef ? (
           <DetailRow
             label="Customer reference"
@@ -116,32 +116,31 @@ export function McpCustomerDetailsCard({
         ) : null}
 
         {showBalance ? (
-          <div className="solvapay-mcp-detail-row">
-            <div className="solvapay-mcp-detail-balance-head">
-              <span className={`solvapay-mcp-detail-label ${cx.muted}`.trim()}>Credit balance</span>
-              {onTopup ? (
-                <button
-                  type="button"
-                  className={cx.linkButton}
-                  onClick={onTopup}
-                  aria-label="Top up credits"
-                >
-                  Top up
-                </button>
+          <div className="solvapay-mcp-detail-row solvapay-mcp-detail-balance-row">
+            <div className="solvapay-mcp-detail-balance-copy">
+              <span className="solvapay-mcp-detail-value">
+                {Intl.NumberFormat(locale).format(credits ?? 0)} credits
+              </span>
+              {approxValue !== null ? (
+                <span className={`solvapay-mcp-detail-value-mono ${cx.muted}`.trim()}>
+                  ~
+                  {formatPrice(
+                    Math.round(approxValue * getMinorUnitsPerMajor(displayCurrency ?? 'USD')),
+                    displayCurrency ?? 'USD',
+                    { locale, free: '' },
+                  )}
+                </span>
               ) : null}
             </div>
-            <span className="solvapay-mcp-detail-value">
-              {Intl.NumberFormat(locale).format(credits ?? 0)} credits
-            </span>
-            {approxValue !== null ? (
-              <span className={`solvapay-mcp-detail-value-mono ${cx.muted}`.trim()}>
-                ~
-                {formatPrice(
-                  Math.round(approxValue * getMinorUnitsPerMajor(displayCurrency ?? 'USD')),
-                  displayCurrency ?? 'USD',
-                  { locale, free: '' },
-                )}
-              </span>
+            {onTopup ? (
+              <button
+                type="button"
+                className={cx.linkButton}
+                onClick={onTopup}
+                aria-label="Top up credits"
+              >
+                Top up
+              </button>
             ) : null}
           </div>
         ) : null}
@@ -161,11 +160,6 @@ export interface McpSellerDetailsCardProps {
  * terms link. Compliance-relevant: a customer paying through the
  * iframe should see who they're actually paying, to the same level of
  * detail as hosted checkout.
- *
- * Currently pulls from `useMerchant()` only (no org number, postal
- * address, or public website — those fields aren't on the SDK's
- * `SdkMerchantResponseDto`). If / when the backend surfaces them, add
- * them here.
  */
 export function McpSellerDetailsCard({
   classNames,
@@ -177,7 +171,7 @@ export function McpSellerDetailsCard({
   if (loading && !merchant) {
     return (
       <div className={cx.card} aria-busy="true">
-        <h2 className={cx.heading}>Seller details</h2>
+        <h2 className={cx.heading}>Seller</h2>
         <p className={cx.muted}>Loading…</p>
       </div>
     )
@@ -191,9 +185,9 @@ export function McpSellerDetailsCard({
   const supportUrl = merchant.supportUrl
 
   return (
-    <section className={cx.card} aria-label="Seller details">
+    <section className={cx.card} aria-label="Seller">
       <div className="solvapay-mcp-detail-heading-row">
-        <h2 className={cx.heading}>Seller details</h2>
+        <h2 className={cx.heading}>Seller</h2>
         {showVerifiedBadge ? (
           <span className="solvapay-mcp-verified-badge" aria-label="Verified seller">
             <span aria-hidden="true">✓</span> Verified seller
@@ -209,7 +203,6 @@ export function McpSellerDetailsCard({
 
         {supportEmail ? (
           <div className="solvapay-mcp-detail-row">
-            <span className={`solvapay-mcp-detail-label ${cx.muted}`.trim()}>Support email</span>
             <a
               className="solvapay-mcp-detail-link"
               href={`mailto:${supportEmail}`}
@@ -221,14 +214,13 @@ export function McpSellerDetailsCard({
 
         {supportUrl ? (
           <div className="solvapay-mcp-detail-row">
-            <span className={`solvapay-mcp-detail-label ${cx.muted}`.trim()}>Support</span>
             <a
               className="solvapay-mcp-detail-link"
               href={supportUrl}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Visit support centre
+              Support centre
             </a>
           </div>
         ) : null}

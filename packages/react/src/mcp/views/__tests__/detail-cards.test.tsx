@@ -109,13 +109,13 @@ describe('<McpCustomerDetailsCard>', () => {
   it('omits the balance row when credits are zero', () => {
     const ctx = buildCtx({}, [], 0)
     renderWith(ctx, <McpCustomerDetailsCard />)
-    expect(screen.queryByText(/Credit balance/i)).toBeNull()
+    expect(screen.queryByText(/credits/i)).toBeNull()
   })
 
-  it('renders the balance row and formatted credits when credits > 0', () => {
+  it('renders formatted credits without a Credit balance label when credits > 0', () => {
     const ctx = buildCtx({}, [], 1500)
     renderWith(ctx, <McpCustomerDetailsCard />)
-    expect(screen.getByText(/Credit balance/i)).toBeTruthy()
+    expect(screen.queryByText(/Credit balance/i)).toBeNull()
     expect(screen.getByText(/1,500 credits/)).toBeTruthy()
   })
 

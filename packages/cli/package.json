@@ -29,16 +29,7 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
-    "@solvapay/auth": "workspace:^",
-    "@solvapay/core": "workspace:^",
-    "@solvapay/server": "workspace:^",
-    "chalk": "^5.6.2",
-    "commander": "^14.0.3",
-    "detect-package-manager": "^3.0.2",
-    "fs-extra": "^11.3.4",
-    "inquirer": "^13.4.2",
-    "open": "^11.0.0",
-    "ora": "^9.3.0"
+    "@solvapay/init": "workspace:^"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

@@ -1,0 +1,42 @@
+{
+  "name": "create-solvapay",
+  "version": "0.1.0",
+  "description": "Scaffold SolvaPay-monetized projects — MCP servers on Cloudflare Workers and more.",
+  "type": "module",
+  "bin": {
+    "create-solvapay": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "scripts",
+    "!scripts/**/node_modules",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git",
+    "directory": "packages/create-solvapay"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "@solvapay/init": "workspace:^"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
+  }
+}
