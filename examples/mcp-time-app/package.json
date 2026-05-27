@@ -10,10 +10,11 @@
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@solvapay/auth": "workspace:^",
     "@solvapay/core": "workspace:*",
     "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
-    "@solvapay/server": "workspace:*",
+    "@solvapay/server": "*",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "zod": "^4.3.6"
