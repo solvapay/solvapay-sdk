@@ -333,11 +333,19 @@ body {
 
 /* Account view */
 
+.solvapay-mcp-account-credit-stack {
+  flex: 1;
+}
+
 .solvapay-mcp-balance-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.solvapay-mcp-account-credit-stack .solvapay-mcp-balance-row {
+  margin-top: auto;
 }
 
 .solvapay-mcp-balance-row .solvapay-mcp-button {
@@ -652,18 +660,10 @@ body {
 /*
  * Shell-level legal footer.
  *
- * Lays the `<LegalFooter>` primitive out as a single horizontal row —
- * `Provided by SolvaPay` flush left, `Terms · Privacy` flush right —
- * with no hairline divider above it. The parent `.solvapay-mcp-shell`
- * already supplies a `gap: 16px` between children, so the row needs no
- * extra `padding-top` of its own — that gap alone gives it enough
- * breathing room from the surface card without the old 32px stacked
- * void where the hairline used to live.
- *
- * `flex-direction: row-reverse` swaps the visual order without changing
- * the primitive's markup: the links live first in the DOM (correct
- * screen-reader reading order — "Terms / Privacy / Provided by") while
- * the attribution is painted on the left edge.
+ * Lays the `<LegalFooter>` primitive out as one centered line:
+ * `Provided by SolvaPay · Terms · Privacy`. The parent
+ * `.solvapay-mcp-shell` already supplies a `gap: 16px` between
+ * children, so the row needs no extra `padding-top` of its own.
  *
  * Scoped to the shell context so the primitive's default centred
  * column layout, font size, and muted slate-500 ink keep working for
@@ -675,14 +675,20 @@ body {
 
 .solvapay-mcp-shell-footer [data-solvapay-legal-footer] {
   flex-direction: row-reverse;
-  justify-content: space-between;
+  justify-content: center;
   align-items: baseline;
+  gap: 0;
   width: 100%;
   /* Step the ink up from slate-500 (the primitive default) to
    * slate-600 so the footer reads cleanly against white without
    * fading into the card border. Matches the rest of the MCP
    * chrome (`AppHeader`, muted body copy). */
   color: var(--color-text-secondary, #475569);
+}
+
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer-attribution]::after {
+  content: ' · ';
+  font-weight: 400;
 }
 
 /* Account view — Customer + Seller details cards
@@ -695,47 +701,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-/* Product header — leads the account surface with the same hierarchy as
- * the hosted manage page: product name as the surface hero, optional
- * product description in muted ink. Sits above the
- * `CURRENT PLAN AND USAGE` section label. */
-.solvapay-mcp-product-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 4px;
-}
-
-.solvapay-mcp-product-name {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--color-text-primary, #0f172a);
-}
-
-.solvapay-mcp-product-description {
-  margin: 0;
-  color: var(--color-text-secondary, #475569);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-/* Section label — uppercased over-line above the plan card. Matches
- * the hosted manage page's `CURRENT PLAN AND USAGE` row. */
-.solvapay-mcp-section-label {
-  display: block;
-  padding: 4px 4px 0;
-  /* Pull the label tighter to the card below so it reads as an
-   * over-line for the card, not a free-floating hairline. */
-  margin-bottom: -4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary, #475569);
 }
 
 .solvapay-mcp-detail-grid {
@@ -787,11 +752,29 @@ body {
   gap: 12px;
 }
 
-.solvapay-mcp-detail-balance-head {
+.solvapay-mcp-customer-card .solvapay-mcp-detail-grid {
+  flex: 1;
+}
+
+.solvapay-mcp-detail-balance-row {
   display: flex;
-  align-items: baseline;
+  flex-direction: row;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.solvapay-mcp-detail-balance-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.solvapay-mcp-detail-balance-row .solvapay-mcp-link-button {
+  align-self: flex-end;
+  flex: 0 0 auto;
 }
 
 .solvapay-mcp-verified-badge {
@@ -805,79 +788,6 @@ body {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-}
-
-/* ---- About view ---- */
-
-.solvapay-mcp-about {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.solvapay-mcp-about-product {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solvapay-mcp-about-image {
-  display: block;
-  max-height: 160px;
-  width: auto;
-  align-self: flex-start;
-  border-radius: 6px;
-}
-
-.solvapay-mcp-about-description {
-  margin: 0;
-  white-space: pre-wrap;
-  color: var(--color-text-secondary, #475467);
-}
-
-.solvapay-mcp-about-ctas {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.solvapay-mcp-about-cta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.solvapay-mcp-about-cta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solvapay-mcp-about-commands {
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--color-background-subtle, #f9fafb);
-}
-
-.solvapay-mcp-about-command-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.solvapay-mcp-about-command {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
-  font-size: 13px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--color-background-raised, #eef2f6);
-}
-
-.solvapay-mcp-about-activity {
-  border: 1px solid var(--color-border-default, #e4e7ec);
 }
 
 /* ---- Back-link primitive ---- */

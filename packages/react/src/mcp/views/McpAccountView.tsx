@@ -4,32 +4,21 @@
  * `<McpAccountView>` — the "manage your SolvaPay account" screen surfaced
  * by the `manage_account` MCP tool.
  *
- * Mirrors the hosted manage page's information hierarchy: the product
- * name + description lead the surface, a `CURRENT PLAN AND USAGE`
- * section label sits above the active plan card, and the
- * customer/seller identity cards stack below (or off to the sidebar
- * via `hideDetailCards`).
+ * One primary card carries the billing state for the current action.
+ * Product name and description live in the host/tool text — not here.
+ * Customer/seller identity cards render inline on narrow iframes or in
+ * the shell sidebar on wide frames via `hideDetailCards`.
  *
  * The plan card has four shapes, picked by the customer's actual state:
  *
- *  - **Active paid purchase** — `<CurrentPlanCard>` with `Started …` and
- *    `pur_…` reference lines, plus the `<UsageMeter>` for usage-based
- *    plans. Inline cancel/update are deliberately hidden in favour of
- *    a single `<LaunchCustomerPortalButton>` ("Manage account") below.
+ *  - **Active paid purchase** — `<CurrentPlanCard>` with plan name, price,
+ *    balance/usage, payment method, and a `<LaunchCustomerPortalButton>`
+ *    ("Manage account") below.
  *  - **Cancelled-but-active purchase** — `<CancelledPlanNotice>` with
  *    its reactivate button.
- *  - **Pay-as-you-go credits, no plan** — in-card framing of the credit
- *    balance with an inline `Top up` button and a `See plans` link.
+ *  - **Pay-as-you-go credits, no plan** — compact balance card with
+ *    `Credits` heading, `<BalanceBadge>`, `Top up`, and `See plans`.
  *  - **No plan, no credits** — empty-state card with `Pick a plan` CTA.
- *
- * The product header and section label render in every state so the
- * customer always sees which product they're managing — same framing
- * as the hosted page even when no purchase is in flight yet.
- *
- * Note: an inline refresh icon used to sit on the section label row.
- * It was removed because `<McpAppShell>` already re-fetches the
- * bootstrap once on mount, which is the only refresh moment that
- * actually matters for re-opened iframes.
  */
 
 import React from 'react'
@@ -47,9 +36,8 @@ import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 export interface McpAccountViewProps {
   /**
-   * Product whose account the customer is managing. Sourced from
-   * `bootstrap.product` by `<McpAppShell>`. When omitted, the view
-   * falls back to the active purchase's `productName` (legacy).
+   * @deprecated Product context is not rendered in the account surface.
+   * Kept for integrators who pass `bootstrap.product` through custom views.
    */
   product?: Pick<BootstrapProduct, 'name' | 'description'> | null
   classNames?: McpViewClassNames
@@ -74,7 +62,6 @@ export interface McpAccountViewProps {
 }
 
 export function McpAccountView({
-  product,
   classNames,
   onTopup,
   onChangePlan,
@@ -104,28 +91,8 @@ export function McpAccountView({
     hasPaidPurchase && activePurchase && activePurchase.amount && activePurchase.amount > 0,
   )
 
-  // Product name falls back to the active purchase's productName for
-  // legacy callers (and unauthenticated bootstraps where `product` is
-  // unavailable). Description is product-only — no purchase-level
-  // fallback exists.
-  const productName = product?.name ?? activePurchase?.productName ?? null
-  const productDescription = product?.description ?? null
-
   return (
     <div className="solvapay-mcp-account">
-      {productName ? (
-        <header className={cx.productHeader} data-solvapay-mcp-product-header="">
-          <h1 className={cx.productName}>{productName}</h1>
-          {productDescription ? (
-            <p className={cx.productDescription}>{productDescription}</p>
-          ) : null}
-        </header>
-      ) : null}
-
-      <span className={cx.sectionLabel} data-solvapay-mcp-section-label="">
-        {copy.account.currentPlanAndUsage}
-      </span>
-
       <div className={cx.card}>
         {hasPaidPurchase ? (
           <>
@@ -160,10 +127,9 @@ export function McpAccountView({
         </CancelledPlanNotice.Root>
 
         {!hasAnyPlan && hasCredits && (
-          <div className={cx.stack}>
+          <div className={`${cx.stack} solvapay-mcp-account-credit-stack`.trim()}>
             <h2 className={cx.heading}>{copy.account.payAsYouGoTitle}</h2>
             <BalanceBadge />
-            <p className={cx.muted}>{copy.account.payAsYouGoBody}</p>
             <div className={cx.balanceRow}>
               {onTopup ? (
                 <button type="button" className={cx.button} onClick={onTopup}>

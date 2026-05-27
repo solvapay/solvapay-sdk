@@ -225,6 +225,19 @@ describe('<McpAppShell>', () => {
     usage: null,
   }
 
+  it('renders Your account and Seller cards in the sidebar when bootstrap.customer is set', () => {
+    const config = seedMerchant({
+      displayName: 'Acme',
+      legalName: 'Acme Inc.',
+      supportEmail: 'support@acme.com',
+    })
+    const ctx = buildCtx(config, [], 1500)
+    renderShell({ view: 'account', customer: authedCustomer }, ctx)
+    expect(screen.getByLabelText('Your account context')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Your account' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Seller' })).toBeTruthy()
+  })
+
   it('mounts the sidebar on every surface when bootstrap.customer is set', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
@@ -268,7 +281,7 @@ describe('<McpAppShell>', () => {
     expect(container.querySelector('.solvapay-mcp-shell-tagline')).toBeNull()
   })
 
-  it('threads bootstrap.product into the account view as the surface heading', () => {
+  it('does not thread bootstrap.product into the account view as a product hero', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
     renderShell(
@@ -283,10 +296,8 @@ describe('<McpAppShell>', () => {
       },
       ctx,
     )
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Acme Knowledge Base' }),
-    ).toBeTruthy()
-    expect(screen.getByText('Search Acme docs from anywhere.')).toBeTruthy()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Acme Knowledge Base' })).toBeNull()
+    expect(screen.queryByText('Search Acme docs from anywhere.')).toBeNull()
   })
 
   it('renders the SolvaPay legal footer with solvapay.com legal URLs', () => {
