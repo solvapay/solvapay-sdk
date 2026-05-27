@@ -686,8 +686,15 @@ body {
   color: var(--color-text-secondary, #475569);
 }
 
+/* Match the visual spacing of the inner `Terms · Privacy` separator.
+ * That span sits inside an `inline-flex` with `gap: 0.5rem`, so each
+ * side of its `·` reads as `0.5rem` flex-gap + the literal space in
+ * the span text. We mirror that by adding `0.5rem` of padding to each
+ * side of the `::after`-rendered bullet — the existing `' · '` text
+ * already contributes the matching literal spaces. */
 .solvapay-mcp-shell-footer [data-solvapay-legal-footer-attribution]::after {
   content: ' · ';
+  padding: 0 0.5rem;
   font-weight: 400;
 }
 
