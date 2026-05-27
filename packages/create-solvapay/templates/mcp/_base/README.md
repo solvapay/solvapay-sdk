@@ -39,6 +39,7 @@ __WORKER_NAME__/
 - Node.js 20+ and npm 10+ (pnpm 9.6+ or yarn also work — see [Package manager](#package-manager) below).
 - Cloudflare account with `wrangler login` completed.
 - SolvaPay account with a product (`prd_…`) created in the Console.
+- Product default plan: **free recurring** (`price: 0`, `freeUnits > 0`). The first paywalled tool call auto-enrolls customers via `checkLimits` — no separate activation step for free tiers.
 
 ## Local dev
 

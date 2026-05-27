@@ -37,6 +37,10 @@ import {
   getServerUrls,
 } from './lib/openapi.mjs'
 import {
+  collectPlanSelectionReminders,
+  validatePlanSelections,
+} from './lib/plan-selections.mjs'
+import {
   PLACEHOLDERS,
   applyOverlayDir,
   assertTargetDirAbsent,
@@ -131,8 +135,12 @@ async function main() {
   await ensureGitignoreCoversEnv(target)
   const envWritten = await writeDotEnv(target, selections)
 
-  const reminders =
-    mode === 'intent-driven'
+  const planReminders = Array.isArray(selections.plans)
+    ? collectPlanSelectionReminders(selections.plans)
+    : []
+  const reminders = [
+    ...planReminders,
+    ...(mode === 'intent-driven'
       ? [
           'Intent-driven mode: author src/tools/*.ts files per intent-driven.md, then update src/tools/index.ts to import and call each register{IntentName}(ctx, env). The .env and project skeleton are ready.',
           `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see solvapay-init.md).`,
@@ -141,7 +149,8 @@ async function main() {
       : [
           `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see solvapay-init.md).`,
           `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. Before \`node scripts/test.mjs\`, run \`( cd scripts && npm install )\` once inside ${target} (see test.md).`,
-        ]
+        ]),
+  ]
 
   const summary = {
     mode,
@@ -293,6 +302,7 @@ function validateSelections(selections) {
   if (auth.kind === 'oauth2-client-credentials') {
     validateOauth2ClientCredentialsSelection(auth)
   }
+  validatePlanSelections(selections.plans)
   // Intent-driven mode owns its own `src/tools/*.ts` files, so no
   // per-op selections are needed. One-to-one mode (default) still
   // requires the operations array — the per-op codegen reads from it.
