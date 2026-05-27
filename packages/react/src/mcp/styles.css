@@ -41,62 +41,60 @@ body {
   padding: 16px;
 }
 
-/* Cap the whole shell at a chat-card width so the AppHeader, body
- * card stack, and LegalFooter all align as one visually unified
- * block centred in the iframe. Capping individual children
- * (`.solvapay-mcp-shell-body` only) leaves the merchant pill orphaned
- * to the iframe-left and the footer's `space-between` splayed across
- * the full iframe — both look disjointed on wide hosts.
+/* Outer chrome cap. The AppHeader, body card stack, and LegalFooter
+ * align as one visually unified block centred in the iframe. The 480
+ * default matches Stripe Checkout's ~440-480 pay column, Apple Pay
+ * sheet's ~390 form, Material 3 dialog content max of 560, and
+ * Refactoring UI's ~30em form-width rule.
  *
- * Why 520:
- *   - SEP-1865 §"Container Dimensions" — when the host omits
- *     `containerDimensions.width`/`maxWidth` (Unbounded mode) the
- *     spec delegates the size choice to the View. We must pick.
- *   - OpenAI Apps SDK guidelines mandate "set a max width and design
- *     layouts that collapse gracefully on small screens".
- *   - OpenAI's `apps-sdk-ui` reservation card uses `max-w-sm` (384px);
- *     `openai-apps-sdk-examples` cluster sits at 220-360px.
- *   - Anthropic's PRIMARY use case is Desktop Claude at 400-500px.
- *     520 is a small composite-flow buffer above that range — our
- *     PlanStep → AmountStep → PaymentStep → SuccessStep is slightly
- *     larger than a single-tool inline card.
- *   - At our 14px body, 520px ≈ 62ch — inside the 65-75ch optimal
- *     reading line length.
+ * Both the sidebar lift (below) and the per-step content (button,
+ * payment form, plan-selector grid) inherit this cap, so the form
+ * stays centred in the iframe and `Provided by SolvaPay · Terms ·
+ * Privacy` aligns to the card's left/right edges rather than the
+ * iframe's.
  *
- * On hosts narrower than 520 (Claude Desktop ~400-500px, ChatGPT
- * inline ~400px, Mobile Claude ~300-360px) the cap is a no-op and
- * content fills, matching Anthropic's "apps fill the container
- * width" guidance for the primary cases. The previous `@media
- * (min-width: 900px) { max-width: 960px }` sidebar-mode override
- * is intentionally NOT carried forward — it was the cause of the
- * felt-cramped problem on 1200px+ iframes. Surfaces that genuinely
- * need more horizontal room should request `displayMode: "fullscreen"`
- * per Anthropic's design guidance, not stretch the inline shell. */
+ * SEP-1865 §"Container Dimensions" delegates the size choice to the
+ * View when the host omits `containerDimensions.width`/`maxWidth`
+ * (Unbounded mode). Anthropic's PRIMARY use case (Claude Desktop
+ * ~400-500px) and OpenAI's inline examples (220-360px) are both
+ * narrower than 480, so the cap is a no-op there and content fills,
+ * matching Anthropic's "apps fill the container width" guidance.
+ * Surfaces that need the full host viewport can still request
+ * `displayMode: "fullscreen"`. */
 .solvapay-mcp-main {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-inline-size: 520px;
+  max-inline-size: 480px;
   margin-inline: auto;
 }
 
-/* On the `account` surface (and only there — see `showSidebar` in
- * McpAppShell.tsx), the shell mounts a `.solvapay-mcp-shell-sidebar`
- * aside carrying the seller + customer details cards. Lift the cap
- * so the 1fr + 320px sidebar grid fits AND the
- * `@container (min-width: 900px)` query below can fire.
- * 900 = body (520) + gap (16) + sidebar (320) + small buffer.
- * Without this lift, McpAppShell would suppress the inline detail
- * cards (assuming the sidebar takes them) while the sidebar stays
- * `display: none` (because the @container threshold is never reached
- * inside the 520 cap) — both copies hidden, customer details
- * invisible for every authed user.
+/* When `bootstrap.customer` is set, `showSidebar` in McpAppShell.tsx
+ * mounts a `.solvapay-mcp-shell-sidebar` aside (seller + customer
+ * details cards) on every surface — account, checkout, and topup —
+ * so the frame does not reshape mid-flow. Lift the cap so the
+ * 320 sidebar + 16 gap + 480 body grid fits AND the matching
+ * `@container (min-width: 816px)` query below can fire.
+ *
+ * The lift is gated behind `@media (min-width: 816px)` so it only
+ * fires when the iframe is actually wide enough to render the
+ * sidebar. Without that gate, on iframes between 480 and 815 the
+ * cap would lift to 816 but the iframe would shrink the main to
+ * its own width — the body would sit at 480 anchored to the left
+ * of a 700px main, and the footer's `space-between` would spread
+ * `Provided by SolvaPay · Terms · Privacy` to the iframe edges
+ * instead of the body's edges. With the gate, those iframes treat
+ * the authed user like the unauthed path: main stays at 480 and
+ * the inline `<McpCustomerDetailsCard>` carries the account
+ * context that the sidebar would have shown.
  *
  * The `:has()` selector is intentionally view-agnostic — the shell
- * controls when the aside actually mounts. `checkout` and `topup`
- * surfaces never mount it, so they keep the 520px cap. */
-.solvapay-mcp-main:has(.solvapay-mcp-shell-sidebar) {
-  max-inline-size: 900px;
+ * controls when the aside actually mounts via the customer-present
+ * gate. Unauthenticated bootstraps never trigger the lift. */
+@media (min-width: 816px) {
+  .solvapay-mcp-main:has(.solvapay-mcp-shell-sidebar) {
+    max-inline-size: 816px;
+  }
 }
 
 .solvapay-mcp-header h1 {
@@ -335,11 +333,19 @@ body {
 
 /* Account view */
 
+.solvapay-mcp-account-credit-stack {
+  flex: 1;
+}
+
 .solvapay-mcp-balance-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.solvapay-mcp-account-credit-stack .solvapay-mcp-balance-row {
+  margin-top: auto;
 }
 
 .solvapay-mcp-balance-row .solvapay-mcp-button {
@@ -564,7 +570,9 @@ body {
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .solvapay-mcp-tab:hover:not([data-active='true']) {
@@ -588,6 +596,12 @@ body {
   gap: 16px;
 }
 
+/* Body column carrying every step of every surface (account card,
+ * checkout step stack, topup form). Width policy is owned by the
+ * outer `.solvapay-mcp-main` cap (480 default, 816 with sidebar) —
+ * inside a single-column layout grid the body fills its 480 cell
+ * exactly; in the two-column sidebar layout the grid's first track
+ * is `minmax(0, 480px)` (below). No body-level max needed. */
 .solvapay-mcp-shell-body {
   display: flex;
   flex-direction: column;
@@ -601,29 +615,38 @@ body {
   gap: 16px;
 }
 
-/* Wide-shell sidebar: visible when `.solvapay-mcp-main` itself is
- * ≥900px wide. Container query (not media query) so the layout fires
- * on the shell's own size, not the iframe viewport — important
- * because `.solvapay-mcp-main` is capped at 520px by default, and
- * we don't want the sidebar grid activating inside that cap on wide
- * iframes (MCP Inspector full browser, MCP Jam) which would squeeze
- * the body column. Hosts with narrow iframes (ChatGPT ~400px,
- * compact Claude Desktop) and the default capped shell fall through
- * to the single-column layout with Account in the tab strip. */
+/* Wide-shell sidebar: visible when the shell's own inline size is
+ * >=816 (480 body + 16 gap + 320 sidebar). Container query (not
+ * media query) so the layout fires on the shell's own size, not the
+ * iframe viewport — the matching media-gated `:has()` lift above
+ * ensures `.solvapay-mcp-main` only reaches 816 on iframes that can
+ * actually host the wide layout. Hosts with narrow iframes (ChatGPT
+ * ~400px, compact Claude Desktop) fall through to the single-column
+ * layout with the inline detail cards under the active card. */
 
 .solvapay-mcp-shell-sidebar {
   display: none;
 }
 
-@container (min-width: 900px) {
+@container (min-width: 816px) {
+  /* Sidebar track sits at 320px on the left and the body track is
+   * `minmax(0, 480px)` on the right. `order: -1` on the sidebar
+   * bumps it to the front of grid auto-placement so DOM order stays
+   * body-first (primary action first for screen readers on the
+   * checkout/topup payment surfaces) while visual order is
+   * sidebar-left. The outer `.solvapay-mcp-main` is already
+   * `margin-inline: auto` capped at 816, so the 320+16+480 = 816px
+   * composition lands centred in the iframe without any extra
+   * `justify-content` on the grid. */
   .solvapay-mcp-shell-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: 320px minmax(0, 480px);
   }
 
   .solvapay-mcp-shell-sidebar {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    order: -1;
   }
 
   /* Account tab is hidden in the wide-shell layout — its content
@@ -637,18 +660,10 @@ body {
 /*
  * Shell-level legal footer.
  *
- * Lays the `<LegalFooter>` primitive out as a single horizontal row —
- * `Provided by SolvaPay` flush left, `Terms · Privacy` flush right —
- * with no hairline divider above it. The parent `.solvapay-mcp-shell`
- * already supplies a `gap: 16px` between children, so the row needs no
- * extra `padding-top` of its own — that gap alone gives it enough
- * breathing room from the surface card without the old 32px stacked
- * void where the hairline used to live.
- *
- * `flex-direction: row-reverse` swaps the visual order without changing
- * the primitive's markup: the links live first in the DOM (correct
- * screen-reader reading order — "Terms / Privacy / Provided by") while
- * the attribution is painted on the left edge.
+ * Lays the `<LegalFooter>` primitive out as one centered line:
+ * `Provided by SolvaPay · Terms · Privacy`. The parent
+ * `.solvapay-mcp-shell` already supplies a `gap: 16px` between
+ * children, so the row needs no extra `padding-top` of its own.
  *
  * Scoped to the shell context so the primitive's default centred
  * column layout, font size, and muted slate-500 ink keep working for
@@ -660,14 +675,20 @@ body {
 
 .solvapay-mcp-shell-footer [data-solvapay-legal-footer] {
   flex-direction: row-reverse;
-  justify-content: space-between;
+  justify-content: center;
   align-items: baseline;
+  gap: 0;
   width: 100%;
   /* Step the ink up from slate-500 (the primitive default) to
    * slate-600 so the footer reads cleanly against white without
    * fading into the card border. Matches the rest of the MCP
    * chrome (`AppHeader`, muted body copy). */
   color: var(--color-text-secondary, #475569);
+}
+
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer-attribution]::after {
+  content: ' · ';
+  font-weight: 400;
 }
 
 /* Account view — Customer + Seller details cards
@@ -680,47 +701,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-/* Product header — leads the account surface with the same hierarchy as
- * the hosted manage page: product name as the surface hero, optional
- * product description in muted ink. Sits above the
- * `CURRENT PLAN AND USAGE` section label. */
-.solvapay-mcp-product-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 4px;
-}
-
-.solvapay-mcp-product-name {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--color-text-primary, #0f172a);
-}
-
-.solvapay-mcp-product-description {
-  margin: 0;
-  color: var(--color-text-secondary, #475569);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-/* Section label — uppercased over-line above the plan card. Matches
- * the hosted manage page's `CURRENT PLAN AND USAGE` row. */
-.solvapay-mcp-section-label {
-  display: block;
-  padding: 4px 4px 0;
-  /* Pull the label tighter to the card below so it reads as an
-   * over-line for the card, not a free-floating hairline. */
-  margin-bottom: -4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary, #475569);
 }
 
 .solvapay-mcp-detail-grid {
@@ -772,11 +752,29 @@ body {
   gap: 12px;
 }
 
-.solvapay-mcp-detail-balance-head {
+.solvapay-mcp-customer-card .solvapay-mcp-detail-grid {
+  flex: 1;
+}
+
+.solvapay-mcp-detail-balance-row {
   display: flex;
-  align-items: baseline;
+  flex-direction: row;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.solvapay-mcp-detail-balance-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.solvapay-mcp-detail-balance-row .solvapay-mcp-link-button {
+  align-self: flex-end;
+  flex: 0 0 auto;
 }
 
 .solvapay-mcp-verified-badge {
@@ -790,79 +788,6 @@ body {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-}
-
-/* ---- About view ---- */
-
-.solvapay-mcp-about {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.solvapay-mcp-about-product {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solvapay-mcp-about-image {
-  display: block;
-  max-height: 160px;
-  width: auto;
-  align-self: flex-start;
-  border-radius: 6px;
-}
-
-.solvapay-mcp-about-description {
-  margin: 0;
-  white-space: pre-wrap;
-  color: var(--color-text-secondary, #475467);
-}
-
-.solvapay-mcp-about-ctas {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.solvapay-mcp-about-cta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.solvapay-mcp-about-cta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solvapay-mcp-about-commands {
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--color-background-subtle, #f9fafb);
-}
-
-.solvapay-mcp-about-command-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.solvapay-mcp-about-command {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
-  font-size: 13px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--color-background-raised, #eef2f6);
-}
-
-.solvapay-mcp-about-activity {
-  border: 1px solid var(--color-border-default, #e4e7ec);
 }
 
 /* ---- Back-link primitive ---- */
