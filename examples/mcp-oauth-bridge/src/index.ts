@@ -7,8 +7,10 @@ import { createMcpOAuthBridge } from '@solvapay/mcp/express'
 import { verifyWebhook } from '@solvapay/server'
 import { createMCPServer } from './server'
 import {
+  host,
   mcpPublicBaseUrl,
   paywallEnabled,
+  port,
   solvapayApiBaseUrl,
   solvapayProductRef,
   solvapayWebhookSecret,
@@ -160,13 +162,8 @@ app.delete('/mcp', async (req: Request, res: Response) => {
   await sessions[sessionId].transport.handleRequest(req, res)
 })
 
-const port = parseInt(process.env.MCP_PORT || '3004', 10)
-const configuredHost = process.env.MCP_HOST || '0.0.0.0'
-// Use an IPv4-compatible bind by default so webhooks posted to 127.0.0.1 can connect.
-const host = configuredHost === 'localhost' ? '0.0.0.0' : configuredHost
-const displayHost = host === '0.0.0.0' ? 'localhost' : host
-
 app.listen(port, host, () => {
+  const displayHost = host === '0.0.0.0' ? 'localhost' : host
   console.error(`MCP OAuth bridge listening on http://${displayHost}:${port}`)
   console.error(`  Product:  ${solvapayProductRef || '(none)'}`)
   console.error(`  API:      ${solvapayApiBaseUrl}`)

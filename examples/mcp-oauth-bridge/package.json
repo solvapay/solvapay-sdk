@@ -5,14 +5,16 @@
   "scripts": {
     "dev": "nodemon --watch src --watch scripts --watch ../../packages/server/dist --watch ../../packages/core/dist --ext ts,js,mjs --exec \"tsx src/index.ts\"",
     "build": "tsup src/index.ts --format esm && tsc --noEmit",
+    "tunnel": "node ../shared/tunnel.mjs",
     "oauth:flow": "tsx scripts/run-oauth-flow.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@solvapay/auth": "workspace:^",
     "@solvapay/core": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
     "@solvapay/mcp": "workspace:*",
-    "@solvapay/server": "workspace:*",
+    "@solvapay/server": "*",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "zod": "^4.1.11"
