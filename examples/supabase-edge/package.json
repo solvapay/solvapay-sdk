@@ -1,0 +1,10 @@
+{
+  "name": "supabase-edge",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@solvapay/auth": "workspace:^",
+    "@solvapay/core": "workspace:^",
+    "@solvapay/server": "^1.1.0"
+  }
+}
