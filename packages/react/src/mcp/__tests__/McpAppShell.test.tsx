@@ -217,38 +217,34 @@ describe('<McpAppShell>', () => {
     expect(screen.getByLabelText('Your account context')).toBeTruthy()
   })
 
-  // Regression — the shell used to mount `.solvapay-mcp-shell-sidebar`
-  // on every surface whenever `bootstrap.customer !== null`, even
-  // though only `<McpAccountView>` ever consumes it. That triggered
-  // the `:has(.solvapay-mcp-shell-sidebar)` selector in styles.css
-  // (which lifts the body cap from 520px to 900px) on `checkout` and
-  // `topup` too, stretching them with no visible benefit on hosts
-  // wider than ~700px (MCPJam, MCP Inspector full-browser). The
-  // sidebar must mount only on the `account` surface.
-  it('does not mount the sidebar on the checkout surface even when authed', () => {
+  const authedCustomer = {
+    ref: 'cus_1',
+    purchase: null,
+    paymentMethod: null,
+    balance: null,
+    usage: null,
+  }
+
+  it('mounts the sidebar on every surface when bootstrap.customer is set', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
-    renderShell(
-      {
-        view: 'checkout',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
-      },
-      ctx,
-    )
-    expect(screen.queryByLabelText('Your account context')).toBeNull()
+
+    for (const view of ['account', 'checkout', 'topup'] as const) {
+      const { unmount } = renderShell({ view, customer: authedCustomer }, ctx)
+      expect(screen.getByLabelText('Your account context')).toBeTruthy()
+      unmount()
+    }
   })
 
-  it('does not mount the sidebar on the topup surface even when authed', () => {
+  it('does not mount the sidebar when bootstrap.customer is null', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
-    renderShell(
-      {
-        view: 'topup',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
-      },
-      ctx,
-    )
-    expect(screen.queryByLabelText('Your account context')).toBeNull()
+
+    for (const view of ['account', 'checkout', 'topup'] as const) {
+      const { unmount } = renderShell({ view, customer: null }, ctx)
+      expect(screen.queryByLabelText('Your account context')).toBeNull()
+      unmount()
+    }
   })
 
   it('no longer renders a shell-level brand header — branding moved to <McpApp>-level <AppHeader>', () => {
@@ -376,6 +372,7 @@ describe('<McpAppShell>', () => {
       fireEvent.click(screen.getByTestId('change-plan'))
     })
     expect(screen.getByTestId('checkout-stub')).toBeTruthy()
+    expect(screen.getByLabelText('Your account context')).toBeTruthy()
   })
 
   it('forwards `onClose` to the checkout view', () => {

@@ -67,8 +67,8 @@ export interface McpAccountViewProps {
   onChangePlan?: () => void
   /**
    * Skip the Customer + Seller detail cards. `<McpAppShell>` sets this
-   * to `true` at the wide-iframe breakpoint because the same cards
-   * render in the persistent right-hand sidebar.
+   * when it mounts the persistent right-hand sidebar (whenever
+   * `bootstrap.customer` is set) so the cards are not duplicated.
    */
   hideDetailCards?: boolean
 }

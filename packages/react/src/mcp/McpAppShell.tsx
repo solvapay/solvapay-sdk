@@ -127,13 +127,11 @@ export function McpAppShell({
   const showFooter = footer ?? true
   // The sidebar (seller + customer details cards) carries the
   // account-context info that `<McpAccountView>` would otherwise
-  // render inline. It only mounts on the `account` surface — the
-  // `checkout` and `topup` surfaces don't render those detail cards
-  // anywhere, so adding a hidden sidebar element there would still
-  // trigger `.solvapay-mcp-main:has(.solvapay-mcp-shell-sidebar)`
-  // (which lifts the cap from 520px to 900px) and stretch those
-  // surfaces with no visible benefit.
-  const showSidebar = effectiveView === 'account' && bootstrap.customer !== null
+  // render inline. Mount it on every surface whenever a customer is
+  // known so the 520px / 900px frame stays stable across in-session
+  // surface swaps (account → checkout → topup). Unauthenticated
+  // bootstraps fall through to the narrow centered column.
+  const showSidebar = bootstrap.customer !== null
 
   return (
     <div className="solvapay-mcp-shell">
