@@ -34,29 +34,124 @@ examples/supabase-edge-mcp/
             └── mcp-app.html               build artefact (copied from ../../../dist/)
 ```
 
-## Setup
+## From scratch (Supabase + Cloudflare proxy + MCPJam)
+
+You need **two** deploys: the MCP function on Supabase, then a
+Cloudflare Worker proxy so OAuth discovery works with MCPJam (the raw
+`*.supabase.co/functions/v1/mcp` URL has a path component that breaks
+RFC 9728 metadata lookup). See
+[`../supabase-edge-mcp-proxy/`](../supabase-edge-mcp-proxy/) for why.
+
+### Prerequisites
+
+- [Supabase CLI](https://supabase.com/docs/guides/cli#installation)
+- A Supabase project (note the **project ref** from the dashboard URL)
+- SolvaPay **secret key** + **product ref** (`prd_…`)
+- [Cloudflare account](https://dash.cloudflare.com/) (personal is fine)
+- Node + pnpm (from the monorepo root: `pnpm install`)
+
+### 1 — Deploy the Supabase edge function
 
 ```bash
-# 1. Install the Supabase CLI — pick the method that fits your OS.
-#    https://supabase.com/docs/guides/cli#installation
-
-# 2. Link this example to your Supabase project.
 cd examples/supabase-edge-mcp
+pnpm install
+
 supabase login
 supabase link --project-ref <your-project-ref>
 
-# 3. Set the required secrets on your Supabase project.
+# Required secrets. Use a placeholder for MCP_PUBLIC_BASE_URL for now —
+# you will update it after the proxy deploy in step 2.
 supabase secrets set \
-  SOLVAPAY_SECRET_KEY=sk_live_... \
-  SOLVAPAY_PRODUCT_REF=prod_... \
-  MCP_PUBLIC_BASE_URL=https://<your-project-ref>.supabase.co/functions/v1/mcp
+  SOLVAPAY_SECRET_KEY=sk_... \
+  SOLVAPAY_PRODUCT_REF=prd_...
 
-# 4. Build the iframe bundle + deploy the function.
+# Optional — staging API instead of production:
+# supabase secrets set SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
+
 pnpm build
 pnpm deploy
 ```
 
-The function is now live at `https://<your-project-ref>.supabase.co/functions/v1/mcp`. Point any MCP client at that URL as the server endpoint.
+Smoke-test the function directly (401 without a token is correct):
+
+```bash
+curl -s -X POST "https://<your-project-ref>.supabase.co/functions/v1/mcp" \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}'
+```
+
+### 2 — Deploy the Cloudflare proxy (personal account)
+
+```bash
+cd ../supabase-edge-mcp-proxy
+pnpm install
+
+pnpm exec wrangler login
+pnpm exec wrangler whoami   # note your Account ID
+
+# Set the required env vars (Wrangler reads these from your shell or a
+# `.dev.vars` file in the proxy directory):
+export SUPABASE_PROJECT_REF=<your-project-ref>
+export CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
+
+# One-time: register a workers.dev subdomain if wrangler prompts you:
+# https://dash.cloudflare.com/<your-account-id>/workers/onboarding
+
+pnpm deploy
+# → https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev
+```
+
+### 3 — Point Supabase OAuth metadata at the proxy URL
+
+```bash
+cd ../supabase-edge-mcp
+supabase secrets set \
+  MCP_PUBLIC_BASE_URL=https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev
+pnpm deploy
+```
+
+Verify OAuth discovery through the proxy (both must return 200):
+
+```bash
+WORKER=https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev
+curl -s "$WORKER/.well-known/oauth-protected-resource" | jq '.resource'
+curl -s "$WORKER/.well-known/oauth-authorization-server" | jq '.issuer'
+# both should print the workers.dev URL (no /functions/v1/mcp path)
+```
+
+### 4 — Connect MCPJam
+
+In MCPJam Inspector:
+
+| Field | Value |
+| ----- | ----- |
+| **URL** | `https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev` |
+| **Auth** | OAuth |
+| **Protocol** | `2025-06-18` |
+| **Registration** | Dynamic Client Registration (DCR) |
+
+Do **not** use the raw Supabase URL in MCPJam — OAuth discovery will fail.
+
+### Quick reference — what runs where
+
+| Component | URL | Purpose |
+| --------- | --- | ------- |
+| Supabase function | `https://<ref>.supabase.co/functions/v1/mcp` | MCP server + OAuth bridge (backend) |
+| Cloudflare proxy | `https://supabase-edge-mcp-proxy.<sub>.workers.dev` | Root URL for MCP clients + RFC 9728 discovery |
+| MCPJam | proxy URL above | Browser MCP client |
+
+## Setup (Supabase only — no MCPJam)
+
+If you only need Cursor / Claude Desktop (native clients), you can skip
+the proxy and set `MCP_PUBLIC_BASE_URL` to the Supabase URL:
+
+```bash
+supabase secrets set \
+  SOLVAPAY_SECRET_KEY=sk_... \
+  SOLVAPAY_PRODUCT_REF=prd_... \
+  MCP_PUBLIC_BASE_URL=https://<your-project-ref>.supabase.co/functions/v1/mcp
+pnpm build && pnpm deploy
+```
 
 ## Local development loop
 
