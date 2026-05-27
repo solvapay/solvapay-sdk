@@ -338,14 +338,22 @@ export class SolvaPayPaywall {
 
     if (!withinLimits) {
       const latencyMs = Date.now() - startTime
-      this.trackUsage(
+      // Awaited (not floated) so the call survives runtimes that
+      // terminate the request context as soon as the response returns
+      // (Cloudflare Workers, Vercel Edge, Supabase Edge). Without
+      // this, the `POST /v1/sdk/usages` fetch gets dropped before it
+      // reaches the backend and `sumForMeter` always returns 0 — the
+      // paywall never decrements free-quota and never gates. Errors
+      // are swallowed because tracking failures must never escalate
+      // into tool-call failures.
+      await this.trackUsage(
         backendCustomerRef,
         product,
         resolvedMeterName || usageType,
         'paywall',
         requestId,
         latencyMs,
-      )
+      ).catch(() => undefined)
 
       // Delegate gate construction to `buildPaywallGate` so adapter
       // paths and `payable.gate()` produce byte-identical wire shapes.
@@ -417,14 +425,18 @@ export class SolvaPayPaywall {
     try {
       const result = await handler(args, handlerContext)
       const latencyMs = Date.now() - startTime
-      this.trackUsage(
+      // See note on the `paywall` outcome above — awaited so the
+      // usage event survives request-scoped runtimes (Workers /
+      // Edge), where a floated fetch is killed when the response
+      // returns and `sumForMeter` never sees the event.
+      await this.trackUsage(
         decision.customerRef,
         product,
         decision.limits.meterName || usageType,
         'success',
         requestId,
         latencyMs,
-      )
+      ).catch(() => undefined)
       return result
     } catch (error) {
       if (error instanceof Error) {
@@ -435,14 +447,14 @@ export class SolvaPayPaywall {
       }
       if (!(error instanceof PaywallError)) {
         const latencyMs = Date.now() - startTime
-        this.trackUsage(
+        await this.trackUsage(
           decision.customerRef,
           product,
           decision.limits.meterName || usageType,
           'fail',
           requestId,
           latencyMs,
-        )
+        ).catch(() => undefined)
       }
       throw error
     }
