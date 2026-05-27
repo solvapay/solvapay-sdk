@@ -1,5 +1,12 @@
 # @solvapay/next
 
+## 1.0.13
+
+### Patch Changes
+
+- Updated dependencies [26423fb]
+  - @solvapay/server@1.1.1
+
 ## 1.0.12
 
 ### Patch Changes
