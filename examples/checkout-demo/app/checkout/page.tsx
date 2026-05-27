@@ -27,7 +27,11 @@ export default function CheckoutPage() {
   const [paymentFailed, setPaymentFailed] = useState(false)
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
+  const productRef = process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+
+  if (!productRef) {
+    throw new Error("Could not find the solvapay product key. Make sure that you've run the init script, and that you have a product on your solvapay account before you try out the demos")
+  }
 
   useEffect(() => {
     return () => {
@@ -68,7 +72,7 @@ export default function CheckoutPage() {
               />
             ) : (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-center">
-                Missing NEXT_PUBLIC_PRODUCT_REF environment variable.
+                Missing NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF environment variable.
               </div>
             )}
 
