@@ -70,6 +70,11 @@ type Selections = {
         scope?: string
         audience?: string
       }
+    | {
+        kind: 'client-credentials-header'
+        clientId: { headerName: string; value: string }
+        clientSecret: { headerName: string; value: string }
+      }
   operations: Array<{ operationId: string; tier: 'free' | 'paid' | 'skip' }>
 }
 
@@ -194,25 +199,15 @@ async function chooseAuth(
     supported?: boolean
     kind?: string
     headerName?: string
+    name?: string
     tokenUrl?: string
   }>,
   nonInteractive: boolean,
 ): Promise<Selections['upstreamAuth']> {
-  const firstSupported = schemes.find(
-    s =>
-      s.supported === true &&
-      (s.kind === 'http-bearer' ||
-        s.kind === 'apiKey-header' ||
-        s.kind === 'oauth2-clientCredentials'),
-  )
-  if (!firstSupported) {
-    return { kind: 'none' }
-  }
-
-  const askValue = async (prompt: string): Promise<string> => {
+  const askValue = async (prompt: string, authLabel: string): Promise<string> => {
     if (nonInteractive) {
       throw new Error(
-        `Spec requires upstream auth (${firstSupported.kind}); pass --non-interactive only after ` +
+        `Spec requires upstream auth (${authLabel}); pass --non-interactive only after ` +
           `setting the upstream secret(s) in the generated .env. Run interactively for the guided flow.`,
       )
     }
@@ -228,9 +223,49 @@ async function chooseAuth(
     }
   }
 
+  // A client-id + client-secret pair sent as two static headers (no token
+  // exchange). Detected when the spec declares exactly two supported
+  // header apiKey schemes that disambiguate into an id and a secret. Try
+  // this before the single-scheme path so we don't collapse the pair into
+  // one header.
+  const pair = detectClientCredentialsHeaderPair(schemes)
+  if (pair) {
+    process.stdout.write(
+      `Spec requires a client-id + client-secret header pair ` +
+        `(${pair.idHeader} + ${pair.secretHeader}).\n`,
+    )
+    const idValue = await askValue(
+      `Client ID header value for ${pair.idHeader} (blank = skip): `,
+      'client-credentials-header',
+    )
+    if (!idValue) return { kind: 'none' }
+    const secretValue = await askValue(
+      `Client secret header value for ${pair.secretHeader}: `,
+      'client-credentials-header',
+    )
+    if (!secretValue) return { kind: 'none' }
+    return {
+      kind: 'client-credentials-header',
+      clientId: { headerName: pair.idHeader, value: idValue },
+      clientSecret: { headerName: pair.secretHeader, value: secretValue },
+    }
+  }
+
+  const firstSupported = schemes.find(
+    s =>
+      s.supported === true &&
+      (s.kind === 'http-bearer' ||
+        s.kind === 'apiKey-header' ||
+        s.kind === 'oauth2-clientCredentials'),
+  )
+  if (!firstSupported) {
+    return { kind: 'none' }
+  }
+
   if (firstSupported.kind === 'http-bearer') {
     const key = await askValue(
       'Spec requires bearer auth. Paste the upstream API key (skips into .env, blank = skip): ',
+      'http-bearer',
     )
     if (!key) return { kind: 'none' }
     return { kind: 'bearer', key }
@@ -240,6 +275,7 @@ async function chooseAuth(
     const headerName = firstSupported.headerName ?? 'X-API-Key'
     const key = await askValue(
       `Spec requires apiKey auth (${headerName}). Paste the upstream API key (blank = skip): `,
+      'apiKey-header',
     )
     if (!key) return { kind: 'none' }
     return { kind: 'apiKey', in: 'header', name: headerName, key }
@@ -253,12 +289,18 @@ async function chooseAuth(
   process.stdout.write(
     `Spec requires OAuth 2.0 client_credentials (token endpoint ${tokenUrl}).\n`,
   )
-  const clientId = await askValue('OAuth client_id (blank = skip OAuth setup): ')
+  const clientId = await askValue('OAuth client_id (blank = skip OAuth setup): ', 'oauth2-client-credentials')
   if (!clientId) return { kind: 'none' }
-  const clientSecret = await askValue('OAuth client_secret: ')
+  const clientSecret = await askValue('OAuth client_secret: ', 'oauth2-client-credentials')
   if (!clientSecret) return { kind: 'none' }
-  const scope = await askValue('OAuth scope (optional, space-delimited; press Enter to skip): ')
-  const audience = await askValue('OAuth audience (optional, e.g. Auth0 audience; press Enter to skip): ')
+  const scope = await askValue(
+    'OAuth scope (optional, space-delimited; press Enter to skip): ',
+    'oauth2-client-credentials',
+  )
+  const audience = await askValue(
+    'OAuth audience (optional, e.g. Auth0 audience; press Enter to skip): ',
+    'oauth2-client-credentials',
+  )
   const auth: Extract<Selections['upstreamAuth'], { kind: 'oauth2-client-credentials' }> = {
     kind: 'oauth2-client-credentials',
     tokenUrl,
@@ -268,6 +310,32 @@ async function chooseAuth(
   if (scope) auth.scope = scope
   if (audience) auth.audience = audience
   return auth
+}
+
+/**
+ * Detect a client-id + client-secret header pair: exactly two supported
+ * `apiKey-header` schemes that disambiguate into an identifier and a secret.
+ *
+ * Disambiguation is by name — the scheme whose header (or scheme key) reads
+ * like a "secret" is the secret; the other is the id. When the two can't be
+ * told apart (both or neither look like a secret), returns `null` so the
+ * caller falls back to the single-scheme path rather than guessing which
+ * credential is which.
+ */
+export function detectClientCredentialsHeaderPair(
+  schemes: Array<{ supported?: boolean; kind?: string; headerName?: string; name?: string }>,
+): { idHeader: string; secretHeader: string } | null {
+  const headerSchemes = schemes.filter(s => s.supported === true && s.kind === 'apiKey-header')
+  if (headerSchemes.length !== 2) return null
+  const looksLikeSecret = (s: { headerName?: string; name?: string }): boolean =>
+    /secret/i.test(s.headerName ?? '') || /secret/i.test(s.name ?? '')
+  const secrets = headerSchemes.filter(looksLikeSecret)
+  const ids = headerSchemes.filter(s => !looksLikeSecret(s))
+  if (secrets.length !== 1 || ids.length !== 1) return null
+  const idHeader = ids[0].headerName
+  const secretHeader = secrets[0].headerName
+  if (!idHeader || !secretHeader) return null
+  return { idHeader, secretHeader }
 }
 
 async function ensureScriptDepsInstalled(): Promise<void> {
