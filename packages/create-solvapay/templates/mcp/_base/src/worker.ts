@@ -42,6 +42,14 @@ export interface Env {
   UPSTREAM_OAUTH_CLIENT_SECRET?: string
   UPSTREAM_OAUTH_SCOPE?: string
   UPSTREAM_OAUTH_AUDIENCE?: string
+  // Client-id + client-secret pair sent as two static request headers —
+  // populated when scaffold detected `upstreamAuth.kind:
+  // "client-credentials-header"`. Unlike the OAuth vars above there is no
+  // token exchange: generated tools send these values directly on the
+  // header names declared in the spec's security schemes. Optional because
+  // not every project uses them.
+  UPSTREAM_CLIENT_ID?: string
+  UPSTREAM_CLIENT_SECRET?: string
 }
 
 function requireEnv(env: Env, name: keyof Env): string {

@@ -54,7 +54,13 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_TEMPLATE_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', '_base')
 const OPENAPI_OVERLAY_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'from-openapi')
 
-const VALID_AUTH_KINDS = new Set(['none', 'bearer', 'apiKey', 'oauth2-client-credentials'])
+const VALID_AUTH_KINDS = new Set([
+  'none',
+  'bearer',
+  'apiKey',
+  'oauth2-client-credentials',
+  'client-credentials-header',
+])
 const VALID_TIERS = new Set(['free', 'paid', 'skip'])
 const VALID_MODES = new Set(['one-to-one', 'intent-driven'])
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
@@ -302,6 +308,9 @@ function validateSelections(selections) {
   if (auth.kind === 'oauth2-client-credentials') {
     validateOauth2ClientCredentialsSelection(auth)
   }
+  if (auth.kind === 'client-credentials-header') {
+    validateClientCredentialsHeaderSelection(auth)
+  }
   validatePlanSelections(selections.plans)
   // Intent-driven mode owns its own `src/tools/*.ts` files, so no
   // per-op selections are needed. One-to-one mode (default) still
@@ -380,6 +389,48 @@ function validateOauth2ClientCredentialsSelection(auth) {
   }
   if (auth.audience !== undefined && typeof auth.audience !== 'string') {
     throw new Error('selections.json: `upstreamAuth.audience` must be a string when provided.')
+  }
+}
+
+/**
+ * Validate the `client-credentials-header` shape: a client-id + client-secret
+ * credential pair sent as two static request headers (no token exchange — that
+ * is `oauth2-client-credentials`). Field names mirror the oauth2 branch so the
+ * two kinds read as the same family.
+ *
+ * The header names (e.g. `x-client-id` / `x-client-secret`) come from the
+ * spec's `securitySchemes`; the values are user-supplied secrets. The values
+ * are seeded into `.env` under the fixed names UPSTREAM_CLIENT_ID /
+ * UPSTREAM_CLIENT_SECRET (declared in the template's `Env` interface), so the
+ * generated `Env` shape stays static regardless of the upstream's header
+ * spelling.
+ */
+function validateClientCredentialsHeaderSelection(auth) {
+  for (const field of ['clientId', 'clientSecret']) {
+    const part = auth[field]
+    if (!part || typeof part !== 'object') {
+      throw new Error(
+        `selections.json: \`upstreamAuth.${field}\` is required and must be an object ` +
+          `with \`headerName\` and \`value\` when \`kind\` is "client-credentials-header".`,
+      )
+    }
+    if (typeof part.headerName !== 'string' || part.headerName.length === 0) {
+      throw new Error(
+        `selections.json: \`upstreamAuth.${field}.headerName\` is required and must be a non-empty string.`,
+      )
+    }
+    if (typeof part.value !== 'string' || part.value.length === 0) {
+      throw new Error(
+        `selections.json: \`upstreamAuth.${field}.value\` is required and must be a non-empty string.`,
+      )
+    }
+  }
+  if (auth.clientId.headerName.toLowerCase() === auth.clientSecret.headerName.toLowerCase()) {
+    throw new Error(
+      'selections.json: `upstreamAuth.clientId.headerName` and ' +
+        '`upstreamAuth.clientSecret.headerName` must differ — both credentials ' +
+        'cannot ride on the same header.',
+    )
   }
 }
 
@@ -589,6 +640,12 @@ function renderHeaderLines(auth, schemes, operation) {
     headerEntries.push(`'${auth.name.toLowerCase()}': \`\${env.UPSTREAM_API_KEY}\``)
   } else if (auth.kind === 'oauth2-client-credentials') {
     headerEntries.push('authorization: `Bearer ${token}`')
+  } else if (auth.kind === 'client-credentials-header') {
+    // Client-id + client-secret pair sent as two static headers. Header
+    // names come from the spec; values resolve from the fixed env vars
+    // UPSTREAM_CLIENT_ID / UPSTREAM_CLIENT_SECRET (see the `Env` interface).
+    headerEntries.push(`'${auth.clientId.headerName.toLowerCase()}': \`\${env.UPSTREAM_CLIENT_ID}\``)
+    headerEntries.push(`'${auth.clientSecret.headerName.toLowerCase()}': \`\${env.UPSTREAM_CLIENT_SECRET}\``)
   }
   if (operation.requestBody?.schema) {
     headerEntries.push("'content-type': 'application/json'")
@@ -762,6 +819,9 @@ async function writeDotEnv(target, selections) {
     if (typeof auth.audience === 'string' && auth.audience.length > 0) {
       lines.push(`UPSTREAM_OAUTH_AUDIENCE=${auth.audience}`)
     }
+  } else if (auth.kind === 'client-credentials-header') {
+    lines.push(`UPSTREAM_CLIENT_ID=${auth.clientId.value}`)
+    lines.push(`UPSTREAM_CLIENT_SECRET=${auth.clientSecret.value}`)
   }
   await writeFile(path, `${lines.join('\n')}\n`, 'utf8')
   return path
@@ -781,6 +841,9 @@ function secretsSeededFor(auth) {
     if (typeof auth.audience === 'string' && auth.audience.length > 0) {
       out.push({ name: 'UPSTREAM_OAUTH_AUDIENCE', location: '.env' })
     }
+  } else if (auth.kind === 'client-credentials-header') {
+    out.push({ name: 'UPSTREAM_CLIENT_ID', location: '.env' })
+    out.push({ name: 'UPSTREAM_CLIENT_SECRET', location: '.env' })
   }
   out.push({ name: 'SOLVAPAY_PRODUCT_REF', location: '.env' })
   out.push({ name: 'MCP_PUBLIC_BASE_URL', location: '.env (localhost placeholder; auto-resolved on deploy)' })
