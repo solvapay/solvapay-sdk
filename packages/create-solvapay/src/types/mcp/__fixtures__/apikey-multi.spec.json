@@ -3,7 +3,7 @@
   "info": {
     "title": "Acme Widgets API",
     "version": "1.0.0",
-    "description": "Minimal OpenAPI fixture exercising a client-id + client-secret header pair (two apiKey-header schemes, no token exchange). Used by unit + smoke tests for the create-mcp-app client-credentials-header path."
+    "description": "Minimal OpenAPI fixture exercising the apiKey-multi path: two static credential headers (AppKey + AppToken) required together, no token exchange. Deliberately NOT named client-id/secret — the kind is generic over N headers. Used by unit + smoke tests for create-mcp-app."
   },
   "servers": [
     { "url": "https://api.acme-widgets.test" }
@@ -38,7 +38,7 @@
             }
           }
         },
-        "security": [{ "acme-client-id": [], "acme-client-secret": [] }]
+        "security": [{ "acme-app-key": [], "acme-app-token": [] }]
       }
     },
     "/widgets": {
@@ -73,21 +73,21 @@
             }
           }
         },
-        "security": [{ "acme-client-id": [], "acme-client-secret": [] }]
+        "security": [{ "acme-app-key": [], "acme-app-token": [] }]
       }
     }
   },
   "components": {
     "securitySchemes": {
-      "acme-client-id": {
+      "acme-app-key": {
         "type": "apiKey",
         "in": "header",
-        "name": "x-acme-client-id"
+        "name": "x-acme-app-key"
       },
-      "acme-client-secret": {
+      "acme-app-token": {
         "type": "apiKey",
         "in": "header",
-        "name": "x-acme-client-secret"
+        "name": "x-acme-app-token"
       }
     }
   }

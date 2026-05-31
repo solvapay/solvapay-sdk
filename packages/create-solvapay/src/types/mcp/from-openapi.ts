@@ -71,9 +71,8 @@ type Selections = {
         audience?: string
       }
     | {
-        kind: 'client-credentials-header'
-        clientId: { headerName: string; value: string }
-        clientSecret: { headerName: string; value: string }
+        kind: 'apiKey-multi'
+        headers: Array<{ name: string; value: string }>
       }
   operations: Array<{ operationId: string; tier: 'free' | 'paid' | 'skip' }>
 }
@@ -223,32 +222,23 @@ async function chooseAuth(
     }
   }
 
-  // A client-id + client-secret pair sent as two static headers (no token
-  // exchange). Detected when the spec declares exactly two supported
-  // header apiKey schemes that disambiguate into an id and a secret. Try
-  // this before the single-scheme path so we don't collapse the pair into
-  // one header.
-  const pair = detectClientCredentialsHeaderPair(schemes)
-  if (pair) {
+  // Two or more static credential headers required together (the OpenAPI
+  // "multiple required schemes" case — e.g. AppKey + AppToken, or a
+  // client-id + client-secret header pair). Try this before the
+  // single-scheme path so we don't collapse the set into one header.
+  const multiHeaders = detectApiKeyMultiHeaders(schemes)
+  if (multiHeaders) {
     process.stdout.write(
-      `Spec requires a client-id + client-secret header pair ` +
-        `(${pair.idHeader} + ${pair.secretHeader}).\n`,
+      `Spec requires ${multiHeaders.length} static credential headers ` +
+        `(${multiHeaders.join(' + ')}).\n`,
     )
-    const idValue = await askValue(
-      `Client ID header value for ${pair.idHeader} (blank = skip): `,
-      'client-credentials-header',
-    )
-    if (!idValue) return { kind: 'none' }
-    const secretValue = await askValue(
-      `Client secret header value for ${pair.secretHeader}: `,
-      'client-credentials-header',
-    )
-    if (!secretValue) return { kind: 'none' }
-    return {
-      kind: 'client-credentials-header',
-      clientId: { headerName: pair.idHeader, value: idValue },
-      clientSecret: { headerName: pair.secretHeader, value: secretValue },
+    const headers: Array<{ name: string; value: string }> = []
+    for (const name of multiHeaders) {
+      const value = await askValue(`Value for header ${name} (blank = skip all): `, 'apiKey-multi')
+      if (!value) return { kind: 'none' }
+      headers.push({ name, value })
     }
+    return { kind: 'apiKey-multi', headers }
   }
 
   const firstSupported = schemes.find(
@@ -313,29 +303,36 @@ async function chooseAuth(
 }
 
 /**
- * Detect a client-id + client-secret header pair: exactly two supported
- * `apiKey-header` schemes that disambiguate into an identifier and a secret.
+ * Detect a multi-header static-credential scheme: two or more supported
+ * `apiKey-header` schemes, all required together. Returns their header names
+ * (deduped, original order) when there are ≥2, else `null` so the caller
+ * falls back to the single-scheme path.
  *
- * Disambiguation is by name — the scheme whose header (or scheme key) reads
- * like a "secret" is the secret; the other is the id. When the two can't be
- * told apart (both or neither look like a secret), returns `null` so the
- * caller falls back to the single-scheme path rather than guessing which
- * credential is which.
+ * Deliberately makes no id/secret assumption — real-world pairs are often
+ * AppKey/AppToken, api-key/store-key, or three-header combinations, so the
+ * generic `apiKey-multi` kind just carries whatever headers the spec
+ * declares. Non-header and unsupported schemes are ignored.
+ *
+ * Note: this keys off the declared `securitySchemes`, not per-operation
+ * AND/OR requirement objects, so it assumes the header schemes are required
+ * together (the common case). The agent path can express exact requirements
+ * by hand-authoring `selections.json`.
  */
-export function detectClientCredentialsHeaderPair(
+export function detectApiKeyMultiHeaders(
   schemes: Array<{ supported?: boolean; kind?: string; headerName?: string; name?: string }>,
-): { idHeader: string; secretHeader: string } | null {
-  const headerSchemes = schemes.filter(s => s.supported === true && s.kind === 'apiKey-header')
-  if (headerSchemes.length !== 2) return null
-  const looksLikeSecret = (s: { headerName?: string; name?: string }): boolean =>
-    /secret/i.test(s.headerName ?? '') || /secret/i.test(s.name ?? '')
-  const secrets = headerSchemes.filter(looksLikeSecret)
-  const ids = headerSchemes.filter(s => !looksLikeSecret(s))
-  if (secrets.length !== 1 || ids.length !== 1) return null
-  const idHeader = ids[0].headerName
-  const secretHeader = secrets[0].headerName
-  if (!idHeader || !secretHeader) return null
-  return { idHeader, secretHeader }
+): string[] | null {
+  const names: string[] = []
+  const seen = new Set<string>()
+  for (const s of schemes) {
+    if (s.supported !== true || s.kind !== 'apiKey-header') continue
+    const header = s.headerName
+    if (!header) continue
+    const key = header.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    names.push(header)
+  }
+  return names.length >= 2 ? names : null
 }
 
 async function ensureScriptDepsInstalled(): Promise<void> {

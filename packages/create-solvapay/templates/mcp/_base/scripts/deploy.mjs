@@ -11,12 +11,12 @@
  *
  * This script sources `.env` (gitignored) and passes the overridable
  * keys as `--var KEY:VALUE` to `wrangler deploy`. Worker Secrets
- * (`SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, and the
- * `UPSTREAM_OAUTH_*` family) are not passed via `--var`. All are
- * uploaded from `.env` automatically on the first deploy when
+ * (`SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, the `UPSTREAM_OAUTH_*`
+ * family, and `UPSTREAM_API_HEADERS`) are not passed via `--var`. All
+ * are uploaded from `.env` automatically on the first deploy when
  * present and not already on the worker (see
- * `ensureSolvaPaySecretKey`, `ensureUpstreamApiKeySecret`, and
- * `ensureUpstreamOAuthSecrets`).
+ * `ensureSolvaPaySecretKey`, `ensureUpstreamApiKeySecret`,
+ * `ensureUpstreamOAuthSecrets`, and `ensureUpstreamApiHeadersSecret`).
  *
  * Single environment by design. Go-live is a key swap, not a separate
  * `--env`: replace `SOLVAPAY_SECRET_KEY` in `.env` with the live key,
@@ -543,6 +543,29 @@ function ensureUpstreamOAuthSecrets(localEnv, { dryRun = false } = {}) {
   }
 }
 
+// `UPSTREAM_API_HEADERS` mirrors `UPSTREAM_API_KEY` semantics for the
+// `apiKey-multi` upstream auth kind: scaffold writes a single compact-JSON
+// var holding all static credential headers. Uploaded once on first deploy,
+// skipped if already present on the worker.
+function ensureUpstreamApiHeadersSecret(localEnv, { dryRun = false } = {}) {
+  const value = localEnv.UPSTREAM_API_HEADERS?.trim()
+  if (!value) return
+
+  const existing = listWorkerSecretNames()
+  if (existing?.includes('UPSTREAM_API_HEADERS')) {
+    console.log('UPSTREAM_API_HEADERS already set on worker — skipping upload.')
+    return
+  }
+
+  if (dryRun) {
+    console.log('[dry-run] would upload UPSTREAM_API_HEADERS from .env to Worker Secrets')
+    return
+  }
+
+  console.log('Uploading UPSTREAM_API_HEADERS from .env to Worker Secrets…')
+  putWorkerSecret('UPSTREAM_API_HEADERS', value)
+}
+
 // Conservative heuristic: catches the typical scaffold/agent placeholders
 // ("api-key-petstore", "your-api-key", "test-key", "todo", etc.) without
 // false-positiving on real API keys (which are typically >= 20 chars and
@@ -820,6 +843,7 @@ await runSolvaPayPreflight({
 ensureSolvaPaySecretKey(localEnv, { dryRun })
 ensureUpstreamApiKeySecret(localEnv, { dryRun, force: forceFlag })
 ensureUpstreamOAuthSecrets(localEnv, { dryRun })
+ensureUpstreamApiHeadersSecret(localEnv, { dryRun })
 
 const wranglerPassthrough = passthrough.filter(
   arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',

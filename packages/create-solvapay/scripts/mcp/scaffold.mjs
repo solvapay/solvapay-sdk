@@ -59,7 +59,7 @@ const VALID_AUTH_KINDS = new Set([
   'bearer',
   'apiKey',
   'oauth2-client-credentials',
-  'client-credentials-header',
+  'apiKey-multi',
 ])
 const VALID_TIERS = new Set(['free', 'paid', 'skip'])
 const VALID_MODES = new Set(['one-to-one', 'intent-driven'])
@@ -308,8 +308,8 @@ function validateSelections(selections) {
   if (auth.kind === 'oauth2-client-credentials') {
     validateOauth2ClientCredentialsSelection(auth)
   }
-  if (auth.kind === 'client-credentials-header') {
-    validateClientCredentialsHeaderSelection(auth)
+  if (auth.kind === 'apiKey-multi') {
+    validateApiKeyMultiSelection(auth)
   }
   validatePlanSelections(selections.plans)
   // Intent-driven mode owns its own `src/tools/*.ts` files, so no
@@ -393,45 +393,67 @@ function validateOauth2ClientCredentialsSelection(auth) {
 }
 
 /**
- * Validate the `client-credentials-header` shape: a client-id + client-secret
- * credential pair sent as two static request headers (no token exchange — that
- * is `oauth2-client-credentials`). Field names mirror the oauth2 branch so the
- * two kinds read as the same family.
+ * Validate the `apiKey-multi` shape: two or more static credential headers
+ * sent on every request (no token exchange). This is the OpenAPI "multiple
+ * required schemes (AND)" case — e.g. `X-VTEX-API-AppKey` + `X-VTEX-API-AppToken`,
+ * or a client-id + client-secret header pair. Deliberately generic: no
+ * id/secret semantics, since real-world pairs are often AppKey/AppToken,
+ * api-key/store-key, or three-header combinations.
  *
- * The header names (e.g. `x-client-id` / `x-client-secret`) come from the
- * spec's `securitySchemes`; the values are user-supplied secrets. The values
- * are seeded into `.env` under the fixed names UPSTREAM_CLIENT_ID /
- * UPSTREAM_CLIENT_SECRET (declared in the template's `Env` interface), so the
- * generated `Env` shape stays static regardless of the upstream's header
- * spelling.
+ * The header names come from the spec's `securitySchemes`; the values are
+ * user-supplied. All `name`→`value` pairs are seeded into `.env` as one
+ * compact-JSON `UPSTREAM_API_HEADERS` var (declared in the template's `Env`
+ * interface), so the generated `Env` shape stays static regardless of how
+ * many headers or what they're called. A single key should use `kind:
+ * "apiKey"` instead — `apiKey-multi` requires at least two.
  */
-function validateClientCredentialsHeaderSelection(auth) {
-  for (const field of ['clientId', 'clientSecret']) {
-    const part = auth[field]
-    if (!part || typeof part !== 'object') {
-      throw new Error(
-        `selections.json: \`upstreamAuth.${field}\` is required and must be an object ` +
-          `with \`headerName\` and \`value\` when \`kind\` is "client-credentials-header".`,
-      )
-    }
-    if (typeof part.headerName !== 'string' || part.headerName.length === 0) {
-      throw new Error(
-        `selections.json: \`upstreamAuth.${field}.headerName\` is required and must be a non-empty string.`,
-      )
-    }
-    if (typeof part.value !== 'string' || part.value.length === 0) {
-      throw new Error(
-        `selections.json: \`upstreamAuth.${field}.value\` is required and must be a non-empty string.`,
-      )
-    }
-  }
-  if (auth.clientId.headerName.toLowerCase() === auth.clientSecret.headerName.toLowerCase()) {
+function validateApiKeyMultiSelection(auth) {
+  if (!Array.isArray(auth.headers) || auth.headers.length < 2) {
     throw new Error(
-      'selections.json: `upstreamAuth.clientId.headerName` and ' +
-        '`upstreamAuth.clientSecret.headerName` must differ — both credentials ' +
-        'cannot ride on the same header.',
+      'selections.json: `upstreamAuth.headers` must be an array of at least two ' +
+        '{ name, value } entries when `kind` is "apiKey-multi". For a single header, ' +
+        'use `kind: "apiKey"`.',
     )
   }
+  const seen = new Set()
+  for (const header of auth.headers) {
+    if (!header || typeof header !== 'object') {
+      throw new Error('selections.json: each entry in `upstreamAuth.headers` must be an object.')
+    }
+    if (typeof header.name !== 'string' || header.name.length === 0) {
+      throw new Error(
+        'selections.json: each `upstreamAuth.headers[].name` is required and must be a non-empty string.',
+      )
+    }
+    if (typeof header.value !== 'string' || header.value.length === 0) {
+      throw new Error(
+        'selections.json: each `upstreamAuth.headers[].value` is required and must be a non-empty string.',
+      )
+    }
+    const key = header.name.toLowerCase()
+    if (seen.has(key)) {
+      throw new Error(
+        `selections.json: duplicate header name \`${header.name}\` in \`upstreamAuth.headers\` — ` +
+          'each credential must ride on its own header.',
+      )
+    }
+    seen.add(key)
+  }
+}
+
+/**
+ * Build the compact-JSON object string written to `.env` as
+ * `UPSTREAM_API_HEADERS`. Keyed by (lower-cased) header name → value; the
+ * generated tools spread it into every request's headers. Compact (no
+ * spaces) so it survives a single `KEY=value` .env line and `wrangler
+ * secret put`.
+ */
+function apiKeyMultiHeadersJson(auth) {
+  const obj = {}
+  for (const header of auth.headers) {
+    obj[header.name.toLowerCase()] = header.value
+  }
+  return JSON.stringify(obj)
 }
 
 function matchSelectionsToOperations(selectionEntries, allOps) {
@@ -640,12 +662,12 @@ function renderHeaderLines(auth, schemes, operation) {
     headerEntries.push(`'${auth.name.toLowerCase()}': \`\${env.UPSTREAM_API_KEY}\``)
   } else if (auth.kind === 'oauth2-client-credentials') {
     headerEntries.push('authorization: `Bearer ${token}`')
-  } else if (auth.kind === 'client-credentials-header') {
-    // Client-id + client-secret pair sent as two static headers. Header
-    // names come from the spec; values resolve from the fixed env vars
-    // UPSTREAM_CLIENT_ID / UPSTREAM_CLIENT_SECRET (see the `Env` interface).
-    headerEntries.push(`'${auth.clientId.headerName.toLowerCase()}': \`\${env.UPSTREAM_CLIENT_ID}\``)
-    headerEntries.push(`'${auth.clientSecret.headerName.toLowerCase()}': \`\${env.UPSTREAM_CLIENT_SECRET}\``)
+  } else if (auth.kind === 'apiKey-multi') {
+    // N static credential headers, carried as one compact-JSON env var
+    // (`UPSTREAM_API_HEADERS`, keyed by header name → value). Spread it into
+    // the request headers so the generated `Env` shape stays static no
+    // matter how many headers the upstream needs.
+    headerEntries.push("...(JSON.parse(env.UPSTREAM_API_HEADERS ?? '{}') as Record<string, string>)")
   }
   if (operation.requestBody?.schema) {
     headerEntries.push("'content-type': 'application/json'")
@@ -819,9 +841,8 @@ async function writeDotEnv(target, selections) {
     if (typeof auth.audience === 'string' && auth.audience.length > 0) {
       lines.push(`UPSTREAM_OAUTH_AUDIENCE=${auth.audience}`)
     }
-  } else if (auth.kind === 'client-credentials-header') {
-    lines.push(`UPSTREAM_CLIENT_ID=${auth.clientId.value}`)
-    lines.push(`UPSTREAM_CLIENT_SECRET=${auth.clientSecret.value}`)
+  } else if (auth.kind === 'apiKey-multi') {
+    lines.push(`UPSTREAM_API_HEADERS=${apiKeyMultiHeadersJson(auth)}`)
   }
   await writeFile(path, `${lines.join('\n')}\n`, 'utf8')
   return path
@@ -841,9 +862,8 @@ function secretsSeededFor(auth) {
     if (typeof auth.audience === 'string' && auth.audience.length > 0) {
       out.push({ name: 'UPSTREAM_OAUTH_AUDIENCE', location: '.env' })
     }
-  } else if (auth.kind === 'client-credentials-header') {
-    out.push({ name: 'UPSTREAM_CLIENT_ID', location: '.env' })
-    out.push({ name: 'UPSTREAM_CLIENT_SECRET', location: '.env' })
+  } else if (auth.kind === 'apiKey-multi') {
+    out.push({ name: 'UPSTREAM_API_HEADERS', location: '.env' })
   }
   out.push({ name: 'SOLVAPAY_PRODUCT_REF', location: '.env' })
   out.push({ name: 'MCP_PUBLIC_BASE_URL', location: '.env (localhost placeholder; auto-resolved on deploy)' })

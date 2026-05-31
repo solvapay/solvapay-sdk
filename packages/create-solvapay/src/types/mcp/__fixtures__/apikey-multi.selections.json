@@ -2,9 +2,11 @@
   "workerName": "acme-widgets-mcp",
   "mcpPublicBaseUrl": "http://localhost:8787",
   "upstreamAuth": {
-    "kind": "client-credentials-header",
-    "clientId": { "headerName": "x-acme-client-id", "value": "smoke-client-id" },
-    "clientSecret": { "headerName": "x-acme-client-secret", "value": "smoke-client-secret" }
+    "kind": "apiKey-multi",
+    "headers": [
+      { "name": "x-acme-app-key", "value": "smoke-app-key" },
+      { "name": "x-acme-app-token", "value": "smoke-app-token" }
+    ]
   },
   "mode": "one-to-one",
   "operations": [
