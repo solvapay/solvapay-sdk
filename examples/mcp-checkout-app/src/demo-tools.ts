@@ -145,10 +145,13 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   // exhaustion ships a text-only narration via `content[0].text` —
   // no iframe opens for a gate, the LLM reads the copy and calls the
   // `upgrade` / `topup` intent tool which mounts the widget.
+  const USAGE_BILLING_SUFFIX =
+    'Usage-based billing: each call debits credits per your active plan. Call `manage_account` to see balance and cost per call; paywall opens when out of balance.'
+
   registerPayable('predict_price_chart', {
     title: 'Predict price chart (Oracle demo)',
     description:
-      'Returns recent daily price history and a forecast over the requested `days` horizon with an 80% confidence band; always renders as an interactive line chart artifact in the host. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. 1 credit per call; paywall opens when out of balance.',
+      `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band; always renders as an interactive line chart artifact in the host. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
@@ -192,7 +195,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('predict_direction', {
     title: 'Predict direction (Oracle demo)',
     description:
-      'Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon; always renders as a compact verdict card artifact in the host. Same seeded model as `predict_price_chart`, so the verdict matches the chart for the same symbol. 1 credit per call; paywall opens when out of balance.',
+      `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon; always renders as a compact verdict card artifact in the host. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
@@ -416,7 +419,7 @@ function registerDemoPrompts(server: McpServer): void {
     {
       title: 'Search knowledge (demo)',
       description:
-        'Call the demo `search_knowledge` paywalled tool. Each call consumes 1 credit; when you run out, the SolvaPay paywall opens.',
+        'Call the demo `search_knowledge` paywalled tool. Usage-based billing applies per call; call `manage_account` for balance and cost per call.',
       argsSchema: { query: z.string().optional() },
     },
     async ({ query }: { query?: string }) => ({
@@ -439,7 +442,7 @@ function registerDemoPrompts(server: McpServer): void {
     {
       title: 'Get market quote (demo)',
       description:
-        'Call the demo `get_market_quote` paywalled tool. Each call consumes 1 credit; when you run out, the SolvaPay paywall opens.',
+        'Call the demo `get_market_quote` paywalled tool. Usage-based billing applies per call; call `manage_account` for balance and cost per call.',
       argsSchema: { symbol: z.string().optional() },
     },
     async ({ symbol }: { symbol?: string }) => ({
