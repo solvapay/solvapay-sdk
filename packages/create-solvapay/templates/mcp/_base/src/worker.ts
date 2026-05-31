@@ -42,6 +42,14 @@ export interface Env {
   UPSTREAM_OAUTH_CLIENT_SECRET?: string
   UPSTREAM_OAUTH_SCOPE?: string
   UPSTREAM_OAUTH_AUDIENCE?: string
+  // Multiple static credential headers (the OpenAPI "two-or-more required
+  // schemes" case) — populated when scaffold detected `upstreamAuth.kind:
+  // "apiKey-multi"`. A compact JSON object keyed by header name → value
+  // (e.g. `{"x-vtex-api-appkey":"…","x-vtex-api-apptoken":"…"}`). Generated
+  // tools `JSON.parse` it and spread it into every request's headers. One
+  // var keeps `Env` static regardless of how many headers the upstream
+  // needs. Optional because not every project uses it.
+  UPSTREAM_API_HEADERS?: string
 }
 
 function requireEnv(env: Env, name: keyof Env): string {

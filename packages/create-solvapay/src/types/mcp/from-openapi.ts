@@ -70,6 +70,10 @@ type Selections = {
         scope?: string
         audience?: string
       }
+    | {
+        kind: 'apiKey-multi'
+        headers: Array<{ name: string; value: string }>
+      }
   operations: Array<{ operationId: string; tier: 'free' | 'paid' | 'skip' }>
 }
 
@@ -194,25 +198,15 @@ async function chooseAuth(
     supported?: boolean
     kind?: string
     headerName?: string
+    name?: string
     tokenUrl?: string
   }>,
   nonInteractive: boolean,
 ): Promise<Selections['upstreamAuth']> {
-  const firstSupported = schemes.find(
-    s =>
-      s.supported === true &&
-      (s.kind === 'http-bearer' ||
-        s.kind === 'apiKey-header' ||
-        s.kind === 'oauth2-clientCredentials'),
-  )
-  if (!firstSupported) {
-    return { kind: 'none' }
-  }
-
-  const askValue = async (prompt: string): Promise<string> => {
+  const askValue = async (prompt: string, authLabel: string): Promise<string> => {
     if (nonInteractive) {
       throw new Error(
-        `Spec requires upstream auth (${firstSupported.kind}); pass --non-interactive only after ` +
+        `Spec requires upstream auth (${authLabel}); pass --non-interactive only after ` +
           `setting the upstream secret(s) in the generated .env. Run interactively for the guided flow.`,
       )
     }
@@ -228,9 +222,40 @@ async function chooseAuth(
     }
   }
 
+  // Two or more static credential headers required together (the OpenAPI
+  // "multiple required schemes" case — e.g. AppKey + AppToken, or a
+  // client-id + client-secret header pair). Try this before the
+  // single-scheme path so we don't collapse the set into one header.
+  const multiHeaders = detectApiKeyMultiHeaders(schemes)
+  if (multiHeaders) {
+    process.stdout.write(
+      `Spec requires ${multiHeaders.length} static credential headers ` +
+        `(${multiHeaders.join(' + ')}).\n`,
+    )
+    const headers: Array<{ name: string; value: string }> = []
+    for (const name of multiHeaders) {
+      const value = await askValue(`Value for header ${name} (blank = skip all): `, 'apiKey-multi')
+      if (!value) return { kind: 'none' }
+      headers.push({ name, value })
+    }
+    return { kind: 'apiKey-multi', headers }
+  }
+
+  const firstSupported = schemes.find(
+    s =>
+      s.supported === true &&
+      (s.kind === 'http-bearer' ||
+        s.kind === 'apiKey-header' ||
+        s.kind === 'oauth2-clientCredentials'),
+  )
+  if (!firstSupported) {
+    return { kind: 'none' }
+  }
+
   if (firstSupported.kind === 'http-bearer') {
     const key = await askValue(
       'Spec requires bearer auth. Paste the upstream API key (skips into .env, blank = skip): ',
+      'http-bearer',
     )
     if (!key) return { kind: 'none' }
     return { kind: 'bearer', key }
@@ -240,6 +265,7 @@ async function chooseAuth(
     const headerName = firstSupported.headerName ?? 'X-API-Key'
     const key = await askValue(
       `Spec requires apiKey auth (${headerName}). Paste the upstream API key (blank = skip): `,
+      'apiKey-header',
     )
     if (!key) return { kind: 'none' }
     return { kind: 'apiKey', in: 'header', name: headerName, key }
@@ -253,12 +279,18 @@ async function chooseAuth(
   process.stdout.write(
     `Spec requires OAuth 2.0 client_credentials (token endpoint ${tokenUrl}).\n`,
   )
-  const clientId = await askValue('OAuth client_id (blank = skip OAuth setup): ')
+  const clientId = await askValue('OAuth client_id (blank = skip OAuth setup): ', 'oauth2-client-credentials')
   if (!clientId) return { kind: 'none' }
-  const clientSecret = await askValue('OAuth client_secret: ')
+  const clientSecret = await askValue('OAuth client_secret: ', 'oauth2-client-credentials')
   if (!clientSecret) return { kind: 'none' }
-  const scope = await askValue('OAuth scope (optional, space-delimited; press Enter to skip): ')
-  const audience = await askValue('OAuth audience (optional, e.g. Auth0 audience; press Enter to skip): ')
+  const scope = await askValue(
+    'OAuth scope (optional, space-delimited; press Enter to skip): ',
+    'oauth2-client-credentials',
+  )
+  const audience = await askValue(
+    'OAuth audience (optional, e.g. Auth0 audience; press Enter to skip): ',
+    'oauth2-client-credentials',
+  )
   const auth: Extract<Selections['upstreamAuth'], { kind: 'oauth2-client-credentials' }> = {
     kind: 'oauth2-client-credentials',
     tokenUrl,
@@ -268,6 +300,39 @@ async function chooseAuth(
   if (scope) auth.scope = scope
   if (audience) auth.audience = audience
   return auth
+}
+
+/**
+ * Detect a multi-header static-credential scheme: two or more supported
+ * `apiKey-header` schemes, all required together. Returns their header names
+ * (deduped, original order) when there are ≥2, else `null` so the caller
+ * falls back to the single-scheme path.
+ *
+ * Deliberately makes no id/secret assumption — real-world pairs are often
+ * AppKey/AppToken, api-key/store-key, or three-header combinations, so the
+ * generic `apiKey-multi` kind just carries whatever headers the spec
+ * declares. Non-header and unsupported schemes are ignored.
+ *
+ * Note: this keys off the declared `securitySchemes`, not per-operation
+ * AND/OR requirement objects, so it assumes the header schemes are required
+ * together (the common case). The agent path can express exact requirements
+ * by hand-authoring `selections.json`.
+ */
+export function detectApiKeyMultiHeaders(
+  schemes: Array<{ supported?: boolean; kind?: string; headerName?: string; name?: string }>,
+): string[] | null {
+  const names: string[] = []
+  const seen = new Set<string>()
+  for (const s of schemes) {
+    if (s.supported !== true || s.kind !== 'apiKey-header') continue
+    const header = s.headerName
+    if (!header) continue
+    const key = header.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    names.push(header)
+  }
+  return names.length >= 2 ? names : null
 }
 
 async function ensureScriptDepsInstalled(): Promise<void> {
