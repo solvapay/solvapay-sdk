@@ -1,5 +1,122 @@
 # @solvapay/server changelog
 
+## 1.1.1
+
+### Patch Changes
+
+- 26423fb: Await `trackUsage` on edge runtimes so paywall limits decrement correctly.
+
+  Floating `trackUsage` promises were dropped when Cloudflare Workers returned
+  the MCP response, so usage never reached the backend and free-quota gating
+  never fired. All three paywall tracking paths now await tracking and swallow
+  errors so tool calls stay reliable.
+
+## 1.1.0
+
+### Minor Changes
+
+- f0ee414: Add first-class chatbot / streaming primitives across `@solvapay/server` and `@solvapay/react`.
+
+  ### `@solvapay/server`
+  - **New `solvaPay.payable({ productRef }).gate(req, opts)` primitive.** Decision-shaped paywall surface for streaming, SSE, and multi-step agent flows that don't fit the one-shot `.http()` / `.next()` / `.mcp()` adapter contract. Returns a discriminated union — `{ kind: 'paywall', response, content }` (pre-built 402) or `{ kind: 'allow', decision, customerRef, trackSuccess, trackFail }` with bound usage closures. `trackSuccess` / `trackFail` pre-fill `productRef`, `customerRef`, `requestId` and route through `ctx.waitUntil` when an `ExecutionContext`-shaped `ctx` is provided so Workers keep `trackUsage` alive past the response close. Multiple `trackSuccess` calls per allow decision are supported (per-step metering for AI SDK `onStepFinish`, LangChain `handleLLMEnd`, OpenAI `response.completed`).
+  - **New `solvaPay.paywall.decide()` factory exposure.** The kernel `paywall.decide()` routine — already used internally by adapters — is now reachable on the public factory return so streaming handlers can consume the verdict directly without re-implementing limit checks + gate construction.
+  - **New `buildPaywallGate(productRef, limits)` export.** Pure helper that converts a `LimitResponseWithPlan` (or any subset compatible with `apiClient.checkLimits`) into a `PaywallStructuredContent`. Extracted from `paywall.decide()`; both paths share the helper so wire shapes stay in lockstep. Exported from both `./` and `./edge` entrypoints.
+  - **New types:** `PayableGateOptions`, `PayableGateResult`, `PayablePaywallResult`, `PayableAllowResult`.
+  - The handler-shaped adapters (`.http`, `.next`, `.mcp`, `.function`) and `paywall.protect()` are unchanged.
+
+  ### `@solvapay/react`
+  - **`usePlans({ productRef })` `fetcher` is now optional.** When omitted, the hook reads `_config` via `SolvaPayContext` and routes through `defaultListPlans` — preferring `config.transport.listPlans` when available, falling back to `GET ${config.api.listPlans ?? '/api/list-plans'}`. Matches the existing fallback in `<PlanSelector>` / `<CheckoutLayout>` so consumers no longer need to hand-roll `useTransport()` + a fetcher just to call `usePlans`. Explicit `fetcher` overrides remain supported for advanced cases.
+  - **New anonymous-auth helpers (`./adapters/auth`):**
+    - `getOrCreateAnonymousCustomerRef(storageKey?)` — mints / persists an `anon_<uuid>` customer ref under `localStorage`. Falls back to the deterministic `'anon_ssr'` placeholder server-side.
+    - `createAnonymousAuthAdapter(customerRef)` — returns an `AuthAdapter` whose `getToken()` and `getUserId()` both yield the supplied ref. Used to keep the SDK's auth-poll heuristic happy in apps without real authentication.
+    - `resetAnonymousCustomerRef(storageKey?)` — clears the persisted ref plus the SDK's cached customer-ref entries so the next call mints a fresh identity.
+
+  These are additive — no existing exports change. `chat-checkout-demo` is now built on `payable.gate()` + `<PaywallNotice>` and demonstrates the JWT real-auth migration in its README.
+
+- b53abcb: Add `useLimits` — a backend-authoritative hook for rendering "X left" pills against any (product, meter) pair.
+
+  The runtime portion of the backend's `LimitResponse` (the same data `paywall.decide()` consults internally on every gated request) is now exposed read-only so consumers can render an honest counter without reinventing the math client-side. Replaces two common patterns:
+  - `floor(useBalance().credits / plan.creditsPerUnit)` for prepaid usage-based products.
+  - `messageLimit - userMessageCount` local refs for free-tier products.
+
+  Both collapse onto one source of truth.
+
+  ### `@solvapay/react`
+
+  ```tsx
+  import { useLimits } from '@solvapay/react'
+
+  const { remaining, withinLimits, refetch, adjustRemaining } = useLimits({
+    productRef: 'prd_api',
+    meterName: 'requests', // optional; defaults to 'requests'
+  })
+  ```
+
+  The minimal projection (`remaining`, `withinLimits`, `meterName`, `activationRequired`) is intentional — `plans` / `balance` / `productDetails` are already surfaced by `usePlans` / `useBalance` / paywall structured content.
+
+  `activationRequired: true` distinguishes "free tier waiting to be claimed" from "exhausted" — both look like `remaining: 0` on the wire, but only the latter should drive an "Upgrade" CTA. Pair with `useActivation` to flip the customer onto the free tier when the backend's default plan needs explicit activation:
+
+  ```tsx
+  const { activationRequired } = useLimits({ productRef })
+  const { activate } = useActivation()
+  const freePlan = plans.find(p => !p.requiresPayment && (p.freeUnits ?? 0) > 0)
+
+  useEffect(() => {
+    if (activationRequired === true && freePlan?.reference) {
+      activate({ productRef, planRef: freePlan.reference })
+    }
+  }, [activationRequired, freePlan?.reference, productRef, activate])
+  ```
+
+  `adjustRemaining(delta)` mirrors `useBalance().adjustBalance` — applies an 8 s optimistic grace window then auto-refetches. Use after a successful gated action so the pill snaps before the trailing refetch lands. Module-level cache keyed by `customerRef:productRef:meterName` with a 10 s TTL that mirrors the backend paywall's `limitsCacheTTL`. When the transport doesn't implement `getLimits` (e.g. an MCP adapter without the route), the hook returns `null` for `remaining` / `withinLimits` with `loading: false` — graceful fallback matching `useUsage`'s behaviour when `getUsage` is absent.
+
+  ### `@solvapay/server`
+
+  New `checkLimitsCore(request, options)` route helper mirrors `listPlansCore` — reads `productRef` (required) and `meterName` (optional) from query string, authenticates via `getAuthenticatedUserCore`, returns the full `LimitResponseWithPlan`. Reachable from both `@solvapay/server` and `@solvapay/server/edge`.
+
+  ### Transport layer
+
+  `SolvaPayTransport` gains an optional `getLimits({ productRef, meterName? })` method (parallel to `getBalance` / `getUsage`). The default HTTP transport routes to `GET /api/limits` (configurable via `SolvaPayConfig.api.getLimits`).
+
+  ### `useAutoActivateFreePlan`
+
+  New hook that encapsulates the "silently activate the free plan when the backend reports `activationRequired: true`" pattern from the demo. Pairs `useLimits`, `usePlans`, and `useActivation` behind a one-shot guard keyed by `${customerRef}:${productRef}` so failed activations don't retry on every render. Returns `{ pending, activated, error }` — use `pending` as a skeleton gate so the UI doesn't flash "0 left" between the limits fetch and the post-activation refetch.
+
+  ```tsx
+  import { useAutoActivateFreePlan } from '@solvapay/react'
+
+  const { pending: autoActivating } = useAutoActivateFreePlan({ productRef })
+
+  <UsagePill loading={autoActivating || limitsLoading} remaining={limitRemaining} />
+  ```
+
+  When the product has no free plan to activate (e.g. a PAYG-only product whose default plan needs activation but is paid), `pending` stays `false` so the consumer commits to the backend's actual `remaining` instead of stalling on a skeleton.
+
+  ### `usePlans` in-flight cache fix
+
+  Reordered the cache check so the in-flight branch wins over the fresh-cache branch. Previously two sibling `usePlans` calls against the same `productRef` could race: the second caller hit the fresh-cache branch (the in-flight slot carries `plans: []` + a fresh timestamp) and locked itself into "loading=false, plans=[]" until the TTL expired. The in-flight branch now coalesces correctly, and the fresh-cache branch only matches when `plans.length > 0`. Behaviour is unchanged for single-mount use; concurrent callers no longer need a workaround.
+
+  ### Non-breaking
+
+  All additions are additive: `useBalance` / `useUsage` are unchanged, `getLimits` is optional on the transport interface so existing custom transports keep working without modification, and the `usePlans` cache reorder is a strict bugfix (no API change).
+
+### Patch Changes
+
+- b53abcb: Topup-only paywalls now emit `kind: 'activation_required'` (with the PAYG plans attached) instead of `kind: 'payment_required'`. Fixes the React SDK rendering "Upgrade to continue" / "Pick a plan below to keep chatting" on a surface that only shows an amount picker — the existing `<PaywallNotice.Heading>` / `<PaywallNotice.Message>` resolvers now pick the topup-flavored copy automatically ("Add credits to continue" / "You're out of credits. Add more below to keep going.").
+
+  The swap is conservative — `buildPaywallGate` only re-discriminates when:
+  1. `activationRequired` is not set (the customer already has an active plan), AND
+  2. `classifyPaywallState` returns `topup_required` (active usage-based plan, out of credits), AND
+  3. `limits.plans` contains at least one paid plan AND every paid plan is PAYG (`type: 'usage-based' | 'hybrid'`). Free plans are filtered out before the check, so a typical Free + PAYG product still counts as topup-only.
+
+  When any of those conditions doesn't hold (no plans on the response, mixed PAYG + recurring product, etc.) the gate stays on `payment_required` so the heading / message stay accurate. The internal `paywall-state` classifier and the MCP narration text generated by `buildGateMessage` were already producing topup copy for this case via the `topup_required` state — only the structured `kind` discriminant on the wire changes.
+
+  ### Backward compat
+
+  HTTP / Next adapter consumers branching on `gate.kind === 'payment_required'` for the topup case will now see `gate.kind === 'activation_required'`. The shape is otherwise identical (with `plans`, `balance`, `productDetails` all populated when available). MCP `<McpCheckoutView>` / `PlanStep` `paywallKind` branching is unaffected because the MCP topup flow routes through `<McpTopupView>` (a separate view discriminator) rather than the upgrade plan-step UI.
+
+  Consumers who relied on `kind === 'payment_required'` to mean "this customer is over their free quota and needs to choose a plan" should switch to checking `kind === 'payment_required'` OR (`kind === 'activation_required'` AND not every paid plan is PAYG) for the same intent.
+
 ## 1.0.12
 
 ### Patch Changes

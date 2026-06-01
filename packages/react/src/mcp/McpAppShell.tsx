@@ -61,9 +61,9 @@ export interface McpAppShellProps {
   /**
    * Ask the host to unmount the MCP app. Wired by `<McpApp>` to
    * `app.requestTeardown()`. The checkout view uses this for its
-   * `"Back to chat"` success CTA and the `"Stay on Free"` dismiss
-   * link. `undefined` hides those affordances so integrators that own
-   * their own mount can opt out.
+   * `"Stay on Free"` decline link on the plan-selection step.
+   * `undefined` hides that affordance so integrators that own their
+   * own mount can opt out.
    */
   onClose?: () => void
 }
@@ -125,9 +125,13 @@ export function McpAppShell({
   }, [onRefreshBootstrap, bootstrap.view])
 
   const showFooter = footer ?? true
-  // The sidebar (seller + customer details cards) shows only when
-  // there's an authenticated customer to render details for.
-  const isShellSidebarEligible = bootstrap.customer !== null
+  // The sidebar (seller + customer details cards) carries the
+  // account-context info that `<McpAccountView>` would otherwise
+  // render inline. Mount it on every surface whenever a customer is
+  // known so the 520px / 900px frame stays stable across in-session
+  // surface swaps (account → checkout → topup). Unauthenticated
+  // bootstraps fall through to the narrow centered column.
+  const showSidebar = bootstrap.customer !== null
 
   return (
     <div className="solvapay-mcp-shell">
@@ -138,14 +142,14 @@ export function McpAppShell({
             bootstrap={bootstrap}
             views={views}
             classNames={classNames}
-            suppressDetailCards={isShellSidebarEligible}
+            suppressDetailCards={showSidebar}
             onSurfaceChange={setOverrideView}
             onRefreshBootstrap={onRefreshBootstrap}
             onClose={onClose}
           />
         </div>
 
-        {isShellSidebarEligible ? (
+        {showSidebar ? (
           <aside className="solvapay-mcp-shell-sidebar" aria-label="Your account context">
             <McpSellerDetailsCard classNames={classNames} />
             <McpCustomerDetailsCard
@@ -186,14 +190,14 @@ export interface McpViewRouterProps {
    */
   onSurfaceChange?: (next: McpViewKind) => void
   /**
-   * Forwarded to `McpCheckoutView`'s `"Back to chat"` success CTA so
-   * the shell can reseed its caches before the host unmounts.
+   * Optional bootstrap re-fetcher. The shell triggers it once on mount
+   * so a customer who re-opens a backgrounded iframe sees fresh
+   * caches; otherwise unused.
    */
   onRefreshBootstrap?: () => void | Promise<void>
   /**
-   * Forwarded to `McpCheckoutView`'s `"Back to chat"` and
-   * `"Stay on Free"` affordances. Wired by `<McpApp>` to
-   * `app.requestTeardown()`.
+   * Forwarded to `McpCheckoutView`'s `"Stay on Free"` decline link.
+   * Wired by `<McpApp>` to `app.requestTeardown()`.
    */
   onClose?: () => void
 }
@@ -242,7 +246,6 @@ export function McpViewRouter({
       return (
         <AccountView
           classNames={classNames}
-          product={bootstrap.product}
           onTopup={goTopup}
           onChangePlan={goCheckout}
           hideDetailCards={suppressDetailCards}

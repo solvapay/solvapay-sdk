@@ -33,13 +33,25 @@ export interface McpViewClassNames {
   appHeaderInitials?: string
   /** `<span>` wrapping the merchant's display name. */
   appHeaderName?: string
-  /** `<header>` wrapping the product name + description on the account view. */
+  /**
+   * @deprecated The account surface no longer renders a product header.
+   * Slot retained for integrator overrides that still target it.
+   */
   productHeader?: string
-  /** `<h1>` rendering the product name on the account view. */
+  /**
+   * @deprecated The account surface no longer renders a product name hero.
+   * Slot retained for integrator overrides that still target it.
+   */
   productName?: string
-  /** `<p>` rendering the optional product description. */
+  /**
+   * @deprecated The account surface no longer renders product description.
+   * Slot retained for integrator overrides that still target it.
+   */
   productDescription?: string
-  /** Uppercased muted label (e.g. `CURRENT PLAN AND USAGE`). */
+  /**
+   * @deprecated The account surface no longer renders a section overline.
+   * Slot retained for integrator overrides that still target it.
+   */
   sectionLabel?: string
 }
 

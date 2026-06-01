@@ -70,9 +70,12 @@ const DefaultTree: React.FC<{ showCreditEstimate: boolean }> = ({ showCreditEsti
           <Primitive.Custom className="solvapay-amount-picker-custom-input" />
         </div>
       </div>
-      {showCreditEstimate && ctx.estimatedCredits != null && (
-        <p className="solvapay-amount-picker-credit-estimate">
-          {creditEstimate(ctx.estimatedCredits)}
+      {showCreditEstimate && (
+        <p
+          className="solvapay-amount-picker-credit-estimate"
+          aria-hidden={ctx.estimatedCredits == null || undefined}
+        >
+          {ctx.estimatedCredits != null ? creditEstimate(ctx.estimatedCredits) : '\u00a0'}
         </p>
       )}
       {ctx.error && (

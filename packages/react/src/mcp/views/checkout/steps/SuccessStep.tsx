@@ -2,8 +2,14 @@
 
 /**
  * Step 4 — shared success surface. Renders a PAYG or recurring
- * receipt depending on the branch that produced the success, plus a
- * `Back to chat` CTA that unmounts the view.
+ * receipt depending on the branch that produced the success.
+ *
+ * No CTA below the receipt: by the time this step mounts,
+ * `CheckoutStateMachine` has already fired
+ * `notifySuccess({ kind: 'topup' | 'plan-activated' })`, which posts a
+ * user-visible message to the conversation. The agent picks that up
+ * and continues the flow on its own — there's nothing left for the
+ * customer to click in the iframe.
  */
 
 import React, { memo } from 'react'
@@ -13,15 +19,10 @@ import type { Cx, SuccessMeta } from '../shared'
 
 interface SuccessStepProps {
   meta: SuccessMeta
-  onBackToChat: () => Promise<void>
   cx: Cx
 }
 
-export const SuccessStep = memo(function SuccessStep({
-  meta,
-  onBackToChat,
-  cx,
-}: SuccessStepProps) {
+export const SuccessStep = memo(function SuccessStep({ meta, cx }: SuccessStepProps) {
   const locale = useHostLocale()
   if (meta.branch === 'payg') {
     return (
@@ -50,17 +51,6 @@ export const SuccessStep = memo(function SuccessStep({
             <dd>{meta.rateLabel}</dd>
           </div>
         </dl>
-
-        <button
-          type="button"
-          className={cx.button}
-          data-variant="success"
-          onClick={() => {
-            void onBackToChat()
-          }}
-        >
-          Back to chat
-        </button>
       </>
     )
   }
@@ -99,17 +89,6 @@ export const SuccessStep = memo(function SuccessStep({
       <p className={`${cx.muted} solvapay-mcp-checkout-manage-pointer`.trim()}>
         Manage from <code>/manage_account</code>
       </p>
-
-      <button
-        type="button"
-        className={cx.button}
-        data-variant="success"
-        onClick={() => {
-          void onBackToChat()
-        }}
-      >
-        Back to chat
-      </button>
     </>
   )
 })

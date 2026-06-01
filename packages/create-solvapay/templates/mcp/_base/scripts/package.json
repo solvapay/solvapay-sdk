@@ -1,0 +1,10 @@
+{
+  "name": "create-solvapay-mcp-scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runtime deps for scaffolded project scripts. Run `npm install` once inside this directory before invoking test.mjs (verify.mjs has no extra deps).",
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^10.1.0"
+  }
+}

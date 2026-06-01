@@ -23,6 +23,7 @@
 import React from 'react'
 import { usePurchase } from '../hooks/usePurchase'
 import { usePurchaseStatus } from '../hooks/usePurchaseStatus'
+import { CancelledPlanNotice } from './CancelledPlanNotice'
 import { usePaymentMethod } from '../hooks/usePaymentMethod'
 import { useCopy } from '../hooks/useCopy'
 import { BalanceBadge } from './BalanceBadge'
@@ -49,6 +50,8 @@ export interface CurrentPlanCardClassNames {
   usageMeter?: string
   paymentMethod?: string
   actions?: string
+  /** Embedded pending-cancellation notice + reactivate CTA. */
+  cancelledNotice?: string
 }
 
 export interface CurrentPlanCardProps {
@@ -56,6 +59,13 @@ export interface CurrentPlanCardProps {
   hidePaymentMethod?: boolean
   /** Hide the "Cancel plan" action. Default: `false`. */
   hideCancelButton?: boolean
+  /**
+   * Hide the embedded `<CancelledPlanNotice>` when renewal is already
+   * cancelled. Default: `false` (notice renders when applicable). Set
+   * `true` when a parent surface (e.g. MCP account view) renders its
+   * own notice alongside the card.
+   */
+  hideCancelledNotice?: boolean
   /** Hide the "Update card" action. Default: `false`. */
   hideUpdatePaymentButton?: boolean
   /**
@@ -173,6 +183,7 @@ function PaymentMethodLine({
 export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   hidePaymentMethod,
   hideCancelButton,
+  hideCancelledNotice,
   hideUpdatePaymentButton,
   hideUsageMeter,
   hideHeading,
@@ -184,7 +195,7 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
 }) => {
   const copy = useCopy()
   const { activePurchase } = usePurchase()
-  const { formatDate } = usePurchaseStatus()
+  const { formatDate, shouldShowCancelledNotice } = usePurchaseStatus()
   const { paymentMethod } = usePaymentMethod()
 
   if (!activePurchase) return null
@@ -227,6 +238,11 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   // the card degrades gracefully.
   const shouldShowPaymentMethod =
     !hidePaymentMethod && paymentMethod !== null
+
+  const showCancelButton =
+    !hideCancelButton &&
+    !activePurchase.cancelledAt &&
+    !shouldShowCancelledNotice
 
   return (
     <div
@@ -331,8 +347,14 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         data-solvapay-current-plan-actions=""
       >
         {!hideUpdatePaymentButton && <UpdatePaymentMethodButton />}
-        {!hideCancelButton && <CancelPlanButton />}
+        {showCancelButton && <CancelPlanButton />}
       </div>
+
+      {shouldShowCancelledNotice && !hideCancelledNotice && (
+        <CancelledPlanNotice
+          className={overrides?.cancelledNotice ?? 'solvapay-current-plan-cancelled-notice'}
+        />
+      )}
     </div>
   )
 }

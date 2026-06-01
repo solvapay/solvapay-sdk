@@ -47,6 +47,7 @@ function buildCtx(
       balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),
@@ -107,24 +108,30 @@ describe('McpAccountView', () => {
     expect(screen.getByText('Loading account…')).toBeTruthy()
   })
 
-  it('renders the pay-as-you-go copy when there is no plan but credits exist', () => {
+  it('renders the Credits heading when there is no plan but credits exist', () => {
     const ctx = buildCtx({}, [], 500)
     renderAccount(ctx)
-    expect(screen.getByText(/pay-as-you-go credits/)).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Credits' })).toBeTruthy()
+    expect(screen.queryByText(/pay-as-you-go credits/i)).toBeNull()
   })
 
-  it('renders the no-plan fallback when there are no purchases and no credits', () => {
+  it('renders the Pick a plan empty state when there are no purchases and no credits', () => {
     const ctx = buildCtx({}, [], 0)
     renderAccount(ctx)
-    expect(screen.getByText("You don't have an active plan")).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Pick a plan' })).toBeTruthy()
+    expect(
+      screen.getByText(
+        'Choose a free, pay-as-you-go, or paid plan to start using this MCP server.',
+      ),
+    ).toBeTruthy()
   })
 
   it('does not render the fallback copy when there is a paid purchase', async () => {
     const ctx = buildCtx({}, [paidPurchase], 0)
     renderAccount(ctx)
     await waitFor(() => {
-      expect(screen.queryByText("You don't have an active plan")).toBeNull()
-      expect(screen.queryByText(/pay-as-you-go credits/)).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Pick a plan' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Credits' })).toBeNull()
     })
   })
 
@@ -139,8 +146,6 @@ describe('McpAccountView', () => {
   it('does not render the inline "Update card" button on a paid plan (the portal handles card updates)', async () => {
     const ctx = buildCtx({}, [paidPurchase], 0)
     renderAccount(ctx)
-    // Wait for the portal-session fetch to settle so any stragglers
-    // would have rendered.
     await screen.findByRole('link', { name: /manage account/i })
     expect(screen.queryByRole('link', { name: /update card/i })).toBeNull()
   })
@@ -170,10 +175,6 @@ describe('McpAccountView', () => {
   })
 
   it('hides the portal hint when the Manage account button itself is hidden (zero-amount paid purchase)', async () => {
-    // Defensive case: hasPaidPurchase is true but the active purchase has
-    // a zero amount (free plan, edge data). The hint and the button must
-    // share the same gate or the hint points at a button that never
-    // renders.
     const zeroAmountPurchase: PurchaseInfo = { ...paidPurchase, amount: 0 }
     const ctx = buildCtx(
       {
@@ -198,27 +199,21 @@ describe('McpAccountView', () => {
     expect(document.querySelector('[data-solvapay-mcp-portal-hint]')).toBeNull()
   })
 
-  it('leads with the product header sourced from the product prop', () => {
+  it('does not render a product hero or description even when product prop is passed', () => {
     const ctx = buildCtx({}, [paidPurchase], 0)
     renderAccount(ctx, {
       product: { name: 'Acme Pro', description: 'Pro-tier API for Acme.' },
     })
-    expect(screen.getByRole('heading', { level: 1, name: 'Acme Pro' })).toBeTruthy()
-    expect(screen.getByText('Pro-tier API for Acme.')).toBeTruthy()
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
+    expect(screen.queryByText('Pro-tier API for Acme.')).toBeNull()
+    expect(document.querySelector('[data-solvapay-mcp-product-header]')).toBeNull()
   })
 
-  it('falls back to the active purchase product name when no product prop is passed', () => {
-    const ctx = buildCtx({}, [paidPurchase], 0)
-    renderAccount(ctx)
-    expect(screen.getByRole('heading', { level: 1, name: 'Widget API' })).toBeTruthy()
-  })
-
-  it('always renders the CURRENT PLAN AND USAGE section label, even with no plan and no credits', () => {
+  it('does not render the Current plan and usage section label', () => {
     const ctx = buildCtx({}, [], 0)
     renderAccount(ctx)
-    expect(document.querySelector('[data-solvapay-mcp-section-label]')?.textContent).toBe(
-      'Current plan and usage',
-    )
+    expect(document.querySelector('[data-solvapay-mcp-section-label]')).toBeNull()
+    expect(screen.queryByText('Current plan and usage')).toBeNull()
   })
 
   it('renders Started … and the purchase reference inside the plan card on a paid plan', async () => {
@@ -233,15 +228,9 @@ describe('McpAccountView', () => {
   })
 
   it('does not render a standalone Credit balance hero section above the plan card', () => {
-    // The pre-refactor view rendered an `<section aria-label="Credit balance">`
-    // hero with a heading and inline Top up. The refactor folds the credit
-    // state into the same plan card via the pay-as-you-go branch, so the
-    // standalone section is gone. The Customer details sidebar still carries a
-    // muted "Credit balance" detail label — that's separate.
     const ctx = buildCtx({}, [], 500)
     renderAccount(ctx)
     expect(screen.queryByRole('region', { name: 'Credit balance' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Credit balance' })).toBeNull()
   })
-
 })

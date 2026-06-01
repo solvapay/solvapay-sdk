@@ -1,17 +1,15 @@
 /**
- * Shared MCP checkout state machine powering `McpCheckoutView`
- * (plan → amount → payment → success). Previously also wrapped by
- * `McpPaywallView`, which was removed in the text-only paywall
- * refactor — the `fromPaywall` / `paywallKind` props on the state
- * machine are still honoured so custom integrators can reuse the
- * amber "Upgrade to continue" banner when they build their own
- * surface.
+ * MCP checkout layout — the activation flow surfaced by
+ * `<McpCheckoutView>`.
+ *
+ * State (step, transitions, success meta) lives in
+ * `useCheckoutFlow` from `@solvapay/react`. This folder ships the
+ * MCP-flavored layout: bridge wiring, "Stay on Free" affordance,
+ * `solvapay-mcp-*` CSS hooks, and the per-step components.
  */
 
 export { EmbeddedCheckout } from './EmbeddedCheckout'
 export type { EmbeddedCheckoutProps } from './EmbeddedCheckout'
-export { CheckoutStateMachine } from './CheckoutStateMachine'
-export type { StateMachineProps } from './CheckoutStateMachine'
 export type { BootstrapPlanLike, Cx, Step, SuccessMeta } from './shared'
 export {
   isPayg,

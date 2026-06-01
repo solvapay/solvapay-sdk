@@ -743,7 +743,7 @@ export interface components {
             reason?: string;
         };
         ProcessPaymentIntentDto: {
-            productRef: string;
+            productRef?: string;
             customerRef: string;
             planRef?: string;
         };
@@ -1382,6 +1382,11 @@ export interface components {
              */
             reference?: string;
             /**
+             * Plan name captured at purchase time
+             * @example Pro Monthly
+             */
+            name?: string;
+            /**
              * Plan price in cents
              * @example 2999
              */
@@ -1521,6 +1526,7 @@ export interface components {
             productRef: string;
             meterName?: string;
             usageType?: string;
+            includeCheckoutSession?: boolean;
         };
         LimitPlanItemDto: {
             reference: string;

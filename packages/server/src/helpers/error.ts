@@ -24,12 +24,16 @@ export function handleRouteError(
 ): ErrorResult {
   console.error(`[${operationName}] Error:`, error)
 
-  // Handle SolvaPay configuration errors
+  // Handle SolvaPay errors. `SolvaPayError.status` carries the
+  // upstream HTTP status when the error came from a backend response
+  // (e.g. 404 from `GET /v1/sdk/merchant`). Configuration errors and
+  // other client-side throws have no status — those collapse to 500
+  // as before.
   if (error instanceof SolvaPayError) {
     const errorMessage = error.message
     return {
       error: errorMessage,
-      status: 500,
+      status: error.status ?? 500,
       details: errorMessage,
     }
   }
