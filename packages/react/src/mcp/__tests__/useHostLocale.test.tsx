@@ -25,8 +25,10 @@ describe('useHostLocale', () => {
     originalLang = document.documentElement.lang
   })
 
-  afterEach(() => {
-    document.documentElement.lang = originalLang
+  afterEach(async () => {
+    await act(async () => {
+      document.documentElement.lang = originalLang
+    })
   })
 
   it('returns documentElement.lang when set', () => {
