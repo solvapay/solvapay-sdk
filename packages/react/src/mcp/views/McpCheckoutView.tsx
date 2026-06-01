@@ -1,23 +1,21 @@
 'use client'
 
 /**
- * `<McpCheckoutView>` — the paid-plan activation surface.
+ * `<McpCheckoutView>` — the paid-plan activation surface for MCP hosts.
  *
- * Thin shell that wires `useStripeProbe` and forwards to the shared
- * `<EmbeddedCheckout>` state machine (plan → amount → payment →
- * success). When Stripe is blocked by CSP, renders the legacy hosted
- * checkout path below instead.
+ * Three rendering paths gated by `useStripeProbe`:
  *
- * The full activation state machine (and all step components) lives in
- * `./checkout/` so custom integrators who build their own gated
- * surface can mount the same flow.
+ *  - `useStripeProbe === 'ready'`   → `<EmbeddedCheckout>` from
+ *    `./checkout` — the stepped activation flow built on
+ *    `useCheckoutFlow`.
+ *  - `useStripeProbe === 'blocked'` → local `HostedCheckout` (new-tab
+ *    fallback with `check_purchase` polling).
+ *  - `useStripeProbe === 'loading'` → interstitial spinner.
  *
- * ## Rendering paths
- *
- * - `useStripeProbe === 'ready'`   → `<EmbeddedCheckout>` from `./checkout`.
- * - `useStripeProbe === 'blocked'` → local `HostedCheckout` (new-tab
- *   fallback with `check_purchase` polling).
- * - `useStripeProbe === 'loading'` → interstitial spinner.
+ * The MCP-specific bits (bridge wiring, "Stay on Free" affordance,
+ * banner copy) live in this file. The state engine and step layout
+ * are shared with the web/chatbot flows via `useCheckoutFlow` +
+ * `<CheckoutSteps.*>` — see `./checkout/EmbeddedCheckout.tsx`.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -30,9 +28,6 @@ import { ExternalLinkGlyph } from '../../components/ExternalLinkGlyph'
 import { EmbeddedCheckout } from './checkout'
 import type { BootstrapPlanLike, Cx } from './checkout'
 
-// Keep polling fast enough that the UI feels responsive after the user
-// completes payment in the other tab, but not so fast that we hammer the
-// MCP server if the user wanders off.
 const POLL_INTERVAL_MS = 3_000
 const AWAITING_TIMEOUT_MS = 10 * 60 * 1000
 
@@ -41,63 +36,39 @@ export interface McpCheckoutViewProps {
   /**
    * Stripe publishable key used by `useStripeProbe` to detect CSP-blocked
    * hosts. Pass `null` to skip the probe and render the hosted fallback
-   * directly (useful for tests or hosts known to refuse `js.stripe.com`).
+   * directly.
    */
   publishableKey?: string | null
   returnUrl: string
   onPurchaseSuccess?: () => void
   /**
-   * Called when the view wants to bounce the customer to the
-   * dedicated Top up surface. Unused by the new activation flow
-   * (PAYG top-ups happen inline here) but kept as a prop for
-   * backward compatibility with integrators that wired it up.
+   * @deprecated PAYG top-ups happen inline now; retained for backward
+   * compatibility with integrators that wired it up.
    */
   onRequestTopup?: () => void
   /**
-   * True when the checkout view was reached via a paywall takeover.
-   * Drives the amber "Upgrade to continue" banner and the
-   * `"Stay on Free"` dismiss link on the plan-selection step.
-   *
-   * Retained as a prop for custom integrators who wire their own
-   * gate → checkout redirection; the stock `<McpAppShell>` does not
-   * set this (merchant paywall responses are text-only in the SDK
-   * so there is no in-iframe paywall takeover to track).
+   * `true` when the view was reached via a paywall takeover. Drives the
+   * amber "Upgrade to continue" banner and the `"Stay on Free"` dismiss
+   * link on the plan-selection step.
    */
   fromPaywall?: boolean
-  /**
-   * Paywall kind surfaced from the original gate payload when
-   * `fromPaywall` is true. Selects between the two banner copies:
-   * `'payment_required'` → quota-exhausted language;
-   * `'activation_required'` → tool-needs-a-paid-plan language.
-   */
   paywallKind?: 'payment_required' | 'activation_required'
-  /**
-   * Product plans snapshot from `bootstrap.plans`. Used to locate
-   * the PAYG plan for the `popular` / `recommended` tag and sort
-   * the plan cards (PAYG first, then recurring ascending). Falls
-   * back to `PlanSelector`'s own `usePlans` fetch when omitted.
-   */
   plans?: readonly BootstrapPlanLike[]
   /**
-   * Invoked at the end of a successful activation — chained before
-   * `onClose()` so the host sees a re-seeded bootstrap if it
-   * re-invokes the original tool.
+   * @deprecated No longer wired — kept on the public type for backward
+   * compatibility. The shell-level on-mount refresh is wired separately
+   * via `<McpAppShell>`.
    */
   onRefreshBootstrap?: () => void | Promise<void>
   /**
    * Ask the host to unmount the MCP app. Wired by `<McpApp>` to
-   * `app.requestTeardown()`. Used by `"Back to chat"` on the success
-   * surface and the `"Stay on Free"` dismiss link. When omitted,
-   * those affordances disappear.
+   * `app.requestTeardown()`. Used by the `"Stay on Free"` dismiss link.
    */
   onClose?: () => void
   /**
-   * Called when the user picks "Back to my account" at the top of
-   * the plan picker. `<McpAppShell>` wires this whenever the shell
-   * owns surface routing — same pattern as `<McpTopupView>` — so the
-   * customer can return to the account view from a "See plans" /
-   * "Pick a plan" entry without re-invoking a tool. `undefined`
-   * hides the back-link.
+   * Called when the user picks "Back to my account" at the top of the
+   * plan picker. Wired by `<McpAppShell>` whenever the shell owns
+   * surface routing.
    */
   onBack?: () => void
   classNames?: McpViewClassNames
@@ -113,7 +84,6 @@ export function McpCheckoutView({
   fromPaywall = false,
   paywallKind,
   plans,
-  onRefreshBootstrap,
   onClose,
   onBack,
   classNames,
@@ -139,7 +109,6 @@ export function McpCheckoutView({
         fromPaywall={fromPaywall}
         paywallKind={paywallKind}
         plans={plans}
-        onRefreshBootstrap={onRefreshBootstrap}
         onClose={onClose}
         onBack={onBack}
         cx={cx}
@@ -150,11 +119,7 @@ export function McpCheckoutView({
     )
   }
   return (
-    <HostedCheckout
-      productRef={productRef}
-      onPurchaseSuccess={onPurchaseSuccess}
-      cx={cx}
-    >
+    <HostedCheckout productRef={productRef} onPurchaseSuccess={onPurchaseSuccess} cx={cx}>
       {children}
     </HostedCheckout>
   )
@@ -162,9 +127,7 @@ export function McpCheckoutView({
 
 // --------------------------------------------------------------------
 // Hosted-checkout fallback (unchanged semantics — the degraded path
-// for CSP-blocked hosts. The new activation UX lives in
-// `./checkout/EmbeddedCheckout`; this fallback keeps a single "Upgrade"
-// surface working as before.)
+// for CSP-blocked hosts).
 // --------------------------------------------------------------------
 
 type AsyncUrlState =
@@ -371,8 +334,8 @@ const UpgradeBody = React.memo(function UpgradeBody({ checkout, onLaunch, cx }: 
     <>
       <h2 className={cx.heading}>Upgrade your plan</h2>
       <p className={cx.muted}>
-        The SolvaPay checkout opens in a new tab. Return here after payment and your purchase
-        will show up automatically.
+        The SolvaPay checkout opens in a new tab. Return here after payment and your purchase will
+        show up automatically.
       </p>
       <HostedLinkButton
         state={checkout}
@@ -410,8 +373,6 @@ function HostedCheckout({
   const [awaitingTimedOut, setAwaitingTimedOut] = useState(false)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
-  // Mirror `EmbeddedCheckout`'s success semantics — fire once after
-  // the hosted-checkout poll confirms a new paid purchase.
   const onPurchaseSuccessRef = useRef(onPurchaseSuccess)
   useEffect(() => {
     onPurchaseSuccessRef.current = onPurchaseSuccess
@@ -467,8 +428,7 @@ function HostedCheckout({
     if (!awaiting) return
     if (!hasPaidPurchase) return
     const newRef = activePurchase?.reference ?? null
-    const isNewPurchase =
-      !awaiting.baselineHadPaidPurchase || newRef !== awaiting.baselineActiveRef
+    const isNewPurchase = !awaiting.baselineHadPaidPurchase || newRef !== awaiting.baselineActiveRef
     if (isNewPurchase) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAwaiting(null)

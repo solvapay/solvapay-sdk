@@ -171,7 +171,7 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
       resolve('blocked')
     }, STRIPE_LOAD_TIMEOUT_MS)
 
-    loadStripe(publishableKey)
+    loadStripe(publishableKey, { developerTools: { assistant: { enabled: false } } })
       .then((stripe) => {
         if (cancelled || resolved) return
         // `loadStripe` resolved after the script-src timeout fired —

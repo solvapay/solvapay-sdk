@@ -28,6 +28,7 @@ function buildCtx(
       balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(async () => ({ success: true } as never)),
@@ -149,5 +150,19 @@ describe('CancelPlanButton', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(() => render(<CancelPlanButton />)).toThrow(MissingProviderError)
     spy.mockRestore()
+  })
+
+  it('renders nothing when the active purchase is pending cancellation', () => {
+    const pendingCancel: PurchaseInfo = {
+      ...recurringActivePurchase,
+      cancelledAt: new Date().toISOString(),
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    }
+    const { container } = render(
+      <Wrap ctx={buildCtx([pendingCancel])}>
+        <CancelPlanButton />
+      </Wrap>,
+    )
+    expect(container.firstChild).toBeNull()
   })
 })

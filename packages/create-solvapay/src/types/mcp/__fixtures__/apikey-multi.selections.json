@@ -1,0 +1,16 @@
+{
+  "workerName": "acme-widgets-mcp",
+  "mcpPublicBaseUrl": "http://localhost:8787",
+  "upstreamAuth": {
+    "kind": "apiKey-multi",
+    "headers": [
+      { "name": "x-acme-app-key", "value": "smoke-app-key" },
+      { "name": "x-acme-app-token", "value": "smoke-app-token" }
+    ]
+  },
+  "mode": "one-to-one",
+  "operations": [
+    { "operationId": "getWidget", "tier": "free" },
+    { "operationId": "createWidget", "tier": "paid" }
+  ]
+}

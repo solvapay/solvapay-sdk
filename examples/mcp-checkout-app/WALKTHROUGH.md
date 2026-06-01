@@ -85,10 +85,10 @@ What that line hides (from `@solvapay/react/mcp`):
 - `<SolvaPayProvider>` mounted with a seeded `initial` snapshot so
   `useMerchant` / `useProduct` / `usePlans` / `usePaymentMethod` never
   fire a first-mount fetch.
-- `<McpAppShell>` — tab nav (Credits / Plan / Top up / Account /
-  Activate) driven by visibility rules, keyboard a11y, persistent
-  Customer + Seller detail sidebar on wide iframes, "My account"
-  header, `Terms · Privacy · Provided by SolvaPay` footer.
+- `<McpAppShell>` — surface-routed (account / checkout / topup), no tab
+  strip. Persistent **Seller** + **Your account** sidebar on wide
+  iframes; inline detail cards below the primary card on narrow frames.
+  `Terms · Privacy · Provided by SolvaPay` footer.
 - Paywall narration — merchant paywalled data tools no longer open
   the widget iframe on a gate. Instead the gate's
   `content[0].text` narrates the recovery intent tool (`upgrade` /

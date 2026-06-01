@@ -76,7 +76,9 @@ describe('seedMcpCaches', () => {
   it('seeds paymentMethod only when customerRef + paymentMethod both present', () => {
     const config: SolvaPayConfig = { transport: makeTransport() }
     seedMcpCaches(
-      makeInitial({ paymentMethod: { kind: 'card', brand: 'visa', last4: '4242' } }),
+      makeInitial({
+        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242', expMonth: 1, expYear: 2030 },
+      }),
       config,
     )
     expect(paymentMethodCache.size).toBe(1)
@@ -91,7 +93,7 @@ describe('seedMcpCaches', () => {
     seedMcpCaches(
       makeInitial({
         customerRef: null,
-        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242' },
+        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242', expMonth: 1, expYear: 2030 },
       }),
       config,
     )

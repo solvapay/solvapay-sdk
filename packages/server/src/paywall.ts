@@ -16,7 +16,7 @@ import type {
   PaywallToolResult,
   SolvaPayClient,
 } from './types'
-import { buildGateMessage, classifyPaywallState } from './paywall-state'
+import { buildPaywallGate } from './paywall-gate'
 import { withRetry, createRequestDeduplicator } from './utils'
 
 // Re-export types for convenience
@@ -271,8 +271,7 @@ export class SolvaPayPaywall {
     let resolvedMeterName: string | undefined
     let lastLimitsCheck: LimitResponseWithPlan | undefined
 
-    const hasFreshCachedLimits =
-      cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
+    const hasFreshCachedLimits = cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
 
     if (hasFreshCachedLimits) {
       checkoutUrl = cachedLimits.checkoutUrl
@@ -303,6 +302,14 @@ export class SolvaPayPaywall {
         customerRef: backendCustomerRef,
         productRef: product,
         meterName: usageType,
+        // `paywall.decide()` bakes `checkoutUrl` into the 402
+        // `PaywallStructuredContent` (consumed by
+        // `<PaywallNotice.HostedCheckoutLink>`), so we opt in. Other
+        // callers of `apiClient.checkLimits` (notably
+        // `checkLimitsCore`, which powers the React `useLimits` hook)
+        // leave this unset and the backend skips the session-creation
+        // side effect.
+        includeCheckoutSession: true,
       })
 
       lastLimitsCheck = limitsCheck
@@ -331,54 +338,34 @@ export class SolvaPayPaywall {
 
     if (!withinLimits) {
       const latencyMs = Date.now() - startTime
-      this.trackUsage(
+      // Awaited (not floated) so the call survives runtimes that
+      // terminate the request context as soon as the response returns
+      // (Cloudflare Workers, Vercel Edge, Supabase Edge). Without
+      // this, the `POST /v1/sdk/usages` fetch gets dropped before it
+      // reaches the backend and `sumForMeter` always returns 0 — the
+      // paywall never decrements free-quota and never gates. Errors
+      // are swallowed because tracking failures must never escalate
+      // into tool-call failures.
+      await this.trackUsage(
         backendCustomerRef,
         product,
         resolvedMeterName || usageType,
         'paywall',
         requestId,
         latencyMs,
+      ).catch(() => undefined)
+
+      // Delegate gate construction to `buildPaywallGate` so adapter
+      // paths and `payable.gate()` produce byte-identical wire shapes.
+      const gate = buildPaywallGate(
+        product,
+        lastLimitsCheck ?? {
+          withinLimits: false,
+          remaining: 0,
+          plan: '',
+          ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
+        },
       )
-
-      // Pre-compute the structured gate fields (everything except
-      // `message`) so `buildGateMessage` sees a finished gate shape
-      // and the classifier runs against the authoritative
-      // `LimitResponseWithPlan`. The state engine owns the copy
-      // entirely — the old `"Pick a plan below..."` template collapsed
-      // distinct recovery states into a single widget-assuming
-      // nudge, which no longer matches the text-only paywall design.
-      const state = classifyPaywallState(lastLimitsCheck ?? null)
-      const preMessageGate: PaywallStructuredContent = lastLimitsCheck?.activationRequired
-        ? {
-            kind: 'activation_required',
-            product,
-            message: '',
-            checkoutUrl:
-              lastLimitsCheck.confirmationUrl || lastLimitsCheck.checkoutUrl || checkoutUrl || '',
-            ...(lastLimitsCheck.confirmationUrl !== undefined
-              ? { confirmationUrl: lastLimitsCheck.confirmationUrl }
-              : {}),
-            ...(lastLimitsCheck.plans !== undefined ? { plans: lastLimitsCheck.plans } : {}),
-            ...(lastLimitsCheck.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
-            ...(lastLimitsCheck.product !== undefined
-              ? { productDetails: lastLimitsCheck.product }
-              : {}),
-          }
-        : {
-            kind: 'payment_required',
-            product,
-            checkoutUrl: checkoutUrl || '',
-            message: '',
-            ...(lastLimitsCheck?.balance !== undefined ? { balance: lastLimitsCheck.balance } : {}),
-            ...(lastLimitsCheck?.product !== undefined
-              ? { productDetails: lastLimitsCheck.product }
-              : {}),
-          }
-
-      const gate: PaywallStructuredContent = {
-        ...preMessageGate,
-        message: buildGateMessage(state, preMessageGate),
-      }
 
       return {
         outcome: 'gate',
@@ -438,14 +425,18 @@ export class SolvaPayPaywall {
     try {
       const result = await handler(args, handlerContext)
       const latencyMs = Date.now() - startTime
-      this.trackUsage(
+      // See note on the `paywall` outcome above — awaited so the
+      // usage event survives request-scoped runtimes (Workers /
+      // Edge), where a floated fetch is killed when the response
+      // returns and `sumForMeter` never sees the event.
+      await this.trackUsage(
         decision.customerRef,
         product,
         decision.limits.meterName || usageType,
         'success',
         requestId,
         latencyMs,
-      )
+      ).catch(() => undefined)
       return result
     } catch (error) {
       if (error instanceof Error) {
@@ -456,14 +447,14 @@ export class SolvaPayPaywall {
       }
       if (!(error instanceof PaywallError)) {
         const latencyMs = Date.now() - startTime
-        this.trackUsage(
+        await this.trackUsage(
           decision.customerRef,
           product,
           decision.limits.meterName || usageType,
           'fail',
           requestId,
           latencyMs,
-        )
+        ).catch(() => undefined)
       }
       throw error
     }

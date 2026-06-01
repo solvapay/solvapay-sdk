@@ -47,7 +47,7 @@ describe('createHttpTransport — default routes', () => {
       api: { getMerchant: '/custom/merchant', createCheckoutSession: '/custom/checkout' },
     })
 
-    await transport.getMerchant()
+    await transport.getMerchant!()
     await transport.createCheckoutSession({ productRef: 'prd_api' })
 
     expect(fetchFn).toHaveBeenNthCalledWith(1, '/custom/merchant', expect.any(Object))
@@ -58,8 +58,8 @@ describe('createHttpTransport — default routes', () => {
     const fetchFn = makeFetch({})
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    await transport.getProduct('prd with spaces')
-    await transport.listPlans('prd_api')
+    await transport.getProduct!('prd with spaces')
+    await transport.listPlans!('prd_api')
 
     expect(fetchFn).toHaveBeenNthCalledWith(
       1,
@@ -73,6 +73,108 @@ describe('createHttpTransport — default routes', () => {
     )
   })
 
+  it('listPlans unwraps `{ plans }` to Plan[]', async () => {
+    const plans = [
+      { reference: 'pln_a', price: 0, currency: 'USD' },
+      { reference: 'pln_b', price: 999, currency: 'USD' },
+    ]
+    const fetchFn = makeFetch({ plans, productRef: 'prd_api' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.listPlans!('prd_api')
+
+    expect(Array.isArray(result)).toBe(true)
+    expect(result).toEqual(plans)
+  })
+
+  it('listPlans returns [] when wire payload omits `plans`', async () => {
+    const fetchFn = makeFetch({})
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.listPlans!('prd_api')
+
+    expect(result).toEqual([])
+  })
+
+  it('getLimits encodes productRef + meterName as query params', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 12, meterName: 'requests' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    await transport.getLimits!({ productRef: 'prd_api', meterName: 'tokens' })
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      `${DEFAULT_ROUTES.getLimits}?productRef=prd_api&meterName=tokens`,
+      expect.objectContaining({ method: 'GET' }),
+    )
+  })
+
+  it('getLimits omits meterName when undefined', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 5, meterName: 'requests' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      `${DEFAULT_ROUTES.getLimits}?productRef=prd_api`,
+      expect.any(Object),
+    )
+  })
+
+  it('getLimits projects the wire response down to TransportLimitsResult', async () => {
+    // The backend returns the full LimitResponseWithPlan; the transport
+    // strips everything but the projection consumed by useLimits.
+    const fetchFn = makeFetch({
+      withinLimits: false,
+      remaining: 0,
+      meterName: 'requests',
+      checkoutUrl: 'https://pay.example.com/co',
+      plans: [{ reference: 'pln_pro' }],
+      balance: { creditBalance: 0 },
+    })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result).toEqual({
+      withinLimits: false,
+      remaining: 0,
+      meterName: 'requests',
+      activationRequired: false,
+    })
+  })
+
+  it('getLimits maps an absent meterName on the wire to null', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 3 })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result.meterName).toBeNull()
+  })
+
+  it('getLimits passes through `activationRequired: true` when the backend reports it', async () => {
+    const fetchFn = makeFetch({
+      withinLimits: false,
+      remaining: 0,
+      meterName: 'requests',
+      activationRequired: true,
+    })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result.activationRequired).toBe(true)
+  })
+
+  it('getLimits defaults `activationRequired` to false when the wire field is absent', async () => {
+    const fetchFn = makeFetch({ withinLimits: true, remaining: 5, meterName: 'requests' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.getLimits!({ productRef: 'prd_api' })
+
+    expect(result.activationRequired).toBe(false)
+  })
+
   it('throws with backend error message when response is not ok', async () => {
     const fetchFn = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: 'Customer not found' }), {
@@ -82,7 +184,7 @@ describe('createHttpTransport — default routes', () => {
     )
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    await expect(transport.checkPurchase()).rejects.toThrow('Customer not found')
+    await expect(transport.checkPurchase!()).rejects.toThrow('Customer not found')
   })
 
   it('falls back to statusText when response has no JSON body', async () => {
@@ -91,7 +193,7 @@ describe('createHttpTransport — default routes', () => {
     )
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    await expect(transport.checkPurchase()).rejects.toThrow(/Internal Server Error|Failed to check purchase/)
+    await expect(transport.checkPurchase!()).rejects.toThrow(/Internal Server Error|Failed to check purchase/)
   })
 
   it('invokes config.onError with the right context key on failure', async () => {
@@ -104,7 +206,7 @@ describe('createHttpTransport — default routes', () => {
       onError,
     })
 
-    await expect(transport.getBalance()).rejects.toThrow()
+    await expect(transport.getBalance!()).rejects.toThrow()
     expect(onError).toHaveBeenCalledWith(expect.any(Error), 'getBalance')
   })
 })

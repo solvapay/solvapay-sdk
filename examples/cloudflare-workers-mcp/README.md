@@ -39,7 +39,7 @@ pnpm build            # Builds src/assets/mcp-app.html via vite
 pnpm serve:local      # wrangler dev on http://localhost:8787
 ```
 
-Then point an MCP client at `http://localhost:8787/`. Good candidates for a first smoke:
+Then point an MCP client at `http://localhost:8787/mcp`. Good candidates for a first smoke:
 
 - **MCP Inspector** (`npx @modelcontextprotocol/inspector`) — reference client; gives you raw tool/resource call inspection.
 - **MCPJam** — hosted web client with a chat UI.
@@ -96,8 +96,14 @@ pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
 cp .env.prod.example .env.prod
 $EDITOR .env.prod
 
+pnpm preflight:prod    # checks .env.prod, build artifacts, wrangler auth
 pnpm run deploy:prod   # builds + deploys to goldberg-demo.solvapay.app
 ```
+
+After deploy, **delete and re-add** any ChatGPT Custom Connector pointing at
+this worker — ChatGPT caches `tools/list` per org/connector and won't pick
+up the ChatGPT-aware `hideToolsByAudience` bypass until the cache is busted.
+Verify the top-up iframe flow end-to-end (`topup` → Stripe form mounts).
 
 `pnpm run deploy:prod` runs `node scripts/deploy.mjs --prod`, which
 sources `.env.prod` instead of `.env` and passes `--env production`

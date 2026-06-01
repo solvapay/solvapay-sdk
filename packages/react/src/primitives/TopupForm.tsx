@@ -78,10 +78,7 @@ type RootProps = TopupFormProps & {
   children?: React.ReactNode
 }
 
-const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
-  props,
-  forwardedRef,
-) {
+const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props, forwardedRef) {
   const {
     amount,
     currency,
@@ -99,9 +96,21 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('TopupForm')
 
+  // Pulled here so the Stripe-confirm-to-webhook race fix (gating
+  // `onSuccess` on backend confirmation) lives next to the existing
+  // provider-context read. Optional — transports that don't implement
+  // it keep the legacy fire-on-confirm behaviour.
+  const { processTopupPayment } = solva
+
   const copy = useCopy()
   const locale = useLocale()
-  const { loading, error: topupError, clientSecret, startTopup, stripePromise } = useTopup({
+  const {
+    loading,
+    error: topupError,
+    clientSecret,
+    startTopup,
+    stripePromise,
+  } = useTopup({
     amount,
     currency,
   })
@@ -110,13 +119,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
   const hasAmount = amount > 0
 
   useEffect(() => {
-    if (
-      !hasInitializedRef.current &&
-      hasAmount &&
-      !loading &&
-      !topupError &&
-      !clientSecret
-    ) {
+    if (!hasInitializedRef.current && hasAmount && !loading && !topupError && !clientSecret) {
       hasInitializedRef.current = true
       startTopup().catch(() => {
         hasInitializedRef.current = false
@@ -125,8 +128,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
     if (hasAmount && clientSecret) hasInitializedRef.current = true
   }, [hasAmount, loading, topupError, clientSecret, startTopup])
 
-  const finalReturnUrl =
-    returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
+  const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
@@ -158,6 +160,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(
     state: dataState,
     onSuccess,
     onError,
+    processTopupPayment,
   }
 
   const shell = (
@@ -193,6 +196,26 @@ type InnerProps = {
   state: TopupFormState
   onSuccess?: TopupFormProps['onSuccess']
   onError?: TopupFormProps['onError']
+  /**
+   * Provider-side backend confirmation hook. When present, `submit`
+   * awaits it before firing `onSuccess` so the customer is fully
+   * credited (PI succeeded + webhook handler booked the credit) by
+   * the time the drawer closes. When absent (custom transports
+   * without a `processTopupPayment` impl), the form keeps the legacy
+   * fire-on-Stripe-confirm behaviour.
+   *
+   * On the `succeeded` branch, the backend may surface a
+   * `creditsAdded` delta observed by its post-process balance poll.
+   * `submit` forwards it to `onSuccess` via the optional `extras`
+   * argument so the checkout flow can optimistically bump the
+   * in-memory balance before its deterministic refetch lands.
+   */
+  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<
+    | { status: 'succeeded'; creditsAdded?: number }
+    | { status: 'timeout'; message?: string }
+    | { status: 'failed' }
+    | { status: 'cancelled' }
+  >
   children?: React.ReactNode
 }
 
@@ -205,6 +228,7 @@ const Inner: React.FC<InnerProps> = ({
   state,
   onSuccess,
   onError,
+  processTopupPayment,
   children,
 }) => {
   const stripe = useStripe()
@@ -256,12 +280,51 @@ const Inner: React.FC<InnerProps> = ({
       return
     }
 
+    // Wait for backend confirmation before declaring success. Mirrors
+    // `PaymentForm`'s `processPayment` step: the backend's `/process`
+    // endpoint polls until the PI reaches `succeeded` AND the wallet
+    // observes the credit delta (`processTopupPaymentIntentCore` adds
+    // a post-success balance poll on top of the `/process` PI-status
+    // poll). This eliminates the Stripe-confirm-to-webhook race that
+    // previously left the customer momentarily uncredited at the
+    // moment `onSuccess` fired — the wallet badge would show stale
+    // `0 left` and the next /api/chat send would 402 until the
+    // webhook caught up.
+    //
+    // Transports without `processTopupPayment` skip this step and
+    // keep the legacy fire-on-confirm behaviour.
+    let creditsAdded: number | undefined
+    if (paymentIntent && processTopupPayment) {
+      try {
+        const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
+        if (result.status === 'failed' || result.status === 'cancelled') {
+          setError(copy.errors.paymentUnexpected)
+          setIsProcessing(false)
+          onError?.(new Error(`Topup ${result.status}`))
+          return
+        }
+        if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
+          creditsAdded = result.creditsAdded
+        }
+        // `timeout` is treated as a soft success — Stripe already
+        // confirmed; the credit will land via webhook within a few
+        // seconds. Fall through and let downstream convergence
+        // (`refetchPurchase` in `recordPaygSuccess`) handle it.
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setError(msg)
+        setIsProcessing(false)
+        onError?.(err instanceof Error ? err : new Error(msg))
+        return
+      }
+    }
+
     setIsProcessing(false)
     if (paymentIntent) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await onSuccess?.(paymentIntent as any)
+      await onSuccess?.(paymentIntent as any, creditsAdded !== undefined ? { creditsAdded } : undefined)
     }
-  }, [stripe, elements, clientSecret, returnUrl, copy, onSuccess, onError])
+  }, [stripe, elements, clientSecret, returnUrl, copy, onSuccess, onError, processTopupPayment])
 
   const effectiveError = error ?? outerError
 
@@ -368,56 +431,68 @@ type SubmitButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   asChild?: boolean
 }
 
-const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(function TopupFormSubmitButton(
-  { asChild, onClick, children, ...rest },
-  forwardedRef,
-) {
-  const ctx = useTopupCtx('SubmitButton')
-  const copy = useCopy()
-  const dataState: SubmitState = ctx.isProcessing
-    ? 'processing'
-    : !ctx.canSubmit
-      ? 'disabled'
-      : 'idle'
+const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
+  function TopupFormSubmitButton({ asChild, onClick, children, ...rest }, forwardedRef) {
+    const ctx = useTopupCtx('SubmitButton')
+    const copy = useCopy()
+    const dataState: SubmitState = ctx.isProcessing
+      ? 'processing'
+      : !ctx.canSubmit
+        ? 'disabled'
+        : 'idle'
 
-  const content = ctx.isProcessing ? (
-    <>
-      <Spinner size="sm" />
-      <span>{copy.cta.processing}</span>
-    </>
-  ) : children ? (
-    children
-  ) : (
-    copy.cta.topUp
-  )
-
-  const commonProps = {
-    'data-solvapay-topup-form-submit': '',
-    'data-state': dataState,
-    'aria-busy': ctx.isProcessing,
-    'aria-disabled': !ctx.canSubmit,
-    disabled: !ctx.canSubmit,
-    onClick: composeEventHandlers(onClick, e => {
-      e.preventDefault()
-      void ctx.submit()
-    }),
-    ...rest,
-  } satisfies React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
-
-  if (asChild) {
-    return (
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
-        {content}
-      </Slot>
+    const processingContent = (
+      <>
+        <Spinner size="sm" />
+        <span>{copy.cta.processing}</span>
+      </>
     )
-  }
-  return (
-    <button ref={forwardedRef} type="submit" {...commonProps}>
-      {content}
-    </button>
-  )
-})
+
+    const commonProps = {
+      'data-solvapay-topup-form-submit': '',
+      'data-state': dataState,
+      'aria-busy': ctx.isProcessing,
+      'aria-disabled': !ctx.canSubmit,
+      disabled: !ctx.canSubmit,
+      onClick: composeEventHandlers(onClick, e => {
+        e.preventDefault()
+        void ctx.submit()
+      }),
+      ...rest,
+    } satisfies React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
+
+    if (asChild) {
+      // The consumer's element is the wrapper that carries their styling.
+      // Preserve it across the idle→processing transition by cloning and
+      // swapping its children, never replacing it with a Fragment. The
+      // previous behaviour passed a Fragment to <Slot> when processing, so
+      // className/disabled/onClick landed on a Fragment (which React does
+      // not render to DOM) and the button visually broke on click.
+      const slotChild =
+        ctx.isProcessing && React.isValidElement(children)
+          ? React.cloneElement(
+              children as React.ReactElement<{ children?: React.ReactNode }>,
+              undefined,
+              processingContent,
+            )
+          : children
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
+          {slotChild}
+        </Slot>
+      )
+    }
+
+    const content = ctx.isProcessing ? processingContent : children ? children : copy.cta.topUp
+
+    return (
+      <button ref={forwardedRef} type="submit" {...commonProps}>
+        {content}
+      </button>
+    )
+  },
+)
 
 type SlotProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
 

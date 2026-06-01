@@ -36,7 +36,7 @@ export const enCopy: SolvaPayCopy = {
     },
     oneTime: (ctx: MandateContext) => {
       const product = ctx.product?.name ? ` for ${ctx.product.name}` : ''
-      return `By confirming, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${product}. Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      return `By confirming, you authorize ${ctx.merchant.legalName} to charge a one-time ${ctx.amountFormatted}${product}. Payments are processed by SolvaPay.${termsSentence(ctx)}`
     },
     topup: (ctx: MandateContext) => {
       const product = ctx.product?.name
@@ -144,8 +144,7 @@ export const enCopy: SolvaPayCopy = {
     expiresLabel: 'Purchase Expires: {date}',
     daysRemaining: '{days} days remaining',
     dayRemaining: '1 day remaining',
-    accessUntil:
-      "You'll continue to have access to {product} features until this date",
+    accessUntil: "You'll continue to have access to {product} features until this date",
     accessEnded: 'Your purchase access has ended',
     cancelledOn: 'Cancelled on {date}',
     reactivateButton: 'Undo Cancellation',
@@ -176,11 +175,11 @@ export const enCopy: SolvaPayCopy = {
   },
   account: {
     currentPlanAndUsage: 'Current plan and usage',
-    payAsYouGoTitle: "You're on pay-as-you-go credits",
-    payAsYouGoBody:
-      'Top up to keep going, or pick a plan for predictable monthly billing.',
-    noPlanTitle: "You don't have an active plan",
-    noPlanBody: 'Pick a plan — free, pay-as-you-go, or paid — to get started.',
+    payAsYouGoTitle: 'Credits',
+    payAsYouGoBody: 'Top up to keep going, or pick a plan for predictable monthly billing.',
+    noPlanTitle: 'Pick a plan',
+    noPlanBody:
+      'Choose a free, pay-as-you-go, or paid plan to start using this MCP server.',
     seePlansButton: 'See plans',
     pickPlanButton: 'Pick a plan',
   },
@@ -190,6 +189,18 @@ export const enCopy: SolvaPayCopy = {
   },
   checkout: {
     backToAccount: 'Back to my account',
+    stepHeading: {
+      plan: 'Choose your plan',
+      amount: 'Add credits',
+      payment: 'Complete payment',
+    },
+    stepMessage: {
+      plan: 'Pick the option that fits your usage.',
+      amount: 'Pick or enter an amount to add to your balance.',
+      paymentRecurring: 'Confirm your card to start your {planName} plan.',
+      paymentOneTime: 'Confirm your card to complete the purchase.',
+      paymentPayg: 'Confirm your card to add credits to your balance.',
+    },
   },
   legalFooter: {
     terms: 'Terms',
@@ -207,14 +218,10 @@ export const enCopy: SolvaPayCopy = {
     paymentIntentUnavailable: 'Payment intent not available. Please refresh the page.',
     cardElementMissing: 'Card element not found',
     paymentUnexpected: 'An unexpected error occurred.',
-    paymentProcessingFailed:
-      'Payment processing failed. Please try again or contact support.',
+    paymentProcessingFailed: 'Payment processing failed. Please try again or contact support.',
     paymentRequires3ds:
       'Payment requires additional authentication. Please complete the verification.',
-    paymentProcessingTimeout:
-      'Payment processing timed out — webhooks may not be configured',
-    paymentConfirmationDelayed:
-      'Payment succeeded but confirmation is taking longer than usual. Refresh in a moment to see your purchase.',
+    paymentProcessingTimeout: 'Payment processing timed out — webhooks may not be configured',
     paymentStatusPrefix: 'Payment status: {status}',
     paywallInvalidContent: 'Paywall content is missing or malformed.',
     usageLoadFailed: 'Failed to load usage',
@@ -222,7 +229,8 @@ export const enCopy: SolvaPayCopy = {
   paywall: {
     header: 'Unlock access',
     paymentRequiredHeading: 'Upgrade to continue',
-    activationRequiredHeading: 'Add credits to continue',
+    activationRequiredHeading: 'Activate a plan to continue',
+    topupRequiredHeading: 'Add credits to continue',
     resolvedHeading: 'You can continue',
     productContext: 'For {product}',
     balanceLine: 'You have {available} credits, need {required}.',
@@ -230,6 +238,11 @@ export const enCopy: SolvaPayCopy = {
       "You've used all your included calls{forProduct}. Choose a plan below to keep going.",
     paymentRequiredMessageRemaining:
       'Only {remaining} call{pluralSuffix} left{forProduct}. Choose a plan below to keep going.',
+    paymentRequiredMessageNoBalance:
+      "You've used your included messages{forProduct}. Pick a plan below to keep chatting.",
+    activationRequiredMessage:
+      'You need an active plan{forProduct} to continue. Pick one below.',
+    topupRequiredMessage: "You're out of credits{forProduct}. Add more below to keep going.",
     paymentRequiredProductSuffix: ' for {product}',
     retryButton: 'Continue',
     hostedCheckoutButton: 'Open checkout',
