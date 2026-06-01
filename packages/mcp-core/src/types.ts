@@ -422,7 +422,8 @@ export type ContentBlock =
  * `text` overrides the SDK's default narrator output for this response.
  * `nudge` attaches an inline upsell strip.
  * `units` is reserved for V1.1 variable-unit billing; V1 silently
- * ignores the field (billing stays at one credit per tool call).
+ * ignores the field (billing stays at one usage unit per tool call;
+ * credit debit = units × plan.creditsPerUnit).
  */
 export interface ResponseOptions {
   /** Override `content[0].text` with merchant-supplied text. */
@@ -433,8 +434,9 @@ export interface ResponseOptions {
    * [V1.1] Units to bill for this call. Defaults to 1. Must be >= 0.
    *
    * V1 behaviour: field is accepted for forward compatibility but
-   * silently ignored. Billing stays fixed at one credit per tool call.
-   * V1.1 behaviour: threaded into `trackUsage` and applied by the backend.
+   * silently ignored. Billing stays fixed at one usage unit per tool
+   * call; credit debit = units × plan.creditsPerUnit. V1.1 behaviour:
+   * threaded into `trackUsage` and applied by the backend.
    */
   units?: number
 }

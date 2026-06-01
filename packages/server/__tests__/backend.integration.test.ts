@@ -1213,6 +1213,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         customerRef,
         productRef: defaultProduct.reference,
         planRef: creditPlan.reference,
+        includeCheckoutSession: true,
       })
 
       expect(result.withinLimits).toBe(false)
@@ -1280,6 +1281,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         customerRef,
         productRef: defaultProduct.reference,
         planRef: creditPlan.reference,
+        includeCheckoutSession: true,
       })
       expect(exhausted.withinLimits).toBe(false)
       expect(exhausted.remaining).toBeLessThanOrEqual(0)

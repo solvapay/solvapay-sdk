@@ -77,13 +77,9 @@ export {
   useAmountPickerCopy,
 } from './AmountPicker'
 
-export {
-  BalanceBadge,
-} from './BalanceBadge'
+export { BalanceBadge } from './BalanceBadge'
 
-export {
-  CancelPlanButton,
-} from './CancelPlanButton'
+export { CancelPlanButton } from './CancelPlanButton'
 
 export {
   CancelledPlanNotice,
@@ -133,15 +129,10 @@ export {
 export { LegalFooter } from './LegalFooter'
 export type { LegalFooterProps } from './LegalFooter'
 
-export {
-  MandateText,
-} from './MandateText'
+export { MandateText } from './MandateText'
 export type { MandateTextProps } from './MandateText'
 
-export {
-  ProductBadge,
-  PlanBadge,
-} from './ProductBadge'
+export { ProductBadge, PlanBadge } from './ProductBadge'
 
 export {
   PaywallNotice,
@@ -156,10 +147,29 @@ export {
   PaywallNoticeRetry,
   usePaywallNotice,
 } from './PaywallNotice'
-export type {
-  PaywallNoticeClassNames,
-  PaywallNoticeRootProps,
-} from './PaywallNotice'
+export type { PaywallNoticeClassNames, PaywallNoticeRootProps } from './PaywallNotice'
+
+// Stepped checkout primitive — opt-in parts that compose on
+// `useCheckoutFlow`. The `<PaywallNotice.EmbeddedCheckout>` ships as
+// the recommended default for paywall surfaces; consumers wanting a
+// different layout (chatbot drawer, modal, multi-step header) compose
+// `<CheckoutSteps.*>` directly.
+export {
+  CheckoutSteps,
+  CheckoutStepsRoot,
+  CheckoutStepsIfStep,
+  CheckoutStepsStepHeading,
+  CheckoutStepsStepMessage,
+  CheckoutStepsPlanGrid,
+  CheckoutStepsPlanContinueButton,
+  CheckoutStepsAmountPicker,
+  CheckoutStepsAmountContinueButton,
+  CheckoutStepsPayment,
+  CheckoutStepsBackLink,
+  CheckoutStepsSuccess,
+  useCheckoutStepsContext,
+} from './checkout'
+export type { CheckoutStep, CheckoutStatus, SuccessMeta, BootstrapPlanLike } from './checkout'
 
 export {
   UsageMeter,
@@ -172,7 +182,4 @@ export {
   UsageMeterEmpty,
   useUsageMeter,
 } from './UsageMeter'
-export type {
-  UsageMeterClassNames,
-  UsageMeterRootProps,
-} from './UsageMeter'
+export type { UsageMeterClassNames, UsageMeterRootProps } from './UsageMeter'

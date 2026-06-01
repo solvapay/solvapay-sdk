@@ -137,8 +137,8 @@ export interface McpAppProps {
    * Override for the shell's "close this app" handler. Defaults to
    * `() => app.requestTeardown()`, which asks the host to unmount the
    * iframe (see `@modelcontextprotocol/ext-apps` `App.requestTeardown`).
-   * Used by the checkout view's `"Back to chat"` and `"Stay on Free"`
-   * affordances; passing `undefined` hides those affordances.
+   * Used by the checkout view's `"Stay on Free"` decline link; passing
+   * `undefined` hides that affordance.
    */
   onClose?: () => void
   /**
@@ -530,9 +530,22 @@ export function McpApp({
           // entries no longer exist (payable merchant tools don't advertise
           // `_meta.ui.resourceUri`) so this is always legitimate user
           // feedback for an in-flight tool call.
-          <div className={cx.card}>
-            <p>Loading…</p>
-          </div>
+          //
+          // The empty `.solvapay-mcp-shell-sidebar` sibling makes the
+          // `:has(.solvapay-mcp-shell-sidebar)` cap-lift in styles.css
+          // match from the first paint, so the `.solvapay-mcp-main` cap
+          // stays at 900px through the loading → mounted transition
+          // instead of snapping 520 → 900 once `<McpAppShell>` arrives.
+          // The placeholder stays `display: none` (the `@container
+          // (min-width: 900px)` query has no `.solvapay-mcp-shell`
+          // ancestor here so it never fires) and `aria-hidden` keeps it
+          // out of the AT tree.
+          <>
+            <div className={cx.card}>
+              <p>Loading…</p>
+            </div>
+            <aside className="solvapay-mcp-shell-sidebar" aria-hidden="true" />
+          </>
         ) : (
           <SolvaPayProvider config={providerConfig}>
             <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>

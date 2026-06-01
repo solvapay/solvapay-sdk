@@ -19,9 +19,8 @@ const usageBasedPlan: Plan = {
   name: 'Usage plan',
   price: 0,
   currency: 'usd',
-  // @ts-expect-error — plan typing is wider than this test fixture needs
   requiresPayment: true,
-  planType: 'usage_based',
+  type: 'usage-based',
 }
 
 function makeFetch(payload: unknown, status = 200) {

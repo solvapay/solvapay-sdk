@@ -1,0 +1,94 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Acme Widgets API",
+    "version": "1.0.0",
+    "description": "Minimal OpenAPI fixture exercising the apiKey-multi path: two static credential headers (AppKey + AppToken) required together, no token exchange. Deliberately NOT named client-id/secret — the kind is generic over N headers. Used by unit + smoke tests for create-mcp-app."
+  },
+  "servers": [
+    { "url": "https://api.acme-widgets.test" }
+  ],
+  "paths": {
+    "/widgets/{id}": {
+      "get": {
+        "operationId": "getWidget",
+        "summary": "Fetch a widget by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Widget identifier.",
+            "schema": { "type": "string", "example": "wdg_123" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Widget details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "name": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "acme-app-key": [], "acme-app-token": [] }]
+      }
+    },
+    "/widgets": {
+      "post": {
+        "operationId": "createWidget",
+        "summary": "Create a widget.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Sprocket" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Widget created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "acme-app-key": [], "acme-app-token": [] }]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "acme-app-key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-acme-app-key"
+      },
+      "acme-app-token": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-acme-app-token"
+      }
+    }
+  }
+}

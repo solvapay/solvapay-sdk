@@ -41,19 +41,59 @@ body {
   padding: 16px;
 }
 
+/* Outer chrome cap. The AppHeader, body card stack, and LegalFooter
+ * align as one visually unified block centred in the iframe. The 480
+ * default matches Stripe Checkout's ~440-480 pay column, Apple Pay
+ * sheet's ~390 form, Material 3 dialog content max of 560, and
+ * Refactoring UI's ~30em form-width rule.
+ *
+ * Both the sidebar lift (below) and the per-step content (button,
+ * payment form, plan-selector grid) inherit this cap, so the form
+ * stays centred in the iframe and `Provided by SolvaPay · Terms ·
+ * Privacy` aligns to the card's left/right edges rather than the
+ * iframe's.
+ *
+ * SEP-1865 §"Container Dimensions" delegates the size choice to the
+ * View when the host omits `containerDimensions.width`/`maxWidth`
+ * (Unbounded mode). Anthropic's PRIMARY use case (Claude Desktop
+ * ~400-500px) and OpenAI's inline examples (220-360px) are both
+ * narrower than 480, so the cap is a no-op there and content fills,
+ * matching Anthropic's "apps fill the container width" guidance.
+ * Surfaces that need the full host viewport can still request
+ * `displayMode: "fullscreen"`. */
 .solvapay-mcp-main {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 520px;
-  margin: 0 auto;
+  max-inline-size: 480px;
+  margin-inline: auto;
 }
 
-/* Widen the container at the sidebar breakpoint so the two-column
- * layout has room to breathe. */
-@media (min-width: 900px) {
-  .solvapay-mcp-main {
-    max-width: 960px;
+/* When `bootstrap.customer` is set, `showSidebar` in McpAppShell.tsx
+ * mounts a `.solvapay-mcp-shell-sidebar` aside (seller + customer
+ * details cards) on every surface — account, checkout, and topup —
+ * so the frame does not reshape mid-flow. Lift the cap so the
+ * 320 sidebar + 16 gap + 480 body grid fits AND the matching
+ * `@container (min-width: 816px)` query below can fire.
+ *
+ * The lift is gated behind `@media (min-width: 816px)` so it only
+ * fires when the iframe is actually wide enough to render the
+ * sidebar. Without that gate, on iframes between 480 and 815 the
+ * cap would lift to 816 but the iframe would shrink the main to
+ * its own width — the body would sit at 480 anchored to the left
+ * of a 700px main, and the footer's `space-between` would spread
+ * `Provided by SolvaPay · Terms · Privacy` to the iframe edges
+ * instead of the body's edges. With the gate, those iframes treat
+ * the authed user like the unauthed path: main stays at 480 and
+ * the inline `<McpCustomerDetailsCard>` carries the account
+ * context that the sidebar would have shown.
+ *
+ * The `:has()` selector is intentionally view-agnostic — the shell
+ * controls when the aside actually mounts via the customer-present
+ * gate. Unauthenticated bootstraps never trigger the lift. */
+@media (min-width: 816px) {
+  .solvapay-mcp-main:has(.solvapay-mcp-shell-sidebar) {
+    max-inline-size: 816px;
   }
 }
 
@@ -293,11 +333,19 @@ body {
 
 /* Account view */
 
+.solvapay-mcp-account-credit-stack {
+  flex: 1;
+}
+
 .solvapay-mcp-balance-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.solvapay-mcp-account-credit-stack .solvapay-mcp-balance-row {
+  margin-top: auto;
 }
 
 .solvapay-mcp-balance-row .solvapay-mcp-button {
@@ -323,15 +371,20 @@ body {
   gap: 12px;
 }
 
+/* Rounded-rectangle quick-amount chips. Mirrors the `.solvapay-amount-picker-pill`
+ * shape used by the web SDK and the hosted topup page so the topup look is
+ * consistent across surfaces. Colors come from host theme tokens
+ * (`--color-*`) so Claude Desktop / ChatGPT / VSCode dark themes adapt
+ * automatically. */
 .solvapay-mcp-amount-options {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .solvapay-mcp-amount-option {
-  padding: 10px;
-  border-radius: var(--border-radius-md, 8px);
+  padding: 6px 14px;
+  border-radius: 8px;
   border: 1px solid var(--color-border-secondary, #e2e8f0);
   background: var(--color-background-primary, #ffffff);
   color: var(--color-text-primary, #0f172a);
@@ -360,14 +413,42 @@ body {
   color: var(--color-text-on-accent, #ffffff);
 }
 
+/* `.solvapay-mcp-amount-custom` now wraps the bordered row — currency
+ * prefix + input — instead of being applied directly to the `<input>`.
+ * Lets us prefix the merchant currency symbol the same way the hosted
+ * page does. The actual `<input>` carries `.solvapay-mcp-amount-custom-input`. */
 .solvapay-mcp-amount-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding: 10px 12px;
   border-radius: var(--border-radius-md, 8px);
   border: 1px solid var(--color-border-secondary, #e2e8f0);
   background: var(--color-background-primary, #ffffff);
+  transition: border-color 120ms ease;
+}
+
+.solvapay-mcp-amount-custom:focus-within {
+  border-color: var(--color-text-primary, #0f172a);
+  box-shadow: 0 0 0 1px var(--color-text-primary, #0f172a);
+}
+
+.solvapay-mcp-amount-currency-symbol {
+  color: var(--color-text-secondary, #475569);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.solvapay-mcp-amount-custom-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
   color: var(--color-text-primary, #0f172a);
   font-size: 14px;
+  min-width: 0;
+  padding: 0;
 }
 
 .solvapay-mcp-topup-form {
@@ -458,6 +539,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Inline-size container for the sidebar layout below
+   * (`.solvapay-mcp-shell-sidebar` / `.solvapay-mcp-shell-layout` use
+   * `@container (min-width: 900px)`). Scoped here rather than on
+   * `.solvapay-mcp-main` so dormant fixed-positioned overlays
+   * (`.solvapay-mcp-tour-overlay`, `.solvapay-mcp-tour-popover`) that
+   * render as siblings of `<McpAppShell>` inside `.solvapay-mcp-main`
+   * stay anchored to the iframe viewport — `container-type` makes the
+   * element a containing block for `position: fixed` descendants per
+   * the CSS containment spec, so we keep that scope tight. */
+  container-type: inline-size;
 }
 
 .solvapay-mcp-tablist {
@@ -479,7 +570,9 @@ body {
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .solvapay-mcp-tab:hover:not([data-active='true']) {
@@ -503,6 +596,12 @@ body {
   gap: 16px;
 }
 
+/* Body column carrying every step of every surface (account card,
+ * checkout step stack, topup form). Width policy is owned by the
+ * outer `.solvapay-mcp-main` cap (480 default, 816 with sidebar) —
+ * inside a single-column layout grid the body fills its 480 cell
+ * exactly; in the two-column sidebar layout the grid's first track
+ * is `minmax(0, 480px)` (below). No body-level max needed. */
 .solvapay-mcp-shell-body {
   display: flex;
   flex-direction: column;
@@ -516,28 +615,43 @@ body {
   gap: 16px;
 }
 
-/* Wide-iframe sidebar: visible at >= 900px. Hosts with narrow iframes
- * (ChatGPT ~400px, compact Claude Desktop) fall through to the
- * single-column layout with Account in the tab strip. */
+/* Wide-shell sidebar: visible when the shell's own inline size is
+ * >=816 (480 body + 16 gap + 320 sidebar). Container query (not
+ * media query) so the layout fires on the shell's own size, not the
+ * iframe viewport — the matching media-gated `:has()` lift above
+ * ensures `.solvapay-mcp-main` only reaches 816 on iframes that can
+ * actually host the wide layout. Hosts with narrow iframes (ChatGPT
+ * ~400px, compact Claude Desktop) fall through to the single-column
+ * layout with the inline detail cards under the active card. */
 
 .solvapay-mcp-shell-sidebar {
   display: none;
 }
 
-@media (min-width: 900px) {
+@container (min-width: 816px) {
+  /* Sidebar track sits at 320px on the left and the body track is
+   * `minmax(0, 480px)` on the right. `order: -1` on the sidebar
+   * bumps it to the front of grid auto-placement so DOM order stays
+   * body-first (primary action first for screen readers on the
+   * checkout/topup payment surfaces) while visual order is
+   * sidebar-left. The outer `.solvapay-mcp-main` is already
+   * `margin-inline: auto` capped at 816, so the 320+16+480 = 816px
+   * composition lands centred in the iframe without any extra
+   * `justify-content` on the grid. */
   .solvapay-mcp-shell-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: 320px minmax(0, 480px);
   }
 
   .solvapay-mcp-shell-sidebar {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    order: -1;
   }
 
-  /* Account tab is hidden at wide viewports — its content lives in
-   * the sidebar. Stays in the DOM so the arrow-key nav is stable;
-   * CSS just takes it out of flow. */
+  /* Account tab is hidden in the wide-shell layout — its content
+   * lives in the sidebar. Stays in the DOM so the arrow-key nav is
+   * stable; CSS just takes it out of flow. */
   .solvapay-mcp-tab[data-hide-wide='true'] {
     display: none;
   }
@@ -546,18 +660,10 @@ body {
 /*
  * Shell-level legal footer.
  *
- * Lays the `<LegalFooter>` primitive out as a single horizontal row —
- * `Provided by SolvaPay` flush left, `Terms · Privacy` flush right —
- * with no hairline divider above it. The parent `.solvapay-mcp-shell`
- * already supplies a `gap: 16px` between children, so the row needs no
- * extra `padding-top` of its own — that gap alone gives it enough
- * breathing room from the surface card without the old 32px stacked
- * void where the hairline used to live.
- *
- * `flex-direction: row-reverse` swaps the visual order without changing
- * the primitive's markup: the links live first in the DOM (correct
- * screen-reader reading order — "Terms / Privacy / Provided by") while
- * the attribution is painted on the left edge.
+ * Lays the `<LegalFooter>` primitive out as one centered line:
+ * `Provided by SolvaPay · Terms · Privacy`. The parent
+ * `.solvapay-mcp-shell` already supplies a `gap: 16px` between
+ * children, so the row needs no extra `padding-top` of its own.
  *
  * Scoped to the shell context so the primitive's default centred
  * column layout, font size, and muted slate-500 ink keep working for
@@ -569,14 +675,27 @@ body {
 
 .solvapay-mcp-shell-footer [data-solvapay-legal-footer] {
   flex-direction: row-reverse;
-  justify-content: space-between;
+  justify-content: center;
   align-items: baseline;
+  gap: 0;
   width: 100%;
   /* Step the ink up from slate-500 (the primitive default) to
    * slate-600 so the footer reads cleanly against white without
    * fading into the card border. Matches the rest of the MCP
    * chrome (`AppHeader`, muted body copy). */
   color: var(--color-text-secondary, #475569);
+}
+
+/* Match the visual spacing of the inner `Terms · Privacy` separator.
+ * That span sits inside an `inline-flex` with `gap: 0.5rem`, so each
+ * side of its `·` reads as `0.5rem` flex-gap + the literal space in
+ * the span text. We mirror that by adding `0.5rem` of padding to each
+ * side of the `::after`-rendered bullet — the existing `' · '` text
+ * already contributes the matching literal spaces. */
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer-attribution]::after {
+  content: ' · ';
+  padding: 0 0.5rem;
+  font-weight: 400;
 }
 
 /* Account view — Customer + Seller details cards
@@ -589,47 +708,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-/* Product header — leads the account surface with the same hierarchy as
- * the hosted manage page: product name as the surface hero, optional
- * product description in muted ink. Sits above the
- * `CURRENT PLAN AND USAGE` section label. */
-.solvapay-mcp-product-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 4px;
-}
-
-.solvapay-mcp-product-name {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--color-text-primary, #0f172a);
-}
-
-.solvapay-mcp-product-description {
-  margin: 0;
-  color: var(--color-text-secondary, #475569);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-/* Section label — uppercased over-line above the plan card. Matches
- * the hosted manage page's `CURRENT PLAN AND USAGE` row. */
-.solvapay-mcp-section-label {
-  display: block;
-  padding: 4px 4px 0;
-  /* Pull the label tighter to the card below so it reads as an
-   * over-line for the card, not a free-floating hairline. */
-  margin-bottom: -4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary, #475569);
 }
 
 .solvapay-mcp-detail-grid {
@@ -681,11 +759,29 @@ body {
   gap: 12px;
 }
 
-.solvapay-mcp-detail-balance-head {
+.solvapay-mcp-customer-card .solvapay-mcp-detail-grid {
+  flex: 1;
+}
+
+.solvapay-mcp-detail-balance-row {
   display: flex;
-  align-items: baseline;
+  flex-direction: row;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.solvapay-mcp-detail-balance-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.solvapay-mcp-detail-balance-row .solvapay-mcp-link-button {
+  align-self: flex-end;
+  flex: 0 0 auto;
 }
 
 .solvapay-mcp-verified-badge {
@@ -699,79 +795,6 @@ body {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-}
-
-/* ---- About view ---- */
-
-.solvapay-mcp-about {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.solvapay-mcp-about-product {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solvapay-mcp-about-image {
-  display: block;
-  max-height: 160px;
-  width: auto;
-  align-self: flex-start;
-  border-radius: 6px;
-}
-
-.solvapay-mcp-about-description {
-  margin: 0;
-  white-space: pre-wrap;
-  color: var(--color-text-secondary, #475467);
-}
-
-.solvapay-mcp-about-ctas {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.solvapay-mcp-about-cta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.solvapay-mcp-about-cta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solvapay-mcp-about-commands {
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--color-background-subtle, #f9fafb);
-}
-
-.solvapay-mcp-about-command-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.solvapay-mcp-about-command {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
-  font-size: 13px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--color-background-raised, #eef2f6);
-}
-
-.solvapay-mcp-about-activity {
-  border: 1px solid var(--color-border-default, #e4e7ec);
 }
 
 /* ---- Back-link primitive ---- */

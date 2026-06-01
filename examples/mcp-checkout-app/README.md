@@ -352,14 +352,17 @@ widget to mount on a data-tool call.
    credits, `popular` on 2 000) → Continue (local transition only) →
    payment step with inline Stripe Elements → `Pay $18.00` →
    `create_topup_payment_intent` + `process_payment` → success
-   surface with receipt grid → `Back to chat` calls
-   `onRefreshBootstrap` then `app.requestTeardown()`.
+   surface with receipt grid (no CTA). The SDK auto-sends
+   `Topped up $18.00. Ready to keep working.` to the chat via
+   `app.sendMessage`, so the agent picks the conversation back up
+   without a user click.
 7. **Recurring branch:** pick Pro → `Continue with Pro — $18/mo`
    (skips amount picker) → payment step with order summary + terms
    line → `Subscribe — $18.00 / monthly` → `create_payment_intent`
    (subscription flag) + `process_payment` → success surface with
-   next-renewal row + `Manage from /manage_account` pointer →
-   `Back to chat`.
+   next-renewal row + `Manage from /manage_account` pointer (no
+   CTA). SDK auto-sends `Activated Pro.` to the chat for the same
+   continuation effect.
 
 ### Gate → upgrade intent → topup → retry sequence
 

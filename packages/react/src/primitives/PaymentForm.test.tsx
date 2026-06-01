@@ -7,7 +7,7 @@
  * `PaymentForm.freePlan.test.tsx`.
  */
 import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import React from 'react'
 import { PaymentForm } from './PaymentForm'
 import { SolvaPayProvider, SolvaPayContext } from '../SolvaPayProvider'
@@ -15,15 +15,14 @@ import { plansCache } from '../hooks/usePlans'
 import { productCache } from '../hooks/useProduct'
 import { merchantCache } from '../hooks/useMerchant'
 import { MissingProviderError } from '../utils/errors'
-import { enCopy } from '../i18n/en'
-import type { Plan, SolvaPayContextValue } from '../types'
+import type { Plan, PurchaseInfo, SolvaPayContextValue } from '../types'
 
 // ---------- Paid-plan success-branch mocks ----------
 //
 // The tests below drive the paid branch of <PaymentForm.Root>. They mock
 // Stripe Elements + the confirmPayment/reconcilePayment utilities so the
-// component hits the post-reconcile polling loop introduced for the MCP
-// checkout flicker fix (plan: close_mcp_checkout_success_gap).
+// component hits the synchronous `upsertPurchase` merge that replaces
+// the post-reconcile polling loop (plan: fix-lifetime-badge-stale).
 //
 // These mocks never execute for the free-plan tests above because
 // FreeInner doesn't touch Stripe or confirmPayment/reconcilePayment.
@@ -200,7 +199,7 @@ describe('PaymentForm primitive', () => {
   })
 })
 
-// ---------- Paid-branch polling: MCP checkout flicker fix ----------
+// ---------- Paid-branch post-success: synchronous `upsertPurchase` merge ----------
 
 const paidPlan: Plan = {
   reference: 'pln_paid',
@@ -211,35 +210,59 @@ const paidPlan: Plan = {
   interval: 'month',
 }
 
+const seededRecurringPurchase: PurchaseInfo = {
+  reference: 'pur_seed_recurring',
+  productName: 'Widget API',
+  productRef: 'prd_recurring',
+  status: 'active',
+  startDate: '2026-01-01T00:00:00Z',
+  amount: 1999,
+  currency: 'usd',
+  planType: 'recurring',
+  isRecurring: true,
+  planSnapshot: { planType: 'recurring' },
+}
+
 type PaidHarnessHandle = {
-  setHasPaidPurchase: (value: boolean) => void
-  refetchCalls: () => number
+  upsertPurchase: ReturnType<typeof vi.fn>
+  refetchPurchase: ReturnType<typeof vi.fn>
+  currentPurchases: () => PurchaseInfo[]
 }
 
 const paidHarnessRef: { current: PaidHarnessHandle | null } = { current: null }
 
 const PaidHarness: React.FC<{
-  onRefetch?: (callCount: number, setPaid: (v: boolean) => void) => void
   onError?: (error: Error) => void
+  onSuccess?: (paymentIntent: unknown) => void
+  initialPurchases?: PurchaseInfo[]
   children?: React.ReactNode
-}> = ({ onRefetch, onError, children }) => {
-  const [hasPaidPurchase, setHasPaidPurchase] = React.useState(false)
-  const callCountRef = React.useRef(0)
+}> = ({ onError, onSuccess, initialPurchases = [], children }) => {
+  const [purchases, setPurchases] = React.useState<PurchaseInfo[]>(initialPurchases)
 
-  const refetchPurchase = React.useCallback(async () => {
-    callCountRef.current += 1
-    onRefetch?.(callCountRef.current, setHasPaidPurchase)
-  }, [onRefetch])
+  const upsertPurchase = React.useMemo(
+    () =>
+      vi.fn((incoming: PurchaseInfo) => {
+        setPurchases(prev => {
+          const next = prev.filter(p => p.reference !== incoming.reference)
+          next.push(incoming)
+          return next
+        })
+      }),
+    [],
+  )
+
+  const refetchPurchase = React.useMemo(() => vi.fn(async () => {}), [])
 
   React.useEffect(() => {
     paidHarnessRef.current = {
-      setHasPaidPurchase,
-      refetchCalls: () => callCountRef.current,
+      upsertPurchase,
+      refetchPurchase,
+      currentPurchases: () => purchases,
     }
     return () => {
       paidHarnessRef.current = null
     }
-  }, [])
+  }, [upsertPurchase, refetchPurchase, purchases])
 
   const ctx = React.useMemo<SolvaPayContextValue>(
     () => ({
@@ -247,19 +270,20 @@ const PaidHarness: React.FC<{
         loading: false,
         isRefetching: false,
         error: null,
-        purchases: [],
+        purchases,
         hasProduct: () => false,
-        activePurchase: null,
-        hasPaidPurchase,
-        activePaidPurchase: null,
+        activePurchase: purchases[0] ?? null,
+        hasPaidPurchase: purchases.some(p => (p.amount ?? 0) > 0 && p.status === 'active'),
+        activePaidPurchase: purchases.find(p => (p.amount ?? 0) > 0) ?? null,
         balanceTransactions: [],
       },
       refetchPurchase,
+      upsertPurchase,
       createPayment: vi.fn().mockResolvedValue({
         clientSecret: 'cs_test_123',
         publishableKey: 'pk_test',
       }),
-      processPayment: vi.fn().mockResolvedValue({ status: 'succeeded' }),
+      processPayment: vi.fn(),
       createTopupPayment: vi.fn(),
       cancelRenewal: vi.fn(),
       reactivateRenewal: vi.fn(),
@@ -274,12 +298,17 @@ const PaidHarness: React.FC<{
         adjustBalance: vi.fn(),
       },
     }),
-    [hasPaidPurchase, refetchPurchase],
+    [purchases, refetchPurchase, upsertPurchase],
   )
 
   return (
     <SolvaPayContext.Provider value={ctx}>
-      <PaymentForm.Root planRef="pln_paid" productRef="prd_paid" onError={onError}>
+      <PaymentForm.Root
+        planRef="pln_paid"
+        productRef="prd_paid"
+        onError={onError}
+        onSuccess={onSuccess}
+      >
         <PaymentForm.PaymentElement />
         {children}
         <PaymentForm.SubmitButton data-testid="submit" />
@@ -289,7 +318,7 @@ const PaidHarness: React.FC<{
   )
 }
 
-describe('PaymentForm paid-branch polling (MCP checkout flicker fix)', () => {
+describe('PaymentForm post-success purchase merge', () => {
   beforeEach(() => {
     plansCache.clear()
     productCache.clear()
@@ -309,24 +338,16 @@ describe('PaymentForm paid-branch polling (MCP checkout flicker fix)', () => {
       promise: null,
       timestamp: Date.now(),
     })
-    vi.useFakeTimers({ shouldAdvanceTime: true })
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  async function clickSubmitAndAwaitProcessing() {
+  async function clickSubmitAndSettle() {
     const button = await screen.findByTestId('submit')
-    // Wait for canSubmit to be true (Elements + clientSecret + paymentInputComplete)
     await waitFor(() => {
       expect(button.getAttribute('data-state')).toBe('idle')
     })
     await act(async () => {
       fireEvent.click(button)
     })
-    // After click, confirmPayment + reconcilePayment resolve on microtasks;
-    // flush them so the polling loop is definitely running.
     await act(async () => {
       await Promise.resolve()
       await Promise.resolve()
@@ -334,70 +355,165 @@ describe('PaymentForm paid-branch polling (MCP checkout flicker fix)', () => {
     return button
   }
 
-  it('keeps isProcessing=true while hasPaidPurchase is still false after the first refetch, then flips off once the provider observes the paid purchase', async () => {
-    render(<PaidHarness onRefetch={(_calls, _set) => {}} />)
-
-    const button = await clickSubmitAndAwaitProcessing()
-
-    // First refetch attempt — stale read, hasPaidPurchase still false.
-    // The loop waits 500ms before issuing the refetch.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(600)
-    })
-    expect(paidHarnessRef.current?.refetchCalls()).toBeGreaterThanOrEqual(1)
-    expect(button.getAttribute('data-state')).toBe('processing')
-    expect(button.getAttribute('aria-busy')).toBe('true')
-
-    // Still stale after another poll — button must remain busy.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1100)
-    })
-    expect(button.getAttribute('data-state')).toBe('processing')
-
-    // Provider finally observes the paid purchase (simulates the backend
-    // returning the newly-created purchase on the next check_purchase call).
-    act(() => {
-      paidHarnessRef.current?.setHasPaidPurchase(true)
+  it('upserts a recurring purchase from a fresh `processPaymentIntent` result and clears isProcessing without a refetch', async () => {
+    const reconcilePaymentMock = (await import('../utils/processPaymentResult'))
+      .reconcilePayment as ReturnType<typeof vi.fn>
+    const freshPurchase = {
+      reference: 'pur_fresh_recurring',
+      productName: 'Widget API',
+      productRef: 'prd_paid',
+      status: 'active',
+      startDate: '2026-05-12T00:00:00Z',
+      amount: 1999,
+      currency: 'usd',
+      planType: 'recurring',
+      isRecurring: true,
+      planSnapshot: { planType: 'recurring' },
+    } satisfies PurchaseInfo
+    reconcilePaymentMock.mockResolvedValueOnce({
+      status: 'success',
+      result: {
+        status: 'succeeded',
+        type: 'recurring',
+        purchase: freshPurchase,
+      },
     })
 
-    // Drain the current poll's wait so the loop sees the updated ref
-    // (populated via the mirroring useEffect) and exits.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
+    const onSuccess = vi.fn()
+    render(<PaidHarness onSuccess={onSuccess} />)
+    const button = await clickSubmitAndSettle()
+
+    await waitFor(() => {
+      expect(paidHarnessRef.current?.upsertPurchase).toHaveBeenCalledTimes(1)
     })
+    expect(paidHarnessRef.current?.upsertPurchase).toHaveBeenCalledWith(freshPurchase)
+    expect(paidHarnessRef.current?.refetchPurchase).not.toHaveBeenCalled()
+    expect(onSuccess).toHaveBeenCalledTimes(1)
 
     await waitFor(() => {
       expect(button.getAttribute('data-state')).toBe('idle')
     })
+    expect(paidHarnessRef.current?.currentPurchases().length).toBe(1)
     expect(screen.queryByTestId('err')?.textContent ?? '').toBe('')
   })
 
-  it('surfaces paymentConfirmationDelayed error and re-enables the button after the 10s ceiling when hasPaidPurchase never flips', async () => {
-    const onError = vi.fn()
-    render(<PaidHarness onError={onError} />)
+  it('falls back to refetch when reconcile returns a bare `succeeded` shape (webhook race) and clears isProcessing', async () => {
+    const reconcilePaymentMock = (await import('../utils/processPaymentResult'))
+      .reconcilePayment as ReturnType<typeof vi.fn>
+    reconcilePaymentMock.mockResolvedValueOnce({
+      status: 'success',
+      result: { status: 'succeeded' },
+    })
 
-    const button = await clickSubmitAndAwaitProcessing()
-
-    // Burn through the full 10s polling ceiling. Use multiple shorter
-    // advances so React has a chance to commit between iterations.
-    for (let i = 0; i < 12; i++) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(1000)
-      })
-    }
+    const onSuccess = vi.fn()
+    render(<PaidHarness onSuccess={onSuccess} />)
+    const button = await clickSubmitAndSettle()
 
     await waitFor(() => {
-      expect(screen.getByTestId('err').textContent).toBe(
-        enCopy.errors.paymentConfirmationDelayed,
-      )
+      expect(paidHarnessRef.current?.refetchPurchase).toHaveBeenCalledTimes(1)
     })
-    expect(button.getAttribute('data-state')).toBe('idle')
-    expect(onError).toHaveBeenCalledWith(expect.any(Error))
-    expect(onError.mock.calls[0][0].message).toBe(
-      enCopy.errors.paymentConfirmationDelayed,
+    expect(paidHarnessRef.current?.upsertPurchase).not.toHaveBeenCalled()
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(button.getAttribute('data-state')).toBe('idle')
+    })
+  })
+
+  it('releases the SubmitButton even when upsertPurchase throws synchronously (try/finally safety net)', async () => {
+    // The thrown error propagates out of submit() as an unhandled rejection
+    // (SubmitButton fires submit() and forgets). We suppress it here because
+    // the test is explicitly about the finally releasing the button — not
+    // about consumer callback throws becoming a silent failure.
+    const swallowExpectedThrow = (err: unknown): void => {
+      if (err instanceof Error && err.message === 'upsert exploded') return
+      throw err
+    }
+    process.on('unhandledRejection', swallowExpectedThrow)
+
+    try {
+      const reconcilePaymentMock = (await import('../utils/processPaymentResult'))
+        .reconcilePayment as ReturnType<typeof vi.fn>
+      reconcilePaymentMock.mockResolvedValueOnce({
+        status: 'success',
+        result: {
+          status: 'succeeded',
+          type: 'recurring',
+          purchase: {
+            reference: 'pur_throw',
+            productName: 'Widget API',
+            productRef: 'prd_paid',
+            status: 'active',
+            startDate: '2026-05-12T00:00:00Z',
+            amount: 1999,
+            currency: 'usd',
+          } satisfies PurchaseInfo,
+        },
+      })
+
+      // Render the harness, then swap `upsertPurchase` for one that throws.
+      // We can't pass it in directly without leaking implementation detail
+      // through PaidHarness, so we mutate the ref the harness publishes.
+      render(<PaidHarness />)
+      await waitFor(() => expect(paidHarnessRef.current).toBeTruthy())
+      paidHarnessRef.current!.upsertPurchase.mockImplementationOnce(() => {
+        throw new Error('upsert exploded')
+      })
+
+      const button = await clickSubmitAndSettle()
+
+      // The thrown error propagates out of submit() but the finally must
+      // still flip the button back to `idle` so the user can retry.
+      await waitFor(() => {
+        expect(button.getAttribute('data-state')).toBe('idle')
+      })
+    } finally {
+      process.off('unhandledRejection', swallowExpectedThrow)
+    }
+  })
+
+  it('normalises a one-time purchase from `processPaymentIntent` and merges it alongside an existing recurring row', async () => {
+    const reconcilePaymentMock = (await import('../utils/processPaymentResult'))
+      .reconcilePayment as ReturnType<typeof vi.fn>
+    reconcilePaymentMock.mockResolvedValueOnce({
+      status: 'success',
+      result: {
+        status: 'succeeded',
+        type: 'one-time',
+        oneTimePurchase: {
+          reference: 'pur_fresh_lifetime',
+          productRef: 'prd_paid',
+          amount: 9900,
+          currency: 'usd',
+          completedAt: '2026-05-12T12:00:00Z',
+        },
+      },
+    })
+
+    const onSuccess = vi.fn()
+    render(
+      <PaidHarness onSuccess={onSuccess} initialPurchases={[seededRecurringPurchase]} />,
     )
-    // At least a handful of refetches were attempted before the ceiling hit.
-    expect(paidHarnessRef.current?.refetchCalls() ?? 0).toBeGreaterThanOrEqual(3)
+    const button = await clickSubmitAndSettle()
+
+    await waitFor(() => {
+      expect(paidHarnessRef.current?.upsertPurchase).toHaveBeenCalledTimes(1)
+    })
+    const merged = paidHarnessRef.current?.upsertPurchase.mock.calls[0]?.[0] as PurchaseInfo
+    expect(merged).toMatchObject({
+      reference: 'pur_fresh_lifetime',
+      status: 'active',
+      amount: 9900,
+      currency: 'usd',
+      planSnapshot: { planType: 'one-time' },
+    })
+    expect(paidHarnessRef.current?.refetchPurchase).not.toHaveBeenCalled()
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+
+    await waitFor(() => {
+      expect(button.getAttribute('data-state')).toBe('idle')
+    })
+    // Started with 1 recurring row; one-time merge should bump it to 2.
+    expect(paidHarnessRef.current?.currentPurchases().length).toBe(2)
   })
 })
 
@@ -428,6 +544,7 @@ const OptionsHarness: React.FC<{
         balanceTransactions: [],
       },
       refetchPurchase: vi.fn(),
+      upsertPurchase: vi.fn(),
       createPayment: vi.fn().mockResolvedValue({
         clientSecret: 'cs_test_options',
         publishableKey: 'pk_test',

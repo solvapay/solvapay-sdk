@@ -19,6 +19,7 @@ function buildCtx(overrides: Partial<SolvaPayContextValue> = {}): SolvaPayContex
       balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),
@@ -204,7 +205,6 @@ describe('LaunchCustomerPortalButton', () => {
         asChild: true,
         onLaunch,
         children: <button data-testid="custom-btn">Open portal</button>,
-        // @ts-expect-error — asChild intentionally accepts arbitrary child shells
       } as Parameters<typeof LaunchCustomerPortalButton>[0],
     )
 

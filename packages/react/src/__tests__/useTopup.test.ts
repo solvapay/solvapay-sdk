@@ -23,6 +23,7 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
       balanceTransactions: [],
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn().mockResolvedValue({
       clientSecret: 'pi_topup_secret',

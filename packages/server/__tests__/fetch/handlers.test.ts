@@ -188,15 +188,15 @@ describe('processPayment', () => {
 
   it('parses body and returns processed result', async () => {
     mockProcessPaymentIntentCore.mockResolvedValue({
+      status: 'succeeded',
       type: 'recurring',
-      status: 'completed',
     })
 
     const res = await processPayment(
       fakePost({ paymentIntentId: 'pi_1', productRef: 'prd_1' }),
     )
     expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ status: 'completed' })
+    expect(await res.json()).toMatchObject({ status: 'succeeded' })
   })
 })
 
