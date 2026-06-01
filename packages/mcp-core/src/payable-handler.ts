@@ -129,9 +129,9 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     return handler(args as TArgs, responseCtx)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const protectedHandler = solvaPay
     .payable({ product, getCustomerRef })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .mcp(wrappedBusinessLogic as any)
 
   return async (
