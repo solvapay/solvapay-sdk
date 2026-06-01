@@ -579,7 +579,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
     }
 
     const now = new Date()
-    const purchase: NonNullable<ProcessPaymentResult['purchase']> = {
+    type RecurringResult = Extract<ProcessPaymentResult, { type: 'recurring' }>
+    const purchase: RecurringResult['purchase'] = {
       reference: `pur_stub_${Math.random().toString(36).slice(2, 10)}`,
       productName: 'Demo Product',
       productRef: params.productRef,
@@ -591,9 +592,9 @@ export class StubSolvaPayClient implements SolvaPayClient {
     }
 
     return {
+      status: 'succeeded',
       type: 'recurring',
       purchase,
-      status: 'completed',
     }
   }
 

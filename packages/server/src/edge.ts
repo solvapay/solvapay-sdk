@@ -14,7 +14,15 @@ export type { ServerClientOptions } from './client'
 
 // Re-export factory for unified API
 export { createSolvaPay } from './factory'
-export type { CreateSolvaPayConfig, SolvaPay, PayableFunction } from './factory'
+export type {
+  CreateSolvaPayConfig,
+  SolvaPay,
+  PayableFunction,
+  PayableGateOptions,
+  PayableGateResult,
+  PayablePaywallResult,
+  PayableAllowResult,
+} from './factory'
 
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
@@ -26,6 +34,7 @@ export { PaywallError, paywallErrorToClientPayload } from './paywall'
 // point already ships. Pure modules — safe on every edge runtime.
 export { isPaywallStructuredContent } from './types/paywall'
 export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './paywall-state'
+export { buildPaywallGate } from './paywall-gate'
 export type { PaywallState } from './paywall-state'
 export type { PaywallDecision } from './types/paywall'
 
@@ -58,6 +67,7 @@ export type {
 export type {
   OneTimePurchaseInfo,
   ProcessPaymentResult,
+  TopupProcessResult,
   CustomerResponseMapped,
   ActivatePlanResult,
   PaymentMethodInfo,
@@ -84,6 +94,7 @@ export {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
+  processTopupPaymentIntentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,
@@ -93,6 +104,7 @@ export {
   trackUsageCore,
   getUsageCore,
   listPlansCore,
+  checkLimitsCore,
   getMerchantCore,
   getProductCore,
   getPaymentMethodCore,

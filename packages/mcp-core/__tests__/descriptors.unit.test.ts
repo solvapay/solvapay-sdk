@@ -356,6 +356,49 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(sc.plans).toBeTruthy()
   })
 
+  it('returns a recovery-oriented tool error when getMerchant 404s', async () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: createSolvaPay({
+        apiClient: {
+          checkLimits: vi
+            .fn()
+            .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
+          trackUsage: vi.fn(),
+          createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
+          getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
+          getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: null }),
+          // Mimic the live SDK: getMerchant throws a SolvaPayError with status: 404
+          getMerchant: vi.fn().mockImplementation(async () => {
+            const { SolvaPayError } = await import('@solvapay/core')
+            throw new SolvaPayError('Get merchant failed (404): Provider not found', {
+              status: 404,
+            })
+          }),
+          getProduct: vi
+            .fn()
+            .mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
+          listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),
+        } as unknown as SolvaPayClient,
+      }),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
+    const result = await upgrade.handler({}, {})
+
+    expect(result.isError).toBe(true)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.status).toBe(404)
+    const text = (result.content as Array<{ text?: string }>)?.[0]?.text ?? ''
+    // The recovery text must mention the next step and not be a JSON dump.
+    expect(text).toMatch(/Provider/i)
+    expect(text).toMatch(/solvapay init/)
+    // Make sure we did not stringify a JSON envelope into content[0].text.
+    expect(text.trim().startsWith('{')).toBe(false)
+  })
+
   it('activate_plan without planRef errors when checkout view is disabled', async () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),
@@ -371,5 +414,62 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.status).toBe(400)
     expect(String(sc.error)).toMatch(/planRef/)
+  })
+})
+
+// Workaround coverage for the ChatGPT MCP connector's stale link_<id>
+// routing bug — see the top-of-file comment in
+// packages/mcp-core/src/descriptors.ts and the OpenAI Apps SDK
+// community thread cited there.
+describe('buildSolvaPayDescriptors → _meta["openai/widgetSessionId"] stamping', () => {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const WIDGET_KEY = 'openai/widgetSessionId'
+
+  function buildBundle() {
+    return buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+  }
+
+  function metaKey(result: { _meta?: Record<string, unknown> }): string | undefined {
+    const value = result._meta?.[WIDGET_KEY]
+    return typeof value === 'string' ? value : undefined
+  }
+
+  it.each([MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.manageAccount])(
+    '%s stamps a fresh UUID per invocation',
+    async toolName => {
+      const { tools } = buildBundle()
+      const tool = tools.find(t => t.name === toolName)!
+
+      const first = await tool.handler({}, {})
+      const second = await tool.handler({}, {})
+
+      const firstId = metaKey(first)
+      const secondId = metaKey(second)
+      expect(firstId).toMatch(UUID_RE)
+      expect(secondId).toMatch(UUID_RE)
+      expect(firstId).not.toBe(secondId)
+    },
+  )
+
+  it("preserves widgetSessionId when mode: 'text' strips _meta.ui", async () => {
+    const { tools } = buildBundle()
+    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
+    const result = await upgrade.handler({ mode: 'text' }, {})
+    expect(metaKey(result)).toMatch(UUID_RE)
+    // ui ref must be stripped in text mode (existing contract).
+    expect((result._meta as Record<string, unknown> | undefined)?.ui).toBeUndefined()
+  })
+
+  it('activate_plan picker bootstrap stamps widgetSessionId', async () => {
+    const { tools } = buildBundle()
+    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
+    const result = await activate.handler({}, {})
+    expect(metaKey(result)).toMatch(UUID_RE)
   })
 })

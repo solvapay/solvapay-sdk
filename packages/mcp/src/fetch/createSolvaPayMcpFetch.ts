@@ -16,7 +16,12 @@
  */
 
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
-import { applyHideToolsByAudience, buildSolvaPayMcpServer } from '../internal/buildMcpServer'
+import {
+  applyHideToolsByAudience,
+  buildSolvaPayMcpServer,
+  normaliseHideToolsByAudience,
+  type HideToolsByAudienceConfig,
+} from '../internal/buildMcpServer'
 import { registerPayableTool, type RegisterPayableToolOptions } from '../registerPayableTool'
 import type { AdditionalToolsContext } from '../server'
 import { createSolvaPayMcpFetchHandler, type CreateSolvaPayMcpFetchHandlerOptions } from './handler'
@@ -35,11 +40,11 @@ export interface CreateSolvaPayMcpFetchOptions
    */
   additionalTools?: (ctx: AdditionalToolsContext) => void
   /**
-   * Hide tools whose `_meta.audience` matches one of these values from
-   * `tools/list`. See `CreateSolvaPayMcpServerOptions` for the full
-   * rationale.
+   * Hide tools whose `_meta.audience` matches one of these values
+   * from `tools/list`. See `CreateSolvaPayMcpServerOptions` for the
+   * full rationale and the ChatGPT auto-bypass behaviour.
    */
-  hideToolsByAudience?: string[]
+  hideToolsByAudience?: HideToolsByAudienceConfig
   /**
    * Register the slash-command prompts built from the descriptor
    * bundle. Defaults to `true`.
@@ -136,7 +141,8 @@ export function createSolvaPayMcpFetch(
 
   // Filter UI-audience tools from `tools/list` last so we see every
   // tool the descriptor loop + `additionalTools` registered.
-  applyHideToolsByAudience(server, hideToolsByAudience)
+  const { audiences, options: filterOptions } = normaliseHideToolsByAudience(hideToolsByAudience)
+  applyHideToolsByAudience(server, audiences, filterOptions)
 
   return createSolvaPayMcpFetchHandler({
     server,

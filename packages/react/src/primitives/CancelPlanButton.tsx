@@ -94,6 +94,12 @@ export const CancelPlanButton = forwardRef<HTMLButtonElement, CancelPlanButtonPr
       }
     }, [effectiveRef, effectivePurchase, confirm, copy, cancelRenewal, reason, onCancelled, onError])
 
+    // Pending cancellation: renewal is already stopped; reactivate via
+    // CancelledPlanNotice instead of offering cancel again.
+    if (effectivePurchase?.status === 'active' && effectivePurchase.cancelledAt) {
+      return null
+    }
+
     const disabled = isCancelling || !effectiveRef
     const state: CancelState = isCancelling ? 'cancelling' : 'idle'
 

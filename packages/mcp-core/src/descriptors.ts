@@ -9,6 +9,28 @@
  * mechanical difference: instead of calling `registerAppTool(server, ...)`,
  * we push `{ name, handler, ... }` onto a `tools[]` array the adapter
  * iterates.
+ *
+ * ----
+ *
+ * `_meta["openai/widgetSessionId"]` workaround. Every intent-tool
+ * response stamps a freshly-minted UUID on `_meta["openai/widgetSessionId"]`.
+ * This is a low-risk forward-looking workaround for the ChatGPT MCP
+ * connector's stale `link_<id>` routing bug, where the host returns
+ * `-32000 MCP Resource not found` on the second `tools/call` of a
+ * session even though the call never reaches the server. A fresh UUID
+ * per invocation gives the host a routing key that changes every call,
+ * which the OpenAI Apps SDK community thread reports unsticks the
+ * failure mode.
+ *
+ * Sources:
+ *   - https://community.openai.com/t/connector-tool-calls-generating-fresh-mcp-session-each-invocation/1364975
+ *   - https://github.com/openai/openai-apps-sdk-examples/issues/165
+ *   - https://developers.openai.com/apps-sdk/reference/ (`_meta` payload)
+ *   - openai/openai-apps-sdk-examples shopping_cart_python uses the
+ *     same `meta["openai/widgetSessionId"]` shape.
+ *
+ * Removable once the upstream bug ships a fix; safe on any host that
+ * doesn't consume the key.
  */
 
 import {
@@ -285,10 +307,30 @@ export function buildSolvaPayDescriptors(
       if (onToolResult) onToolResult(name, result, { durationMs: Date.now() - started })
       return result
     } catch (err) {
+      // Errors thrown from `buildBootstrapPayload` and downstream
+      // helpers can carry an upstream HTTP `status` and a
+      // human-readable `details` string (see
+      // `createBootstrapMerchantError` in `bootstrap-payload.ts`).
+      // Read them off the caught value when present so the recovery
+      // message reaches `content[0].text` and `structuredContent.status`
+      // matches the upstream — otherwise both used to collapse to 500
+      // / `previewJson(err)`.
+      const carrier =
+        err && typeof err === 'object'
+          ? (err as { status?: unknown; details?: unknown })
+          : undefined
+      const status = typeof carrier?.status === 'number' ? carrier.status : 500
+      const message = err instanceof Error ? err.message : String(err)
+      const details =
+        typeof carrier?.details === 'string' && carrier.details.length > 0
+          ? carrier.details
+          : err instanceof Error
+            ? err.message
+            : previewJson(err)
       const errorResult = toolErrorResult({
-        error: err instanceof Error ? err.message : String(err),
-        status: 500,
-        details: previewJson(err),
+        error: message,
+        status,
+        details,
       })
       if (onToolResult) onToolResult(name, errorResult, { durationMs: Date.now() - started })
       return errorResult
@@ -322,7 +364,10 @@ export function buildSolvaPayDescriptors(
         trace(name, args, extra, async () => {
           const mode = parseMode(args.mode)
           const data = await buildBootstrapPayload(view, extra)
-          return narratedToolResult(name as IntentTool, data, mode, toolMeta)
+          return narratedToolResult(name as IntentTool, data, mode, {
+            ...toolMeta,
+            'openai/widgetSessionId': crypto.randomUUID(),
+          })
         }),
     })
   }
@@ -601,7 +646,7 @@ export function buildSolvaPayDescriptors(
             MCP_TOOL_NAMES.activatePlan as IntentTool,
             await buildBootstrapPayload('checkout', extra),
             mode,
-            toolMeta,
+            { ...toolMeta, 'openai/widgetSessionId': crypto.randomUUID() },
           )
         }
 

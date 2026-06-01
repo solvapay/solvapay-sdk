@@ -62,6 +62,7 @@ function buildCtx(
       name: 'Demo',
     },
     refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),
@@ -206,7 +207,6 @@ describe('<McpAppShell>', () => {
     const ctx = buildCtx(config, [], 0)
     renderShell(
       {
-        // @ts-expect-error — stress the undefined fallback path.
         view: undefined,
         customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
       },
@@ -215,6 +215,49 @@ describe('<McpAppShell>', () => {
     // Account view renders the sidebar's Details cards, not the
     // Checkout picker — assert via the "Your account context" aside.
     expect(screen.getByLabelText('Your account context')).toBeTruthy()
+  })
+
+  const authedCustomer = {
+    ref: 'cus_1',
+    purchase: null,
+    paymentMethod: null,
+    balance: null,
+    usage: null,
+  }
+
+  it('renders Your account and Seller cards in the sidebar when bootstrap.customer is set', () => {
+    const config = seedMerchant({
+      displayName: 'Acme',
+      legalName: 'Acme Inc.',
+      supportEmail: 'support@acme.com',
+    })
+    const ctx = buildCtx(config, [], 1500)
+    renderShell({ view: 'account', customer: authedCustomer }, ctx)
+    expect(screen.getByLabelText('Your account context')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Your account' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Seller' })).toBeTruthy()
+  })
+
+  it('mounts the sidebar on every surface when bootstrap.customer is set', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+
+    for (const view of ['account', 'checkout', 'topup'] as const) {
+      const { unmount } = renderShell({ view, customer: authedCustomer }, ctx)
+      expect(screen.getByLabelText('Your account context')).toBeTruthy()
+      unmount()
+    }
+  })
+
+  it('does not mount the sidebar when bootstrap.customer is null', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+
+    for (const view of ['account', 'checkout', 'topup'] as const) {
+      const { unmount } = renderShell({ view, customer: null }, ctx)
+      expect(screen.queryByLabelText('Your account context')).toBeNull()
+      unmount()
+    }
   })
 
   it('no longer renders a shell-level brand header — branding moved to <McpApp>-level <AppHeader>', () => {
@@ -238,7 +281,7 @@ describe('<McpAppShell>', () => {
     expect(container.querySelector('.solvapay-mcp-shell-tagline')).toBeNull()
   })
 
-  it('threads bootstrap.product into the account view as the surface heading', () => {
+  it('does not thread bootstrap.product into the account view as a product hero', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
     renderShell(
@@ -253,10 +296,8 @@ describe('<McpAppShell>', () => {
       },
       ctx,
     )
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Acme Knowledge Base' }),
-    ).toBeTruthy()
-    expect(screen.getByText('Search Acme docs from anywhere.')).toBeTruthy()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Acme Knowledge Base' })).toBeNull()
+    expect(screen.queryByText('Search Acme docs from anywhere.')).toBeNull()
   })
 
   it('renders the SolvaPay legal footer with solvapay.com legal URLs', () => {
@@ -342,6 +383,7 @@ describe('<McpAppShell>', () => {
       fireEvent.click(screen.getByTestId('change-plan'))
     })
     expect(screen.getByTestId('checkout-stub')).toBeTruthy()
+    expect(screen.getByLabelText('Your account context')).toBeTruthy()
   })
 
   it('forwards `onClose` to the checkout view', () => {

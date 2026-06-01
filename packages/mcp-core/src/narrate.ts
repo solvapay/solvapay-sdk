@@ -32,9 +32,12 @@ interface PlanShape {
   billingCycle?: string | null
   meterRef?: string | null
   limit?: number | null
+  creditsPerUnit?: number | null
+  reference?: string
 }
 
 interface PurchaseShape {
+  planRef?: string
   planSnapshot?: PlanShape | null
   amount?: number
   currency?: string
@@ -109,6 +112,33 @@ function balanceRow(customer: CustomerShape | null | undefined): string | null {
   return money ? `Balance: ${fmt} credits (~${money})` : `Balance: ${fmt} credits`
 }
 
+function resolveCreditsPerCall(active: PurchaseShape, plans: PlanShape[]): number | null {
+  const snapshot = active.planSnapshot
+  if (snapshot?.planType === 'usage-based') {
+    const fromSnapshot = snapshot.creditsPerUnit
+    if (typeof fromSnapshot === 'number' && fromSnapshot > 0) return fromSnapshot
+  }
+
+  const planRef = active.planRef
+  if (planRef) {
+    const match = plans.find(p => p.reference === planRef)
+    if (
+      match?.planType === 'usage-based' &&
+      typeof match.creditsPerUnit === 'number' &&
+      match.creditsPerUnit > 0
+    ) {
+      return match.creditsPerUnit
+    }
+  }
+
+  return null
+}
+
+function costPerCallRow(creditsPerUnit: number): string {
+  const fmt = new Intl.NumberFormat('en-US').format(creditsPerUnit)
+  return `Cost per call: ${fmt} credits`
+}
+
 function commandsLine(commands: string[]): string {
   return `Commands: ${commands.map((c) => `\`/${c}\``).join(' ')}`
 }
@@ -178,6 +208,8 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
     }
     const bal = balanceRow(customer)
     if (bal) lines.push(bal)
+    const creditsPerCall = resolveCreditsPerCall(active, (data.plans ?? []) as PlanShape[])
+    if (creditsPerCall != null) lines.push(costPerCallRow(creditsPerCall))
     lines.push('')
     lines.push(commandsLine(['topup', 'upgrade']))
   }

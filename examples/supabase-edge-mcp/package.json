@@ -12,7 +12,7 @@
     "serve:local": "supabase functions serve mcp --import-map=supabase/functions/mcp/deno.local.json"
   },
   "devDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/react": "workspace:*",
@@ -21,8 +21,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "cross-env": "^10.1.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "vite": "^8.0.6",
     "vite-plugin-singlefile": "^2.3.2",
     "zod": "^4.3.6"

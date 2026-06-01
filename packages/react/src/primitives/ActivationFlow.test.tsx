@@ -19,9 +19,8 @@ const usageBasedPlan: Plan = {
   name: 'Usage plan',
   price: 0,
   currency: 'usd',
-  // @ts-expect-error — plan typing is wider than this test fixture needs
   requiresPayment: true,
-  planType: 'usage_based',
+  type: 'usage-based',
 }
 
 function makeFetch(payload: unknown, status = 200) {
@@ -113,11 +112,18 @@ describe('ActivationFlow selector sharing (phase 0.2)', () => {
 
 describe('ActivationFlow amountMinor (zero-decimal currencies)', () => {
   function renderFlowForCurrency(currency: string) {
-    const fetchFn = makeFetch({ plans: [{ ...usageBasedPlan, currency }] })
+    // Seed plansCache directly — when a transport is configured without
+    // `listPlans` (the MCP shape after Phase 2c), `usePlan` routes through
+    // `defaultListPlans`, which reads from the seeded cache rather than
+    // firing a raw `/api/list-plans` fetch. Matches production bootstrap.
+    plansCache.set('prd_x', {
+      plans: [{ ...usageBasedPlan, currency }],
+      timestamp: Date.now(),
+      promise: null,
+    })
     return render(
       <SolvaPayProvider
         config={{
-          fetch: fetchFn as unknown as typeof fetch,
           transport: {
             checkPurchase: vi.fn().mockResolvedValue({ purchases: [] }),
             activatePlan: activatePlanTopupRequired(),

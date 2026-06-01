@@ -98,8 +98,8 @@ type MerchantHandler<TArgs, TResult> = (
  *     terminal `SolvaPayCallToolResult`: applies `options.text` /
  *     `options.nudge` (as a text suffix) and flushes `ctx.emit(...)`
  *     blocks into `content[]`.
- *  5. Silently ignores `options.units` (V1 billing stays at one credit
- *     per call; V1.1 will thread it into `trackUsage`).
+ *  5. Silently ignores `options.units` (V1 billing stays at one usage
+ *     unit per call; credit debit = units × plan.creditsPerUnit).
  */
 export function buildPayableHandler<TArgs extends Record<string, unknown>, TResult>(
   solvaPay: SolvaPay,
@@ -245,7 +245,7 @@ async function unwrapResponseEnvelope(
   ]
 
   // `options.units` is intentionally ignored — V1 billing stays at one
-  // credit per call.
+  // usage unit per call; credit debit = units × plan.creditsPerUnit.
 
   const existingMeta =
     typeof adapterResult._meta === 'object' && adapterResult._meta !== null

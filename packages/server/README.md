@@ -262,7 +262,7 @@ Choose the adapter based on your context:
 
 The `createSolvaPayClient` returns an object implementing `SolvaPayClient`:
 
-- `checkLimits(params)` - Check if customer is within usage limits
+- `checkLimits(params)` - Check if customer is within usage limits. For products whose default plan is free and non-usage-based, the first call also auto-enrolls the customer (creates a `Purchase` with `origin: 'free_default'`). Merchants who want explicit enrollment at signup can still call `purchases.activate(...)`.
 - `trackUsage(params)` - Track usage for metered billing
 - `createCustomer(params)` - Create a new customer
 - `getCustomer(params)` - Get customer details by reference
