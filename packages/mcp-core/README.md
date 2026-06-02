@@ -1,6 +1,13 @@
 # @solvapay/mcp-core
 
+[![npm version](https://img.shields.io/npm/v/@solvapay/mcp-core.svg)](https://www.npmjs.com/package/@solvapay/mcp-core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Framework-neutral MCP (Model Context Protocol) contracts for the SolvaPay SDK.
+
+**When to use this package:** build a custom MCP adapter (`fastmcp`, raw JSON-RPC) or serve OAuth discovery JSON without importing `@modelcontextprotocol/*`. For the official SDK adapter, use [`@solvapay/mcp`](../mcp) or [`npm create solvapay@latest <name> -- --type mcp`](https://www.npmjs.com/package/create-solvapay).
+
+Guide: [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp)
 
 This package owns the shapes that cross the SolvaPay server ↔ client ↔
 adapter boundary: tool names, descriptor builder (for SolvaPay intent
@@ -97,3 +104,9 @@ myAdapter.registerResource(resource)
 - [`@solvapay/mcp/fetch`](../mcp/src/fetch) — fetch-first OAuth handlers + turnkey `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch`
 - [`@solvapay/server`](../server) — core SDK (paywall, webhooks, `*Core` helpers)
 - [`@solvapay/react/mcp`](../react) — React provider + views for the MCP App UI shell
+- [`create-solvapay`](../create-solvapay) — scaffold new MCP apps
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
+- **Docs**: [docs.solvapay.com/sdks/typescript/guides/mcp](https://docs.solvapay.com/sdks/typescript/guides/mcp)

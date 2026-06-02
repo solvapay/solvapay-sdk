@@ -1,21 +1,35 @@
 # @solvapay/init
 
-Shared primitives for SolvaPay CLI tooling. Consumed by:
+[![npm version](https://img.shields.io/npm/v/@solvapay/init.svg)](https://www.npmjs.com/package/@solvapay/init)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- [`solvapay`](https://www.npmjs.com/package/solvapay) — the `solvapay init` CLI for existing projects
-- [`create-solvapay`](https://www.npmjs.com/package/create-solvapay) — the `npm create solvapay` scaffolder
+Shared primitives for SolvaPay CLI tooling — browser auth, env writes, product picker, and package-manager helpers.
+
+**When to use this package:** do not install unless you are building a scaffolder or custom CLI on top of SolvaPay init flows. End users should run [`npx solvapay init`](https://www.npmjs.com/package/solvapay) or [`npm create solvapay`](https://www.npmjs.com/package/create-solvapay).
+
+## Consumers
+
+- [`solvapay`](https://www.npmjs.com/package/solvapay) — `solvapay init` for existing projects
+- [`create-solvapay`](https://www.npmjs.com/package/create-solvapay) — `npm create solvapay` scaffolder
 
 ## Surface
 
-This package exports the building blocks for SolvaPay's CLI flows:
-
-- **`runInitInDirectory({ cwd, options })`** — the full init orchestration (browser auth, env writes, optional SDK install, product picker) targeted at a specific directory.
-- Browser-based device-code auth: `createInitSession`, `openAuthUrl`, `waitForExchange`, `verifySecretKey`, `verifyProductRef`.
-- `.env` and `.gitignore` writers: `writeSolvaPaySecretToEnv`, `writeSolvaPayProductRefToEnv`, `ensureEnvInGitignore`, `readSolvaPayProductRefFromEnv`.
-- Product picker: `listProducts`, `pickProductInteractive`, `askKeepConfiguredProduct`, `formatConfiguredProductLabel`.
-- Package-manager helpers: `detectPackageManager`, `installSolvaPaySdk`, `getInstallCommand`, `getSolvaPayBasePackages`.
-- Project helpers: `ensureNodeProject`, `waitForEnter`.
+- **`runInitInDirectory({ cwd, options })`** — full init orchestration in a target directory
+- Browser auth: `createInitSession`, `openAuthUrl`, `waitForExchange`, `verifySecretKey`, `verifyProductRef`
+- Env writers: `writeSolvaPaySecretToEnv`, `writeSolvaPayProductRefToEnv`, `ensureEnvInGitignore`
+- Product picker: `listProducts`, `pickProductInteractive`, `askKeepConfiguredProduct`
+- Package managers: `detectPackageManager`, `installSolvaPaySdk`, `getInstallCommand`
 
 ## Stability
 
-Pre-`1.0.0`. The surface evolves with the consumer CLIs; pin an exact version if you build your own scaffolder against it.
+Pre-`1.0.0`. Pin an exact version if you depend on this programmatically.
+
+## See also
+
+- [`solvapay`](../cli) — end-user CLI
+- [`create-solvapay`](../create-solvapay) — project scaffolder
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
+- **Docs**: [docs.solvapay.com](https://docs.solvapay.com)
