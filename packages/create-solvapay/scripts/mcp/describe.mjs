@@ -36,6 +36,7 @@ import {
   suggestTier,
   synthesizeExamples,
   buildAdvisories,
+  buildSpecShapeAdvisories,
   getServerUrls,
 } from './lib/openapi.mjs'
 
@@ -268,105 +269,6 @@ function buildProbeAdvisories(probe) {
     ]
   }
   return []
-}
-
-function buildSpecShapeAdvisories({ servers, operations, schemes }) {
-  return [
-    ...buildServerAdvisories(servers),
-    ...buildPathOutlierAdvisories(operations),
-    ...buildMultiHeaderAuthAdvisories(operations, schemes),
-  ]
-}
-
-function buildServerAdvisories(servers) {
-  if (!servers.length) {
-    return [
-      {
-        kind: 'emptyServers',
-        message:
-          'Spec declares no OpenAPI `servers` (or Swagger `host`/`basePath`). Confirm the real upstream base URL before scaffolding; generated tools need an absolute API origin.',
-      },
-    ]
-  }
-  return servers
-    .filter(server => !/^https?:\/\//i.test(server))
-    .map(server => ({
-      kind: 'relativeServerUrl',
-      serverUrl: server,
-      message:
-        `Spec server URL \`${server}\` is relative. Confirm the absolute upstream base URL before scaffold, or generated tools will call a placeholder origin.`,
-    }))
-}
-
-function buildPathOutlierAdvisories(operations) {
-  const firstSegmentCounts = new Map()
-  for (const op of operations) {
-    const first = firstPathSegment(op.path)
-    if (!first) continue
-    firstSegmentCounts.set(first, (firstSegmentCounts.get(first) ?? 0) + 1)
-  }
-  if (firstSegmentCounts.size < 2) return []
-
-  const [dominant, dominantCount] = Array.from(firstSegmentCounts.entries())
-    .sort((a, b) => b[1] - a[1])[0]
-  if (dominantCount < 2 || dominant.length < 2) return []
-
-  const outliers = operations
-    .filter(op => {
-      const first = firstPathSegment(op.path)
-      return first && first !== dominant && first.startsWith(dominant)
-    })
-    .map(op => ({ operationId: op.operationId, method: op.method, path: op.path }))
-
-  if (!outliers.length) return []
-  return [
-    {
-      kind: 'pathPrefixOutlier',
-      dominantPrefix: `/${dominant}`,
-      operations: outliers,
-      message:
-        `Most paths start with \`/${dominant}/...\`, but ${outliers.length} operation(s) use a similar first segment. ` +
-        'Review these for spec typos or intentional alternate base paths before scaffold.',
-    },
-  ]
-}
-
-function firstPathSegment(path) {
-  return String(path ?? '').split('/').filter(Boolean)[0] ?? null
-}
-
-function buildMultiHeaderAuthAdvisories(operations, schemes) {
-  const schemeByName = new Map(schemes.map(scheme => [scheme.name, scheme]))
-  const seen = new Set()
-  const advisories = []
-  for (const op of operations) {
-    const requirements = Array.isArray(op.security) ? op.security : []
-    for (const req of requirements) {
-      if (!req || typeof req !== 'object') continue
-      const headerSchemes = Object.keys(req)
-        .map(name => schemeByName.get(name))
-        .filter(scheme => scheme?.kind === 'apiKey-header' && scheme?.supported === true)
-      if (headerSchemes.length < 2) continue
-
-      const key = headerSchemes.map(scheme => scheme.name).sort().join('|')
-      if (seen.has(key)) continue
-      seen.add(key)
-      advisories.push({
-        kind: 'multiHeaderAuth',
-        operationId: op.operationId,
-        schemeNames: headerSchemes.map(scheme => scheme.name),
-        headerNames: headerSchemes.map(scheme => scheme.headerName),
-        recommendedUpstreamAuth: {
-          kind: 'apiKey-multi',
-          headers: headerSchemes.map(scheme => ({ name: scheme.headerName, value: '<user supplies>' })),
-        },
-        message:
-          `Operation \`${op.operationId}\` requires multiple apiKey header schemes together. ` +
-          'Use `upstreamAuth.kind: "apiKey-multi"` and collect one secret value per header.',
-      })
-    }
-  }
-  return advisories
 }
 
 main().catch(err => {
