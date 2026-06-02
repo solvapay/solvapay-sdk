@@ -10,7 +10,7 @@
  *      changes to `mcp-app.tsx` would not show up in `wrangler dev`.
  *   2. `wrangler dev` — Workers runtime on http://localhost:8787,
  *      reads `.env` for `SOLVAPAY_SECRET_KEY` / `SOLVAPAY_PRODUCT_REF` /
- *      `MCP_PUBLIC_BASE_URL` / `UPSTREAM_API_KEY`.
+ *      `MCP_PUBLIC_BASE_URL` / `UPSTREAM_API_KEY` / `UPSTREAM_API_HEADERS`.
  *
  * Output is interleaved with `[vite]` / `[wrangler]` tags so the two
  * processes are easy to tell apart. Ctrl+C tears both down.

@@ -165,7 +165,7 @@ describe('runInitInDirectory', () => {
     expect(output.join('')).toContain('Browser authentication URL:')
     expect(output.join('')).toContain("If it doesn't open, visit:")
     expect(output.join('')).toContain('✅ Secret key authenticates')
-    expect(output.join('')).toContain("You're all set! Here's how to get started:")
+    expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
     expect(waitForEnter).toHaveBeenCalledWith(
       'Press Enter to open your browser to authenticate and set up your account if you do not already have one. ',
     )
@@ -362,25 +362,43 @@ describe('runInitInDirectory', () => {
     expect(writeSolvaPayProductRefToEnv).toHaveBeenCalledWith('prd_newest', { cwd: TEST_CWD })
   })
 
-  it('auto-picks a product under --yes when no existing ref is configured', async () => {
+  it('hard-fails under --yes when no product ref is configured', async () => {
     mockSuccessfulAuth()
     vi.mocked(pickProductInteractive).mockResolvedValue({
-      action: 'picked',
-      product: mockProduct,
-    })
-    vi.mocked(writeSolvaPayProductRefToEnv).mockResolvedValue({
-      filePath: '/tmp/.env',
-      action: 'created',
+      action: 'skipped',
+      reason: 'non_interactive_requires_product',
     })
 
-    await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
+    await expect(runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })).rejects.toThrow(
+      /SOLVAPAY_PRODUCT_REF is required for non-interactive init/i,
+    )
 
     expect(pickProductInteractive).toHaveBeenCalledWith(
       'https://api.solvapay.com',
       'sk_test_123',
       { yes: true },
     )
-    expect(writeSolvaPayProductRefToEnv).toHaveBeenCalledWith('prd_newest', { cwd: TEST_CWD })
+    expect(writeSolvaPayProductRefToEnv).not.toHaveBeenCalled()
+  })
+
+  it('verifies and writes an explicit productRef option without running the picker', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(verifyProductRef).mockResolvedValue({ status: 'ok' })
+    vi.mocked(writeSolvaPayProductRefToEnv).mockResolvedValue({
+      filePath: '/tmp/.env',
+      action: 'updated',
+    })
+
+    await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true, productRef: 'prd_intended' } })
+
+    expect(verifyProductRef).toHaveBeenCalledWith(
+      'https://api.solvapay.com',
+      'sk_test_123',
+      'prd_intended',
+    )
+    expect(writeSolvaPayProductRefToEnv).toHaveBeenCalledWith('prd_intended', { cwd: TEST_CWD })
+    expect(pickProductInteractive).not.toHaveBeenCalled()
+    expect(output.join('')).toContain('Product ref verified (prd_intended)')
   })
 
   it('skips product configuration when the picker finds zero products', async () => {
@@ -393,7 +411,7 @@ describe('runInitInDirectory', () => {
     await runInitInDirectory({ cwd: TEST_CWD })
 
     expect(writeSolvaPayProductRefToEnv).not.toHaveBeenCalled()
-    expect(output.join('')).toContain("You're all set! Here's how to get started:")
+    expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
   })
 
   it('skips product configuration when listing products fails', async () => {
@@ -406,7 +424,7 @@ describe('runInitInDirectory', () => {
     await runInitInDirectory({ cwd: TEST_CWD })
 
     expect(writeSolvaPayProductRefToEnv).not.toHaveBeenCalled()
-    expect(output.join('')).toContain("You're all set! Here's how to get started:")
+    expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
   })
 
   it('writes nothing when the user declines a single-product prompt', async () => {
@@ -427,7 +445,7 @@ describe('runInitInDirectory', () => {
 
     expect(installSolvaPaySdk).not.toHaveBeenCalled()
     expect(output.join('')).not.toContain('SolvaPay SDK packages installed')
-    expect(output.join('')).toContain("You're all set!")
+    expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
   })
 
   it('hard-fails when verifyMerchant returns not_found', async () => {
@@ -511,7 +529,7 @@ describe('runInitInDirectory', () => {
     await runInitInDirectory({ cwd: TEST_CWD })
 
     expect(output.join('')).toMatch(/Merchant lookup unauthorized/i)
-    expect(output.join('')).toContain("You're all set! Here's how to get started:")
+    expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
   })
 
   it('soft-warns and continues when verifyMerchant returns a network error', async () => {
@@ -528,6 +546,6 @@ describe('runInitInDirectory', () => {
     await runInitInDirectory({ cwd: TEST_CWD })
 
     expect(output.join('')).toMatch(/Merchant lookup failed/i)
-    expect(output.join('')).toContain("You're all set! Here's how to get started:")
+    expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
   })
 })

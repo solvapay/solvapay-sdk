@@ -154,7 +154,7 @@ async function main() {
         ]
       : [
           `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see solvapay-init.md).`,
-          `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. Before \`node scripts/test.mjs\`, run \`( cd scripts && npm install )\` once inside ${target} (see test.md).`,
+          `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. Before \`node scripts/test.mjs\`, run \`( cd scripts && npm install )\` once inside ${target}.`,
         ]),
   ]
 
@@ -520,7 +520,7 @@ function deriveServerNameFromWorkerName(workerName) {
 }
 
 function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl }) {
-  const fnName = `register${capitalize(operation.operationId)}`
+  const fnName = `register${toPascalIdentifier(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
   const includesEnv = headerLines.length > 0
@@ -643,13 +643,12 @@ function renderHeaderLines(auth, schemes, operation) {
   // to the top-level auth kind when the spec has no operation-level
   // security override.
   //
-  // The static branches wrap `env.UPSTREAM_API_KEY` (typed `string | undefined`
-  // in the template's `Env` interface) in a template literal so the
-  // header value is `string`. If the secret is missing the worker still
-  // sends the header with literal "undefined" — the recovery path
-  // is uploading `UPSTREAM_API_KEY` to the Worker from `.env` via
-  // deploy.mjs on first deploy (see deploy.md), not a compile-time
-  // guard.
+  // The single-key static branches wrap `env.UPSTREAM_API_KEY` (typed
+  // `string | undefined` in the template's `Env` interface) in a
+  // template literal so the header value is `string`. Multi-header auth
+  // spreads the compact JSON `env.UPSTREAM_API_HEADERS` secret into the
+  // request. Missing secrets are deploy-time concerns handled by
+  // deploy.mjs, not compile-time guards.
   //
   // The oauth2-client-credentials branch references a `token` variable
   // that the renderer injects right before URL construction in the
@@ -778,10 +777,13 @@ export function registerTools(_ctx: AdditionalToolsContext, _env: Env) {
   }
   const opsNeedEnv = authKind !== 'none'
   const imports = operationIds
-    .map(id => `import { register${capitalize(id)} } from './${id}'`)
+    .map(id => `import { register${toPascalIdentifier(id)} } from './${id}'`)
     .join('\n')
   const calls = operationIds
-    .map(id => (opsNeedEnv ? `  register${capitalize(id)}(ctx, env)` : `  register${capitalize(id)}(ctx)`))
+    .map(id => {
+      const fnName = `register${toPascalIdentifier(id)}`
+      return opsNeedEnv ? `  ${fnName}(ctx, env)` : `  ${fnName}(ctx)`
+    })
     .join('\n')
   // When `opsNeedEnv` is false, `env` is intentionally unused in the
   // aggregator body. ESLint's `no-unused-vars` (which the template's
@@ -892,6 +894,19 @@ function jsAccessor(name) {
 
 function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+function toPascalIdentifier(value) {
+  const words = String(value)
+    .split(/[^A-Za-z0-9_$]+/)
+    .filter(Boolean)
+  let name = words.length > 0
+    ? words.map(word => capitalize(word)).join('')
+    : 'Tool'
+  name = name.replace(/^[^A-Za-z_$]+/, '')
+  if (!name) name = 'Tool'
+  if (/^[0-9]/.test(name)) name = `_${name}`
+  return name
 }
 
 function joinUrl(base, path) {

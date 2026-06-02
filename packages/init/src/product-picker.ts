@@ -7,7 +7,7 @@ const CONSOLE_PRODUCTS_URL = 'https://app.solvapay.com/products'
 export type PickResult =
   | { action: 'picked'; product: ProductSummary }
   | { action: 'declined' }
-  | { action: 'skipped'; reason: 'zero_products' | 'network_error' }
+  | { action: 'skipped'; reason: 'zero_products' | 'network_error' | 'non_interactive_requires_product' }
 
 type PickOptions = {
   yes: boolean
@@ -93,11 +93,12 @@ export const pickProductInteractive = async (
     return { action: 'skipped', reason: 'zero_products' }
   }
 
-  const autoPick = options.yes || !process.stdout.isTTY
-  if (autoPick) {
-    const picked = products[0]
-    process.stdout.write(`📝 Auto-selected product: ${picked.name} (${picked.reference})\n`)
-    return { action: 'picked', product: picked }
+  const nonInteractive = options.yes || !process.stdout.isTTY
+  if (nonInteractive) {
+    process.stdout.write(
+      'Skipped product auto-selection in non-interactive mode. Set SOLVAPAY_PRODUCT_REF in .env or pass --product <prd_...>, then re-run `solvapay init`.\n',
+    )
+    return { action: 'skipped', reason: 'non_interactive_requires_product' }
   }
 
   if (products.length === 1) {

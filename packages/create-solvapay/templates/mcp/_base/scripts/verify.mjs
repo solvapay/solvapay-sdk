@@ -113,9 +113,15 @@ async function main() {
     ? await runMerchantBootstrapCheck(base, rpcOptions)
     : { status: 'skipped', reason: 'no --credentials-file passed; cannot exercise SolvaPay bootstrap' }
 
+  const warnings = collectWarnings(checks)
   const summary = {
     workerUrl: base,
     checks,
+    paidPathVerification: {
+      paywallGate: checks.paywallGate.status,
+      merchantBootstrap: checks.merchantBootstrap.status,
+    },
+    warnings,
     overall: Object.values(checks).every(c => c.status !== 'failed') ? 'passed' : 'failed',
   }
   process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`)
@@ -199,6 +205,21 @@ async function runToolsListCheck(base, rpcOptions = {}) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
+}
+
+function collectWarnings(checks) {
+  const warnings = []
+  if (checks.paywallGate?.status === 'skipped') {
+    warnings.push(
+      `Paid-path check skipped: paywallGate (${checks.paywallGate.reason}). This verifies the MCP/OAuth contract, not a complete paid-tool purchase path.`,
+    )
+  }
+  if (checks.merchantBootstrap?.status === 'skipped') {
+    warnings.push(
+      `Paid-path check skipped: merchantBootstrap (${checks.merchantBootstrap.reason}). Pass --credentials-file from mcpjam oauth login to exercise the SolvaPay bootstrap path.`,
+    )
+  }
+  return warnings
 }
 
 function findToolCandidates(names) {
