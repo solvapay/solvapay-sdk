@@ -9,7 +9,9 @@
     "dev:widget": "cross-env INPUT=mcp-app.html vite build --watch",
     "predeploy": "npm run build",
     "deploy": "node scripts/deploy.mjs",
-    "serve:local": "wrangler dev"
+    "serve:local": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.1",

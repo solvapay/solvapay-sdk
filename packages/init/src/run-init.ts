@@ -47,14 +47,11 @@ const printBanner = (): void => {
   process.stdout.write(`${chalk.cyanBright(ASCII_BANNER)}\n\n`)
 }
 
-const printQuickStart = (): void => {
+const printSetupComplete = (): void => {
   process.stdout.write(`
-You're all set! Here's how to get started:
+You're all set. SolvaPay credentials were saved to .env.
 
-  import { SolvaPay } from '@solvapay/server';
-  const sp = new SolvaPay();
-
-Docs: https://docs.solvapay.com
+Continue with the next step in your setup when you're ready.
 `)
 }
 
@@ -84,6 +81,12 @@ const finishInstallProgressReporter = (): void => {
 
 export type InitCommandOptions = {
   yes?: boolean
+  /**
+   * Product reference to verify and persist without invoking the picker.
+   * Used by `solvapay init --product <prd_...>` and forwarded by
+   * `create-solvapay --product <prd_...>`.
+   */
+  productRef?: string
   /**
    * Target the SolvaPay dev backend (`https://api-dev.solvapay.com`) for
    * the browser-auth flow + every downstream `.env`-driven SDK call.
@@ -115,6 +118,25 @@ const configureProductRef = async (
   cwd: string,
   options: InitCommandOptions,
 ): Promise<void> => {
+  if (options.productRef) {
+    const verified = await verifyProductRef(apiBaseUrl, secretKey, options.productRef)
+    if (verified.status !== 'ok') {
+      const detail =
+        verified.status === 'not_found'
+          ? verified.body
+          : verified.status === 'error'
+            ? verified.message
+            : verified.status
+      throw new Error(
+        `Could not verify SOLVAPAY_PRODUCT_REF ${options.productRef}: ${detail}. ` +
+          'Confirm the product belongs to this SolvaPay account and re-run init.',
+      )
+    }
+    await writeSolvaPayProductRefToEnv(options.productRef, { cwd })
+    process.stdout.write(`✅ Product ref verified (${options.productRef})\n`)
+    return
+  }
+
   const existing = await readSolvaPayProductRefFromEnv(cwd)
 
   if (existing && existing !== SOLVAPAY_PRODUCT_REF_PLACEHOLDER) {
@@ -167,6 +189,12 @@ const configureProductRef = async (
       process.stdout.write('Skipped — set SOLVAPAY_PRODUCT_REF in .env later.\n')
       break
     case 'skipped':
+      if (pick.reason === 'non_interactive_requires_product') {
+        throw new Error(
+          'SOLVAPAY_PRODUCT_REF is required for non-interactive init. ' +
+            'Set it in .env or pass --product <prd_...>, then re-run `solvapay init`.',
+        )
+      }
       break
   }
 }
@@ -370,5 +398,5 @@ export const runInitInDirectory = async ({
   await configureProductRef(apiBaseUrl, exchange.secretKey, cwd, options)
 
   process.stdout.write('\n')
-  printQuickStart()
+  printSetupComplete()
 }

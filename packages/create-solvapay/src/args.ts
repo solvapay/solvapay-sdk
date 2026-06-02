@@ -206,7 +206,7 @@ export function inferMcpMode(args: ParsedMcpArgs): McpMode | null {
 }
 
 export function toInitOptions(common: ParsedCommonArgs): InitCommandOptions {
-  return { yes: common.yes, dev: common.dev }
+  return { yes: common.yes, dev: common.dev, productRef: common.product }
 }
 
 const KEBAB_RE = /^[a-z][a-z0-9-]*$/

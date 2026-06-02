@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ProductBadge, usePurchase } from '@solvapay/react'
 import { Button } from './ui/Button'
 import { signOut, getAccessToken } from '../lib/supabase'
+import { acquireCheckoutLock, releaseCheckoutLock, useCheckoutInProgress } from '../lib/checkout-guard'
 import { useState, useCallback } from 'react'
 
 /**
@@ -14,7 +15,7 @@ import { useState, useCallback } from 'react'
 export function Navigation() {
   const { loading: purchasesLoading, hasPaidPurchase } = usePurchase()
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
+  const isRedirecting = useCheckoutInProgress()
 
   const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
 
@@ -23,12 +24,12 @@ export function Navigation() {
 
   // Handle redirect to hosted checkout page
   const handleUpgrade = useCallback(async () => {
+    if (!acquireCheckoutLock()) return
     if (!productRef) {
+      releaseCheckoutLock()
       alert('Product reference is not configured')
       return
     }
-
-    setIsRedirecting(true)
 
     try {
       const accessToken = await getAccessToken()
@@ -65,7 +66,7 @@ export function Navigation() {
     } catch (err) {
       console.error('Failed to redirect to checkout:', err)
       alert(err instanceof Error ? err.message : 'Failed to redirect to checkout')
-      setIsRedirecting(false)
+      releaseCheckoutLock()
     }
   }, [productRef])
 

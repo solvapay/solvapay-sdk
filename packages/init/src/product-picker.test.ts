@@ -33,7 +33,7 @@ describe('pickProductInteractive', () => {
     expect(output.join('')).toContain('https://app.solvapay.com/products')
   })
 
-  it('auto-picks the newest product under --yes', async () => {
+  it('requires an explicit product under --yes instead of auto-picking', async () => {
     vi.mocked(listProducts).mockResolvedValue({
       ok: true,
       products: [
@@ -57,16 +57,8 @@ describe('pickProductInteractive', () => {
       yes: true,
     })
 
-    expect(result).toEqual({
-      action: 'picked',
-      product: {
-        reference: 'prd_newest',
-        name: 'Newest',
-        status: 'active',
-        createdAt: '2026-01-02T00:00:00.000Z',
-      },
-    })
-    expect(output.join('')).toContain('Auto-selected product: Newest (prd_newest)')
+    expect(result).toEqual({ action: 'skipped', reason: 'non_interactive_requires_product' })
+    expect(output.join('')).toContain('Skipped product auto-selection in non-interactive mode')
   })
 
   it('skips on network error', async () => {

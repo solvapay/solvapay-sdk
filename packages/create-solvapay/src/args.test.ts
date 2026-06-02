@@ -157,11 +157,27 @@ describe('sanitizeProjectName', () => {
 
 describe('toInitOptions', () => {
   it('forwards yes and dev to the init options', () => {
-    expect(toInitOptions(parseArgs(['--yes', '--dev']))).toEqual({ yes: true, dev: true })
+    expect(toInitOptions(parseArgs(['--yes', '--dev']))).toEqual({
+      yes: true,
+      dev: true,
+      productRef: undefined,
+    })
   })
 
   it('defaults dev to false when --dev is absent', () => {
-    expect(toInitOptions(parseArgs([]))).toEqual({ yes: false, dev: false })
+    expect(toInitOptions(parseArgs([]))).toEqual({
+      yes: false,
+      dev: false,
+      productRef: undefined,
+    })
+  })
+
+  it('forwards product ref to the init options', () => {
+    expect(toInitOptions(parseArgs(['--product', 'prd_abc']))).toEqual({
+      yes: false,
+      dev: false,
+      productRef: 'prd_abc',
+    })
   })
 })
 

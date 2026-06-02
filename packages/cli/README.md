@@ -30,7 +30,7 @@ npx solvapay init --dev
 - Writes `SOLVAPAY_SECRET_KEY` to `.env` (with overwrite confirmation)
 - Ensures `.env` is ignored in `.gitignore`
 - Installs `@solvapay/server` and `@solvapay/core`
-- Verifies the key and prints a quick-start snippet
+- Verifies the key and prints a setup summary
 
 ## Product configuration
 
