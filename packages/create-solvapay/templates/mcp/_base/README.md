@@ -27,7 +27,7 @@ __WORKER_NAME__/
     ├── worker.ts            // entrypoint: createSolvaPayMcpFetch + browser CORS mirror
     ├── tools/
     │   ├── index.ts         // registerTools(ctx, env) aggregator
-    │   └── <operationId>.ts // one file per generated OpenAPI operation
+    │   └── <tool>.ts        // generated OpenAPI operation or agent-authored intent tools
     ├── mcp-app.tsx          // widget React entry
     ├── assets.d.ts          // declares `*.html` as text imports
     └── assets/
@@ -40,6 +40,23 @@ __WORKER_NAME__/
 - Cloudflare account with `wrangler login` completed.
 - SolvaPay account with a product (`prd_…`) created in the Console.
 - Product default plan: **free recurring** (`price: 0`, `freeUnits > 0`). The first paywalled tool call auto-enrolls customers via `checkLimits` — no separate activation step for free tiers.
+
+## Initialize SolvaPay
+
+Run init from this project after scaffold:
+
+```bash
+npx -y solvapay@latest init
+```
+
+This writes `SOLVAPAY_SECRET_KEY` to `.env` and can save a confirmed `SOLVAPAY_PRODUCT_REF`.
+In non-interactive or `--yes` runs, init will not auto-pick a product. Set
+`SOLVAPAY_PRODUCT_REF` yourself or pass `--product prd_...` after confirming the product belongs
+to this MCP server.
+
+If your business model is usage-based or metered, confirm the selected product has the intended
+metering plan in the SolvaPay Console before handing the worker to users. Scaffold validates plan
+metadata when provided, but it does not create plans.
 
 ## Local dev
 
@@ -68,6 +85,14 @@ Other scripts:
 - `npm run typecheck` — TypeScript check without emitting files.
 - `npm run verify -- http://localhost:8787` — contract checks against a running worker.
 
+Without an OAuth credentials file, paid-path checks such as `paywallGate` and
+`merchantBootstrap` may be reported as skipped. To exercise them, log in with your MCP client
+tooling and pass the generated credentials file:
+
+```bash
+npm run verify -- http://localhost:8787 --credentials-file ./credentials.json
+```
+
 `.env` (gitignored) is what `wrangler dev` reads:
 
 ```
@@ -76,6 +101,13 @@ SOLVAPAY_PRODUCT_REF=__SOLVAPAY_PRODUCT_REF__
 MCP_PUBLIC_BASE_URL=__MCP_PUBLIC_BASE_URL__
 UPSTREAM_API_KEY=…                  # bearer or single apiKey-header upstream auth
 UPSTREAM_API_HEADERS={"x-client-id":"…","x-client-secret":"…"}  # apiKey-multi upstream auth
+```
+
+For `apiKey-multi` upstream auth, keep `UPSTREAM_API_HEADERS` as compact JSON on one line. Use the
+actual header names from the OpenAPI security schemes, for example:
+
+```bash
+UPSTREAM_API_HEADERS={"x-api-client-id":"client-id","x-api-client-secret":"client-secret"}
 ```
 
 Point an MCP client (MCP Inspector, MCPJam, Claude Desktop, ChatGPT Custom Connectors) at `http://localhost:8787/`.
