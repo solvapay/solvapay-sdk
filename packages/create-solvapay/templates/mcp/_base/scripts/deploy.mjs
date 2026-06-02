@@ -547,7 +547,7 @@ function ensureUpstreamOAuthSecrets(localEnv, { dryRun = false } = {}) {
 // `apiKey-multi` upstream auth kind: scaffold writes a single compact-JSON
 // var holding all static credential headers. Uploaded once on first deploy,
 // skipped if already present on the worker.
-function ensureUpstreamApiHeadersSecret(localEnv, { dryRun = false } = {}) {
+function ensureUpstreamApiHeadersSecret(localEnv, { dryRun = false, force = false } = {}) {
   const value = localEnv.UPSTREAM_API_HEADERS?.trim()
   if (!value) return
 
@@ -555,6 +555,21 @@ function ensureUpstreamApiHeadersSecret(localEnv, { dryRun = false } = {}) {
   if (existing?.includes('UPSTREAM_API_HEADERS')) {
     console.log('UPSTREAM_API_HEADERS already set on worker — skipping upload.')
     return
+  }
+
+  const placeholderReason = validateUpstreamApiHeaders(value)
+  if (placeholderReason && !force) {
+    console.warn(
+      [
+        '',
+        `⚠  UPSTREAM_API_HEADERS in .env is not deploy-ready: ${placeholderReason}.`,
+        '   Expected compact JSON such as {"x-api-key":"real-value","x-api-secret":"real-value"}.',
+        '   Update .env with real header values and re-run `npm run deploy`.',
+        '   Pass --force to upload anyway.',
+        '',
+      ].join('\n'),
+    )
+    process.exit(1)
   }
 
   if (dryRun) {
@@ -577,6 +592,32 @@ function looksLikePlaceholderUpstreamKey(value) {
   if (/^(your|placeholder|example|sample|test|demo|todo|fake|dummy)-api-key$/i.test(value)) return true
   if (/^changeme/i.test(value)) return true
   return false
+}
+
+function validateUpstreamApiHeaders(value) {
+  let parsed
+  try {
+    parsed = JSON.parse(value)
+  } catch (err) {
+    return `invalid JSON (${err.message ?? String(err)})`
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return 'value must be a JSON object keyed by header name'
+  }
+  const entries = Object.entries(parsed)
+  if (entries.length < 2) {
+    return 'apiKey-multi requires at least two headers'
+  }
+  for (const [name, headerValue] of entries) {
+    if (!name.trim()) return 'header names must be non-empty'
+    if (typeof headerValue !== 'string' || !headerValue.trim()) {
+      return `header "${name}" must have a non-empty string value`
+    }
+    if (looksLikePlaceholderUpstreamKey(headerValue)) {
+      return `header "${name}" looks like a placeholder`
+    }
+  }
+  return null
 }
 
 // Print copy-paste connection snippets for Cursor / Claude Desktop /
@@ -746,7 +787,7 @@ function printDeclineInstructions(accountId) {
       '',
       '  • Or attach a custom domain to this Worker by adding a routes block to wrangler.jsonc:',
       '      "routes": [{ "pattern": "mcp.your-company.com", "custom_domain": true }]',
-      '    then set MCP_PUBLIC_BASE_URL in .env to match. See deploy.md step 2.',
+      '    then set MCP_PUBLIC_BASE_URL in .env to match before deploying.',
       '',
       'Re-run `npm run deploy` (optionally with --yes) once the URL is what you want.',
       '',
@@ -843,7 +884,7 @@ await runSolvaPayPreflight({
 ensureSolvaPaySecretKey(localEnv, { dryRun })
 ensureUpstreamApiKeySecret(localEnv, { dryRun, force: forceFlag })
 ensureUpstreamOAuthSecrets(localEnv, { dryRun })
-ensureUpstreamApiHeadersSecret(localEnv, { dryRun })
+ensureUpstreamApiHeadersSecret(localEnv, { dryRun, force: forceFlag })
 
 const wranglerPassthrough = passthrough.filter(
   arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',

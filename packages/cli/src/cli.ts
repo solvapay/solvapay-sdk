@@ -10,11 +10,32 @@ Commands:
   init    Authenticate, configure .env, and install SolvaPay SDK packages
 
 Flags for init:
-  -y, --yes    Auto-create package.json and skip browser confirmation prompt
-  --dev        Target the SolvaPay dev backend (api-dev.solvapay.com).
-               Internal testing only — production secret keys are rejected
-               by api-dev. Persisted to .env as SOLVAPAY_API_BASE_URL.
+  -y, --yes         Auto-create package.json and skip browser confirmation prompt
+  --product <ref>   Verify and persist SOLVAPAY_PRODUCT_REF without product picker
+  --dev             Target the SolvaPay dev backend (api-dev.solvapay.com).
+                    Internal testing only — production secret keys are rejected
+                    by api-dev. Persisted to .env as SOLVAPAY_API_BASE_URL.
 `
+
+function parseInitArgs(argv: string[]): { yes: boolean; dev: boolean; productRef?: string } {
+  let yes = false
+  let dev = false
+  let productRef: string | undefined
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '--yes' || arg === '-y') {
+      yes = true
+    } else if (arg === '--dev') {
+      dev = true
+    } else if (arg === '--product') {
+      productRef = argv[++i]
+      if (!productRef || productRef.startsWith('-')) {
+        throw new Error('--product requires a product reference')
+      }
+    }
+  }
+  return { yes, dev, productRef }
+}
 
 const main = async () => {
   const command = process.argv[2]
@@ -31,10 +52,7 @@ const main = async () => {
 
   if (command === 'init') {
     printVersionBanner()
-    const initFlags = new Set(process.argv.slice(3))
-    const yes = initFlags.has('--yes') || initFlags.has('-y')
-    const dev = initFlags.has('--dev')
-    await runInitCommand({ yes, dev })
+    await runInitCommand(parseInitArgs(process.argv.slice(3)))
     return
   }
 

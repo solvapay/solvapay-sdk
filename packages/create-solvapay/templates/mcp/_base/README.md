@@ -17,8 +17,8 @@ __WORKER_NAME__/
 ├── .gitignore
 ├── scripts/
 │   ├── deploy.mjs           // `npm run deploy` entrypoint; reads .env, passes --var overrides to wrangler
-│   ├── verify.mjs           // contract checks against a running worker (see verify.md in the skill)
-│   ├── test.mjs             // smoke harness with OpenAPI-derived sample inputs (see test.md)
+│   ├── verify.mjs           // contract checks against a running worker
+│   ├── test.mjs             // smoke harness with OpenAPI-derived sample inputs
 │   ├── package.json         // `@apidevtools/swagger-parser` for test.mjs only
 │   └── lib/
 │       ├── mcp-client.mjs   // JSON-RPC helper shared by verify + test
@@ -65,6 +65,8 @@ Other scripts:
 - `npm run build` — one-shot widget build (`src/assets/mcp-app.html`).
 - `npm run dev:widget` — widget watch only, no worker.
 - `npm run serve:local` — `wrangler dev` only, no widget watch.
+- `npm run typecheck` — TypeScript check without emitting files.
+- `npm run verify -- http://localhost:8787` — contract checks against a running worker.
 
 `.env` (gitignored) is what `wrangler dev` reads:
 
@@ -72,7 +74,8 @@ Other scripts:
 SOLVAPAY_SECRET_KEY=sk_test_…       # populated by `npx solvapay init`
 SOLVAPAY_PRODUCT_REF=__SOLVAPAY_PRODUCT_REF__
 MCP_PUBLIC_BASE_URL=__MCP_PUBLIC_BASE_URL__
-UPSTREAM_API_KEY=…                  # only present when the OpenAPI spec uses bearer/apiKey auth
+UPSTREAM_API_KEY=…                  # bearer or single apiKey-header upstream auth
+UPSTREAM_API_HEADERS={"x-client-id":"…","x-client-secret":"…"}  # apiKey-multi upstream auth
 ```
 
 Point an MCP client (MCP Inspector, MCPJam, Claude Desktop, ChatGPT Custom Connectors) at `http://localhost:8787/`.
@@ -81,15 +84,15 @@ Point an MCP client (MCP Inspector, MCPJam, Claude Desktop, ChatGPT Custom Conne
 
 ```bash
 npm run deploy
-# Uploads SOLVAPAY_SECRET_KEY and UPSTREAM_API_KEY (when present in .env)
+# Uploads SOLVAPAY_SECRET_KEY and upstream credential secrets (when present)
 # from .env as Worker secrets on the first deploy.
 ```
 
-`scripts/deploy.mjs` reads `.env` and forwards `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` / `SOLVAPAY_API_BASE_URL` as `--var` overrides to `wrangler deploy`. `SOLVAPAY_SECRET_KEY` and `UPSTREAM_API_KEY` are uploaded from `.env` as Worker secrets on the first deploy; subsequent deploys log "already set on worker — skipping upload" and leave them alone.
+`scripts/deploy.mjs` reads `.env` and forwards `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` / `SOLVAPAY_API_BASE_URL` as `--var` overrides to `wrangler deploy`. `SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, `UPSTREAM_API_HEADERS`, and `UPSTREAM_OAUTH_*` values are uploaded from `.env` as Worker secrets on the first deploy when present; subsequent deploys log "already set on worker — skipping upload" and leave them alone.
 
 `npm run deploy` confirms the resolved `*.workers.dev` URL with `[Y/n]` before deploying. Add `--yes` (or set `SOLVAPAY_DEPLOY_YES=1`) to skip the prompt in CI; it's also skipped when a `custom_domain` route is configured or stdin is not a TTY.
 
-On a default `*.workers.dev` deploy, `deploy.mjs` auto-resolves `MCP_PUBLIC_BASE_URL` from the Cloudflare API before the first deploy — no manual second deploy needed. For custom domains, set `MCP_PUBLIC_BASE_URL` in `.env` explicitly (see [deploy.md](../deploy.md) step 2).
+On a default `*.workers.dev` deploy, `deploy.mjs` auto-resolves `MCP_PUBLIC_BASE_URL` from the Cloudflare API before the first deploy — no manual second deploy needed. For custom domains, set `MCP_PUBLIC_BASE_URL` in `.env` explicitly before deploying.
 
 ## Custom domain (optional)
 

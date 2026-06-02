@@ -27,6 +27,10 @@ const sleep = async (ms: number): Promise<void> =>
   })
 
 const startSpinner = (message: string): SpinnerController => {
+  if (!process.stdout.isTTY) {
+    return { stop: () => {} }
+  }
+
   const frames = ['|', '/', '-', '\\']
   let frameIndex = 0
   process.stdout.write(`${message} ${frames[frameIndex]}`)

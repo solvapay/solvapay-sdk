@@ -50,7 +50,7 @@ async function loadSwaggerParser() {
     if (err && typeof err === 'object' && err.code === 'ERR_MODULE_NOT_FOUND') {
       throw new Error(
         '`@apidevtools/swagger-parser` is not installed. Run `( cd scripts && npm install )` ' +
-          'once inside this project (see test.md), then re-run.',
+          'once inside this project, then re-run.',
       )
     }
     throw err
