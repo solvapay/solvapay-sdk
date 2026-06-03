@@ -1,10 +1,17 @@
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
+
 /** @type {import('next').NextConfig} */
-/* global process */
 const nextConfig = {
-  env: {
-    NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF: process.env.SOLVAPAY_PRODUCT_REF,
-  },
-};
+  transpilePackages: [
+    '@solvapay/auth',
+    '@solvapay/react',
+    '@solvapay/server',
+    '@solvapay/core',
+    '@solvapay/next',
+    '@solvapay/react-supabase',
+  ],
+}
 
-export default nextConfig;
+export default nextConfig
 
+initOpenNextCloudflareForDev()

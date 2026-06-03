@@ -147,7 +147,107 @@ pnpm build
 pnpm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3010](http://localhost:3010) in your browser.
+
+## Deploy to Cloudflare Workers (DEV-441)
+
+This demo deploys to [https://web-app-demo.solvapay.app](https://web-app-demo.solvapay.app) via
+[@opennextjs/cloudflare](https://opennext.js.org/cloudflare) + Wrangler. Deploy ergonomics mirror
+`examples/chat-checkout-demo` (`scripts/deploy.mjs`, gitignored env files, one-time secrets).
+
+> **Build-time vs runtime.** `NEXT_PUBLIC_*` vars are baked in at `opennextjs-cloudflare build`
+> (use `.env.prod` for prod). `SOLVAPAY_SECRET_KEY` and `SUPABASE_JWT_SECRET` are Worker
+> **secrets** — `wrangler secret put` once per Worker; `deploy.mjs` does not re-upload them.
+
+### Differences from chat-checkout-demo
+
+| Topic | chat-checkout-demo | checkout-demo |
+| --- | --- | --- |
+| Runtime | Vite + `worker.ts` + `handlers.ts` | Next.js 16 + OpenNext |
+| Auth | Anonymous `x-customer-ref` | Supabase JWT + `middleware.ts` |
+| Secrets | `SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY` | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET` |
+| Build-time env | `VITE_*` | `NEXT_PUBLIC_*` |
+| Prod domain | `chat-demo.solvapay.app` | `web-app-demo.solvapay.app` |
+
+Uses Supabase project [ganvogeprtezdpakybib](https://supabase.com/dashboard/project/ganvogeprtezdpakybib)
+(`https://ganvogeprtezdpakybib.supabase.co`) — not SolvaPay internal dev auth.
+
+### Supabase prod redirect (required before OAuth on prod)
+
+In **Authentication → URL configuration** for `ganvogeprtezdpakybib`:
+
+- **Redirect URLs:** `https://web-app-demo.solvapay.app/auth/callback` (keep `http://localhost:3010/auth/callback` for local dev)
+- **Site URL:** `https://web-app-demo.solvapay.app` (recommended)
+
+Google Cloud Console still uses `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback` only.
+
+### Local Cloudflare preview
+
+```bash
+# From SDK root
+pnpm install && pnpm -w build:packages
+
+cd examples/checkout-demo
+cp env.example .env.local   # or .env — fill keys
+cp .dev.vars.example .dev.vars   # optional; wrangler dev reads secrets here
+
+pnpm build:opennext
+pnpm serve:local   # wrangler dev
+```
+
+### Deploy to `*.workers.dev`
+
+**1. Secrets (one-time):**
+
+```bash
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY
+pnpm exec wrangler secret put SUPABASE_JWT_SECRET
+```
+
+**2. Deploy:**
+
+```bash
+pnpm run deploy:cf   # build:opennext + wrangler deploy
+```
+
+### Deploy the live demo (`web-app-demo.solvapay.app`)
+
+Production uses Worker `solvapay-checkout-demo-prod` (`[env.production]` in `wrangler.jsonc`) on
+Cloudflare account `98aefe33182e11a1b0e5d7fa89a12a6d`. Your Wrangler login must have access to that
+account (`wrangler whoami` should list it — not only a personal account).
+
+> **pnpm script names:** use `pnpm run deploy:cf` and `pnpm run deploy:cf:prod` (plain `pnpm deploy`
+> is reserved by pnpm itself).
+
+**1. Prod secrets (one-time, separate from non-prod Worker):**
+
+```bash
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
+pnpm exec wrangler secret put SUPABASE_JWT_SECRET --env production
+pnpm exec wrangler secret list --env production
+```
+
+**2. Prod build env:**
+
+```bash
+cp .env.prod.example .env.prod
+# Fill NEXT_PUBLIC_PRODUCT_REF, NEXT_PUBLIC_SUPABASE_* (ganvogeprtezdpakybib)
+```
+
+**3. Deploy:**
+
+```bash
+pnpm run deploy:cf:prod
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| CF `error code: 1101` on `/api/*` | Missing secrets — `wrangler secret list --env production` |
+| `Product not found: prd_…` | `NEXT_PUBLIC_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY` |
+| OAuth redirect error on prod | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs |
+| OpenNext build: Node middleware | Use `middleware.ts` (not `proxy.ts`) until OpenNext supports Next 16 `proxy` |
 
 ## Demo Flow
 
@@ -188,17 +288,18 @@ To override individual methods, pass a custom `transport` on the config. See
 
 ### 2. Authentication Setup
 
-This demo uses Supabase authentication middleware (`proxy.ts`) and SDK helpers from
-`@solvapay/next`.
+This demo uses Supabase authentication middleware (`middleware.ts`) and SDK helpers from
+`@solvapay/next`. Cloudflare deploy uses `middleware.ts` (Edge) — not `proxy.ts` — because
+OpenNext on Cloudflare does not support Node `proxy` yet.
 
-**Proxy Setup (Default):**
+**Middleware setup (default):**
 
 ```tsx
-// proxy.ts
+// middleware.ts
 import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
 
-export const proxy = createSupabaseAuthMiddleware({
-  publicRoutes: ['/api/list-plans'],
+export const middleware = createSupabaseAuthMiddleware({
+  publicRoutes: ['/api/list-plans', '/api/merchant', '/api/get-product'],
 })
 
 export const config = {
@@ -333,7 +434,7 @@ checkout-demo/
 │   │   └── page.tsx              # Checkout page with plan selection
 │   ├── layout.tsx                # Root layout with SolvaPayProvider
 │   └── page.tsx                  # Home with locked content
-├── proxy.ts                      # Authentication proxy (extracts userId)
+├── middleware.ts                 # Supabase JWT auth on /api/* (Edge)
 ├── package.json
 ├── next.config.mjs
 ├── tsconfig.json
@@ -373,7 +474,7 @@ The provider automatically:
 
 ### Authentication
 
-This demo uses Supabase authentication middleware by default (`proxy.ts` in Next.js 16):
+This demo uses Supabase authentication middleware by default (`middleware.ts`):
 
 - Middleware extracts user IDs from Supabase JWT tokens on all `/api/*` routes
 - User IDs are set as `x-user-id` header for downstream routes
@@ -644,7 +745,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 
 1. Verify Supabase credentials are correct
 2. Check that `SUPABASE_JWT_SECRET` matches your project settings
-3. Ensure middleware (`proxy.ts`) is properly extracting user ID
+3. Ensure middleware (`middleware.ts`) is properly extracting user ID
 4. Verify access token is being sent in Authorization header
 5. Check Supabase project has email/password auth enabled
 6. Review middleware logs for authentication errors

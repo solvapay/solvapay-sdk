@@ -1,0 +1,6 @@
+# Copy to .dev.vars for `wrangler dev` / OpenNext preview (gitignored).
+NEXTJS_ENV=development
+
+# Same secrets as local .env.local for Worker runtime:
+# SOLVAPAY_SECRET_KEY=
+# SUPABASE_JWT_SECRET=
