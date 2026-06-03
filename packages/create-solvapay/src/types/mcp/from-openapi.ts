@@ -57,6 +57,7 @@ type Selections = {
   mcpPublicBaseUrl: string
   solvapayProductRef?: string
   apiBaseUrl?: string
+  upstreamBaseUrl?: string
   mode: 'one-to-one'
   upstreamAuth:
     | { kind: 'none' }
@@ -100,6 +101,8 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   const securitySchemes = Array.isArray(describeOutput.securitySchemes)
     ? describeOutput.securitySchemes
     : []
+  const servers = parseStringArray(describeOutput.servers)
+  printDescribeAdvisories(describeOutput.advisories)
 
   if (operations.length === 0) {
     throw new Error(
@@ -108,6 +111,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   }
 
   const authChoice = await chooseAuth(securitySchemes, nonInteractive)
+  const upstreamBaseUrl = await resolveUpstreamBaseUrl(servers, nonInteractive)
   const selections: Selections = {
     workerName: projectName,
     serverName: deriveServerName(projectName),
@@ -119,6 +123,9 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
       operationId: op.operationId,
       tier: op.suggestedTier,
     })),
+  }
+  if (upstreamBaseUrl) {
+    selections.upstreamBaseUrl = upstreamBaseUrl
   }
   if (dev) {
     selections.apiBaseUrl = DEV_API_BASE_URL
@@ -191,6 +198,73 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   )
 
   printConnectionSnippets({ projectName })
+}
+
+function parseStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
+function printDescribeAdvisories(value: unknown): void {
+  if (!Array.isArray(value) || value.length === 0) return
+  const messages = value
+    .map(advisory => {
+      if (!advisory || typeof advisory !== 'object') return null
+      const record = advisory as Record<string, unknown>
+      return typeof record.message === 'string' ? record.message : null
+    })
+    .filter((message): message is string => message !== null)
+  if (messages.length === 0) return
+
+  process.stdout.write('\nOpenAPI advisories:\n')
+  for (const message of messages) {
+    process.stdout.write(`  - ${message}\n`)
+  }
+  process.stdout.write('\n')
+}
+
+async function resolveUpstreamBaseUrl(
+  servers: string[],
+  nonInteractive: boolean,
+): Promise<string | undefined> {
+  if (servers.some(isAbsoluteHttpUrl)) return undefined
+
+  const problem = servers.length > 0
+    ? `declares only relative server URL(s): ${servers.join(', ')}`
+    : 'does not declare an OpenAPI server URL'
+
+  if (nonInteractive || !stdin.isTTY || !stdout.isTTY) {
+    throw new Error(
+      `The OpenAPI spec ${problem}. Re-run interactively and enter the upstream API base URL, or use the agent flow and set \`upstreamBaseUrl\` in selections.json.`,
+    )
+  }
+
+  const rl = readline.createInterface({ input: stdin, output: stdout })
+  try {
+    const answer = (
+      await rl.question(
+        `The OpenAPI spec ${problem}. Enter the upstream API base URL (for example, https://api.example.com): `,
+      )
+    ).trim()
+    if (!answer) {
+      throw new Error('Upstream API base URL is required when the OpenAPI spec has no absolute server URL.')
+    }
+    if (!isAbsoluteHttpUrl(answer)) {
+      throw new Error(`Upstream API base URL must start with http:// or https:// (got ${answer}).`)
+    }
+    return answer.replace(/\/$/, '')
+  } finally {
+    rl.close()
+  }
+}
+
+function isAbsoluteHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+  } catch {
+    return false
+  }
 }
 
 async function chooseAuth(

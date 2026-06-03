@@ -93,10 +93,10 @@ export const pickProductInteractive = async (
     return { action: 'skipped', reason: 'zero_products' }
   }
 
-  const nonInteractive = options.yes || !process.stdout.isTTY
+  const nonInteractive = options.yes || !process.stdin.isTTY || !process.stdout.isTTY
   if (nonInteractive) {
     process.stdout.write(
-      'Skipped product auto-selection in non-interactive mode. Set SOLVAPAY_PRODUCT_REF in .env or pass --product <prd_...>, then re-run `solvapay init`.\n',
+      'Skipped product auto-selection in non-interactive mode. Set SOLVAPAY_PRODUCT_REF in .env or pass --product <prd_...> when you are ready.\n',
     )
     return { action: 'skipped', reason: 'non_interactive_requires_product' }
   }

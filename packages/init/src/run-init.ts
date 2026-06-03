@@ -190,9 +190,8 @@ const configureProductRef = async (
       break
     case 'skipped':
       if (pick.reason === 'non_interactive_requires_product') {
-        throw new Error(
-          'SOLVAPAY_PRODUCT_REF is required for non-interactive init. ' +
-            'Set it in .env or pass --product <prd_...>, then re-run `solvapay init`.',
+        process.stdout.write(
+          'No product ref was saved. Set SOLVAPAY_PRODUCT_REF in .env or re-run `solvapay init --product <prd_...>` after confirming the intended product.\n',
         )
       }
       break

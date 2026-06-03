@@ -362,16 +362,14 @@ describe('runInitInDirectory', () => {
     expect(writeSolvaPayProductRefToEnv).toHaveBeenCalledWith('prd_newest', { cwd: TEST_CWD })
   })
 
-  it('hard-fails under --yes when no product ref is configured', async () => {
+  it('does not auto-pick or hard-fail under --yes when no product ref is configured', async () => {
     mockSuccessfulAuth()
     vi.mocked(pickProductInteractive).mockResolvedValue({
       action: 'skipped',
       reason: 'non_interactive_requires_product',
     })
 
-    await expect(runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })).rejects.toThrow(
-      /SOLVAPAY_PRODUCT_REF is required for non-interactive init/i,
-    )
+    await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
 
     expect(pickProductInteractive).toHaveBeenCalledWith(
       'https://api.solvapay.com',
@@ -379,6 +377,7 @@ describe('runInitInDirectory', () => {
       { yes: true },
     )
     expect(writeSolvaPayProductRefToEnv).not.toHaveBeenCalled()
+    expect(output.join('')).toContain('No product ref was saved')
   })
 
   it('verifies and writes an explicit productRef option without running the picker', async () => {

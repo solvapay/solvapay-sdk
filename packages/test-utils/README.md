@@ -1,50 +1,29 @@
 # @solvapay/test-utils
 
-**Internal Package - Not Published to npm**
+**Internal package — not published to npm**
 
-This package contains shared test utilities for SDK testing across packages.
+Shared test utilities for the SolvaPay SDK monorepo.
 
 ## Purpose
 
-Provides reusable test helpers, mocks, assertions, and fixtures for testing SolvaPay SDK packages.
+Reusable test helpers, mocks, assertions, and fixtures for testing SDK packages.
 
 ## Status
 
-Currently minimal - utilities will be added as needed.
+Currently minimal — utilities are added as needed.
 
-## Future Contents
+## Used by
 
-This package will grow to include:
-
-- **Mock Helpers**: Mock API clients, mock backend responses
-- **Custom Assertions**: Vitest/Jest custom matchers for common patterns
-- **Test Fixtures**: Reusable test data and scenarios
-- **Test Helpers**: Common setup/teardown functions
-
-## Usage
-
-```typescript
-import {} from /* utilities will be added here */ '@solvapay/test-utils'
-```
-
-## Used By
-
-- SDK packages: `@solvapay/server`, `@solvapay/client`, `@solvapay/edge`, etc.
-- Integration tests across SDK packages
+- `@solvapay/server`, `@solvapay/react`, `@solvapay/mcp`, and other workspace packages
+- Integration tests across the monorepo
 
 ## Development
 
-This package is for internal use only:
-
-- Private package (not published)
-- Used as workspace dependency
+- Private workspace dependency only
 - Source files imported directly (no build step)
 
-## Adding New Test Utilities
+When adding utilities: create in `src/`, export from `src/index.ts`, document usage here.
 
-When adding new utilities:
+## See also
 
-1. Create the utility in `src/`
-2. Export from `src/index.ts`
-3. Update this README with usage documentation
-4. Consider if the utility should be generic or specific to a package
+- [SDK testing guide](../../docs/contributing/testing.md)
