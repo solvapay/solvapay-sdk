@@ -1,12 +1,3 @@
-/**
- * Canonical registry file (2/4).
- *
- * Returns the process-wide SolvaPay instance used by every catch-all route
- * under `app/api/solvapay/[...solvapay]`. Replace the stub fallback with
- * your production wiring (typically `createSolvaPay({ apiKey: env.KEY })`)
- * when integrating.
- */
-
 import { createSolvaPay, type SolvaPay } from '@solvapay/server'
 import { createStubSolvaPay } from '@solvapay/examples-shared/next-stub'
 

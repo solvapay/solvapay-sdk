@@ -63,7 +63,7 @@
   "env": {
     "production": {
       "name": "solvapay-chat-checkout-demo-prod",
-      "account_id": "98aefe33182e11a1b0e5d7fa89a12a6d",
+      "account_id": "${CLOUDFLARE_ACCOUNT_ID}",
       "routes": [
         {
           "pattern": "chat-demo.solvapay.app",

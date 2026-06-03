@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { UsageSimulator } from './components/UsageSimulator'
 
 export default function HomePage() {
-  const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
+  const productRef = process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
 
   // Memoize the fetcher function to prevent unnecessary re-fetches
   const fetchPlans = useCallback(async (productRef: string) => {

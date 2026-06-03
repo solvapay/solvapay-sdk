@@ -1,0 +1,6 @@
+.env
+
+# Supabase CLI machine-local state — written by `supabase link` / CLI calls.
+# Not portable across developers. See examples/supabase-edge-mcp/.gitignore.
+supabase/.temp/
+supabase/.branches/
