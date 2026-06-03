@@ -168,6 +168,20 @@ describe('createOAuthAuthorizeHandler', () => {
       `${apiBaseUrl}/v1/customer/auth/authorize?response_type=code&client_id=c_1&code_challenge=abc&code_challenge_method=S256&redirect_uri=${encodeURIComponent('cursor://cb')}`,
     )
   })
+
+  it('preserves resource in the upstream authorize redirect', async () => {
+    const handler = createOAuthAuthorizeHandler({ apiBaseUrl })
+    const resource = 'https://mcp.example.com'
+    const query =
+      `response_type=code&client_id=c_1&redirect_uri=${encodeURIComponent('cursor://cb')}` +
+      `&resource=${encodeURIComponent(resource)}`
+    const res = await handler(new Request(`${publicBaseUrl}/oauth/authorize?${query}`))
+
+    expect(res!.status).toBe(302)
+    expect(res!.headers.get('location')).toBe(
+      `${apiBaseUrl}/v1/customer/auth/authorize?${query}`,
+    )
+  })
 })
 
 describe('createOAuthTokenHandler', () => {
@@ -201,6 +215,28 @@ describe('createOAuthTokenHandler', () => {
     expect((upstreamInit.headers as Record<string, string>)['content-type']).toBe(
       'application/x-www-form-urlencoded',
     )
+  })
+
+  it('preserves resource in the token form proxy body', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch)
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(200, { access_token: 'AT', token_type: 'Bearer' }),
+    )
+
+    const handler = createOAuthTokenHandler({ apiBaseUrl })
+    const resource = encodeURIComponent('https://mcp.example.com')
+    const body = `grant_type=authorization_code&code=abc&resource=${resource}`
+    const res = await handler(
+      new Request(`${publicBaseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body,
+      }),
+    )
+
+    expect(res!.status).toBe(200)
+    const upstreamInit = fetchMock.mock.calls[0]![1] as RequestInit
+    expect(upstreamInit.body).toBe(body)
   })
 
   it('normalizes NestJS validation errors into RFC 6749 shape', async () => {

@@ -99,7 +99,7 @@ export interface paths {
         put?: never;
         /**
          * Process payment intent after client-side confirmation
-         * @description Processes a payment intent that has been confirmed on the client side. Polls the database for payment intent status to become succeeded (up to 10 seconds). Returns the current status of the payment intent.
+         * @description Processes a payment intent that has been confirmed on the client side. Polls the database for payment intent status to become succeeded. Returns the current status of the payment intent; on success, the response is enriched with the Purchase row created by the webhook handler.
          */
         post: operations["PaymentIntentSdkController_processPaymentIntent"];
         delete?: never;
@@ -741,6 +741,158 @@ export interface components {
         };
         CancelPurchaseRequest: {
             reason?: string;
+        };
+        PurchaseInfo: {
+            /**
+             * Purchase reference
+             * @example pur_1A2B3C4D
+             */
+            reference: string;
+            /**
+             * Product name
+             * @example API Gateway Manager
+             */
+            productName: string;
+            /**
+             * Product reference
+             * @example prd_abc123
+             */
+            productRef?: string;
+            /**
+             * Purchase status
+             * @example active
+             */
+            status: string;
+            /**
+             * Start date
+             * @example 2025-10-27T10:00:00Z
+             */
+            startDate: string;
+            /**
+             * Amount in USD cents (normalised for aggregation)
+             * @example 9900
+             */
+            amount: number;
+            /**
+             * Original amount in the payment currency (minor units)
+             * @example 7500
+             */
+            originalAmount?: number;
+            /**
+             * ISO 4217 currency code of the customer-facing charge
+             * @example GBP
+             */
+            currency: string;
+            /**
+             * Exchange rate from original currency to USD
+             * @example 1.32
+             */
+            exchangeRate?: number;
+            /**
+             * End date of purchase
+             * @example 2025-11-27T10:00:00Z
+             */
+            endDate?: string;
+            /**
+             * When purchase was cancelled
+             * @example 2025-10-28T10:00:00Z
+             */
+            cancelledAt?: string;
+            /**
+             * Reason for cancellation
+             * @example Customer request
+             */
+            cancellationReason?: string;
+            /**
+             * Plan reference from the plan snapshot, for reliable plan matching
+             * @example pln_abc123
+             */
+            planRef?: string;
+            /** @description Snapshot of the plan at time of purchase */
+            planSnapshot?: Record<string, never>;
+        };
+        ProcessPaymentSucceededRecurring: {
+            /**
+             * discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "ProcessPaymentSucceededRecurring";
+            /**
+             * @example recurring
+             * @enum {string}
+             */
+            type: "recurring";
+            purchase: components["schemas"]["PurchaseInfo"];
+        };
+        OneTimePurchaseInfo: {
+            /**
+             * Purchase reference
+             * @example pur_1A2B3C4D
+             */
+            reference: string;
+            /**
+             * Product reference
+             * @example prd_abc123
+             */
+            productRef?: string;
+            /**
+             * Amount in USD cents (normalised for aggregation)
+             * @example 9900
+             */
+            amount: number;
+            /**
+             * ISO 4217 currency code of the customer-facing charge
+             * @example USD
+             */
+            currency: string;
+            /**
+             * When the one-time purchase was completed
+             * @example 2025-10-27T10:00:00Z
+             */
+            completedAt: string;
+        };
+        ProcessPaymentSucceededOneTime: {
+            /**
+             * discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "ProcessPaymentSucceededOneTime";
+            /**
+             * @example one-time
+             * @enum {string}
+             */
+            type: "one-time";
+            oneTimePurchase: components["schemas"]["OneTimePurchaseInfo"];
+        };
+        ProcessPaymentSucceededBare: {
+            /**
+             * discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "ProcessPaymentSucceededBare";
+        };
+        ProcessPaymentTimeout: {
+            /**
+             * discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "ProcessPaymentTimeout";
+            /** @description Detail message describing the timeout */
+            message?: string;
+        };
+        ProcessPaymentFailed: {
+            /**
+             * discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "ProcessPaymentFailed";
+        };
+        ProcessPaymentCancelled: {
+            /**
+             * discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "ProcessPaymentCancelled";
         };
         ProcessPaymentIntentDto: {
             productRef?: string;
@@ -1628,75 +1780,6 @@ export interface components {
             customerRef: string;
             productRef?: string;
         };
-        PurchaseInfo: {
-            /**
-             * Purchase reference
-             * @example pur_1A2B3C4D
-             */
-            reference: string;
-            /**
-             * Product name
-             * @example API Gateway Manager
-             */
-            productName: string;
-            /**
-             * Product reference
-             * @example prd_abc123
-             */
-            productRef?: string;
-            /**
-             * Purchase status
-             * @example active
-             */
-            status: string;
-            /**
-             * Start date
-             * @example 2025-10-27T10:00:00Z
-             */
-            startDate: string;
-            /**
-             * Amount in USD cents (normalised for aggregation)
-             * @example 9900
-             */
-            amount: number;
-            /**
-             * Original amount in the payment currency (minor units)
-             * @example 7500
-             */
-            originalAmount?: number;
-            /**
-             * ISO 4217 currency code of the customer-facing charge
-             * @example GBP
-             */
-            currency: string;
-            /**
-             * Exchange rate from original currency to USD
-             * @example 1.32
-             */
-            exchangeRate?: number;
-            /**
-             * End date of purchase
-             * @example 2025-11-27T10:00:00Z
-             */
-            endDate?: string;
-            /**
-             * When purchase was cancelled
-             * @example 2025-10-28T10:00:00Z
-             */
-            cancelledAt?: string;
-            /**
-             * Reason for cancellation
-             * @example Customer request
-             */
-            cancellationReason?: string;
-            /**
-             * Plan reference from the plan snapshot, for reliable plan matching
-             * @example pln_abc123
-             */
-            planRef?: string;
-            /** @description Snapshot of the plan at time of purchase */
-            planSnapshot?: Record<string, never>;
-        };
         CustomerResponse: {
             /**
              * Customer reference identifier
@@ -1881,7 +1964,7 @@ export interface operations {
                     "application/json": components["schemas"]["SdkMerchantResponseDto"];
                 };
             };
-            /** @description Provider not found */
+            /** @description Provider not found in the requested environment. Body includes a `code` (`provider_not_found_in_environment`), the `requestedEnvironment`, and `providerExistsInSandbox` so the SDK / CLI can branch on the recovery path. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2021,25 +2104,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Payment intent status */
+            /** @description Payment intent status with optional purchase enrichment on success */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /**
-                         * Payment intent status
-                         * @example succeeded
-                         * @enum {string}
-                         */
-                        status?: "succeeded" | "timeout" | "failed" | "cancelled";
-                        /**
-                         * Optional message, only present for timeout status
-                         * @example Timeout while waiting for payment intent confirmation, try again later. This could be due to payment webhooks not being configured correctly.
-                         */
-                        message?: string;
-                    };
+                    "application/json": components["schemas"]["ProcessPaymentSucceededRecurring"] | components["schemas"]["ProcessPaymentSucceededOneTime"] | components["schemas"]["ProcessPaymentSucceededBare"] | components["schemas"]["ProcessPaymentTimeout"] | components["schemas"]["ProcessPaymentFailed"] | components["schemas"]["ProcessPaymentCancelled"];
                 };
             };
             /** @description Payment not succeeded, invalid request, or forbidden */
@@ -2657,6 +2728,8 @@ export interface operations {
                 productRef?: string;
                 /** @description Filter by customer reference */
                 customerRef?: string;
+                /** @description Include free recurring purchases and free auto-enrollments (default true) */
+                includeFree?: unknown;
             };
             header?: never;
             path?: never;
@@ -2679,7 +2752,10 @@ export interface operations {
     };
     PurchaseSdkController_getPurchasesForCustomer: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include free auto-enrollments (default true for customer-scoped views) */
+                includeFree?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Customer reference or ID */
