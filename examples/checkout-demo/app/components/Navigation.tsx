@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ProductBadge, usePurchase, BalanceBadge } from '@solvapay/react'
+import { ProductBadge, usePurchase, BalanceBadge, useBalance } from '@solvapay/react'
 import { Button } from './ui/Button'
 import { signOut } from '../lib/supabase'
 import { useState } from 'react'
@@ -13,9 +13,11 @@ import { useState } from 'react'
  */
 export function Navigation() {
   const { loading: purchasesLoading, activePurchase } = usePurchase()
+  const { credits } = useBalance()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
-  const showUpgradeButton = !purchasesLoading && !activePurchase
+  const hasCredits = credits != null && credits > 0
+  const showUpgradeButton = !purchasesLoading && !activePurchase && !hasCredits
 
   const handleSignOut = async () => {
     setIsSigningOut(true)

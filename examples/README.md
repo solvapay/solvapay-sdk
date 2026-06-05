@@ -73,7 +73,10 @@ pnpm install
 pnpm dev
 ```
 
-The application will start on `http://localhost:3000`
+The application will start on `http://localhost:3010`
+
+**Production deploy (Cloudflare):** [web-app-demo.solvapay.app](https://web-app-demo.solvapay.app) — see
+[checkout-demo README](./checkout-demo/README.md#deploy-to-cloudflare-workers-dev-441) (`pnpm run deploy:cf:prod`).
 
 ### Supabase Edge Functions (`supabase-edge`)
 
