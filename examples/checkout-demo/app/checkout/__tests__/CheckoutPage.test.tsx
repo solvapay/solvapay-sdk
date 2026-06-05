@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import React from 'react'
 
 // Stub Next.js navigation + router so the page renders in jsdom.
@@ -48,5 +48,26 @@ describe('CheckoutPage (smoke)', () => {
     expect(props.requireTermsAcceptance).toBe(true)
     expect(typeof props.onResult).toBe('function')
     expect(typeof props.onError).toBe('function')
+  })
+
+  describe('when NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF is unset', () => {
+    const previous = process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+
+    afterEach(() => {
+      if (previous === undefined) {
+        delete process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+      } else {
+        process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF = previous
+      }
+    })
+
+    it('shows inline config error instead of throwing', () => {
+      delete process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+      render(<CheckoutPage />)
+      expect(layoutCalls).toHaveLength(0)
+      expect(
+        screen.getByText(/Missing NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF environment variable/i),
+      ).toBeInTheDocument()
+    })
   })
 })

@@ -133,7 +133,7 @@ cp env.example .env.local
 
 # Edit .env.local with your SolvaPay and Supabase credentials
 # Required: SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
-# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_PRODUCT_REF
+# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
 ```
 
 ## Running the Demo
@@ -231,7 +231,7 @@ pnpm exec wrangler secret list --env production
 
 ```bash
 cp .env.prod.example .env.prod
-# Fill NEXT_PUBLIC_PRODUCT_REF, NEXT_PUBLIC_SUPABASE_* (ganvogeprtezdpakybib)
+# Fill NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF, NEXT_PUBLIC_SUPABASE_* (ganvogeprtezdpakybib)
 ```
 
 **3. Deploy:**
@@ -245,7 +245,9 @@ pnpm run deploy:cf:prod
 | Symptom | Fix |
 | --- | --- |
 | CF `error code: 1101` on `/api/*` | Missing secrets — `wrangler secret list --env production` |
-| `Product not found: prd_…` | `NEXT_PUBLIC_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY` |
+| `Product not found: prd_…` | `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY` |
+| `/checkout` shows "This page couldn't load" | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod` |
+| `Failed to fetch plans: 401` on `/checkout` | `SOLVAPAY_API_BASE_URL` must match the Worker secret: sandbox/dev keys → `https://api-dev.solvapay.com`; live keys → `https://api.solvapay.com`. Redeploy after updating `.env.prod` |
 | OAuth redirect error on prod | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs |
 | OpenNext build: Node middleware | Use `middleware.ts` (not `proxy.ts`) until OpenNext supports Next 16 `proxy` |
 
@@ -529,8 +531,8 @@ This demo uses Supabase authentication middleware by default (`middleware.ts`):
 | Variable                        | Description                                   | Required |
 | ------------------------------- | --------------------------------------------- | -------- |
 | `SOLVAPAY_SECRET_KEY`           | Your SolvaPay secret key                      | Yes      |
-| `SOLVAPAY_API_BASE_URL`         | Backend URL (defaults to prod)                | No       |
-| `NEXT_PUBLIC_PRODUCT_REF`       | Product reference                             | No       |
+| `SOLVAPAY_API_BASE_URL`         | Backend URL — must match secret key env (dev: `https://api-dev.solvapay.com`) | No |
+| `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` | Product reference (client bundle)          | No       |
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                          | Yes      |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key                      | Yes      |
 | `SUPABASE_JWT_SECRET`           | Supabase JWT secret (for server verification) | Yes      |
@@ -739,16 +741,17 @@ SUPABASE_JWT_SECRET=your_secret_here
 
 ### "Unauthorized" errors
 
-**Problem**: API routes return 401 Unauthorized.
+**Problem**: API routes return 401 Unauthorized, or checkout shows `Failed to fetch plans: 401`.
 
 **Solution**:
 
-1. Verify Supabase credentials are correct
-2. Check that `SUPABASE_JWT_SECRET` matches your project settings
-3. Ensure middleware (`middleware.ts`) is properly extracting user ID
-4. Verify access token is being sent in Authorization header
-5. Check Supabase project has email/password auth enabled
-6. Review middleware logs for authentication errors
+1. **`/api/list-plans` 401 (public route):** The Worker calls SolvaPay with `SOLVAPAY_SECRET_KEY`. Set `SOLVAPAY_API_BASE_URL` to the API that issued the key — sandbox/dev keys need `https://api-dev.solvapay.com`, not `https://api.solvapay.com`. Update `.env.prod` and run `pnpm run deploy:cf:prod`.
+2. **Protected routes 401:** Verify Supabase credentials are correct
+3. Check that `SUPABASE_JWT_SECRET` matches your project settings
+4. Ensure middleware (`middleware.ts`) is properly extracting user ID
+5. Verify access token is being sent in Authorization header
+6. Check Supabase project has email/password auth enabled
+7. Review middleware logs for authentication errors
 
 ### Payment form not appearing
 

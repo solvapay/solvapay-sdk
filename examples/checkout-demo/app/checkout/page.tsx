@@ -29,10 +29,6 @@ export default function CheckoutPage() {
 
   const productRef = process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
 
-  if (!productRef) {
-    throw new Error("Could not find the solvapay product key. Make sure that you've run the init script, and that you have a product on your solvapay account before you try out the demos")
-  }
-
   useEffect(() => {
     return () => {
       if (redirectTimeoutRef.current) clearTimeout(redirectTimeoutRef.current)

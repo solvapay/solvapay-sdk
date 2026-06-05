@@ -10,6 +10,12 @@ const nextConfig = {
     '@solvapay/next',
     '@solvapay/react-supabase',
   ],
+  env: {
+    NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF:
+      process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF ??
+      process.env.NEXT_PUBLIC_PRODUCT_REF ??
+      process.env.SOLVAPAY_PRODUCT_REF,
+  },
 }
 
 export default nextConfig
