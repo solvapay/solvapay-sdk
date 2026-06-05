@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { buildAuthInfoFromBearer } from '../src/auth-bridge'
 import {
   McpBearerAuthError,
   decodeJwtPayload,
@@ -56,5 +57,55 @@ describe('mcp-auth helpers', () => {
     const token = createUnsignedJwt({ sub: 'cust_123', name: 'José García 🎉' })
     const payload = decodeJwtPayload(token)
     expect(payload.name).toBe('José García 🎉')
+  })
+
+  it('buildAuthInfoFromBearer treats aud as resource metadata, not client identity', () => {
+    const token = createUnsignedJwt({
+      customer_ref: 'cust_123',
+      aud: 'https://mcp.example.com',
+      scope: 'tools:read tools:write',
+    })
+
+    const authInfo = buildAuthInfoFromBearer(`Bearer ${token}`)
+
+    expect(authInfo?.clientId).toBe('solvapay-mcp-client')
+    expect(authInfo?.scopes).toEqual(['tools:read', 'tools:write'])
+    expect(authInfo?.extra?.customer_ref).toBe('cust_123')
+    expect(authInfo?.extra?.resource).toBe('https://mcp.example.com')
+  })
+
+  it('buildAuthInfoFromBearer keeps explicit client identity ahead of resource claims', () => {
+    const cases = [
+      {
+        payload: { customer_ref: 'cust_123', aud: 'https://mcp.example.com' },
+        options: { clientId: 'client_from_options' },
+        expected: 'client_from_options',
+      },
+      {
+        payload: {
+          customer_ref: 'cust_123',
+          client_id: 'client_from_payload',
+          azp: 'client_from_azp',
+          aud: 'https://mcp.example.com',
+        },
+        options: {},
+        expected: 'client_from_payload',
+      },
+      {
+        payload: {
+          customer_ref: 'cust_123',
+          azp: 'client_from_azp',
+          aud: 'https://mcp.example.com',
+        },
+        options: {},
+        expected: 'client_from_azp',
+      },
+    ]
+
+    for (const { payload, options, expected } of cases) {
+      const token = createUnsignedJwt(payload)
+
+      expect(buildAuthInfoFromBearer(`Bearer ${token}`, options)?.clientId).toBe(expected)
+    }
   })
 })

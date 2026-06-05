@@ -1,17 +1,11 @@
-export type WebhookEventType =
-  | 'payment.succeeded'
-  | 'payment.failed'
-  | 'payment.refunded'
-  | 'payment.refund_failed'
-  | 'purchase.created'
-  | 'purchase.updated'
-  | 'purchase.cancelled'
-  | 'purchase.expired'
-  | 'purchase.suspended'
-  | 'customer.created'
-  | 'customer.updated'
-  | 'customer.deleted'
-  | 'checkout_session.created'
+import type { components } from './generated'
+
+/**
+ * The set of webhook event types, generated from the backend OpenAPI spec
+ * (`components.schemas.WebhookEventType`). New events flow in automatically
+ * whenever the SDK types are regenerated — do not hand-edit this union.
+ */
+export type WebhookEventType = components['schemas']['WebhookEventType']
 
 export interface WebhookProduct {
   reference: string
@@ -30,21 +24,19 @@ export interface CustomerWebhookObject {
 
 type WebhookPayloadObject = Record<string, unknown>
 
+/**
+ * Richly-typed payloads for the events whose `data.object` shape is known and
+ * stable. Any event type not listed here falls back to a generic object, so the
+ * map never needs to be kept exhaustive against {@link WebhookEventType}.
+ */
 export type WebhookEventObjectMap = {
-  'payment.succeeded': WebhookPayloadObject
-  'payment.failed': WebhookPayloadObject
-  'payment.refunded': WebhookPayloadObject
-  'payment.refund_failed': WebhookPayloadObject
-  'purchase.created': WebhookPayloadObject
-  'purchase.updated': WebhookPayloadObject
-  'purchase.cancelled': WebhookPayloadObject
-  'purchase.expired': WebhookPayloadObject
-  'purchase.suspended': WebhookPayloadObject
   'customer.created': CustomerWebhookObject
   'customer.updated': CustomerWebhookObject
   'customer.deleted': CustomerWebhookObject
-  'checkout_session.created': WebhookPayloadObject
 }
+
+type WebhookObjectForType<TType extends WebhookEventType> =
+  TType extends keyof WebhookEventObjectMap ? WebhookEventObjectMap[TType] : WebhookPayloadObject
 
 export type WebhookEventForType<TType extends WebhookEventType> = {
   id: string
@@ -52,7 +44,7 @@ export type WebhookEventForType<TType extends WebhookEventType> = {
   created: number
   api_version: string
   data: {
-    object: WebhookEventObjectMap[TType]
+    object: WebhookObjectForType<TType>
     previous_attributes: Record<string, unknown> | null
   }
   livemode: boolean

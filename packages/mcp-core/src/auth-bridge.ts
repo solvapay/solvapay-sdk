@@ -27,10 +27,15 @@ function getClientId(payload: JwtPayload, explicitClientId?: string): string {
   const payloadClientId =
     (typeof payload.client_id === 'string' && payload.client_id) ||
     (typeof payload.azp === 'string' && payload.azp) ||
-    (typeof payload.aud === 'string' && payload.aud) ||
     null
 
   return payloadClientId || 'solvapay-mcp-client'
+}
+
+function getResource(payload: JwtPayload): string | undefined {
+  if (typeof payload.resource === 'string' && payload.resource) return payload.resource
+  if (typeof payload.aud === 'string' && payload.aud) return payload.aud
+  return undefined
 }
 
 function getScopes(payload: JwtPayload, defaultScopes: string[]): string[] {
@@ -64,6 +69,7 @@ export function buildAuthInfoFromBearer(
   const clientId = getClientId(payload, options.clientId)
   const scopes = getScopes(payload, options.defaultScopes || [])
   const expiresAt = getExpiresAt(payload)
+  const resource = getResource(payload)
 
   return {
     token,
@@ -72,6 +78,7 @@ export function buildAuthInfoFromBearer(
     expiresAt,
     extra: {
       customer_ref: customerRef,
+      ...(resource ? { resource } : {}),
       ...(options.includePayload ? { payload } : {}),
     },
   }
