@@ -116,24 +116,24 @@ Before running this demo, you need:
      - Add your app's callback URL (`http://localhost:3000/auth/callback`) to Supabase Redirect URLs
 
 3. **Environment Variables**
-   - Copy `env.example` to `.env.local`
-   - Fill in your SolvaPay and Supabase credentials
+   - Run `npx solvapay init` in `examples/checkout-demo/` to create a gitignored `.env`, **or**
+   - Create `.env.local` manually (see [Environment Variables](#environment-variables) below)
 
 ## Setup
 
 ```bash
-# Install dependencies (from workspace root)
+# From the SDK monorepo root — lockfile must stay in sync (CI uses --frozen-lockfile)
 pnpm install
 
-# Navigate to the demo
 cd examples/checkout-demo
 
-# Copy environment variables
-cp env.example .env.local
+# Recommended: CLI scaffolds .env with SOLVAPAY_SECRET_KEY + product ref
+npx solvapay init
 
-# Edit .env.local with your SolvaPay and Supabase credentials
-# Required: SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
-# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+# Or create .env.local manually with:
+#   SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET,
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Optional: SOLVAPAY_API_BASE_URL, NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF (or SOLVAPAY_PRODUCT_REF)
 ```
 
 ## Running the Demo
@@ -153,24 +153,57 @@ Open [http://localhost:3010](http://localhost:3010) in your browser.
 
 This demo deploys to [https://web-app-demo.solvapay.app](https://web-app-demo.solvapay.app) via
 [@opennextjs/cloudflare](https://opennext.js.org/cloudflare) + Wrangler. Deploy ergonomics mirror
-`examples/chat-checkout-demo` (`scripts/deploy.mjs`, gitignored env files, one-time secrets).
+`examples/chat-checkout-demo` (`scripts/deploy.mjs`, gitignored env files, one-time Worker secrets).
 
-> **Build-time vs runtime.** `NEXT_PUBLIC_*` vars are baked in at `opennextjs-cloudflare build`
-> (use `.env.prod` for prod). `SOLVAPAY_SECRET_KEY` and `SUPABASE_JWT_SECRET` are Worker
-> **secrets** — `wrangler secret put` once per Worker; `deploy.mjs` does not re-upload them.
+### Two value paths (read this first)
+
+Understanding where each config value lives is required for a reproducible deploy:
+
+| When               | Where                     | Variables                                            | How they reach the Worker                                                                                         |
+| ------------------ | ------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Build time**     | Gitignored `.env.prod`    | `NEXT_PUBLIC_*` (product ref, Supabase URL/anon key) | Loaded by `pnpm build:opennext:prod` (`dotenv -e .env.prod`) and **baked into the client bundle**                 |
+| **Deploy time**    | Gitignored `.env.prod`    | `SOLVAPAY_API_BASE_URL` (optional)                   | Forwarded by `scripts/deploy.mjs` as `wrangler deploy --var`                                                      |
+| **Runtime (once)** | Cloudflare Worker secrets | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET`         | `wrangler secret put` — **not** in `.env.prod`; persists across deploys; `deploy.mjs` does **not** re-upload them |
+
+If you skip `wrangler secret put`, the Worker deploys successfully but every `/api/*` request fails at
+runtime with Cloudflare `error code: 1101`. If you skip `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in
+`.env.prod` before `build:opennext:prod`, `/checkout` loads but cannot fetch plans.
+
+**API base URL must match the secret key** that issued it:
+
+| Key source                                                          | Set `SOLVAPAY_API_BASE_URL` to           |
+| ------------------------------------------------------------------- | ---------------------------------------- |
+| Keys from `solvapay init` / app.solvapay.com (incl. `sk_sandbox_*`) | `https://api.solvapay.com`               |
+| Keys from a dev/staging backend                                     | `https://api-dev.solvapay.com`           |
+| Local backend                                                       | `http://localhost:3001` (local dev only) |
+
+After changing `.env.prod`, redeploy with `pnpm run deploy:cf:prod`.
 
 ### Differences from chat-checkout-demo
 
-| Topic          | chat-checkout-demo                      | checkout-demo                                |
-| -------------- | --------------------------------------- | -------------------------------------------- |
-| Runtime        | Vite + `worker.ts` + `handlers.ts`      | Next.js 16 + OpenNext                        |
-| Auth           | Anonymous `x-customer-ref`              | Supabase JWT + `middleware.ts`               |
-| Secrets        | `SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY` | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET` |
-| Build-time env | `VITE_*`                                | `NEXT_PUBLIC_*`                              |
-| Prod domain    | `chat-demo.solvapay.app`                | `web-app-demo.solvapay.app`                  |
+| Topic          | chat-checkout-demo                      | checkout-demo                                    |
+| -------------- | --------------------------------------- | ------------------------------------------------ |
+| Runtime        | Vite + `worker.ts` + `handlers.ts`      | Next.js 16 + OpenNext                            |
+| Auth           | Anonymous `x-customer-ref`              | Supabase JWT + `middleware.ts`                   |
+| Secrets        | `SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY` | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET`     |
+| Build-time env | `VITE_*`                                | `NEXT_PUBLIC_*`                                  |
+| Prod domain    | `chat-demo.solvapay.app`                | `web-app-demo.solvapay.app`                      |
+| Prod Worker    | `solvapay-chat-checkout-demo-prod`      | `solvapay-checkout-demo-prod`                    |
+| Deploy scripts | `pnpm deploy` / `pnpm deploy:prod`      | `pnpm run deploy:cf` / `pnpm run deploy:cf:prod` |
 
 Uses Supabase project [ganvogeprtezdpakybib](https://supabase.com/dashboard/project/ganvogeprtezdpakybib)
 (`https://ganvogeprtezdpakybib.supabase.co`) — not SolvaPay internal dev auth.
+
+### Prerequisites (prod deploy checklist)
+
+Before deploying to `web-app-demo.solvapay.app`, confirm all of the following:
+
+1. **Repo** — clone `solvapay-sdk` and check out the branch with checkout-demo Cloudflare support.
+2. **Install** — from the **monorepo root**, run `pnpm install` (CI uses `pnpm install --frozen-lockfile`; commit any `pnpm-lock.yaml` changes when `examples/checkout-demo/package.json` changes).
+3. **Wrangler** — `pnpm exec wrangler login` (or set `CLOUDFLARE_API_TOKEN`).
+4. **Cloudflare account** — `pnpm exec wrangler whoami` must list account `98aefe33182e11a1b0e5d7fa89a12a6d` (SolvaPay org), not only a personal account.
+5. **SolvaPay** — a secret key and product ref for the merchant you want the demo to use (`npx solvapay init` in `examples/checkout-demo/` writes these to gitignored `.env`).
+6. **Supabase** — JWT secret plus anon URL/key for project `ganvogeprtezdpakybib` (see [Supabase prod redirect](#supabase-prod-redirect-required-before-oauth-on-prod) below).
 
 ### Supabase prod redirect (required before OAuth on prod)
 
@@ -188,68 +221,150 @@ Google Cloud Console still uses `https://ganvogeprtezdpakybib.supabase.co/auth/v
 pnpm install && pnpm -w build:packages
 
 cd examples/checkout-demo
-cp env.example .env.local   # or .env — fill keys
-cp .dev.vars.example .dev.vars   # optional; wrangler dev reads secrets here
+
+# Local secrets — either .env.local (Next dev) or .dev.vars (wrangler dev)
+npx solvapay init   # creates .env, or copy values manually into .env.local
+cp .dev.vars.example .dev.vars
+# Fill SOLVAPAY_SECRET_KEY and SUPABASE_JWT_SECRET in .dev.vars
 
 pnpm build:opennext
 pnpm serve:local   # wrangler dev
 ```
 
-### Deploy to `*.workers.dev`
+`wrangler dev` reads `.dev.vars` for Worker runtime secrets; Next.js dev (`pnpm dev`) reads `.env.local` / `.env`.
 
-**1. Secrets (one-time):**
+### Deploy to `*.workers.dev` (non-prod Worker)
+
+Uses the top-level Worker `solvapay-checkout-demo` (no `--env production`).
+
+**1. Secrets (one-time per Worker — separate from prod):**
 
 ```bash
+cd examples/checkout-demo
+
 pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY
 pnpm exec wrangler secret put SUPABASE_JWT_SECRET
+
+# Or pipe from .env:
+grep '^SOLVAPAY_SECRET_KEY=' .env | cut -d= -f2- | pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY
+grep '^SUPABASE_JWT_SECRET=' .env | cut -d= -f2- | pnpm exec wrangler secret put SUPABASE_JWT_SECRET
+
+pnpm exec wrangler secret list   # should list both secrets
 ```
 
 **2. Deploy:**
 
 ```bash
-pnpm run deploy:cf   # build:opennext + wrangler deploy
+pnpm run deploy:cf   # pnpm -w build:packages && pnpm build:opennext && node scripts/deploy.mjs
 ```
 
-### Deploy the live demo (`web-app-demo.solvapay.app`)
+### Deploy the live demo (`web-app-demo.solvapay.app`) — full walkthrough
 
-Production uses Worker `solvapay-checkout-demo-prod` (`[env.production]` in `wrangler.jsonc`) on
-Cloudflare account `98aefe33182e11a1b0e5d7fa89a12a6d`. Your Wrangler login must have access to that
-account (`wrangler whoami` should list it — not only a personal account).
+Production uses Worker **`solvapay-checkout-demo-prod`** in `[env.production]` of
+[`wrangler.jsonc`](wrangler.jsonc), Cloudflare account **`98aefe33182e11a1b0e5d7fa89a12a6d`**, route
+**`web-app-demo.solvapay.app`**.
 
-> **pnpm script names:** use `pnpm run deploy:cf` and `pnpm run deploy:cf:prod` (plain `pnpm deploy`
-> is reserved by pnpm itself).
+> **pnpm script names:** use `pnpm run deploy:cf` and `pnpm run deploy:cf:prod`. Plain `pnpm deploy`
+> is reserved by pnpm itself.
 
-**1. Prod secrets (one-time, separate from non-prod Worker):**
+> **Prod secrets are scoped to the prod Worker.** Uploading secrets without `--env production` only
+> covers the `*.workers.dev` Worker. Prod always needs `--env production`.
+
+#### Step 0 — Install and build packages
 
 ```bash
-pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
-pnpm exec wrangler secret put SUPABASE_JWT_SECRET --env production
-pnpm exec wrangler secret list --env production
+# From solvapay-sdk root
+pnpm install
+pnpm -w build:packages
 ```
 
-**2. Prod build env:**
+#### Step 1 — Prod Worker secrets (one-time)
+
+```bash
+cd examples/checkout-demo
+
+# Interactive:
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
+pnpm exec wrangler secret put SUPABASE_JWT_SECRET --env production
+
+# Or pipe from local .env (use printf to avoid trailing-newline corruption on keys with + or =):
+grep '^SOLVAPAY_SECRET_KEY=' .env | cut -d= -f2- | pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
+grep '^SUPABASE_JWT_SECRET=' .env | cut -d= -f2- | pnpm exec wrangler secret put SUPABASE_JWT_SECRET --env production
+
+pnpm exec wrangler secret list --env production
+# Expected: SOLVAPAY_SECRET_KEY, SUPABASE_JWT_SECRET
+```
+
+To **rotate** a secret later, run the same `wrangler secret put` command again — no rebuild required
+unless you also change build-time vars.
+
+#### Step 2 — Prod build env (`.env.prod`)
 
 ```bash
 cp .env.prod.example .env.prod
-# Fill NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF, NEXT_PUBLIC_SUPABASE_* (ganvogeprtezdpakybib)
 ```
 
-**3. Deploy:**
+Edit `.env.prod` (gitignored). Minimum required fields:
+
+```bash
+# Baked into the client bundle at build time (pnpm build:opennext:prod)
+NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF=prd_your_product_ref   # must match merchant for SOLVAPAY_SECRET_KEY
+NEXT_PUBLIC_SUPABASE_URL=https://ganvogeprtezdpakybib.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Deploy-time Worker var (must match the API that issued SOLVAPAY_SECRET_KEY)
+SOLVAPAY_API_BASE_URL=https://api.solvapay.com
+```
+
+`next.config.mjs` also accepts `SOLVAPAY_PRODUCT_REF` or `NEXT_PUBLIC_PRODUCT_REF` at build time, but
+`.env.prod.example` standardizes on `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF`.
+
+**Do not** put `SOLVAPAY_SECRET_KEY` or `SUPABASE_JWT_SECRET` in `.env.prod` — those are Worker secrets
+(step 1).
+
+#### Step 3 — Build and deploy
 
 ```bash
 pnpm run deploy:cf:prod
 ```
 
+This runs, in order:
+
+1. `pnpm -w build:packages` — rebuild SDK workspace packages
+2. `pnpm build:opennext:prod` — OpenNext production build with `.env.prod` (bakes `NEXT_PUBLIC_*`)
+3. `node scripts/deploy.mjs --prod` — `wrangler deploy --env production` (+ `--var SOLVAPAY_API_BASE_URL` from `.env.prod`)
+
+#### Step 4 — Verify
+
+```bash
+# Public API (no auth) — should return 200 with plans JSON
+curl -sS -o /dev/null -w "%{http_code}\n" \
+  "https://web-app-demo.solvapay.app/api/list-plans?productRef=YOUR_PRODUCT_REF"
+
+# Browser
+open https://web-app-demo.solvapay.app/checkout
+```
+
+Expected: HTTP 200 on list-plans; checkout shows plan selection after sign-in (not "Missing
+NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF" or Cloudflare 1101).
+
+#### Step 5 — Supabase OAuth (if testing sign-in on prod)
+
+Complete [Supabase prod redirect](#supabase-prod-redirect-required-before-oauth-on-prod) before Google
+or email OAuth on `web-app-demo.solvapay.app`.
+
 ### Troubleshooting
 
-| Symptom                                     | Fix                                                                                                                                                                                  |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| CF `error code: 1101` on `/api/*`           | Missing secrets — `wrangler secret list --env production`                                                                                                                            |
-| `Product not found: prd_…`                  | `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY`                                                                                  |
-| `/checkout` shows "This page couldn't load" | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod`                                                     |
-| `Failed to fetch plans: 401` on `/checkout` | `SOLVAPAY_API_BASE_URL` must match the Worker secret: sandbox/dev keys → `https://api-dev.solvapay.com`; live keys → `https://api.solvapay.com`. Redeploy after updating `.env.prod` |
-| OAuth redirect error on prod                | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs                                                                                                      |
-| OpenNext build: Node middleware             | Use `middleware.ts` (not `proxy.ts`) until OpenNext supports Next 16 `proxy`                                                                                                         |
+| Symptom                                              | Fix                                                                                                                                                   |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CI: `ERR_PNPM_OUTDATED_LOCKFILE` for `checkout-demo` | From repo root: `pnpm install`, commit updated `pnpm-lock.yaml`                                                                                       |
+| CF `error code: 1101` on `/api/*`                    | Missing secrets — `wrangler secret list --env production`; re-run step 1                                                                              |
+| `Product not found: prd_…`                           | `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY`                                                   |
+| `/checkout` shows "This page couldn't load"          | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod`                      |
+| `Failed to fetch plans: 401` on `/checkout`          | `SOLVAPAY_API_BASE_URL` must match the Worker secret's API — see [Two value paths](#two-value-paths-read-this-first). Update `.env.prod` and redeploy |
+| OAuth redirect error on prod                         | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs                                                                       |
+| OpenNext build: Node middleware                      | Use `middleware.ts` (not `proxy.ts`) until OpenNext supports Next 16 `proxy`                                                                          |
+| `wrangler whoami` missing SolvaPay account           | Request access to Cloudflare account `98aefe33182e11a1b0e5d7fa89a12a6d`                                                                               |
 
 ## Demo Flow
 
@@ -437,10 +552,14 @@ checkout-demo/
 │   ├── layout.tsx                # Root layout with SolvaPayProvider
 │   └── page.tsx                  # Home with locked content
 ├── middleware.ts                 # Supabase JWT auth on /api/* (Edge)
+├── wrangler.jsonc                # Cloudflare Worker config (prod: web-app-demo.solvapay.app)
+├── scripts/deploy.mjs            # Deploy wrapper (sources .env / .env.prod)
+├── open-next.config.ts           # OpenNext Cloudflare adapter config
+├── .env.prod.example             # Prod build/deploy env template (copy to .env.prod)
+├── .dev.vars.example             # Local wrangler dev secrets template
 ├── package.json
 ├── next.config.mjs
 ├── tsconfig.json
-├── env.example
 └── README.md
 ```
 
@@ -528,14 +647,14 @@ This demo uses Supabase authentication middleware by default (`middleware.ts`):
 
 ## Environment Variables
 
-| Variable                           | Description                                                                   | Required |
-| ---------------------------------- | ----------------------------------------------------------------------------- | -------- |
-| `SOLVAPAY_SECRET_KEY`              | Your SolvaPay secret key                                                      | Yes      |
-| `SOLVAPAY_API_BASE_URL`            | Backend URL — must match secret key env (dev: `https://api-dev.solvapay.com`) | No       |
-| `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` | Product reference (client bundle)                                             | No       |
-| `NEXT_PUBLIC_SUPABASE_URL`         | Supabase project URL                                                          | Yes      |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Supabase anon/public key                                                      | Yes      |
-| `SUPABASE_JWT_SECRET`              | Supabase JWT secret (for server verification)                                 | Yes      |
+| Variable                           | Description                                                                          | Required |
+| ---------------------------------- | ------------------------------------------------------------------------------------ | -------- |
+| `SOLVAPAY_SECRET_KEY`              | Your SolvaPay secret key                                                             | Yes      |
+| `SOLVAPAY_API_BASE_URL`            | Backend URL — must match the API that issued `SOLVAPAY_SECRET_KEY` (see deploy docs) | No       |
+| `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` | Product reference (client bundle)                                                    | No       |
+| `NEXT_PUBLIC_SUPABASE_URL`         | Supabase project URL                                                                 | Yes      |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Supabase anon/public key                                                             | Yes      |
+| `SUPABASE_JWT_SECRET`              | Supabase JWT secret (for server verification)                                        | Yes      |
 
 ## Customization
 
@@ -686,11 +805,10 @@ SUPABASE_JWT_SECRET=your_secret_here
 
 **Solution**:
 
-1. Ensure `.env.local` exists in the example directory
-2. Copy from `env.example` if needed: `cp env.example .env.local`
-3. Add your SolvaPay secret key to `.env.local`
-4. Restart the dev server after adding environment variables
-5. Verify the variable name is exactly `SOLVAPAY_SECRET_KEY`
+1. Ensure `.env.local` or `.env` exists in the example directory (run `npx solvapay init` or create manually)
+2. For Cloudflare deploys, upload secrets with `wrangler secret put` (local `.env` is not read in prod)
+3. Restart the dev server after adding environment variables
+4. Verify the variable name is exactly `SOLVAPAY_SECRET_KEY`
 
 ### "Payment intent creation failed"
 
@@ -745,7 +863,7 @@ SUPABASE_JWT_SECRET=your_secret_here
 
 **Solution**:
 
-1. **`/api/list-plans` 401 (public route):** The Worker calls SolvaPay with `SOLVAPAY_SECRET_KEY`. Set `SOLVAPAY_API_BASE_URL` to the API that issued the key — sandbox/dev keys need `https://api-dev.solvapay.com`, not `https://api.solvapay.com`. Update `.env.prod` and run `pnpm run deploy:cf:prod`.
+1. **`/api/list-plans` 401 (public route):** The Worker calls SolvaPay with `SOLVAPAY_SECRET_KEY`. Set `SOLVAPAY_API_BASE_URL` in `.env.prod` to the API that issued the key — keys from `solvapay init` / app.solvapay.com use `https://api.solvapay.com`; dev/staging keys use `https://api-dev.solvapay.com`. Redeploy with `pnpm run deploy:cf:prod`.
 2. **Protected routes 401:** Verify Supabase credentials are correct
 3. Check that `SUPABASE_JWT_SECRET` matches your project settings
 4. Ensure middleware (`middleware.ts`) is properly extracting user ID
