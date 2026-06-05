@@ -63,20 +63,28 @@ See the [Supabase Edge Functions guide](/sdks/typescript/guides/supabase-edge) f
 
 ## Event Types
 
-| Event | Description |
+SolvaPay emits **46 event types** across these domains. `event.type` is fully typed as
+`WebhookEventType`, so your editor autocompletes every name and narrows `event.data.object`
+in a `switch`.
+
+| Domain | Examples |
 |---|---|
-| `payment.succeeded` | Payment successfully processed |
-| `payment.failed` | Payment attempt failed |
-| `payment.refunded` | Refund successfully processed |
-| `payment.refund_failed` | Refund attempt failed |
-| `purchase.created` | New purchase created |
-| `purchase.updated` | Purchase modified |
-| `purchase.cancelled` | Purchase cancelled |
-| `purchase.expired` | Purchase expired |
-| `purchase.suspended` | Purchase suspended |
-| `customer.created` | Customer created |
-| `customer.updated` | Customer updated |
-| `customer.deleted` | Customer deleted |
+| **Customer** | `customer.created`, `customer.updated`, `customer.deleted` |
+| **Purchase & subscription** | `purchase.created`, `purchase.activated`, `purchase.renewed`, `purchase.past_due`, `purchase.cancellation_scheduled`, `purchase.cancelled`, `purchase.plan_changed`, `purchase.refunded` |
+| **Payments, refunds & disputes** | `payment.succeeded`, `payment.failed`, `payment.refunded`, `payment.refund_pending`, `payment.canceled`, `payment.disputed`, `payment.dispute_closed` |
+| **Payouts** | `payout.paid`, `payout.failed` |
+| **Checkout** | `checkout_session.created`, `checkout_session.completed`, `checkout_session.expired` |
+| **Credits & wallet** | `customer.credit.topped_up`, `customer.credit.debited`, `customer.credit.low_balance`, `customer.credit.exhausted`, `customer.credit.granted`, `customer.credit.adjusted` |
+| **Usage & metering** | `usage.charged`, `usage.recorded`, `usage.reset` |
+| **Catalog** | `product.created/updated/archived`, `plan.created/updated/archived` |
+
+See the [central Webhooks documentation](/webhooks#event-types) for the full table and per-event payload schemas.
+
+### Subscribing to specific events
+
+Endpoints receive **all events by default**. To receive only a subset, set `enabledEvents`
+when creating/updating the endpoint (empty = all), or choose **Selected events** in the
+Console. See [Choosing which events to receive](/webhooks#choosing-which-events-to-receive).
 
 ## Side effects on Customer and Transaction records
 

@@ -661,6 +661,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/webhooks/event-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List webhook event types
+         * @description Returns the catalog of webhook event types you can subscribe to, grouped by category. Use these `type` values when configuring an endpoint’s `enabledEvents`.
+         */
+        get: operations["WebhookSdkController_listEventTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/webhooks/event-schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the webhook event envelope schema
+         * @description Returns a representative example of the signed webhook payload every endpoint receives. Useful when building and type-checking a webhook handler; the live `type` will be one of the values from `event-types`.
+         */
+        get: operations["WebhookSdkController_getEventSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1936,6 +1976,83 @@ export interface components {
             verifyUrl?: string | null;
             user?: components["schemas"]["UserInfoUserDto"];
             purchase?: components["schemas"]["UserInfoPurchaseDto"];
+        };
+        /**
+         * Event types to subscribe to. Empty array = all events.
+         * @enum {string}
+         */
+        WebhookEventType: "customer.created" | "customer.updated" | "customer.deleted" | "purchase.created" | "purchase.activated" | "purchase.updated" | "purchase.trial_ending" | "purchase.trial_converted" | "purchase.suspended" | "purchase.past_due" | "purchase.cancellation_scheduled" | "purchase.cancelled" | "purchase.reactivated" | "purchase.expired" | "purchase.renewed" | "purchase.renewal_reminder" | "purchase.refunded" | "purchase.plan_changed" | "payment.succeeded" | "payment.failed" | "payment.refunded" | "payment.refund_failed" | "payment.refund_pending" | "payment.canceled" | "payment.disputed" | "payment.dispute_closed" | "payout.paid" | "payout.failed" | "checkout_session.created" | "checkout_session.completed" | "checkout_session.expired" | "customer.credit.topped_up" | "customer.credit.low_balance" | "customer.credit.exhausted" | "customer.credit.debited" | "customer.credit.granted" | "customer.credit.adjusted" | "usage.charged" | "usage.recorded" | "usage.reset" | "product.created" | "product.updated" | "product.archived" | "plan.created" | "plan.updated" | "plan.archived";
+        WebhookEventDefinitionDto: {
+            /** @example purchase.created */
+            type: components["schemas"]["WebhookEventType"];
+            /** @description Human-readable description of the event. */
+            description: string;
+            /**
+             * Emission status.
+             * @example live
+             * @enum {string}
+             */
+            status: "live" | "planned";
+        };
+        WebhookEventCategoryDto: {
+            /**
+             * Category key.
+             * @example purchase
+             */
+            category: string;
+            /**
+             * Human-readable category label.
+             * @example Purchases & subscriptions
+             */
+            label: string;
+            /** @description Category description. */
+            description: string;
+            /** @description Events in this category. */
+            events: components["schemas"]["WebhookEventDefinitionDto"][];
+        };
+        WebhookEventDataDto: {
+            /** @description The resource that the event relates to. */
+            object: {
+                [key: string]: unknown;
+            };
+            /** @description For *.updated events, the previous values of changed attributes. */
+            previous_attributes?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        WebhookEventRequestDto: {
+            /** @description ID of the API request that triggered the event. */
+            id: Record<string, never> | null;
+            /** @description Idempotency key of the triggering request. */
+            idempotency_key: Record<string, never> | null;
+        };
+        WebhookEventDto: {
+            /**
+             * Unique event ID.
+             * @example evt_1A2B3C4D
+             */
+            id: string;
+            /** @example purchase.created */
+            type: components["schemas"]["WebhookEventType"];
+            /**
+             * Unix timestamp (seconds) when the event was created.
+             * @example 1717000000
+             */
+            created: number;
+            /**
+             * API version that produced the event payload.
+             * @example 2024-01-01
+             */
+            api_version: string;
+            /** @description Event payload envelope. */
+            data: components["schemas"]["WebhookEventDataDto"];
+            /**
+             * True for live-mode events, false for sandbox.
+             * @example true
+             */
+            livemode: boolean;
+            /** @description Context about the triggering API request. */
+            request: components["schemas"]["WebhookEventRequestDto"];
         };
     };
     responses: never;
@@ -3316,6 +3433,44 @@ export interface operations {
                         /** @enum {string} */
                         kind: "none";
                     };
+                };
+            };
+        };
+    };
+    WebhookSdkController_listEventTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEventCategoryDto"][];
+                };
+            };
+        };
+    };
+    WebhookSdkController_getEventSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEventDto"];
                 };
             };
         };
