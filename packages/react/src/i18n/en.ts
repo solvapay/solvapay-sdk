@@ -175,10 +175,11 @@ export const enCopy: SolvaPayCopy = {
   },
   account: {
     currentPlanAndUsage: 'Current plan and usage',
-    payAsYouGoTitle: "You're on pay-as-you-go credits",
+    payAsYouGoTitle: 'Credits',
     payAsYouGoBody: 'Top up to keep going, or pick a plan for predictable monthly billing.',
-    noPlanTitle: "You don't have an active plan",
-    noPlanBody: 'Pick a plan — free, pay-as-you-go, or paid — to get started.',
+    noPlanTitle: 'Pick a plan',
+    noPlanBody:
+      'Choose a free, pay-as-you-go, or paid plan to start using this MCP server.',
     seePlansButton: 'See plans',
     pickPlanButton: 'Pick a plan',
   },

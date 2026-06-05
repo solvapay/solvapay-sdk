@@ -72,6 +72,67 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('renews May')
     expect(text).toContain('Balance: 100 credits')
   })
+
+  it('shows cost per call for usage-based plans from planSnapshot.creditsPerUnit', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                planSnapshot: {
+                  name: 'Pay as you go',
+                  planType: 'usage-based',
+                  creditsPerUnit: 1000,
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: { credits: 5000, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Cost per call: 1,000 credits')
+    expect(text).toContain('Balance: 5,000 credits')
+  })
+
+  it('falls back to data.plans when planSnapshot omits creditsPerUnit', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        plans: [
+          {
+            reference: 'pln_payg',
+            name: 'Pay as you go',
+            planType: 'usage-based',
+            creditsPerUnit: 1000,
+          } as never,
+        ],
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                planRef: 'pln_payg',
+                planSnapshot: {
+                  name: 'Pay as you go',
+                  planType: 'usage-based',
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: { credits: 2000, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Cost per call: 1,000 credits')
+  })
 })
 
 describe('narrateUpgrade', () => {

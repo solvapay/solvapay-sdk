@@ -4,12 +4,11 @@
  * `useAutoActivateFreePlan` — silently activates the product's free plan
  * when the backend reports `activationRequired: true`.
  *
- * Some product configurations (e.g. a default usage-based plan that
- * needs explicit activation) leave fresh customers with `remaining: 0`
- * until they trigger a 402. Wiring this hook in flips the customer
- * onto the free tier the moment `useLimits` reports
- * `activationRequired: true`, so the UI never has to show the
- * misleading "0 left" state.
+ * Primary enrollment for free + non-usage-based default plans now happens
+ * server-side: the first `checkLimits` call auto-creates a Purchase with
+ * `origin: 'free_default'`. This hook remains a defensive fallback for
+ * paid-default products that expose a free fallback plan, for hosts that
+ * skip the limits pre-check, or when auto-enrollment fails transiently.
  *
  * Use the returned `pending` flag as a skeleton gate so the UI doesn't
  * commit to "0 left" between the limits fetch and the post-activation

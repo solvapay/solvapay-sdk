@@ -1,8 +1,13 @@
 # @solvapay/server
 
-Universal server SDK for Node.js and edge runtimes. Includes API client, paywall protection, and webhook verification.
+[![npm version](https://img.shields.io/npm/v/@solvapay/server.svg)](https://www.npmjs.com/package/@solvapay/server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Works in**: Node.js, Vercel Edge Functions, Cloudflare Workers, Deno, Supabase Edge Functions, and more.
+Universal server SDK for Node.js and edge runtimes — API client, paywall protection, and webhook verification.
+
+**When to use this package:** protect HTTP routes, Next.js handlers, background jobs, or low-level MCP tool handlers. For a full MCP server with transport tools and widget UI, prefer [`npm create solvapay@latest <name> -- --type mcp`](https://www.npmjs.com/package/create-solvapay) or [`@solvapay/mcp`](../mcp/README.md).
+
+**Works in:** Node.js, Vercel Edge, Cloudflare Workers, Deno, Supabase Edge Functions, and more.
 
 ## Install
 
@@ -10,467 +15,123 @@ Universal server SDK for Node.js and edge runtimes. Includes API client, paywall
 pnpm add @solvapay/server
 ```
 
-## Usage
+## Quickstart
 
-### Basic Client
+```typescript
+import { createSolvaPay } from '@solvapay/server'
 
-The same imports work in **Node.js and edge runtimes**. The correct implementation is automatically selected:
+const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
+const payable = solvaPay.payable({ product: 'prd_YOUR_PRODUCT' })
 
-```ts
+app.post('/tasks', payable.http(async args => ({ id: 'task_1', ...args })))
+```
+
+Guide: [Express integration](https://docs.solvapay.com/sdks/typescript/guides/express)
+
+### Basic client
+
+The same imports work in Node and edge runtimes — the correct crypto implementation is selected automatically:
+
+```typescript
 import { createSolvaPayClient, verifyWebhook } from '@solvapay/server'
 
-// Works in Node.js, Edge Functions, Cloudflare Workers, Deno, etc.
 const apiClient = createSolvaPayClient({
   apiKey: process.env.SOLVAPAY_SECRET_KEY!,
 })
 
-// Auto-selects Node crypto or Web Crypto based on runtime
-const event = await verifyWebhook({
-  body,
-  signature,
-  secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
-})
-```
-
-**Edge Runtime Examples:**
-
-```ts
-// Supabase Edge Function
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createSolvaPayClient, verifyWebhook } from 'https://esm.sh/@solvapay/server@latest'
-
-const solvapay = createSolvaPayClient({
-  apiKey: Deno.env.get('SOLVAPAY_SECRET_KEY')!,
-})
-
-// Vercel Edge Function
-import { createSolvaPayClient } from '@solvapay/server'
-
-export const runtime = 'edge'
-const solvapay = createSolvaPayClient({
-  apiKey: process.env.SOLVAPAY_SECRET_KEY!,
-})
+const event = await verifyWebhook({ body, signature, secret: process.env.SOLVAPAY_WEBHOOK_SECRET! })
 ```
 
 ### Web-standards runtimes — `@solvapay/server/fetch` subpath
 
-For Deno / Supabase Edge / Cloudflare Workers / Bun / Next edge /
-Vercel Functions deploys, use the `./fetch` subpath export. Every
-SolvaPay route ships as a ready-made `(req: Request) => Promise<Response>`
-handler with CORS + JSON serialisation baked in, so each Edge Function
-is a one-liner:
+For Deno / Supabase Edge / Cloudflare Workers / Bun, use ready-made `(req: Request) => Promise<Response>` handlers:
 
-```ts
+```typescript
 // supabase/functions/check-purchase/index.ts
 import { checkPurchase } from '@solvapay/server/fetch'
 
 Deno.serve(checkPurchase)
 ```
 
-Available handlers: `checkPurchase`, `trackUsage`, `createPaymentIntent`,
-`processPayment`, `createTopupPaymentIntent`, `customerBalance`,
-`cancelRenewal`, `reactivateRenewal`, `activatePlan`, `getPaymentMethod`,
-`listPlans`, `syncCustomer`, `createCheckoutSession`,
-`createCustomerSession`, `getMerchant`, `getProduct`, `solvapayWebhook`.
+Available handlers include `checkPurchase`, `createPaymentIntent`, `processPayment`, `listPlans`, `syncCustomer`, `createCheckoutSession`, `createCustomerSession`, `solvapayWebhook`, and more.
 
-Configure CORS for production origins:
+Guide: [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) · Example: [`examples/supabase-edge`](../../examples/supabase-edge)
 
-```ts
-import { checkPurchase, configureCors } from '@solvapay/server/fetch'
+### Paywall adapters
 
-configureCors({ origins: ['https://myapp.com', 'http://localhost:5173'] })
+```typescript
+const payable = solvaPay.payable({ product: 'my-product' })
 
-Deno.serve(checkPurchase)
+app.post('/tasks', payable.http(handler))           // Express / Fastify
+export const POST = payable.next(handler)           // Next.js App Router
+server.setRequestHandler(..., payable.mcp(handler)) // MCP (low-level)
+const fn = await payable.function(handler)          // Direct / jobs / tests
 ```
 
-Webhook handler (verifies the `SV-Signature` header via Web Crypto,
-returns 401 on invalid signatures, 500 on handler failures):
+| Adapter | Use when |
+| --- | --- |
+| `payable.http()` | Express, Fastify, traditional HTTP |
+| `payable.next()` | Next.js App Router |
+| `payable.mcp()` | MCP tool handlers (low-level) |
+| `payable.function()` | Tests, cron, non-HTTP contexts |
 
-```ts
-import { solvapayWebhook } from '@solvapay/server/fetch'
+### Authentication
 
-Deno.serve(
-  solvapayWebhook({
-    secret: Deno.env.get('SOLVAPAY_WEBHOOK_SECRET')!,
-    onEvent: async event => {
-      if (event.type === 'purchase.created') {
-        // handle new purchase
-      }
-    },
-  }),
-)
-```
+Integrate `@solvapay/auth` via `getCustomerRef`. Fail closed on missing auth — do not fall back to shared identities like `anonymous`:
 
-Full reference implementation in
-[`examples/supabase-edge`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge).
-
-> **History**: the `./fetch` subpath was formerly shipped as the
-> standalone package `@solvapay/fetch@1.0.0` (renamed from
-> `@solvapay/supabase@1.0.1`). It was folded into `@solvapay/server`
-> in `@solvapay/server@1.0.8` — see the CHANGELOG for the migration
-> one-liner.
-
-### Paywall Protection
-
-Use the unified payable API to protect your endpoints and functions with usage limits and metered billing:
-
-```ts
-import { createSolvaPay } from '@solvapay/server';
-
-// Create SolvaPay instance with your API key
-const solvaPay = createSolvaPay({
-  apiKey: process.env.SOLVAPAY_SECRET_KEY!
-});
-
-// Create a payable with your product configuration
-const payable = solvaPay.payable({ product: 'my-product' });
-
-// Use the appropriate adapter for your context:
-
-// For HTTP frameworks (Express, Fastify)
-app.post('/tasks', payable.http(async (args) => {
-  return { result: 'success' };
-}));
-
-// For Next.js App Router
-export const POST = payable.next(async (args) => {
-  return { result: 'success' };
-});
-
-// For MCP servers
-server.setRequestHandler(ListToolsRequestSchema, payable.mcp(async (args) => {
-  return { tools: [...] };
-}));
-
-// For direct function protection (testing, background jobs)
-const protectedHandler = await payable.function(async (args) => {
-  return { result: 'success' };
-});
-
-const result = await protectedHandler({
-  auth: { customer_ref: 'customer_123' }
-});
-```
-
-### Authentication Integration
-
-You can integrate authentication adapters from `@solvapay/auth` with the `getCustomerRef` option:
-
-```ts
-import { createSolvaPay } from '@solvapay/server'
+```typescript
 import { SupabaseAuthAdapter } from '@solvapay/auth/supabase'
 
-const auth = new SupabaseAuthAdapter({
-  jwtSecret: process.env.SUPABASE_JWT_SECRET!,
+const auth = new SupabaseAuthAdapter({ jwtSecret: process.env.SUPABASE_JWT_SECRET! })
+
+export const POST = payable.next(handler, {
+  getCustomerRef: async req => {
+    const userId = await auth.getUserIdFromRequest(req)
+    if (!userId) throw new Error('Unauthorized')
+    return userId
+  },
 })
-
-const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
-
-// Use with Next.js adapter
-export const POST = solvaPay.payable({ product: 'my-api' }).next(
-  async args => {
-    return { result: 'success' }
-  },
-  {
-    getCustomerRef: async req => {
-      const userId = await auth.getUserIdFromRequest(req)
-      if (!userId) {
-        throw new Error('Unauthorized')
-      }
-      return userId
-    },
-  },
-)
 ```
-
-This automatically extracts the user ID from authentication tokens and uses it as the customer reference for paywall checks.
-Fail closed on missing/invalid auth. Do not fall back to shared identities like `anonymous`.
 
 ### MCP servers
 
-`@solvapay/server` is framework-free. For a full SolvaPay MCP server
-(transport tools + `open_*` bootstrap tools + UI resource) use
-[`@solvapay/mcp`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp)'s
-`createSolvaPayMcpServer` — the official `@modelcontextprotocol/sdk`
-adapter. For framework-neutral descriptors (`fastmcp`, raw JSON-RPC),
-use
-[`@solvapay/mcp-core`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp-core)'s
-`buildSolvaPayDescriptors`. OAuth-bridge middleware ships as runtime-
-specific subpath exports of `@solvapay/mcp`:
-[`@solvapay/mcp/express`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp/src/express)
-(`createMcpOAuthBridge`) for Node, and
-[`@solvapay/mcp/fetch`](https://github.com/solvapay/solvapay-sdk/tree/main/packages/mcp/src/fetch)
-(`createSolvaPayMcpFetchHandler`, `createSolvaPayMcpFetch`) for
-Web-standards runtimes (Deno / Supabase Edge / Cloudflare Workers /
-Bun / Next edge / Vercel Functions). JWT bearer helpers
-(`getCustomerRefFromBearerAuthHeader`, `McpBearerAuthError`) live
-in `@solvapay/mcp-core`.
+`@solvapay/server` is framework-free. For batteries-included MCP:
 
-For MCP bearer-token flows, import the helpers from `@solvapay/mcp-core`:
+- **New apps:** [`npm create solvapay@latest <name> -- --type mcp`](https://www.npmjs.com/package/create-solvapay)
+- **Official adapter:** [`@solvapay/mcp`](../mcp/README.md) — `createSolvaPayMcpServer`
+- **Custom adapters:** [`@solvapay/mcp-core`](../mcp-core/README.md) — descriptors + OAuth JSON
+- **OAuth middleware:** `@solvapay/mcp/express` (Node) or `@solvapay/mcp/fetch` (edge)
 
-```ts
-import {
-  getCustomerRefFromBearerAuthHeader,
-  McpBearerAuthError,
-} from '@solvapay/mcp-core'
+Guide: [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp)
 
-const handler = solvaPay.payable({ product: 'my-api' }).mcp(
-  async args => ({ ok: true }),
-  {
-    getCustomerRef: args => {
-      try {
-        return getCustomerRefFromBearerAuthHeader(args._authHeader as string | undefined)
-      } catch (error) {
-        if (error instanceof McpBearerAuthError) {
-          throw new Error('Unauthorized')
-        }
-        throw error
-      }
-    },
-  },
-)
-```
+## API client methods
 
-`payable({ getCustomerRef })` is now supported as a default extractor across adapters. Adapter-level
-`getCustomerRef` still takes precedence when both are provided.
+`createSolvaPayClient` implements:
 
-### When to Use Each Adapter
+- `checkLimits(params)` — usage limits; auto-enrolls on first call for free default plans
+- `trackUsage(params)` — metered billing
+- `createCustomer(params)` / `getCustomer(params)` — customer lifecycle
 
-Choose the adapter based on your context:
+Full reference: [Server SDK docs](https://docs.solvapay.com/sdks/typescript/intro)
 
-- **`payable.http()`** - Use with Express, Fastify, or other traditional HTTP frameworks
-  - Handles request/response objects automatically
-  - Extracts args from body, params, query
-  - Formats errors as HTTP responses
+## Contributing
 
-- **`payable.next()`** - Use with Next.js App Router API routes
-  - Works with Web Request/Response APIs
-  - Handles route parameters and context
-  - Returns proper Response objects
+Type generation and integration-test details live in contributor docs — not duplicated here:
 
-- **`payable.mcp()`** - Use with Model Context Protocol servers
-  - Wraps responses in MCP format
-  - Handles MCP-specific error reporting
-  - Provides structured content
+- [SDK testing guide](../../docs/contributing/testing.md)
+- [Type generation](../../packages/server/src/types/README.md) — `pnpm --filter @solvapay/server generate:types`
+- [Architecture](../../docs/contributing/architecture.md)
 
-- **`payable.function()`** - Use for direct function protection
-  - No framework overhead
-  - Perfect for testing
-  - Use in background jobs, cron tasks, or non-HTTP contexts
+## See also
 
-## API Client Methods
+- [`@solvapay/mcp`](../mcp) — official MCP SDK adapter
+- [`@solvapay/mcp-core`](../mcp-core) — framework-neutral MCP contracts
+- [`@solvapay/auth`](../auth) — auth adapters
+- [`@solvapay/next`](../next) — Next.js API route helpers
+- [`create-solvapay`](../create-solvapay) — scaffold new MCP apps
 
-The `createSolvaPayClient` returns an object implementing `SolvaPayClient`:
+## Support
 
-- `checkLimits(params)` - Check if customer is within usage limits
-- `trackUsage(params)` - Track usage for metered billing
-- `createCustomer(params)` - Create a new customer
-- `getCustomer(params)` - Get customer details by reference
-
-## Type Generation
-
-This package supports automatic TypeScript type generation from the SolvaPay backend OpenAPI specification.
-
-### Generating Types
-
-To generate types from your locally running backend:
-
-```bash
-# Ensure your backend is running on http://localhost:3001
-# Then run:
-pnpm generate:types
-```
-
-This will fetch the OpenAPI spec from `http://localhost:3001/v1/openapi.json` and generate TypeScript types in `src/types/generated.ts`. Only `/v1/sdk/` routes are included in the generated types.
-
-### Using Generated Types
-
-```typescript
-import type { paths, components } from './types/generated'
-
-// Use path operation types
-type CheckLimitsRequest =
-  paths['/v1/sdk/limits']['post']['requestBody']['content']['application/json']
-type CheckLimitsResponse =
-  paths['/v1/sdk/limits']['post']['responses']['200']['content']['application/json']
-
-// Use component schemas
-type Agent = components['schemas']['Agent']
-type Plan = components['schemas']['Plan']
-```
-
-**Note:** The generated types complement the existing hand-written types in `src/types/client.ts`. Run `pnpm generate:types` whenever the backend API changes to keep types in sync.
-
-## Testing
-
-This package includes comprehensive tests for SDK functionality, including unit tests and integration tests with real backend.
-
-### Running Tests
-
-```bash
-# Run unit tests only (fast, uses mock backend)
-pnpm test
-
-# Run integration tests (requires real backend)
-pnpm test:integration
-
-# Run all tests
-pnpm test:all
-
-# Run all tests with real backend
-pnpm test:all:integration
-
-# Watch mode
-pnpm test:watch
-```
-
-### Unit Tests
-
-Unit tests (`__tests__/paywall.unit.test.ts`, `__tests__/mcp-auth.unit.test.ts`) use a mock API client and test:
-
-- Paywall protection logic
-- Handler creation (HTTP, Next.js, MCP)
-- Error handling
-- Authentication flows
-- Product resolution
-
-**No backend required** - runs fast and deterministically.
-
-### Integration Tests
-
-Integration tests (`__tests__/backend.integration.test.ts`) connect to a real SolvaPay backend and test:
-
-- SDK API methods with real responses
-- Actual limit enforcement
-- Real usage tracking
-- Multi-framework handlers with backend
-- Error handling with real backend responses
-
-**Setup required:**
-
-Set environment variables before running tests:
-
-```bash
-# Option 1: Export in your shell (persists in session)
-export USE_REAL_BACKEND=true
-export SOLVAPAY_SECRET_KEY=your_secret_key_here
-export SOLVAPAY_API_BASE_URL=http://localhost:3001  # optional, defaults to dev API
-pnpm test:integration
-
-# Option 2: Inline with command (single use)
-USE_REAL_BACKEND=true SOLVAPAY_SECRET_KEY=your_key pnpm test:integration
-```
-
-**Note:** Integration tests are automatically skipped if `USE_REAL_BACKEND` or `SOLVAPAY_SECRET_KEY` are not set. This allows CI/CD to run unit tests without backend credentials.
-
-### Payment Integration Tests (Stripe)
-
-Payment tests (`__tests__/payment-stripe.integration.test.ts`) verify the complete payment flow with Stripe:
-
-- Creating payment intents
-- Confirming payments with test cards
-- Webhook processing (optional)
-- Credit management and usage tracking
-
-**Required Setup:**
-
-```bash
-export USE_REAL_BACKEND=true
-export SOLVAPAY_SECRET_KEY=your_secret_key_here
-export STRIPE_TEST_SECRET_KEY=sk_test_your_stripe_key
-export SOLVAPAY_API_BASE_URL=http://localhost:3001
-```
-
-**Optional - Webhook Tests:**
-
-The E2E webhook test is skipped by default because it requires Stripe webhooks to be forwarded to your local backend. To enable webhook testing:
-
-1. **Install Stripe CLI:**
-
-   ```bash
-   # macOS
-   brew install stripe/stripe-cli/stripe
-
-   # Linux / Windows - see https://stripe.com/docs/stripe-cli
-   ```
-
-2. **Login to Stripe:**
-
-   ```bash
-   stripe login
-   ```
-
-3. **Forward webhooks to your local backend:**
-
-   ```bash
-   # Terminal 1: Start your backend
-   cd path/to/solvapay-backend
-   pnpm dev
-
-   # Terminal 2: Forward Stripe webhooks
-   stripe listen --forward-to localhost:3001/webhooks/stripe
-   ```
-
-4. **Run payment tests with webhook testing enabled:**
-   ```bash
-   ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
-   ```
-
-The Stripe CLI will forward webhook events from Stripe to your local backend, allowing the E2E test to verify the complete payment flow including webhook processing.
-
-### Debugging and Logging
-
-The SDK and tests provide environment variable controls for logging:
-
-**SDK Debug Logging**
-
-Enable detailed logging for SDK operations (API calls, responses, errors):
-
-```bash
-# Enable SDK debug logging
-export SOLVAPAY_DEBUG=true
-
-# Run tests or your application
-pnpm test:integration
-```
-
-**Test Verbose Logging**
-
-Enable verbose logging for integration test progress and debug information:
-
-```bash
-# Enable verbose test logging (test setup, progress, debug info)
-export VERBOSE_TEST_LOGS=true
-
-# Run integration tests
-pnpm test:integration
-```
-
-**Combined Usage:**
-
-```bash
-# Enable all logging for maximum debugging
-SOLVAPAY_DEBUG=true VERBOSE_TEST_LOGS=true pnpm test:integration
-
-# Quiet mode (default) - minimal output
-pnpm test:integration
-```
-
-By default, both are **disabled** to keep test output clean and readable. Enable them when troubleshooting test failures or debugging SDK behavior.
-
-### CI/CD
-
-```yaml
-# Always run unit tests
-- name: Run unit tests
-  run: pnpm test
-
-# Optionally run integration tests if secrets available
-- name: Run integration tests
-  if: ${{ secrets.SOLVAPAY_SECRET_KEY != '' }}
-  env:
-    SOLVAPAY_SECRET_KEY: ${{ secrets.SOLVAPAY_SECRET_KEY }}
-  run: pnpm test:integration
-```
-
-More: [docs/contributing/architecture.md](../../docs/contributing/architecture.md)
+- **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
+- **Security**: [Security Policy](https://github.com/solvapay/solvapay-sdk/blob/main/SECURITY.md)
+- **Docs**: [docs.solvapay.com/sdks/typescript](https://docs.solvapay.com/sdks/typescript/intro)

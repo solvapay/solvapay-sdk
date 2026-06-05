@@ -1,87 +1,37 @@
 # @solvapay/core
 
-Shared types, schemas, errors, and utilities used across all SolvaPay SDK packages.
+[![npm version](https://img.shields.io/npm/v/@solvapay/core.svg)](https://www.npmjs.com/package/@solvapay/core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This package is **runtime-agnostic** -- it contains no Node.js or browser globals and has `"sideEffects": false`.
+Shared types, schemas, errors, and utilities used across all SolvaPay SDK packages. Runtime-agnostic — no Node.js or browser globals.
+
+**When to use this package:** rarely install directly. It is pulled in automatically by `@solvapay/server`, `@solvapay/react`, and other packages. Install only if you need shared types or `SolvaPayError` without a full SDK surface.
 
 ## Install
 
 ```bash
-npm install @solvapay/core
-# or
-yarn add @solvapay/core
-# or
 pnpm add @solvapay/core
 ```
 
-## Exports
-
-### `SolvaPayError`
-
-Base error class for all SolvaPay SDK errors. Useful for catching SDK-specific errors:
+## Key exports
 
 ```typescript
-import { SolvaPayError } from '@solvapay/core'
-
-try {
-  const config = getSolvaPayConfig()
-} catch (error) {
-  if (error instanceof SolvaPayError) {
-    console.error('SolvaPay error:', error.message)
-  }
-}
-```
-
-### `SolvaPayConfig`
-
-Configuration interface for the SDK:
-
-```typescript
+import { SolvaPayError, getSolvaPayConfig, Env } from '@solvapay/core'
 import type { SolvaPayConfig } from '@solvapay/core'
-
-const config: SolvaPayConfig = {
-  apiKey: 'sk_live_...',
-  apiBaseUrl: 'https://api.solvapay.com', // optional
-}
 ```
 
-### `getSolvaPayConfig()`
+- `SolvaPayError` — base error class for SDK errors
+- `SolvaPayConfig` / `getSolvaPayConfig()` — config from `SOLVAPAY_SECRET_KEY` env
+- `Env` — Zod schema for env validation
+- `version` — current SDK version string
 
-Validates and returns configuration from environment variables. Reads `SOLVAPAY_SECRET_KEY` and optional `SOLVAPAY_API_BASE_URL`:
+## See also
 
-```typescript
-import { getSolvaPayConfig } from '@solvapay/core'
+- [`@solvapay/server`](../server) — server-side paywall and API client
+- [`@solvapay/react`](../react) — client-side checkout components
+- [Architecture guide](../../docs/contributing/architecture.md) — package boundaries
 
-const config = getSolvaPayConfig()
-// config.apiKey - from SOLVAPAY_SECRET_KEY
-// config.apiBaseUrl - from SOLVAPAY_API_BASE_URL (optional)
-```
+## Support
 
-Throws `SolvaPayError` if `SOLVAPAY_SECRET_KEY` is not set.
-
-### `Env`
-
-Zod schema for validating environment variables:
-
-```typescript
-import { Env } from '@solvapay/core'
-
-const result = Env.safeParse(process.env)
-if (!result.success) {
-  console.error('Invalid environment:', result.error)
-}
-```
-
-### `version`
-
-The current SDK version string.
-
-## When to Use This Package
-
-Most developers don't need to install `@solvapay/core` directly -- it's automatically included as a dependency of `@solvapay/server`, `@solvapay/react`, and other packages. Install it directly only if you need access to the shared types or error classes without pulling in a full SDK package.
-
-## More Information
-
-- [Architecture Guide](../../docs/contributing/architecture.md) - Package design and boundaries
-- [Server SDK](../server/README.md) - Server-side paywall protection
-- [React SDK](../react/README.md) - Client-side payment components
+- **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
+- **Docs**: [docs.solvapay.com/sdks/typescript](https://docs.solvapay.com/sdks/typescript/intro)

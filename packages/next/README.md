@@ -1,322 +1,88 @@
 # @solvapay/next
 
-Next.js-specific utilities and helpers for SolvaPay SDK.
+[![npm version](https://img.shields.io/npm/v/@solvapay/next.svg)](https://www.npmjs.com/package/@solvapay/next)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This package provides framework-specific helpers for Next.js API routes with built-in optimizations like request deduplication and caching.
+Next.js API route helpers for SolvaPay — purchase checks, payments, checkout sessions, and customer portal.
 
-## Installation
+**When to use this package:** you run Next.js App Router API routes and want typed helpers with request deduplication and caching. For Express or other frameworks, use `@solvapay/server` directly.
+
+## Install
 
 ```bash
-npm install @solvapay/next @solvapay/server next
+pnpm add @solvapay/next @solvapay/server next
 ```
 
-## Usage
+Guide: [Next.js integration](https://docs.solvapay.com/sdks/typescript/guides/nextjs)
 
-All helpers return either a success result or a `NextResponse` error, making them easy to use in Next.js API routes.
+## Quickstart
 
-### Check Purchase
-
-Check user purchase status with built-in request deduplication and caching:
+All helpers return either a success result or a `NextResponse` error:
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
-import { checkPurchase } from '@solvapay/next'
+import { checkPurchase, createPaymentIntent } from '@solvapay/next'
 
 export async function GET(request: NextRequest) {
   const result = await checkPurchase(request)
-
-  // If result is a NextResponse, it's an error response - return it
-  if (result instanceof NextResponse) {
-    return result
-  }
-
-  // Otherwise, return the purchase data
-  return NextResponse.json(result)
+  return result instanceof NextResponse ? result : NextResponse.json(result)
 }
-```
-
-**Features:**
-
-- **Automatic Deduplication**: Prevents duplicate API calls by deduplicating concurrent requests
-- **Caching**: Caches results for 2 seconds to prevent duplicate sequential requests
-- **Automatic Cleanup**: Expired cache entries are automatically cleaned up
-- **Memory Safe**: Maximum cache size limits prevent memory issues
-
-### Sync Customer
-
-Sync customer with SolvaPay backend (ensures customer exists and returns customer reference):
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { syncCustomer } from '@solvapay/next'
-
-export async function POST(request: NextRequest) {
-  const result = await syncCustomer(request)
-
-  if (result instanceof NextResponse) {
-    return result
-  }
-
-  return NextResponse.json({ customerRef: result })
-}
-```
-
-### Create Payment Intent
-
-Create a Stripe payment intent for checkout:
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { createPaymentIntent } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
   const { planRef, productRef } = await request.json()
-
-  if (!planRef || !productRef) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
-  }
-
   const result = await createPaymentIntent(request, { planRef, productRef })
   return result instanceof NextResponse ? result : NextResponse.json(result)
 }
 ```
 
-### Process Payment
+Example app: [`examples/checkout-demo`](../../examples/checkout-demo)
 
-Process payment after Stripe confirmation:
+## Helper reference
 
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { processPayment } from '@solvapay/next'
+| Helper | Purpose |
+| --- | --- |
+| `checkPurchase` | Purchase status (deduped + cached) |
+| `syncCustomer` | Ensure customer exists |
+| `createPaymentIntent` / `processPayment` | Embedded checkout |
+| `createCheckoutSession` | Hosted redirect checkout |
+| `createCustomerSession` | Customer portal |
+| `listPlans` | Public plan listing |
+| `cancelRenewal` / `reactivateRenewal` / `activatePlan` | Plan lifecycle |
+| `trackUsage` | Server-side usage metering |
+| `getAuthenticatedUser` | User ID, email, name from headers |
+| `clearPurchaseCache` / `getPurchaseCacheStats` | Cache management |
 
-export async function POST(request: NextRequest) {
-  const { paymentIntentId, productRef, planRef } = await request.json()
+Full signatures and options: [Next.js guide](https://docs.solvapay.com/sdks/typescript/guides/nextjs)
 
-  if (!paymentIntentId || !productRef) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
-  }
+## Middleware
 
-  const result = await processPayment(request, { paymentIntentId, productRef, planRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
-}
-```
-
-### List Plans
-
-List available plans (public route, no authentication required):
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { listPlans } from '@solvapay/next'
-
-export async function GET(request: NextRequest) {
-  const result = await listPlans(request)
-  return result instanceof NextResponse ? result : NextResponse.json(result)
-}
-```
-
-### Cancel Renewal
-
-Cancel renewal of a user's purchase:
+Helpers expect `x-user-id` from middleware. Quick setup with Supabase:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { cancelRenewal } from '@solvapay/next'
-
-export async function POST(request: NextRequest) {
-  const { purchaseRef, reason } = await request.json()
-
-  if (!purchaseRef) {
-    return NextResponse.json({ error: 'Missing purchaseRef' }, { status: 400 })
-  }
-
-  const result = await cancelRenewal(request, { purchaseRef, reason })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
-}
-```
-
-### Create Checkout Session
-
-Create a hosted checkout session:
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { createCheckoutSession } from '@solvapay/next'
-
-export async function POST(request: NextRequest) {
-  const { productRef, planRef } = await request.json()
-
-  if (!productRef) {
-    return NextResponse.json({ error: 'Missing productRef' }, { status: 400 })
-  }
-
-  const result = await createCheckoutSession(request, { productRef, planRef })
-  return result instanceof NextResponse ? result : NextResponse.json(result)
-}
-```
-
-### Create Customer Session
-
-Create a customer portal session:
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { createCustomerSession } from '@solvapay/next'
-
-export async function POST(request: NextRequest) {
-  const result = await createCustomerSession(request)
-  return result instanceof NextResponse ? result : NextResponse.json(result)
-}
-```
-
-### Get Authenticated User
-
-Get authenticated user information (userId, email, name):
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { getAuthenticatedUser } from '@solvapay/next'
-
-export async function GET(request: NextRequest) {
-  const result = await getAuthenticatedUser(request, {
-    includeEmail: true,
-    includeName: true,
-  })
-
-  if (result instanceof NextResponse) {
-    return result
-  }
-
-  return NextResponse.json(result)
-}
-```
-
-### Cache Management
-
-```typescript
-import {
-  clearPurchaseCache,
-  clearAllPurchaseCache,
-  getPurchaseCacheStats,
-} from '@solvapay/next'
-
-// Clear cache for a specific user
-clearPurchaseCache(userId)
-
-// Clear all cache entries
-clearAllPurchaseCache()
-
-// Get cache statistics
-const stats = getPurchaseCacheStats()
-console.log(`In-flight: ${stats.inFlight}, Cached: ${stats.cached}`)
-```
-
-## Helper Functions Reference
-
-All helper functions follow the same pattern:
-
-- Take a `Request` or `NextRequest` as the first parameter
-- Return either the success result or a `NextResponse` error
-- Automatically extract user information from request headers (set by middleware)
-- Support optional configuration options
-
-**Available Helpers:**
-
-- `checkPurchase(request, options?)` - Check purchase with caching
-- `syncCustomer(request, options?)` - Sync customer with backend
-- `createPaymentIntent(request, body, options?)` - Create payment intent
-- `processPayment(request, body, options?)` - Process payment
-- `listPlans(request)` - List available plans (public)
-- `cancelRenewal(request, body, options?)` - Cancel renewal
-- `createCheckoutSession(request, body, options?)` - Create hosted checkout
-- `createCustomerSession(request, options?)` - Create customer portal
-- `getAuthenticatedUser(request, options?)` - Get user info
-
-**Common Options:**
-
-- `solvaPay?: SolvaPay` - Custom SolvaPay instance
-- `includeEmail?: boolean` - Include user email (default: true)
-- `includeName?: boolean` - Include user name (default: true)
-
-## Requirements
-
-- Next.js >= 13.0.0
-- Node.js >= 18.17
-
-## Why a Separate Package?
-
-This package is separate from `@solvapay/server` to keep the server package framework-agnostic. Users who use Express, Fastify, or other frameworks don't need Next.js as a dependency.
-
-## Middleware Setup
-
-These helpers expect the user ID to be set in the `x-user-id` header by your Next.js middleware/proxy.
-
-### Quick Setup with Supabase
-
-The easiest way is to use `createSupabaseAuthMiddleware`:
-
-**For Next.js 15:**
-
-```typescript
-// middleware.ts (at project root)
+// middleware.ts (Next.js 15) or src/proxy.ts (Next.js 16)
 import { createSupabaseAuthMiddleware } from '@solvapay/next'
 
 export const middleware = createSupabaseAuthMiddleware({
   publicRoutes: ['/api/list-plans'],
 })
 
-export const config = {
-  matcher: ['/api/:path*'],
-}
+export const config = { matcher: ['/api/:path*'] }
 ```
 
-**For Next.js 16 with `src/` folder:**
+Next.js 16 renamed middleware to proxy — use `@solvapay/next/middleware` and export `proxy` instead of `middleware` when required.
 
-```typescript
-// src/proxy.ts (in src/ folder, not project root)
-import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
+## Requirements
 
-// Use 'proxy' export for Next.js 16 (no deprecation warning)
-export const proxy = createSupabaseAuthMiddleware({
-  publicRoutes: ['/api/list-plans'],
-})
+- Next.js >= 13.0.0
+- Node.js >= 18.17
 
-export const config = {
-  matcher: ['/api/:path*'],
-}
-```
+## See also
 
-**File Location Notes:**
+- [`@solvapay/server`](../server) — framework-agnostic paywall
+- [`@solvapay/react`](../react) — checkout UI
+- [`@solvapay/auth`](../auth) — auth adapters and `requireUserId`
 
-- **Next.js 15**: Place `middleware.ts` at project root
-- **Next.js 16 without `src/` folder**: Place `proxy.ts` at project root
-- **Next.js 16 with `src/` folder**: Place `src/proxy.ts` (in `src/` folder, not root)
+## Support
 
-> **Note:** Next.js 16 renamed "middleware" to "proxy". Use `proxy` to avoid deprecation warnings.
-
-### Custom Middleware
-
-Alternatively, you can create your own middleware:
-
-```typescript
-// proxy.ts (or src/proxy.ts for Next.js 16)
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-
-export async function proxy(request: NextRequest) {
-  // Extract user ID from your auth system
-  const userId = await getUserIdFromAuth(request)
-
-  // Clone request and add user ID header
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-user-id', userId)
-
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
-}
-```
-
-You can also use the `requireUserId` utility from `@solvapay/auth` in your middleware.
+- **Issues**: [GitHub Issues](https://github.com/solvapay/solvapay-sdk/issues)
+- **Docs**: [docs.solvapay.com/sdks/typescript/guides/nextjs](https://docs.solvapay.com/sdks/typescript/guides/nextjs)

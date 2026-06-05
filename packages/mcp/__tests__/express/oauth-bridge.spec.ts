@@ -276,6 +276,24 @@ describe('createOAuthAuthorizeHandler', () => {
     expect(state.ended).toBe(true)
   })
 
+  it('preserves resource in the upstream authorize redirect', async () => {
+    const handler = createOAuthAuthorizeHandler({ apiBaseUrl })
+    const { res, state } = mockRes()
+    const resource = 'https://mcp.example.com'
+    const query =
+      `?response_type=code&client_id=client_abc&redirect_uri=${encodeURIComponent('cursor://cb')}` +
+      `&resource=${encodeURIComponent(resource)}`
+
+    await handler(
+      mockReq({ method: 'GET', path: '/oauth/authorize', url: `/oauth/authorize${query}` }),
+      res,
+      vi.fn(),
+    )
+
+    expect(state.statusCode).toBe(302)
+    expect(state.headers['location']).toBe(`${apiBaseUrl}/v1/customer/auth/authorize${query}`)
+  })
+
   it('passes through when method is not GET', async () => {
     const handler = createOAuthAuthorizeHandler({ apiBaseUrl })
     const { res, state } = mockRes()
@@ -343,7 +361,11 @@ describe('createOAuthTokenHandler', () => {
         method: 'POST',
         path: '/oauth/token',
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: { grant_type: 'refresh_token', refresh_token: 'rt' },
+        body: {
+          grant_type: 'refresh_token',
+          refresh_token: 'rt',
+          resource: 'https://mcp.example.com',
+        },
       }),
       res,
       vi.fn(),
@@ -354,6 +376,7 @@ describe('createOAuthTokenHandler', () => {
     const parsed = new URLSearchParams(body)
     expect(parsed.get('grant_type')).toBe('refresh_token')
     expect(parsed.get('refresh_token')).toBe('rt')
+    expect(parsed.get('resource')).toBe('https://mcp.example.com')
   })
 })
 
