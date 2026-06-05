@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useBalance, usePurchase } from '@solvapay/react'
+import { useBalance, usePlans, usePurchase } from '@solvapay/react'
 import Link from 'next/link'
 import { getAccessToken } from '../lib/supabase'
 
@@ -16,8 +16,16 @@ export function UsageSimulator() {
   const { credits, adjustBalance } = useBalance()
   const { activePurchase } = usePurchase()
 
-  const productRef = activePurchase?.productRef
-  const creditsPerUnit = activePurchase?.planSnapshot?.creditsPerUnit ?? 1000
+  const productRef =
+    activePurchase?.productRef ?? process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+  const { plans } = usePlans({ productRef: productRef ?? undefined })
+
+  const snapshotCredits = activePurchase?.planSnapshot?.creditsPerUnit
+  const paygCreditsPerUnit = plans.find(plan => plan.type === 'usage-based')?.creditsPerUnit
+  const creditsPerUnit =
+    snapshotCredits != null && snapshotCredits > 0
+      ? snapshotCredits
+      : (paygCreditsPerUnit ?? 1000)
 
   const [query, setQuery] = useState(EXAMPLE_QUERIES[0])
   const [sessionQueries, setSessionQueries] = useState(0)

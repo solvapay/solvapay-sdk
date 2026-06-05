@@ -30,6 +30,9 @@ export default function HomePage() {
 
   const { credits, displayCurrency, creditsPerMinorUnit, loading: balanceLoading } = useBalance()
 
+  const hasCredits = credits != null && credits > 0
+  const hasPremiumAccess = Boolean(activePurchase) || hasCredits
+
   // Combine loading states - only show content when both are loaded
   const isLoading = purchasesLoading || plansLoading
 
@@ -137,8 +140,16 @@ export default function HomePage() {
                 </p>
               )}
             </div>
+          ) : hasCredits ? (
+            <p className="text-slate-600">
+              Pay as you go —{' '}
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {new Intl.NumberFormat().format(credits)} credits
+              </span>{' '}
+              available
+            </p>
           ) : (
-            <p className="text-slate-600">You don't have an active purchase</p>
+            <p className="text-slate-600">You don&apos;t have an active purchase</p>
           )}
         </div>
 
@@ -155,12 +166,12 @@ export default function HomePage() {
           <FeatureCard
             title="Advanced Analytics"
             description="Real-time data analysis with custom dashboards."
-            locked={!isLoading && !activePurchase}
+            locked={!isLoading && !hasPremiumAccess}
           />
           <FeatureCard
             title="Priority Support"
             description="Get help from our team within 24 hours."
-            locked={!isLoading && !activePurchase}
+            locked={!isLoading && !hasPremiumAccess}
           />
         </div>
 
@@ -260,7 +271,7 @@ export default function HomePage() {
         </div>
 
         {/* Usage Simulator - only shown when user has an active purchase */}
-        {!isLoading && activePurchase && <UsageSimulator />}
+        {!isLoading && hasPremiumAccess && <UsageSimulator />}
       </main>
     </div>
   )

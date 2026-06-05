@@ -8,13 +8,14 @@ const mockBalanceRefetch = vi.fn()
 vi.mock('@solvapay/react', () => ({
   useBalance: vi.fn(),
   usePurchase: vi.fn(),
+  usePlans: vi.fn(),
 }))
 
 vi.mock('../../lib/supabase', () => ({
   getAccessToken: vi.fn(() => Promise.resolve('test-token')),
 }))
 
-import { useBalance, usePurchase } from '@solvapay/react'
+import { useBalance, usePurchase, usePlans } from '@solvapay/react'
 
 const fetchMock = vi.fn()
 global.fetch = fetchMock
@@ -36,6 +37,10 @@ function mockDefaults() {
     },
     loading: false,
   } as ReturnType<typeof usePurchase>)
+  vi.mocked(usePlans).mockReturnValue({
+    plans: [{ reference: 'pln_payg', type: 'usage-based', creditsPerUnit: 1000 }],
+    loading: false,
+  } as ReturnType<typeof usePlans>)
 }
 
 describe('UsageSimulator', () => {
@@ -141,6 +146,21 @@ describe('UsageSimulator', () => {
       expect(callBody.description).toBe('What is vector search?')
       expect(callBody.metadata.query).toBe('What is vector search?')
     })
+  })
+
+  it('falls back to PAYG meter when subscription snapshot has creditsPerUnit 0', () => {
+    vi.mocked(usePurchase).mockReturnValue({
+      activePurchase: {
+        productRef: 'prd_TEST',
+        productName: 'Subscription',
+        planSnapshot: { creditsPerUnit: 0, type: 'recurring' },
+      },
+      loading: false,
+    } as ReturnType<typeof usePurchase>)
+
+    render(<UsageSimulator />)
+
+    expect(screen.getByText('1,000')).toBeInTheDocument()
   })
 
   it('shows error state when API call fails', async () => {

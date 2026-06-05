@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
 
-// Stub Next.js navigation + router so the page renders in jsdom.
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
@@ -11,40 +10,36 @@ vi.mock('next/link', () => ({
     React.createElement('a', { href }, children),
 }))
 
-// Capture the CheckoutLayout props the page hands us — the point of this
-// smoke test is "the demo page mounts <CheckoutLayout> with the expected
-// productRef/onResult wiring", not to exercise the SDK internals.
-const layoutCalls: Array<Record<string, unknown>> = []
+const flowPanelCalls: Array<Record<string, unknown>> = []
 vi.mock('@solvapay/react', () => ({
-  useCustomer: () => ({ email: 'test@example.com', name: 'Test User' }),
   usePurchase: () => ({ activePurchase: null }),
-  CheckoutLayout: (props: Record<string, unknown>) => {
-    layoutCalls.push(props)
-    return React.createElement('div', { 'data-testid': 'checkout-layout' })
+  CancelledPlanNotice: () =>
+    React.createElement('div', { 'data-testid': 'cancelled-notice' }),
+  CancelPlanButton: () =>
+    React.createElement('button', { 'data-testid': 'cancel-plan' }, 'cancel'),
+}))
+vi.mock('../components/CheckoutFlowPanel', () => ({
+  CheckoutFlowPanel: (props: Record<string, unknown>) => {
+    flowPanelCalls.push(props)
+    return React.createElement('div', { 'data-testid': 'checkout-flow-panel' })
   },
-  CancelledPlanNotice: () => React.createElement('div', { 'data-testid': 'cancelled-notice' }),
-  CancelPlanButton: () => React.createElement('button', { 'data-testid': 'cancel-plan' }, 'cancel'),
 }))
 
 import CheckoutPage from '../page'
 
 beforeEach(() => {
-  layoutCalls.length = 0
+  flowPanelCalls.length = 0
   process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF = 'prd_smoke'
 })
 
 describe('CheckoutPage (smoke)', () => {
-  it('mounts CheckoutLayout with the configured productRef and prefill', () => {
+  it('mounts CheckoutFlowPanel with the configured productRef', () => {
     render(<CheckoutPage />)
-    expect(layoutCalls).toHaveLength(1)
-    const props = layoutCalls[0]
+    expect(flowPanelCalls).toHaveLength(1)
+    const props = flowPanelCalls[0]
     expect(props.productRef).toBe('prd_smoke')
-    expect(props.prefillCustomer).toEqual({
-      email: 'test@example.com',
-      name: 'Test User',
-    })
-    expect(props.requireTermsAcceptance).toBe(true)
-    expect(typeof props.onResult).toBe('function')
+    expect(typeof props.returnUrl).toBe('string')
+    expect(typeof props.onPurchaseSuccess).toBe('function')
     expect(typeof props.onError).toBe('function')
   })
 
@@ -62,7 +57,7 @@ describe('CheckoutPage (smoke)', () => {
     it('shows inline config error instead of throwing', () => {
       delete process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
       render(<CheckoutPage />)
-      expect(layoutCalls).toHaveLength(0)
+      expect(flowPanelCalls).toHaveLength(0)
       expect(
         screen.getByText(/Missing NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF environment variable/i),
       ).toBeInTheDocument()
