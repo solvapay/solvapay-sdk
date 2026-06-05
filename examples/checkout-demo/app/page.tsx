@@ -22,10 +22,7 @@ export default function HomePage() {
     fetcher: fetchPlans,
   })
 
-  const {
-    loading: purchasesLoading,
-    activePurchase,
-  } = usePurchase()
+  const { loading: purchasesLoading, activePurchase } = usePurchase()
 
   // Get advanced purchase status helpers
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
@@ -125,8 +122,8 @@ export default function HomePage() {
                     ) : null
                   })()}
                   <p className="text-xs text-amber-700 mt-1">
-                    You'll continue to have access to {cancelledPurchase.productName} features
-                    until this date
+                    You'll continue to have access to {cancelledPurchase.productName} features until
+                    this date
                   </p>
                 </div>
               ) : (
@@ -241,7 +238,8 @@ export default function HomePage() {
                   </p>
                   {displayCurrency && creditsPerMinorUnit ? (
                     <p className="text-sm text-slate-500 mt-1">
-                      ~{new Intl.NumberFormat(undefined, {
+                      ~
+                      {new Intl.NumberFormat(undefined, {
                         style: 'currency',
                         currency: displayCurrency,
                         minimumFractionDigits: 2,

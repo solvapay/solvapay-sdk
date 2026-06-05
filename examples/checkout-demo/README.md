@@ -161,13 +161,13 @@ This demo deploys to [https://web-app-demo.solvapay.app](https://web-app-demo.so
 
 ### Differences from chat-checkout-demo
 
-| Topic | chat-checkout-demo | checkout-demo |
-| --- | --- | --- |
-| Runtime | Vite + `worker.ts` + `handlers.ts` | Next.js 16 + OpenNext |
-| Auth | Anonymous `x-customer-ref` | Supabase JWT + `middleware.ts` |
-| Secrets | `SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY` | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET` |
-| Build-time env | `VITE_*` | `NEXT_PUBLIC_*` |
-| Prod domain | `chat-demo.solvapay.app` | `web-app-demo.solvapay.app` |
+| Topic          | chat-checkout-demo                      | checkout-demo                                |
+| -------------- | --------------------------------------- | -------------------------------------------- |
+| Runtime        | Vite + `worker.ts` + `handlers.ts`      | Next.js 16 + OpenNext                        |
+| Auth           | Anonymous `x-customer-ref`              | Supabase JWT + `middleware.ts`               |
+| Secrets        | `SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY` | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET` |
+| Build-time env | `VITE_*`                                | `NEXT_PUBLIC_*`                              |
+| Prod domain    | `chat-demo.solvapay.app`                | `web-app-demo.solvapay.app`                  |
 
 Uses Supabase project [ganvogeprtezdpakybib](https://supabase.com/dashboard/project/ganvogeprtezdpakybib)
 (`https://ganvogeprtezdpakybib.supabase.co`) — not SolvaPay internal dev auth.
@@ -242,14 +242,14 @@ pnpm run deploy:cf:prod
 
 ### Troubleshooting
 
-| Symptom | Fix |
-| --- | --- |
-| CF `error code: 1101` on `/api/*` | Missing secrets — `wrangler secret list --env production` |
-| `Product not found: prd_…` | `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY` |
-| `/checkout` shows "This page couldn't load" | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod` |
+| Symptom                                     | Fix                                                                                                                                                                                  |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CF `error code: 1101` on `/api/*`           | Missing secrets — `wrangler secret list --env production`                                                                                                                            |
+| `Product not found: prd_…`                  | `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY`                                                                                  |
+| `/checkout` shows "This page couldn't load" | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod`                                                     |
 | `Failed to fetch plans: 401` on `/checkout` | `SOLVAPAY_API_BASE_URL` must match the Worker secret: sandbox/dev keys → `https://api-dev.solvapay.com`; live keys → `https://api.solvapay.com`. Redeploy after updating `.env.prod` |
-| OAuth redirect error on prod | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs |
-| OpenNext build: Node middleware | Use `middleware.ts` (not `proxy.ts`) until OpenNext supports Next 16 `proxy` |
+| OAuth redirect error on prod                | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs                                                                                                      |
+| OpenNext build: Node middleware             | Use `middleware.ts` (not `proxy.ts`) until OpenNext supports Next 16 `proxy`                                                                                                         |
 
 ## Demo Flow
 
@@ -528,14 +528,14 @@ This demo uses Supabase authentication middleware by default (`middleware.ts`):
 
 ## Environment Variables
 
-| Variable                        | Description                                   | Required |
-| ------------------------------- | --------------------------------------------- | -------- |
-| `SOLVAPAY_SECRET_KEY`           | Your SolvaPay secret key                      | Yes      |
-| `SOLVAPAY_API_BASE_URL`         | Backend URL — must match secret key env (dev: `https://api-dev.solvapay.com`) | No |
-| `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` | Product reference (client bundle)          | No       |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                          | Yes      |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key                      | Yes      |
-| `SUPABASE_JWT_SECRET`           | Supabase JWT secret (for server verification) | Yes      |
+| Variable                           | Description                                                                   | Required |
+| ---------------------------------- | ----------------------------------------------------------------------------- | -------- |
+| `SOLVAPAY_SECRET_KEY`              | Your SolvaPay secret key                                                      | Yes      |
+| `SOLVAPAY_API_BASE_URL`            | Backend URL — must match secret key env (dev: `https://api-dev.solvapay.com`) | No       |
+| `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` | Product reference (client bundle)                                             | No       |
+| `NEXT_PUBLIC_SUPABASE_URL`         | Supabase project URL                                                          | Yes      |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Supabase anon/public key                                                      | Yes      |
+| `SUPABASE_JWT_SECRET`              | Supabase JWT secret (for server verification)                                 | Yes      |
 
 ## Customization
 

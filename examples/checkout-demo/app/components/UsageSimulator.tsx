@@ -125,7 +125,9 @@ export function UsageSimulator() {
       {isExhausted && (
         <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
           <p className="text-sm font-medium text-amber-900 mb-2">No credits remaining</p>
-          <p className="text-xs text-amber-700 mb-3">Top up your balance to continue running queries.</p>
+          <p className="text-xs text-amber-700 mb-3">
+            Top up your balance to continue running queries.
+          </p>
           <Link
             href="/topup"
             className="inline-block px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"

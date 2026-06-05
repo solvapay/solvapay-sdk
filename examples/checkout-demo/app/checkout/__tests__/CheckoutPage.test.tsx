@@ -22,10 +22,8 @@ vi.mock('@solvapay/react', () => ({
     layoutCalls.push(props)
     return React.createElement('div', { 'data-testid': 'checkout-layout' })
   },
-  CancelledPlanNotice: () =>
-    React.createElement('div', { 'data-testid': 'cancelled-notice' }),
-  CancelPlanButton: () =>
-    React.createElement('button', { 'data-testid': 'cancel-plan' }, 'cancel'),
+  CancelledPlanNotice: () => React.createElement('div', { 'data-testid': 'cancelled-notice' }),
+  CancelPlanButton: () => React.createElement('button', { 'data-testid': 'cancel-plan' }, 'cancel'),
 }))
 
 import CheckoutPage from '../page'

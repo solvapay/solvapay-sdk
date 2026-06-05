@@ -69,13 +69,16 @@ describe('UsageSimulator', () => {
     fireEvent.click(button)
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/track-usage', expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer test-token',
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/track-usage',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-token',
+          }),
         }),
-      }))
+      )
     })
 
     expect(mockAdjustBalance).toHaveBeenCalledWith(-1000)

@@ -1,6 +1,7 @@
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
 
 /** @type {import('next').NextConfig} */
+/* global process */
 const nextConfig = {
   transpilePackages: [
     '@solvapay/auth',
