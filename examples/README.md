@@ -16,6 +16,27 @@ See [`shared/README.md`](./shared/README.md) for detailed documentation.
 
 ## Available Examples
 
+### Next.js Auth0 (`nextjs-auth0`)
+
+A minimal Next.js App Router starter with Auth0 login, shadcn/ui, Tailwind CSS, and a per-user task board:
+
+- Auth0 v4 session auth via `proxy.ts`
+- Protected dashboard and `/api/tasks` CRUD
+- In-memory storage keyed by `session.user.sub`
+- No SolvaPay dependencies (natural follow-up: paywall on task limits)
+
+**Run the example:**
+
+```bash
+cd examples/nextjs-auth0
+cp .env.example .env.local
+# Add Auth0 credentials — see README.md
+pnpm install
+pnpm dev
+```
+
+The application will start on `http://localhost:3013`
+
 ### Express Basic (`express-basic`)
 
 A simple Express.js server demonstrating:
