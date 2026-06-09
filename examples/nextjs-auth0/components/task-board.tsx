@@ -2,18 +2,26 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
+import { usePurchase, useBalance } from '@solvapay/react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { CheckoutPanel } from '@/components/checkout-panel'
 import type { Task } from '@/lib/tasks-store'
 
 export function TaskBoard() {
+  const { hasPaidPurchase, loading: purchaseLoading, refetch: refetchPurchase } = usePurchase()
+  const { credits, refetch: refetchBalance } = useBalance()
+
   const [tasks, setTasks] = useState<Task[]>([])
   const [title, setTitle] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Set when /api/tasks returns 402 — the customer ran out of Pay As You Go
+  // credits and needs to (re)open the embedded checkout to top up.
+  const [needsCheckout, setNeedsCheckout] = useState(false)
 
   const loadTasks = useCallback(async () => {
     setError(null)
@@ -51,6 +59,15 @@ export function TaskBoard() {
     }
   }, [loadTasks])
 
+  const refetchAccess = useCallback(async () => {
+    await Promise.all([refetchPurchase(), refetchBalance()])
+  }, [refetchPurchase, refetchBalance])
+
+  const handlePurchased = useCallback(async () => {
+    setNeedsCheckout(false)
+    await refetchAccess()
+  }, [refetchAccess])
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmedTitle = title.trim()
@@ -68,12 +85,20 @@ export function TaskBoard() {
         body: JSON.stringify({ title: trimmedTitle }),
       })
 
+      if (response.status === 402) {
+        // Out of credits — surface the embedded checkout to top up.
+        setNeedsCheckout(true)
+        await refetchAccess()
+        return
+      }
+
       if (!response.ok) {
         throw new Error('Failed to create task')
       }
 
       setTitle('')
       await loadTasks()
+      await refetchBalance()
     } catch {
       setError('Could not create task. Try again.')
     } finally {
@@ -99,12 +124,36 @@ export function TaskBoard() {
     }
   }
 
-  if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading tasks...</p>
+  if (isLoading || purchaseLoading) {
+    return <p className="text-sm text-muted-foreground">Loading...</p>
+  }
+
+  // Gate task creation behind the Pay As You Go plan. Until the customer has
+  // bought credits (or once they run out), show the embedded checkout.
+  if (!hasPaidPurchase || needsCheckout) {
+    return (
+      <Card>
+        <CardContent className="space-y-4 p-6">
+          <div>
+            <h2 className="text-base font-semibold">Unlock the task board</h2>
+            <p className="text-sm text-muted-foreground">
+              {needsCheckout
+                ? 'You are out of credits. Top up to keep adding tasks — each task costs one request.'
+                : 'Adding tasks is billed pay-as-you-go. Buy credits below to get started — each task costs one request.'}
+            </p>
+          </div>
+          <CheckoutPanel onPurchased={() => void handlePurchased()} />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
     <div className="space-y-6">
+      {typeof credits === 'number' ? (
+        <p className="text-xs text-muted-foreground">Credits remaining: {credits.toLocaleString()}</p>
+      ) : null}
+
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           value={title}

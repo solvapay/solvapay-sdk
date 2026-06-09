@@ -7,11 +7,16 @@
     "dev": "next dev --port 3013",
     "build": "next build",
     "start": "next start --port 3013",
-    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs"
+    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs --ignore-pattern .agents --ignore-pattern .claude"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.22.0",
     "@radix-ui/react-slot": "^1.1.2",
+    "@solvapay/auth": "workspace:^",
+    "@solvapay/core": "workspace:^",
+    "@solvapay/next": "workspace:^",
+    "@solvapay/react": "workspace:^",
+    "@solvapay/server": "workspace:^",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",

@@ -1,6 +1,8 @@
+import '@solvapay/react/styles.css'
 import './globals.css'
 
 import { SiteHeader } from '@/components/site-header'
+import { SolvaPayClientProvider } from '@/components/solvapay-provider'
 
 export const metadata = {
   title: 'Next.js Auth0 Task Board',
@@ -11,8 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <SiteHeader />
-        {children}
+        <SolvaPayClientProvider>
+          <SiteHeader />
+          {children}
+        </SolvaPayClientProvider>
       </body>
     </html>
   )
