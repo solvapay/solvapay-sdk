@@ -1,5 +1,11 @@
 # create-solvapay
 
+## 0.3.0
+
+### Minor Changes
+
+- 776e4d4: Add `apiKey-multi` upstream auth for OpenAPI specs that require two or more static credential headers together (multi-scheme AND, no token exchange). The scaffolder auto-detects supported header schemes, seeds a single `UPSTREAM_API_HEADERS` compact-JSON secret, and generated tools spread parsed headers on upstream calls.
+
 ## 0.2.0
 
 ### Minor Changes
