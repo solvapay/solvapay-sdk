@@ -238,21 +238,23 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(typeof result.remaining).toBe('number')
     })
 
-    it('should successfully track usage events without errors', async () => {
+    it('should successfully track usage events and return a usage response', async () => {
       // Use paywall's ensureCustomer for consistent customer creation
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
 
-      // trackUsage returns void - just verify it doesn't throw
-      await expect(
-        apiClient.trackUsage({
-          customerRef: customerRef,
-          actionType: 'api_call',
-          units: 1,
-          outcome: 'success',
-          productRef: defaultProduct.reference,
-          timestamp: new Date().toISOString(),
-        }),
-      ).resolves.toBeUndefined()
+      const result = await apiClient.trackUsage({
+        customerRef: customerRef,
+        actionType: 'api_call',
+        units: 1,
+        outcome: 'success',
+        productRef: defaultProduct.reference,
+        timestamp: new Date().toISOString(),
+      })
+
+      expect(result).toMatchObject({
+        success: true,
+        reference: expect.any(String),
+      })
     })
 
     it('should correctly identify when customer exceeds their usage limit', async () => {
@@ -309,7 +311,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       // Track usage exactly (remainingUnits + 1) times to exceed the limit
       // Note: trackUsage deducts from allowance, checkLimits only checks status
       const usageCount = remainingUnits + 1
-      const usageRequests: Promise<void>[] = []
+      const usageRequests: Array<ReturnType<typeof apiClient.trackUsage>> = []
 
       for (let i = 0; i < usageCount; i++) {
         usageRequests.push(
@@ -1251,6 +1253,124 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(balanceResult.displayCurrency).toBeDefined()
 
       console.log(`✅ getCustomerBalance: credits=${balanceResult.credits}, currency=${balanceResult.displayCurrency}`)
+    })
+
+    it('should assign credits and debit them once for idempotent usage retries', async () => {
+      const customer = `test_credit_assign_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+      await activateCreditPlan(customerRef)
+
+      const grantKey = `grant-${customerRef}`
+      const firstGrant = await apiClient.assignCredits({
+        customerRef,
+        credits: 500,
+        reason: 'signup_bonus',
+        idempotencyKey: grantKey,
+      })
+      const secondGrant = await apiClient.assignCredits({
+        customerRef,
+        credits: 500,
+        reason: 'signup_bonus',
+        idempotencyKey: grantKey,
+      })
+
+      expect(firstGrant).toMatchObject({
+        success: true,
+        customerRef,
+        credits: 500,
+        balance: 500,
+        reason: 'signup_bonus',
+      })
+      expect(secondGrant).toEqual(firstGrant)
+
+      const usageKey = `usage-${customerRef}`
+      const firstUsage = await apiClient.trackUsage({
+        customerRef,
+        actionType: 'api_call',
+        units: 1,
+        outcome: 'success',
+        productRef: defaultProduct.reference,
+        idempotencyKey: usageKey,
+      })
+      const secondUsage = await apiClient.trackUsage({
+        customerRef,
+        actionType: 'api_call',
+        units: 1,
+        outcome: 'success',
+        productRef: defaultProduct.reference,
+        idempotencyKey: usageKey,
+      })
+
+      expect(firstUsage).toMatchObject({
+        success: true,
+        reference: expect.any(String),
+        creditDebit: {
+          debited: true,
+          amount: 100,
+          unitsRemaining: 4,
+        },
+      })
+      expect(secondUsage).toMatchObject({
+        success: true,
+        reference: firstUsage.reference,
+        creditDebit: {
+          debited: false,
+          reason: 'duplicate',
+        },
+      })
+
+      const balance = await apiClient.getCustomerBalance({ customerRef })
+      expect(balance.credits).toBe(400)
+    })
+
+    it('should assign credits and return per-event debit results from trackUsageBulk', async () => {
+      const customer = `test_credit_bulk_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+      await activateCreditPlan(customerRef)
+
+      await apiClient.assignCredits({
+        customerRef,
+        credits: 300,
+        reason: 'signup_bonus',
+        idempotencyKey: `grant-${customerRef}`,
+      })
+
+      const result = await apiClient.trackUsageBulk({
+        events: [
+          {
+            customerRef,
+            actionType: 'api_call',
+            units: 1,
+            outcome: 'success',
+            productRef: defaultProduct.reference,
+          },
+          {
+            customerRef,
+            actionType: 'api_call',
+            units: 1,
+            outcome: 'success',
+            productRef: defaultProduct.reference,
+          },
+        ],
+      })
+
+      expect(result).toMatchObject({
+        success: true,
+        inserted: 2,
+      })
+      expect(result.results).toHaveLength(2)
+      for (const usage of result.results) {
+        expect(usage).toMatchObject({
+          reference: expect.any(String),
+          creditDebit: {
+            debited: true,
+            amount: 100,
+          },
+        })
+      }
+
+      const balance = await apiClient.getCustomerBalance({ customerRef })
+      expect(balance.credits).toBe(100)
     })
 
     // NOTE: Credit-deduction-on-consumption tests are covered by the payment
