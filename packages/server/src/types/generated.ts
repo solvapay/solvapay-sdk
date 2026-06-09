@@ -174,7 +174,7 @@ export interface paths {
         };
         /**
          * List products
-         * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and MCP Pay flag.
+         * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and no-code MCP integration flag.
          */
         get: operations["ProductSdkController_listProducts"];
         put?: never;
@@ -1072,7 +1072,7 @@ export interface components {
             updatedAt: string;
         };
         CreatePlanRequest: {
-            name?: string;
+            name: string;
             description?: string;
             /** @enum {string} */
             type?: "recurring" | "usage-based" | "one-time" | "hybrid";
@@ -1302,7 +1302,7 @@ export interface components {
              */
             totalTransactions: number;
             /**
-             * Whether this product uses MCP Pay proxy
+             * Whether this product uses the no-code MCP integration (SolvaPay reverse proxy)
              * @example false
              */
             isMcpPay: boolean;
@@ -1978,7 +1978,7 @@ export interface components {
             purchase?: components["schemas"]["UserInfoPurchaseDto"];
         };
         /**
-         * Event types to subscribe to. Empty array = all events.
+         * Event type.
          * @enum {string}
          */
         WebhookEventType: "customer.created" | "customer.updated" | "customer.deleted" | "purchase.created" | "purchase.activated" | "purchase.updated" | "purchase.trial_ending" | "purchase.trial_converted" | "purchase.suspended" | "purchase.past_due" | "purchase.cancellation_scheduled" | "purchase.cancelled" | "purchase.reactivated" | "purchase.expired" | "purchase.renewed" | "purchase.renewal_reminder" | "purchase.refunded" | "purchase.plan_changed" | "payment.succeeded" | "payment.failed" | "payment.refunded" | "payment.refund_failed" | "payment.refund_pending" | "payment.canceled" | "payment.disputed" | "payment.dispute_closed" | "payout.paid" | "payout.failed" | "checkout_session.created" | "checkout_session.completed" | "checkout_session.expired" | "customer.credit.topped_up" | "customer.credit.low_balance" | "customer.credit.exhausted" | "customer.credit.debited" | "customer.credit.granted" | "customer.credit.adjusted" | "usage.charged" | "usage.recorded" | "usage.reset" | "product.created" | "product.updated" | "product.archived" | "plan.created" | "plan.updated" | "plan.archived";
@@ -2454,7 +2454,7 @@ export interface operations {
                 search?: string;
                 /** @description Filter by status */
                 status?: "active" | "inactive" | "suspended";
-                /** @description Filter MCP Pay products */
+                /** @description Filter no-code MCP integration products */
                 isMcpPay?: boolean;
             };
             header?: never;
