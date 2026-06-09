@@ -1,5 +1,16 @@
 # create-solvapay
 
+## 0.4.0
+
+### Minor Changes
+
+- 254498f: Harden the OpenAPI-to-MCP scaffold: require explicit upstream base URLs when specs omit usable servers, share OpenAPI advisories across CLI and agent paths, and prevent non-interactive init from binding an unconfirmed product.
+
+### Patch Changes
+
+- Updated dependencies [254498f]
+  - @solvapay/init@0.3.0
+
 ## 0.3.0
 
 ### Minor Changes

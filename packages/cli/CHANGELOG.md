@@ -1,5 +1,16 @@
 # solvapay
 
+## 1.2.0
+
+### Minor Changes
+
+- 254498f: Surface the `init --product` flag in the CLI so the product can be selected non-interactively during `solvapay init`.
+
+### Patch Changes
+
+- Updated dependencies [254498f]
+  - @solvapay/init@0.3.0
+
 ## 1.1.0
 
 ### Minor Changes

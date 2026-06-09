@@ -1,5 +1,11 @@
 # @solvapay/init
 
+## 0.3.0
+
+### Minor Changes
+
+- 254498f: Add `init --product` so a product ref can be verified without the interactive picker, failing closed in non-interactive runs when `--product` is omitted.
+
 ## 0.2.0
 
 ### Minor Changes

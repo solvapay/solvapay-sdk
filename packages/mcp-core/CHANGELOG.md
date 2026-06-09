@@ -1,5 +1,11 @@
 # @solvapay/mcp-core changelog
 
+## 0.2.5
+
+### Patch Changes
+
+- 254498f: Preserve OAuth resource metadata in bearer auth by exposing `extra.resource`, instead of inferring MCP client identity from resource-only `aud` claims.
+
 ## 0.2.4
 
 ### Patch Changes
