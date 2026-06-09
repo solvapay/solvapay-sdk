@@ -26,7 +26,7 @@
     "@stripe/react-stripe-js": "^6.0.0",
     "@supabase/supabase-js": "^2.105.1",
     "jose": "^6.2.2",
-    "next": "^16.2.6",
+    "next": "^16.2.7",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
