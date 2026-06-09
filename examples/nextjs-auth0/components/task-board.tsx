@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { usePurchase, useBalance } from '@solvapay/react'
+import { useBalance } from '@solvapay/react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,8 +11,12 @@ import { CheckoutPanel } from '@/components/checkout-panel'
 import type { Task } from '@/lib/tasks-store'
 
 export function TaskBoard() {
-  const { hasPaidPurchase, loading: purchaseLoading, refetch: refetchPurchase } = usePurchase()
-  const { credits, refetch: refetchBalance } = useBalance()
+  // Pay As You Go access is governed by the credit balance, NOT by
+  // `hasPaidPurchase`: a usage-based plan activates at zero amount and top-ups
+  // are recorded as credit transactions (not "paid plan" purchases), so
+  // `hasPaidPurchase` stays false even with a full wallet.
+  const { credits, loading: balanceLoading, refetch: refetchBalance } = useBalance()
+  const hasCredits = typeof credits === 'number' && credits > 0
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [title, setTitle] = useState('')
@@ -59,14 +63,10 @@ export function TaskBoard() {
     }
   }, [loadTasks])
 
-  const refetchAccess = useCallback(async () => {
-    await Promise.all([refetchPurchase(), refetchBalance()])
-  }, [refetchPurchase, refetchBalance])
-
   const handlePurchased = useCallback(async () => {
     setNeedsCheckout(false)
-    await refetchAccess()
-  }, [refetchAccess])
+    await refetchBalance()
+  }, [refetchBalance])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -88,7 +88,7 @@ export function TaskBoard() {
       if (response.status === 402) {
         // Out of credits — surface the embedded checkout to top up.
         setNeedsCheckout(true)
-        await refetchAccess()
+        await refetchBalance()
         return
       }
 
@@ -124,13 +124,14 @@ export function TaskBoard() {
     }
   }
 
-  if (isLoading || purchaseLoading) {
+  if (isLoading || balanceLoading) {
     return <p className="text-sm text-muted-foreground">Loading...</p>
   }
 
-  // Gate task creation behind the Pay As You Go plan. Until the customer has
-  // bought credits (or once they run out), show the embedded checkout.
-  if (!hasPaidPurchase || needsCheckout) {
+  // Gate task creation on the credit balance. Show the embedded checkout until
+  // the customer has credits (or once a 402 says they've run out); the board
+  // returns the moment a top-up lands and the balance reflects it.
+  if (!hasCredits || needsCheckout) {
     return (
       <Card>
         <CardContent className="space-y-4 p-6">
@@ -150,10 +151,6 @@ export function TaskBoard() {
 
   return (
     <div className="space-y-6">
-      {typeof credits === 'number' ? (
-        <p className="text-xs text-muted-foreground">Credits remaining: {credits.toLocaleString()}</p>
-      ) : null}
-
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           value={title}
