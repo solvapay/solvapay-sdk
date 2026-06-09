@@ -74,7 +74,7 @@ in a `switch`.
 | **Payments, refunds & disputes** | `payment.succeeded`, `payment.failed`, `payment.refunded`, `payment.refund_pending`, `payment.canceled`, `payment.disputed`, `payment.dispute_closed` |
 | **Payouts** | `payout.paid`, `payout.failed` |
 | **Checkout** | `checkout_session.created`, `checkout_session.completed`, `checkout_session.expired` |
-| **Credits & wallet** | `customer.credit.topped_up`, `customer.credit.debited`, `customer.credit.low_balance`, `customer.credit.exhausted`, `customer.credit.granted`, `customer.credit.adjusted` |
+| **Credits** | `customer.credit.topped_up`, `customer.credit.debited`, `customer.credit.low_balance`, `customer.credit.exhausted`, `customer.credit.granted`, `customer.credit.adjusted` |
 | **Usage & metering** | `usage.charged`, `usage.recorded`, `usage.reset` |
 | **Catalog** | `product.created/updated/archived`, `plan.created/updated/archived` |
 
@@ -91,7 +91,7 @@ Console. See [Choosing which events to receive](/webhooks#choosing-which-events-
 Two SolvaPay-internal webhook handlers update derived data you may rely on:
 
 - **Card mirror on `payment_intent.succeeded`.** When a payment succeeds, SolvaPay mirrors the card brand, last4, expMonth, and expYear onto the `Customer` record. `GET /v1/sdk/payment-method?customerRef=…` reads from this mirror, so the SDK's `usePaymentMethod` hook and `CurrentPlanCard` never round-trip to Stripe. The mirror is updated whenever a new successful payment lands, so the "payment method on file" always reflects the last working card.
-- **Refund FX normalization.** For refunds against transactions with a non-unity exchange rate (e.g. EUR → USD), the refund record now stores both the original-currency amount and the USD equivalent computed from the source transaction's stored `exchangeRate`. This keeps wallet balances and revenue reports consistent after cross-currency refunds.
+- **Refund FX normalization.** For refunds against transactions with a non-unity exchange rate (e.g. EUR → USD), the refund record now stores both the original-currency amount and the USD equivalent computed from the source transaction's stored `exchangeRate`. This keeps credit balances and revenue reports consistent after cross-currency refunds.
 
 Both behaviors are idempotent and safe to replay.
 

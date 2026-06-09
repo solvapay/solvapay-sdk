@@ -19,8 +19,20 @@ app.post('/tasks', payable.http(createTask))
 // Next.js App Router
 export const POST = payable.next(createTask)
 
-// MCP Server
-const handler = payable.mcp(createTask)
+// MCP Server — register paid tools on the batteries-included factory
+const server = createSolvaPayMcpServer({
+  solvaPay,
+  productRef: 'prd_myapi',
+  resourceUri: 'ui://my-app/mcp-app.html',
+  htmlPath: './mcp-app.html',
+  publicBaseUrl: 'https://my-mcp.example.com',
+  additionalTools: ({ registerPayable }) => {
+    registerPayable('create_task', {
+      schema: { title: z.string() },
+      handler: async ({ title }, ctx) => ctx.respond(await createTask(title)),
+    })
+  },
+})
 ```
 
 ## Headless React components
