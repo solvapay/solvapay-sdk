@@ -1,5 +1,11 @@
 # @solvapay/server changelog
 
+## 1.2.0
+
+### Minor Changes
+
+- 254498f: Expand `WebhookEventType` to the full live backend event catalog and derive the public union from the generated schema with a `WebhookPayloadObject` fallback for unlisted types.
+
 ## 1.1.1
 
 ### Patch Changes
