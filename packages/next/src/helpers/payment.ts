@@ -8,6 +8,7 @@ import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
+  processTopupPaymentIntentCore,
   isErrorResult,
 } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
@@ -106,6 +107,36 @@ export async function processPaymentIntent(
   } = {},
 ): Promise<NextResponse> {
   const result = await processPaymentIntentCore(request, body, options)
+  if (!isErrorResult(result)) {
+    await invalidatePurchaseCacheForRequest(request)
+  }
+  return toNextRouteResponse(result)
+}
+
+/**
+ * Next.js route wrapper for POST /api/process-topup-payment.
+ *
+ * @example
+ * ```ts
+ * // app/api/process-topup-payment/route.ts
+ * import { processTopupPaymentIntent } from '@solvapay/next/helpers'
+ *
+ * export async function POST(request: Request) {
+ *   const { paymentIntentId } = await request.json()
+ *   return processTopupPaymentIntent(request, { paymentIntentId })
+ * }
+ * ```
+ */
+export async function processTopupPaymentIntent(
+  request: globalThis.Request,
+  body: {
+    paymentIntentId: string
+  },
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
+): Promise<NextResponse> {
+  const result = await processTopupPaymentIntentCore(request, body, options)
   if (!isErrorResult(result)) {
     await invalidatePurchaseCacheForRequest(request)
   }

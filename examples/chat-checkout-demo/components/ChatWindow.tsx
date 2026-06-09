@@ -358,24 +358,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl">
       {renderHeader()}
-      <div className="flex-1 overflow-y-auto px-6 py-6 bg-gradient-to-b from-white to-slate-50/30">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {messages.map(msg => (
-            <Message key={msg.id} message={msg} />
-          ))}
-          {isBotThinking && <ThinkingIndicator />}
-          <div ref={messagesEndRef} />
+      <div className="relative flex-1 min-h-0">
+        <div className="h-full overflow-y-auto px-6 py-6 bg-gradient-to-b from-white to-slate-50/30">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {messages.map(msg => (
+              <Message key={msg.id} message={msg} />
+            ))}
+            {isBotThinking && <ThinkingIndicator />}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
+        {checkoutState ? (
+          <div className="absolute inset-0 overflow-y-auto bg-white/95 backdrop-blur-sm">
+            <InlineCheckout
+              state={checkoutState}
+              onSuccess={onFormSuccess}
+              onUnlock={onUnlock}
+            />
+          </div>
+        ) : (
+          <div className="absolute bottom-0 inset-x-0">
+            <ChatInput onSendMessage={onSendMessage} />
+          </div>
+        )}
       </div>
-      {checkoutState ? (
-        <InlineCheckout
-          state={checkoutState}
-          onSuccess={onFormSuccess}
-          onUnlock={onUnlock}
-        />
-      ) : (
-        <ChatInput onSendMessage={onSendMessage} />
-      )}
     </div>
   )
 }

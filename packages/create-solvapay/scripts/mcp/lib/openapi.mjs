@@ -12,6 +12,7 @@
  *   - suggestTier(operation) -> 'free' | 'paid' | 'skip'
  *   - synthesizeExamples(operation) -> { inputs, examplesQuality }
  *   - buildAdvisories(operations, schemes) -> Advisory[]
+ *   - buildSpecShapeAdvisories({ servers, operations, schemes }) -> Advisory[]
  *
  * The only non-stdlib dependency is `@apidevtools/swagger-parser`,
  * pulled on demand via `npx --package @apidevtools/swagger-parser`.
@@ -291,11 +292,167 @@ export function buildAdvisories(operations, schemes) {
   return advisories
 }
 
+export function buildSpecShapeAdvisories({ servers, operations, schemes }) {
+  return [
+    ...buildServerAdvisories(servers),
+    ...buildPathOutlierAdvisories(operations),
+    ...buildMultiHeaderAuthAdvisories(operations, schemes),
+  ]
+}
+
+export function buildServerAdvisories(servers) {
+  if (!servers.length) {
+    return [
+      {
+        kind: 'emptyServers',
+        message:
+          'Spec declares no OpenAPI `servers` (or Swagger `host`/`basePath`). Confirm the real upstream base URL and set `upstreamBaseUrl` in selections.json before scaffolding.',
+      },
+    ]
+  }
+  return servers
+    .filter(server => !/^https?:\/\//i.test(server))
+    .map(server => ({
+      kind: 'relativeServerUrl',
+      serverUrl: server,
+      message:
+        `Spec server URL \`${server}\` is relative. Confirm the absolute upstream base URL and set \`upstreamBaseUrl\` in selections.json before scaffolding.`,
+    }))
+}
+
+export function buildPathOutlierAdvisories(operations) {
+  const firstSegmentCounts = new Map()
+  for (const op of operations) {
+    const first = pathSegments(op.path)[0]
+    if (!first) continue
+    firstSegmentCounts.set(first, (firstSegmentCounts.get(first) ?? 0) + 1)
+  }
+  if (firstSegmentCounts.size < 2) return []
+
+  const [dominantFirst, dominantCount] = Array.from(firstSegmentCounts.entries())
+    .sort((a, b) => b[1] - a[1])[0]
+  if (dominantCount < 2 || dominantFirst.length < 2) return []
+
+  const dominantPrefixSegments = dominantPathPrefixSegments(operations, dominantFirst)
+  const dominantPrefix = `/${dominantPrefixSegments.join('/')}`
+  const dominantCompact = compactSegments(dominantPrefixSegments)
+  const dominantFirstCompact = compactSegments([dominantFirst])
+
+  const outliers = operations
+    .filter(op => {
+      const segments = pathSegments(op.path)
+      const first = segments[0]
+      if (!first || first === dominantFirst) return false
+
+      const firstCompact = compactSegments([first])
+      const comparableCompact = compactSegments(segments.slice(0, dominantPrefixSegments.length))
+      if (!firstCompact || !comparableCompact) return false
+
+      return (
+        firstCompact.startsWith(dominantFirstCompact) ||
+        dominantFirstCompact.startsWith(firstCompact) ||
+        firstCompact === dominantCompact ||
+        comparableCompact === dominantCompact ||
+        isNearMiss(comparableCompact, dominantCompact)
+      )
+    })
+    .map(op => ({ operationId: op.operationId, method: op.method, path: op.path }))
+
+  if (!outliers.length) return []
+  return [
+    {
+      kind: 'pathPrefixOutlier',
+      dominantPrefix,
+      operations: outliers,
+      message:
+        `Most paths start with \`${dominantPrefix}/...\`, but ${outliers.length} operation(s) use a similar path prefix. ` +
+        'Review these for spec typos or intentional alternate base paths before scaffold.',
+    },
+  ]
+}
+
+export function buildMultiHeaderAuthAdvisories(operations, schemes) {
+  const schemeByName = new Map(schemes.map(scheme => [scheme.name, scheme]))
+  const seen = new Set()
+  const advisories = []
+  for (const op of operations) {
+    const requirements = Array.isArray(op.security) ? op.security : []
+    for (const req of requirements) {
+      if (!req || typeof req !== 'object') continue
+      const headerSchemes = Object.keys(req)
+        .map(name => schemeByName.get(name))
+        .filter(scheme => scheme?.kind === 'apiKey-header' && scheme?.supported === true)
+      if (headerSchemes.length < 2) continue
+
+      const key = headerSchemes.map(scheme => scheme.name).sort().join('|')
+      if (seen.has(key)) continue
+      seen.add(key)
+      advisories.push({
+        kind: 'multiHeaderAuth',
+        operationId: op.operationId,
+        schemeNames: headerSchemes.map(scheme => scheme.name),
+        headerNames: headerSchemes.map(scheme => scheme.headerName),
+        recommendedUpstreamAuth: {
+          kind: 'apiKey-multi',
+          headers: headerSchemes.map(scheme => ({ name: scheme.headerName, value: '<user supplies>' })),
+        },
+        message:
+          `Operation \`${op.operationId}\` requires multiple apiKey header schemes together. ` +
+          'Use `upstreamAuth.kind: "apiKey-multi"` and collect one secret value per header.',
+      })
+    }
+  }
+  return advisories
+}
+
 export function isSupportedAuthKind(kind) {
   return SUPPORTED_AUTH_KINDS.has(kind)
 }
 
 // — helpers ————————————————————————————————————————————————————————————
+
+function pathSegments(path) {
+  return String(path ?? '').split('/').filter(Boolean)
+}
+
+function dominantPathPrefixSegments(operations, dominantFirst) {
+  const prefixCounts = new Map()
+  for (const op of operations) {
+    const segments = pathSegments(op.path)
+    if (segments[0] !== dominantFirst) continue
+    const prefix = segments.slice(0, 2).join('/')
+    if (!prefix) continue
+    prefixCounts.set(prefix, (prefixCounts.get(prefix) ?? 0) + 1)
+  }
+  const [prefix, count] = Array.from(prefixCounts.entries()).sort((a, b) => b[1] - a[1])[0] ?? []
+  if (!prefix || count < 2) return [dominantFirst]
+  return prefix.split('/')
+}
+
+function compactSegments(segments) {
+  return segments.join('').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function isNearMiss(a, b) {
+  if (a.length < 4 || b.length < 4) return false
+  return editDistance(a, b) <= 2
+}
+
+function editDistance(a, b) {
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i]
+    for (let j = 1; j <= b.length; j++) {
+      curr[j] = Math.min(
+        curr[j - 1] + 1,
+        prev[j] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      )
+    }
+    prev.splice(0, prev.length, ...curr)
+  }
+  return prev[b.length]
+}
 
 function mergeParameters(pathLevel, opLevel) {
   const map = new Map()

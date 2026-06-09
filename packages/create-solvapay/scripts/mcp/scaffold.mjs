@@ -98,6 +98,9 @@ async function main() {
   if (mode !== 'intent-driven') {
     enforceAuthSupport(selectedOps, schemes, selections.upstreamAuth)
   }
+  const generatedOps = selectedOps.filter(({ selection }) => selection.tier !== 'skip')
+  const serverBaseUrl =
+    generatedOps.length > 0 ? resolveToolServerBaseUrl(spec, selections) : null
 
   const serverName =
     typeof selections.serverName === 'string' && selections.serverName.length > 0
@@ -129,7 +132,7 @@ async function main() {
       schemes,
       tier: selection.tier,
       auth: selections.upstreamAuth,
-      serverBaseUrl: pickServerUrl(spec),
+      serverBaseUrl,
     })
     await mkdir(dirname(filePath), { recursive: true })
     await writeFile(filePath, toolSource, 'utf8')
@@ -144,17 +147,19 @@ async function main() {
   const planReminders = Array.isArray(selections.plans)
     ? collectPlanSelectionReminders(selections.plans)
     : []
+  const upstreamBaseUrlReminder = buildUpstreamBaseUrlReminder(spec, selections)
   const reminders = [
     ...planReminders,
+    ...(upstreamBaseUrlReminder ? [upstreamBaseUrlReminder] : []),
     ...(mode === 'intent-driven'
       ? [
           'Intent-driven mode: author src/tools/*.ts files per intent-driven.md, then update src/tools/index.ts to import and call each register{IntentName}(ctx, env). The .env and project skeleton are ready.',
-          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see solvapay-init.md).`,
+          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
           `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. \`node scripts/test.mjs\` will report intent tools as skipped (they aren't in the spec's operationIds) — exercise them manually per intent-driven.md.`,
         ]
       : [
-          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see solvapay-init.md).`,
-          `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. Before \`node scripts/test.mjs\`, run \`( cd scripts && npm install )\` once inside ${target} (see test.md).`,
+          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
+          `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. Before \`node scripts/test.mjs\`, run \`( cd scripts && npm install )\` once inside ${target}.`,
         ]),
   ]
 
@@ -274,6 +279,12 @@ function validateSelections(selections) {
   }
   if (selections.apiBaseUrl !== undefined && typeof selections.apiBaseUrl !== 'string') {
     throw new Error('selections.json: `apiBaseUrl` must be a string when provided.')
+  }
+  if (selections.upstreamBaseUrl !== undefined) {
+    if (typeof selections.upstreamBaseUrl !== 'string' || selections.upstreamBaseUrl.length === 0) {
+      throw new Error('selections.json: `upstreamBaseUrl` must be a non-empty string when provided.')
+    }
+    assertAbsoluteHttpUrl(selections.upstreamBaseUrl, 'upstreamBaseUrl')
   }
   if (selections.mode !== undefined && !VALID_MODES.has(selections.mode)) {
     throw new Error(
@@ -496,9 +507,51 @@ function enforceAuthSupport(matched, schemes, upstreamAuth) {
   }
 }
 
-function pickServerUrl(spec) {
-  const urls = getServerUrls(spec)
-  return urls[0] ?? 'https://upstream.example.com'
+function resolveToolServerBaseUrl(spec, selections) {
+  if (typeof selections.upstreamBaseUrl === 'string' && selections.upstreamBaseUrl.length > 0) {
+    return selections.upstreamBaseUrl.replace(/\/$/, '')
+  }
+
+  const absolute = getAbsoluteServerUrls(spec)
+  if (absolute.length > 0) {
+    return absolute[0].replace(/\/$/, '')
+  }
+
+  const declared = getServerUrls(spec)
+  const detail = declared.length
+    ? `declares only relative server URL(s): ${declared.join(', ')}`
+    : 'declares no usable `servers` URL'
+  throw new Error(
+    `OpenAPI spec ${detail}. Set \`upstreamBaseUrl\` in selections.json to the real absolute upstream API base URL before scaffolding generated tools.`,
+  )
+}
+
+function buildUpstreamBaseUrlReminder(spec, selections) {
+  if (typeof selections.upstreamBaseUrl === 'string' && selections.upstreamBaseUrl.length > 0) {
+    return `Using explicit upstream base URL from selections.json: ${selections.upstreamBaseUrl}`
+  }
+  const declared = getServerUrls(spec)
+  if (getAbsoluteServerUrls(spec).length > 0) return null
+  if (declared.length > 0) {
+    return `OpenAPI spec declares only relative server URL(s) (${declared.join(', ')}). Confirm the real upstream base URL and centralize it in your intent tools before calling the upstream API.`
+  }
+  return 'OpenAPI spec declares no server URL. Confirm the real upstream base URL and centralize it in your intent tools before calling the upstream API.'
+}
+
+function getAbsoluteServerUrls(spec) {
+  return getServerUrls(spec).filter(url => /^https?:\/\//i.test(url))
+}
+
+function assertAbsoluteHttpUrl(value, key) {
+  let parsed
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new Error(`selections.json: \`${key}\` must be a valid absolute URL.`)
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error(`selections.json: \`${key}\` must use http:// or https://.`)
+  }
 }
 
 /**
@@ -520,7 +573,7 @@ function deriveServerNameFromWorkerName(workerName) {
 }
 
 function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl }) {
-  const fnName = `register${capitalize(operation.operationId)}`
+  const fnName = `register${toPascalIdentifier(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
   const includesEnv = headerLines.length > 0
@@ -643,13 +696,12 @@ function renderHeaderLines(auth, schemes, operation) {
   // to the top-level auth kind when the spec has no operation-level
   // security override.
   //
-  // The static branches wrap `env.UPSTREAM_API_KEY` (typed `string | undefined`
-  // in the template's `Env` interface) in a template literal so the
-  // header value is `string`. If the secret is missing the worker still
-  // sends the header with literal "undefined" — the recovery path
-  // is uploading `UPSTREAM_API_KEY` to the Worker from `.env` via
-  // deploy.mjs on first deploy (see deploy.md), not a compile-time
-  // guard.
+  // The single-key static branches wrap `env.UPSTREAM_API_KEY` (typed
+  // `string | undefined` in the template's `Env` interface) in a
+  // template literal so the header value is `string`. Multi-header auth
+  // spreads the compact JSON `env.UPSTREAM_API_HEADERS` secret into the
+  // request. Missing secrets are deploy-time concerns handled by
+  // deploy.mjs, not compile-time guards.
   //
   // The oauth2-client-credentials branch references a `token` variable
   // that the renderer injects right before URL construction in the
@@ -778,10 +830,13 @@ export function registerTools(_ctx: AdditionalToolsContext, _env: Env) {
   }
   const opsNeedEnv = authKind !== 'none'
   const imports = operationIds
-    .map(id => `import { register${capitalize(id)} } from './${id}'`)
+    .map(id => `import { register${toPascalIdentifier(id)} } from './${id}'`)
     .join('\n')
   const calls = operationIds
-    .map(id => (opsNeedEnv ? `  register${capitalize(id)}(ctx, env)` : `  register${capitalize(id)}(ctx)`))
+    .map(id => {
+      const fnName = `register${toPascalIdentifier(id)}`
+      return opsNeedEnv ? `  ${fnName}(ctx, env)` : `  ${fnName}(ctx)`
+    })
     .join('\n')
   // When `opsNeedEnv` is false, `env` is intentionally unused in the
   // aggregator body. ESLint's `no-unused-vars` (which the template's
@@ -821,7 +876,7 @@ async function writeDotEnv(target, selections) {
       : PLACEHOLDERS.PRODUCT_REF
   const lines = [
     '# Generated by create-solvapay scaffold.',
-    '# SOLVAPAY_SECRET_KEY is populated by `npx solvapay init` (see solvapay-init.md).',
+    '# SOLVAPAY_SECRET_KEY is populated by `npx solvapay init` (see the generated README).',
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
     `MCP_PUBLIC_BASE_URL=${selections.mcpPublicBaseUrl}`,
   ]
@@ -892,6 +947,19 @@ function jsAccessor(name) {
 
 function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+function toPascalIdentifier(value) {
+  const words = String(value)
+    .split(/[^A-Za-z0-9_$]+/)
+    .filter(Boolean)
+  let name = words.length > 0
+    ? words.map(word => capitalize(word)).join('')
+    : 'Tool'
+  name = name.replace(/^[^A-Za-z_$]+/, '')
+  if (!name) name = 'Tool'
+  if (/^[0-9]/.test(name)) name = `_${name}`
+  return name
 }
 
 function joinUrl(base, path) {

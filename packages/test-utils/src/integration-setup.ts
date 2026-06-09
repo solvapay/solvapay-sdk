@@ -88,6 +88,7 @@ export async function createTestProduct(
 }
 
 export interface CreateTestPlanOptions {
+  name?: string
   type?: 'recurring' | 'usage-based' | 'one-time' | 'hybrid'
   price?: number
   currency?: string
@@ -119,6 +120,7 @@ export async function createTestPlan(
   const currency = opts.currency ?? 'USD'
 
   const body: Record<string, unknown> = {
+    name: opts.name ?? `SDK Test Plan ${Date.now()}`,
     type: planType,
     price,
     currency,

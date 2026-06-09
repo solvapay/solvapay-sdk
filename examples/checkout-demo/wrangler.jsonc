@@ -1,0 +1,59 @@
+/**
+ * Wrangler config for the SolvaPay checkout demo (Next.js via OpenNext).
+ *
+ * - `main` / `assets` point at the OpenNext build output (`.open-next/`).
+ * - Secrets (`SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET`) are uploaded once
+ *   via `wrangler secret put` and persist across deploys.
+ * - `SOLVAPAY_API_BASE_URL` can be overridden at deploy time via
+ *   `scripts/deploy.mjs` → `wrangler deploy --var`.
+ *
+ * Prod: `pnpm deploy:prod` → `--env production` → web-app-demo.solvapay.app
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "solvapay-checkout-demo",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-04-26",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "solvapay-checkout-demo",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+  "env": {
+    "production": {
+      "name": "solvapay-checkout-demo-prod",
+      "account_id": "98aefe33182e11a1b0e5d7fa89a12a6d",
+      "routes": [
+        {
+          "pattern": "web-app-demo.solvapay.app",
+          "custom_domain": true,
+        },
+      ],
+      "main": ".open-next/worker.js",
+      "compatibility_date": "2026-04-26",
+      "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+      "assets": {
+        "directory": ".open-next/assets",
+        "binding": "ASSETS",
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "solvapay-checkout-demo-prod",
+        },
+      ],
+      "observability": {
+        "enabled": true,
+      },
+    },
+  },
+}

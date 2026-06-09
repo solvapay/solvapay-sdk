@@ -15,7 +15,7 @@ let cached: SolvaPay | null = null
 export function getSolvaPay(): SolvaPay {
   if (cached) return cached
   if (process.env.SOLVAPAY_SECRET_KEY) {
-    cached = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
+    cached = createSolvaPay()
     return cached
   }
   cached = createStubSolvaPay()

@@ -1,0 +1,7 @@
+.env
+.env.local
+.env.prod
+!.env.prod.example
+.dev.vars
+.open-next/
+.wrangler/

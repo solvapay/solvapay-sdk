@@ -35,6 +35,22 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+      dedupe: ['react', 'react-dom', '@stripe/react-stripe-js'],
+    },
+    // Forward SOLVAPAY_PRODUCT_REF as a fallback for each scenario's
+    // VITE_*_PRODUCT_REF so a minimal .env (as written by `solvapay init`)
+    // works out of the box. Explicit VITE_*_PRODUCT_REF values in .env
+    // always take precedence.
+    define: {
+      'import.meta.env.VITE_SUBSCRIPTION_PRODUCT_REF': JSON.stringify(
+        env.VITE_SUBSCRIPTION_PRODUCT_REF || env.SOLVAPAY_PRODUCT_REF || '',
+      ),
+      'import.meta.env.VITE_LIFETIME_PRODUCT_REF': JSON.stringify(
+        env.VITE_LIFETIME_PRODUCT_REF || env.SOLVAPAY_PRODUCT_REF || '',
+      ),
+      'import.meta.env.VITE_TOPUP_PRODUCT_REF': JSON.stringify(
+        env.VITE_TOPUP_PRODUCT_REF || env.SOLVAPAY_PRODUCT_REF || '',
+      ),
     },
   }
 })

@@ -8,22 +8,19 @@
   "main": "src/worker.ts",
   "compatibility_date": "2025-10-01",
   "compatibility_flags": ["nodejs_compat"],
-  // SolvaPay organisation account (not the personal account) so the
-  // `solvapay.com` zone is in scope for the custom-domain route.
-  "account_id": "98aefe33182e11a1b0e5d7fa89a12a6d",
+  // Set CLOUDFLARE_ACCOUNT_ID in your environment (or .dev.vars) — Wrangler
+  // reads it automatically. Required when deploying to a custom domain
+  // so Cloudflare can find the right zone.
+  "account_id": "${CLOUDFLARE_ACCOUNT_ID}",
 
   // Bind the Worker to `mcp-goldberg.solvapay.com`. Cloudflare needs
   // both the DNS record (CNAME → workers.dev target) and the route
   // entry — `custom_domain: true` handles both in one shot.
-  "routes": [
-    {
-      "pattern": "mcp-goldberg.solvapay.com",
-      "custom_domain": true
-    }
-  ],
+
 
   "vars": {
-    "SUPABASE_PROJECT_REF": "ohzivhxmsdnjahtaicus",
+    // Set SUPABASE_PROJECT_REF in your environment (or .dev.vars).
+    "SUPABASE_PROJECT_REF": "${SUPABASE_PROJECT_REF}",
     "SUPABASE_FUNCTION_NAME": "mcp"
   },
 

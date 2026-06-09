@@ -1,6 +1,8 @@
 import { createSolvaPay, createSolvaPayClient } from '@solvapay/server'
 
-export const mcpPublicBaseUrl = process.env.MCP_PUBLIC_BASE_URL || 'http://localhost:3006'
+export const port = parseInt(process.env.MCP_PORT || '3006', 10)
+export const host = process.env.MCP_HOST || 'localhost'
+export const mcpPublicBaseUrl = process.env.MCP_PUBLIC_BASE_URL || `http://localhost:${port}`
 export const solvapayApiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'http://localhost:3000'
 export const solvapayProductRef = process.env.SOLVAPAY_PRODUCT_REF || ''
 

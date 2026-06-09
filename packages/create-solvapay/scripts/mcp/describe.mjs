@@ -36,6 +36,7 @@ import {
   suggestTier,
   synthesizeExamples,
   buildAdvisories,
+  buildSpecShapeAdvisories,
   getServerUrls,
 } from './lib/openapi.mjs'
 
@@ -55,7 +56,11 @@ async function main() {
   const servers = getServerUrls(spec)
 
   const serverProbe = probe ? await runServerProbe(servers[0], operations) : { status: 'skipped', reason: '--no-probe' }
-  const advisories = [...buildAdvisories(operations, schemes), ...buildProbeAdvisories(serverProbe)]
+  const advisories = [
+    ...buildAdvisories(operations, schemes),
+    ...buildSpecShapeAdvisories({ servers, operations, schemes }),
+    ...buildProbeAdvisories(serverProbe),
+  ]
 
   const summary = {
     openapiVersion: spec.openapi ?? spec.swagger ?? null,

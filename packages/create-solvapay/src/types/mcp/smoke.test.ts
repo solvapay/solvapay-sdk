@@ -27,6 +27,7 @@ const FIXTURE_PATHS = {
   petstoreV2: path.join(FIXTURES_DIR, 'petstore-v2.spec.json'),
   petstoreV3: path.join(FIXTURES_DIR, 'petstore-v3.spec.json'),
   pokeapi: path.join(FIXTURES_DIR, 'pokeapi.spec.yml'),
+  apiKeyMulti: path.join(FIXTURES_DIR, 'apikey-multi.spec.json'),
 } as const
 
 const PETSTORE_V2_SELECTIONS = path.join(FIXTURES_DIR, 'petstore-v2.selections.json')
@@ -150,6 +151,15 @@ describe('describe.mjs against cached fixtures', () => {
     const basicAuth = out.securitySchemes.find(s => s.name === 'basicAuth')
     expect(basicAuth).toBeDefined()
     expect(basicAuth?.supported).toBe(false)
+  })
+
+  it('apiKey-multi fixture: emits a machine-readable multi-header advisory', async () => {
+    const out = (await spawnScriptJson('describe.mjs', [
+      FIXTURE_PATHS.apiKeyMulti,
+      '--no-probe',
+    ])) as DescribeOutput
+
+    expect(out.advisories.some(a => a.kind === 'multiHeaderAuth')).toBe(true)
   })
 })
 

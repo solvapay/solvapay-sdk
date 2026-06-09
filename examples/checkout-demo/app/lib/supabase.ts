@@ -63,16 +63,15 @@ export async function getUser() {
  * Sign up a new user with email and password
  */
 export async function signUp(email: string, password: string, name?: string) {
+  const emailRedirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
   return await supabase.auth.signUp({
     email,
     password,
-    options: name
-      ? {
-          data: {
-            full_name: name,
-          },
-        }
-      : undefined,
+    options: {
+      emailRedirectTo,
+      ...(name ? { data: { full_name: name } } : {}),
+    },
   })
 }
 
