@@ -22,6 +22,14 @@ export type {
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,
   ToolPlanMappingInput,
+  CreditDebitSkipReason,
+  CreditDebitResult,
+  TrackUsageRequest,
+  TrackUsageResponse,
+  TrackUsageBulkRequest,
+  TrackUsageBulkResponse,
+  AssignCreditsRequest,
+  AssignCreditsResponse,
 } from './client'
 // Re-export SolvaPayClient interface from types/client.ts
 export type { SolvaPayClient } from './client'

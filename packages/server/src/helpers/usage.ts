@@ -1,4 +1,5 @@
 import type { SolvaPay } from '../factory'
+import type { TrackUsageResponse } from '../types'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
@@ -84,11 +85,12 @@ export async function trackUsageCore(
     productRef?: string
     description?: string
     metadata?: Record<string, unknown>
+    idempotencyKey?: string
   },
   options: {
     solvaPay?: SolvaPay
   } = {},
-): Promise<{ success: true } | ErrorResult> {
+): Promise<TrackUsageResponse | ErrorResult> {
   try {
     const userResult = await getAuthenticatedUserCore(request)
 
@@ -104,16 +106,17 @@ export async function trackUsageCore(
       name: name || undefined,
     })
 
-    await solvaPay.trackUsage({
+    const result = await solvaPay.trackUsage({
       customerRef,
       actionType: body.actionType,
       units: body.units,
       productRef: body.productRef,
       description: body.description,
       metadata: body.metadata,
+      idempotencyKey: body.idempotencyKey,
     })
 
-    return { success: true }
+    return result
   } catch (error) {
     return handleRouteError(error, 'Track usage', 'Track usage failed')
   }

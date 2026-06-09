@@ -25,6 +25,7 @@ export async function trackUsage(
     productRef?: string
     description?: string
     metadata?: Record<string, unknown>
+    idempotencyKey?: string
   },
   options: {
     solvaPay?: SolvaPay
