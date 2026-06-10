@@ -581,6 +581,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/customers/{reference}/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grant credits to a customer
+         * @description Adds credits to a customer balance. Use Idempotency-Key to make grants safe to retry.
+         */
+        post: operations["CustomerSdkController_grantCredits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/customers/customer-sessions": {
         parameters: {
             query?: never;
@@ -1464,6 +1484,52 @@ export interface components {
         CloneProductDto: {
             name?: string;
         };
+        CreditDebitSuccessResponse: {
+            /** @enum {number} */
+            debited: true;
+            /**
+             * Credits debited for this usage event
+             * @example 10
+             */
+            amount: number;
+            /**
+             * Estimated remaining units after debit
+             * @example 99
+             */
+            unitsRemaining: number;
+        };
+        CreditDebitSkippedResponse: {
+            /** @enum {number} */
+            debited: false;
+            /**
+             * Reason no credit debit was recorded
+             * @example duplicate
+             * @enum {string}
+             */
+            reason: "duplicate" | "no_product_ref" | "customer_not_found" | "no_active_purchase" | "plan_not_credit_based";
+        };
+        UsageRecordResponse: {
+            /** @example true */
+            success: boolean;
+            /** @example usage_A1B2C3D4 */
+            reference: string;
+            creditDebit?: components["schemas"]["CreditDebitSuccessResponse"] | components["schemas"]["CreditDebitSkippedResponse"];
+        };
+        BulkUsageResultResponse: {
+            /** @example usage_A1B2C3D4 */
+            reference: string;
+            creditDebit?: components["schemas"]["CreditDebitSuccessResponse"] | components["schemas"]["CreditDebitSkippedResponse"];
+        };
+        BulkUsageResponse: {
+            /** @example true */
+            success: boolean;
+            /**
+             * Number of usage events inserted
+             * @example 2
+             */
+            inserted: number;
+            results: components["schemas"]["BulkUsageResultResponse"][];
+        };
         CreateUsageRequest: {
             customerRef: string;
             /**
@@ -1851,6 +1917,22 @@ export interface components {
             telephone?: string;
             metadata?: unknown;
             externalRef?: string;
+        };
+        GrantCustomerCreditsRequest: {
+            credits: number;
+            reason?: string;
+        };
+        GrantCustomerCreditsResponse: {
+            /** @description Whether the grant was recorded */
+            success: boolean;
+            /** @description Customer reference identifier */
+            customerRef: string;
+            /** @description Granted credit amount */
+            credits: number;
+            /** @description Customer credit balance after the grant */
+            balance: number;
+            /** @description Machine-readable grant reason */
+            reason?: string;
         };
         CreateCustomerSessionResponse: {
             /**
@@ -2720,12 +2802,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @example true */
-                        success?: boolean;
-                        /** @example usage_A1B2C3D4 */
-                        reference?: string;
-                    };
+                    "application/json": components["schemas"]["UsageRecordResponse"];
                 };
             };
             /** @description Validation failed */
@@ -2755,7 +2832,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BulkUsageResponse"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -3284,6 +3363,43 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+        };
+    };
+    CustomerSdkController_grantCredits: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Provider-scoped idempotency key for safe grant retries */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                /** @description Customer reference identifier */
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantCustomerCreditsRequest"];
+            };
+        };
+        responses: {
+            /** @description Credits granted successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantCustomerCreditsResponse"];
+                };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

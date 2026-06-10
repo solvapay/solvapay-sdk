@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 
 vi.mock('@solvapay/server', () => ({
   trackUsageCore: vi.fn(),
-  isErrorResult: vi.fn((r: unknown) =>
-    typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
+  isErrorResult: vi.fn(
+    (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
 }))
 
@@ -52,6 +52,7 @@ describe('trackUsage', () => {
       productRef: 'prd_XYZ',
       description: 'test query',
       metadata: { toolName: 'search' },
+      idempotencyKey: 'usage_key_123',
     })
 
     expect(mockTrackUsageCore).toHaveBeenCalledWith(
@@ -62,6 +63,7 @@ describe('trackUsage', () => {
         productRef: 'prd_XYZ',
         description: 'test query',
         metadata: { toolName: 'search' },
+        idempotencyKey: 'usage_key_123',
       },
       {},
     )

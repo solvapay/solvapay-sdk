@@ -15,7 +15,7 @@
 
 import { promises as fs } from 'fs'
 import path from 'path'
-import type { SolvaPayClient, CustomerResponseMapped } from '@solvapay/server'
+import type { SolvaPayClient, CustomerResponseMapped, TrackUsageResponse } from '@solvapay/server'
 
 // Re-export the interface from SDK for convenience
 export type { SolvaPayClient }
@@ -24,13 +24,9 @@ type ListPlansResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['listPlan
 type CreatePaymentIntentResult = Awaited<
   ReturnType<NonNullable<SolvaPayClient['createPaymentIntent']>>
 >
-type ProcessPaymentResult = Awaited<
-  ReturnType<NonNullable<SolvaPayClient['processPaymentIntent']>>
->
+type ProcessPaymentResult = Awaited<ReturnType<NonNullable<SolvaPayClient['processPaymentIntent']>>>
 type ActivatePlanResult = Awaited<ReturnType<NonNullable<SolvaPayClient['activatePlan']>>>
-type CustomerBalanceResult = Awaited<
-  ReturnType<NonNullable<SolvaPayClient['getCustomerBalance']>>
->
+type CustomerBalanceResult = Awaited<ReturnType<NonNullable<SolvaPayClient['getCustomerBalance']>>>
 type ProductResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['getProduct']>>>
 type MerchantResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['getMerchant']>>>
 
@@ -294,10 +290,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
-  async checkLimits(params: {
-    customerRef: string
-    productRef: string
-  }): Promise<{
+  async checkLimits(params: { customerRef: string; productRef: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string
@@ -395,7 +388,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   }
 
   /**
-   * Track usage for analytics
+   * Track usage for metering
    */
   async trackUsage(params: {
     customerRef: string
@@ -409,13 +402,18 @@ export class StubSolvaPayClient implements SolvaPayClient {
     duration?: number
     timestamp?: string
     idempotencyKey?: string
-  }): Promise<void> {
+  }): Promise<TrackUsageResponse> {
     await new Promise(resolve => setTimeout(resolve, this.delays.trackUsage))
 
     this.log(`📡 Stub Request: POST /v1/sdk/usages`)
     this.log(
       `   Action: ${params.metadata?.action || 'api_requests'}, Units: ${params.units || 1}, Customer: ${params.customerRef}`,
     )
+
+    return {
+      success: true,
+      reference: `usage_${Math.random().toString(36).slice(2, 15)}`,
+    }
   }
 
   /**
@@ -504,7 +502,9 @@ export class StubSolvaPayClient implements SolvaPayClient {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
 
     this.log(`📡 Stub Request: POST /v1/sdk/payment-intents (topup)`)
-    this.log(`   Customer: ${params.customerRef}, Amount: ${params.amount}, Currency: ${params.currency}`)
+    this.log(
+      `   Customer: ${params.customerRef}, Amount: ${params.amount}, Currency: ${params.currency}`,
+    )
 
     const processorPaymentId = `pi_topup_${Math.random().toString(36).slice(2, 15)}`
 
@@ -563,9 +563,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   }): Promise<ProcessPaymentResult> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
 
-    this.log(
-      `📡 Stub Request: POST /v1/sdk/payment-intents/${params.paymentIntentId}/process`,
-    )
+    this.log(`📡 Stub Request: POST /v1/sdk/payment-intents/${params.paymentIntentId}/process`)
 
     const customerData = await this.loadCustomerData()
     if (!customerData[params.customerRef]) {
@@ -655,9 +653,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Get customer credit balance (stub reads from in-memory/file storage).
    */
-  async getCustomerBalance(params: {
-    customerRef: string
-  }): Promise<CustomerBalanceResult> {
+  async getCustomerBalance(params: { customerRef: string }): Promise<CustomerBalanceResult> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
 
     this.log(`📡 Stub Request: GET /v1/sdk/customers/${params.customerRef}/credits`)

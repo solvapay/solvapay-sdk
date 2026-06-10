@@ -159,6 +159,35 @@ export type SdkPlatformConfigResponse = components['schemas']['SdkPlatformConfig
 /** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
 export type SdkProductResponse = components['schemas']['SdkProductResponse']
 
+export type CreditDebitSkipReason = components['schemas']['CreditDebitSkippedResponse']['reason']
+
+export type CreditDebitResult =
+  | components['schemas']['CreditDebitSuccessResponse']
+  | components['schemas']['CreditDebitSkippedResponse']
+
+export type TrackUsageRequest = Omit<
+  Partial<components['schemas']['CreateUsageRequest']>,
+  'customerRef' | 'metadata'
+> & {
+  customerRef: string
+  metadata?: Record<string, unknown>
+}
+
+export type TrackUsageResponse = components['schemas']['UsageRecordResponse']
+
+export interface TrackUsageBulkRequest {
+  events: TrackUsageRequest[]
+}
+
+export type TrackUsageBulkResponse = components['schemas']['BulkUsageResponse']
+
+export type AssignCreditsRequest = components['schemas']['GrantCustomerCreditsRequest'] & {
+  customerRef: string
+  idempotencyKey?: string
+}
+
+export type AssignCreditsResponse = components['schemas']['GrantCustomerCreditsResponse']
+
 export type McpBootstrapPlanInput = NonNullable<
   components['schemas']['McpBootstrapDto']['plans']
 >[number]
@@ -213,19 +242,10 @@ export interface SolvaPayClient {
   checkLimits(params: CheckLimitsRequest): Promise<LimitResponseWithPlan>
 
   // POST: /v1/sdk/usages
-  trackUsage(params: {
-    customerRef: string
-    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
-    units?: number
-    outcome?: 'success' | 'paywall' | 'fail'
-    productRef?: string
-    purchaseRef?: string
-    description?: string
-    metadata?: Record<string, unknown>
-    duration?: number
-    timestamp?: string
-    idempotencyKey?: string
-  }): Promise<void>
+  trackUsage(params: TrackUsageRequest): Promise<TrackUsageResponse>
+
+  // POST: /v1/sdk/usages/bulk
+  trackUsageBulk?(params: TrackUsageBulkRequest): Promise<TrackUsageBulkResponse>
 
   // POST: /v1/sdk/customers
   createCustomer?(
@@ -255,6 +275,9 @@ export interface SolvaPayClient {
     externalRef?: string
     email?: string
   }): Promise<CustomerResponseMapped>
+
+  // POST: /v1/sdk/customers/{customerRef}/credits
+  assignCredits?(params: AssignCreditsRequest): Promise<AssignCreditsResponse>
 
   /**
    * SDK-facing merchant identity (GET /v1/sdk/merchant).
@@ -394,9 +417,7 @@ export interface SolvaPayClient {
   }): Promise<components['schemas']['UserInfoResponse']>
 
   // GET: /v1/sdk/customers/:customerRef/credits
-  getCustomerBalance?(params: {
-    customerRef: string
-  }): Promise<{
+  getCustomerBalance?(params: { customerRef: string }): Promise<{
     customerRef: string
     credits: number
     displayCurrency: string
