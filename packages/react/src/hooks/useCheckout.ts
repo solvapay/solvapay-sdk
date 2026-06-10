@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { loadStripe, Stripe, StripeConstructorOptions } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
 import { buildRequestHeaders } from '../utils/headers'
+import { usePlanSelection } from '../components/PlanSelectionContext'
 import type { Plan, PrefillCustomer, SolvaPayConfig } from '../types'
 
 export interface UseCheckoutReturn {
@@ -95,9 +96,11 @@ async function resolvePlanRef(
 export function useCheckout(options: {
   planRef?: string
   productRef?: string
+  currency?: string
   customer?: PrefillCustomer
 }): UseCheckoutReturn {
-  const { planRef, productRef, customer } = options
+  const { planRef, productRef, currency: currencyOverride, customer } = options
+  const planSelection = usePlanSelection()
   const { createPayment, customerRef, updateCustomerRef, _config } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -137,9 +140,11 @@ export function useCheckout(options: {
         throw new Error('Could not determine plan reference for checkout')
       }
 
+      const selectedCurrency = currencyOverride ?? planSelection?.selectedCurrency ?? undefined
       const result = await createPayment({
         planRef: effectivePlanRef,
         productRef,
+        ...(selectedCurrency && { currency: selectedCurrency }),
         customer,
       })
 
@@ -181,7 +186,17 @@ export function useCheckout(options: {
       setLoading(false)
       isStartingRef.current = false
     }
-  }, [planRef, productRef, customer, createPayment, updateCustomerRef, loading, _config])
+  }, [
+    planRef,
+    productRef,
+    currencyOverride,
+    planSelection?.selectedCurrency,
+    customer,
+    createPayment,
+    updateCustomerRef,
+    loading,
+    _config,
+  ])
 
   const reset = useCallback(() => {
     isStartingRef.current = false

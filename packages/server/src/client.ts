@@ -602,6 +602,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           productRef: params.productRef,
           planRef: params.planRef,
           customerRef: params.customerRef,
+          ...(params.currency && { currency: params.currency }),
         }),
       })
 

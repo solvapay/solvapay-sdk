@@ -23,6 +23,30 @@ function basePayload(overrides: Partial<BootstrapPayload> = {}): BootstrapPayloa
 }
 
 describe('narrateManageAccount', () => {
+  it('lists all currency options for multi-currency plans', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        plans: [
+          {
+            planType: 'recurring',
+            name: 'Global',
+            price: 1000,
+            currency: 'USD',
+            billingCycle: 'monthly',
+            pricingOptions: [
+              { currency: 'USD', price: 1000, default: true },
+              { currency: 'EUR', price: 900 },
+            ],
+          },
+        ] as never,
+      }),
+    )
+
+    expect(text).toContain('Global')
+    expect(text).toContain('$10.00')
+    expect(text).toContain('€9.00')
+  })
+
   it('produces a cold-start welcome with plan list', () => {
     const { text } = narrateManageAccount(
       basePayload({

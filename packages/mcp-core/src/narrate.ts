@@ -29,6 +29,11 @@ interface PlanShape {
   planType?: string
   price?: number
   currency?: string
+  pricingOptions?: Array<{
+    currency?: string
+    price?: number
+    default?: boolean
+  }>
   billingCycle?: string | null
   meterRef?: string | null
   limit?: number | null
@@ -143,10 +148,26 @@ function commandsLine(commands: string[]): string {
   return `Commands: ${commands.map((c) => `\`/${c}\``).join(' ')}`
 }
 
+function formatPlanPrices(p: PlanShape): string {
+  const options =
+    p.pricingOptions && p.pricingOptions.length > 0
+      ? p.pricingOptions
+      : [{ currency: p.currency, price: p.price, default: true }]
+
+  if (options.length <= 1) {
+    return formatMoney(options[0]?.price, options[0]?.currency)
+  }
+
+  return options
+    .map((option) => formatMoney(option.price, option.currency))
+    .filter(Boolean)
+    .join(' · ')
+}
+
 function plansListLines(plans: PlanShape[]): string[] {
   return plans.map((p) => {
     const name = p.name ?? 'Plan'
-    const price = formatMoney(p.price, p.currency)
+    const price = formatPlanPrices(p)
     const cycle = p.billingCycle ? `/${p.billingCycle}` : ''
     const type =
       p.planType === 'free'

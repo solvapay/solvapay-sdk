@@ -433,6 +433,7 @@ export interface SolvaPayContextValue {
   createPayment: (params: {
     planRef?: string
     productRef?: string
+    currency?: string
     customer?: PrefillCustomer
   }) => Promise<PaymentIntentResult>
   processPayment?: (params: {
@@ -510,6 +511,14 @@ export interface PaymentError extends Error {
  * All fields are optional except `reference` so the type stays compatible
  * with partial JSON responses from custom fetcher functions.
  */
+export interface PlanPricingOption {
+  currency: string
+  price: number
+  basePrice?: number
+  setupFee?: number
+  default?: boolean
+}
+
 export interface Plan {
   type?: 'recurring' | 'one-time' | 'usage-based'
   reference: string
@@ -517,6 +526,7 @@ export interface Plan {
   description?: string
   price?: number
   currency?: string
+  pricingOptions?: PlanPricingOption[]
   currencySymbol?: string
   freeUnits?: number
   setupFee?: number

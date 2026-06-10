@@ -22,6 +22,7 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
@@ -35,6 +36,11 @@ import { PlanSelectionProvider } from '../components/PlanSelectionContext'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProductRefError, MissingProviderError } from '../utils/errors'
 import { isPaygPlan } from '../utils/isPayg'
+import {
+  getPlanPricingOptions,
+  resolvePlanPricingOption,
+  type PlanPricingOption,
+} from '../utils/planPricing'
 import type { Plan } from '../types'
 
 type CardState = 'idle' | 'selected' | 'current' | 'disabled'
@@ -56,6 +62,9 @@ type PlanSelectorContextValue = {
    * `userHasSelected` true so auto-selection doesn't reassert.
    */
   clearSelection: () => void
+  selectedCurrencies: Record<string, string>
+  setPlanCurrency: (planRef: string, currency: string) => void
+  getSelectedOption: (plan: Plan) => PlanPricingOption
 }
 
 const PlanSelectorContext = createContext<PlanSelectorContextValue | null>(null)
@@ -70,12 +79,15 @@ function usePlanSelectorContext(part: string): PlanSelectorContextValue {
 
 type CardContextValue = {
   plan: Plan
+  selectedOption: PlanPricingOption
+  pricingOptions: PlanPricingOption[]
   state: CardState
   isCurrent: boolean
   isFree: boolean
   isPopular: boolean
   disabled: boolean
   select: () => void
+  setCurrency: (currency: string) => void
 }
 
 const CardContext = createContext<CardContextValue | null>(null)
@@ -180,6 +192,18 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
   }, [setSelectedPlanIndex])
 
   const selectedPlanRef = selectedPlan?.reference ?? null
+  const [selectedCurrencies, setSelectedCurrencies] = useState<Record<string, string>>({})
+
+  const getSelectedOption = useCallback(
+    (plan: Plan) => resolvePlanPricingOption(plan, selectedCurrencies[plan.reference] ?? null),
+    [selectedCurrencies],
+  )
+
+  const setPlanCurrency = useCallback((planRef: string, currency: string) => {
+    setSelectedCurrencies(current => ({ ...current, [planRef]: currency }))
+  }, [])
+
+  const selectedCurrency = selectedPlan ? getSelectedOption(selectedPlan).currency : null
 
   // Auto-select the customer's already-active PAYG plan when it lands
   // in the visible plan list. The default checkout filter (see
@@ -221,6 +245,9 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isPopular,
       select,
       clearSelection,
+      selectedCurrencies,
+      setPlanCurrency,
+      getSelectedOption,
     }),
     [
       plans,
@@ -235,6 +262,9 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isPopular,
       select,
       clearSelection,
+      selectedCurrencies,
+      setPlanCurrency,
+      getSelectedOption,
     ],
   )
 
@@ -245,6 +275,12 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
         selectedPlanRef,
         setSelectedPlanRef: ref => {
           if (ref) select(ref)
+        },
+        selectedCurrency,
+        setSelectedCurrency: currency => {
+          if (selectedPlanRef && currency) {
+            setPlanCurrency(selectedPlanRef, currency)
+          }
         },
         plans,
         loading,
@@ -312,14 +348,19 @@ const Grid = forwardRef<HTMLDivElement, GridProps>(function PlanSelectorGrid(
               : isFree
                 ? 'disabled'
                 : 'idle'
+        const pricingOptions = getPlanPricingOptions(plan)
+        const selectedOption = ctx.getSelectedOption(plan)
         const cardCtx: CardContextValue = {
           plan,
+          selectedOption,
+          pricingOptions,
           state,
           isCurrent,
           isFree,
           isPopular,
           disabled,
           select: () => ctx.select(plan.reference),
+          setCurrency: currency => ctx.setPlanCurrency(plan.reference, currency),
         }
         return (
           <CardContext.Provider key={plan.reference} value={cardCtx}>
@@ -421,15 +462,15 @@ const CardPrice = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelectorCa
       })
       return `${rate} / call`
     }
-    return formatPrice(card.plan.price ?? 0, card.plan.currency ?? 'usd', {
+    return formatPrice(card.selectedOption.price ?? 0, card.selectedOption.currency ?? 'usd', {
       locale,
       free: copy.interval.free,
     })
   }, [
     card.isFree,
     card.plan.type,
-    card.plan.price,
-    card.plan.currency,
+    card.selectedOption.price,
+    card.selectedOption.currency,
     card.plan.creditsPerUnit,
     locale,
     copy.planSelector.freeBadge,
@@ -484,6 +525,33 @@ function normalizeBillingCycle(cycle: string | null | undefined): string | null 
 }
 
 type BadgeProps = LeafProps & { 'data-variant'?: 'current' | 'popular' }
+
+const CardCurrency = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  function PlanSelectorCardCurrency({ children, onChange, ...rest }, forwardedRef) {
+    const card = useCardContext('CardCurrency')
+    if (card.pricingOptions.length <= 1) return null
+
+    return (
+      <select
+        ref={forwardedRef}
+        data-solvapay-plan-selector-card-currency=""
+        value={card.selectedOption.currency}
+        onChange={event => {
+          card.setCurrency(event.target.value)
+          onChange?.(event)
+        }}
+        {...rest}
+      >
+        {children ??
+          card.pricingOptions.map(option => (
+            <option key={option.currency} value={option.currency}>
+              {option.currency}
+            </option>
+          ))}
+      </select>
+    )
+  },
+)
 
 const CardBadge = forwardRef<HTMLSpanElement, BadgeProps>(function PlanSelectorCardBadge(
   { asChild, children, ...rest },
@@ -553,6 +621,7 @@ export const PlanSelectorCard = Card
 export const PlanSelectorCardName = CardName
 export const PlanSelectorCardPrice = CardPrice
 export const PlanSelectorCardInterval = CardInterval
+export const PlanSelectorCardCurrency = CardCurrency
 export const PlanSelectorCardBadge = CardBadge
 export const PlanSelectorLoading = Loading
 export const PlanSelectorError = ErrorSlot
@@ -565,6 +634,7 @@ export const PlanSelector = {
   CardName,
   CardPrice,
   CardInterval,
+  CardCurrency,
   CardBadge,
   Loading,
   Error: ErrorSlot,

@@ -31,6 +31,7 @@ export {
   PlanSelectorCardName,
   PlanSelectorCardPrice,
   PlanSelectorCardInterval,
+  PlanSelectorCardCurrency,
   PlanSelectorCardBadge,
   PlanSelectorLoading,
   PlanSelectorError,
