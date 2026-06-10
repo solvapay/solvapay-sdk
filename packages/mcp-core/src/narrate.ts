@@ -154,13 +154,9 @@ function formatPlanPrices(p: PlanShape): string {
       ? p.pricingOptions
       : [{ currency: p.currency, price: p.price, default: true }]
 
-  if (options.length <= 1) {
-    return formatMoney(options[0]?.price, options[0]?.currency)
-  }
-
   return options
     .map((option) => formatMoney(option.price, option.currency))
-    .filter(Boolean)
+    .filter((value): value is string => value != null)
     .join(' · ')
 }
 
