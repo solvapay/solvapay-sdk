@@ -106,6 +106,7 @@ export const enCopy: SolvaPayCopy = {
     currentBadge: 'Current',
     popularBadge: 'Popular',
     freeBadge: 'Free',
+    usageRateLabel: 'Usage-based',
     perIntervalShort: '/{interval}',
     continueButton: 'Continue',
     backButton: '← Back to plans',

@@ -57,6 +57,7 @@ export async function createPaymentIntentCore(
   body: {
     planRef: string
     productRef: string
+    currency?: string
   },
   options: {
     solvaPay?: SolvaPay
@@ -99,6 +100,7 @@ export async function createPaymentIntentCore(
       productRef: body.productRef,
       planRef: body.planRef,
       customerRef,
+      ...(body.currency && { currency: body.currency }),
     })
 
     return {

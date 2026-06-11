@@ -10,6 +10,7 @@
 import type { Plan } from '../../types'
 import { formatPrice } from '../../utils/format'
 import { isPaygPlan } from '../../utils/isPayg'
+import { resolvePlanPricingOption, type PlanPricingOption } from '../../utils/planPricing'
 
 export type CheckoutStep = 'plan' | 'amount' | 'payment' | 'success'
 
@@ -31,6 +32,13 @@ export interface BootstrapPlanLike {
   meterRef?: string | null
   creditsPerUnit?: number | null
   requiresPayment?: boolean
+  pricingOptions?: Array<{
+    currency: string
+    price: number
+    basePrice?: number
+    setupFee?: number
+    default?: boolean
+  }>
 }
 
 export type SuccessMeta =
@@ -99,24 +107,27 @@ export function buildDefaultCheckoutPlanFilter(
   }
 }
 
-export function formatContinueLabel(plan: BootstrapPlanLike | null, locale?: string): string {
+export function formatContinueLabel(
+  plan: BootstrapPlanLike | null,
+  locale?: string,
+  pricingOption?: PlanPricingOption,
+): string {
   if (!plan) return 'Continue'
   if (isPayg(plan)) {
     return `Continue with ${plan.name ?? 'Pay as you go'}`
   }
-  const currency = (plan.currency ?? 'USD').toUpperCase()
-  const priceLabel = formatPrice(plan.price ?? 0, currency, { locale })
+  const option =
+    pricingOption ?? resolvePlanPricingOption(plan as unknown as Plan, null)
+  const currency = option.currency.toUpperCase()
+  const priceLabel = formatPrice(option.price ?? 0, currency, { locale })
   const cycle = plan.billingCycle ? `/${shortCycle(plan.billingCycle)}` : ''
   return `Continue with ${plan.name ?? 'Plan'} — ${priceLabel}${cycle}`
 }
 
 export function formatPaygRate(plan: BootstrapPlanLike, locale?: string): string {
-  const currency = (plan.currency ?? 'USD').toUpperCase()
   const creditsPerUnit = plan.creditsPerUnit ?? 1
-  // One currency unit per credit at the plan's rate. Minor-unit
-  // representation: 1 credit = 1 / creditsPerUnit of a minor unit.
-  const perCreditMinor = Math.max(1, Math.round(1 / creditsPerUnit))
-  return `${formatPrice(perCreditMinor, currency, { locale })} / call`
+  const creditLabel = creditsPerUnit === 1 ? 'credit' : 'credits'
+  return `${creditsPerUnit.toLocaleString(locale)} ${creditLabel} / call`
 }
 
 export function inferIncludedCredits(plan: BootstrapPlanLike): number {

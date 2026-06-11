@@ -448,6 +448,7 @@ export function buildSolvaPayDescriptors(
     inputSchema: {
       planRef: z.string(),
       productRef: z.string(),
+      currency: z.string().optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({}),
@@ -459,10 +460,12 @@ export function buildSolvaPayDescriptors(
         const planRef = typeof args.planRef === 'string' ? args.planRef : ''
         const effectiveProduct =
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
+        const currency =
+          typeof args.currency === 'string' && args.currency ? args.currency : undefined
 
         const result = await createPaymentIntentCore(
           buildRequest(extra, { method: 'POST' }),
-          { planRef, productRef: effectiveProduct },
+          { planRef, productRef: effectiveProduct, ...(currency && { currency }) },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

@@ -244,6 +244,9 @@ function McpCheckoutBody({
     return (
       <AmountStep
         plan={selectedPlanShape}
+        topupCurrency={flow.topupCurrency}
+        topupCurrencies={flow.topupCurrencies}
+        onCurrencyChange={flow.setTopupCurrency}
         onBack={() => flow.back()}
         onContinue={amountMinor => {
           flow.selectAmount(amountMinor)
@@ -260,6 +263,7 @@ function McpCheckoutBody({
         <PaygPaymentStep
           plan={selectedPlanShape}
           amountMinor={flow.selectedAmountMinor}
+          topupCurrency={flow.topupCurrency}
           returnUrl={returnUrl}
           onBack={() => flow.back()}
           onSuccess={extras => flow.notifyPaymentSuccess(undefined, extras)}

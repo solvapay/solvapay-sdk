@@ -4,8 +4,8 @@ vi.mock('../factory', () => ({
   createSolvaPay: vi.fn(),
 }))
 
-vi.mock('./auth', () => ({
-  getAuthenticatedUserCore: vi.fn(),
+vi.mock('./customer', () => ({
+  syncCustomerCore: vi.fn(),
 }))
 
 vi.mock('./error', () => ({
@@ -19,10 +19,9 @@ vi.mock('./error', () => ({
 }))
 
 import { createSolvaPay } from '../factory'
-import { getAuthenticatedUserCore } from './auth'
-import { processTopupPaymentIntentCore } from './payment'
+import { syncCustomerCore } from './customer'
+import { createPaymentIntentCore, processTopupPaymentIntentCore } from './payment'
 
-const mockGetAuth = vi.mocked(getAuthenticatedUserCore)
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
 
 function fakeRequest() {
@@ -32,22 +31,94 @@ function fakeRequest() {
   })
 }
 
+describe('createPaymentIntentCore', () => {
+  const mockSyncCustomer = vi.mocked(syncCustomerCore)
+  const mockCreatePaymentIntent = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSyncCustomer.mockResolvedValue('cus_ABC')
+    mockCreatePaymentIntent.mockResolvedValue({
+      processorPaymentId: 'pi_test',
+      clientSecret: 'cs_test',
+      publishableKey: 'pk_test',
+      accountId: 'acct_test',
+    })
+  })
+
+  it('rejects requests missing planRef or productRef with status 400', async () => {
+    const result = await createPaymentIntentCore(new Request('http://localhost'), {
+      planRef: '',
+      productRef: 'prd_test',
+    })
+    expect(result).toEqual({
+      error: 'Missing required parameters: planRef and productRef are required',
+      status: 400,
+    })
+  })
+
+  it('forwards currency to solvaPay.createPaymentIntent when provided', async () => {
+    const solvaPay = {
+      createPaymentIntent: mockCreatePaymentIntent,
+    } as never
+
+    const result = await createPaymentIntentCore(
+      new Request('http://localhost'),
+      {
+        planRef: 'pln_test',
+        productRef: 'prd_test',
+        currency: 'EUR',
+      },
+      { solvaPay },
+    )
+
+    expect(mockSyncCustomer).toHaveBeenCalled()
+    expect(mockCreatePaymentIntent).toHaveBeenCalledWith({
+      productRef: 'prd_test',
+      planRef: 'pln_test',
+      customerRef: 'cus_ABC',
+      currency: 'EUR',
+    })
+    expect(result).toMatchObject({
+      processorPaymentId: 'pi_test',
+      clientSecret: 'cs_test',
+      publishableKey: 'pk_test',
+      customerRef: 'cus_ABC',
+    })
+  })
+
+  it('omits currency when not provided in the request body', async () => {
+    const solvaPay = {
+      createPaymentIntent: mockCreatePaymentIntent,
+    } as never
+
+    await createPaymentIntentCore(
+      new Request('http://localhost'),
+      {
+        planRef: 'pln_test',
+        productRef: 'prd_test',
+      },
+      { solvaPay },
+    )
+
+    expect(mockCreatePaymentIntent).toHaveBeenCalledWith({
+      productRef: 'prd_test',
+      planRef: 'pln_test',
+      customerRef: 'cus_ABC',
+    })
+  })
+})
+
 describe('processTopupPaymentIntentCore', () => {
-  const mockEnsureCustomer = vi.fn()
+  const mockSyncCustomer = vi.mocked(syncCustomerCore)
   const mockProcessPaymentIntent = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockEnsureCustomer.mockResolvedValue('cus_ABC')
+    mockSyncCustomer.mockResolvedValue('cus_ABC')
     mockCreateSolvaPay.mockReturnValue({
-      ensureCustomer: mockEnsureCustomer,
       processPaymentIntent: mockProcessPaymentIntent,
     } as never)
-    mockGetAuth.mockResolvedValue({
-      userId: 'user_123',
-      email: 'user@example.com',
-      name: 'Test User',
-    })
   })
 
   it('rejects requests missing paymentIntentId with status 400', async () => {
@@ -61,8 +132,8 @@ describe('processTopupPaymentIntentCore', () => {
     expect(mockProcessPaymentIntent).not.toHaveBeenCalled()
   })
 
-  it('propagates auth errors verbatim', async () => {
-    mockGetAuth.mockResolvedValue({
+  it('propagates syncCustomerCore errors verbatim', async () => {
+    mockSyncCustomer.mockResolvedValue({
       error: 'Unauthorized',
       status: 401,
       details: 'No token provided',
@@ -78,17 +149,14 @@ describe('processTopupPaymentIntentCore', () => {
     expect(mockProcessPaymentIntent).not.toHaveBeenCalled()
   })
 
-  it('forwards paymentIntentId to solvaPay.processPaymentIntent with the authenticated customerRef', async () => {
+  it('forwards paymentIntentId to solvaPay.processPaymentIntent with the synced customerRef', async () => {
     mockProcessPaymentIntent.mockResolvedValue({ status: 'succeeded' })
 
     const result = await processTopupPaymentIntentCore(fakeRequest(), {
       paymentIntentId: 'pi_test_123',
     })
 
-    expect(mockEnsureCustomer).toHaveBeenCalledWith('user_123', 'user_123', {
-      email: 'user@example.com',
-      name: 'Test User',
-    })
+    expect(mockSyncCustomer).toHaveBeenCalled()
     expect(mockProcessPaymentIntent).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
       customerRef: 'cus_ABC',
@@ -164,7 +232,6 @@ describe('processTopupPaymentIntentCore', () => {
   it('uses an externally-provided solvaPay instance instead of creating a new one', async () => {
     mockProcessPaymentIntent.mockResolvedValue({ status: 'succeeded' })
     const externalSolvaPay = {
-      ensureCustomer: mockEnsureCustomer,
       processPaymentIntent: mockProcessPaymentIntent,
     } as never
 
@@ -192,25 +259,19 @@ describe('processTopupPaymentIntentCore', () => {
 // ------------------------------------------------------------------
 
 describe('processTopupPaymentIntentCore — post-success balance polling', () => {
-  const mockEnsureCustomer = vi.fn()
+  const mockSyncCustomer = vi.mocked(syncCustomerCore)
   const mockProcessPaymentIntent = vi.fn()
   const mockGetCustomerBalance = vi.fn()
 
   beforeEach(() => {
     vi.useFakeTimers()
-    mockEnsureCustomer.mockReset().mockResolvedValue('cus_ABC')
+    mockSyncCustomer.mockReset().mockResolvedValue('cus_ABC')
     mockProcessPaymentIntent.mockReset()
     mockGetCustomerBalance.mockReset()
     mockCreateSolvaPay.mockReset().mockReturnValue({
-      ensureCustomer: mockEnsureCustomer,
       processPaymentIntent: mockProcessPaymentIntent,
       getCustomerBalance: mockGetCustomerBalance,
     } as never)
-    mockGetAuth.mockReset().mockResolvedValue({
-      userId: 'user_123',
-      email: 'user@example.com',
-      name: 'Test User',
-    })
   })
 
   afterEach(() => {
@@ -338,7 +399,6 @@ describe('processTopupPaymentIntentCore — post-success balance polling', () =>
     // `getCustomerBalance` — mirrors the shape of older custom
     // adapters that pre-date the wallet API.
     mockCreateSolvaPay.mockReturnValue({
-      ensureCustomer: mockEnsureCustomer,
       processPaymentIntent: mockProcessPaymentIntent,
     } as never)
     mockProcessPaymentIntent.mockResolvedValue({ status: 'succeeded' })
