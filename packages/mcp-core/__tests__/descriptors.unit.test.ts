@@ -473,3 +473,41 @@ describe('buildSolvaPayDescriptors → _meta["openai/widgetSessionId"] stamping'
     expect(metaKey(result)).toMatch(UUID_RE)
   })
 })
+
+describe('create_payment_intent descriptor', () => {
+  it('forwards optional currency to createPaymentIntentCore', async () => {
+    const serverModule = await import('@solvapay/server')
+    const coreSpy = vi.spyOn(serverModule, 'createPaymentIntentCore').mockResolvedValue({
+      clientSecret: 'cs_test',
+      publishableKey: 'pk_test',
+      customerRef: 'cus_test',
+    })
+
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === MCP_TOOL_NAMES.createPayment)
+    expect(tool).toBeTruthy()
+
+    await tool!.handler(
+      { planRef: 'pln_pro', productRef: 'prd_test', currency: 'EUR' },
+      { authInfo: { extra: { customer_ref: 'cus_test' } } },
+    )
+
+    expect(coreSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        planRef: 'pln_pro',
+        productRef: 'prd_test',
+        currency: 'EUR',
+      }),
+      expect.anything(),
+    )
+
+    coreSpy.mockRestore()
+  })
+})

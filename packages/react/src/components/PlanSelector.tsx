@@ -29,11 +29,11 @@ export interface PlanSelectorProps {
 const DefaultTree: React.FC = () => (
   <>
     <Primitive.Heading className="solvapay-plan-selector-heading" />
+    <Primitive.CurrencySwitcher className="solvapay-plan-selector-currency-switcher" />
     <Primitive.Grid className="solvapay-plan-selector-grid">
       <Primitive.Card className="solvapay-plan-selector-card">
         <Primitive.CardBadge className="solvapay-plan-selector-card-badge" />
         <Primitive.CardName className="solvapay-plan-selector-card-name" />
-        <Primitive.CardCurrency className="solvapay-plan-selector-card-currency" />
         <Primitive.CardPrice className="solvapay-plan-selector-card-price" />
         <Primitive.CardInterval className="solvapay-plan-selector-card-interval" />
       </Primitive.Card>

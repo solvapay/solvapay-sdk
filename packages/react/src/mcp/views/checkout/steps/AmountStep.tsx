@@ -19,6 +19,7 @@ import type { BootstrapPlanLike, Cx } from '../shared'
 
 interface AmountStepProps {
   plan: BootstrapPlanLike
+  topupCurrency?: string | null
   onBack: () => void
   onContinue: (amountMinor: number) => void
   cx: Cx
@@ -26,11 +27,12 @@ interface AmountStepProps {
 
 export const AmountStep = memo(function AmountStep({
   plan,
+  topupCurrency,
   onBack,
   onContinue,
   cx,
 }: AmountStepProps) {
-  const currency = (plan.currency ?? 'USD').toUpperCase()
+  const currency = (topupCurrency ?? plan.currency ?? 'USD').toUpperCase()
   const locale = useHostLocale()
 
   const [stagedAmountMinor, setStagedAmountMinor] = useState<number | null>(null)

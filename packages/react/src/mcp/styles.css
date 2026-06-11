@@ -978,6 +978,23 @@ body {
   font-size: 13px;
 }
 
+.solvapay-mcp-plan-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.solvapay-mcp-plan-step-header .solvapay-mcp-heading,
+.solvapay-mcp-plan-step-header > .solvapay-mcp-heading {
+  margin: 0;
+}
+
+.solvapay-mcp-plan-step-header .solvapay-plan-selector-currency-switcher {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 .solvapay-mcp-checkout-dismiss {
   align-self: center;
 }

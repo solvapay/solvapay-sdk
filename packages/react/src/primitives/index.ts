@@ -32,6 +32,7 @@ export {
   PlanSelectorCardPrice,
   PlanSelectorCardInterval,
   PlanSelectorCardCurrency,
+  PlanSelectorCurrencySwitcher,
   PlanSelectorCardBadge,
   PlanSelectorLoading,
   PlanSelectorError,

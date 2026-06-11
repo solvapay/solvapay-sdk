@@ -20,6 +20,7 @@ import type { BootstrapPlanLike, Cx } from '../shared'
 interface PaygPaymentStepProps {
   plan: BootstrapPlanLike
   amountMinor: number
+  topupCurrency?: string | null
   returnUrl: string
   onBack: () => void
   onSuccess: (extras?: TopupFormSuccessExtras) => void
@@ -29,12 +30,13 @@ interface PaygPaymentStepProps {
 export const PaygPaymentStep = memo(function PaygPaymentStep({
   plan,
   amountMinor,
+  topupCurrency,
   returnUrl,
   onBack,
   onSuccess,
   cx,
 }: PaygPaymentStepProps) {
-  const currency = (plan.currency ?? 'USD').toUpperCase()
+  const currency = (topupCurrency ?? plan.currency ?? 'USD').toUpperCase()
   const locale = useHostLocale()
   const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
   // `creditsPerMinorUnit` is the mint rate the backend surfaces on the

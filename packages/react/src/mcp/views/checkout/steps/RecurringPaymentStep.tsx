@@ -9,7 +9,10 @@
 import React, { memo } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { PaymentForm } from '../../../../primitives/PaymentForm'
+import { usePlanSelection } from '../../../../components/PlanSelectionContext'
 import { formatPrice } from '../../../../utils/format'
+import { resolvePlanPricingOption } from '../../../../utils/planPricing'
+import type { Plan } from '../../../../types'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
 import type { BootstrapPlanLike, Cx } from '../shared'
@@ -34,9 +37,14 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
   onSuccess,
   cx,
 }: RecurringPaymentStepProps) {
-  const currency = (plan.currency ?? 'USD').toUpperCase()
+  const planSelection = usePlanSelection()
+  const pricingOption = resolvePlanPricingOption(
+    plan as unknown as Plan,
+    planSelection?.selectedCurrency,
+  )
+  const currency = pricingOption.currency.toUpperCase()
   const locale = useHostLocale()
-  const amountMinor = plan.price ?? 0
+  const amountMinor = pricingOption.price ?? 0
   const cycle = plan.billingCycle ?? 'monthly'
   const credits = inferIncludedCredits(plan)
   const planName = plan.name ?? 'Plan'

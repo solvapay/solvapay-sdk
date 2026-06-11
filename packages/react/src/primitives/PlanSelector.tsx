@@ -62,6 +62,8 @@ type PlanSelectorContextValue = {
    * `userHasSelected` true so auto-selection doesn't reassert.
    */
   clearSelection: () => void
+  preferredCurrency: string | null
+  setPreferredCurrency: (currency: string) => void
   selectedCurrencies: Record<string, string>
   setPlanCurrency: (planRef: string, currency: string) => void
   getSelectedOption: (plan: Plan) => PlanPricingOption
@@ -192,12 +194,22 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
   }, [setSelectedPlanIndex])
 
   const selectedPlanRef = selectedPlan?.reference ?? null
+  const [preferredCurrency, setPreferredCurrencyState] = useState<string | null>(null)
   const [selectedCurrencies, setSelectedCurrencies] = useState<Record<string, string>>({})
 
   const getSelectedOption = useCallback(
-    (plan: Plan) => resolvePlanPricingOption(plan, selectedCurrencies[plan.reference] ?? null),
-    [selectedCurrencies],
+    (plan: Plan) =>
+      resolvePlanPricingOption(
+        plan,
+        selectedCurrencies[plan.reference] ?? preferredCurrency ?? null,
+      ),
+    [selectedCurrencies, preferredCurrency],
   )
+
+  const setPreferredCurrency = useCallback((currency: string) => {
+    setPreferredCurrencyState(currency.toUpperCase())
+    setSelectedCurrencies({})
+  }, [])
 
   const setPlanCurrency = useCallback((planRef: string, currency: string) => {
     setSelectedCurrencies(current => ({ ...current, [planRef]: currency }))
@@ -245,6 +257,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isPopular,
       select,
       clearSelection,
+      preferredCurrency,
+      setPreferredCurrency,
       selectedCurrencies,
       setPlanCurrency,
       getSelectedOption,
@@ -262,6 +276,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       isPopular,
       select,
       clearSelection,
+      preferredCurrency,
+      setPreferredCurrency,
       selectedCurrencies,
       setPlanCurrency,
       getSelectedOption,
@@ -278,8 +294,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
         },
         selectedCurrency,
         setSelectedCurrency: currency => {
-          if (selectedPlanRef && currency) {
-            setPlanCurrency(selectedPlanRef, currency)
+          if (currency) {
+            setPreferredCurrency(currency)
           }
         },
         plans,
@@ -526,6 +542,53 @@ function normalizeBillingCycle(cycle: string | null | undefined): string | null 
 
 type BadgeProps = LeafProps & { 'data-variant'?: 'current' | 'popular' }
 
+const CurrencySwitcher = forwardRef<
+  HTMLSelectElement,
+  React.SelectHTMLAttributes<HTMLSelectElement>
+>(function PlanSelectorCurrencySwitcher({ children, onChange, className, ...rest }, forwardedRef) {
+  const ctx = usePlanSelectorContext('CurrencySwitcher')
+
+  const availableCurrencies = useMemo(() => {
+    const currencies = new Set<string>()
+    for (const plan of ctx.plans) {
+      const options = getPlanPricingOptions(plan)
+      if (options.length <= 1) continue
+      for (const option of options) {
+        currencies.add(option.currency.toUpperCase())
+      }
+    }
+    return [...currencies].sort()
+  }, [ctx.plans])
+
+  if (availableCurrencies.length < 2) return null
+
+  const effectiveCurrency =
+    ctx.preferredCurrency ??
+    (ctx.selectedPlan ? ctx.getSelectedOption(ctx.selectedPlan).currency.toUpperCase() : null) ??
+    availableCurrencies[0]
+
+  return (
+    <select
+      ref={forwardedRef}
+      data-solvapay-plan-selector-currency-switcher=""
+      className={className}
+      value={effectiveCurrency}
+      onChange={event => {
+        ctx.setPreferredCurrency(event.target.value)
+        onChange?.(event)
+      }}
+      {...rest}
+    >
+      {children ??
+        availableCurrencies.map(currency => (
+          <option key={currency} value={currency}>
+            {currency}
+          </option>
+        ))}
+    </select>
+  )
+})
+
 const CardCurrency = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   function PlanSelectorCardCurrency({ children, onChange, ...rest }, forwardedRef) {
     const card = useCardContext('CardCurrency')
@@ -621,6 +684,7 @@ export const PlanSelectorCard = Card
 export const PlanSelectorCardName = CardName
 export const PlanSelectorCardPrice = CardPrice
 export const PlanSelectorCardInterval = CardInterval
+export const PlanSelectorCurrencySwitcher = CurrencySwitcher
 export const PlanSelectorCardCurrency = CardCurrency
 export const PlanSelectorCardBadge = CardBadge
 export const PlanSelectorLoading = Loading
@@ -634,6 +698,7 @@ export const PlanSelector = {
   CardName,
   CardPrice,
   CardInterval,
+  CurrencySwitcher,
   CardCurrency,
   CardBadge,
   Loading,

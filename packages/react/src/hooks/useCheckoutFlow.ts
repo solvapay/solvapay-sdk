@@ -27,6 +27,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { usePlanSelector } from '../primitives/PlanSelector'
+import { usePlanSelection } from '../components/PlanSelectionContext'
 import { useBalance } from './useBalance'
 import { useMerchant } from './useMerchant'
 import { useSolvaPay } from './useSolvaPay'
@@ -41,6 +42,7 @@ import {
   type CheckoutStep,
   type SuccessMeta,
 } from '../primitives/checkout/shared'
+import { resolvePlanPricingOption } from '../utils/planPricing'
 
 export type CheckoutStatus = 'idle' | 'activating' | 'paying' | 'error'
 
@@ -156,6 +158,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   onErrorRef.current = opts.onError
 
   const planCtx = usePlanSelector()
+  const planSelection = usePlanSelection()
   const transport = useTransport()
   const locale = useLocale()
   const balance = useBalance()
@@ -336,19 +339,25 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
 
   const recordRecurringSuccess = useCallback(() => {
     if (!selectedPlanShape) return
-    const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
+    const pricingOption = selectedPlan
+      ? resolvePlanPricingOption(selectedPlan, planSelection?.selectedCurrency)
+      : {
+          currency: selectedPlanShape.currency ?? 'USD',
+          price: selectedPlanShape.price ?? 0,
+        }
+    const currency = pricingOption.currency.toUpperCase()
     const meta: SuccessMeta = {
       branch: 'recurring',
       plan: selectedPlanShape,
       creditsIncluded: inferIncludedCredits(selectedPlanShape),
-      chargedTodayMinor: selectedPlanShape.price ?? 0,
+      chargedTodayMinor: pricingOption.price ?? 0,
       currency,
       nextRenewalLabel: null,
     }
     setSuccessMeta(meta)
     setStep('success')
     onPurchaseSuccessRef.current?.(meta)
-  }, [selectedPlanShape])
+  }, [selectedPlanShape, selectedPlan, planSelection?.selectedCurrency])
 
   const advance = useCallback(async () => {
     if (step === 'plan') {

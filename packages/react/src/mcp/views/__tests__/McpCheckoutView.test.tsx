@@ -775,6 +775,103 @@ describe('<McpCheckoutView> — Recurring branch', () => {
 })
 
 // ------------------------------------------------------------------
+// Multi-currency plan selection
+// ------------------------------------------------------------------
+
+describe('<McpCheckoutView> — multi-currency plans', () => {
+  const multiProPlan: Plan = {
+    ...proPlan,
+    pricingOptions: [
+      { currency: 'USD', price: 1800, default: true },
+      { currency: 'EUR', price: 1600 },
+    ],
+  }
+
+  function renderMultiCurrencyView(
+    props: Partial<React.ComponentProps<typeof McpCheckoutView>> = {},
+  ) {
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config)
+    plansCache.set(productRef, {
+      plans: [freePlan, paygPlan, multiProPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    return {
+      ctx,
+      transport,
+      ...render(
+        <SolvaPayContext.Provider value={ctx}>
+          <McpBridgeProvider app={{}}>
+            <McpCheckoutView
+              productRef={productRef}
+              publishableKey="pk_test"
+              returnUrl="https://example.test/r"
+              plans={[
+                { ...freePlan, planType: 'free' } as never,
+                { ...paygPlan, planType: 'usage-based' } as never,
+                { ...multiProPlan, planType: 'recurring' } as never,
+              ]}
+              fromPaywall
+              {...props}
+            />
+          </McpBridgeProvider>
+        </SolvaPayContext.Provider>,
+      ),
+    }
+  }
+
+  it('renders the currency switcher when a plan exposes multiple pricing options', async () => {
+    renderMultiCurrencyView()
+    await waitFor(() => expect(screen.getByText('Pro')).toBeTruthy())
+    expect(
+      document.querySelector('[data-solvapay-plan-selector-currency-switcher]'),
+    ).toBeTruthy()
+  })
+
+  it('does not render the currency switcher for single-currency plans', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => expect(screen.getByText('Pro')).toBeTruthy())
+    expect(
+      document.querySelector('[data-solvapay-plan-selector-currency-switcher]'),
+    ).toBeNull()
+  })
+
+  it('updates the continue label and recurring payment summary when currency is switched', async () => {
+    renderMultiCurrencyView()
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen
+      .getByText('Pro')
+      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    await waitFor(() =>
+      screen.getByRole('button', { name: /Continue with Pro — \$18\.00\/mo/ }),
+    )
+
+    const switcher = document.querySelector(
+      '[data-solvapay-plan-selector-currency-switcher]',
+    ) as HTMLSelectElement
+    act(() => {
+      fireEvent.change(switcher, { target: { value: 'EUR' } })
+    })
+
+    await waitFor(() =>
+      screen.getByRole('button', { name: /Continue with Pro — €16\.00\/mo/ }),
+    )
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro — €16\.00\/mo/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    expect(screen.getByTestId('payment-submit-label').textContent).toMatch(/€16\.00\/mo/)
+    expect(screen.getByText('€16.00/mo')).toBeTruthy()
+  })
+})
+
+// ------------------------------------------------------------------
 // CSS hooks — guard the markup classes/attributes that the MCP
 // stylesheet hangs rules off. A silent rename here = unstyled view,
 // so pin the critical selectors with explicit assertions.
