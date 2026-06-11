@@ -1,6 +1,6 @@
 ---
-title: "Usage events"
-description: "Publish usage events from your application for analytics and operational visibility."
+title: 'Usage events'
+description: 'Record metered customer usage from your application.'
 ---
 
 ## What are usage events?
@@ -10,10 +10,10 @@ document generation.
 
 Usage events are distinct from [meter events](/meters/events):
 
-- Usage events: analytics and operational visibility
+- Usage events: customer-level metering and credit debit for SDK integrations
 - Meter events: billing and limit enforcement
 
-## Publish a usage event
+## Record usage
 
 ```typescript
 import { createSolvaPay } from '@solvapay/server'
@@ -22,37 +22,45 @@ const solvaPay = createSolvaPay({
   apiKey: process.env.SOLVAPAY_SECRET_KEY,
 })
 
-await solvaPay.createEvent({
-  type: 'usage.api_call',
+const result = await solvaPay.trackUsage({
   customerRef: 'cus_3C4D5E6F',
+  productRef: 'prd_api',
+  actionType: 'api_call',
   units: 1,
+  outcome: 'success',
+  idempotencyKey: 'request_123',
 })
+
+if (result.creditDebit?.debited) {
+  console.log(`Debited ${result.creditDebit.amount} credits`)
+}
 ```
 
 ## Event fields
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `type` | `string` | Yes | Dot-notation event type (for example `usage.api_call`) |
-| `customerRef` | `string` | Yes | Customer reference this event belongs to |
-| `productRef` | `string` | No | Product scope for the event |
-| `units` | `number` | Yes | Quantity consumed (non-negative) |
+| Field            | Type     | Required | Description                                                                    |
+| ---------------- | -------- | -------- | ------------------------------------------------------------------------------ |
+| `customerRef`    | `string` | Yes      | Customer reference this event belongs to                                       |
+| `productRef`     | `string` | No       | Product scope for the event                                                    |
+| `actionType`     | `string` | No       | Usage category, such as `api_call` or `custom`                                 |
+| `units`          | `number` | No       | Quantity consumed. Defaults to `1`                                             |
+| `outcome`        | `string` | No       | `success`, `paywall`, or `fail`. Credit debit only applies to successful usage |
+| `idempotencyKey` | `string` | No       | Retry-safe key for duplicate usage submissions                                 |
 
 ## Common types
 
-- `usage.api_call`
-- `usage.token`
-- `usage.message_sent`
-- `usage.document_generated`
-- `usage.search`
-- `usage.storage`
+- `api_call`
+- `transaction`
+- `email`
+- `storage`
+- `custom`
 
 ## Relationship to meters
 
 Use both when needed:
 
-- `createEvent()` for product analytics and operations
-- `trackUsage()` for limits and billing logic
+- `trackUsage()` for customer-level usage and credit debit
+- Meter events for named meter ingestion and aggregation
 
 ## Next steps
 

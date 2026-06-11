@@ -170,7 +170,7 @@ function Account() {
 
 ## Text-only paywall
 
-The MCP App surface uses SolvaPay's **text-only paywall**. `payable.mcp` emits a plain-text `Purchase required` response — no embedded UI meta, no structured checkout payload — so the host model can read the copy, call `create_checkout_session`, and surface the returned URL however it likes. There is no `McpPaywallView` / `McpNudgeView` / `McpUpsellStrip` component anymore; render checkout through `<PaymentForm>` or the hosted URL instead.
+The MCP App surface uses SolvaPay's **text-only paywall**. A `registerPayable` tool emits a plain-text `Purchase required` response — no embedded UI meta, no structured checkout payload — so the host model can read the copy, call `create_checkout_session`, and surface the returned URL however it likes. There is no `McpPaywallView` / `McpNudgeView` / `McpUpsellStrip` component anymore; render checkout through `<PaymentForm>` or the hosted URL instead.
 
 ## Complete example
 
@@ -182,6 +182,6 @@ A full working example — server, client, OAuth bridge, polling, and the five-s
 
 ## Next steps
 
-- [MCP Server integration](/sdks/typescript/guides/mcp) — server-side paywall patterns with `payable.mcp()`
+- [MCP Server integration](/sdks/typescript/guides/mcp) — server-side paywall patterns with `createSolvaPayMcpServer` and `registerPayable`
 - [React SDK guide](/sdks/typescript/guides/react) — hooks and components used under `createMcpAppAdapter`
 - [Purchase management](/sdks/typescript/guides/purchase-management) — cancel, reactivate, renewal semantics
