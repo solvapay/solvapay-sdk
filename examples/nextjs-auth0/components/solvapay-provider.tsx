@@ -6,9 +6,19 @@ import { SolvaPayProvider } from '@solvapay/react'
 import { createAuth0ClientAuthAdapter } from '@solvapay/react/auth0'
 
 /**
- * Wraps the app in `SolvaPayProvider` and bridges Auth0 to the SDK via
- * `@solvapay/react/auth0`. The server-side session is forwarded in `proxy.ts`
- * by `@solvapay/auth/auth0` + `@solvapay/next/middleware`.
+ * Client-side SolvaPay auth adapter — UI/session awareness only.
+ *
+ * `createAuth0ClientAuthAdapter` reports signed-in state via Auth0 `user.sub`.
+ * It does **not** send Auth0 tokens to SolvaPay; the client uses a sentinel
+ * auth pattern so React hooks know when to show paywall/checkout UI.
+ *
+ * The production identity bridge for API routes and billing is server-side in
+ * `proxy.ts`: middleware reads the httpOnly Auth0 session and sets `x-user-id`.
+ * Keep those two layers separate — never put IdP bearer tokens in the browser
+ * adapter or localStorage.
+ *
+ * `useMemo` on `user?.sub` avoids recreating the adapter when unrelated user
+ * fields change (email, picture, etc.).
  */
 export function SolvaPayClientProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser()

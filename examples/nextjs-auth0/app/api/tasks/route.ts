@@ -4,6 +4,10 @@ import { auth0 } from '@/lib/auth0'
 import { getProductRef, getSolvaPay } from '@/lib/solvapay'
 import { createTask, deleteTask, listTasks } from '@/lib/tasks-store'
 
+/**
+ * Resolve the current user from the Auth0 httpOnly session.
+ * Returns Auth0 `sub` — the same value `proxy.ts` forwards as `x-user-id`.
+ */
 async function getAuthenticatedUserId(): Promise<string | null> {
   const session = await auth0.getSession()
   return session?.user?.sub ?? null
@@ -19,11 +23,15 @@ export async function GET() {
 }
 
 /**
- * Creating a task is the metered, paid action. `payable.next` checks the
- * customer's Pay As You Go access before the handler runs — returning a 402
- * with checkout details when they have no credits — and records one usage
- * event ("request") against the plan when it succeeds. The customer ref is
- * the Auth0 `sub` forwarded as `x-user-id` by `proxy.ts`.
+ * Creating a task is the metered, paid action. Identity chain for billing:
+ *
+ *   Auth0 session (httpOnly cookie)
+ *     → `session.user.sub`
+ *     → `proxy.ts` sets `x-user-id` on the request
+ *     → `@solvapay/next` / `payable.next` resolves SolvaPay customer by `externalRef`
+ *
+ * `payable.next` checks Pay As You Go access before the handler runs (402 when out
+ * of credits) and records one usage event ("request") on success.
  */
 export async function POST(request: NextRequest, context: unknown) {
   const userId = await getAuthenticatedUserId()

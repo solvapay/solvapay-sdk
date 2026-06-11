@@ -23,6 +23,26 @@ Creating a task is the paid action. Each task costs **one request** against the 
 
 The `SOLVAPAY_SECRET_KEY` stays server-only. The browser only sees `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF`. Payments are collected inline with Stripe Elements; the publishable key + client secret come from the payment-intent API responses.
 
+## Identity bridge in depth (DEV-453 / Spawned)
+
+This example is the **canonical SDK-path reference** for mapping Auth0 users to SolvaPay customers. Read the inline comments in `proxy.ts`, `lib/auth0.ts`, and `components/solvapay-provider.tsx` for the full contract.
+
+| Field | Source | SolvaPay usage | Browser? |
+|-------|--------|----------------|----------|
+| `externalRef` / customer ref | Auth0 `sub` | Stable billing identity via `x-user-id` | No — set server-side in `proxy.ts` |
+| Auth0 ID token | Auth0 session | Optional email/name on first customer create | No — forwarded server-side only |
+| Auth0 access token | Auth0 API | **Never** sent to SolvaPay | Stays at integrator edge |
+| `SOLVAPAY_SECRET_KEY` | Dashboard | All SDK/server billing calls | Server-only |
+
+**Auth0 app type:** create a **Regular Web Application** in the Auth0 Dashboard (not SPA/Native) so the session uses an httpOnly cookie and `/auth/login|callback|logout` work via `proxy.ts`.
+
+**Token TTL:** if your IdP rotates access tokens on a short TTL (e.g. Spawned's 24h at their edge), that does not affect SolvaPay. We key customers on the stable `sub`, not on access-token expiry.
+
+**Further reading:**
+
+- SDK guide: [`docs/guides/custom-auth.mdx`](../../docs/guides/custom-auth.mdx) (Auth0 section)
+- Full Spawned bridge (SDK + MCP OAuth + CLI + magic-link): [`solvapay-backend/docs/integrations/spawned-identity-bridge.md`](https://github.com/solvapay/solvapay-backend/blob/dev/docs/integrations/spawned-identity-bridge.md)
+
 ## Prerequisites
 
 - Node.js 20+
