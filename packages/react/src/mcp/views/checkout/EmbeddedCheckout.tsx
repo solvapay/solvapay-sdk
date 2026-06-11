@@ -245,6 +245,8 @@ function McpCheckoutBody({
       <AmountStep
         plan={selectedPlanShape}
         topupCurrency={flow.topupCurrency}
+        topupCurrencies={flow.topupCurrencies}
+        onCurrencyChange={flow.setTopupCurrency}
         onBack={() => flow.back()}
         onContinue={amountMinor => {
           flow.selectAmount(amountMinor)

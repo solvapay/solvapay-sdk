@@ -755,6 +755,15 @@ export interface components {
              */
             defaultCurrency?: string;
             /**
+             * Full set of currencies a customer may pay credit topups in, including the default currency. Omitted/single-entry means single-currency behavior.
+             * @example [
+             *       "USD",
+             *       "EUR",
+             *       "GBP"
+             *     ]
+             */
+            supportedTopupCurrencies?: string[];
+            /**
              * Descriptor appearing on the customer card statement
              * @example ACME INC
              */

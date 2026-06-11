@@ -94,11 +94,12 @@ export interface UseCheckoutFlowReturn {
   /** Returns the active branch — `null` when no plan is selected. */
   branch: 'payg' | 'recurring' | null
   /**
-   * Currency for the PAYG topup branch, resolved from the
-   * `topupCurrency` option (when set) or `merchant.defaultCurrency`.
+   * Currency for the PAYG topup branch, resolved in order:
+   * top-up step override → plan-picker `preferredCurrency` (when
+   * supported) → `topupCurrency` option or `merchant.defaultCurrency`.
    * `null` while the merchant is still loading and no explicit
-   * option was passed. **Plan currency is never consulted** — credit
-   * topups are merchant-wide, not plan-specific.
+   * option was passed. Plan `currency` / `selectedCurrency` are never
+   * consulted — credit topups are merchant-wide, not plan-specific.
    */
   topupCurrency: string | null
   /**
@@ -107,6 +108,20 @@ export interface UseCheckoutFlowReturn {
    * misleading default while the merchant fetch is in flight.
    */
   topupCurrencyReady: boolean
+  /**
+   * Full set of currencies the customer may pay topups in — the
+   * merchant's `supportedTopupCurrencies` (which already includes the
+   * default) or, for single-currency merchants, just the resolved
+   * `topupCurrency`. Always uppercased and deduped. The amount step
+   * renders a switcher only when this has more than one entry.
+   */
+  topupCurrencies: string[]
+  /**
+   * Override the topup currency from a picker. Accepts any code in
+   * `topupCurrencies`; ignored otherwise. Resets to the merchant default
+   * resolution on `reset()`.
+   */
+  setTopupCurrency: (code: string) => void
   /**
    * Whether the current step has a meaningful previous step to return
    * to. `<CheckoutSteps.BackLink>` reads this to suppress itself when
@@ -166,16 +181,48 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   const { refetchPurchase } = useSolvaPay()
   const { merchant } = useMerchant()
 
-  // Resolve PAYG topup currency strictly from the `topupCurrency` option
-  // (forwarded by `<CheckoutSteps.Root topupCurrency={…}>` and friends)
-  // or the merchant's `defaultCurrency`. Plan currency is intentionally
-  // never consulted: credit topups settle into the merchant-wide wallet,
-  // independent of which plan the customer picked. While the merchant
-  // fetch is in flight (and no explicit prop was passed), `topupCurrency`
-  // stays `null` and step components render a skeleton/disabled state.
-  const topupCurrency: string | null =
+  // Resolve PAYG topup currency from (in order): the amount-step override,
+  // the plan-picker's `preferredCurrency` (when supported), then the
+  // `topupCurrency` option or merchant `defaultCurrency`. Plan `currency` /
+  // `selectedCurrency` are intentionally never consulted — credit topups
+  // settle into the merchant-wide wallet. While the merchant fetch is in
+  // flight (and no explicit prop was passed), `topupCurrency` stays `null`
+  // and step components render a skeleton/disabled state.
+  const [topupCurrencyOverride, setTopupCurrencyOverride] = useState<string | null>(null)
+
+  // Full set of pay currencies. The merchant payload already includes the
+  // default in `supportedTopupCurrencies`; single-currency merchants omit it,
+  // so we fall back to the resolved default code.
+  const topupCurrencies = useMemo<string[]>(() => {
+    const fromMerchant = (merchant?.supportedTopupCurrencies ?? [])
+      .map(code => code.toUpperCase())
+      .filter(Boolean)
+    const fallback =
+      opts.topupCurrency?.toUpperCase() ?? merchant?.defaultCurrency?.toUpperCase() ?? null
+    const list = fromMerchant.length > 0 ? fromMerchant : fallback ? [fallback] : []
+    return Array.from(new Set(list))
+  }, [merchant?.supportedTopupCurrencies, merchant?.defaultCurrency, opts.topupCurrency])
+
+  const resolvedDefaultTopupCurrency: string | null =
     opts.topupCurrency?.toUpperCase() ?? merchant?.defaultCurrency?.toUpperCase() ?? null
+  const planPickerCurrency = planCtx.preferredCurrency?.toUpperCase() ?? null
+  const topupCurrency: string | null =
+    (topupCurrencyOverride && topupCurrencies.includes(topupCurrencyOverride)
+      ? topupCurrencyOverride
+      : null) ??
+    (planPickerCurrency && topupCurrencies.includes(planPickerCurrency)
+      ? planPickerCurrency
+      : null) ??
+    resolvedDefaultTopupCurrency
   const topupCurrencyReady = topupCurrency != null
+
+  const setTopupCurrency = useCallback(
+    (code: string) => {
+      const normalized = code.toUpperCase()
+      setTopupCurrencyOverride(normalized)
+    },
+    [],
+  )
 
   const [step, setStep] = useState<CheckoutStep>(initialStep)
   const [status, setStatus] = useState<CheckoutStatus>('idle')
@@ -409,6 +456,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setSuccessMeta(null)
     setError(null)
     setStatus('idle')
+    setTopupCurrencyOverride(null)
   }, [])
 
   const retry = useCallback(async () => {
@@ -441,6 +489,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       branch,
       topupCurrency,
       topupCurrencyReady,
+      topupCurrencies,
+      setTopupCurrency,
       canGoBack,
       selectPlan,
       selectAmount,
@@ -461,6 +511,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       branch,
       topupCurrency,
       topupCurrencyReady,
+      topupCurrencies,
+      setTopupCurrency,
       canGoBack,
       selectPlan,
       selectAmount,

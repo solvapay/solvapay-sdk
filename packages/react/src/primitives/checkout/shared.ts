@@ -125,12 +125,9 @@ export function formatContinueLabel(
 }
 
 export function formatPaygRate(plan: BootstrapPlanLike, locale?: string): string {
-  const currency = (plan.currency ?? 'USD').toUpperCase()
   const creditsPerUnit = plan.creditsPerUnit ?? 1
-  // One currency unit per credit at the plan's rate. Minor-unit
-  // representation: 1 credit = 1 / creditsPerUnit of a minor unit.
-  const perCreditMinor = Math.max(1, Math.round(1 / creditsPerUnit))
-  return `${formatPrice(perCreditMinor, currency, { locale })} / call`
+  const creditLabel = creditsPerUnit === 1 ? 'credit' : 'credits'
+  return `${creditsPerUnit.toLocaleString(locale)} ${creditLabel} / call`
 }
 
 export function inferIncludedCredits(plan: BootstrapPlanLike): number {

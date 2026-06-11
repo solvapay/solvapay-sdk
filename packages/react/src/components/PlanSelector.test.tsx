@@ -350,7 +350,7 @@ describe('PlanSelector primitive', () => {
     spy.mockRestore()
   })
 
-  it('CardPrice renders a per-call rate for usage-based (PAYG) plans', async () => {
+  it('CardPrice renders a usage label for usage-based (PAYG) plans', async () => {
     const payg: Plan = {
       reference: 'pln_payg',
       name: 'Pay as you go',
@@ -373,9 +373,8 @@ describe('PlanSelector primitive', () => {
         </PlanSelector.Root>
       </SolvaPayProvider>,
     )
-    await waitFor(() => expect(screen.getByText('$0.01 / call')).toBeTruthy())
-    // PAYG plans shouldn't render a cycle suffix — that's a per-call rate,
-    // not a per-cycle charge.
+    await waitFor(() => expect(screen.getByText('Usage-based')).toBeTruthy())
+    // PAYG plans shouldn't render a cycle suffix — usage is not per-cycle.
     expect(screen.queryByText('/month')).toBeNull()
     expect(screen.queryByText('/year')).toBeNull()
   })

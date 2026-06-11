@@ -466,17 +466,8 @@ const CardPrice = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelectorCa
   const copy = useCopy()
   const formatted = useMemo(() => {
     if (card.isFree) return copy.planSelector.freeBadge
-    // PAYG plans price per call, not per cycle. Derive the rate from
-    // `creditsPerUnit` (credits per minor unit) — mirrors the helper
-    // in `McpCheckoutView`'s `formatPaygRate` so both surfaces agree.
     if (card.plan.type === 'usage-based') {
-      const creditsPerUnit = card.plan.creditsPerUnit ?? 1
-      const perCallMinor = Math.max(1, Math.round(1 / creditsPerUnit))
-      const rate = formatPrice(perCallMinor, card.plan.currency ?? 'usd', {
-        locale,
-        free: '',
-      })
-      return `${rate} / call`
+      return copy.planSelector.usageRateLabel
     }
     return formatPrice(card.selectedOption.price ?? 0, card.selectedOption.currency ?? 'usd', {
       locale,
@@ -487,9 +478,9 @@ const CardPrice = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelectorCa
     card.plan.type,
     card.selectedOption.price,
     card.selectedOption.currency,
-    card.plan.creditsPerUnit,
     locale,
     copy.planSelector.freeBadge,
+    copy.planSelector.usageRateLabel,
     copy.interval.free,
   ])
   const Comp = asChild ? Slot : 'span'
@@ -506,9 +497,8 @@ const CardInterval = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelecto
 ) {
   const card = useCardContext('CardInterval')
   const copy = useCopy()
-  // PAYG plans are priced per-call, not per-cycle — the rate suffix
-  // lives on `CardPrice` ("$0.01 / call") and a cycle label would be
-  // misleading here.
+  // PAYG plans are usage-based, not per-cycle — the label lives on
+  // `CardPrice` and a cycle suffix would be misleading here.
   if (card.isFree || card.plan.type === 'usage-based') return null
   // Bootstrap-shaped plans only populate `billingCycle`; legacy plans
   // fetched via the list-plans API populate `interval`. Support both

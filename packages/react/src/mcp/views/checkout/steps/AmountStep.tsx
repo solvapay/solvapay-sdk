@@ -18,30 +18,65 @@ import { BackLink } from '../../BackLink'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
 interface AmountStepProps {
+  /**
+   * Kept for caller-contract parity with the other steps. The topup amount is
+   * merchant-wallet denominated, so plan fields (incl. `plan.currency`) are
+   * intentionally not read here.
+   */
   plan: BootstrapPlanLike
   topupCurrency?: string | null
+  /**
+   * Full set of pay currencies (incl. default). A switcher renders only when
+   * this has more than one entry; single-currency merchants see no switcher.
+   */
+  topupCurrencies?: string[]
+  /** Override the topup currency from the switcher. */
+  onCurrencyChange?: (code: string) => void
   onBack: () => void
   onContinue: (amountMinor: number) => void
   cx: Cx
 }
 
 export const AmountStep = memo(function AmountStep({
-  plan,
   topupCurrency,
+  topupCurrencies,
+  onCurrencyChange,
   onBack,
   onContinue,
   cx,
 }: AmountStepProps) {
-  const currency = (topupCurrency ?? plan.currency ?? 'USD').toUpperCase()
+  // Topup currency comes from the merchant/picker only. Plan currency is never
+  // consulted — credit topups settle into the merchant-wide wallet.
+  const currency = (topupCurrency ?? 'USD').toUpperCase()
   const locale = useHostLocale()
 
   const [stagedAmountMinor, setStagedAmountMinor] = useState<number | null>(null)
+
+  const currencies = topupCurrencies ?? []
+  const showCurrencySwitch = currencies.length > 1 && !!onCurrencyChange
+  const currencyDisplay = showCurrencySwitch ? 'code' : 'symbol'
 
   return (
     <>
       <BackLink label="Back" onClick={onBack} />
 
-      <h2 className={cx.heading}>How many credits?</h2>
+      <div className="solvapay-mcp-step-header">
+        <h2 className={cx.heading}>How many credits?</h2>
+        {showCurrencySwitch && (
+          <select
+            className="solvapay-mcp-currency-switch"
+            value={currency}
+            onChange={event => onCurrencyChange?.(event.target.value)}
+            aria-label="Topup currency"
+          >
+            {currencies.map(code => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
       <p className={cx.muted}>Top up to start using the tool.</p>
 
       <AmountPicker.Root
@@ -50,14 +85,14 @@ export const AmountStep = memo(function AmountStep({
         className={cx.amountPicker}
         onChange={value => setStagedAmountMinor(value)}
       >
-        <PresetAmountRow cx={cx} />
-        <CustomAmountRow rowClassName={cx.amountCustom} />
+        <PresetAmountRow cx={cx} currencyDisplay={currencyDisplay} />
+        <CustomAmountRow rowClassName={cx.amountCustom} currencyDisplay={currencyDisplay} />
         <AmountPicker.Confirm
           className={cx.button}
           onConfirm={amountMinor => onContinue(amountMinor)}
         >
           {stagedAmountMinor
-            ? `Continue — ${formatPrice(stagedAmountMinor, currency, { locale })}`
+            ? `Continue — ${formatPrice(stagedAmountMinor, currency, { locale, currencyDisplay })}`
             : 'Continue'}
         </AmountPicker.Confirm>
       </AmountPicker.Root>
@@ -65,7 +100,13 @@ export const AmountStep = memo(function AmountStep({
   )
 })
 
-function PresetAmountRow({ cx }: { cx: Cx }) {
+function PresetAmountRow({
+  cx,
+  currencyDisplay,
+}: {
+  cx: Cx
+  currencyDisplay: 'symbol' | 'code'
+}) {
   const { quickAmounts, currency } = useAmountPicker()
   const locale = useHostLocale()
   // Recommended preset: the second option (index 1) when available —
@@ -77,6 +118,7 @@ function PresetAmountRow({ cx }: { cx: Cx }) {
         const label = formatPrice(amount * getMinorUnitsPerMajor(currency), currency, {
           locale,
           free: '',
+          currencyDisplay,
         })
         return (
           <AmountPicker.Option
@@ -85,7 +127,9 @@ function PresetAmountRow({ cx }: { cx: Cx }) {
             className={cx.amountOption}
             data-popular={i === popularIndex ? '' : undefined}
             aria-label={`${label}${i === popularIndex ? ' (popular)' : ''}`}
-          />
+          >
+            {label}
+          </AmountPicker.Option>
         )
       })}
     </div>
@@ -94,12 +138,19 @@ function PresetAmountRow({ cx }: { cx: Cx }) {
 
 // Bordered "$ 0.00" row mirroring the hosted topup page. `cx.amountCustom`
 // styles the row wrapper now (post-pill-refactor); the inner span carries the
-// merchant currency symbol, and the input renders unstyled inside.
-function CustomAmountRow({ rowClassName }: { rowClassName: string }) {
-  const { currencySymbol } = useAmountPicker()
+// merchant currency symbol or code, and the input renders unstyled inside.
+function CustomAmountRow({
+  rowClassName,
+  currencyDisplay,
+}: {
+  rowClassName: string
+  currencyDisplay: 'symbol' | 'code'
+}) {
+  const { currencySymbol, currency } = useAmountPicker()
+  const prefix = currencyDisplay === 'code' ? currency.toUpperCase() : currencySymbol
   return (
     <div className={rowClassName}>
-      <span className="solvapay-mcp-amount-currency-symbol">{currencySymbol}</span>
+      <span className="solvapay-mcp-amount-currency-symbol">{prefix}</span>
       <AmountPicker.Custom className="solvapay-mcp-amount-custom-input" placeholder="0.00" />
     </div>
   )

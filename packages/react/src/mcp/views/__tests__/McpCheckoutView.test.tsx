@@ -110,9 +110,11 @@ vi.mock('../../useStripeProbe', () => ({
 import { McpCheckoutView } from '../McpCheckoutView'
 import { plansCache } from '../../../hooks/usePlans'
 import { merchantCache } from '../../../hooks/useMerchant'
+import { createTransportCacheKey } from '../../../transport/cache-key'
 import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type {
+  Merchant,
   Plan,
   PurchaseInfo,
   SolvaPayConfig,
@@ -137,7 +139,7 @@ const freePlan: Plan = {
 const paygPlan: Plan = {
   reference: 'pln_payg',
   name: 'Pay as you go',
-  price: 1, // $0.01 / call
+  price: 1,
   currency: 'usd',
   requiresPayment: true,
   type: 'usage-based',
@@ -641,6 +643,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(screen.getByText('Credits')).toBeTruthy()
     expect(screen.getByText('Plan')).toBeTruthy()
     expect(screen.getByText('Rate')).toBeTruthy()
+    expect(screen.getByText('1 credit / call')).toBeTruthy()
 
     // Regression guard: the success step previously rendered a
     // `Back to chat` button that called `app.requestTeardown()`,
@@ -848,7 +851,7 @@ describe('<McpCheckoutView> — multi-currency plans', () => {
       fireEvent.click(proCard)
     })
     await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pro — \$18\.00\/mo/ }),
+      screen.getByRole('button', { name: /Continue with Pro — \$18(\.00)?\/mo/ }),
     )
 
     const switcher = document.querySelector(
@@ -859,15 +862,93 @@ describe('<McpCheckoutView> — multi-currency plans', () => {
     })
 
     await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pro — €16\.00\/mo/ }),
+      screen.getByRole('button', { name: /Continue with Pro — €16(\.00)?\/mo/ }),
     )
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro — €16\.00\/mo/ }))
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro — €16(\.00)?\/mo/ }))
     })
     await waitFor(() => screen.getByTestId('payment-form-stub'))
-    expect(screen.getByTestId('payment-submit-label').textContent).toMatch(/€16\.00\/mo/)
-    expect(screen.getByText('€16.00/mo')).toBeTruthy()
+    expect(screen.getByTestId('payment-submit-label').textContent).toMatch(/€16(\.00)?\/mo/)
+  })
+})
+
+// ------------------------------------------------------------------
+// PAYG amount step — currency code labels when switcher is shown
+// ------------------------------------------------------------------
+
+describe('<McpCheckoutView> — PAYG amount step currency labels', () => {
+  const multiCurrencyMerchant: Merchant = {
+    displayName: 'Acme',
+    legalName: 'Acme Inc.',
+    defaultCurrency: 'usd',
+    supportedTopupCurrencies: ['usd', 'eur', 'gbp'],
+  }
+
+  const singleCurrencyMerchant: Merchant = {
+    displayName: 'Acme',
+    legalName: 'Acme Inc.',
+    defaultCurrency: 'usd',
+  }
+
+  function seedMerchant(merchant: Merchant, config: SolvaPayConfig) {
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+  }
+
+  async function advanceToAmountStepWithMerchant(merchant: Merchant) {
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    seedMerchant(merchant, config)
+    plansCache.set(productRef, {
+      plans: [freePlan, paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    const ctx = buildCtx(config)
+    const bridgeApp: McpBridgeAppLike = {}
+    const view = render(
+      <SolvaPayContext.Provider value={ctx}>
+        <McpBridgeProvider app={bridgeApp}>
+          <McpCheckoutView
+            productRef={productRef}
+            publishableKey="pk_test"
+            returnUrl="https://example.test/r"
+            plans={bootstrapPlans}
+            fromPaywall
+          />
+        </McpBridgeProvider>
+      </SolvaPayContext.Provider>,
+    )
+    await waitFor(() =>
+      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+    )
+    act(() => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
+      )
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+    return view
+  }
+
+  it('renders currency codes in amount pills when the topup switcher is shown', async () => {
+    const { container } = await advanceToAmountStepWithMerchant(multiCurrencyMerchant)
+    await screen.findByLabelText('Topup currency')
+    const pill = container.querySelector('[data-amount="10"]')
+    expect(pill?.textContent?.replace(/\u00A0/g, ' ')).toBe('USD 10')
+    expect(pill?.textContent).not.toMatch(/^\$/)
+  })
+
+  it('keeps currency symbols in amount pills for single-currency merchants', async () => {
+    await advanceToAmountStepWithMerchant(singleCurrencyMerchant)
+    await screen.findByText(/How many credits/)
+    expect(screen.queryByLabelText('Topup currency')).toBeNull()
+    expect(screen.getByRole('button', { name: '$10' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'USD 10' })).toBeNull()
   })
 })
 

@@ -93,6 +93,13 @@ export interface Merchant {
   privacyUrl?: string
   country?: string
   defaultCurrency?: string
+  /**
+   * Full set of currencies (including `defaultCurrency`) the customer may
+   * pay credit topups in. Surfaced only when the merchant enabled more than
+   * one — single-currency merchants leave this undefined and keep today's
+   * behavior. Drives the topup currency switcher in the PAYG amount step.
+   */
+  supportedTopupCurrencies?: string[]
   statementDescriptor?: string
   logoUrl?: string
   /**

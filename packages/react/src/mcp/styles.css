@@ -225,6 +225,28 @@ body {
   margin-bottom: 4px;
 }
 
+/* AmountStep header: title left, compact topup-currency switcher right.
+ * Only present for multi-currency merchants; single-currency merchants
+ * render the bare heading exactly as before. */
+.solvapay-mcp-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.solvapay-mcp-currency-switch {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--color-background, #ffffff);
+  color: var(--color-text, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .solvapay-mcp-muted {
   margin: 0;
   color: var(--color-text-secondary, #475569);

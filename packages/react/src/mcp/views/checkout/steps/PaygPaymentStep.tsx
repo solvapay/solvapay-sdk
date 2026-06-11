@@ -36,7 +36,9 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
   onSuccess,
   cx,
 }: PaygPaymentStepProps) {
-  const currency = (topupCurrency ?? plan.currency ?? 'USD').toUpperCase()
+  // Topup currency comes from the merchant/picker only — never the plan, so a
+  // plan's own currency can't leak into a merchant-wide credit topup.
+  const currency = (topupCurrency ?? 'USD').toUpperCase()
   const locale = useHostLocale()
   const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
   // `creditsPerMinorUnit` is the mint rate the backend surfaces on the
