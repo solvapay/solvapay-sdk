@@ -2,13 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 const {
   middlewareHandlerMock,
-  createAuthMiddlewareMock,
-  createAuth0AuthAdapterMock,
+  createAuth0AuthMiddlewareMock,
   auth0Mock,
 } = vi.hoisted(() => ({
   middlewareHandlerMock: vi.fn(),
-  createAuthMiddlewareMock: vi.fn(() => middlewareHandlerMock),
-  createAuth0AuthAdapterMock: vi.fn(() => ({ kind: 'auth0-adapter' })),
+  createAuth0AuthMiddlewareMock: vi.fn(() => middlewareHandlerMock),
   auth0Mock: {
     middleware: vi.fn(),
     getSession: vi.fn(),
@@ -16,11 +14,7 @@ const {
 }))
 
 vi.mock('@solvapay/next/middleware', () => ({
-  createAuthMiddleware: createAuthMiddlewareMock,
-}))
-
-vi.mock('@solvapay/auth/auth0', () => ({
-  createAuth0AuthAdapter: createAuth0AuthAdapterMock,
+  createAuth0AuthMiddleware: createAuth0AuthMiddlewareMock,
 }))
 
 vi.mock('./lib/auth0', () => ({
@@ -35,12 +29,8 @@ function makeRequest(path: string): Request {
 }
 
 describe('nextjs-auth0 proxy middleware', () => {
-  it('wires Auth0 adapter into createAuthMiddleware with processAllRoutes', () => {
-    expect(createAuth0AuthAdapterMock).toHaveBeenCalledWith({ auth0: auth0Mock })
-    expect(createAuthMiddlewareMock).toHaveBeenCalledWith({
-      adapter: { kind: 'auth0-adapter' },
-      processAllRoutes: true,
-    })
+  it('wires auth0 into createAuth0AuthMiddleware', () => {
+    expect(createAuth0AuthMiddlewareMock).toHaveBeenCalledWith({ auth0: auth0Mock })
   })
 
   it('delegates incoming requests to generated middleware handler', async () => {

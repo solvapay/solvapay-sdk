@@ -37,5 +37,9 @@ export { getProduct } from './product'
 export { trackUsage } from './usage'
 
 // Export middleware helpers
-export { createAuthMiddleware, createSupabaseAuthMiddleware } from './middleware'
-export type { AuthMiddlewareOptions, SupabaseAuthMiddlewareOptions } from './middleware'
+export { createAuth0AuthMiddleware, createAuthMiddleware, createSupabaseAuthMiddleware } from './middleware'
+export type {
+  Auth0AuthMiddlewareOptions,
+  AuthMiddlewareOptions,
+  SupabaseAuthMiddlewareOptions,
+} from './middleware'

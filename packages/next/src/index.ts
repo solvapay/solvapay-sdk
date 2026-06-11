@@ -139,9 +139,14 @@ export {
   getProduct,
   getPaymentMethod,
   trackUsage,
+  createAuth0AuthMiddleware,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,
 } from './helpers'
 
 // Export middleware types
-export type { AuthMiddlewareOptions, SupabaseAuthMiddlewareOptions } from './helpers'
+export type {
+  Auth0AuthMiddlewareOptions,
+  AuthMiddlewareOptions,
+  SupabaseAuthMiddlewareOptions,
+} from './helpers'

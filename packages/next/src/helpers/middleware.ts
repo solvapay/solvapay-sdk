@@ -9,6 +9,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import type { AuthAdapter } from '@solvapay/auth'
 import { SOLVAPAY_AUTHORIZATION_HEADER, SOLVAPAY_USER_ID_HEADER } from '@solvapay/auth'
+import { createAuth0AuthAdapter, type Auth0ClientLike } from '@solvapay/auth/auth0'
 
 /**
  * Configuration options for authentication middleware
@@ -147,6 +148,57 @@ export function createAuthMiddleware(options: AuthMiddlewareOptions) {
 
     return forward
   }
+}
+
+/**
+ * Configuration options for Auth0 authentication middleware
+ */
+export interface Auth0AuthMiddlewareOptions {
+  /**
+   * Auth0 client instance used by the adapter.
+   */
+  auth0: Auth0ClientLike
+
+  /**
+   * Public routes that don't require authentication.
+   */
+  publicRoutes?: string[]
+
+  /**
+   * Route prefix owned by Auth0 (default: `/auth`).
+   */
+  authRoutePrefix?: string
+
+  /**
+   * Header name to store the user ID (default: `x-user-id`)
+   */
+  userIdHeader?: string
+
+  /**
+   * Route prefix that enforces 401 when unauthenticated (default: `/api`)
+   */
+  protectedRoutePrefix?: string
+}
+
+/**
+ * Creates a Next.js middleware function for Auth0 authentication.
+ */
+export function createAuth0AuthMiddleware(options: Auth0AuthMiddlewareOptions) {
+  const {
+    auth0,
+    authRoutePrefix,
+    publicRoutes = [],
+    userIdHeader = SOLVAPAY_USER_ID_HEADER,
+    protectedRoutePrefix = '/api',
+  } = options
+
+  return createAuthMiddleware({
+    adapter: createAuth0AuthAdapter({ auth0, authRoutePrefix }),
+    publicRoutes,
+    userIdHeader,
+    protectedRoutePrefix,
+    processAllRoutes: true,
+  })
 }
 
 /**

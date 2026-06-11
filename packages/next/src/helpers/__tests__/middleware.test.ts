@@ -2,7 +2,8 @@ import type { NextRequest } from 'next/server'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { AuthAdapter } from '@solvapay/auth'
-import { createAuthMiddleware } from '../middleware'
+import type { Auth0ClientLike } from '@solvapay/auth/auth0'
+import { createAuth0AuthMiddleware, createAuthMiddleware } from '../middleware'
 
 function makeNextRequest(path: string): NextRequest {
   const url = `https://example.com${path}`
@@ -105,5 +106,95 @@ describe('createAuthMiddleware', () => {
 
     expect(response.status).toBe(200)
     expect(adapter.getUserIdFromRequest).not.toHaveBeenCalled()
+  })
+})
+
+function makeAuth0(overrides?: Partial<Auth0ClientLike>): Auth0ClientLike {
+  return {
+    middleware: vi.fn(async () => new Response(null, { headers: { 'set-cookie': 'session=abc' } })),
+    getSession: vi.fn(async () => ({
+      user: { sub: 'auth0|user-1' },
+      tokenSet: { idToken: 'id.jwt.token' },
+    })),
+    ...overrides,
+  }
+}
+
+describe('createAuth0AuthMiddleware', () => {
+  it('forwards user id and claims token for authenticated protected routes', async () => {
+    const auth0 = makeAuth0()
+    const middleware = createAuth0AuthMiddleware({ auth0 })
+    const response = await middleware(makeNextRequest('/api/tasks'))
+
+    expect(response.status).toBe(200)
+    expect(auth0.middleware).toHaveBeenCalledOnce()
+    expect(auth0.getSession).toHaveBeenCalledOnce()
+    expect(response.headers.getSetCookie()).toContain('session=abc')
+  })
+
+  it('short-circuits auth0-owned auth routes', async () => {
+    const auth0 = makeAuth0({
+      middleware: vi.fn(async () => new Response('redirect', { status: 302 })),
+    })
+    const middleware = createAuth0AuthMiddleware({ auth0 })
+    const response = await middleware(makeNextRequest('/auth/login'))
+
+    expect(response.status).toBe(302)
+    expect(auth0.middleware).toHaveBeenCalledOnce()
+    expect(auth0.getSession).not.toHaveBeenCalled()
+  })
+
+  it('honors custom authRoutePrefix', async () => {
+    const auth0 = makeAuth0({
+      middleware: vi.fn(async () => new Response('custom', { status: 302 })),
+    })
+    const middleware = createAuth0AuthMiddleware({
+      auth0,
+      authRoutePrefix: '/api/auth',
+    })
+    const response = await middleware(makeNextRequest('/api/auth/login'))
+
+    expect(response.status).toBe(302)
+    expect(auth0.middleware).toHaveBeenCalledOnce()
+    expect(auth0.getSession).not.toHaveBeenCalled()
+  })
+
+  it('returns 401 for unauthenticated protected api routes', async () => {
+    const auth0 = makeAuth0({
+      getSession: vi.fn(async () => null),
+    })
+    const middleware = createAuth0AuthMiddleware({ auth0 })
+    const response = await middleware(makeNextRequest('/api/tasks'))
+
+    expect(response.status).toBe(401)
+    expect(auth0.middleware).toHaveBeenCalledOnce()
+    expect(response.headers.getSetCookie()).toContain('session=abc')
+  })
+
+  it('does not enforce 401 for unauthenticated non-api routes', async () => {
+    const auth0 = makeAuth0({
+      getSession: vi.fn(async () => null),
+    })
+    const middleware = createAuth0AuthMiddleware({ auth0 })
+    const response = await middleware(makeNextRequest('/dashboard'))
+
+    expect(response.status).toBe(200)
+    expect(auth0.middleware).toHaveBeenCalledOnce()
+    expect(response.headers.getSetCookie()).toContain('session=abc')
+  })
+
+  it('respects publicRoutes under protected prefix', async () => {
+    const auth0 = makeAuth0({
+      getSession: vi.fn(async () => null),
+    })
+    const middleware = createAuth0AuthMiddleware({
+      auth0,
+      publicRoutes: ['/api/list-plans'],
+    })
+    const response = await middleware(makeNextRequest('/api/list-plans'))
+
+    expect(response.status).toBe(200)
+    expect(auth0.middleware).toHaveBeenCalledOnce()
+    expect(response.headers.getSetCookie()).toContain('session=abc')
   })
 })

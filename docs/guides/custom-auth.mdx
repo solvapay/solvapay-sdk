@@ -458,12 +458,11 @@ Use `@solvapay/auth/auth0` with `@solvapay/next/middleware` and `@solvapay/react
 **Server middleware** (`proxy.ts` at project root):
 
 ```typescript
-import { createAuthMiddleware } from '@solvapay/next/middleware'
-import { createAuth0AuthAdapter } from '@solvapay/auth/auth0'
+import { createAuth0AuthMiddleware } from '@solvapay/next/middleware'
 import { auth0 } from './lib/auth0'
 
-export const proxy = createAuthMiddleware({
-  adapter: createAuth0AuthAdapter({ auth0 }),
+export const proxy = createAuth0AuthMiddleware({
+  auth0,
   authRoutePrefix: '/auth',
 })
 
