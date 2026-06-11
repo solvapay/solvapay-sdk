@@ -1,5 +1,7 @@
 # Next.js Auth0 Task Board + SolvaPay
 
+> **Canonical reference** for Auth0 + SolvaPay SDK integration (DEV-453 / DEV-466). Copy this pattern for Spawned or any Auth0 Regular Web Application.
+
 A Next.js App Router example with **Auth0** login, **shadcn/ui**, **Tailwind CSS v4**, a per-user task board, and **SolvaPay** monetization using an **embedded** (non-hosted) **Pay As You Go** checkout.
 
 ## What it demonstrates

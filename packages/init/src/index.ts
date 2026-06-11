@@ -10,6 +10,12 @@ export type {
   InitSessionResponse,
   VerifyProductRefResult,
 } from './browser-auth'
+export { createCustomerInitSession, waitForCustomerExchange } from './customer-browser-auth'
+export type {
+  CustomerExchangeResponse,
+  CustomerInitSessionOptions,
+  CustomerInitSessionResponse,
+} from './customer-browser-auth'
 
 export {
   ensureEnvInGitignore,

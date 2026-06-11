@@ -168,6 +168,8 @@ export {
   getOrCreateAnonymousCustomerRef,
   resetAnonymousCustomerRef,
 } from './adapters/auth'
+export { createSessionAuthAdapter } from './adapters/session-auth'
+export type { SessionAuthAdapterOptions } from './adapters/session-auth'
 
 // Utilities
 export {

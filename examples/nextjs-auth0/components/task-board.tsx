@@ -135,14 +135,14 @@ export function TaskBoard() {
     return (
       <Card>
         <CardContent className="space-y-4 p-6">
-          <div>
+          <section aria-label="Checkout required">
             <h2 className="text-base font-semibold">Unlock the task board</h2>
             <p className="text-sm text-muted-foreground">
               {needsCheckout
                 ? 'You are out of credits. Top up to keep adding tasks — each task costs one request.'
                 : 'Adding tasks is billed pay-as-you-go. Buy credits below to get started — each task costs one request.'}
             </p>
-          </div>
+          </section>
           <CheckoutPanel onPurchased={() => void handlePurchased()} />
         </CardContent>
       </Card>
@@ -150,7 +150,7 @@ export function TaskBoard() {
   }
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-6" aria-label="Task board">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           value={title}
@@ -164,7 +164,11 @@ export function TaskBoard() {
         </Button>
       </form>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {tasks.length === 0 ? (
         <Card>
@@ -178,12 +182,12 @@ export function TaskBoard() {
             <li key={task.id}>
               <Card>
                 <CardContent className="flex items-center justify-between gap-4 p-4">
-                  <div>
+                  <article>
                     <p className="font-medium">{task.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <time className="text-xs text-muted-foreground" dateTime={task.createdAt}>
                       {new Date(task.createdAt).toLocaleString()}
-                    </p>
-                  </div>
+                    </time>
+                  </article>
                   <Button
                     type="button"
                     variant="ghost"
@@ -199,6 +203,6 @@ export function TaskBoard() {
           ))}
         </ul>
       )}
-    </div>
+    </section>
   )
 }

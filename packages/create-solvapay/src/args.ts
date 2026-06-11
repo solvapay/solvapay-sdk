@@ -11,6 +11,7 @@ import type { InitCommandOptions } from '@solvapay/init'
 export type ParsedCommonArgs = {
   projectName?: string
   type?: string
+  auth?: string
   product?: string
   yes: boolean
   dev: boolean
@@ -49,6 +50,7 @@ const FLAG_ALIASES: Record<string, string> = {
 
 const COMMON_SKIP_FLAGS = new Set([
   '--type',
+  '--auth',
   '--yes',
   '--non-interactive',
   '--product',
@@ -57,7 +59,7 @@ const COMMON_SKIP_FLAGS = new Set([
   '--dev',
 ])
 
-const COMMON_VALUE_FLAGS = new Set(['--type', '--product'])
+const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product'])
 const COMMON_BOOLEAN_FLAGS = new Set([
   '--yes',
   '--non-interactive',
@@ -108,6 +110,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
         return out
       }
       if (arg === '--type') out.type = value
+      if (arg === '--auth') out.auth = value
       if (arg === '--product') out.product = value
       continue
     }
@@ -160,7 +163,7 @@ export function parseMcpArgs(argv: readonly string[]): ParsedMcpArgs {
     }
 
     if (COMMON_SKIP_FLAGS.has(arg)) {
-      if (arg === '--type' || arg === '--product') {
+      if (arg === '--type' || arg === '--auth' || arg === '--product') {
         i++
       }
       continue
@@ -248,9 +251,11 @@ export const HELP_TEXT = `Usage:
 
 Project types:
   mcp    Monetized MCP server on Cloudflare Workers (from-openapi or from-scratch)
+  next-auth0  Next.js + Auth0 starter with SolvaPay middleware wiring
 
 Common flags:
   --type <kind>          Project type to scaffold (default: prompt; required if non-interactive)
+  --auth <provider>      Shortcut surface for auth-focused starters (e.g. auth0).
   -y, --yes              Non-interactive: accept all defaults
   --product <ref>        Pre-fill SOLVAPAY_PRODUCT_REF (skip the picker)
   --non-interactive      Alias for --yes; fail fast on any missing prompt input

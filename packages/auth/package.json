@@ -20,6 +20,11 @@
       "types": "./dist/mock.d.ts",
       "import": "./dist/mock.js",
       "require": "./dist/mock.cjs"
+    },
+    "./auth0": {
+      "types": "./dist/auth0.d.ts",
+      "import": "./dist/auth0.js",
+      "require": "./dist/auth0.cjs"
     }
   },
   "files": [
@@ -39,8 +44,8 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts src/supabase.ts src/mock.ts src/next-utils.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
-    "test": "vitest run || exit 0",
+    "build": "tsup src/index.ts src/supabase.ts src/mock.ts src/auth0.ts src/next-utils.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
+    "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"
@@ -49,6 +54,7 @@
     "jose": "^6.2.2"
   },
   "devDependencies": {
+    "@solvapay/test-utils": "workspace:*",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.2"

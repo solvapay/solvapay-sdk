@@ -1,6 +1,5 @@
-import { createAuthMiddleware } from '@solvapay/next/middleware'
 import { createAuth0AuthAdapter } from '@solvapay/auth/auth0'
-
+import { createAuthMiddleware } from '@solvapay/next/middleware'
 import { auth0 } from './lib/auth0'
 
 export const proxy = createAuthMiddleware({
