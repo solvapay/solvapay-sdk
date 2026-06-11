@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { auth0 } from '@/lib/auth0'
-import { solvaPay, PRODUCT_REF } from '@/lib/solvapay'
+import { getProductRef, getSolvaPay } from '@/lib/solvapay'
 import { createTask, deleteTask, listTasks } from '@/lib/tasks-store'
 
 async function getAuthenticatedUserId(): Promise<string | null> {
@@ -25,13 +25,13 @@ export async function GET() {
  * event ("request") against the plan when it succeeds. The customer ref is
  * the Auth0 `sub` forwarded as `x-user-id` by `proxy.ts`.
  */
-const payable = solvaPay.payable({ product: PRODUCT_REF })
-
 export async function POST(request: NextRequest, context: unknown) {
   const userId = await getAuthenticatedUserId()
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const payable = getSolvaPay().payable({ product: getProductRef() })
 
   // Build the protected handler per request, closing over the user id we just
   // resolved. (Reading the Auth0 session again inside the SolvaPay callback is
