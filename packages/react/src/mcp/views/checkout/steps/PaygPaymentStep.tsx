@@ -28,7 +28,7 @@ interface PaygPaymentStepProps {
 }
 
 export const PaygPaymentStep = memo(function PaygPaymentStep({
-  plan,
+  plan: _plan,
   amountMinor,
   topupCurrency,
   returnUrl,
