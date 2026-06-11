@@ -40,13 +40,21 @@ The `SOLVAPAY_SECRET_KEY` stays server-only. The browser only sees `NEXT_PUBLIC_
 
 ## SolvaPay setup
 
-From this directory, run the SDK initializer (the `--dev` flag points the app at the SolvaPay dev backend):
+This demo app always runs at `http://localhost:3013` (`APP_BASE_URL`). That is separate from where the **SolvaPay API** lives (`SOLVAPAY_API_BASE_URL`).
+
+**Hosted dev backend:**
 
 ```bash
 npx -y solvapay@latest init --dev
 ```
 
-This authenticates, installs the base SDK packages, and writes `SOLVAPAY_SECRET_KEY`, `SOLVAPAY_API_BASE_URL`, and `SOLVAPAY_PRODUCT_REF` to `.env`. Then install the Next.js + React packages:
+**Local backend** (your ngrok API URL — the app itself stays on localhost):
+
+```bash
+SOLVAPAY_API_BASE_URL=https://api.<your-subdomain>.ngrok.app npx -y solvapay@latest init --yes
+```
+
+Init authenticates, installs SDK packages, and writes `SOLVAPAY_SECRET_KEY`, `SOLVAPAY_API_BASE_URL`, and `SOLVAPAY_PRODUCT_REF` to `.env`. Then install the Next.js + React packages:
 
 ```bash
 pnpm add @solvapay/next @solvapay/react

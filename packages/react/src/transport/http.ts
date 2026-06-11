@@ -13,6 +13,7 @@ import type {
   TransportCustomerSessionResult,
 } from './types'
 import { buildRequestHeaders } from '../utils/headers'
+import { readErrorMessage } from '../utils/readErrorMessage'
 
 type FetchFn = typeof fetch
 
@@ -37,14 +38,8 @@ async function request<T>(
 
   const res = await fetchFn(url, init)
   if (!res.ok) {
-    let serverMessage: string | undefined
-    try {
-      const data = (await res.clone().json()) as { error?: string }
-      serverMessage = data?.error
-    } catch {
-      // ignore: response may not be JSON
-    }
-    const error = new Error(serverMessage || `${opts.errorPrefix}: ${res.statusText || res.status}`)
+    const message = await readErrorMessage(res, opts.errorPrefix)
+    const error = new Error(message)
     config?.onError?.(error, opts.onErrorContext)
     throw error
   }
