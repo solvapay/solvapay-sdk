@@ -14,6 +14,8 @@ description: "This guide shows you how to create custom authentication adapters 
 
 ## Overview
 
+For the framework-agnostic linkage model (`ensureCustomer(externalRef)` from your backend after your own IdP login), see [Customer linkage (bring your own client and IdP)](./customer-linkage).
+
 SolvaPay SDK uses authentication adapters to extract user IDs from requests. There are two types of adapters:
 
 1. **Server-Side Adapters** (`@solvapay/auth`) - Extract user IDs from HTTP requests in API routes
@@ -455,7 +457,7 @@ function App() {
 
 Use `@solvapay/auth/auth0` with `@solvapay/next/middleware` and `@solvapay/react/auth0` on the client. The canonical runnable reference is [`examples/nextjs-auth0`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/nextjs-auth0).
 
-**Auth0 setup:** create a **Regular Web Application** in the Auth0 Dashboard (httpOnly session cookie — not SPA/Native). If your IdP uses a short access-token TTL at the integrator edge (e.g. Spawned's 24h), that stays on your side; SolvaPay keys customers on the stable Auth0 `sub`, so token expiry does not invalidate the customer mapping.
+**Auth0 setup:** create a **Regular Web Application** in the Auth0 Dashboard (httpOnly session cookie — not SPA/Native). If your IdP uses a short access-token TTL at the integrator edge (e.g. 24h), that stays on your side; SolvaPay keys customers on the stable Auth0 `sub`, so token expiry does not invalidate the customer mapping.
 
 **Server middleware** (`proxy.ts` at project root):
 

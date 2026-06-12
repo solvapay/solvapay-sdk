@@ -10,8 +10,8 @@ import { Auth0Client } from '@auth0/nextjs-auth0/server'
  * the session is stored in an httpOnly cookie and `/auth/login|callback|logout`
  * work server-side via `proxy.ts`.
  *
- * Auth0 access-token TTL (e.g. 24h at Spawned's edge) is irrelevant to SolvaPay:
- * we never send access tokens to SolvaPay. Billing identity is the stable `sub`,
- * forwarded as `x-user-id` by the middleware after each session read.
+ * IdP access-token TTL at your edge is irrelevant to SolvaPay: we never send access
+ * tokens to SolvaPay. Billing identity is the stable Auth0 `sub`, forwarded as
+ * `x-user-id` by the middleware after each session read.
  */
 export const auth0 = new Auth0Client()

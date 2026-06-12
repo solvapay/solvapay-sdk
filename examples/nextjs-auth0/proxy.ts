@@ -6,16 +6,15 @@
  * 1. Mounts Auth0 v4 routes: `/auth/login`, `/auth/callback`, `/auth/logout`.
  * 2. Reads the Auth0 session from the httpOnly cookie on every matched request.
  * 3. Forwards `x-user-id = session.user.sub` to downstream route handlers — this is
- *    SolvaPay's stable `externalRef` / customer reference (DEV-453 contract).
+ *    SolvaPay's stable `externalRef` / customer reference.
  * 4. Optionally forwards `Authorization: Bearer <id_token>` server-side only, so
  *    `@solvapay/next` route wrappers can seed email/name on first customer create.
  *
- * Security contract (Spawned / identity-bridge):
- * - Auth0 **access tokens** never reach SolvaPay APIs (integrator validates at their edge).
- * - Auth0 **ID tokens** may be forwarded here in the proxy only — never from the browser.
+ * Security contract:
+ * - IdP **access tokens** never reach SolvaPay APIs (validate at your edge only).
+ * - IdP **ID tokens** may be forwarded here in the proxy only — never from the browser.
  * - `SOLVAPAY_SECRET_KEY` stays server-only; billing calls use `sk_*`, not IdP bearer tokens.
- * - Auth0 token TTL (e.g. Spawned's 24h) stays at the integrator edge; SolvaPay keys on
- *   the stable `sub`, so access-token expiry does not invalidate the customer mapping.
+ * - SolvaPay keys on the stable Auth0 `sub`, so access-token expiry does not break linkage.
  *
  * The client-side bridge in `components/solvapay-provider.tsx` only reports whether a
  * user is signed in — the real identity handoff for API routes happens here.

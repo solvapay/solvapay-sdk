@@ -8,6 +8,8 @@ description: "Choose the right SolvaPay SDK example project and run it locally."
 | Example | Framework | Checkout type | Auth | Best for |
 | --- | --- | --- | --- | --- |
 | [express-basic](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-basic) | Express.js | Paywall only | Header-based | First integration and API protection |
+| [express-provider-linkage](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-provider-linkage) | Express.js | Paywall only | Provider-owned (`ensureCustomer`) | BYO CLI/IdP linkage from your backend |
+| [nextjs-auth0](https://github.com/solvapay/solvapay-sdk/tree/main/examples/nextjs-auth0) | Next.js | Embedded | Auth0 | Auth0 web reference for `externalRef` linkage |
 | [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/checkout-demo) | Next.js | Embedded | Supabase | Full custom checkout flow |
 | [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/hosted-checkout-demo) | Next.js | Hosted | Supabase | Fast checkout integration |
 | [shadcn-checkout](https://github.com/solvapay/solvapay-sdk/tree/main/examples/shadcn-checkout) | Vite + shadcn/ui | Embedded | Supabase | Paste-in Lovable / shadcn projects |
@@ -51,6 +53,18 @@ Use `.env` instead of `.env.local` when the example README says so.
 - Good first project for `payable.http()`
 - Uses stub mode and header-based customer identity
 - README: [examples/express-basic/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-basic/README.md)
+
+### express-provider-linkage
+
+- Provider-owned client + IdP: backend calls `ensureCustomer(externalRef)` before metering
+- Simulates post-CLI-login requests with `x-provider-user-id`
+- README: [examples/express-provider-linkage/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-provider-linkage/README.md)
+
+### nextjs-auth0
+
+- Auth0 Regular Web App + embedded Pay As You Go checkout
+- Canonical web reference for Auth0 `sub` → SolvaPay customer linkage
+- README: [examples/nextjs-auth0/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/nextjs-auth0/README.md)
 
 ### checkout-demo
 

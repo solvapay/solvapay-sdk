@@ -1,6 +1,6 @@
 # Next.js Auth0 Task Board + SolvaPay
 
-> **Canonical reference** for Auth0 + SolvaPay SDK integration (DEV-453 / DEV-466). Copy this pattern for Spawned or any Auth0 Regular Web Application.
+> **Canonical reference** for Auth0 + SolvaPay SDK integration. Copy this pattern for any Auth0 Regular Web Application.
 
 A Next.js App Router example with **Auth0** login, **shadcn/ui**, **Tailwind CSS v4**, a per-user task board, and **SolvaPay** monetization using an **embedded** (non-hosted) **Pay As You Go** checkout.
 
@@ -23,9 +23,9 @@ Creating a task is the paid action. Each task costs **one request** against the 
 
 The `SOLVAPAY_SECRET_KEY` stays server-only. The browser only sees `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF`. Payments are collected inline with Stripe Elements; the publishable key + client secret come from the payment-intent API responses.
 
-## Identity bridge in depth (DEV-453 / Spawned)
+## Identity bridge in depth
 
-This example is the **canonical SDK-path reference** for mapping Auth0 users to SolvaPay customers. Read the inline comments in `proxy.ts`, `lib/auth0.ts`, and `components/solvapay-provider.tsx` for the full contract.
+This example is the **canonical web reference** for mapping Auth0 users to SolvaPay customers. Read the inline comments in `proxy.ts`, `lib/auth0.ts`, and `components/solvapay-provider.tsx` for the full contract.
 
 | Field | Source | SolvaPay usage | Browser? |
 |-------|--------|----------------|----------|
@@ -36,12 +36,12 @@ This example is the **canonical SDK-path reference** for mapping Auth0 users to 
 
 **Auth0 app type:** create a **Regular Web Application** in the Auth0 Dashboard (not SPA/Native) so the session uses an httpOnly cookie and `/auth/login|callback|logout` work via `proxy.ts`.
 
-**Token TTL:** if your IdP rotates access tokens on a short TTL (e.g. Spawned's 24h at their edge), that does not affect SolvaPay. We key customers on the stable `sub`, not on access-token expiry.
+**Token TTL:** if your IdP rotates access tokens on a short TTL at your edge, that does not affect SolvaPay. We key customers on the stable `sub`, not on access-token expiry.
 
 **Further reading:**
 
-- SDK guide: [`docs/guides/custom-auth.mdx`](../../docs/guides/custom-auth.mdx) (Auth0 section)
-- Full Spawned bridge (SDK + MCP OAuth + CLI + magic-link): [`solvapay-backend/docs/integrations/spawned-identity-bridge.md`](https://github.com/solvapay/solvapay-backend/blob/dev/docs/integrations/spawned-identity-bridge.md)
+- SDK guide: [`docs/guides/customer-linkage.mdx`](../../docs/guides/customer-linkage.mdx) — framework-agnostic linkage with `ensureCustomer(externalRef)`
+- Auth0 adapters: [`docs/guides/custom-auth.mdx`](../../docs/guides/custom-auth.mdx)
 
 ## Prerequisites
 
