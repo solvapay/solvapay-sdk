@@ -75,6 +75,11 @@ function buildForwardResponse(
 ): NextResponse {
   const requestHeaders = new Headers(req.headers)
 
+  // Strip client-supplied identity headers so they can never be spoofed past
+  // the middleware. We only re-set them below from a verified session identity.
+  requestHeaders.delete(userIdHeader)
+  requestHeaders.delete(SOLVAPAY_AUTHORIZATION_HEADER)
+
   if (identity) {
     requestHeaders.set(userIdHeader, identity.userId)
     if (identity.claimsToken) {

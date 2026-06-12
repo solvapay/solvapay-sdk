@@ -5,13 +5,18 @@ import type { AuthAdapter } from '@solvapay/auth'
 import type { Auth0ClientLike } from '@solvapay/auth/auth0'
 import { createAuth0AuthMiddleware, createAuthMiddleware } from '../middleware'
 
-function makeNextRequest(path: string): NextRequest {
+function makeNextRequest(path: string, headers?: HeadersInit): NextRequest {
   const url = `https://example.com${path}`
   return {
     url,
     nextUrl: new URL(url),
-    headers: new Headers(),
+    headers: new Headers(headers),
   } as NextRequest
+}
+
+/** Reads the request header value the middleware forwards downstream. */
+function forwardedRequestHeader(response: { headers: Headers }, name: string): string | null {
+  return response.headers.get(`x-middleware-request-${name}`)
 }
 
 describe('createAuthMiddleware', () => {
@@ -106,6 +111,51 @@ describe('createAuthMiddleware', () => {
 
     expect(response.status).toBe(200)
     expect(adapter.getUserIdFromRequest).not.toHaveBeenCalled()
+  })
+
+  it('does not forward a client-supplied x-user-id on public routes', async () => {
+    const adapter: AuthAdapter = {
+      getUserIdFromRequest: vi.fn(async () => null),
+    }
+
+    const middleware = createAuthMiddleware({
+      adapter,
+      publicRoutes: ['/api/list-plans'],
+    })
+    const response = await middleware(
+      makeNextRequest('/api/list-plans', { 'x-user-id': 'auth0|attacker' }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(forwardedRequestHeader(response, 'x-user-id')).toBeNull()
+  })
+
+  it('overrides a spoofed x-user-id with the verified identity', async () => {
+    const adapter: AuthAdapter = {
+      getUserIdFromRequest: vi.fn(async () => 'auth0|real-user'),
+    }
+
+    const middleware = createAuthMiddleware({ adapter })
+    const response = await middleware(
+      makeNextRequest('/api/tasks', { 'x-user-id': 'auth0|attacker' }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(forwardedRequestHeader(response, 'x-user-id')).toBe('auth0|real-user')
+  })
+
+  it('strips a spoofed authorization header when identity carries no claims token', async () => {
+    const adapter: AuthAdapter = {
+      getUserIdFromRequest: vi.fn(async () => 'auth0|real-user'),
+    }
+
+    const middleware = createAuthMiddleware({ adapter })
+    const response = await middleware(
+      makeNextRequest('/api/tasks', { authorization: 'Bearer attacker-token' }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(forwardedRequestHeader(response, 'authorization')).toBeNull()
   })
 })
 

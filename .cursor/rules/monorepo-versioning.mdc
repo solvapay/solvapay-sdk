@@ -1,0 +1,81 @@
+---
+description: Internal peerDependency ranges and Changesets conventions for the SDK monorepo — avoid major-version cascades
+globs: packages/*/package.json,.changeset/*.md
+alwaysApply: false
+---
+
+# Monorepo Versioning & Internal Peer Dependencies
+
+## Internal peerDependencies must use `workspace:^`, never `workspace:*`
+
+When one `@solvapay/*` package declares another as a **peerDependency**, the range
+**must** be `workspace:^` (caret), not `workspace:*` (exact pin).
+
+```jsonc
+// ✅ correct
+"peerDependencies": {
+  "@solvapay/auth": "workspace:^"
+}
+
+// ❌ wrong — exact pin causes major-version cascades
+"peerDependencies": {
+  "@solvapay/auth": "workspace:*"
+}
+```
+
+### Why this matters (the cascade)
+
+`.changeset/config.json` sets `onlyUpdatePeerDependentsWhenOutOfRange: true`, and a
+peer-dependency range change is a **major** bump by semver convention. `workspace:*`
+publishes as the *exact* current version (e.g. `1.0.8`), so **any** bump to that peer
+— even a patch — puts the published range out of range and forces Changesets to bump
+**every dependent to a new major**.
+
+Real example this rule exists to prevent: a `patch` to `@solvapay/mcp-core` and a
+`minor` to `@solvapay/auth` cascaded `@solvapay/react`, `@solvapay/server`, and
+`@solvapay/react-supabase` all to `2.0.0`, with no breaking change anywhere.
+
+`workspace:^` publishes as `^<version>`, so patch/minor peer bumps stay in range and
+do not cascade.
+
+### Note on pre-1.0 peers
+
+For a `0.x` peer, `workspace:^` publishes as `^0.2.4`, which only satisfies `0.2.x`.
+A future `0.3.0` (minor) of that peer will still cascade a major onto dependents.
+This is correct semver. If you need `0.x` minor bumps to stay in range, raise it with
+the team before choosing a looser range (e.g. `>=0.2.4 <1`) — do not pick one
+unilaterally.
+
+### When you change an internal peer range
+
+Changing a published peer range is consumer-facing. Add a **patch** changeset for each
+package whose `peerDependencies` you edited (`*`→`^` is a widening, so patch is correct),
+then run `pnpm install` to refresh the lockfile.
+
+## Verify the release plan before merging
+
+After editing any `.changeset/*.md` or internal `package.json` dependency range, run:
+
+```bash
+pnpm changeset status --verbose
+```
+
+Confirm the output ends with **"would release NO packages as a major"** — unless a
+package genuinely ships a breaking change backed by its own `major` changeset. If a
+major bump appears that you cannot trace to an intentional `major` changeset, **stop**
+and find the peer-range cascade rather than forcing versions.
+
+## Never hand-edit `version` fields
+
+Let Changesets compute versions from `.changeset/*.md`. Do not edit the `version` field
+in any `package.json` by hand.
+
+## Changeset bump levels
+
+| Level     | When                                                                 |
+| --------- | -------------------------------------------------------------------- |
+| **patch** | Bug fix, internal refactor, dep-range widening — no public API change |
+| **minor** | New public API — additive, backwards-compatible                       |
+| **major** | Removed/renamed API, changed signature, behaviour break              |
+
+Lead the changeset body with **what changed for consumers**, not implementation detail.

@@ -63,7 +63,7 @@
     "@solvapay/core": "workspace:*"
   },
   "peerDependencies": {
-    "@solvapay/auth": "workspace:*",
+    "@solvapay/auth": "workspace:^",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
