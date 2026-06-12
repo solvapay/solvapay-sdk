@@ -10,7 +10,6 @@ export type {
   InitSessionResponse,
   VerifyProductRefResult,
 } from './browser-auth'
-
 export {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,

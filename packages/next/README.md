@@ -69,6 +69,19 @@ export const middleware = createSupabaseAuthMiddleware({
 export const config = { matcher: ['/api/:path*'] }
 ```
 
+Auth0 has the same high-level API:
+
+```typescript
+import { createAuth0AuthMiddleware } from '@solvapay/next/middleware'
+import { auth0 } from './lib/auth0'
+
+export const proxy = createAuth0AuthMiddleware({ auth0 })
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)'],
+}
+```
+
 Next.js 16 renamed middleware to proxy — use `@solvapay/next/middleware` and export `proxy` instead of `middleware` when required.
 
 ## Requirements

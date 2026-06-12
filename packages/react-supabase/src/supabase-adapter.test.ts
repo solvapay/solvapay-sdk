@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describeClientAuthAdapterContract } from '../../test-utils/src/describeClientAuthAdapterContract'
 import { createSupabaseAuthAdapter, type SupabaseClientLike } from './supabase-adapter'
 
 type AuthChangeCallback = (event: string, session: unknown) => void
@@ -118,5 +119,19 @@ describe('createSupabaseAuthAdapter', () => {
       client._emit('SIGNED_OUT', null)
       expect(listener).toHaveBeenCalledTimes(1)
     })
+  })
+
+  describeClientAuthAdapterContract({
+    name: 'SupabaseClient',
+    createAuthenticatedAdapter: () =>
+      createSupabaseAuthAdapter({
+        client: makeClient({ access_token: 'tok-123', user: { id: 'user-abc' } }),
+      }),
+    createUnauthenticatedAdapter: () =>
+      createSupabaseAuthAdapter({
+        client: makeClient(null),
+      }),
+    expectedToken: 'tok-123',
+    expectedUserId: 'user-abc',
   })
 })

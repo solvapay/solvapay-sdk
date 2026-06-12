@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { loadStripe, Stripe, StripeConstructorOptions } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
 import { buildRequestHeaders } from '../utils/headers'
+import { readErrorMessage } from '../utils/readErrorMessage'
 import { usePlanSelection } from '../components/PlanSelectionContext'
 import type { Plan, PrefillCustomer, SolvaPayConfig } from '../types'
 
@@ -42,7 +43,11 @@ async function resolvePlanRef(
   const res = await fetchFn(url, { method: 'GET', headers })
 
   if (!res.ok) {
-    throw new Error(`Failed to fetch plans for product "${productRef}": ${res.statusText}`)
+    const message = await readErrorMessage(
+      res,
+      `Failed to fetch plans for product "${productRef}"`,
+    )
+    throw new Error(message)
   }
 
   const data = (await res.json()) as { plans?: Plan[] }

@@ -14,6 +14,8 @@ description: "This guide shows you how to create custom authentication adapters 
 
 ## Overview
 
+For the framework-agnostic linkage model (`ensureCustomer(externalRef)` from your backend after your own IdP login), see [Customer linkage (bring your own client and IdP)](./customer-linkage).
+
 SolvaPay SDK uses authentication adapters to extract user IDs from requests. There are two types of adapters:
 
 1. **Server-Side Adapters** (`@solvapay/auth`) - Extract user IDs from HTTP requests in API routes
@@ -451,34 +453,51 @@ function App() {
 }
 ```
 
-### Example 2: Auth0 Adapter (Server-Side)
+### Example 2: Auth0 (Next.js App Router, v4)
+
+Use `@solvapay/auth/auth0` with `@solvapay/next/middleware` and `@solvapay/react/auth0` on the client. The canonical runnable reference is [`examples/nextjs-auth0`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/nextjs-auth0).
+
+**Auth0 setup:** create a **Regular Web Application** in the Auth0 Dashboard (httpOnly session cookie — not SPA/Native). If your IdP uses a short access-token TTL at the integrator edge (e.g. 24h), that stays on your side; SolvaPay keys customers on the stable Auth0 `sub`, so token expiry does not invalidate the customer mapping.
+
+**Server middleware** (`proxy.ts` at project root):
 
 ```typescript
-import type { AuthAdapter } from '@solvapay/auth'
-import { initAuth0 } from '@auth0/nextjs-auth0'
+import { createAuth0AuthMiddleware } from '@solvapay/next/middleware'
+import { auth0 } from './lib/auth0'
 
-class Auth0Adapter implements AuthAdapter {
-  private auth0: any
+export const proxy = createAuth0AuthMiddleware({
+  auth0,
+  authRoutePrefix: '/auth',
+})
 
-  constructor() {
-    this.auth0 = initAuth0({
-      secret: process.env.AUTH0_SECRET,
-      baseURL: process.env.AUTH0_BASE_URL,
-      clientID: process.env.AUTH0_CLIENT_ID,
-      clientSecret: process.env.AUTH0_CLIENT_SECRET,
-    })
-  }
-
-  async getUserIdFromRequest(req: Request | RequestLike): Promise<string | null> {
-    try {
-      const session = await this.auth0.getSession(req)
-      return session?.user?.sub || null
-    } catch {
-      return null
-    }
-  }
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)'],
 }
 ```
+
+The middleware forwards two headers to downstream SolvaPay route handlers **server-side only**:
+
+- `x-user-id` — Auth0 `sub`, used as `externalRef` / customer reference
+- `Authorization: Bearer <id_token>` — optional Auth0 ID token for email/name on first customer create
+
+**Never** send Auth0 access tokens from the browser to SolvaPay APIs. SolvaPay billing calls use your `sk_*` secret server-side.
+
+**Client provider:**
+
+```typescript
+import { SolvaPayProvider } from '@solvapay/react'
+import { createAuth0ClientAuthAdapter } from '@solvapay/react/auth0'
+import { useUser } from '@auth0/nextjs-auth0'
+
+function App({ children }: { children: React.ReactNode }) {
+  const { user } = useUser()
+  const adapter = createAuth0ClientAuthAdapter({ userId: user?.sub })
+
+  return <SolvaPayProvider config={{ auth: { adapter } }}>{children}</SolvaPayProvider>
+}
+```
+
+Auth0 keeps the session in an httpOnly cookie. The client adapter reports whether a user is signed in; `proxy.ts` bridges the session into `x-user-id` for API routes.
 
 ### Example 3: Custom OAuth Adapter
 

@@ -5,7 +5,7 @@
  * This adapter integrates with Supabase Auth to get tokens and user IDs.
  */
 
-import type { AuthAdapter } from '@solvapay/react'
+import { createSessionAuthAdapter, type AuthAdapter } from '@solvapay/react'
 
 /**
  * Structural shape of a Supabase client as used by the adapter.
@@ -82,57 +82,56 @@ export function createSupabaseAuthAdapter(config: SupabaseAuthAdapterConfig): Au
 
   const client = config.client
 
-  return {
-    async getToken(): Promise<string | null> {
-      if (typeof window === 'undefined') return null
+  const readSession = async (): Promise<
+    { access_token?: string; user?: { id?: string } } | null
+  > => {
+    if (typeof window === 'undefined') return null
 
-      try {
-        const {
-          data: { session },
-        } = await client.auth.getSession()
-        return session?.access_token || null
-      } catch (error) {
-        console.warn('[SupabaseAuthAdapter] Failed to get token:', error)
-        return null
-      }
-    },
-
-    async getUserId(): Promise<string | null> {
-      if (typeof window === 'undefined') return null
-
-      try {
-        const {
-          data: { session },
-        } = await client.auth.getSession()
-        return session?.user?.id || null
-      } catch (error) {
-        console.warn('[SupabaseAuthAdapter] Failed to get user ID:', error)
-        return null
-      }
-    },
-
-    subscribe(listener: () => void): () => void {
-      if (typeof window === 'undefined') {
-        return () => undefined
-      }
-
-      try {
-        const {
-          data: { subscription },
-        } = client.auth.onAuthStateChange(() => {
-          listener()
-        })
-        return () => {
-          try {
-            subscription.unsubscribe()
-          } catch (error) {
-            console.warn('[SupabaseAuthAdapter] Failed to unsubscribe:', error)
-          }
-        }
-      } catch (error) {
-        console.warn('[SupabaseAuthAdapter] Failed to subscribe to auth changes:', error)
-        return () => undefined
-      }
-    },
+    try {
+      const {
+        data: { session },
+      } = await client.auth.getSession()
+      return session
+    } catch (error) {
+      console.warn('[SupabaseAuthAdapter] Failed to read session:', error)
+      return null
+    }
   }
+
+  const subscribe: AuthAdapter['subscribe'] = listener => {
+    if (typeof window === 'undefined') {
+      return () => undefined
+    }
+
+    try {
+      const {
+        data: { subscription },
+      } = client.auth.onAuthStateChange(() => {
+        listener()
+      })
+      return () => {
+        try {
+          subscription.unsubscribe()
+        } catch (error) {
+          console.warn('[SupabaseAuthAdapter] Failed to unsubscribe:', error)
+        }
+      }
+    } catch (error) {
+      console.warn('[SupabaseAuthAdapter] Failed to subscribe to auth changes:', error)
+      return () => undefined
+    }
+  }
+
+  return createSessionAuthAdapter({
+    getToken: async () => {
+      const session = await readSession()
+      return session?.access_token || null
+    },
+    getUserId: async () => {
+      const session = await readSession()
+      return session?.user?.id || null
+    },
+    subscribe,
+    sentinelToken: 'supabase-session',
+  })
 }

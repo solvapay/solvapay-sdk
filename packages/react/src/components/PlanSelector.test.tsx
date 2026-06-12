@@ -453,6 +453,7 @@ describe('PlanSelector primitive', () => {
           <PlanSelector.CurrencySwitcher data-testid="currency-switcher" />
           <PlanSelector.Grid>
             <PlanSelector.Card>
+              <PlanSelector.CardName />
               <PlanSelector.CardPrice />
             </PlanSelector.Card>
           </PlanSelector.Grid>

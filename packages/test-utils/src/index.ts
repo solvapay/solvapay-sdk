@@ -34,4 +34,8 @@ export {
 // Test logging utilities
 export { testLog, conditionalLog, alwaysLog } from './test-logger'
 
+// Adapter contract test helpers
+export { describeAuthAdapterContract } from './describeAuthAdapterContract'
+export { describeClientAuthAdapterContract } from './describeClientAuthAdapterContract'
+
 export const TEST_UTILS_VERSION = '0.0.0'
