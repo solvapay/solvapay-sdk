@@ -1,5 +1,16 @@
 # @solvapay/next
 
+## 1.1.0
+
+### Minor Changes
+
+- 254498f: Export `processTopupPaymentIntent` from `@solvapay/next` so top-up payment intents can be processed through a dedicated server helper.
+
+### Patch Changes
+
+- Updated dependencies [254498f]
+  - @solvapay/server@1.2.0
+
 ## 1.0.13
 
 ### Patch Changes
