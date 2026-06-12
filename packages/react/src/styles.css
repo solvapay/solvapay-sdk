@@ -305,6 +305,31 @@
   background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
 }
 
+[data-solvapay-plan-selector-currency-switcher],
+.solvapay-plan-selector-currency-switcher {
+  align-self: flex-end;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--solvapay-accent);
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  padding: 0.375rem 0.625rem;
+  cursor: pointer;
+}
+
+[data-solvapay-plan-selector-card-currency] {
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--solvapay-muted-foreground);
+  background: transparent;
+  border: 1px solid var(--solvapay-border);
+  border-radius: calc(var(--solvapay-radius) - 2px);
+  padding: 0.125rem 0.375rem;
+  cursor: pointer;
+}
+
 /* -----------------------------------------------------------------------------
  * CheckoutSteps namespace — baseline styling for `<CheckoutSteps.*>`
  * parts so the recommended-default `<PaywallNotice.EmbeddedCheckout>`

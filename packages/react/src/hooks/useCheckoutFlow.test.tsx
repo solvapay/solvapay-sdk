@@ -20,7 +20,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCheckoutFlow } from './useCheckoutFlow'
-import { PlanSelector } from '../primitives/PlanSelector'
+import { PlanSelector, usePlanSelector } from '../primitives/PlanSelector'
 import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
 import { SolvaPayContext } from '../SolvaPayProvider'
@@ -1129,5 +1129,151 @@ describe('useCheckoutFlow — synchronous refetch on PAYG success', () => {
     // doesn't refetch (and never optimistically minted credits).
     expect(adjustBalance).not.toHaveBeenCalled()
     expect(refetchPurchase).not.toHaveBeenCalled()
+  })
+})
+
+// ------------------------------------------------------------------
+// Topup currency (multi-currency PAYG)
+// ------------------------------------------------------------------
+
+describe('useCheckoutFlow — topup currency', () => {
+  it('single-currency merchant: exposes only the default and resolves topupCurrency to it', () => {
+    const { Wrapper } = makeWrapper({ merchant: { ...defaultMerchant, defaultCurrency: 'sek' } })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    expect(result.current.topupCurrencies).toEqual(['SEK'])
+    expect(result.current.topupCurrency).toBe('SEK')
+    expect(result.current.topupCurrencyReady).toBe(true)
+  })
+
+  it('multi-currency merchant: exposes the full supported set (uppercased, deduped)', () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'EUR', 'eur', 'gbp'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    expect(result.current.topupCurrencies).toEqual(['USD', 'EUR', 'GBP'])
+    expect(result.current.topupCurrency).toBe('USD')
+  })
+
+  it('setTopupCurrency switches to a supported currency', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.setTopupCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('EUR'))
+  })
+
+  it('setTopupCurrency ignores a currency outside the supported set', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.setTopupCurrency('gbp')
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('USD'))
+  })
+
+  it('reset clears a currency override back to the default', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.setTopupCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('EUR'))
+    act(() => {
+      result.current.reset()
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('USD'))
+  })
+
+  it('plan-picker preferredCurrency flows into topupCurrency when supported', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'sek',
+        supportedTopupCurrencies: ['sek', 'eur'],
+      },
+    })
+    const { result } = renderHook(
+      () => {
+        const flow = useCheckoutFlow({ productRef })
+        const planCtx = usePlanSelector()
+        return { flow, planCtx }
+      },
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.planCtx.setPreferredCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('EUR'))
+  })
+
+  it('plan-picker preferredCurrency is ignored when not in supportedTopupCurrencies', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'sek',
+        supportedTopupCurrencies: ['sek'],
+      },
+    })
+    const { result } = renderHook(
+      () => {
+        const flow = useCheckoutFlow({ productRef })
+        const planCtx = usePlanSelector()
+        return { flow, planCtx }
+      },
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.planCtx.setPreferredCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('SEK'))
+  })
+
+  it('top-up switcher override wins over plan-picker preferredCurrency', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur', 'sek'],
+      },
+    })
+    const { result } = renderHook(
+      () => {
+        const flow = useCheckoutFlow({ productRef })
+        const planCtx = usePlanSelector()
+        return { flow, planCtx }
+      },
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.planCtx.setPreferredCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('EUR'))
+    act(() => {
+      result.current.flow.setTopupCurrency('sek')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('SEK'))
   })
 })

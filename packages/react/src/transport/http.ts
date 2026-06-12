@@ -87,6 +87,7 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       const body: Record<string, unknown> = {}
       if (params.planRef) body.planRef = params.planRef
       if (params.productRef) body.productRef = params.productRef
+      if (params.currency) body.currency = params.currency
       if (params.customer && (params.customer.name || params.customer.email)) {
         body.customer = params.customer
       }

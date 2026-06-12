@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { buildDefaultCheckoutPlanFilter } from './shared'
+import { buildDefaultCheckoutPlanFilter, formatPaygRate } from './shared'
 import type { Plan } from '../../types'
 
 const free: Plan = {
@@ -84,5 +84,17 @@ describe('buildDefaultCheckoutPlanFilter', () => {
 
   it('returns [] for an empty plan list', () => {
     expect(visible([])).toEqual([])
+  })
+})
+
+describe('formatPaygRate', () => {
+  it('renders singular credits per call', () => {
+    expect(formatPaygRate({ ...payg, creditsPerUnit: 1 })).toBe('1 credit / call')
+  })
+
+  it('renders formatted credits per call', () => {
+    expect(formatPaygRate({ ...payg, creditsPerUnit: 1000 }, 'en-US')).toBe(
+      '1,000 credits / call',
+    )
   })
 })

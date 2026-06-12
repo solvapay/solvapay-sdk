@@ -366,6 +366,7 @@ export interface SolvaPayClient {
     productRef: string
     planRef: string
     customerRef: string
+    currency?: string
     idempotencyKey?: string
   }): Promise<{
     processorPaymentId: string

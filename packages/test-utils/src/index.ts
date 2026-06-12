@@ -8,13 +8,19 @@
 // Integration test setup utilities
 export {
   createTestPlan,
+  createMultiCurrencyPaidTestPlan,
   createTestProduct,
   deleteTestPlan,
   deleteTestProduct,
   createTestProvider,
 } from './integration-setup'
 
-export type { TestProviderSetup, TestProductSetup, TestPlanSetup } from './integration-setup'
+export type {
+  TestProviderSetup,
+  TestProductSetup,
+  TestPlanSetup,
+  TestPlanPricingOption,
+} from './integration-setup'
 
 // Stripe payment test helpers
 export {

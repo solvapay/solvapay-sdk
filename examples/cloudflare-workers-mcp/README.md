@@ -13,6 +13,7 @@ Ships with a toy paywalled demo toolbox (`predict_price_chart`, `predict_directi
 - The SolvaPay MCP tool surface (`check_purchase`, `create_payment_intent`, `process_payment`, `upgrade`, `manage_account`, `topup`, …)
 - A text-only paywall narration when a paywalled tool is called past the customer's plan limit, routing the LLM to the right recovery intent (`upgrade` / `topup` / `activate_plan`)
 - The SolvaPay MCP widget iframe (`ui://cloudflare-workers-mcp/mcp-app.html`) with CSP auto-including your `apiBaseUrl`
+- Multi-currency plans: configure per-plan `pricingOptions` in the SolvaPay Console; the checkout widget shows a currency switcher automatically when a plan exposes more than one currency
 
 ## Prerequisites
 

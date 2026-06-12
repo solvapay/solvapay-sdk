@@ -18,6 +18,8 @@ export type FormatPriceOptions = {
    * Pass `''` to disable the zero-check and always render the numeric zero.
    */
   free?: string
+  /** `symbol` (default) or `code` (e.g. USD 10 instead of $10). */
+  currencyDisplay?: 'symbol' | 'code'
 }
 
 const ZERO_DECIMAL_CURRENCIES = new Set([
@@ -68,7 +70,7 @@ export function formatPrice(
   currency: string,
   opts: FormatPriceOptions = {},
 ): string {
-  const { locale, interval, intervalCount = 1, free = 'Free' } = opts
+  const { locale, interval, intervalCount = 1, free = 'Free', currencyDisplay } = opts
 
   if (amountMinor === 0 && free !== '') {
     return free
@@ -80,12 +82,16 @@ export function formatPrice(
   const fractionDigits = isWhole ? 0 : naturalFractionDigits
   const major = toMajorUnits(amountMinor, currency)
 
-  const formatter = new Intl.NumberFormat(locale, {
+  const formatterOptions: Intl.NumberFormatOptions = {
     style: 'currency',
     currency: currency.toUpperCase(),
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  })
+  }
+  if (currencyDisplay) {
+    formatterOptions.currencyDisplay = currencyDisplay
+  }
+  const formatter = new Intl.NumberFormat(locale, formatterOptions)
 
   const formatted = formatter.format(major)
 

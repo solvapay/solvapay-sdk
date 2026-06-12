@@ -90,6 +90,7 @@ export interface SolvaPayCopy {
     currentBadge: string
     popularBadge: string
     freeBadge: string
+    usageRateLabel: string
     perIntervalShort: string
     continueButton: string
     backButton: string

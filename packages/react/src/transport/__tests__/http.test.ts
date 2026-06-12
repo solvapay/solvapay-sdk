@@ -40,6 +40,25 @@ describe('createHttpTransport — default routes', () => {
     expect(JSON.parse(init.body as string)).toEqual({ planRef: 'pln_pro' })
   })
 
+  it('forwards optional currency on createPayment', async () => {
+    const fetchFn = makeFetch({ clientSecret: 'cs_x', publishableKey: 'pk_x' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    await transport.createPayment({
+      planRef: 'pln_pro',
+      productRef: 'prd_x',
+      currency: 'EUR',
+      customer: {},
+    })
+
+    const [, init] = fetchFn.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(init.body as string)).toEqual({
+      planRef: 'pln_pro',
+      productRef: 'prd_x',
+      currency: 'EUR',
+    })
+  })
+
   it('honours config.api overrides', async () => {
     const fetchFn = makeFetch({})
     const transport = createHttpTransport({

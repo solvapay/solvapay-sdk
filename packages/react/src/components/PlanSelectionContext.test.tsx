@@ -31,6 +31,8 @@ const baseValue: PlanSelectionContextValue = {
   productRef: 'prd_x',
   selectedPlanRef: null,
   setSelectedPlanRef: () => {},
+  selectedCurrency: null,
+  setSelectedCurrency: () => {},
   plans: [monthlyPlan, yearlyPlan],
   loading: false,
   error: null,

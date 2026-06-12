@@ -10,7 +10,8 @@ const nextConfig = {
     '@solvapay/server',
   ],
   env: {
-    NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF: process.env.SOLVAPAY_PRODUCT_REF,
+    NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF:
+      process.env.NEXT_PUBLIC_PRODUCT_REF ?? process.env.SOLVAPAY_PRODUCT_REF ?? 'prd_demo',
   },
 }
 

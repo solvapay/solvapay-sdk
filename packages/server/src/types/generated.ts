@@ -755,6 +755,15 @@ export interface components {
              */
             defaultCurrency?: string;
             /**
+             * Full set of currencies a customer may pay credit topups in, including the default currency. Omitted/single-entry means single-currency behavior.
+             * @example [
+             *       "USD",
+             *       "EUR",
+             *       "GBP"
+             *     ]
+             */
+            supportedTopupCurrencies?: string[];
+            /**
              * Descriptor appearing on the customer card statement
              * @example ACME INC
              */
@@ -971,6 +980,33 @@ export interface components {
              */
             checkoutUrl: string;
         };
+        PlanPricingOptionDto: {
+            /**
+             * ISO 4217 currency code
+             * @example USD
+             */
+            currency: string;
+            /**
+             * Price in smallest currency unit (e.g. cents)
+             * @example 2999
+             */
+            price: number;
+            /**
+             * Base price in smallest currency unit (hybrid plans)
+             * @example 1999
+             */
+            basePrice?: number;
+            /**
+             * One-time setup fee in smallest currency unit
+             * @example 500
+             */
+            setupFee?: number;
+            /**
+             * Whether this is the default currency option for the plan
+             * @example true
+             */
+            default?: boolean;
+        };
         Plan: {
             /**
              * Plan type exposed in SDK
@@ -1008,6 +1044,8 @@ export interface components {
              * @example USD
              */
             currency: string;
+            /** @description Per-currency price options for this plan */
+            pricingOptions?: components["schemas"]["PlanPricingOptionDto"][];
             /**
              * Currency symbol (derived from currency)
              * @example $
@@ -1101,6 +1139,13 @@ export interface components {
             price?: number;
             creditsPerUnit?: number;
             currency?: string;
+            pricingOptions?: {
+                currency: string;
+                price: number;
+                basePrice?: number;
+                setupFee?: number;
+                default?: boolean;
+            }[];
             /** @enum {string} */
             billingModel?: "pre-paid" | "post-paid";
             freeUnits?: number;
@@ -1139,6 +1184,13 @@ export interface components {
             price?: number;
             creditsPerUnit?: number;
             currency?: string;
+            pricingOptions?: {
+                currency: string;
+                price: number;
+                basePrice?: number;
+                setupFee?: number;
+                default?: boolean;
+            }[];
             /** @enum {string} */
             billingModel?: "pre-paid" | "post-paid";
             freeUnits?: number;
@@ -1383,6 +1435,13 @@ export interface components {
                 name: string;
                 price: number;
                 currency: string;
+                pricingOptions?: {
+                    currency: string;
+                    price: number;
+                    basePrice?: number;
+                    setupFee?: number;
+                    default?: boolean;
+                }[];
                 /** @enum {string} */
                 billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
                 /** @enum {string} */
@@ -1451,6 +1510,13 @@ export interface components {
                 name: string;
                 price: number;
                 currency: string;
+                pricingOptions?: {
+                    currency: string;
+                    price: number;
+                    basePrice?: number;
+                    setupFee?: number;
+                    default?: boolean;
+                }[];
                 /** @enum {string} */
                 billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
                 /** @enum {string} */
@@ -1799,6 +1865,8 @@ export interface components {
             creditsPerUnit?: number;
             billingModel?: string;
             billingCycle?: string;
+            /** @description Per-currency price options for this plan */
+            pricingOptions?: components["schemas"]["PlanPricingOptionDto"][];
         };
         LimitBalanceDto: {
             /** @description Credit balance in mils */
@@ -1882,6 +1950,22 @@ export interface components {
             };
             externalRef?: string;
         };
+        GrantCustomerCreditsRequest: {
+            credits: number;
+            reason?: string;
+        };
+        GrantCustomerCreditsResponse: {
+            /** @description Whether the grant was recorded */
+            success: boolean;
+            /** @description Customer reference identifier */
+            customerRef: string;
+            /** @description Granted credit amount */
+            credits: number;
+            /** @description Customer credit balance after the grant */
+            balance: number;
+            /** @description Machine-readable grant reason */
+            reason?: string;
+        };
         CreateCustomerSessionRequest: {
             customerRef: string;
             productRef?: string;
@@ -1917,22 +2001,6 @@ export interface components {
             telephone?: string;
             metadata?: unknown;
             externalRef?: string;
-        };
-        GrantCustomerCreditsRequest: {
-            credits: number;
-            reason?: string;
-        };
-        GrantCustomerCreditsResponse: {
-            /** @description Whether the grant was recorded */
-            success: boolean;
-            /** @description Customer reference identifier */
-            customerRef: string;
-            /** @description Granted credit amount */
-            credits: number;
-            /** @description Customer credit balance after the grant */
-            balance: number;
-            /** @description Machine-readable grant reason */
-            reason?: string;
         };
         CreateCustomerSessionResponse: {
             /**
