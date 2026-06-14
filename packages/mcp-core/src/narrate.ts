@@ -300,6 +300,13 @@ const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
   activate_plan: (p) => `Opened ${p} plan picker.`,
 }
 
+const UI_PANEL_SHOWN: Record<IntentTool, string> = {
+  topup: 'Top-up options are shown in the panel.',
+  upgrade: 'Plans and checkout are shown in the panel.',
+  manage_account: 'Account details are shown in the panel.',
+  activate_plan: 'Plan options are shown in the panel.',
+}
+
 /**
  * One-line placeholder shown on UI-rendering hosts when the intent
  * tool runs in `mode: 'ui'`. Gives the agent minimal grounding (what
@@ -315,6 +322,6 @@ export function uiPlaceholder(
   const balance = balanceSummary(data.customer as CustomerShape | null)
   const parts = [opened]
   if (balance) parts.push(`Balance: ${balance}.`)
-  parts.push("Pass `mode: 'text'` for a markdown summary.")
+  parts.push(UI_PANEL_SHOWN[tool])
   return parts.join(' ')
 }

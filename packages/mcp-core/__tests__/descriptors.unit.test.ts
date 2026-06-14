@@ -135,6 +135,32 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
   })
 
+  it('marks checkout and topup intent tools as destructive and idempotent', () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+
+    for (const name of [MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.topup]) {
+      const tool = tools.find(t => t.name === name)!
+      expect(tool.annotations).toMatchObject({
+        openWorldHint: true,
+        destructiveHint: true,
+        idempotentHint: true,
+      })
+    }
+
+    const account = tools.find(t => t.name === MCP_TOOL_NAMES.manageAccount)!
+    expect(account.annotations).toMatchObject({
+      openWorldHint: true,
+      readOnlyHint: true,
+      idempotentHint: true,
+    })
+  })
+
   it('does not register tools removed/renamed in the Phase 2 trim', () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),

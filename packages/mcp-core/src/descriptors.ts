@@ -122,8 +122,8 @@ const solvapayTool = (
  */
 const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> = {
   account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  topup: solvapayTool({ destructiveHint: true }),
-  checkout: solvapayTool({ destructiveHint: true }),
+  topup: solvapayTool({ destructiveHint: true, idempotentHint: true }),
+  checkout: solvapayTool({ destructiveHint: true, idempotentHint: true }),
 }
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
