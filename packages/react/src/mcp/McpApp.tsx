@@ -28,6 +28,7 @@ import {
   fetchMcpBootstrap,
   isTransportToolName,
   parseBootstrapFromToolResult,
+  waitForInitialToolResult,
   type CallToolResultLike,
   type McpBootstrap,
   type McpAppBootstrapLike,
@@ -211,6 +212,10 @@ export function McpApp({
   // it doesn't double-apply the same payload a fetch is about to
   // deliver via its own `setBootstrap`.
   const pendingBootstrapFetchRef = useRef(0)
+  // Gates the live `toolresult` subscription until the one-shot initial
+  // bootstrap path finishes. Prevents double-applying the host's
+  // opening notification while `waitForInitialToolResult` is in flight.
+  const initialBootstrapDoneRef = useRef(false)
 
   // Capture `applyContext` / `onInitError` in refs so the persistent
   // `onhostcontextchanged` handler and the bootstrap effect always see
@@ -235,6 +240,7 @@ export function McpApp({
     setInitError(null)
     setBootstrap(null)
     setHostName(null)
+    initialBootstrapDoneRef.current = false
 
     // `@modelcontextprotocol/ext-apps` `App` exposes lifecycle hooks as
     // property setters — mutating the `app` prop is intentional and part
@@ -262,6 +268,7 @@ export function McpApp({
     // mounted view.
     const onToolResult = (params: ToolResultNotificationParams) => {
       if (cancelled) return
+      if (!initialBootstrapDoneRef.current) return
       const toolName = app.getHostContext?.()?.toolInfo?.tool?.name ?? null
       if (toolName && isTransportToolName(toolName)) return
       // Dedupe: skip notifications that land during an in-flight
@@ -291,6 +298,17 @@ export function McpApp({
     }
 
     let unsubscribe: (() => void) | undefined
+
+    // Hosts (MCPJam, ChatGPT Apps, Claude Desktop) fire
+    // `ui/notifications/tool-result` with the invoking intent tool's
+    // payload immediately after `connect()`. Subscribe before connect so
+    // we can consume that notification instead of re-calling the same
+    // tool via `fetchMcpBootstrap` (which showed up as duplicate
+    // `manage_account` / `upgrade` invocations in server logs).
+    const initialToolResultPromise = waitForInitialToolResult(app, {
+      timeoutMs: 2000,
+    })
+
     if (typeof app.addEventListener === 'function') {
       app.addEventListener('toolresult', onToolResult)
       unsubscribe = () => {
@@ -298,12 +316,16 @@ export function McpApp({
       }
     } else {
       // Fallback for hosts / mocks exposing only the legacy DOM-style
-      // setter. We save the prior handler and restore on cleanup to
-      // avoid clobbering an outer composition.
+      // setter. `waitForInitialToolResult` above may have claimed
+      // `ontoolresult` — chain through it so both handlers run.
       const prior = app.ontoolresult
-      app.ontoolresult = onToolResult
+      const chainedHandler = (params: ToolResultNotificationParams) => {
+        prior?.(params)
+        onToolResult(params)
+      }
+      app.ontoolresult = chainedHandler
       unsubscribe = () => {
-        if (app.ontoolresult === onToolResult) app.ontoolresult = prior
+        if (app.ontoolresult === chainedHandler) app.ontoolresult = prior
       }
     }
 
@@ -319,25 +341,38 @@ export function McpApp({
         // leave in-widget branding to the app — render).
         setHostName(app.getHostVersion?.()?.name ?? null)
 
-        // Mount the matching intent tool via `fetchMcpBootstrap`. The
-        // `pendingBootstrapFetchRef` gate suppresses the echo
-        // notification while this in-flight fetch applies state.
-        //
-        // Merchant payable tools no longer advertise
-        // `_meta.ui.resourceUri`, so data-tool iframe entries don't
-        // exist anymore — every mount arrives via an intent tool
-        // (`upgrade` / `manage_account` / `topup`) and `classifyHostEntry`
-        // now collapses to `intent | other`.
-        pendingBootstrapFetchRef.current += 1
+        let resolvedBootstrap: McpBootstrap | null = null
         try {
-          const result = await fetchMcpBootstrap(app)
-          if (!cancelled) setBootstrap(result)
-        } finally {
-          pendingBootstrapFetchRef.current = Math.max(
-            0,
-            pendingBootstrapFetchRef.current - 1,
-          )
+          const initial = await initialToolResultPromise
+          if (!initial.timedOut) {
+            resolvedBootstrap = initial.bootstrap
+          }
+        } catch (err) {
+          if (cancelled) return
+          const message =
+            err instanceof Error ? err.message : 'Failed to parse initial tool result'
+          setInitError(message)
+          onInitErrorRef.current?.(err instanceof Error ? err : new Error(message))
+          initialBootstrapDoneRef.current = true
+          return
         }
+
+        if (!resolvedBootstrap) {
+          // Legacy / minimal hosts that don't push the opening
+          // notification — fall back to a client-initiated fetch.
+          pendingBootstrapFetchRef.current += 1
+          try {
+            resolvedBootstrap = await fetchMcpBootstrap(app)
+          } finally {
+            pendingBootstrapFetchRef.current = Math.max(
+              0,
+              pendingBootstrapFetchRef.current - 1,
+            )
+          }
+        }
+
+        initialBootstrapDoneRef.current = true
+        if (!cancelled) setBootstrap(resolvedBootstrap)
       } catch (err) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : 'Failed to initialize SolvaPay'
