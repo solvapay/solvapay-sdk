@@ -132,6 +132,7 @@ describe('buildSolvaPayDescriptors', () => {
       expect((tool!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility).toEqual([
         'app',
       ])
+      expect((tool!.meta as Record<string, unknown>)['openai/widgetAccessible']).toBe(true)
       expect(tool!.description).toMatch(/UI-only/i)
     }
 
@@ -141,7 +142,7 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
   })
 
-  it('marks checkout and topup intent tools as destructive and idempotent', () => {
+  it('marks all intent tools as read-only view openers', () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),
       productRef: 'prd_test',
@@ -150,21 +151,15 @@ describe('buildSolvaPayDescriptors', () => {
       publicBaseUrl: 'https://example.com',
     })
 
-    for (const name of [MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.topup]) {
+    for (const name of [MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.manageAccount]) {
       const tool = tools.find(t => t.name === name)!
       expect(tool.annotations).toMatchObject({
         openWorldHint: true,
-        destructiveHint: true,
+        readOnlyHint: true,
         idempotentHint: true,
       })
+      expect(tool.annotations?.destructiveHint).toBeUndefined()
     }
-
-    const account = tools.find(t => t.name === MCP_TOOL_NAMES.manageAccount)!
-    expect(account.annotations).toMatchObject({
-      openWorldHint: true,
-      readOnlyHint: true,
-      idempotentHint: true,
-    })
   })
 
   it('does not register tools removed/renamed in the Phase 2 trim', () => {

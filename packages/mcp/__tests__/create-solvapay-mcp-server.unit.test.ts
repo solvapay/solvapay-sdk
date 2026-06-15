@@ -178,25 +178,22 @@ describe('createSolvaPayMcpServer', () => {
   })
 
   describe('tool annotations', () => {
-    it('flows readOnly + idempotent annotations on manage_account', () => {
+    it('flows readOnly + idempotent annotations on all intent tools', () => {
       const { server } = buildTestServer()
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
-      const manageAccount = registered[MCP_TOOL_NAMES.manageAccount]
-      expect(manageAccount?.annotations).toEqual({
-        readOnlyHint: true,
-        idempotentHint: true,
-        openWorldHint: true,
-      })
-    })
-
-    it('flows destructive annotations on upgrade', () => {
-      const { server } = buildTestServer()
-      // @ts-expect-error — private registry used for coverage only
-      const registered = server._registeredTools ?? {}
-      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
-      expect(upgrade?.annotations?.destructiveHint).toBe(true)
-      expect(upgrade?.annotations?.openWorldHint).toBe(true)
+      for (const name of [
+        MCP_TOOL_NAMES.manageAccount,
+        MCP_TOOL_NAMES.upgrade,
+        MCP_TOOL_NAMES.topup,
+      ]) {
+        const tool = registered[name]
+        expect(tool?.annotations).toEqual({
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
+        })
+      }
     })
 
     it('registerPayable defaults to readOnly + openWorld for data tools', () => {
@@ -271,21 +268,27 @@ describe('createSolvaPayMcpServer', () => {
       expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
     })
 
-    it('stamps _meta.ui.visibility on UI-only transport tools but not intent tools', () => {
+    it('stamps _meta.ui.visibility and openai/widgetAccessible on UI-only transport tools but not intent tools', () => {
       const { server } = buildTestServer()
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
       const createPayment = registered[MCP_TOOL_NAMES.createPayment]
-      const transportUi = (
-        createPayment?._meta as { ui?: { visibility?: readonly string[] } } | undefined
-      )?.ui
-      expect(transportUi?.visibility).toEqual(['app'])
+      const transportMeta = createPayment?._meta as
+        | { ui?: { visibility?: readonly string[] } }
+        | undefined
+      expect(transportMeta?.ui?.visibility).toEqual(['app'])
+      expect(
+        (createPayment?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
+      ).toBe(true)
 
       const upgrade = registered[MCP_TOOL_NAMES.upgrade]
       const intentUi = (
         upgrade?._meta as { ui?: { visibility?: readonly string[] } } | undefined
       )?.ui
       expect(intentUi?.visibility).not.toEqual(['app'])
+      expect(
+        (upgrade?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
+      ).toBeUndefined()
     })
 
     it('stamps _meta.ui.icons on every intent tool when branding is provided', () => {

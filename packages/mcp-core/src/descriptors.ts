@@ -127,8 +127,8 @@ const solvapayTool = (
  */
 const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> = {
   account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  topup: solvapayTool({ destructiveHint: true, idempotentHint: true }),
-  checkout: solvapayTool({ destructiveHint: true, idempotentHint: true }),
+  topup: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+  checkout: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
 }
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
@@ -280,6 +280,9 @@ export function buildSolvaPayDescriptors(
   const uiToolMeta = {
     ui: { resourceUri, visibility: ['app'] as const },
     audience: 'ui' as const,
+    // ChatGPT Apps SDK rejects iframe `callTool` unless this flag is set.
+    // Dual-stamp with `ui.visibility: ['app']` for MCP Apps hosts.
+    'openai/widgetAccessible': true as const,
   }
   const enabledViews = new Set<SolvaPayMcpViewKind>(views)
   const tools: SolvaPayToolDescriptor[] = []
@@ -395,7 +398,7 @@ export function buildSolvaPayDescriptors(
   pushIntentTool(
     'checkout',
     'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
+    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. This tool only returns a read-only snapshot or opens the UI — actual charges happen later in the embedded checkout after the customer confirms. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
       MODE_HINT,
   )
   pushIntentTool(
@@ -407,7 +410,7 @@ export function buildSolvaPayDescriptors(
   pushIntentTool(
     'topup',
     'Top up credits',
-    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
+    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. This tool only returns a read-only snapshot or opens the UI — credits are not charged until the customer confirms payment in the embedded flow. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
       MODE_HINT,
   )
   // `activate_plan` is registered below (transport section) as a
