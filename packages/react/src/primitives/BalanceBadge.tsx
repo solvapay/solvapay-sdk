@@ -10,7 +10,7 @@
  */
 
 import React, { forwardRef, useContext } from 'react'
-import { creditsToDisplayMinorUnits, minorUnitsPerMajor } from '@solvapay/mcp-core'
+import { creditsToDisplayMinorUnits, minorUnitsPerMajor } from '@solvapay/core'
 import { Slot } from './slot'
 import { useBalance } from '../hooks/useBalance'
 import { useCopy, useLocale } from '../hooks/useCopy'
