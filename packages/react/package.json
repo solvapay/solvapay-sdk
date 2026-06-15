@@ -67,6 +67,7 @@
     }
   },
   "dependencies": {
+    "@solvapay/core": "workspace:*",
     "@stripe/react-stripe-js": "^6.0.0",
     "@stripe/stripe-js": "^9.0.0"
   },

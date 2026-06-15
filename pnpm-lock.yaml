@@ -1131,6 +1131,9 @@ importers:
 
   packages/react:
     dependencies:
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../core
       '@stripe/react-stripe-js':
         specifier: ^6.0.0
         version: 6.1.0(@stripe/stripe-js@9.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

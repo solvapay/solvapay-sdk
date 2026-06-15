@@ -12,7 +12,7 @@
  */
 
 import React from 'react'
-import { creditsToDisplayMinorUnits } from '@solvapay/mcp-core'
+import { creditsToDisplayMinorUnits } from '@solvapay/core'
 import { useBalance } from '../../hooks/useBalance'
 import { useCustomer } from '../../hooks/useCustomer'
 import { useMerchant } from '../../hooks/useMerchant'

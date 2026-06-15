@@ -15,7 +15,7 @@
  * is still well-formed.
  */
 
-import { creditsToDisplayMinorUnits, isZeroDecimalCurrency } from './credit-display'
+import { creditsToDisplayMinorUnits, isZeroDecimalCurrency } from '@solvapay/core'
 import type { BootstrapPayload } from './types'
 
 export interface NarratorOutput {
