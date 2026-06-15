@@ -59,6 +59,10 @@ import type { IntentTool } from './narrate'
 import { createBuildBootstrapPayload, type BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { mergeCsp } from './csp'
 import {
+  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
+  SOLVAPAY_BOOTSTRAP_URI,
+} from './resources/bootstrap'
+import {
   SOLVAPAY_OVERVIEW_MARKDOWN,
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
@@ -67,6 +71,7 @@ import { MCP_TOOL_NAMES } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS, TOOL_FOR_VIEW } from './types'
 import type {
   McpToolExtra,
+  SolvaPayBootstrapResourceDescriptor,
   SolvaPayCallToolResult,
   SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
@@ -122,8 +127,8 @@ const solvapayTool = (
  */
 const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> = {
   account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  topup: solvapayTool({ destructiveHint: true }),
-  checkout: solvapayTool({ destructiveHint: true }),
+  topup: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+  checkout: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
 }
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
@@ -213,6 +218,12 @@ export interface SolvaPayDescriptorBundle {
    */
   docsResources: SolvaPayDocsResourceDescriptor[]
   /**
+   * Idempotent bootstrap snapshot at `solvapay://bootstrap.json` — the
+   * widget reads this when the host scrubs `structuredContent` from the
+   * opening tool-result notification.
+   */
+  bootstrapResource: SolvaPayBootstrapResourceDescriptor
+  /**
    * Parallelised fetch of merchant + product + plans + (optional)
    * customer snapshot that backs every `open_*` tool. Exposed so the
    * paywall envelope (`paywallToolResult`, `buildPayableHandler`) can
@@ -260,10 +271,19 @@ export function buildSolvaPayDescriptors(
 
   const toolMeta = { ui: { resourceUri } }
   // State-change tools that need a server round-trip from inside the
-  // embedded UI but offer no LLM-facing use. Hosts that honour
-  // `_meta.audience` can hide these from the model; hosts that don't,
-  // still see them but are steered away by the description prefix.
-  const uiToolMeta = { ...toolMeta, audience: 'ui' as const }
+  // embedded UI but offer no LLM-facing use.
+  // `visibility: ['app']` is the SEP-1865 signal MCP Apps hosts read to
+  // keep these transport tools out of the model's tool list while the
+  // embedded iframe can still call them (`app` is included). The
+  // proprietary `audience` tag stays for the server-side
+  // `hideToolsByAudience` opt-in on non-SEP-1865 hosts.
+  const uiToolMeta = {
+    ui: { resourceUri, visibility: ['app'] as const },
+    audience: 'ui' as const,
+    // ChatGPT Apps SDK rejects iframe `callTool` unless this flag is set.
+    // Dual-stamp with `ui.visibility: ['app']` for MCP Apps hosts.
+    'openai/widgetAccessible': true as const,
+  }
   const enabledViews = new Set<SolvaPayMcpViewKind>(views)
   const tools: SolvaPayToolDescriptor[] = []
 
@@ -378,7 +398,7 @@ export function buildSolvaPayDescriptors(
   pushIntentTool(
     'checkout',
     'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
+    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. This tool only returns a read-only snapshot or opens the UI — actual charges happen later in the embedded checkout after the customer confirms. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
       MODE_HINT,
   )
   pushIntentTool(
@@ -390,7 +410,7 @@ export function buildSolvaPayDescriptors(
   pushIntentTool(
     'topup',
     'Top up credits',
-    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
+    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. This tool only returns a read-only snapshot or opens the UI — credits are not charged until the customer confirms payment in the embedded flow. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
       MODE_HINT,
   )
   // `activate_plan` is registered below (transport section) as a
@@ -696,7 +716,20 @@ export function buildSolvaPayDescriptors(
     },
   ]
 
-  return { tools, resource, prompts, docsResources, buildBootstrapPayload }
+  const bootstrapResource: SolvaPayBootstrapResourceDescriptor = {
+    uri: SOLVAPAY_BOOTSTRAP_URI,
+    name: 'SolvaPay bootstrap',
+    title: 'SolvaPay bootstrap',
+    description:
+      'Current merchant/product/plans/customer snapshot for the embedded UI. Widgets read this idempotently when the host scrubs structuredContent from tool results.',
+    mimeType: SOLVAPAY_BOOTSTRAP_MIME_TYPE,
+    // View is an echoed routing label — the widget resolves the actual
+    // surface from host context (`inferViewFromHost`), so any view kind
+    // produces identical merchant/product/plans/customer data.
+    readPayload: extra => buildBootstrapPayload('account', extra),
+  }
+
+  return { tools, resource, prompts, docsResources, bootstrapResource, buildBootstrapPayload }
 }
 
 /**

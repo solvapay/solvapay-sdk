@@ -25,6 +25,7 @@ import {
   deriveIcons,
   type ApplyHideToolsByAudienceOptions,
   type BuildSolvaPayDescriptorsOptions,
+  type SolvaPayBootstrapResourceDescriptor,
   type SolvaPayDescriptorBundle,
   type SolvaPayDocsResourceDescriptor,
   type SolvaPayPromptDescriptor,
@@ -148,6 +149,30 @@ function registerDocsResource(server: McpServer, docs: SolvaPayDocsResourceDescr
   )
 }
 
+function registerBootstrapResource(
+  server: McpServer,
+  bootstrap: SolvaPayBootstrapResourceDescriptor,
+): void {
+  server.registerResource(
+    bootstrap.name,
+    bootstrap.uri,
+    {
+      ...(bootstrap.title !== undefined ? { title: bootstrap.title } : {}),
+      description: bootstrap.description,
+      mimeType: bootstrap.mimeType,
+    },
+    async (_uri, extra): Promise<ReadResourceResult> => ({
+      contents: [
+        {
+          uri: bootstrap.uri,
+          mimeType: bootstrap.mimeType,
+          text: JSON.stringify(await bootstrap.readPayload(extra)),
+        },
+      ],
+    }),
+  )
+}
+
 /**
  * Build the `McpServer` from a `BuildSolvaPayDescriptorsOptions`
  * bundle, register every SolvaPay tool / prompt / docs resource / UI
@@ -210,6 +235,8 @@ export function buildSolvaPayMcpServer(
       registerDocsResource(server, docs)
     }
   }
+
+  registerBootstrapResource(server, descriptors.bootstrapResource)
 
   const resource = descriptors.resource
   registerAppResource(

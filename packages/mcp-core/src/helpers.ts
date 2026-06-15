@@ -259,7 +259,7 @@ export function narratedToolResult(
 
   const content: SolvaPayCallToolResult['content'] =
     mode === 'ui'
-      ? [placeholderBlock]
+      ? [placeholderBlock, narratedBlock]
       : mode === 'text'
         ? [narratedBlock, ...resourceLinkBlocks]
         : [narratedBlock, ...resourceLinkBlocks]

@@ -15,7 +15,7 @@ import type {
   BootstrapProduct,
   SolvaPayMcpViewKind,
 } from '@solvapay/mcp-core'
-import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL } from '@solvapay/mcp-core'
+import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL, SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
 import type { McpAppLike } from './adapter'
 
 /**
@@ -57,6 +57,14 @@ export interface McpBootstrap {
  */
 export interface McpAppBootstrapLike extends McpAppLike {
   getHostContext: () => McpHostContextLike | undefined
+  /**
+   * Optional — proxied by `@modelcontextprotocol/ext-apps` `App.readServerResource`.
+   * When present, `<McpApp>` reads `solvapay://bootstrap.json` instead of
+   * replaying the intent tool on hosts that scrub `structuredContent`.
+   */
+  readServerResource?: (params: {
+    uri: string
+  }) => Promise<{ contents?: Array<{ text?: string }> }>
 }
 
 /**
@@ -189,6 +197,45 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
 }
 
 /**
+ * Read the idempotent bootstrap snapshot from `solvapay://bootstrap.json`.
+ *
+ * Used when the host scrubs `structuredContent` from the opening
+ * `toolresult` notification (e.g. MCPJam) so the widget can recover
+ * without replaying the intent tool. The view is resolved locally from
+ * host context — the resource body is view-agnostic.
+ *
+ * Throws when `readServerResource` is unavailable, the resource body is
+ * missing, or parsing fails. Callers fall back to `fetchMcpBootstrap`.
+ */
+export async function fetchMcpBootstrapViaResource(
+  app: McpAppBootstrapLike,
+): Promise<McpBootstrap> {
+  if (typeof app.readServerResource !== 'function') {
+    throw new Error('Host does not support readServerResource')
+  }
+  const view = inferViewFromHost(app)
+  const result = await app.readServerResource({ uri: SOLVAPAY_BOOTSTRAP_URI })
+  const text = result.contents?.[0]?.text
+  if (typeof text !== 'string' || !text) {
+    throw new Error('Bootstrap resource returned no text content')
+  }
+  let payload: unknown
+  try {
+    payload = JSON.parse(text) as unknown
+  } catch {
+    throw new Error('Bootstrap resource returned invalid JSON')
+  }
+  const bootstrap = parseBootstrapFromToolResult(
+    { structuredContent: payload },
+    SOLVAPAY_BOOTSTRAP_URI,
+    view,
+  )
+  // Force the view from host context — the resource echoes a placeholder
+  // view label that must not override the iframe entry tool.
+  return { ...bootstrap, view }
+}
+
+/**
  * Parse a raw `CallToolResult`-shaped payload into an `McpBootstrap`.
  *
  * Shared between `fetchMcpBootstrap` (client-initiated) and the live
@@ -318,9 +365,12 @@ export type WaitForInitialToolResultResult =
  * unsubscribes.
  *
  * Intended for integrators who mount their own shell on top of
- * `createMcpAppAdapter` and need the same "consume the initial
- * tool-result payload" semantics `<McpApp>` uses internally. Subscribe
- * **before** calling `app.connect()` to avoid missing the initial
+ * `createMcpAppAdapter` and need an explicit timed wait for the host's
+ * opening `toolresult` notification. `<McpApp>` no longer uses this
+ * internally — it branches on `classifyHostEntry` and applies the
+ * one-shot notification via its live `toolresult` handler instead.
+ *
+ * Subscribe **before** calling `app.connect()` to avoid missing the
  * notification the host fires after `ui/initialize`.
  *
  * Parse errors are surfaced via the returned promise's rejection; a

@@ -110,6 +110,9 @@ describe('buildSolvaPayDescriptors', () => {
       const tool = tools.find(t => t.name === name)
       expect(tool).toBeTruthy()
       expect((tool!.meta as Record<string, unknown>).audience).toBeUndefined()
+      const visibility = (tool!.meta as { ui?: { visibility?: readonly string[] } }).ui
+        ?.visibility
+      expect(visibility).not.toEqual(['app'])
     }
 
     // UI-transport tools (state-change, no LLM use) all tag themselves.
@@ -126,6 +129,10 @@ describe('buildSolvaPayDescriptors', () => {
       const tool = tools.find(t => t.name === name)
       expect(tool).toBeTruthy()
       expect((tool!.meta as Record<string, unknown>).audience).toBe('ui')
+      expect((tool!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility).toEqual([
+        'app',
+      ])
+      expect((tool!.meta as Record<string, unknown>)['openai/widgetAccessible']).toBe(true)
       expect(tool!.description).toMatch(/UI-only/i)
     }
 
@@ -133,6 +140,26 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.mimeType).toBe('text/html;profile=mcp-app')
     expect(resource.readHtml).toBeTypeOf('function')
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
+  })
+
+  it('marks all intent tools as read-only view openers', () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+
+    for (const name of [MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.manageAccount]) {
+      const tool = tools.find(t => t.name === name)!
+      expect(tool.annotations).toMatchObject({
+        openWorldHint: true,
+        readOnlyHint: true,
+        idempotentHint: true,
+      })
+      expect(tool.annotations?.destructiveHint).toBeUndefined()
+    }
   })
 
   it('does not register tools removed/renamed in the Phase 2 trim', () => {

@@ -46,6 +46,7 @@ export type {
 export {
   classifyHostEntry,
   fetchMcpBootstrap,
+  fetchMcpBootstrapViaResource,
   isTransportToolName,
   parseBootstrapFromToolResult,
   SOLVAPAY_TRANSPORT_TOOL_NAMES,
