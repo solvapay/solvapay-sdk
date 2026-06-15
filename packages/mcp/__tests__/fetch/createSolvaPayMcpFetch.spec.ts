@@ -16,7 +16,7 @@
 import { readFile } from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
+import { MCP_TOOL_NAMES, SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpFetch } from '../../src/fetch/createSolvaPayMcpFetch'
@@ -36,6 +36,17 @@ function makeSolvaPay() {
       .fn()
       .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/sess_1' }),
     getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getMerchant: vi.fn().mockResolvedValue({ displayName: 'Acme', legalName: 'Acme Inc' }),
+    getProduct: vi.fn().mockResolvedValue({ reference: productRef, name: 'Test product' }),
+    listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),
+    getPaymentMethod: vi.fn().mockResolvedValue({ kind: 'none' }),
+    getCustomerBalance: vi.fn().mockResolvedValue({
+      customerRef: 'cus_existing',
+      credits: 0,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 1,
+      displayExchangeRate: 1,
+    }),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
@@ -256,6 +267,25 @@ describe('createSolvaPayMcpFetch', () => {
     expect(entry?.uri).toBe(resourceUri)
     expect(entry?.text).toContain('<html><body>test</body></html>')
     expect(entry?._meta?.ui?.prefersBorder).toBe(false)
+  })
+
+  it('resources/read returns bootstrap JSON at solvapay://bootstrap.json', async () => {
+    const handler = buildHandler()
+    await initialize(handler)
+
+    const read = await callRpc<ResourceReadResult>(handler, {
+      jsonrpc: '2.0',
+      id: 31,
+      method: 'resources/read',
+      params: { uri: SOLVAPAY_BOOTSTRAP_URI },
+    })
+    expect(read.status).toBe(200)
+    const entry = read.json.result?.contents?.[0]
+    expect(entry?.uri).toBe(SOLVAPAY_BOOTSTRAP_URI)
+    expect(entry?.mimeType).toBe('application/json')
+    const payload = JSON.parse(entry?.text ?? '{}') as { productRef?: string; returnUrl?: string }
+    expect(payload.productRef).toBe(productRef)
+    expect(payload.returnUrl).toBe(publicBaseUrl)
   })
 
   it('tools/call reaches the upgrade intent handler with default mode', async () => {

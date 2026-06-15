@@ -110,6 +110,9 @@ describe('buildSolvaPayDescriptors', () => {
       const tool = tools.find(t => t.name === name)
       expect(tool).toBeTruthy()
       expect((tool!.meta as Record<string, unknown>).audience).toBeUndefined()
+      const visibility = (tool!.meta as { ui?: { visibility?: readonly string[] } }).ui
+        ?.visibility
+      expect(visibility).not.toEqual(['app'])
     }
 
     // UI-transport tools (state-change, no LLM use) all tag themselves.
@@ -126,6 +129,9 @@ describe('buildSolvaPayDescriptors', () => {
       const tool = tools.find(t => t.name === name)
       expect(tool).toBeTruthy()
       expect((tool!.meta as Record<string, unknown>).audience).toBe('ui')
+      expect((tool!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility).toEqual([
+        'app',
+      ])
       expect(tool!.description).toMatch(/UI-only/i)
     }
 

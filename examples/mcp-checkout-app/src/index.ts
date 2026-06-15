@@ -156,8 +156,8 @@ app.listen(port, host, () => {
     // Surface the dev-only asset origins so it's obvious from the
     // startup log whether `MCP_ASSET_ORIGINS` landed in the process
     // env. If a merchant logo is CSP-blocked at `http://localhost:...`
-    // and this array is empty, the .env wasn't reloaded — nodemon
-    // doesn't watch `.env` unless it's in the `--watch` list.
+    // and this array is empty, the .env wasn't reloaded — restart dev
+    // (tsx watch picks up `.env` via `--include .env`).
     mcpAssetOrigins,
   })
 })

@@ -153,6 +153,13 @@ describe('createSolvaPayMcpServer', () => {
     expect(resourceUris).toContain('docs://solvapay/overview.md')
   })
 
+  it('registers the bootstrap resource by default', () => {
+    const { server } = buildTestServer()
+    // @ts-expect-error — private registry used for coverage only
+    const resourceUris = Object.keys(server._registeredResources ?? {})
+    expect(resourceUris).toContain('solvapay://bootstrap.json')
+  })
+
   it('opts out of the docs resource when registerDocsResources: false', () => {
     const { server } = buildTestServer({ registerDocsResources: false })
     // @ts-expect-error — private registry used for coverage only
@@ -262,6 +269,23 @@ describe('createSolvaPayMcpServer', () => {
         upgrade?._meta as { ui?: { resourceUri?: string } } | undefined
       )?.ui
       expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
+    })
+
+    it('stamps _meta.ui.visibility on UI-only transport tools but not intent tools', () => {
+      const { server } = buildTestServer()
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      const createPayment = registered[MCP_TOOL_NAMES.createPayment]
+      const transportUi = (
+        createPayment?._meta as { ui?: { visibility?: readonly string[] } } | undefined
+      )?.ui
+      expect(transportUi?.visibility).toEqual(['app'])
+
+      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const intentUi = (
+        upgrade?._meta as { ui?: { visibility?: readonly string[] } } | undefined
+      )?.ui
+      expect(intentUi?.visibility).not.toEqual(['app'])
     })
 
     it('stamps _meta.ui.icons on every intent tool when branding is provided', () => {

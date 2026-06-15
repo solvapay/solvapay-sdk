@@ -56,6 +56,7 @@ export type {
   ResponseContext,
   ResponseOptions,
   ResponseResult,
+  SolvaPayBootstrapResourceDescriptor,
   SolvaPayCallToolResult,
   SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
@@ -126,6 +127,11 @@ export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,
 } from './descriptors'
+
+export {
+  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
+  SOLVAPAY_BOOTSTRAP_URI,
+} from './resources/bootstrap'
 
 export {
   SOLVAPAY_OVERVIEW_MARKDOWN,
