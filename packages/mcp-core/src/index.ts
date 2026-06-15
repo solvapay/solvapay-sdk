@@ -83,6 +83,13 @@ export {
 } from './helpers'
 export type { BuildSolvaPayRequestOptions, SolvaPayToolMode } from './helpers'
 
+// ---- Credit → fiat display ----
+export {
+  creditsToDisplayMinorUnits,
+  isZeroDecimalCurrency,
+  minorUnitsPerMajor,
+} from './credit-display'
+
 // ---- Narrators (per-tool text-mode renderers) ----
 export {
   NARRATORS,
