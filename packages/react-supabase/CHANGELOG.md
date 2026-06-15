@@ -1,5 +1,11 @@
 # @solvapay/react-supabase changelog
 
+## 1.0.10
+
+### Patch Changes
+
+- 2de7fd8: Add Auth0 identity adapters across `@solvapay/auth`, `@solvapay/react`, and `@solvapay/next` (`createAuth0AuthMiddleware`), plus a `next-auth0` scaffolder template. The Next.js middleware now strips client-supplied identity headers (`x-user-id`, `authorization`) before forwarding a verified session identity downstream.
+
 ## 1.0.9
 
 ### Patch Changes
