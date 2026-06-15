@@ -1,5 +1,11 @@
 # @solvapay/core
 
+## 1.1.0
+
+### Minor Changes
+
+- 7a03c7f: Credit → fiat display helpers (`creditsToDisplayMinorUnits`, `minorUnitsPerMajor`, `isZeroDecimalCurrency`) now live in `@solvapay/core` so Next.js client components can import them without pulling the Node-only `@solvapay/mcp-core` server bundle. `@solvapay/mcp-core` re-exports the same symbols for backward compatibility.
+
 ## 1.0.9
 
 ### Patch Changes

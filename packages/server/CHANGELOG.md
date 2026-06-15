@@ -1,5 +1,14 @@
 # @solvapay/server changelog
 
+## 1.2.1
+
+### Patch Changes
+
+- 2de7fd8: Add Auth0 identity adapters across `@solvapay/auth`, `@solvapay/react`, and `@solvapay/next` (`createAuth0AuthMiddleware`), plus a `next-auth0` scaffolder template. The Next.js middleware now strips client-supplied identity headers (`x-user-id`, `authorization`) before forwarding a verified session identity downstream.
+- c2a1169: Loosen internal `@solvapay/*` peerDependency ranges from `workspace:*` (exact) to `workspace:^` so a patch/minor bump of a peer no longer forces a major bump on its dependents. Affects `@solvapay/react` → `@solvapay/mcp-core`, `@solvapay/server` → `@solvapay/auth`, and `@solvapay/mcp` → `@solvapay/mcp-core`. This is a widening of the published peer range and is non-breaking for consumers.
+- Updated dependencies [7a03c7f]
+  - @solvapay/core@1.1.0
+
 ## 1.2.0
 
 ### Minor Changes
