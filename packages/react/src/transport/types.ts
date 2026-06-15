@@ -123,6 +123,7 @@ export interface SolvaPayTransport {
   createPayment: (params: {
     planRef?: string
     productRef?: string
+    currency?: string
     customer?: PrefillCustomer
   }) => Promise<PaymentIntentResult>
 

@@ -180,6 +180,14 @@ export type {
   ToolPlanMappingInput,
   SdkMerchantResponse,
   SdkProductResponse,
+  CreditDebitSkipReason,
+  CreditDebitResult,
+  TrackUsageRequest,
+  TrackUsageResponse,
+  TrackUsageBulkRequest,
+  TrackUsageBulkResponse,
+  AssignCreditsRequest,
+  AssignCreditsResponse,
 } from './types/client'
 
 // Export utilities for general use

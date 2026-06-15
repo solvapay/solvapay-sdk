@@ -9,9 +9,13 @@
  */
 
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { McpApp, type McpAppFull } from '../McpApp'
+
+beforeEach(() => {
+  vi.useRealTimers()
+})
 
 type ToolResultHandler = (params: {
   structuredContent?: unknown
@@ -33,12 +37,20 @@ function makeEventfulApp(opts: {
   const listeners: Record<string, ToolResultHandler[]> = {}
   const hostContext = { toolInfo: { tool: { name: opts.initialToolName } } }
 
+  const fireToolResult: TestApp['fireToolResult'] = (params) => {
+    const bucket = listeners['toolresult'] ?? []
+    for (const h of bucket) h(params)
+  }
+
   const app = {
     callServerTool: vi.fn().mockResolvedValue({
       structuredContent: opts.initialStructured,
     }),
     getHostContext: () => hostContext,
-    connect: vi.fn().mockResolvedValue(undefined),
+    connect: vi.fn().mockImplementation(async () => {
+      await Promise.resolve()
+      fireToolResult({ structuredContent: opts.initialStructured })
+    }),
     addEventListener: vi.fn((evt: string, handler: ToolResultHandler) => {
       ;(listeners[evt] ??= []).push(handler)
     }),
@@ -53,11 +65,6 @@ function makeEventfulApp(opts: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
 
-  const fireToolResult: TestApp['fireToolResult'] = (params) => {
-    const bucket = listeners['toolresult'] ?? []
-    for (const h of bucket) h(params)
-  }
-
   return { app, hostContext, fireToolResult }
 }
 
@@ -66,6 +73,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     const { app, hostContext, fireToolResult } = makeEventfulApp({
       initialToolName: 'upgrade',
       initialStructured: {
+        view: 'checkout',
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
         customer: { ref: 'cus_1' },
@@ -105,6 +113,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     const { app, hostContext, fireToolResult } = makeEventfulApp({
       initialToolName: 'manage_account',
       initialStructured: {
+        view: 'account',
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
         customer: { ref: 'cus_1' },
@@ -161,6 +170,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     const { app, hostContext, fireToolResult } = makeEventfulApp({
       initialToolName: 'upgrade',
       initialStructured: {
+        view: 'checkout',
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
         customer: { ref: 'cus_1' },
@@ -199,6 +209,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     const { app, hostContext, fireToolResult } = makeEventfulApp({
       initialToolName: 'upgrade',
       initialStructured: {
+        view: 'checkout',
         productRef: 'prod_1',
         returnUrl: 'https://example.test/r',
         customer: { ref: 'cus_1' },
@@ -236,7 +247,17 @@ describe('<McpApp> — live tool-result subscription', () => {
         },
       }),
       getHostContext: () => hostContext,
-      connect: vi.fn().mockResolvedValue(undefined),
+      connect: vi.fn().mockImplementation(async () => {
+        await Promise.resolve()
+        setHandler?.({
+          structuredContent: {
+            view: 'checkout',
+            productRef: 'prod_1',
+            returnUrl: 'https://example.test/r',
+            customer: { ref: 'cus_1' },
+          },
+        })
+      }),
       onhostcontextchanged: undefined,
       onteardown: undefined,
       requestTeardown: vi.fn().mockResolvedValue(undefined),

@@ -56,6 +56,7 @@ export type {
   ResponseContext,
   ResponseOptions,
   ResponseResult,
+  SolvaPayBootstrapResourceDescriptor,
   SolvaPayCallToolResult,
   SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
@@ -81,6 +82,13 @@ export {
   toolResult,
 } from './helpers'
 export type { BuildSolvaPayRequestOptions, SolvaPayToolMode } from './helpers'
+
+// ---- Credit → fiat display (re-exported from @solvapay/core for backward compat) ----
+export {
+  creditsToDisplayMinorUnits,
+  isZeroDecimalCurrency,
+  minorUnitsPerMajor,
+} from '@solvapay/core'
 
 // ---- Narrators (per-tool text-mode renderers) ----
 export {
@@ -126,6 +134,11 @@ export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,
 } from './descriptors'
+
+export {
+  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
+  SOLVAPAY_BOOTSTRAP_URI,
+} from './resources/bootstrap'
 
 export {
   SOLVAPAY_OVERVIEW_MARKDOWN,

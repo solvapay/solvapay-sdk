@@ -15,6 +15,7 @@
  * is still well-formed.
  */
 
+import { creditsToDisplayMinorUnits, isZeroDecimalCurrency } from '@solvapay/core'
 import type { BootstrapPayload } from './types'
 
 export interface NarratorOutput {
@@ -29,6 +30,11 @@ interface PlanShape {
   planType?: string
   price?: number
   currency?: string
+  pricingOptions?: Array<{
+    currency?: string
+    price?: number
+    default?: boolean
+  }>
   billingCycle?: string | null
   meterRef?: string | null
   limit?: number | null
@@ -42,20 +48,24 @@ interface PurchaseShape {
   amount?: number
   currency?: string
   endDate?: string
+  metadata?: { purpose?: string }
 }
 
 interface CustomerShape {
   ref?: string
-  balance?: { credits?: number | null; displayCurrency?: string; displayExchangeRate?: number } | null
+  balance?: {
+    credits?: number | null
+    displayCurrency?: string
+    displayExchangeRate?: number
+    creditsPerMinorUnit?: number
+  } | null
   usage?: { used?: number; limit?: number; resetsAt?: string } | null
   purchase?: { purchases?: PurchaseShape[] } | null
 }
 
-const ZERO_DECIMAL = new Set(['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'])
-
 function formatMoney(amountMinor: number | null | undefined, currency: string | null | undefined): string | null {
   if (amountMinor == null || !currency) return null
-  const zero = ZERO_DECIMAL.has(currency.toLowerCase())
+  const zero = isZeroDecimalCurrency(currency)
   const major = zero ? amountMinor : amountMinor / 100
   try {
     return new Intl.NumberFormat('en-US', {
@@ -77,9 +87,13 @@ function formatDate(iso: string | null | undefined): string | null {
   }
 }
 
+function isPlanPurchase(purchase: PurchaseShape): boolean {
+  return !!purchase.planSnapshot && purchase.metadata?.purpose !== 'credit_topup'
+}
+
 function activePurchase(customer: CustomerShape | null | undefined): PurchaseShape | null {
   const list = customer?.purchase?.purchases ?? []
-  return list[0] ?? null
+  return list.find(isPlanPurchase) ?? null
 }
 
 function productName(data: BootstrapPayload): string {
@@ -103,11 +117,19 @@ function balanceRow(customer: CustomerShape | null | undefined): string | null {
   const credits = customer.balance.credits ?? 0
   if (!credits && credits !== 0) return null
   const currency = customer.balance.displayCurrency
-  const rate = customer.balance.displayExchangeRate ?? 1
-  // Credits are minor-unit-equivalent on display currency; rate is
-  // already applied by the server.
-  const majorMinor = currency ? Math.round(credits / rate) : null
-  const money = formatMoney(majorMinor, currency ?? null)
+  const creditsPerMinorUnit = customer.balance.creditsPerMinorUnit
+  const displayMinor =
+    currency &&
+    typeof creditsPerMinorUnit === 'number' &&
+    creditsPerMinorUnit > 0
+      ? creditsToDisplayMinorUnits({
+          credits,
+          creditsPerMinorUnit,
+          displayExchangeRate: customer.balance.displayExchangeRate ?? 1,
+          displayCurrency: currency,
+        })
+      : null
+  const money = formatMoney(displayMinor, currency ?? null)
   const fmt = new Intl.NumberFormat('en-US').format(credits)
   return money ? `Balance: ${fmt} credits (~${money})` : `Balance: ${fmt} credits`
 }
@@ -143,10 +165,22 @@ function commandsLine(commands: string[]): string {
   return `Commands: ${commands.map((c) => `\`/${c}\``).join(' ')}`
 }
 
+function formatPlanPrices(p: PlanShape): string {
+  const options =
+    p.pricingOptions && p.pricingOptions.length > 0
+      ? p.pricingOptions
+      : [{ currency: p.currency, price: p.price, default: true }]
+
+  return options
+    .map((option) => formatMoney(option.price, option.currency))
+    .filter((value): value is string => value != null)
+    .join(' · ')
+}
+
 function plansListLines(plans: PlanShape[]): string[] {
   return plans.map((p) => {
     const name = p.name ?? 'Plan'
-    const price = formatMoney(p.price, p.currency)
+    const price = formatPlanPrices(p)
     const cycle = p.billingCycle ? `/${p.billingCycle}` : ''
     const type =
       p.planType === 'free'
@@ -183,6 +217,8 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
   if (!active) {
     lines.push(`**Welcome to ${name}**`)
     lines.push('')
+    const bal = balanceRow(customer)
+    if (bal) lines.push(bal)
     const plans = (data.plans ?? []) as PlanShape[]
     if (plans.length > 0) {
       lines.push('No active plan. Plans available:')
@@ -283,6 +319,13 @@ const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
   activate_plan: (p) => `Opened ${p} plan picker.`,
 }
 
+const UI_PANEL_SHOWN: Record<IntentTool, string> = {
+  topup: 'Top-up options are shown in the panel.',
+  upgrade: 'Plans and checkout are shown in the panel.',
+  manage_account: 'Account details are shown in the panel.',
+  activate_plan: 'Plan options are shown in the panel.',
+}
+
 /**
  * One-line placeholder shown on UI-rendering hosts when the intent
  * tool runs in `mode: 'ui'`. Gives the agent minimal grounding (what
@@ -298,6 +341,6 @@ export function uiPlaceholder(
   const balance = balanceSummary(data.customer as CustomerShape | null)
   const parts = [opened]
   if (balance) parts.push(`Balance: ${balance}.`)
-  parts.push("Pass `mode: 'text'` for a markdown summary.")
+  parts.push(UI_PANEL_SHOWN[tool])
   return parts.join(' ')
 }

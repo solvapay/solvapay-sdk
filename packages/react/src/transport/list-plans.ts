@@ -17,6 +17,7 @@
 
 import type { Plan, SolvaPayConfig } from '../types'
 import { buildRequestHeaders } from '../utils/headers'
+import { readErrorMessage } from '../utils/readErrorMessage'
 import { plansCache } from '../hooks/usePlans'
 
 export async function defaultListPlans(
@@ -36,7 +37,8 @@ export async function defaultListPlans(
   const { headers } = await buildRequestHeaders(config)
   const res = await fetchFn(url, { method: 'GET', headers })
   if (!res.ok) {
-    const error = new Error(`Failed to fetch plans: ${res.statusText || res.status}`)
+    const message = await readErrorMessage(res, 'Failed to fetch plans')
+    const error = new Error(message)
     config?.onError?.(error, 'listPlans')
     throw error
   }

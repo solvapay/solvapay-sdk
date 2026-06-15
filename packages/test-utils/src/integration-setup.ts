@@ -17,6 +17,14 @@ export interface TestProductSetup {
   providerId: string
 }
 
+export type TestPlanPricingOption = {
+  currency: string
+  price: number
+  basePrice?: number
+  setupFee?: number
+  default?: boolean
+}
+
 export interface TestPlanSetup {
   reference: string
   productRef: string
@@ -25,6 +33,7 @@ export interface TestPlanSetup {
   price: number
   creditsPerUnit?: number
   currency: string
+  pricingOptions?: TestPlanPricingOption[]
 }
 
 /**
@@ -92,6 +101,7 @@ export interface CreateTestPlanOptions {
   type?: 'recurring' | 'usage-based' | 'one-time' | 'hybrid'
   price?: number
   currency?: string
+  pricingOptions?: TestPlanPricingOption[]
   billingCycle?: string
   freeUnits?: number
   limit?: number
@@ -144,6 +154,10 @@ export async function createTestPlan(
     body.basePrice = price
   }
 
+  if (opts.pricingOptions?.length) {
+    body.pricingOptions = opts.pricingOptions
+  }
+
   const response = await fetch(`${apiBaseUrl}/v1/sdk/products/${productRef}/plans`, {
     method: 'POST',
     headers: {
@@ -167,7 +181,41 @@ export async function createTestPlan(
     price,
     creditsPerUnit: opts.creditsPerUnit,
     currency,
+    pricingOptions: opts.pricingOptions,
   }
+}
+
+/**
+ * Create a paid recurring plan with explicit per-currency pricing options.
+ * The default option must use the provider's default currency.
+ */
+export async function createMultiCurrencyPaidTestPlan(
+  apiBaseUrl: string,
+  secretKey: string,
+  productRef: string,
+  params: {
+    defaultCurrency: string
+    pricingOptions: TestPlanPricingOption[]
+    name?: string
+  },
+): Promise<TestPlanSetup> {
+  const defaultOption =
+    params.pricingOptions.find(option => option.default) ?? params.pricingOptions[0]
+
+  if (!defaultOption) {
+    throw new Error('pricingOptions must include at least one currency option')
+  }
+
+  return createTestPlan(apiBaseUrl, secretKey, productRef, {
+    name: params.name ?? `SDK Multi-Currency Plan ${Date.now()}`,
+    type: 'recurring',
+    price: defaultOption.price,
+    currency: defaultOption.currency,
+    billingCycle: 'monthly',
+    freeUnits: 0,
+    isDefault: false,
+    pricingOptions: params.pricingOptions,
+  })
 }
 
 /**

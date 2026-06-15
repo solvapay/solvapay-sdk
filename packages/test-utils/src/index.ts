@@ -8,13 +8,19 @@
 // Integration test setup utilities
 export {
   createTestPlan,
+  createMultiCurrencyPaidTestPlan,
   createTestProduct,
   deleteTestPlan,
   deleteTestProduct,
   createTestProvider,
 } from './integration-setup'
 
-export type { TestProviderSetup, TestProductSetup, TestPlanSetup } from './integration-setup'
+export type {
+  TestProviderSetup,
+  TestProductSetup,
+  TestPlanSetup,
+  TestPlanPricingOption,
+} from './integration-setup'
 
 // Stripe payment test helpers
 export {
@@ -27,5 +33,9 @@ export {
 
 // Test logging utilities
 export { testLog, conditionalLog, alwaysLog } from './test-logger'
+
+// Adapter contract test helpers
+export { describeAuthAdapterContract } from './describeAuthAdapterContract'
+export { describeClientAuthAdapterContract } from './describeClientAuthAdapterContract'
 
 export const TEST_UTILS_VERSION = '0.0.0'

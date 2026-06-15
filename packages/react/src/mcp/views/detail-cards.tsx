@@ -12,10 +12,11 @@
  */
 
 import React from 'react'
+import { creditsToDisplayMinorUnits } from '@solvapay/core'
 import { useBalance } from '../../hooks/useBalance'
 import { useCustomer } from '../../hooks/useCustomer'
 import { useMerchant } from '../../hooks/useMerchant'
-import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
+import { formatPrice } from '../../utils/format'
 import { useHostLocale } from '../useHostLocale'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -91,12 +92,17 @@ export function McpCustomerDetailsCard({
   const showBalance =
     !hideBalance && typeof credits === 'number' && credits > 0
 
-  const approxValue =
+  const displayMinor =
     showBalance &&
     typeof creditsPerMinorUnit === 'number' &&
     creditsPerMinorUnit > 0 &&
     displayCurrency
-      ? (credits / creditsPerMinorUnit) * (displayExchangeRate ?? 1)
+      ? creditsToDisplayMinorUnits({
+          credits: credits ?? 0,
+          creditsPerMinorUnit,
+          displayExchangeRate: displayExchangeRate ?? 1,
+          displayCurrency,
+        })
       : null
 
   return (
@@ -121,14 +127,10 @@ export function McpCustomerDetailsCard({
               <span className="solvapay-mcp-detail-value">
                 {Intl.NumberFormat(locale).format(credits ?? 0)} credits
               </span>
-              {approxValue !== null ? (
+              {displayMinor !== null ? (
                 <span className={`solvapay-mcp-detail-value-mono ${cx.muted}`.trim()}>
                   ~
-                  {formatPrice(
-                    Math.round(approxValue * getMinorUnitsPerMajor(displayCurrency ?? 'USD')),
-                    displayCurrency ?? 'USD',
-                    { locale, free: '' },
-                  )}
+                  {formatPrice(displayMinor, displayCurrency ?? 'USD', { locale, free: '' })}
                 </span>
               ) : null}
             </div>

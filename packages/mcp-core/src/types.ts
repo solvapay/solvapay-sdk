@@ -322,6 +322,20 @@ export interface SolvaPayDocsResourceDescriptor {
 }
 
 /**
+ * Bootstrap snapshot resource — a JSON `BootstrapPayload` the widget can
+ * `resources/read` when the host scrubs `structuredContent` from the
+ * opening tool-result notification. Auth-aware via `readPayload(extra)`.
+ */
+export interface SolvaPayBootstrapResourceDescriptor {
+  uri: string
+  name: string
+  title?: string
+  description: string
+  mimeType: string
+  readPayload: (extra?: McpToolExtra) => Promise<BootstrapPayload>
+}
+
+/**
  * One MCP prompt — rendered as `/<name>` in hosts with slash-command
  * support. Kept framework-neutral so every adapter (`@modelcontextprotocol/sdk`,
  * `fastmcp`, raw JSON-RPC) can map it to their own `registerPrompt`

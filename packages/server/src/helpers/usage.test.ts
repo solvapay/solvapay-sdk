@@ -40,7 +40,11 @@ describe('trackUsageCore', () => {
     vi.clearAllMocks()
 
     mockEnsureCustomer.mockResolvedValue('cus_ABC')
-    mockTrackUsage.mockResolvedValue(undefined)
+    mockTrackUsage.mockResolvedValue({
+      success: true,
+      reference: 'usage_123',
+      creditDebit: { debited: true, amount: 10, unitsRemaining: 99 },
+    })
 
     mockCreateSolvaPay.mockReturnValue({
       ensureCustomer: mockEnsureCustomer,
@@ -77,6 +81,7 @@ describe('trackUsageCore', () => {
       productRef: 'prd_XYZ',
       description: 'test query',
       metadata: { toolName: 'search' },
+      idempotencyKey: 'usage_key_123',
     })
 
     expect(mockEnsureCustomer).toHaveBeenCalledWith('user_123', 'user_123', {
@@ -91,12 +96,17 @@ describe('trackUsageCore', () => {
       productRef: 'prd_XYZ',
       description: 'test query',
       metadata: { toolName: 'search' },
+      idempotencyKey: 'usage_key_123',
     })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({
+      success: true,
+      reference: 'usage_123',
+      creditDebit: { debited: true, amount: 10, unitsRemaining: 99 },
+    })
   })
 
-  it('returns success result when tracking succeeds', async () => {
+  it('returns the backend usage result when tracking succeeds', async () => {
     mockGetAuth.mockResolvedValue({
       userId: 'user_123',
       email: null,
@@ -105,7 +115,11 @@ describe('trackUsageCore', () => {
 
     const result = await trackUsageCore(fakeRequest(), { units: 1 })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({
+      success: true,
+      reference: 'usage_123',
+      creditDebit: { debited: true, amount: 10, unitsRemaining: 99 },
+    })
   })
 
   it('returns error when solvaPay.trackUsage throws', async () => {

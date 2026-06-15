@@ -17,6 +17,28 @@ export interface RequestLike {
 }
 
 /**
+ * Resolved server-side identity for downstream SolvaPay handlers.
+ */
+export interface ServerIdentity {
+  /** Stable user identifier (e.g. Auth0 `sub`). */
+  userId: string
+  /** Optional OIDC ID token forwarded as Bearer for email/name on customer create. */
+  claimsToken?: string
+}
+
+/**
+ * Result of an optional provider-owned middleware pre-step (`handleRequest`).
+ */
+export interface AuthRequestHandleResult {
+  /** When `ownsRequest` is true, return this response immediately. */
+  response?: Response
+  /** Provider middleware response whose Set-Cookie headers should be merged. */
+  sessionResponse?: Response
+  /** When true, `response` is the final answer (e.g. `/auth/*` routes). */
+  ownsRequest?: boolean
+}
+
+/**
  * Authentication adapter interface for extracting user IDs from requests.
  *
  * This interface defines the contract for authentication adapters that can
@@ -63,4 +85,18 @@ export interface AuthAdapter {
    * return null and let the caller decide how to handle unauthenticated requests.
    */
   getUserIdFromRequest(req: Request | RequestLike): Promise<string | null>
+
+  /**
+   * Optional richer identity resolution (user id + claims token).
+   *
+   * When absent, middleware falls back to `getUserIdFromRequest`.
+   */
+  getIdentityFromRequest?(req: Request | RequestLike): Promise<ServerIdentity | null>
+
+  /**
+   * Optional provider-owned request handling (session refresh, auth routes).
+   *
+   * When absent, middleware skips the pre-step.
+   */
+  handleRequest?(req: Request): Promise<AuthRequestHandleResult | null>
 }

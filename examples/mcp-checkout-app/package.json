@@ -5,7 +5,7 @@
   "scripts": {
     "build": "cross-env INPUT=mcp-app.html vite build && tsc",
     "serve": "tsx src/index.ts",
-    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"nodemon --watch src --watch .env --watch dist/mcp-app.html --watch ../../packages/core/src --watch ../../packages/server/src --watch ../../packages/mcp-core/src --watch ../../packages/mcp/src --ext ts,tsx,css,html,env --exec \\\"tsx src/index.ts\\\"\"",
+    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"tsx watch --clear-screen=false --include .env --include dist/mcp-app.html --include '../../packages/*/src/**/*.ts' --include '../../packages/*/src/**/*.tsx' src/index.ts\"",
     "tunnel": "node ../shared/tunnel.mjs"
   },
   "dependencies": {
@@ -31,7 +31,6 @@
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
-    "nodemon": "^3.1.14",
     "rollup": "^4.60.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

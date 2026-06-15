@@ -109,4 +109,10 @@ export function getSolvaPayConfig(): SolvaPayConfig {
   }
 }
 
+export {
+  creditsToDisplayMinorUnits,
+  isZeroDecimalCurrency,
+  minorUnitsPerMajor,
+} from './credit-display'
+
 export const version = '0.1.0'
