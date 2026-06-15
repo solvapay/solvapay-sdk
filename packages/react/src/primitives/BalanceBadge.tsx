@@ -10,6 +10,7 @@
  */
 
 import React, { forwardRef, useContext } from 'react'
+import { creditsToDisplayMinorUnits, minorUnitsPerMajor } from '@solvapay/mcp-core'
 import { Slot } from './slot'
 import { useBalance } from '../hooks/useBalance'
 import { useCopy, useLocale } from '../hooks/useCopy'
@@ -73,14 +74,21 @@ export const BalanceBadge = forwardRef<HTMLSpanElement, BalanceBadgeProps>(funct
 
   let currencyEquivalent = ''
   if (!numberOnly && displayCurrency && creditsPerMinorUnit) {
-    const usdCents = credits / creditsPerMinorUnit
-    const displayMajorUnits = (usdCents * (displayExchangeRate ?? 1)) / 100
-    const formatted = new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: displayCurrency,
-      minimumFractionDigits: 2,
-    }).format(displayMajorUnits)
-    currencyEquivalent = interpolate(copy.balance.currencyEquivalent, { amount: formatted })
+    const displayMinor = creditsToDisplayMinorUnits({
+      credits,
+      creditsPerMinorUnit,
+      displayExchangeRate: displayExchangeRate ?? 1,
+      displayCurrency,
+    })
+    if (displayMinor !== null) {
+      const minorPerMajor = minorUnitsPerMajor(displayCurrency)
+      const formatted = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: displayCurrency,
+        minimumFractionDigits: minorPerMajor === 1 ? 0 : 2,
+      }).format(displayMinor / minorPerMajor)
+      currencyEquivalent = interpolate(copy.balance.currencyEquivalent, { amount: formatted })
+    }
   }
 
   const content = children ?? (

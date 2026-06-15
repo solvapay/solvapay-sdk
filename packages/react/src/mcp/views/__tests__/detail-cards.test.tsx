@@ -117,6 +117,29 @@ describe('<McpCustomerDetailsCard>', () => {
     renderWith(ctx, <McpCustomerDetailsCard />)
     expect(screen.queryByText(/Credit balance/i)).toBeNull()
     expect(screen.getByText(/1,500 credits/)).toBeTruthy()
+    expect(screen.getByText(/~\$0\.15/)).toBeTruthy()
+  })
+
+  it('shows ~SEK 150.92 for 159,600 credits (not 100x inflated)', () => {
+    const ctx = buildCtx(
+      {
+        balance: {
+          loading: false,
+          credits: 159_600,
+          displayCurrency: 'SEK',
+          creditsPerMinorUnit: 100,
+          displayExchangeRate: 9.46,
+          refetch: vi.fn(),
+          adjustBalance: vi.fn(),
+        },
+      },
+      [],
+      159_600,
+    )
+    renderWith(ctx, <McpCustomerDetailsCard />)
+    expect(screen.getByText(/159,600 credits/)).toBeTruthy()
+    expect(screen.getByText(/~kr150\.98|~SEK 150\.98/)).toBeTruthy()
+    expect(screen.queryByText(/15,103/)).toBeNull()
   })
 
   it('shows Top up link and calls onTopup when clicked', () => {
