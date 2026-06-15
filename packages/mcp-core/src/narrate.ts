@@ -15,6 +15,7 @@
  * is still well-formed.
  */
 
+import { creditsToDisplayMinorUnits, isZeroDecimalCurrency } from './credit-display'
 import type { BootstrapPayload } from './types'
 
 export interface NarratorOutput {
@@ -47,20 +48,24 @@ interface PurchaseShape {
   amount?: number
   currency?: string
   endDate?: string
+  metadata?: { purpose?: string }
 }
 
 interface CustomerShape {
   ref?: string
-  balance?: { credits?: number | null; displayCurrency?: string; displayExchangeRate?: number } | null
+  balance?: {
+    credits?: number | null
+    displayCurrency?: string
+    displayExchangeRate?: number
+    creditsPerMinorUnit?: number
+  } | null
   usage?: { used?: number; limit?: number; resetsAt?: string } | null
   purchase?: { purchases?: PurchaseShape[] } | null
 }
 
-const ZERO_DECIMAL = new Set(['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'])
-
 function formatMoney(amountMinor: number | null | undefined, currency: string | null | undefined): string | null {
   if (amountMinor == null || !currency) return null
-  const zero = ZERO_DECIMAL.has(currency.toLowerCase())
+  const zero = isZeroDecimalCurrency(currency)
   const major = zero ? amountMinor : amountMinor / 100
   try {
     return new Intl.NumberFormat('en-US', {
@@ -82,9 +87,13 @@ function formatDate(iso: string | null | undefined): string | null {
   }
 }
 
+function isPlanPurchase(purchase: PurchaseShape): boolean {
+  return !!purchase.planSnapshot && purchase.metadata?.purpose !== 'credit_topup'
+}
+
 function activePurchase(customer: CustomerShape | null | undefined): PurchaseShape | null {
   const list = customer?.purchase?.purchases ?? []
-  return list[0] ?? null
+  return list.find(isPlanPurchase) ?? null
 }
 
 function productName(data: BootstrapPayload): string {
@@ -108,11 +117,19 @@ function balanceRow(customer: CustomerShape | null | undefined): string | null {
   const credits = customer.balance.credits ?? 0
   if (!credits && credits !== 0) return null
   const currency = customer.balance.displayCurrency
-  const rate = customer.balance.displayExchangeRate ?? 1
-  // Credits are minor-unit-equivalent on display currency; rate is
-  // already applied by the server.
-  const majorMinor = currency ? Math.round(credits / rate) : null
-  const money = formatMoney(majorMinor, currency ?? null)
+  const creditsPerMinorUnit = customer.balance.creditsPerMinorUnit
+  const displayMinor =
+    currency &&
+    typeof creditsPerMinorUnit === 'number' &&
+    creditsPerMinorUnit > 0
+      ? creditsToDisplayMinorUnits({
+          credits,
+          creditsPerMinorUnit,
+          displayExchangeRate: customer.balance.displayExchangeRate ?? 1,
+          displayCurrency: currency,
+        })
+      : null
+  const money = formatMoney(displayMinor, currency ?? null)
   const fmt = new Intl.NumberFormat('en-US').format(credits)
   return money ? `Balance: ${fmt} credits (~${money})` : `Balance: ${fmt} credits`
 }
@@ -200,6 +217,8 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
   if (!active) {
     lines.push(`**Welcome to ${name}**`)
     lines.push('')
+    const bal = balanceRow(customer)
+    if (bal) lines.push(bal)
     const plans = (data.plans ?? []) as PlanShape[]
     if (plans.length > 0) {
       lines.push('No active plan. Plans available:')
