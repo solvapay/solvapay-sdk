@@ -128,6 +128,35 @@ export {
   useTopupForm,
 } from './TopupForm'
 
+export {
+  AutoRecharge,
+  AutoRechargeRoot,
+  AutoRechargeLoading,
+  AutoRechargeHeader,
+  AutoRechargeDescription,
+  AutoRechargeEnableSwitch,
+  AutoRechargeBody,
+  AutoRechargeSummary,
+  AutoRechargeThresholdField,
+  AutoRechargeTopupField,
+  AutoRechargeAmountField,
+  AutoRechargeModeToggle,
+  AutoRechargeUnitToggle,
+  AutoRechargeHint,
+  AutoRechargeAdvancedToggle,
+  AutoRechargeAdvancedPanel,
+  AutoRechargeValidationError,
+  AutoRechargeActions,
+  AutoRechargeSaveButton,
+  AutoRechargeDisableButton,
+  AutoRechargeError,
+  AutoRechargeStatusMessage,
+  AutoRechargeStatus,
+  AutoRechargeCardSetup,
+  useAutoRechargeForm,
+} from './AutoRecharge'
+export type { AutoRechargeFormState, AutoRechargeInputPayload } from './AutoRecharge'
+
 export { LegalFooter } from './LegalFooter'
 export type { LegalFooterProps } from './LegalFooter'
 

@@ -1,8 +1,15 @@
 'use client'
 
-import { FormEvent, ReactElement, useState } from 'react'
+/**
+ * Default-tree shim over the `AutoRecharge` primitive.
+ *
+ * Renders the golden-path auto-recharge panel consumers expect in drop-in
+ * usage. For full control, compose `@solvapay/react/primitives` directly.
+ */
+
+import React from 'react'
 import type { SaveAutoRechargeResponse } from '@solvapay/server'
-import { useAutoRecharge } from '../hooks/useAutoRecharge'
+import { AutoRecharge as Primitive } from '../primitives/AutoRecharge'
 
 export type AutoRechargeProps = {
   currency?: string
@@ -11,104 +18,47 @@ export type AutoRechargeProps = {
   onSetupRequired?: (result: SaveAutoRechargeResponse) => void | Promise<void>
   onSaved?: (result: SaveAutoRechargeResponse) => void | Promise<void>
   onDisabled?: () => void | Promise<void>
+  className?: string
 }
 
 export function AutoRecharge({
   currency = 'USD',
-  defaultThresholdAmountMajor = 5,
-  defaultTopupAmountMajor = 10,
+  defaultThresholdAmountMajor,
+  defaultTopupAmountMajor,
   onSetupRequired,
   onSaved,
   onDisabled,
-}: AutoRechargeProps): ReactElement {
-  const autoRecharge = useAutoRecharge()
-  const [enabled, setEnabled] = useState(true)
-  const [thresholdAmountMajor, setThresholdAmountMajor] = useState(
-    String(defaultThresholdAmountMajor),
-  )
-  const [topupAmountMajor, setTopupAmountMajor] = useState(String(defaultTopupAmountMajor))
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setStatusMessage(null)
-    const result = await autoRecharge.save({
-      enabled,
-      triggerType: 'balance',
-      thresholdAmountMajor: Number(thresholdAmountMajor),
-      topupMode: 'fixed',
-      topupAmountMajor: Number(topupAmountMajor),
-      currency,
-    })
-
-    if (result.setupClientSecret) {
-      setStatusMessage('Confirm your card to activate automatic top-ups.')
-      await onSetupRequired?.(result)
-      return
-    }
-
-    setStatusMessage('Automatic top-up settings saved.')
-    await onSaved?.(result)
-  }
-
-  const disable = async () => {
-    await autoRecharge.disable()
-    setStatusMessage('Automatic top-ups disabled.')
-    await onDisabled?.()
-  }
+  className,
+}: AutoRechargeProps): React.ReactElement {
+  const rootClass = ['solvapay-auto-recharge', className].filter(Boolean).join(' ')
 
   return (
-    <section aria-label="Automatic credit top-up">
-      <form onSubmit={submit}>
-        <fieldset disabled={autoRecharge.saving || autoRecharge.disabling}>
-          <legend>Automatic credit top-up</legend>
-
-          <label>
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={event => setEnabled(event.currentTarget.checked)}
-            />
-            Enable automatic top-ups
-          </label>
-
-          <label>
-            When balance falls below
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={thresholdAmountMajor}
-              onChange={event => setThresholdAmountMajor(event.currentTarget.value)}
-            />
-          </label>
-
-          <label>
-            Add this amount
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={topupAmountMajor}
-              onChange={event => setTopupAmountMajor(event.currentTarget.value)}
-            />
-          </label>
-
-          <button type="submit">Save automatic top-up</button>
-          {autoRecharge.config ? (
-            <button type="button" onClick={disable}>
-              Disable automatic top-up
-            </button>
-          ) : null}
-        </fieldset>
-      </form>
-
-      {autoRecharge.error ? (
-        <p role="alert" aria-live="polite">
-          {autoRecharge.error.message}
-        </p>
-      ) : null}
-      {statusMessage ? <p aria-live="polite">{statusMessage}</p> : null}
-    </section>
+    <Primitive.Root
+      currency={currency}
+      defaultThresholdAmountMajor={defaultThresholdAmountMajor}
+      defaultTopupAmountMajor={defaultTopupAmountMajor}
+      onSetupRequired={onSetupRequired}
+      onSaved={onSaved}
+      onDisabled={onDisabled}
+      className={rootClass}
+    >
+      <Primitive.Loading className="solvapay-auto-recharge-loading" />
+      <Primitive.Header className="solvapay-auto-recharge-header" />
+      <Primitive.Body className="solvapay-auto-recharge-body">
+        <Primitive.Summary className="solvapay-auto-recharge-summary" />
+        <Primitive.ThresholdField />
+        <Primitive.TopupField className="solvapay-auto-recharge-topup-field" />
+        <Primitive.AdvancedToggle className="solvapay-auto-recharge-advanced-toggle" />
+        <Primitive.AdvancedPanel className="solvapay-auto-recharge-advanced" />
+        <Primitive.ValidationError className="solvapay-auto-recharge-validation-error" />
+        <Primitive.Actions className="solvapay-auto-recharge-actions">
+          <Primitive.SaveButton className="solvapay-auto-recharge-save" />
+          <Primitive.DisableButton className="solvapay-auto-recharge-disable" />
+        </Primitive.Actions>
+      </Primitive.Body>
+      <Primitive.Status className="solvapay-auto-recharge-status" />
+      <Primitive.Error className="solvapay-auto-recharge-error" />
+      <Primitive.StatusMessage className="solvapay-auto-recharge-status-message" />
+    </Primitive.Root>
   )
 }
