@@ -115,10 +115,7 @@ export interface SolvaPayTransport {
    * `remaining` / `withinLimits` with `loading: false` (graceful fallback,
    * matching `useUsage`'s behaviour when `getUsage` is absent).
    */
-  getLimits?: (params: {
-    productRef: string
-    meterName?: string
-  }) => Promise<TransportLimitsResult>
+  getLimits?: (params: { productRef: string; meterName?: string }) => Promise<TransportLimitsResult>
 
   createPayment: (params: {
     planRef?: string
@@ -136,6 +133,7 @@ export interface SolvaPayTransport {
   createTopupPayment: (params: {
     amount: number
     currency?: string
+    businessDetails?: import('../types').BusinessDetailsPayload
   }) => Promise<TopupPaymentResult>
 
   /**
@@ -150,18 +148,13 @@ export interface SolvaPayTransport {
    * legacy behaviour. The HTTP transport always implements it; new
    * transports SHOULD too.
    */
-  processTopupPayment?: (params: {
-    paymentIntentId: string
-  }) => Promise<TopupProcessResult>
+  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
 
-  activatePlan: (params: {
-    productRef: string
-    planRef: string
-  }) => Promise<ActivatePlanResult>
+  activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
 
   createCheckoutSession: (params?: {
     planRef?: string

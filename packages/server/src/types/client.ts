@@ -382,11 +382,28 @@ export interface SolvaPayClient {
     currency: string
     description?: string
     idempotencyKey?: string
+    businessDetails?: {
+      address: {
+        country: string
+        postalCode?: string
+        state?: string
+        line1?: string
+        city?: string
+      }
+      taxId?: {
+        type: string
+        value: string
+      }
+    }
   }): Promise<{
     processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
+    subtotal?: number
+    tax?: number
+    total?: number
+    customerSessionClientSecret?: string
   }>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/cancel

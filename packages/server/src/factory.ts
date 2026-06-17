@@ -466,11 +466,28 @@ export interface SolvaPay {
     currency: string
     description?: string
     idempotencyKey?: string
+    businessDetails?: {
+      address: {
+        country: string
+        postalCode?: string
+        state?: string
+        line1?: string
+        city?: string
+      }
+      taxId?: {
+        type: string
+        value: string
+      }
+    }
   }): Promise<{
     processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
+    subtotal?: number
+    tax?: number
+    total?: number
+    customerSessionClientSecret?: string
   }>
 
   /**
@@ -649,9 +666,7 @@ export interface SolvaPay {
    * @param params.customerRef - Customer reference
    * @returns Customer reference, credits, and display currency
    */
-  getCustomerBalance(params: {
-    customerRef: string
-  }): Promise<{
+  getCustomerBalance(params: { customerRef: string }): Promise<{
     customerRef: string
     credits: number
     displayCurrency: string

@@ -127,6 +127,9 @@ export {
   TopupFormLegalFooter,
   useTopupForm,
 } from './TopupForm'
+export { BusinessTopupSection } from './BusinessTopupSection'
+export type { BusinessTopupSectionProps } from './BusinessTopupSection'
+export type { BusinessDetailsPayload } from './businessDetails'
 
 export { LegalFooter } from './LegalFooter'
 export type { LegalFooterProps } from './LegalFooter'

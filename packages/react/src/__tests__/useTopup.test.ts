@@ -102,6 +102,33 @@ describe('useTopup', () => {
     expect(createTopupPayment).toHaveBeenCalledWith({ amount: 5000, currency: 'eur' })
   })
 
+  it('passes businessDetails to createTopupPayment when provided', async () => {
+    const createTopupPayment = vi.fn().mockResolvedValue({
+      clientSecret: 'cs_1',
+      publishableKey: 'pk_1',
+    })
+    const ctx = createMockContext({ createTopupPayment })
+    const businessDetails = {
+      address: { country: 'SE', postalCode: '11122' },
+      taxId: { type: 'eu_vat', value: 'SE123456789001' },
+    }
+
+    const { result } = renderHook(
+      () => useTopup({ amount: 5000, currency: 'eur', businessDetails }),
+      { wrapper: createWrapper(ctx) },
+    )
+
+    await act(async () => {
+      await result.current.startTopup()
+    })
+
+    expect(createTopupPayment).toHaveBeenCalledWith({
+      amount: 5000,
+      currency: 'eur',
+      businessDetails,
+    })
+  })
+
   it('sets clientSecret from response', async () => {
     const ctx = createMockContext({
       createTopupPayment: vi.fn().mockResolvedValue({
@@ -168,12 +195,11 @@ describe('useTopup', () => {
       resolvePromise = resolve
     })
 
-    const createTopupPayment = vi.fn().mockImplementation(
-      () =>
-        hangingPromise.then(() => ({
-          clientSecret: 'cs',
-          publishableKey: 'pk',
-        })),
+    const createTopupPayment = vi.fn().mockImplementation(() =>
+      hangingPromise.then(() => ({
+        clientSecret: 'cs',
+        publishableKey: 'pk',
+      })),
     )
     const ctx = createMockContext({ createTopupPayment })
 

@@ -20,13 +20,21 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * @param options.currency - ISO 4217 currency code (default: 'usd')
  */
 export function useTopup(options: UseTopupOptions): UseTopupReturn {
-  const { amount, currency } = options
+  const { amount, currency, businessDetails } = options
   const { createTopupPayment, customerRef, updateCustomerRef } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [subtotal, setSubtotal] = useState<number | undefined>()
+  const [tax, setTax] = useState<number | undefined>()
+  const [total, setTotal] = useState<number | undefined>()
+  const [customerSessionClientSecret, setCustomerSessionClientSecret] = useState<
+    string | undefined
+  >()
   const isStartingRef = useRef(false)
+  const businessDetailsRef = useRef(businessDetails)
+  businessDetailsRef.current = businessDetails
 
   const startTopup = useCallback(async () => {
     if (isStartingRef.current || loading) {
@@ -43,7 +51,11 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     setError(null)
 
     try {
-      const result = await createTopupPayment({ amount, currency })
+      const result = await createTopupPayment({
+        amount,
+        currency,
+        businessDetails: businessDetailsRef.current,
+      })
 
       if (!result || typeof result !== 'object') {
         throw new Error('Invalid topup payment intent response from server')
@@ -63,6 +75,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
 
       const stripeOptions: StripeConstructorOptions = {
         ...(result.accountId ? { stripeAccount: result.accountId } : {}),
+        betas: ['elements_tax_id_1'],
         developerTools: { assistant: { enabled: false } },
       }
 
@@ -76,6 +89,10 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
+      setSubtotal(result.subtotal)
+      setTax(result.tax)
+      setTotal(result.total)
+      setCustomerSessionClientSecret(result.customerSessionClientSecret)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start topup')
       setError(error)
@@ -91,6 +108,10 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     setError(null)
     setStripePromise(null)
     setClientSecret(null)
+    setSubtotal(undefined)
+    setTax(undefined)
+    setTotal(undefined)
+    setCustomerSessionClientSecret(undefined)
   }, [])
 
   return {
@@ -98,6 +119,10 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     error,
     stripePromise,
     clientSecret,
+    subtotal,
+    tax,
+    total,
+    customerSessionClientSecret,
     startTopup,
     reset,
   }

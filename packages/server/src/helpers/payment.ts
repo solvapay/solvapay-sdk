@@ -136,6 +136,19 @@ export async function createTopupPaymentIntentCore(
     amount: number
     currency: string
     description?: string
+    businessDetails?: {
+      address: {
+        country: string
+        postalCode?: string
+        state?: string
+        line1?: string
+        city?: string
+      }
+      taxId?: {
+        type: string
+        value: string
+      }
+    }
   },
   options: {
     solvaPay?: SolvaPay
@@ -149,6 +162,10 @@ export async function createTopupPaymentIntentCore(
       publishableKey: string
       accountId?: string
       customerRef: string
+      subtotal?: number
+      tax?: number
+      total?: number
+      customerSessionClientSecret?: string
     }
   | ErrorResult
 > {
@@ -193,6 +210,7 @@ export async function createTopupPaymentIntentCore(
       amount: body.amount,
       currency: body.currency,
       description: body.description,
+      ...(body.businessDetails ? { businessDetails: body.businessDetails } : {}),
     })
 
     return {
@@ -201,6 +219,10 @@ export async function createTopupPaymentIntentCore(
       publishableKey: paymentIntent.publishableKey,
       accountId: paymentIntent.accountId,
       customerRef,
+      subtotal: paymentIntent.subtotal,
+      tax: paymentIntent.tax,
+      total: paymentIntent.total,
+      customerSessionClientSecret: paymentIntent.customerSessionClientSecret,
     }
   } catch (error) {
     return handleRouteError(

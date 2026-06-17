@@ -119,6 +119,7 @@ export type {
   PurchaseStatusValue,
   TopupFormProps,
   TopupPaymentResult,
+  BusinessDetailsPayload,
   UseTopupOptions,
   UseTopupReturn,
   BalanceStatus,

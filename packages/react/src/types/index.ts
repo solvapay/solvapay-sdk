@@ -169,11 +169,30 @@ export interface TopupPaymentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string
+  subtotal?: number
+  tax?: number
+  total?: number
+  customerSessionClientSecret?: string
+}
+
+export interface BusinessDetailsPayload {
+  address: {
+    country: string
+    postalCode?: string
+    state?: string
+    line1?: string
+    city?: string
+  }
+  taxId?: {
+    type: string
+    value: string
+  }
 }
 
 export interface UseTopupOptions {
   amount: number
   currency?: string
+  businessDetails?: BusinessDetailsPayload
 }
 
 export interface UseTopupReturn {
@@ -181,6 +200,10 @@ export interface UseTopupReturn {
   error: Error | null
   stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
   clientSecret: string | null
+  subtotal?: number
+  tax?: number
+  total?: number
+  customerSessionClientSecret?: string
   startTopup: () => Promise<void>
   reset: () => void
 }
@@ -451,6 +474,7 @@ export interface SolvaPayContextValue {
   createTopupPayment: (params: {
     amount: number
     currency?: string
+    businessDetails?: BusinessDetailsPayload
   }) => Promise<TopupPaymentResult>
   /**
    * Process a credit-topup payment intent after Stripe's `confirmPayment`
@@ -465,15 +489,10 @@ export interface SolvaPayContextValue {
    * confirm (legacy behaviour). The default HTTP transport always
    * implements it.
    */
-  processTopupPayment?: (params: {
-    paymentIntentId: string
-  }) => Promise<TopupProcessResult>
+  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
-  activatePlan: (params: {
-    productRef: string
-    planRef: string
-  }) => Promise<ActivatePlanResult>
+  activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
   balance: BalanceStatus

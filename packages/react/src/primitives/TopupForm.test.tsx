@@ -40,6 +40,28 @@ vi.mock('@stripe/react-stripe-js', () => ({
       onClick: () => props.onChange?.({ complete: true }),
     })
   },
+  AddressElement: ({ onChange }: { onChange?: (event: unknown) => void }) =>
+    React.createElement('button', {
+      'data-testid': 'address-element',
+      type: 'button',
+      onClick: () =>
+        onChange?.({
+          complete: true,
+          value: {
+            address: { country: 'SE', postal_code: '11122', city: 'Stockholm' },
+          },
+        }),
+    }),
+  TaxIdElement: ({ onChange }: { onChange?: (event: unknown) => void }) =>
+    React.createElement('button', {
+      'data-testid': 'tax-id-element',
+      type: 'button',
+      onClick: () =>
+        onChange?.({
+          complete: true,
+          value: { taxIdType: 'eu_vat', taxId: 'SE123456789001' },
+        }),
+    }),
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
@@ -483,10 +505,9 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     })
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
-    expect(onSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'pi_test_123' }),
-      { creditsAdded: 250 },
-    )
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: 'pi_test_123' }), {
+      creditsAdded: 250,
+    })
   })
 
   it('omits the extras argument when the backend does not surface creditsAdded', async () => {
@@ -605,5 +626,75 @@ describe('TopupForm.PaymentElement default options', () => {
       link: 'never',
       applePay: 'never',
     })
+  })
+})
+
+describe('TopupForm.BusinessPurchase', () => {
+  it('renders the business purchase toggle (AC1)', async () => {
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.BusinessPurchase />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /i'm purchasing as a business/i })).toBeTruthy()
+    })
+  })
+
+  it('calls createTopupPayment without businessDetails on initial load (AC4)', async () => {
+    const createTopupPayment = vi.fn().mockResolvedValue({
+      clientSecret: 'pi_topup_secret',
+      publishableKey: 'pk_test_123',
+    })
+
+    render(
+      <Wrap value={ctx({ createTopupPayment })}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.BusinessPurchase />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() => {
+      expect(createTopupPayment).toHaveBeenCalledWith({ amount: 1000, currency: undefined })
+    })
+  })
+
+  it('threads businessDetails through createTopupPayment after business fields complete (AC1)', async () => {
+    const createTopupPayment = vi.fn().mockResolvedValue({
+      clientSecret: 'pi_topup_secret',
+      publishableKey: 'pk_test_123',
+    })
+
+    render(
+      <Wrap value={ctx({ createTopupPayment })}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.BusinessPurchase />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() => expect(createTopupPayment).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /i'm purchasing as a business/i }))
+    fireEvent.click(screen.getByTestId('address-element'))
+    fireEvent.click(screen.getByTestId('tax-id-element'))
+
+    await waitFor(
+      () => {
+        expect(createTopupPayment).toHaveBeenLastCalledWith({
+          amount: 1000,
+          currency: undefined,
+          businessDetails: {
+            address: { country: 'SE', postalCode: '11122', city: 'Stockholm' },
+            taxId: { type: 'eu_vat', value: 'SE123456789001' },
+          },
+        })
+      },
+      { timeout: 3000 },
+    )
   })
 })

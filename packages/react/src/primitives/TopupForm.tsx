@@ -41,6 +41,8 @@ import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
+import { BusinessTopupSection } from './BusinessTopupSection'
+import type { BusinessDetailsPayload } from './businessDetails'
 import type { TopupFormProps } from '../types'
 
 type SubmitState = 'idle' | 'processing' | 'disabled'
@@ -51,6 +53,10 @@ type TopupFormContextValue = {
   currency?: string
   state: TopupFormState
   clientSecret: string | null
+  subtotal?: number
+  tax?: number
+  total?: number
+  setBusinessDetails: (details: BusinessDetailsPayload | undefined) => void
   stripe: Stripe | null
   elements: StripeElements | null
   isReady: boolean
@@ -104,15 +110,24 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
 
   const copy = useCopy()
   const locale = useLocale()
+  const [businessDetails, setBusinessDetails] = useState<BusinessDetailsPayload | undefined>()
+  const remintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const businessDetailsInitializedRef = useRef(false)
   const {
     loading,
     error: topupError,
     clientSecret,
+    subtotal,
+    tax,
+    total,
+    customerSessionClientSecret,
     startTopup,
+    reset,
     stripePromise,
   } = useTopup({
     amount,
     currency,
+    businessDetails,
   })
 
   const hasInitializedRef = useRef(false)
@@ -128,12 +143,41 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     if (hasAmount && clientSecret) hasInitializedRef.current = true
   }, [hasAmount, loading, topupError, clientSecret, startTopup])
 
+  useEffect(() => {
+    if (!hasInitializedRef.current || !hasAmount) {
+      return
+    }
+    if (!businessDetailsInitializedRef.current) {
+      businessDetailsInitializedRef.current = true
+      return
+    }
+    if (remintTimerRef.current) {
+      clearTimeout(remintTimerRef.current)
+    }
+    remintTimerRef.current = setTimeout(() => {
+      reset()
+      hasInitializedRef.current = false
+      startTopup().catch(() => {
+        hasInitializedRef.current = false
+      })
+    }, 400)
+    return () => {
+      if (remintTimerRef.current) {
+        clearTimeout(remintTimerRef.current)
+      }
+    }
+  }, [businessDetails, hasAmount, reset, startTopup])
+
   const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret, locale: locale as StripeElementLocale | undefined }
-  }, [clientSecret, locale])
+    return {
+      clientSecret,
+      locale: locale as StripeElementLocale | undefined,
+      ...(customerSessionClientSecret ? { customerSessionClientSecret } : {}),
+    }
+  }, [clientSecret, customerSessionClientSecret, locale])
 
   const Comp = asChild ? Slot : 'div'
 
@@ -155,6 +199,11 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     amount,
     currency,
     clientSecret,
+    subtotal,
+    tax,
+    total,
+    businessDetails,
+    setBusinessDetails,
     returnUrl: finalReturnUrl,
     outerError,
     state: dataState,
@@ -191,6 +240,11 @@ type InnerProps = {
   amount: number
   currency?: string
   clientSecret: string | null
+  subtotal?: number
+  tax?: number
+  total?: number
+  businessDetails?: BusinessDetailsPayload
+  setBusinessDetails: (details: BusinessDetailsPayload | undefined) => void
   returnUrl: string
   outerError: string | null
   state: TopupFormState
@@ -210,7 +264,9 @@ type InnerProps = {
    * argument so the checkout flow can optimistically bump the
    * in-memory balance before its deterministic refetch lands.
    */
-  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<
+  processTopupPayment?: (params: {
+    paymentIntentId: string
+  }) => Promise<
     | { status: 'succeeded'; creditsAdded?: number }
     | { status: 'timeout'; message?: string }
     | { status: 'failed' }
@@ -223,6 +279,10 @@ const Inner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
+  subtotal,
+  tax,
+  total,
+  setBusinessDetails,
   returnUrl,
   outerError,
   state,
@@ -322,7 +382,10 @@ const Inner: React.FC<InnerProps> = ({
     setIsProcessing(false)
     if (paymentIntent) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await onSuccess?.(paymentIntent as any, creditsAdded !== undefined ? { creditsAdded } : undefined)
+      await onSuccess?.(
+        paymentIntent as any,
+        creditsAdded !== undefined ? { creditsAdded } : undefined,
+      )
     }
   }, [stripe, elements, clientSecret, returnUrl, copy, onSuccess, onError, processTopupPayment])
 
@@ -334,6 +397,10 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
+      subtotal,
+      tax,
+      total,
+      setBusinessDetails,
       stripe: (stripe as Stripe | null) ?? null,
       elements: (elements as StripeElements | null) ?? null,
       isReady,
@@ -350,6 +417,10 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
+      subtotal,
+      tax,
+      total,
+      setBusinessDetails,
       stripe,
       elements,
       isReady,
@@ -370,6 +441,10 @@ const OfflineInner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
+  subtotal,
+  tax,
+  total,
+  setBusinessDetails,
   returnUrl,
   outerError,
   state,
@@ -383,6 +458,10 @@ const OfflineInner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
+      subtotal,
+      tax,
+      total,
+      setBusinessDetails,
       stripe: null,
       elements: null,
       isReady: false,
@@ -394,7 +473,20 @@ const OfflineInner: React.FC<InnerProps> = ({
       setPaymentInputComplete: noopSet,
       submit: noopSubmit,
     }),
-    [amount, currency, state, clientSecret, outerError, returnUrl, noopSet, noopSubmit],
+    [
+      amount,
+      currency,
+      state,
+      clientSecret,
+      subtotal,
+      tax,
+      total,
+      setBusinessDetails,
+      outerError,
+      returnUrl,
+      noopSet,
+      noopSubmit,
+    ],
   )
   return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>
 }
@@ -531,6 +623,20 @@ const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function TopupFormError(
   )
 })
 
+const BusinessPurchaseSlot: React.FC = () => {
+  const ctx = useTopupCtx('BusinessPurchase')
+  if (!ctx.stripe || !ctx.elements) return null
+  return (
+    <BusinessTopupSection
+      currency={ctx.currency}
+      subtotalMinor={ctx.subtotal}
+      taxMinor={ctx.tax}
+      totalMinor={ctx.total}
+      onBusinessDetailsChange={ctx.setBusinessDetails}
+    />
+  )
+}
+
 export const TopupFormRoot = Root
 export const TopupFormPaymentElement = PaymentElementSlot
 export const TopupFormSubmitButton = SubmitButton
@@ -541,6 +647,7 @@ export const TopupFormLegalFooter = LegalFooter
 export const TopupForm = {
   Root,
   AmountPicker: AmountPickerPrimitive.Root,
+  BusinessPurchase: BusinessPurchaseSlot,
   PaymentElement: PaymentElementSlot,
   SubmitButton,
   Loading,
