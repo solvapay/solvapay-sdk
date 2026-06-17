@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useBalance } from '@solvapay/react'
+import { AutoRecharge, LaunchCustomerPortalButton, useBalance } from '@solvapay/react'
 import { AmountPicker } from '@solvapay/react/primitives'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
@@ -101,7 +101,15 @@ export default function TopupPage() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <h2 className="text-xl font-semibold text-slate-900 mb-8">Top up credits</h2>
+            <header className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold text-slate-900">Top up credits</h2>
+              <LaunchCustomerPortalButton
+                tab="account"
+                className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+              >
+                Manage auto top-up
+              </LaunchCustomerPortalButton>
+            </header>
 
             {amountCents === null ? (
               <div className="space-y-6">
@@ -124,6 +132,7 @@ export default function TopupPage() {
                 >
                   Continue to payment
                 </button>
+                <AutoRecharge currency={currency} />
               </div>
             ) : (
               <StyledTopupForm

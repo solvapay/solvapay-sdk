@@ -308,6 +308,9 @@ export interface SolvaPayConfig {
     createCheckoutSession?: string // Default: '/api/create-checkout-session'
     createCustomerSession?: string // Default: '/api/create-customer-session'
     getPaymentMethod?: string // Default: '/api/payment-method'
+    getAutoRecharge?: string // Default: '/api/auto-recharge'
+    saveAutoRecharge?: string // Default: '/api/auto-recharge'
+    disableAutoRecharge?: string // Default: '/api/auto-recharge'
     getUsage?: string // Default: '/api/usage'
     getLimits?: string // Default: '/api/limits'
   }
@@ -448,10 +451,7 @@ export interface SolvaPayContextValue {
     productRef: string
     planRef?: string
   }) => Promise<ProcessPaymentResult>
-  createTopupPayment: (params: {
-    amount: number
-    currency?: string
-  }) => Promise<TopupPaymentResult>
+  createTopupPayment: (params: { amount: number; currency?: string }) => Promise<TopupPaymentResult>
   /**
    * Process a credit-topup payment intent after Stripe's `confirmPayment`
    * resolves. Resolves once the backend observes the PI reach
@@ -465,15 +465,10 @@ export interface SolvaPayContextValue {
    * confirm (legacy behaviour). The default HTTP transport always
    * implements it.
    */
-  processTopupPayment?: (params: {
-    paymentIntentId: string
-  }) => Promise<TopupProcessResult>
+  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
-  activatePlan: (params: {
-    productRef: string
-    planRef: string
-  }) => Promise<ActivatePlanResult>
+  activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
   balance: BalanceStatus

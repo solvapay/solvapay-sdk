@@ -141,6 +141,46 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
 export type PaymentMethodInfo =
   operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
 
+export type AutoRechargeStatus = 'active' | 'disabled' | 'failed' | 'completed' | 'pending_setup'
+
+export type AutoRechargeConfig = {
+  enabled: boolean
+  trigger: { type: 'balance'; thresholdCredits: number }
+  topup:
+    | { mode: 'fixed'; amountMinor: number; currency: string }
+    | { mode: 'target'; targetCredits: number; currency: string }
+  maxRecharges?: number
+  rechargeCount: number
+  fundingSourceType?: 'saved_card' | 'tokenized_card'
+  paymentMethodId?: string
+  status: AutoRechargeStatus
+  failureCount: number
+  lastChargeAt?: string
+  updatedAt?: string
+}
+
+export type AutoRechargeInput = {
+  enabled: boolean
+  triggerType: 'balance'
+  thresholdAmountMajor?: number
+  topupMode: 'fixed' | 'target'
+  topupAmountMajor?: number
+  targetCredits?: number
+  maxRecharges?: number
+  currency: string
+}
+
+export type AutoRechargeResponse = {
+  config: AutoRechargeConfig | null
+}
+
+export type SaveAutoRechargeResponse = {
+  config: AutoRechargeConfig
+  setupClientSecret?: string
+  publishableKey?: string
+  stripeAccountId?: string
+}
+
 /**
  * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
  */
@@ -441,4 +481,15 @@ export interface SolvaPayClient {
 
   // GET: /v1/sdk/payment-method?customerRef=...
   getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
+
+  // GET: /v1/sdk/auto-recharge?customerRef=...
+  getAutoRecharge?(params: { customerRef: string }): Promise<AutoRechargeResponse>
+
+  // PUT: /v1/sdk/auto-recharge
+  saveAutoRecharge?(
+    params: AutoRechargeInput & { customerRef: string },
+  ): Promise<SaveAutoRechargeResponse>
+
+  // DELETE: /v1/sdk/auto-recharge?customerRef=...
+  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: true }>
 }

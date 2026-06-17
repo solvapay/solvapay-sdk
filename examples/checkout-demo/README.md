@@ -184,7 +184,7 @@ After changing `.env.prod`, redeploy with `pnpm run deploy:cf:prod`.
 | Topic          | chat-checkout-demo                      | checkout-demo                                    |
 | -------------- | --------------------------------------- | ------------------------------------------------ |
 | Runtime        | Vite + `worker.ts` + `handlers.ts`      | Next.js 16 + OpenNext                            |
-| Auth           | Anonymous `x-customer-ref`              | Supabase JWT + `middleware.ts`                   |
+| Auth           | Anonymous `x-customer-ref`              | Supabase JWT + `proxy.ts`                        |
 | Secrets        | `SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY` | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET`     |
 | Build-time env | `VITE_*`                                | `NEXT_PUBLIC_*`                                  |
 | Prod domain    | `chat-demo.solvapay.app`                | `web-app-demo.solvapay.app`                      |
@@ -363,7 +363,7 @@ or email OAuth on `web-app-demo.solvapay.app`.
 | `/checkout` shows "This page couldn't load"          | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod`                      |
 | `Failed to fetch plans: 401` on `/checkout`          | `SOLVAPAY_API_BASE_URL` must match the Worker secret's API — see [Two value paths](#two-value-paths-read-this-first). Update `.env.prod` and redeploy |
 | OAuth redirect error on prod                         | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs                                                                       |
-| OpenNext build: Node middleware                      | Use `middleware.ts` (not `proxy.ts`) until OpenNext supports Next 16 `proxy`                                                                          |
+| OpenNext build: proxy warning                        | Use `proxy.ts` for the Next.js proxy convention                                                                                                       |
 | `wrangler whoami` missing SolvaPay account           | Request access to Cloudflare account `98aefe33182e11a1b0e5d7fa89a12a6d`                                                                               |
 
 ## Demo Flow
@@ -405,17 +405,16 @@ To override individual methods, pass a custom `transport` on the config. See
 
 ### 2. Authentication Setup
 
-This demo uses Supabase authentication middleware (`middleware.ts`) and SDK helpers from
-`@solvapay/next`. Cloudflare deploy uses `middleware.ts` (Edge) — not `proxy.ts` — because
-OpenNext on Cloudflare does not support Node `proxy` yet.
+This demo uses Supabase authentication through `proxy.ts` and SDK helpers from
+`@solvapay/next`.
 
-**Middleware setup (default):**
+**Proxy setup (default):**
 
 ```tsx
-// middleware.ts
+// proxy.ts
 import { createSupabaseAuthMiddleware } from '@solvapay/next/middleware'
 
-export const middleware = createSupabaseAuthMiddleware({
+export const proxy = createSupabaseAuthMiddleware({
   publicRoutes: ['/api/list-plans', '/api/merchant', '/api/get-product'],
 })
 
@@ -551,7 +550,7 @@ checkout-demo/
 │   │   └── page.tsx              # Checkout page with plan selection
 │   ├── layout.tsx                # Root layout with SolvaPayProvider
 │   └── page.tsx                  # Home with locked content
-├── middleware.ts                 # Supabase JWT auth on /api/* (Edge)
+├── proxy.ts                      # Supabase JWT auth on /api/* (Edge)
 ├── wrangler.jsonc                # Cloudflare Worker config (prod: web-app-demo.solvapay.app)
 ├── scripts/deploy.mjs            # Deploy wrapper (sources .env / .env.prod)
 ├── open-next.config.ts           # OpenNext Cloudflare adapter config
@@ -595,11 +594,11 @@ The provider automatically:
 
 ### Authentication
 
-This demo uses Supabase authentication middleware by default (`middleware.ts`):
+This demo uses Supabase authentication through `proxy.ts` by default:
 
-- Middleware extracts user IDs from Supabase JWT tokens on all `/api/*` routes
+- Proxy extracts user IDs from Supabase JWT tokens on all `/api/*` routes
 - User IDs are set as `x-user-id` header for downstream routes
-- Middleware returns 401 if authentication fails
+- Proxy returns 401 if authentication fails
 - The frontend sends access tokens in Authorization headers
 - The Supabase user ID is stored as `externalRef` on the SolvaPay backend
 - The `customerRef` prop passed to `SolvaPayProvider` uses the Supabase user ID as a cache key (the actual SolvaPay backend customer reference is returned from API calls)
@@ -866,10 +865,10 @@ SUPABASE_JWT_SECRET=your_secret_here
 1. **`/api/list-plans` 401 (public route):** The Worker calls SolvaPay with `SOLVAPAY_SECRET_KEY`. Set `SOLVAPAY_API_BASE_URL` in `.env.prod` to the API that issued the key — keys from `solvapay init` / app.solvapay.com use `https://api.solvapay.com`; dev/staging keys use `https://api-dev.solvapay.com`. Redeploy with `pnpm run deploy:cf:prod`.
 2. **Protected routes 401:** Verify Supabase credentials are correct
 3. Check that `SUPABASE_JWT_SECRET` matches your project settings
-4. Ensure middleware (`middleware.ts`) is properly extracting user ID
+4. Ensure proxy (`proxy.ts`) is properly extracting user ID
 5. Verify access token is being sent in Authorization header
 6. Check Supabase project has email/password auth enabled
-7. Review middleware logs for authentication errors
+7. Review proxy logs for authentication errors
 
 ### Payment form not appearing
 

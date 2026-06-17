@@ -31,6 +31,7 @@ export { CreditGate } from './components/CreditGate'
 
 // Account-management (phase 2 — MCP slice)
 export { CurrentPlanCard } from './components/CurrentPlanCard'
+export { AutoRecharge } from './components/AutoRecharge'
 export { LaunchCustomerPortalButton } from './components/LaunchCustomerPortalButton'
 export { UpdatePaymentMethodButton } from './components/UpdatePaymentMethodButton'
 export {
@@ -57,6 +58,7 @@ export { useTopup } from './hooks/useTopup'
 export { useBalance } from './hooks/useBalance'
 export { useTopupAmountSelector } from './hooks/useTopupAmountSelector'
 export { usePaymentMethod } from './hooks/usePaymentMethod'
+export { useAutoRecharge } from './hooks/useAutoRecharge'
 export { useTransport } from './hooks/useTransport'
 export { useUsage } from './hooks/useUsage'
 export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
@@ -154,6 +156,7 @@ export type { CancelledPlanNoticeProps } from './components/CancelledPlanNotice'
 export type { CreditGateProps } from './components/CreditGate'
 export type { CheckoutVariant } from './utils/checkoutVariant'
 export type { CurrentPlanCardProps, CurrentPlanCardClassNames } from './components/CurrentPlanCard'
+export type { AutoRechargeProps } from './components/AutoRecharge'
 export type { LaunchCustomerPortalButtonProps } from './components/LaunchCustomerPortalButton'
 export type {
   UpdatePaymentMethodButtonProps,

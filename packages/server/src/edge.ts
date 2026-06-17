@@ -108,6 +108,9 @@ export {
   getMerchantCore,
   getProductCore,
   getPaymentMethodCore,
+  getAutoRechargeCore,
+  saveAutoRechargeCore,
+  disableAutoRechargeCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'

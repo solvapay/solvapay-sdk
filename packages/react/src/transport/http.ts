@@ -18,7 +18,7 @@ import { readErrorMessage } from '../utils/readErrorMessage'
 type FetchFn = typeof fetch
 
 interface RouteOptions {
-  method: 'GET' | 'POST'
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
   onErrorContext: string
   errorPrefix: string
@@ -62,14 +62,14 @@ export const DEFAULT_ROUTES = {
   getProduct: '/api/get-product',
   listPlans: '/api/list-plans',
   getPaymentMethod: '/api/payment-method',
+  getAutoRecharge: '/api/auto-recharge',
+  saveAutoRecharge: '/api/auto-recharge',
+  disableAutoRecharge: '/api/auto-recharge',
   getUsage: '/api/usage',
   getLimits: '/api/limits',
 } as const
 
-function routeFor(
-  config: SolvaPayConfig | undefined,
-  key: keyof typeof DEFAULT_ROUTES,
-): string {
+function routeFor(config: SolvaPayConfig | undefined, key: keyof typeof DEFAULT_ROUTES): string {
   const configured = config?.api?.[key as keyof NonNullable<SolvaPayConfig['api']>]
   return configured || DEFAULT_ROUTES[key]
 }
@@ -172,16 +172,12 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
     },
 
     createCustomerSession: () =>
-      request<TransportCustomerSessionResult>(
-        config,
-        routeFor(config, 'createCustomerSession'),
-        {
-          method: 'POST',
-          body: {},
-          onErrorContext: 'createCustomerSession',
-          errorPrefix: 'Failed to create customer session',
-        },
-      ),
+      request<TransportCustomerSessionResult>(config, routeFor(config, 'createCustomerSession'), {
+        method: 'POST',
+        body: {},
+        onErrorContext: 'createCustomerSession',
+        errorPrefix: 'Failed to create customer session',
+      }),
 
     getMerchant: () =>
       request(config, routeFor(config, 'getMerchant'), {
@@ -221,6 +217,28 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         method: 'GET',
         onErrorContext: 'getPaymentMethod',
         errorPrefix: 'Failed to load payment method',
+      }),
+
+    getAutoRecharge: () =>
+      request(config, routeFor(config, 'getAutoRecharge'), {
+        method: 'GET',
+        onErrorContext: 'getAutoRecharge',
+        errorPrefix: 'Failed to load auto-recharge',
+      }),
+
+    saveAutoRecharge: input =>
+      request(config, routeFor(config, 'saveAutoRecharge'), {
+        method: 'PUT',
+        body: input,
+        onErrorContext: 'saveAutoRecharge',
+        errorPrefix: 'Failed to save auto-recharge',
+      }),
+
+    disableAutoRecharge: () =>
+      request(config, routeFor(config, 'disableAutoRecharge'), {
+        method: 'DELETE',
+        onErrorContext: 'disableAutoRecharge',
+        errorPrefix: 'Failed to disable auto-recharge',
       }),
 
     getUsage: () =>
