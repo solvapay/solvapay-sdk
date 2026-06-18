@@ -22,11 +22,14 @@ export type AutoRechargeInputPayload = AutoRechargeInput
 export function createDefaultAutoRechargeForm(
   currency: string,
   defaultTopupMajor?: number | null,
+  defaultThresholdMajor?: number | null,
 ): AutoRechargeFormState {
   const topup =
     defaultTopupMajor != null && defaultTopupMajor > 0 ? String(defaultTopupMajor) : '10'
   const threshold =
-    defaultTopupMajor != null && defaultTopupMajor > 0 ? String(defaultTopupMajor) : '5'
+    defaultThresholdMajor != null && defaultThresholdMajor >= 0
+      ? String(defaultThresholdMajor)
+      : '5'
 
   return {
     enabled: false,
@@ -121,12 +124,23 @@ export function validateAutoRechargeForm(
   return { ok: true, payload }
 }
 
-export function configToForm(config: AutoRechargeConfig, currency: string): AutoRechargeFormState {
+export function configToForm(
+  config: AutoRechargeConfig,
+  currency: string,
+  conversion?: AutoRechargeConversionContext,
+): AutoRechargeFormState {
   const base = createDefaultAutoRechargeForm(currency)
+  const thresholdMajor = estimateCurrencyMajorFromCredits(
+    config.trigger.thresholdCredits,
+    currency,
+    conversion?.creditsPerMinorUnit,
+    conversion?.displayExchangeRate,
+  )
   return {
     ...base,
     enabled: config.enabled,
-    thresholdAmountMajor: String(Math.max(0, config.trigger.thresholdCredits / 100)),
+    thresholdAmountMajor:
+      thresholdMajor != null ? String(Math.max(0, thresholdMajor)) : '0',
     topupAmountMajor: String(config.topup.amountMinor / getMinorUnitsPerMajor(currency)),
   }
 }

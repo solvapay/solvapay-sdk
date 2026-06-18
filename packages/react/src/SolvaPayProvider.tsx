@@ -23,7 +23,6 @@ import type {
 import { pollBalanceUntilIncreased, BALANCE_RECONCILE_DELAYS_MS } from '@solvapay/server'
 import {
   BALANCE_RECONCILE_GRACE_MS,
-  getActiveAutoRechargeThreshold,
 } from './helpers/auto-recharge-cache'
 import {
   filterPurchases,
@@ -38,7 +37,7 @@ import {
   clearCachedCustomerRef,
 } from './utils/headers'
 import { createHttpTransport } from './transport/http'
-import type { SolvaPayTransport } from './transport/types'
+import type { CreditDisplayBlock, SolvaPayTransport } from './transport/types'
 import { CopyProvider } from './i18n/context'
 
 export const SolvaPayContext = createContext<SolvaPayContextValue | null>(null)
@@ -130,6 +129,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   const [displayExchangeRateValue, setDisplayExchangeRateValue] = useState<number | null>(
     initial?.balance?.displayExchangeRate ?? null,
   )
+  const [displayBlockValue, setDisplayBlockValue] = useState<CreditDisplayBlock | null>(
+    initial?.balance?.display ?? null,
+  )
   const [balanceLoading, setBalanceLoading] = useState(false)
   const balanceInFlightRef = useRef(false)
   const balanceLoadedRef = useRef(!!initial?.balance)
@@ -167,6 +169,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       setDisplayCurrencyValue(null)
       setCreditsPerMinorUnitValue(null)
       setDisplayExchangeRateValue(null)
+      setDisplayBlockValue(null)
       setBalanceLoading(false)
       balanceLoadedRef.current = false
       return
@@ -192,6 +195,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       setDisplayCurrencyValue(data.displayCurrency ?? null)
       setCreditsPerMinorUnitValue(data.creditsPerMinorUnit ?? null)
       setDisplayExchangeRateValue(data.displayExchangeRate ?? null)
+      setDisplayBlockValue(data.display ?? null)
       balanceLoadedRef.current = true
     } catch (error) {
       console.error('[SolvaPayProvider] Failed to fetch balance:', error)
@@ -214,6 +218,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   }, [])
 
   const OPTIMISTIC_GRACE_MS = 8000
+  const DEBIT_GRACE_MS = 2000
 
   const clearOptimisticGrace = useCallback(() => {
     optimisticUntilRef.current = 0
@@ -229,12 +234,14 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       displayCurrency?: string | null
       creditsPerMinorUnit?: number | null
       displayExchangeRate?: number | null
+      display?: CreditDisplayBlock | null
     }) => {
       creditsValueRef.current = data.credits ?? null
       setCreditsValue(data.credits ?? null)
       setDisplayCurrencyValue(data.displayCurrency ?? null)
       setCreditsPerMinorUnitValue(data.creditsPerMinorUnit ?? null)
       setDisplayExchangeRateValue(data.displayExchangeRate ?? null)
+      setDisplayBlockValue(data.display ?? null)
       balanceLoadedRef.current = true
     },
     [],
@@ -293,22 +300,28 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       const nextCredits = (creditsValueRef.current ?? 0) + credits
       creditsValueRef.current = nextCredits
       setCreditsValue(nextCredits)
+      if (credits >= 0) {
+        scheduleGraceRefetch(OPTIMISTIC_GRACE_MS)
+      } else {
+        scheduleGraceRefetch(DEBIT_GRACE_MS)
+      }
+    },
+    [scheduleGraceRefetch],
+  )
 
-      const threshold = getActiveAutoRechargeThreshold(configRef.current)
-      const shouldReconcile =
-        credits < 0 && threshold !== null && nextCredits < threshold
-
-      if (shouldReconcile) {
-        const generation = (reconcilePollRef.current?.generation ?? 0) + 1
-        reconcilePollRef.current = { baseline: nextCredits, generation }
-        scheduleGraceRefetch(BALANCE_RECONCILE_GRACE_MS)
-        if (!reconcileRunningRef.current) {
-          void reconcileBalanceIncreaseImpl()
-        }
+  const reconcileAfterUsageDebitImpl = useCallback(
+    (opts?: { expectIncrease?: boolean }) => {
+      if (opts?.expectIncrease !== true) {
         return
       }
 
-      scheduleGraceRefetch(OPTIMISTIC_GRACE_MS)
+      const nextCredits = creditsValueRef.current ?? 0
+      const generation = (reconcilePollRef.current?.generation ?? 0) + 1
+      reconcilePollRef.current = { baseline: nextCredits, generation }
+      scheduleGraceRefetch(BALANCE_RECONCILE_GRACE_MS)
+      if (!reconcileRunningRef.current) {
+        void reconcileBalanceIncreaseImpl()
+      }
     },
     [reconcileBalanceIncreaseImpl, scheduleGraceRefetch],
   )
@@ -332,7 +345,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   )
 
   const createTopupPayment = useCallback(
-    (params: { amount: number; currency?: string }): Promise<TopupPaymentResult> =>
+    (params: {
+      amount: number
+      currency?: string
+      autoRecharge?: import('@solvapay/server').AutoRechargeInput
+    }): Promise<TopupPaymentResult> =>
       transportRef.current.createTopupPayment(params),
     [],
   )
@@ -550,6 +567,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     setDisplayCurrencyValue(next.balance?.displayCurrency ?? null)
     setCreditsPerMinorUnitValue(next.balance?.creditsPerMinorUnit ?? null)
     setDisplayExchangeRateValue(next.balance?.displayExchangeRate ?? null)
+    setDisplayBlockValue(next.balance?.display ?? null)
     balanceLoadedRef.current = !!next.balance
   }, [])
 
@@ -683,8 +701,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       displayCurrency: displayCurrencyValue,
       creditsPerMinorUnit: creditsPerMinorUnitValue,
       displayExchangeRate: displayExchangeRateValue,
+      display: displayBlockValue,
       refetch: fetchBalanceImpl,
       adjustBalance: adjustBalanceImpl,
+      reconcileAfterUsageDebit: reconcileAfterUsageDebitImpl,
     }),
     [
       balanceLoading,
@@ -692,8 +712,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       displayCurrencyValue,
       creditsPerMinorUnitValue,
       displayExchangeRateValue,
+      displayBlockValue,
       fetchBalanceImpl,
       adjustBalanceImpl,
+      reconcileAfterUsageDebitImpl,
     ],
   )
 

@@ -172,6 +172,8 @@ export type {
   ActivatePlanResult,
   PaymentMethodInfo,
   AutoRechargeConfig,
+  AutoRechargeDisplayBlock,
+  CreditDisplayBlock,
   AutoRechargeInput,
   AutoRechargeResponse,
   SaveAutoRechargeResponse,

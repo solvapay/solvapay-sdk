@@ -19,6 +19,8 @@ export type AutoRechargeProps = {
   onSetupRequired?: (result: SaveAutoRechargeResponse) => void | Promise<void>
   onSaved?: (result: SaveAutoRechargeResponse) => void | Promise<void>
   onDisabled?: () => void | Promise<void>
+  deferCardSetup?: boolean
+  onPendingConfig?: (payload: import('../helpers/auto-recharge-form').AutoRechargeInputPayload) => void | Promise<void>
   className?: string
 }
 
@@ -29,6 +31,8 @@ export function AutoRecharge({
   onSetupRequired,
   onSaved,
   onDisabled,
+  deferCardSetup,
+  onPendingConfig,
   className,
 }: AutoRechargeProps): React.ReactElement {
   const rootClass = ['solvapay-auto-recharge', className].filter(Boolean).join(' ')
@@ -41,6 +45,8 @@ export function AutoRecharge({
       onSetupRequired={onSetupRequired}
       onSaved={onSaved}
       onDisabled={onDisabled}
+      deferCardSetup={deferCardSetup}
+      onPendingConfig={onPendingConfig}
       className={rootClass}
     >
       <Primitive.Loading className="solvapay-auto-recharge-loading" />

@@ -102,6 +102,32 @@ describe('useTopup', () => {
     expect(createTopupPayment).toHaveBeenCalledWith({ amount: 5000, currency: 'eur' })
   })
 
+  it('forwards autoRecharge to createTopupPayment', async () => {
+    const createTopupPayment = vi.fn().mockResolvedValue({
+      clientSecret: 'cs_1',
+      publishableKey: 'pk_1',
+    })
+    const autoRecharge = {
+      enabled: true,
+      triggerType: 'balance' as const,
+      thresholdAmountMajor: 5,
+      topupAmountMajor: 10,
+      currency: 'USD',
+    }
+    const ctx = createMockContext({ createTopupPayment })
+
+    const { result } = renderHook(
+      () => useTopup({ amount: 5000, currency: 'usd', autoRecharge }),
+      { wrapper: createWrapper(ctx) },
+    )
+
+    await act(async () => {
+      await result.current.startTopup()
+    })
+
+    expect(createTopupPayment).toHaveBeenCalledWith({ amount: 5000, currency: 'usd', autoRecharge })
+  })
+
   it('sets clientSecret from response', async () => {
     const ctx = createMockContext({
       createTopupPayment: vi.fn().mockResolvedValue({

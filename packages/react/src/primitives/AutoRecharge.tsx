@@ -125,6 +125,8 @@ type RootProps = {
   onSetupRequired?: (result: SaveAutoRechargeResponse) => void | Promise<void>
   onSaved?: (result: SaveAutoRechargeResponse) => void | Promise<void>
   onDisabled?: () => void | Promise<void>
+  deferCardSetup?: boolean
+  onPendingConfig?: (payload: AutoRechargeInputPayload) => void | Promise<void>
   asChild?: boolean
   children?: React.ReactNode
 } & Omit<React.HTMLAttributes<HTMLElement>, 'children'>
@@ -140,6 +142,8 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     onSetupRequired,
     onSaved,
     onDisabled,
+    deferCardSetup = false,
+    onPendingConfig,
     asChild,
     children,
     className,
@@ -152,11 +156,14 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const autoRecharge = useAutoRecharge()
   const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const conversionContext = useMemo(
+    () => ({ creditsPerMinorUnit, displayExchangeRate }),
+    [creditsPerMinorUnit, displayExchangeRate],
+  )
   const copy = useCopy()
   const titleId = useId()
   const triggerRef = useRef<HTMLButtonElement | null>(null)
-  const defaultTopup =
-    defaultTopupAmountMajor ?? defaultThresholdAmountMajor ?? undefined
+  const defaultTopup = defaultTopupAmountMajor ?? defaultThresholdAmountMajor ?? undefined
 
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
   const isControlled = openProp !== undefined
@@ -182,7 +189,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const [form, setForm] = useState<AutoRechargeFormState>(() =>
     autoRecharge.config
-      ? configToForm(autoRecharge.config, currency)
+      ? configToForm(autoRecharge.config, currency, conversionContext)
       : createDefaultAutoRechargeForm(currency, defaultTopup),
   )
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -193,9 +200,9 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     if (autoRecharge.config) {
       // Mirror server config into editable local form state when it changes.
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional external-to-local sync
-      setForm(configToForm(autoRecharge.config, currency))
+      setForm(configToForm(autoRecharge.config, currency, conversionContext))
     }
-  }, [autoRecharge.config, currency])
+  }, [autoRecharge.config, currency, conversionContext])
 
   const canToggleUnits = creditsPerMinorUnit != null && creditsPerMinorUnit > 0
   const rate = displayExchangeRate ?? 1
@@ -230,12 +237,12 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const resetForm = useCallback(() => {
     if (autoRecharge.config) {
-      setForm(configToForm(autoRecharge.config, currency))
+      setForm(configToForm(autoRecharge.config, currency, conversionContext))
     } else {
       setForm(createDefaultAutoRechargeForm(currency, defaultTopup))
     }
     setValidationError(null)
-  }, [autoRecharge.config, currency, defaultTopup])
+  }, [autoRecharge.config, currency, conversionContext, defaultTopup])
 
   const flipUnit = useCallback(
     (
@@ -289,12 +296,25 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const savedSummaryLine = useMemo(() => {
     if (!autoRecharge.config?.enabled) return null
-    return buildSummaryLine(configToForm(autoRecharge.config, currency), currency)
-  }, [autoRecharge.config, currency])
+    return buildSummaryLine(
+      configToForm(autoRecharge.config, currency, conversionContext),
+      currency,
+    )
+  }, [autoRecharge.config, currency, conversionContext])
 
   const save = useCallback(async () => {
     const payload = emitValidation(form)
     if (!payload) return
+
+    if (deferCardSetup) {
+      await onPendingConfig?.(payload)
+      setSetup(null)
+      setStatusMessage(
+        payload.enabled ? copy.autoRecharge.savedMessage : copy.autoRecharge.disabledMessage,
+      )
+      setOpen(false)
+      return
+    }
 
     const result = await autoRecharge.save(payload)
     if (result.setupClientSecret) {
@@ -312,8 +332,10 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
   }, [
     autoRecharge,
     copy.autoRecharge,
+    deferCardSetup,
     emitValidation,
     form,
+    onPendingConfig,
     onSaved,
     onSetupRequired,
     setOpen,
@@ -443,12 +465,7 @@ const Loading = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagr
     const ctx = useAutoRechargeCtx('Loading')
     if (!ctx.loading) return null
     return (
-      <p
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-auto-recharge-loading=""
-        {...rest}
-      >
+      <p ref={forwardedRef} className={className} data-solvapay-auto-recharge-loading="" {...rest}>
         {children ?? (
           <>
             <Spinner size="sm" /> Loading auto-recharge settings…
@@ -459,20 +476,16 @@ const Loading = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagr
   },
 )
 
-const Card = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(
-  function AutoRechargeCard({ className, children, ...rest }, forwardedRef) {
-    return (
-      <section
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-auto-recharge-card=""
-        {...rest}
-      >
-        {children}
-      </section>
-    )
-  },
-)
+const Card = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function AutoRechargeCard(
+  { className, children, ...rest },
+  forwardedRef,
+) {
+  return (
+    <section ref={forwardedRef} className={className} data-solvapay-auto-recharge-card="" {...rest}>
+      {children}
+    </section>
+  )
+})
 
 const CardHeading = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
   function AutoRechargeCardHeading({ className, children, ...rest }, forwardedRef) {
@@ -510,52 +523,53 @@ const CardSummary = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLPa
 
 type TriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
 
-const Trigger = forwardRef<HTMLButtonElement, TriggerProps>(
-  function AutoRechargeTrigger({ asChild, onClick, children, className, ...rest }, forwardedRef) {
-    const ctx = useAutoRechargeCtx('Trigger')
-    const copy = useCopy()
-    const label = ctx.config
-      ? copy.autoRecharge.modifyTriggerLabel
-      : copy.autoRecharge.setupTriggerLabel
+const Trigger = forwardRef<HTMLButtonElement, TriggerProps>(function AutoRechargeTrigger(
+  { asChild, onClick, children, className, ...rest },
+  forwardedRef,
+) {
+  const ctx = useAutoRechargeCtx('Trigger')
+  const copy = useCopy()
+  const label = ctx.config
+    ? copy.autoRecharge.modifyTriggerLabel
+    : copy.autoRecharge.setupTriggerLabel
 
-    const setRefs = (node: HTMLButtonElement | null) => {
-      ctx.registerTriggerRef(node)
-      if (typeof forwardedRef === 'function') {
-        forwardedRef(node)
-      } else if (forwardedRef) {
-        forwardedRef.current = node
-      }
+  const setRefs = (node: HTMLButtonElement | null) => {
+    ctx.registerTriggerRef(node)
+    if (typeof forwardedRef === 'function') {
+      forwardedRef(node)
+    } else if (forwardedRef) {
+      forwardedRef.current = node
     }
+  }
 
-    const commonProps = {
-      'data-solvapay-auto-recharge-trigger': '',
-      type: 'button' as const,
-      'aria-haspopup': 'dialog' as const,
-      'aria-expanded': ctx.open,
-      disabled: ctx.loading,
-      onClick: composeEventHandlers(onClick, (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault()
-        ctx.resetForm()
-        ctx.setOpen(true)
-      }),
-      className,
-      ...rest,
-    }
+  const commonProps = {
+    'data-solvapay-auto-recharge-trigger': '',
+    type: 'button' as const,
+    'aria-haspopup': 'dialog' as const,
+    'aria-expanded': ctx.open,
+    disabled: ctx.loading,
+    onClick: composeEventHandlers(onClick, (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+      ctx.resetForm()
+      ctx.setOpen(true)
+    }),
+    className,
+    ...rest,
+  }
 
-    if (asChild) {
-      return (
-        <Slot ref={setRefs as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
-          {children ?? label}
-        </Slot>
-      )
-    }
+  if (asChild) {
     return (
-      <button ref={setRefs} {...commonProps}>
+      <Slot ref={setRefs as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
         {children ?? label}
-      </button>
+      </Slot>
     )
-  },
-)
+  }
+  return (
+    <button ref={setRefs} {...commonProps}>
+      {children ?? label}
+    </button>
+  )
+})
 
 const Overlay = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   function AutoRechargeOverlay({ onClick, className, ...rest }, forwardedRef) {
@@ -658,12 +672,7 @@ const EnableQuestion = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTM
   function AutoRechargeEnableQuestion({ className, children, ...rest }, forwardedRef) {
     const copy = useCopy()
     return (
-      <p
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-auto-recharge-question=""
-        {...rest}
-      >
+      <p ref={forwardedRef} className={className} data-solvapay-auto-recharge-question="" {...rest}>
         {children ?? copy.autoRecharge.enableQuestion}
       </p>
     )
@@ -731,7 +740,10 @@ const CancelButton = forwardRef<HTMLButtonElement, CancelButtonProps>(
 
     if (asChild) {
       return (
-        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
+        <Slot
+          ref={forwardedRef as React.Ref<HTMLElement>}
+          {...(commonProps as Record<string, unknown>)}
+        >
           {children ?? copy.autoRecharge.cancelButton}
         </Slot>
       )
@@ -799,7 +811,9 @@ const EnableSwitch = forwardRef<HTMLInputElement, EnableSwitchProps>(
       'data-solvapay-auto-recharge-enable': '',
       'data-appearance': appearance,
       type: 'checkbox',
-      ...(appearance === 'switch' ? { role: 'switch' as const, 'aria-checked': ctx.form.enabled } : {}),
+      ...(appearance === 'switch'
+        ? { role: 'switch' as const, 'aria-checked': ctx.form.enabled }
+        : {}),
       checked: ctx.form.enabled,
       'aria-label': copy.autoRecharge.enableLabel,
       disabled: ctx.loading || ctx.saving || ctx.disabling || !!ctx.setup,
@@ -812,7 +826,10 @@ const EnableSwitch = forwardRef<HTMLInputElement, EnableSwitchProps>(
 
     if (asChild) {
       return (
-        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)} />
+        <Slot
+          ref={forwardedRef as React.Ref<HTMLElement>}
+          {...(commonProps as Record<string, unknown>)}
+        />
       )
     }
     return <input ref={forwardedRef} {...commonProps} />
@@ -896,12 +913,7 @@ const Summary = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagr
     const ctx = useAutoRechargeCtx('Summary')
     if (!ctx.summaryLine) return null
     return (
-      <p
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-auto-recharge-summary=""
-        {...rest}
-      >
+      <p ref={forwardedRef} className={className} data-solvapay-auto-recharge-summary="" {...rest}>
         {children ?? ctx.summaryLine}
       </p>
     )
@@ -991,7 +1003,12 @@ const AmountField = forwardRef<HTMLInputElement, AmountFieldProps>(function Auto
             unit={fieldConfig.unit}
             fieldLabel={fieldConfig.unitToggleLabel}
             onToggle={() =>
-              ctx.flipUnit(fieldConfig.valueKey, fieldConfig.unitKey, fieldConfig.unit, fieldConfig.value)
+              ctx.flipUnit(
+                fieldConfig.valueKey,
+                fieldConfig.unitKey,
+                fieldConfig.unit,
+                fieldConfig.value,
+              )
             }
           />
         ) : null}
@@ -1032,25 +1049,29 @@ type UnitToggleProps = {
   onToggle: () => void
 }
 
-const UnitToggle = forwardRef<HTMLButtonElement, UnitToggleProps & React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  function AutoRechargeUnitToggle({ unit, fieldLabel, onToggle, className, ...rest }, forwardedRef) {
-    const ctx = useAutoRechargeCtx('UnitToggle')
-    const targetUnitLabel = unit === 'currency' ? 'credits' : 'currency'
-    return (
-      <button
-        ref={forwardedRef}
-        type="button"
-        className={className}
-        data-solvapay-auto-recharge-unit-toggle=""
-        aria-label={`Switch ${fieldLabel} to ${targetUnitLabel}`}
-        onClick={onToggle}
-        {...rest}
-      >
-        {unit === 'currency' ? ctx.currency.toUpperCase() : 'credits'}
-      </button>
-    )
-  },
-)
+const UnitToggle = forwardRef<
+  HTMLButtonElement,
+  UnitToggleProps & React.ButtonHTMLAttributes<HTMLButtonElement>
+>(function AutoRechargeUnitToggle(
+  { unit, fieldLabel, onToggle, className, ...rest },
+  forwardedRef,
+) {
+  const ctx = useAutoRechargeCtx('UnitToggle')
+  const targetUnitLabel = unit === 'currency' ? 'credits' : 'currency'
+  return (
+    <button
+      ref={forwardedRef}
+      type="button"
+      className={className}
+      data-solvapay-auto-recharge-unit-toggle=""
+      aria-label={`Switch ${fieldLabel} to ${targetUnitLabel}`}
+      onClick={onToggle}
+      {...rest}
+    >
+      {unit === 'currency' ? ctx.currency.toUpperCase() : 'credits'}
+    </button>
+  )
+})
 
 const Hint = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   function AutoRechargeHint({ className, ...rest }, forwardedRef) {
@@ -1075,41 +1096,42 @@ const Hint = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraph
         )
 
     return (
-      <p
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-auto-recharge-hint=""
-        {...rest}
-      >
+      <p ref={forwardedRef} className={className} data-solvapay-auto-recharge-hint="" {...rest}>
         {text}
       </p>
     )
   },
 )
 
-const ValidationError = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  function AutoRechargeValidationError({ className, ...rest }, forwardedRef) {
-    const ctx = useAutoRechargeCtx('ValidationError')
-    if (!ctx.validationError) return null
-    return (
-      <p
-        ref={forwardedRef}
-        role="alert"
-        aria-live="polite"
-        className={className}
-        data-solvapay-auto-recharge-validation-error=""
-        {...rest}
-      >
-        {ctx.validationError}
-      </p>
-    )
-  },
-)
+const ValidationError = forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(function AutoRechargeValidationError({ className, ...rest }, forwardedRef) {
+  const ctx = useAutoRechargeCtx('ValidationError')
+  if (!ctx.validationError) return null
+  return (
+    <p
+      ref={forwardedRef}
+      role="alert"
+      aria-live="polite"
+      className={className}
+      data-solvapay-auto-recharge-validation-error=""
+      {...rest}
+    >
+      {ctx.validationError}
+    </p>
+  )
+})
 
 const Actions = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   function AutoRechargeActions({ className, children, ...rest }, forwardedRef) {
     return (
-      <menu ref={forwardedRef} className={className} data-solvapay-auto-recharge-actions="" {...rest}>
+      <menu
+        ref={forwardedRef}
+        className={className}
+        data-solvapay-auto-recharge-actions=""
+        {...rest}
+      >
         {children ?? (
           <>
             <li>
@@ -1127,47 +1149,51 @@ const Actions = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>
 
 type SaveButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
 
-const SaveButton = forwardRef<HTMLButtonElement, SaveButtonProps>(
-  function AutoRechargeSaveButton({ asChild, onClick, children, className, ...rest }, forwardedRef) {
-    const ctx = useAutoRechargeCtx('SaveButton')
-    const copy = useCopy()
-    const dataState = ctx.saving ? 'processing' : ctx.validationError ? 'disabled' : 'idle'
-    const commonProps = {
-      'data-solvapay-auto-recharge-save': '',
-      'data-state': dataState,
-      type: 'button' as const,
-      disabled: ctx.saving || ctx.disabling || !!ctx.validationError,
-      'aria-busy': ctx.saving,
-      onClick: composeEventHandlers(onClick, (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault()
-        void ctx.save()
-      }),
-      className,
-      ...rest,
-    }
+const SaveButton = forwardRef<HTMLButtonElement, SaveButtonProps>(function AutoRechargeSaveButton(
+  { asChild, onClick, children, className, ...rest },
+  forwardedRef,
+) {
+  const ctx = useAutoRechargeCtx('SaveButton')
+  const copy = useCopy()
+  const dataState = ctx.saving ? 'processing' : ctx.validationError ? 'disabled' : 'idle'
+  const commonProps = {
+    'data-solvapay-auto-recharge-save': '',
+    'data-state': dataState,
+    type: 'button' as const,
+    disabled: ctx.saving || ctx.disabling || !!ctx.validationError,
+    'aria-busy': ctx.saving,
+    onClick: composeEventHandlers(onClick, (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+      void ctx.save()
+    }),
+    className,
+    ...rest,
+  }
 
-    const content = ctx.saving ? (
-      <>
-        <Spinner size="sm" /> {copy.cta.processing}
-      </>
-    ) : (
-      (children ?? copy.autoRecharge.saveButton)
-    )
+  const content = ctx.saving ? (
+    <>
+      <Spinner size="sm" /> {copy.cta.processing}
+    </>
+  ) : (
+    (children ?? copy.autoRecharge.saveButton)
+  )
 
-    if (asChild) {
-      return (
-        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
-          {content}
-        </Slot>
-      )
-    }
+  if (asChild) {
     return (
-      <button ref={forwardedRef} {...commonProps}>
+      <Slot
+        ref={forwardedRef as React.Ref<HTMLElement>}
+        {...(commonProps as Record<string, unknown>)}
+      >
         {content}
-      </button>
+      </Slot>
     )
-  },
-)
+  }
+  return (
+    <button ref={forwardedRef} {...commonProps}>
+      {content}
+    </button>
+  )
+})
 
 type DisableButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
 
@@ -1195,7 +1221,10 @@ const DisableButton = forwardRef<HTMLButtonElement, DisableButtonProps>(
 
     if (asChild) {
       return (
-        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
+        <Slot
+          ref={forwardedRef as React.Ref<HTMLElement>}
+          {...(commonProps as Record<string, unknown>)}
+        >
           {children ?? copy.autoRecharge.disableButton}
         </Slot>
       )
@@ -1331,7 +1360,11 @@ function CardSetupInner({ onComplete }: { onComplete: () => void }) {
           {error}
         </p>
       ) : null}
-      <button type="submit" disabled={processing || !stripe} data-solvapay-auto-recharge-setup-submit="">
+      <button
+        type="submit"
+        disabled={processing || !stripe}
+        data-solvapay-auto-recharge-setup-submit=""
+      >
         {processing ? copy.autoRecharge.setupProcessing : copy.autoRecharge.setupSubmit}
       </button>
     </form>
@@ -1362,7 +1395,11 @@ function CardSetup({ setup, onComplete }: CardSetupProps) {
   }
 
   return (
-    <Elements key={setup.setupClientSecret} stripe={stripePromise} options={{ clientSecret: setup.setupClientSecret }}>
+    <Elements
+      key={setup.setupClientSecret}
+      stripe={stripePromise}
+      options={{ clientSecret: setup.setupClientSecret }}
+    >
       <CardSetupInner onComplete={onComplete} />
     </Elements>
   )

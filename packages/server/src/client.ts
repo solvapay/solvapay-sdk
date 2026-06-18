@@ -636,6 +636,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           amount: params.amount,
           currency: params.currency,
           description: params.description,
+          ...(params.autoRecharge ? { autoRecharge: params.autoRecharge } : {}),
         }),
       })
 

@@ -110,7 +110,11 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
     createTopupPayment: params =>
       request(config, routeFor(config, 'createTopupPayment'), {
         method: 'POST',
-        body: { amount: params.amount, currency: params.currency },
+        body: {
+          amount: params.amount,
+          currency: params.currency,
+          ...(params.autoRecharge ? { autoRecharge: params.autoRecharge } : {}),
+        },
         onErrorContext: 'createTopupPayment',
         errorPrefix: 'Failed to create topup payment',
       }),

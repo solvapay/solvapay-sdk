@@ -212,7 +212,7 @@ describe('SolvaPayProvider - balance (credits)', () => {
     expect(result.current.balance.displayCurrency).toBe('USD')
   })
 
-  it('polls balance until credits increase when debit drops below auto-recharge threshold', async () => {
+  it('polls balance until credits increase when server signals auto-recharge triggered', async () => {
     let balanceFetchCount = 0
     fetchSpy.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('customer-balance')) {
@@ -240,18 +240,6 @@ describe('SolvaPayProvider - balance (credits)', () => {
       })
     })
 
-    autoRechargeCache.set('/api/auto-recharge', {
-      config: {
-        enabled: true,
-        status: 'active',
-        trigger: { type: 'balance', thresholdCredits: 500 },
-        topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
-        failureCount: 0,
-      },
-      promise: null,
-      timestamp: Date.now(),
-    })
-
     const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
 
     await waitFor(() => {
@@ -265,6 +253,7 @@ describe('SolvaPayProvider - balance (credits)', () => {
 
     act(() => {
       result.current.balance.adjustBalance(-600)
+      result.current.balance.reconcileAfterUsageDebit({ expectIncrease: true })
     })
     expect(result.current.balance.credits).toBe(400)
 
@@ -281,7 +270,46 @@ describe('SolvaPayProvider - balance (credits)', () => {
     })
   })
 
-  it('does not start extended reconcile when auto-recharge is not cached/active', async () => {
+  it('keeps optimistic debit until grace refetch reconciles with server', async () => {
+    fetchSpy.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('customer-balance')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ credits: 10_400, displayCurrency: 'USD' }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ customerRef: 'cus_auto', purchases: [] }),
+      })
+    })
+
+    const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(result.current.customerRef).toBe('cus_auto')
+    })
+
+    await act(async () => {
+      await result.current.balance.refetch()
+    })
+    expect(result.current.balance.credits).toBe(10_400)
+
+    act(() => {
+      result.current.balance.adjustBalance(-1000)
+    })
+    expect(result.current.balance.credits).toBe(9400)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
+    await waitFor(() => {
+      expect(result.current.balance.credits).toBe(10_400)
+    })
+  })
+
+  it('schedules grace refetch after negative adjustBalance even without reconcile polling', async () => {
     fetchSpy.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('customer-balance')) {
         return Promise.resolve({
@@ -308,22 +336,15 @@ describe('SolvaPayProvider - balance (credits)', () => {
 
     act(() => {
       result.current.balance.adjustBalance(-600)
+      result.current.balance.reconcileAfterUsageDebit({ expectIncrease: false })
     })
     expect(result.current.balance.credits).toBe(400)
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(8500)
-    })
-
-    await waitFor(() => {
-      expect(getBalanceCalls().length).toBe(callsBeforeAdjust + 1)
-    })
-    expect(result.current.balance.credits).toBe(1000)
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(32_000)
+      await vi.advanceTimersByTimeAsync(2500)
     })
 
     expect(getBalanceCalls().length).toBe(callsBeforeAdjust + 1)
+    expect(result.current.balance.credits).toBe(1000)
   })
 })

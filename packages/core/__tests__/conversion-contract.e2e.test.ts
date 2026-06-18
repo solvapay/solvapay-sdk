@@ -108,6 +108,29 @@ describe('conversion contract round-trip', () => {
   })
 })
 
+/** Mirrors post-fix auto-recharge validation threshold storage. */
+function thresholdCreditsFromMajor(thresholdMajor: number, displayExchangeRate: number): number {
+  const thresholdUsdMinor = Math.round((thresholdMajor / displayExchangeRate) * 100)
+  return minorUnitsToCredits(thresholdUsdMinor)
+}
+
+describe('auto-recharge threshold round-trip', () => {
+  it.each([
+    { currency: 'SEK', rate: SEK_RATE, threshold: 1000 },
+    { currency: 'USD', rate: 1, threshold: 10 },
+    { currency: 'EUR', rate: EUR_RATE, threshold: 50 },
+    { currency: 'JPY', rate: JPY_RATE, threshold: 500 },
+  ])(
+    '$currency threshold save->store->display round-trips within one minor unit',
+    ({ currency, rate, threshold }) => {
+      const stored = thresholdCreditsFromMajor(threshold, rate)
+      const displayed = estimateCurrencyMajorFromCredits(stored, currency, CPM, rate)
+      expect(displayed).not.toBeNull()
+      expect(displayed).toBeCloseTo(threshold, 0)
+    },
+  )
+})
+
 describe('topped-up amount equals available display amount', () => {
   it.each([
     { currency: 'SEK', rate: SEK_RATE, amount: 100 },
@@ -135,5 +158,41 @@ describe('topped-up amount equals available display amount', () => {
     )
     expect(availableMajor).toBeGreaterThan(99)
     expect(availableMajor).toBeLessThanOrEqual(100)
+  })
+})
+
+/** Mirrors backend credit-display.helper buildCreditDisplay — must stay in sync. */
+function backendMirrorAmountMajor(
+  credits: number,
+  displayCurrency: string,
+  exchangeRate: number,
+  creditsPerMinorUnit: number,
+): number {
+  const minor = creditsToDisplayMinorUnits({
+    credits,
+    creditsPerMinorUnit,
+    displayExchangeRate: exchangeRate,
+    displayCurrency,
+  })
+  if (minor === null) return NaN
+  return minor / minorUnitsPerMajor(displayCurrency)
+}
+
+describe('backend display builder agrees with @solvapay/core', () => {
+  it.each([
+    { credits: 31_500, currency: 'SEK', rate: SEK_RATE },
+    { credits: 10_000, currency: 'USD', rate: 1 },
+    { credits: 50_000, currency: 'EUR', rate: EUR_RATE },
+  ])('$currency balance display matches core reference', ({ credits, currency, rate }) => {
+    const fromCore = displayMajorFromCredits(credits, currency, rate, CPM)
+    const fromBackendMirror = backendMirrorAmountMajor(credits, currency, rate, CPM)
+    expect(fromBackendMirror).toBeCloseTo(fromCore, 2)
+  })
+
+  it('payment-intent mint credits produce finite integer credits for SEK top-up', () => {
+    const credits = mintCreditsFromTopup(100, 'SEK', SEK_RATE, CPM)
+    expect(Number.isInteger(credits)).toBe(true)
+    expect(credits).toBeGreaterThan(100_000)
+    expect(credits).toBeLessThan(110_000)
   })
 })

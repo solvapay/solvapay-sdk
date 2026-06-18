@@ -1,3 +1,4 @@
+import { creditsToDisplayMinorUnits } from '@solvapay/core'
 import { getMinorUnitsPerMajor } from './format'
 
 export function estimateCredits(
@@ -22,9 +23,12 @@ export function estimateCurrencyMajorFromCredits(
   if (credits == null || credits <= 0) return null
   if (creditsPerMinorUnit == null || creditsPerMinorUnit <= 0) return null
   const rate = displayExchangeRate ?? 1
-  const minorMultiplier = getMinorUnitsPerMajor(currency)
-  const minorUnits = (credits / creditsPerMinorUnit) * rate
-  const major = minorUnits / minorMultiplier
-  const fractionDigits = Math.max(0, Math.round(Math.log10(minorMultiplier)))
-  return Number(major.toFixed(fractionDigits))
+  const displayMinor = creditsToDisplayMinorUnits({
+    credits,
+    creditsPerMinorUnit,
+    displayExchangeRate: rate,
+    displayCurrency: currency,
+  })
+  if (displayMinor === null) return null
+  return displayMinor / getMinorUnitsPerMajor(currency)
 }

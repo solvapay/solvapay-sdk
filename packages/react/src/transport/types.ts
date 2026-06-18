@@ -31,11 +31,33 @@ import type {
   SaveAutoRechargeResponse,
 } from '@solvapay/server'
 
+export type CreditDisplayBlock = {
+  amountMajor: number
+  currency: string
+  formatted: string
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
+export type AutoRechargeDisplayBlock = {
+  thresholdAmountMajor: number
+  topupAmountMajor: number
+  currency: string
+  formatted: {
+    threshold: string
+    topup: string
+  }
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
 export interface TransportBalanceResult {
   credits: number
   displayCurrency: string
   creditsPerMinorUnit: number
   displayExchangeRate: number
+  /** Backend-computed display values — render verbatim, do not reconvert. */
+  display?: CreditDisplayBlock
 }
 
 /**
@@ -136,7 +158,11 @@ export interface SolvaPayTransport {
     planRef?: string
   }) => Promise<ProcessPaymentResult>
 
-  createTopupPayment: (params: { amount: number; currency?: string }) => Promise<TopupPaymentResult>
+  createTopupPayment: (params: {
+    amount: number
+    currency?: string
+    autoRecharge?: import('@solvapay/server').AutoRechargeInput
+  }) => Promise<TopupPaymentResult>
 
   /**
    * Process a credit-topup payment intent after Stripe's `confirmPayment`

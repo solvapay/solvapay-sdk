@@ -466,6 +466,7 @@ export interface SolvaPay {
     currency: string
     description?: string
     idempotencyKey?: string
+    autoRecharge?: import('./types/client').AutoRechargeInput
   }): Promise<{
     processorPaymentId: string
     clientSecret: string

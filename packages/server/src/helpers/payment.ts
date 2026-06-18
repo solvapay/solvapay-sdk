@@ -137,6 +137,7 @@ export async function createTopupPaymentIntentCore(
     amount: number
     currency: string
     description?: string
+    autoRecharge?: import('../types/client').AutoRechargeInput
   },
   options: {
     solvaPay?: SolvaPay
@@ -194,6 +195,7 @@ export async function createTopupPaymentIntentCore(
       amount: body.amount,
       currency: body.currency,
       description: body.description,
+      ...(body.autoRecharge ? { autoRecharge: body.autoRecharge } : {}),
     })
 
     return {

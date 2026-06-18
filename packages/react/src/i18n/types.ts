@@ -120,6 +120,7 @@ export interface SolvaPayCopy {
     cancelButton: string
     disableButton: string
     savedMessage: string
+    stagedMessage: string
     disabledMessage: string
     setupRequiredMessage: string
     setupHeading: string

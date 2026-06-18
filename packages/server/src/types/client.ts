@@ -153,6 +153,28 @@ export type AutoRechargeConfig = {
   failureCount: number
   lastChargeAt?: string
   updatedAt?: string
+  /** Backend-computed display values — render verbatim, do not divide thresholdCredits. */
+  display?: AutoRechargeDisplayBlock
+}
+
+export type AutoRechargeDisplayBlock = {
+  thresholdAmountMajor: number
+  topupAmountMajor: number
+  currency: string
+  formatted: {
+    threshold: string
+    topup: string
+  }
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
+export type CreditDisplayBlock = {
+  amountMajor: number
+  currency: string
+  formatted: string
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
 }
 
 export type AutoRechargeInput = {
@@ -197,6 +219,12 @@ export type CreditDebitSkipReason = components['schemas']['CreditDebitSkippedRes
 export type CreditDebitResult =
   | components['schemas']['CreditDebitSuccessResponse']
   | components['schemas']['CreditDebitSkippedResponse']
+
+/**
+ * When `debited: true` and `autoRecharge.triggered: true`, the server initiated
+ * an off-session charge — credits are booked asynchronously via webhook, not inline.
+ */
+export type CreditDebitSuccess = components['schemas']['CreditDebitSuccessResponse']
 
 export type TrackUsageRequest = Omit<
   Partial<components['schemas']['CreateUsageRequest']>,
@@ -415,6 +443,7 @@ export interface SolvaPayClient {
     currency: string
     description?: string
     idempotencyKey?: string
+    autoRecharge?: AutoRechargeInput
   }): Promise<{
     processorPaymentId: string
     clientSecret: string
@@ -457,6 +486,7 @@ export interface SolvaPayClient {
     displayCurrency: string
     creditsPerMinorUnit: number
     displayExchangeRate: number
+    display?: CreditDisplayBlock
   }>
 
   // POST: /v1/sdk/checkout-sessions

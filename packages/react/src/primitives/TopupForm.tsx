@@ -82,6 +82,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
   const {
     amount,
     currency,
+    autoRecharge,
     onSuccess,
     onError,
     returnUrl,
@@ -113,6 +114,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
   } = useTopup({
     amount,
     currency,
+    autoRecharge,
   })
 
   const hasInitializedRef = useRef(false)

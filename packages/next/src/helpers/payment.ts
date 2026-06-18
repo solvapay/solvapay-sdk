@@ -67,6 +67,7 @@ export async function createTopupPaymentIntent(
     amount: number
     currency: string
     description?: string
+    autoRecharge?: import('@solvapay/server').AutoRechargeInput
   },
   options: {
     solvaPay?: SolvaPay

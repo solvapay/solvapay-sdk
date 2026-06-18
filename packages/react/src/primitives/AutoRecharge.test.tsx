@@ -236,6 +236,21 @@ describe('AutoRecharge primitive', () => {
     expect(screen.getByTestId('payment-element')).toBeInTheDocument()
   })
 
+  it('with deferCardSetup, save exposes pending config without SetupIntent UI', async () => {
+    const onPendingConfig = vi.fn()
+    renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig })
+    openModal()
+    enableAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    expect(autoRechargeMocks.save).not.toHaveBeenCalled()
+    expect(onPendingConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: true, topupAmountMajor: 10 }),
+    )
+    expect(screen.queryByTestId('stripe-elements')).not.toBeInTheDocument()
+  })
+
   it('shows status badge for pending_setup config', () => {
     autoRechargeMocks.config = { ...config, status: 'pending_setup' }
     render(

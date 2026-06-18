@@ -2,30 +2,23 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import type { AutoRechargeInput } from '@solvapay/server'
 import { AutoRecharge, useBalance } from '@solvapay/react'
 import { AmountPicker } from '@solvapay/react/primitives'
-import { estimateTopupCredits } from '../lib/credit-display'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
-  const { adjustBalance, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
+  const { refetch, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
   const currency = displayCurrency || 'USD'
   const [amount, setAmount] = useState<number | null>(null)
   const [amountCents, setAmountCents] = useState<number | null>(null)
+  const [pendingAutoRecharge, setPendingAutoRecharge] = useState<AutoRechargeInput | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [paymentFailed, setPaymentFailed] = useState(false)
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
-    if (amountCents) {
-      adjustBalance(
-        estimateTopupCredits({
-          amountCents,
-          creditsPerMinorUnit,
-          displayExchangeRate,
-        }),
-      )
-    }
+    void refetch()
   }
 
   const handlePaymentError = (err: Error) => {
@@ -145,12 +138,17 @@ export default function TopupPage() {
                 >
                   Continue to payment
                 </button>
-                <AutoRecharge currency={currency} />
+                <AutoRecharge
+                  currency={currency}
+                  deferCardSetup
+                  onPendingConfig={setPendingAutoRecharge}
+                />
               </section>
             ) : (
               <StyledTopupForm
                 amountCents={amountCents}
                 currency={currency}
+                autoRecharge={pendingAutoRecharge ?? undefined}
                 creditsPerMinorUnit={creditsPerMinorUnit}
                 displayExchangeRate={displayExchangeRate}
                 onSuccess={handlePaymentSuccess}
