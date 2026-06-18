@@ -179,6 +179,7 @@ A full working example — server, client, OAuth bridge, polling, and the five-s
 ## Known boundaries
 
 - **`trackUsage` stays on the server.** Usage metering belongs on your backend, not the client — continue to call `solvaPay.trackUsage(...)` from `@solvapay/server` inside your tool handlers.
+- **Inline card entry on Claude.** Claude's MCP Apps host applies a fixed sandbox Content Security Policy that does not forward the spec's `frameDomains` declaration. Because Stripe's card surfaces load in a nested iframe, the inline Payment Element cannot render inside Claude's widget. The SDK detects this at runtime and falls back to SolvaPay-hosted checkout in a new tab (see [Hosted checkout from inside the iframe](#hosted-checkout-from-inside-the-iframe)), so checkout still completes and the payment stays on SolvaPay's rail. On hosts that honor the spec (e.g. ChatGPT), the inline Payment Element renders directly — no configuration needed.
 
 ## Next steps
 
