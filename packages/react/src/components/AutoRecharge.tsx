@@ -20,7 +20,9 @@ export type AutoRechargeProps = {
   onSaved?: (result: SaveAutoRechargeResponse) => void | Promise<void>
   onDisabled?: () => void | Promise<void>
   deferCardSetup?: boolean
-  onPendingConfig?: (payload: import('../helpers/auto-recharge-form').AutoRechargeInputPayload) => void | Promise<void>
+  onPendingConfig?: (
+    payload: import('../helpers/auto-recharge-form').AutoRechargeInputPayload,
+  ) => void | Promise<void>
   className?: string
 }
 

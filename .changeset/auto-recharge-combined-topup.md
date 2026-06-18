@@ -1,7 +1,7 @@
 ---
-"@solvapay/react": minor
-"@solvapay/server": minor
-"@solvapay/next": patch
+'@solvapay/react': minor
+'@solvapay/server': minor
+'@solvapay/next': patch
 ---
 
 Auto-recharge can now be configured in the same top-up payment as the initial card charge, so integrators do not need a separate SetupIntent step before checkout.
