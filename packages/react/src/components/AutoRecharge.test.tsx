@@ -45,6 +45,10 @@ function renderShim(props: Partial<React.ComponentProps<typeof AutoRecharge>> = 
   )
 }
 
+function openModal(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Set up auto-recharge' }))
+}
+
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -57,18 +61,21 @@ beforeEach(() => {
 })
 
 describe('AutoRecharge (default-tree shim)', () => {
-  it('renders polished panel with solvapay class hooks', () => {
+  it('renders summary card with solvapay class hooks', () => {
     renderShim()
     expect(document.querySelector('.solvapay-auto-recharge')).toBeInTheDocument()
-    expect(screen.getByText('Auto-recharge')).toBeInTheDocument()
-    expect(screen.getByText(/recommended for production/i)).toBeInTheDocument()
+    expect(document.querySelector('.solvapay-auto-recharge-card')).toBeInTheDocument()
+    expect(screen.getByText('Auto recharge')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Set up auto-recharge' })).toBeInTheDocument()
   })
 
-  it('shows form fields when enabled', () => {
+  it('shows form fields in dialog when enabled', () => {
     renderShim()
+    openModal()
     fireEvent.click(screen.getByLabelText('Enable auto-recharge'))
     expect(screen.getByText('When balance falls below')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save automatic top-up' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save settings' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
   it('accepts className on root', () => {

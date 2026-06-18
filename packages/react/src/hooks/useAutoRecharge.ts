@@ -6,14 +6,8 @@ import type {
 } from '@solvapay/server'
 import { useSolvaPay } from './useSolvaPay'
 import { createHttpTransport } from '../transport/http'
-import { createTransportCacheKey } from '../transport/cache-key'
 import type { SolvaPayConfig } from '../types'
-
-type CacheEntry = {
-  config: AutoRechargeConfig | null
-  promise: Promise<AutoRechargeConfig | null> | null
-  timestamp: number
-}
+import { autoRechargeCache, autoRechargeCacheKeyFor, CACHE_DURATION } from './autoRechargeCache'
 
 export type UseAutoRechargeReturn = {
   config: AutoRechargeConfig | null
@@ -26,15 +20,8 @@ export type UseAutoRechargeReturn = {
   disable: () => Promise<{ success: true }>
 }
 
-const autoRechargeCache = new Map<string, CacheEntry>()
-const CACHE_DURATION = 5 * 60 * 1000
-
 /** @internal Exported only for tests. */
 export { autoRechargeCache, CACHE_DURATION }
-
-function cacheKeyFor(config: SolvaPayConfig | undefined): string {
-  return createTransportCacheKey(config, config?.api?.getAutoRecharge || '/api/auto-recharge')
-}
 
 async function fetchAutoRecharge(
   config: SolvaPayConfig | undefined,
@@ -47,7 +34,7 @@ async function fetchAutoRecharge(
 
 export function useAutoRecharge(): UseAutoRechargeReturn {
   const { _config } = useSolvaPay()
-  const key = cacheKeyFor(_config)
+  const key = autoRechargeCacheKeyFor(_config)
 
   const [config, setConfig] = useState<AutoRechargeConfig | null>(
     () => autoRechargeCache.get(key)?.config ?? null,

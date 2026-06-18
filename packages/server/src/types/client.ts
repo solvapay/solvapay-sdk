@@ -141,16 +141,12 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
 export type PaymentMethodInfo =
   operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
 
-export type AutoRechargeStatus = 'active' | 'disabled' | 'failed' | 'completed' | 'pending_setup'
+export type AutoRechargeStatus = 'active' | 'disabled' | 'failed' | 'pending_setup'
 
 export type AutoRechargeConfig = {
   enabled: boolean
   trigger: { type: 'balance'; thresholdCredits: number }
-  topup:
-    | { mode: 'fixed'; amountMinor: number; currency: string }
-    | { mode: 'target'; targetCredits: number; currency: string }
-  maxRecharges?: number
-  rechargeCount: number
+  topup: { mode: 'fixed'; amountMinor: number; currency: string }
   fundingSourceType?: 'saved_card' | 'tokenized_card'
   paymentMethodId?: string
   status: AutoRechargeStatus
@@ -163,10 +159,7 @@ export type AutoRechargeInput = {
   enabled: boolean
   triggerType: 'balance'
   thresholdAmountMajor?: number
-  topupMode: 'fixed' | 'target'
   topupAmountMajor?: number
-  targetCredits?: number
-  maxRecharges?: number
   currency: string
 }
 

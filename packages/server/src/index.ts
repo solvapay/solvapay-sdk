@@ -224,6 +224,9 @@ export {
   getProductCore,
   isErrorResult,
   handleRouteError,
+  pollBalanceUntilIncreased,
+  BALANCE_RECONCILE_DELAYS_MS,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
 } from './helpers'
 export type {
   ErrorResult,

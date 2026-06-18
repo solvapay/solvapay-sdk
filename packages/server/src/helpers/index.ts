@@ -60,3 +60,10 @@ export type { PurchaseCheckResult } from './purchase'
 // Export usage tracking helpers
 export { trackUsageCore, getUsageCore } from './usage'
 export type { GetUsageResult } from './usage'
+
+// Export balance polling helpers
+export {
+  pollBalanceUntilIncreased,
+  BALANCE_RECONCILE_DELAYS_MS,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
+} from './balance-poll'

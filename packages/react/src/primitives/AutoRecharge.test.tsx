@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { AutoRecharge } from './AutoRecharge'
+import { AutoRecharge as AutoRechargeComponent } from '../components/AutoRecharge'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import type { AutoRechargeConfig } from '@solvapay/server'
 
@@ -10,7 +11,6 @@ const config: AutoRechargeConfig = {
   enabled: true,
   trigger: { type: 'balance', thresholdCredits: 500 },
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
-  rechargeCount: 0,
   status: 'active',
   failureCount: 0,
 }
@@ -81,6 +81,36 @@ function renderAutoRecharge(
   )
 }
 
+function renderModalAutoRecharge(
+  props: Partial<React.ComponentProps<typeof AutoRecharge.Root>> = {},
+) {
+  return render(
+    <SolvaPayProvider config={{}}>
+      <AutoRecharge.Root currency="USD" {...props}>
+        <AutoRecharge.Trigger />
+        <AutoRecharge.Content>
+          <AutoRecharge.Title />
+          <AutoRecharge.EnableQuestion />
+          <AutoRecharge.EnableRow />
+        <AutoRecharge.Fields>
+          <AutoRecharge.ThresholdField />
+          <AutoRecharge.TopupField />
+          <AutoRecharge.ValidationError />
+        </AutoRecharge.Fields>
+        <AutoRecharge.Actions>
+          <AutoRecharge.CancelButton />
+          <AutoRecharge.SaveButton />
+        </AutoRecharge.Actions>
+        </AutoRecharge.Content>
+      </AutoRecharge.Root>
+    </SolvaPayProvider>,
+  )
+}
+
+function openModal(): void {
+  fireEvent.click(screen.getByRole('button', { name: /set up auto-recharge|modify/i }))
+}
+
 function enableAutoRecharge(): void {
   fireEvent.click(screen.getByLabelText('Enable auto-recharge'))
 }
@@ -113,20 +143,6 @@ describe('AutoRecharge primitive', () => {
     expect(screen.getByLabelText('Fixed top-up amount')).toBeInTheDocument()
   })
 
-  it('switches fill title between fixed amount and fill to target', () => {
-    renderAutoRecharge()
-    enableAutoRecharge()
-    expect(screen.getByText('Add this amount')).toBeInTheDocument()
-    expect(screen.getByLabelText('Fixed top-up amount')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByLabelText('Switch to fill to target'))
-    expect(screen.getByText('Fill up to target')).toBeInTheDocument()
-    expect(screen.getByLabelText('Target credits')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByLabelText('Switch to fixed amount'))
-    expect(screen.getByText('Add this amount')).toBeInTheDocument()
-  })
-
   it('shows balance threshold summary with natural phrasing', () => {
     renderAutoRecharge({ currency: 'SEK' })
     enableAutoRecharge()
@@ -139,7 +155,7 @@ describe('AutoRecharge primitive', () => {
     renderAutoRecharge()
     enableAutoRecharge()
     fireEvent.change(screen.getByLabelText('Fixed top-up amount'), { target: { value: '0.01' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save automatic top-up' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     expect(autoRechargeMocks.save).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/minimum/i)
@@ -151,12 +167,11 @@ describe('AutoRecharge primitive', () => {
     renderAutoRecharge()
     enableAutoRecharge()
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save automatic top-up' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     })
     expect(autoRechargeMocks.save).toHaveBeenCalledWith(
       expect.objectContaining({
         enabled: true,
-        topupMode: 'fixed',
         thresholdAmountMajor: 5,
         topupAmountMajor: 10,
         currency: 'USD',
@@ -166,7 +181,17 @@ describe('AutoRecharge primitive', () => {
 
   it('shows disable button when config exists', () => {
     autoRechargeMocks.config = config
-    renderAutoRecharge()
+    renderAutoRecharge({}, (
+      <>
+        <AutoRecharge.Header />
+        <AutoRecharge.Body>
+          <AutoRecharge.Actions>
+            <AutoRecharge.SaveButton />
+            <AutoRecharge.DisableButton />
+          </AutoRecharge.Actions>
+        </AutoRecharge.Body>
+      </>
+    ))
     expect(screen.getByRole('button', { name: 'Disable automatic top-up' })).toBeInTheDocument()
   })
 
@@ -189,58 +214,10 @@ describe('AutoRecharge primitive', () => {
     fireEvent.click(screen.getByLabelText('Switch fixed top-up amount to credits'))
     fireEvent.change(screen.getByLabelText('Fixed top-up amount'), { target: { value: '100000' } })
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save automatic top-up' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     })
     expect(autoRechargeMocks.save).toHaveBeenCalledWith(
       expect.objectContaining({ topupAmountMajor: 10 }),
-    )
-  })
-
-  it('saves targetCredits when fill-to-target is entered in currency', async () => {
-    autoRechargeMocks.save.mockResolvedValue({ config })
-    renderAutoRecharge()
-    enableAutoRecharge()
-    fireEvent.click(screen.getByLabelText('Switch to fill to target'))
-    fireEvent.change(screen.getByLabelText('Target credits'), { target: { value: '10' } })
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save automatic top-up' }))
-    })
-    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
-      expect.objectContaining({ topupMode: 'target', targetCredits: 100_000 }),
-    )
-  })
-
-  it('keeps fill-to-target unit when switching between fixed and target modes', () => {
-    renderAutoRecharge()
-    enableAutoRecharge()
-    fireEvent.click(screen.getByLabelText('Switch to fill to target'))
-    fireEvent.click(screen.getByLabelText('Switch target balance to credits'))
-    expect(screen.getByLabelText('Switch target balance to currency')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByLabelText('Switch to fixed amount'))
-    fireEvent.click(screen.getByLabelText('Switch to fill to target'))
-
-    expect(screen.getByLabelText('Switch target balance to currency')).toBeInTheDocument()
-  })
-
-  it('defaults fill-to-target to currency like fixed amount', () => {
-    renderAutoRecharge()
-    enableAutoRecharge()
-    fireEvent.click(screen.getByLabelText('Switch to fill to target'))
-    expect(screen.getByLabelText('Switch target balance to credits')).toBeInTheDocument()
-  })
-
-  it('includes maxRecharges in save payload from advanced panel', async () => {
-    autoRechargeMocks.save.mockResolvedValue({ config })
-    renderAutoRecharge()
-    enableAutoRecharge()
-    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
-    fireEvent.change(screen.getByLabelText('Maximum recharges'), { target: { value: '3' } })
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save automatic top-up' }))
-    })
-    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
-      expect.objectContaining({ maxRecharges: 3 }),
     )
   })
 
@@ -253,7 +230,7 @@ describe('AutoRecharge primitive', () => {
     renderAutoRecharge()
     enableAutoRecharge()
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save automatic top-up' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     })
     expect(screen.getByTestId('stripe-elements')).toBeInTheDocument()
     expect(screen.getByTestId('payment-element')).toBeInTheDocument()
@@ -269,5 +246,77 @@ describe('AutoRecharge primitive', () => {
       </SolvaPayProvider>,
     )
     expect(screen.getByText('Pending card authorization')).toBeInTheDocument()
+  })
+})
+
+describe('AutoRecharge modal flow', () => {
+  it('opens dialog from trigger and shows settings title', () => {
+    renderModalAutoRecharge()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    openModal()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('Auto recharge settings')).toBeInTheDocument()
+  })
+
+  it('shows checkbox enable control and question in the dialog', () => {
+    renderModalAutoRecharge()
+    openModal()
+    expect(screen.getByText('Would you like to set up automatic recharge?')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Yes, automatically recharge my card when my credit balance falls below a threshold',
+      ),
+    ).toBeInTheDocument()
+    const checkbox = screen.getByLabelText('Enable auto-recharge')
+    expect(checkbox).toHaveAttribute('data-appearance', 'checkbox')
+    expect(checkbox).not.toBeChecked()
+    expect(screen.queryByLabelText('Balance threshold')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+  })
+
+  it('shows Cancel and Save settings buttons right-aligned in actions', () => {
+    renderModalAutoRecharge()
+    openModal()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+    enableAutoRecharge()
+    expect(screen.getByRole('button', { name: 'Save settings' })).toBeInTheDocument()
+  })
+
+  it('closes dialog on Cancel without saving', async () => {
+    renderModalAutoRecharge()
+    openModal()
+    enableAutoRecharge()
+    fireEvent.change(screen.getByLabelText('Fixed top-up amount'), { target: { value: '99' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    expect(autoRechargeMocks.save).not.toHaveBeenCalled()
+    openModal()
+    enableAutoRecharge()
+    expect(screen.getByLabelText('Fixed top-up amount')).toHaveValue('10')
+  })
+
+  it('closes dialog after successful save', async () => {
+    autoRechargeMocks.save.mockResolvedValue({ config })
+    renderModalAutoRecharge()
+    openModal()
+    enableAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows Modify trigger when config exists', () => {
+    autoRechargeMocks.config = config
+    render(
+      <SolvaPayProvider config={{}}>
+        <AutoRechargeComponent currency="USD" />
+      </SolvaPayProvider>,
+    )
+    expect(screen.getByRole('button', { name: 'Modify' })).toBeInTheDocument()
   })
 })

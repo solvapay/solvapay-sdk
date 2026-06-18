@@ -266,6 +266,11 @@ export interface BalanceStatus {
   creditsPerMinorUnit: number | null
   displayExchangeRate: number | null
   refetch: () => Promise<void>
+  /**
+   * Optimistically adjusts the in-memory balance. When an active cached
+   * auto-recharge config is crossed, the provider reconciles asynchronously
+   * until the backend balance reflects the recharge credit.
+   */
   adjustBalance: (credits: number) => void
 }
 

@@ -23,7 +23,6 @@ describe('createDefaultAutoRechargeForm', () => {
     expect(form.enabled).toBe(false)
     expect(form.thresholdAmountMajor).toBe('5')
     expect(form.topupAmountMajor).toBe('10')
-    expect(form.topupMode).toBe('fixed')
   })
 
   it('should use defaultTopupMajor for threshold and topup when provided', () => {
@@ -59,19 +58,6 @@ describe('validateAutoRechargeForm unit conversion', () => {
     }
   })
 
-  it('converts target entered in currency to credits for payload', () => {
-    const form = enabledForm({
-      topupMode: 'target',
-      targetUnit: 'currency',
-      targetCredits: '10',
-    })
-    const result = validateAutoRechargeForm(form, 'USD', conversion)
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.payload.targetCredits).toBe(100_000)
-    }
-  })
-
   it('rejects fixed top-up below minimum charge', () => {
     const form = enabledForm({ topupAmountMajor: '0.01' })
     const result = validateAutoRechargeForm(form, 'USD', conversion)
@@ -97,7 +83,6 @@ describe('configToForm', () => {
       enabled: true,
       trigger: { type: 'balance', thresholdCredits: 500 },
       topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
-      rechargeCount: 1,
       status: 'active',
       failureCount: 0,
     }
@@ -105,21 +90,6 @@ describe('configToForm', () => {
     expect(form.enabled).toBe(true)
     expect(form.thresholdAmountMajor).toBe('5')
     expect(form.topupAmountMajor).toBe('10')
-    expect(form.topupMode).toBe('fixed')
-  })
-
-  it('maps target-mode config to form state', () => {
-    const config: AutoRechargeConfig = {
-      enabled: true,
-      trigger: { type: 'balance', thresholdCredits: 500 },
-      topup: { mode: 'target', targetCredits: 50_000, currency: 'USD' },
-      rechargeCount: 0,
-      status: 'active',
-      failureCount: 0,
-    }
-    const form = configToForm(config, 'USD')
-    expect(form.topupMode).toBe('target')
-    expect(form.targetCredits).toBe('50000')
   })
 })
 

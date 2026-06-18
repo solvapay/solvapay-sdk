@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
+import { BALANCE_RECONCILE_DELAYS_MS } from '@solvapay/server'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { useSolvaPay } from '../hooks/useSolvaPay'
+import { autoRechargeCache } from '../hooks/useAutoRecharge'
 
 const mockAdapter = {
   getToken: vi.fn().mockResolvedValue('test-token'),
@@ -34,6 +36,7 @@ describe('SolvaPayProvider - balance (credits)', () => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
     localStorage.clear()
+    autoRechargeCache.clear()
 
     fetchSpy = vi.fn().mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('customer-balance')) {
@@ -59,6 +62,7 @@ describe('SolvaPayProvider - balance (credits)', () => {
   })
 
   afterEach(() => {
+    autoRechargeCache.clear()
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })
@@ -206,5 +210,120 @@ describe('SolvaPayProvider - balance (credits)', () => {
 
     expect(result.current.balance.credits).toBe(500000)
     expect(result.current.balance.displayCurrency).toBe('USD')
+  })
+
+  it('polls balance until credits increase when debit drops below auto-recharge threshold', async () => {
+    let balanceFetchCount = 0
+    fetchSpy.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('customer-balance')) {
+        balanceFetchCount += 1
+        if (balanceFetchCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credits: 1000, displayCurrency: 'USD' }),
+          })
+        }
+        if (balanceFetchCount <= 3) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credits: 400, displayCurrency: 'USD' }),
+          })
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ credits: 10_000, displayCurrency: 'USD' }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ customerRef: 'cus_auto', purchases: [] }),
+      })
+    })
+
+    autoRechargeCache.set('/api/auto-recharge', {
+      config: {
+        enabled: true,
+        status: 'active',
+        trigger: { type: 'balance', thresholdCredits: 500 },
+        topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
+        failureCount: 0,
+      },
+      promise: null,
+      timestamp: Date.now(),
+    })
+
+    const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(result.current.customerRef).toBe('cus_auto')
+    })
+
+    await act(async () => {
+      await result.current.balance.refetch()
+    })
+    expect(result.current.balance.credits).toBe(1000)
+
+    act(() => {
+      result.current.balance.adjustBalance(-600)
+    })
+    expect(result.current.balance.credits).toBe(400)
+
+    await act(async () => {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+        await vi.advanceTimersByTimeAsync(delay)
+      }
+    })
+
+    expect(getBalanceCalls().length).toBeGreaterThan(3)
+
+    await waitFor(() => {
+      expect(result.current.balance.credits).toBe(10_000)
+    })
+  })
+
+  it('does not start extended reconcile when auto-recharge is not cached/active', async () => {
+    fetchSpy.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('customer-balance')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ credits: 1000, displayCurrency: 'USD' }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ customerRef: 'cus_auto', purchases: [] }),
+      })
+    })
+
+    const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(result.current.customerRef).toBe('cus_auto')
+    })
+
+    await act(async () => {
+      await result.current.balance.refetch()
+    })
+    const callsBeforeAdjust = getBalanceCalls().length
+
+    act(() => {
+      result.current.balance.adjustBalance(-600)
+    })
+    expect(result.current.balance.credits).toBe(400)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8500)
+    })
+
+    await waitFor(() => {
+      expect(getBalanceCalls().length).toBe(callsBeforeAdjust + 1)
+    })
+    expect(result.current.balance.credits).toBe(1000)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(32_000)
+    })
+
+    expect(getBalanceCalls().length).toBe(callsBeforeAdjust + 1)
   })
 })

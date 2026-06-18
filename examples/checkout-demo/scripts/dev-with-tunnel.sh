@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_NGROK_CONFIG="$APP_ROOT/../../../solvapay-backend/ngrok.yml"
+NEXT_BIN="$APP_ROOT/node_modules/.bin/next"
 
 cleanup() {
   if [[ -n "${NEXT_PID:-}" ]]; then
@@ -17,6 +18,8 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+cd "$APP_ROOT"
+
 if ! command -v ngrok >/dev/null 2>&1; then
   echo "ngrok is required to expose checkout-demo. Install it with: brew install ngrok" >&2
   exit 1
@@ -27,29 +30,61 @@ if [[ ! -f "$BACKEND_NGROK_CONFIG" ]]; then
   exit 1
 fi
 
-if [[ -f "$APP_ROOT/.env.local" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "$APP_ROOT/.env.local"
-  set +a
+if [[ ! -x "$NEXT_BIN" ]]; then
+  echo "Missing Next.js binary at: $NEXT_BIN" >&2
+  echo "Run pnpm install (or npm install) in examples/checkout-demo first." >&2
+  exit 1
 fi
+
+load_env_file() {
+  local env_file="$1"
+  if [[ -f "$env_file" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+  fi
+}
+
+load_env_file "$APP_ROOT/.env"
+load_env_file "$APP_ROOT/.env.local"
 
 CHECKOUT_DEMO_NGROK_URL="${CHECKOUT_DEMO_NGROK_URL:-}"
 if [[ -z "$CHECKOUT_DEMO_NGROK_URL" ]]; then
   echo "Missing CHECKOUT_DEMO_NGROK_URL." >&2
-  echo "Set it in examples/checkout-demo/.env.local, for example:" >&2
+  echo "Set it in examples/checkout-demo/.env or .env.local, for example:" >&2
   echo "  CHECKOUT_DEMO_NGROK_URL=https://checkout-<your-subdomain>.ngrok.app" >&2
+  echo "  CHECKOUT_DEMO_NGROK_HOST=checkout-<your-subdomain>.ngrok.app" >&2
   exit 1
 fi
 
+if [[ -z "${CHECKOUT_DEMO_NGROK_HOST:-}" ]]; then
+  CHECKOUT_DEMO_NGROK_HOST="${CHECKOUT_DEMO_NGROK_URL#https://}"
+  CHECKOUT_DEMO_NGROK_HOST="${CHECKOUT_DEMO_NGROK_HOST#http://}"
+  CHECKOUT_DEMO_NGROK_HOST="${CHECKOUT_DEMO_NGROK_HOST%%/*}"
+  export CHECKOUT_DEMO_NGROK_HOST
+fi
+
 echo "Starting checkout-demo on http://localhost:3010"
-NODE_OPTIONS='--disable-warning=DEP0205' next dev --port 3010 &
+NODE_OPTIONS='--max-old-space-size=4096 --disable-warning=DEP0205' "$NEXT_BIN" dev --port 3010 &
 NEXT_PID=$!
 
 echo "Starting checkout-demo tunnel at $CHECKOUT_DEMO_NGROK_URL"
 ngrok http 3010 --config "$BACKEND_NGROK_CONFIG" --url "$CHECKOUT_DEMO_NGROK_URL" &
 NGROK_PID=$!
 
-while kill -0 "$NEXT_PID" 2>/dev/null && kill -0 "$NGROK_PID" 2>/dev/null; do
+while true; do
+  if ! kill -0 "$NEXT_PID" 2>/dev/null; then
+    echo "Next.js exited unexpectedly." >&2
+    wait "$NEXT_PID" 2>/dev/null || true
+    exit 1
+  fi
+
+  if ! kill -0 "$NGROK_PID" 2>/dev/null; then
+    echo "ngrok exited unexpectedly. Check your ngrok auth token and reserved domain." >&2
+    wait "$NGROK_PID" 2>/dev/null || true
+    exit 1
+  fi
+
   sleep 1
 done

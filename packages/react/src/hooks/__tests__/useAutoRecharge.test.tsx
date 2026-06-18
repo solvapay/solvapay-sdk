@@ -9,7 +9,6 @@ const config: AutoRechargeConfig = {
   enabled: true,
   trigger: { type: 'balance', thresholdCredits: 500 },
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
-  rechargeCount: 0,
   fundingSourceType: 'saved_card',
   paymentMethodId: 'pm_123',
   status: 'active',
@@ -66,7 +65,6 @@ describe('useAutoRecharge', () => {
         enabled: true,
         triggerType: 'balance',
         thresholdAmountMajor: 5,
-        topupMode: 'fixed',
         topupAmountMajor: 10,
         currency: 'USD',
       })

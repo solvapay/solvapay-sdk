@@ -105,19 +105,19 @@ export interface SolvaPayCopy {
   autoRecharge: {
     heading: string
     description: string
+    settingsHeading: string
+    setupTriggerLabel: string
+    modifyTriggerLabel: string
+    notConfiguredHint: string
     enableLabel: string
+    enableQuestion: string
+    enableSentence: string
     thresholdLabel: string
     thresholdAriaLabel: string
     fixedAmountLabel: string
-    targetAmountLabel: string
     fixedAmountAriaLabel: string
-    targetAmountAriaLabel: string
-    switchToTarget: string
-    switchToFixed: string
-    advancedLabel: string
-    maxRechargesLabel: string
-    maxRechargesAriaLabel: string
     saveButton: string
+    cancelButton: string
     disableButton: string
     savedMessage: string
     disabledMessage: string
@@ -132,7 +132,6 @@ export interface SolvaPayCopy {
     currencyPerRechargeApprox: string
     statusPendingSetup: string
     statusFailed: string
-    statusCompleted: string
   }
   activationFlow: {
     heading: string

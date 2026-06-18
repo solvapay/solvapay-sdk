@@ -3,8 +3,9 @@
 /**
  * Default-tree shim over the `AutoRecharge` primitive.
  *
- * Renders the golden-path auto-recharge panel consumers expect in drop-in
- * usage. For full control, compose `@solvapay/react/primitives` directly.
+ * Renders a summary card with a trigger that opens a modal dialog for
+ * configuring automatic credit top-up. For full control, compose
+ * `@solvapay/react/primitives` directly.
  */
 
 import React from 'react'
@@ -43,22 +44,29 @@ export function AutoRecharge({
       className={rootClass}
     >
       <Primitive.Loading className="solvapay-auto-recharge-loading" />
-      <Primitive.Header className="solvapay-auto-recharge-header" />
-      <Primitive.Body className="solvapay-auto-recharge-body">
-        <Primitive.Summary className="solvapay-auto-recharge-summary" />
-        <Primitive.ThresholdField />
-        <Primitive.TopupField className="solvapay-auto-recharge-topup-field" />
-        <Primitive.AdvancedToggle className="solvapay-auto-recharge-advanced-toggle" />
-        <Primitive.AdvancedPanel className="solvapay-auto-recharge-advanced" />
-        <Primitive.ValidationError className="solvapay-auto-recharge-validation-error" />
-        <Primitive.Actions className="solvapay-auto-recharge-actions">
-          <Primitive.SaveButton className="solvapay-auto-recharge-save" />
-          <Primitive.DisableButton className="solvapay-auto-recharge-disable" />
-        </Primitive.Actions>
-      </Primitive.Body>
-      <Primitive.Status className="solvapay-auto-recharge-status" />
+      <Primitive.Card className="solvapay-auto-recharge-card">
+        <Primitive.CardHeading className="solvapay-auto-recharge-card-heading" />
+        <Primitive.CardSummary className="solvapay-auto-recharge-card-summary" />
+        <Primitive.Status className="solvapay-auto-recharge-status" />
+        <Primitive.Trigger className="solvapay-auto-recharge-trigger" />
+      </Primitive.Card>
       <Primitive.Error className="solvapay-auto-recharge-error" />
-      <Primitive.StatusMessage className="solvapay-auto-recharge-status-message" />
+      <Primitive.Content className="solvapay-auto-recharge-content">
+        <Primitive.Title className="solvapay-auto-recharge-title" />
+        <Primitive.EnableQuestion className="solvapay-auto-recharge-question" />
+        <Primitive.EnableRow className="solvapay-auto-recharge-enable-row" />
+        <Primitive.Fields className="solvapay-auto-recharge-fields">
+          <Primitive.ThresholdField />
+          <Primitive.TopupField className="solvapay-auto-recharge-topup-field" />
+          <Primitive.ValidationError className="solvapay-auto-recharge-validation-error" />
+        </Primitive.Fields>
+        <Primitive.Setup />
+        <Primitive.Actions className="solvapay-auto-recharge-actions">
+          <Primitive.CancelButton className="solvapay-auto-recharge-cancel" />
+          <Primitive.SaveButton className="solvapay-auto-recharge-save" />
+        </Primitive.Actions>
+        <Primitive.StatusMessage className="solvapay-auto-recharge-status-message" />
+      </Primitive.Content>
     </Primitive.Root>
   )
 }

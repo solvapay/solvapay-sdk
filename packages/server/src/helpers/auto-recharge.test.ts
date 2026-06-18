@@ -54,7 +54,6 @@ describe('auto-recharge helpers', () => {
       enabled: true,
       triggerType: 'balance' as const,
       thresholdAmountMajor: 5,
-      topupMode: 'fixed' as const,
       topupAmountMajor: 10,
       currency: 'USD',
     }

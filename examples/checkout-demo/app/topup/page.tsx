@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AutoRecharge, LaunchCustomerPortalButton, useBalance } from '@solvapay/react'
+import { AutoRecharge, useBalance } from '@solvapay/react'
 import { AmountPicker } from '@solvapay/react/primitives'
+import { estimateTopupCredits } from '../lib/credit-display'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
@@ -17,7 +18,13 @@ export default function TopupPage() {
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
     if (amountCents) {
-      adjustBalance(amountCents * (creditsPerMinorUnit ?? 100))
+      adjustBalance(
+        estimateTopupCredits({
+          amountCents,
+          creditsPerMinorUnit,
+          displayExchangeRate,
+        }),
+      )
     }
   }
 
@@ -27,23 +34,23 @@ export default function TopupPage() {
   }
 
   const handleBack = () => {
-    // Reset both states: AmountPicker's selection resets on remount, so the
-    // parent `amount` must clear too or the "Continue" button stays enabled
-    // with a stale, visually-unselected amount.
     setAmount(null)
     setAmountCents(null)
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto px-6 py-12">
+    <main className="min-h-screen bg-white">
+      <section className="max-w-2xl mx-auto px-6 py-12">
         <Link href="/" className="text-slate-600 hover:text-slate-900 mb-8 inline-block">
           ← Back
         </Link>
 
         {paymentFailed ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+            <p
+              className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center"
+              aria-hidden="true"
+            >
               <svg
                 className="w-6 h-6 text-red-600"
                 fill="none"
@@ -57,12 +64,13 @@ export default function TopupPage() {
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-            </div>
+            </p>
             <h2 className="text-xl font-semibold text-slate-900 mb-2">Top-up failed</h2>
             <p className="text-slate-600 mb-6">
               Something went wrong processing your payment. Please try again.
             </p>
             <button
+              type="button"
               onClick={() => {
                 setPaymentFailed(false)
                 setAmount(null)
@@ -72,10 +80,13 @@ export default function TopupPage() {
             >
               Try Again
             </button>
-          </div>
+          </section>
         ) : paymentSuccess ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+            <p
+              className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center"
+              aria-hidden="true"
+            >
               <svg
                 className="w-6 h-6 text-emerald-600"
                 fill="none"
@@ -89,7 +100,7 @@ export default function TopupPage() {
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-            </div>
+            </p>
             <h2 className="text-xl font-semibold text-slate-900 mb-2">Top-up successful!</h2>
             <p className="text-slate-600 mb-6">Your credits have been added to your account.</p>
             <Link
@@ -98,28 +109,30 @@ export default function TopupPage() {
             >
               Back to Dashboard
             </Link>
-          </div>
+          </section>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <header className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            <header className="mb-8">
               <h2 className="text-xl font-semibold text-slate-900">Top up credits</h2>
-              <LaunchCustomerPortalButton
-                tab="account"
-                className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
-              >
-                Manage auto top-up
-              </LaunchCustomerPortalButton>
             </header>
 
             {amountCents === null ? (
-              <div className="space-y-6">
+              <section className="space-y-6">
                 <AmountPicker.Root currency={currency} onChange={setAmount}>
-                  <div className="grid grid-cols-4 gap-2">
-                    <AmountPicker.Option amount={10} />
-                    <AmountPicker.Option amount={50} />
-                    <AmountPicker.Option amount={100} />
-                    <AmountPicker.Option amount={500} />
-                  </div>
+                  <menu className="grid grid-cols-4 gap-2 list-none p-0 m-0">
+                    <li>
+                      <AmountPicker.Option amount={10} />
+                    </li>
+                    <li>
+                      <AmountPicker.Option amount={50} />
+                    </li>
+                    <li>
+                      <AmountPicker.Option amount={100} />
+                    </li>
+                    <li>
+                      <AmountPicker.Option amount={500} />
+                    </li>
+                  </menu>
                   <AmountPicker.Custom className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base" />
                 </AmountPicker.Root>
                 <button
@@ -133,7 +146,7 @@ export default function TopupPage() {
                   Continue to payment
                 </button>
                 <AutoRecharge currency={currency} />
-              </div>
+              </section>
             ) : (
               <StyledTopupForm
                 amountCents={amountCents}
@@ -145,9 +158,9 @@ export default function TopupPage() {
                 onBack={handleBack}
               />
             )}
-          </div>
+          </section>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }
