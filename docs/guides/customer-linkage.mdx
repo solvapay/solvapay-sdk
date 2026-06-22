@@ -46,14 +46,14 @@ await solvaPay.trackUsage({
 
 ## The `externalRef` contract
 
-| Rule | Detail |
-| --- | --- |
-| **Stable** | Use an identifier that does not change for the lifetime of the user (IdP `sub`, internal UUID, etc.). Do not use email alone. |
-| **Deterministic** | The same user must always map to the same `externalRef`. |
-| **IdP-agnostic** | Any string your backend controls is valid. Auth0 `sub` is a common choice, not a requirement. |
-| **Provider-scoped** | `externalRef` is unique per SolvaPay provider (your account), not globally. |
-| **Server-only linkage** | Call `ensureCustomer` from code that holds `sk_*`. Never send IdP access tokens to SolvaPay. |
-| **Secret key stays server-side** | `sk_*` never belongs in a CLI, browser, or mobile app. |
+| Rule                             | Detail                                                                                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Stable**                       | Use an identifier that does not change for the lifetime of the user (IdP `sub`, internal UUID, etc.). Do not use email alone. |
+| **Deterministic**                | The same user must always map to the same `externalRef`.                                                                      |
+| **IdP-agnostic**                 | Any string your backend controls is valid. Auth0 `sub` is a common choice, not a requirement.                                 |
+| **Provider-scoped**              | `externalRef` is unique per SolvaPay provider (your account), not globally.                                                   |
+| **Server-only linkage**          | Call `ensureCustomer` from code that holds `sk_*`. Never send IdP access tokens to SolvaPay.                                  |
+| **Secret key stays server-side** | `sk_*` never belongs in a CLI, browser, or mobile app.                                                                        |
 
 ### REST equivalent
 
