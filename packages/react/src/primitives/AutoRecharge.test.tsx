@@ -254,7 +254,7 @@ describe('AutoRecharge primitive', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     })
     expect(autoRechargeMocks.save).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: true, topupAmountMajor: 10 }),
+      expect.objectContaining({ enabled: true, topupAmountMajor: 10, deferSetupIntent: true }),
     )
     expect(onPendingConfig).toHaveBeenCalledWith(
       expect.objectContaining({ enabled: true, topupAmountMajor: 10 }),

@@ -175,6 +175,7 @@ export type {
   AutoRechargeDisplayBlock,
   CreditDisplayBlock,
   AutoRechargeInput,
+  SaveAutoRechargeInput,
   AutoRechargeResponse,
   SaveAutoRechargeResponse,
   McpBootstrapRequest,

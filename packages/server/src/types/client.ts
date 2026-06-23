@@ -182,11 +182,18 @@ export type AutoRechargeInput = {
   triggerType: 'balance'
   thresholdAmountMajor?: number
   topupAmountMajor?: number
+  maxRecharges?: number
   currency: string
+}
+
+/** PUT /sdk/auto-recharge — input plus request-only flags. */
+export type SaveAutoRechargeInput = AutoRechargeInput & {
+  deferSetupIntent?: boolean
 }
 
 export type AutoRechargeResponse = {
   config: AutoRechargeConfig | null
+  display?: AutoRechargeDisplayBlock
 }
 
 export type SaveAutoRechargeResponse = {
@@ -510,7 +517,7 @@ export interface SolvaPayClient {
 
   // PUT: /v1/sdk/auto-recharge
   saveAutoRecharge?(
-    params: AutoRechargeInput & { customerRef: string },
+    params: SaveAutoRechargeInput & { customerRef: string },
   ): Promise<SaveAutoRechargeResponse>
 
   // DELETE: /v1/sdk/auto-recharge?customerRef=...

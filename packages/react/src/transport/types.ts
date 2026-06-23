@@ -27,6 +27,7 @@ import type {
   TopupProcessResult,
   PaymentMethodInfo,
   AutoRechargeInput,
+  SaveAutoRechargeInput,
   AutoRechargeResponse,
   SaveAutoRechargeResponse,
 } from '@solvapay/server'
@@ -126,7 +127,7 @@ export interface SolvaPayTransport {
    */
   getPaymentMethod?: () => Promise<PaymentMethodInfo>
   getAutoRecharge?: () => Promise<AutoRechargeResponse>
-  saveAutoRecharge?: (input: AutoRechargeInput) => Promise<SaveAutoRechargeResponse>
+  saveAutoRecharge?: (input: SaveAutoRechargeInput) => Promise<SaveAutoRechargeResponse>
   disableAutoRecharge?: () => Promise<{ success: true }>
   /**
    * Optional: fetch the authenticated customer's usage snapshot for the

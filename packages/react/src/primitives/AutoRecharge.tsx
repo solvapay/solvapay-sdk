@@ -307,7 +307,9 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     const payload = emitValidation(form)
     if (!payload) return
 
-    const result = await autoRecharge.save(payload)
+    const saveInput = deferCardSetup ? { ...payload, deferSetupIntent: true } : payload
+
+    const result = await autoRecharge.save(saveInput)
     if (result.setupClientSecret) {
       setSetup(result)
       setStatusMessage(copy.autoRecharge.setupRequiredMessage)

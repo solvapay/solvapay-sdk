@@ -1,21 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { AutoRechargeInput } from '@solvapay/server'
-import { AutoRecharge, useAutoRecharge, useBalance } from '@solvapay/react'
+import { AutoRecharge, configToAutoRechargeInput, useAutoRecharge, useBalance } from '@solvapay/react'
 import { AmountPicker } from '@solvapay/react/primitives'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
   const { refetch, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
-  const { refresh: refreshAutoRecharge } = useAutoRecharge()
+  const { config: savedAutoRechargeConfig, refresh: refreshAutoRecharge } = useAutoRecharge()
   const currency = displayCurrency || 'USD'
   const [amount, setAmount] = useState<number | null>(null)
   const [amountCents, setAmountCents] = useState<number | null>(null)
   const [pendingAutoRecharge, setPendingAutoRecharge] = useState<AutoRechargeInput | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [paymentFailed, setPaymentFailed] = useState(false)
+
+  const paymentAutoRecharge = useMemo((): AutoRechargeInput | undefined => {
+    if (pendingAutoRecharge) return pendingAutoRecharge
+    if (!savedAutoRechargeConfig?.enabled) return undefined
+    return (
+      configToAutoRechargeInput(savedAutoRechargeConfig, {
+        currency,
+        conversion: { creditsPerMinorUnit, displayExchangeRate },
+      }) ?? undefined
+    )
+  }, [
+    pendingAutoRecharge,
+    savedAutoRechargeConfig,
+    currency,
+    creditsPerMinorUnit,
+    displayExchangeRate,
+  ])
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
@@ -150,7 +167,7 @@ export default function TopupPage() {
               <StyledTopupForm
                 amountCents={amountCents}
                 currency={currency}
-                autoRecharge={pendingAutoRecharge ?? undefined}
+                autoRecharge={paymentAutoRecharge}
                 creditsPerMinorUnit={creditsPerMinorUnit}
                 displayExchangeRate={displayExchangeRate}
                 onSuccess={handlePaymentSuccess}

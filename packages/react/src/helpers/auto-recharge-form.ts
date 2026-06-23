@@ -1,4 +1,8 @@
-import type { AutoRechargeConfig, AutoRechargeInput } from '@solvapay/server'
+import type {
+  AutoRechargeConfig,
+  AutoRechargeDisplayBlock,
+  AutoRechargeInput,
+} from '@solvapay/server'
 import { formatPrice, getMinorUnitsPerMajor } from '../utils/format'
 import { estimateCredits, estimateCurrencyMajorFromCredits } from '../utils/credit-estimation'
 
@@ -122,6 +126,56 @@ export function validateAutoRechargeForm(
   payload.topupAmountMajor = amountMajor
 
   return { ok: true, payload }
+}
+
+/** Map a persisted config back to a payment-intent auto-recharge payload. */
+export function configToAutoRechargeInput(
+  config: AutoRechargeConfig,
+  options?: {
+    display?: AutoRechargeDisplayBlock | null
+    currency?: string
+    conversion?: AutoRechargeConversionContext
+  },
+): AutoRechargeInput | null {
+  if (!config.enabled) return null
+
+  const display = options?.display ?? config.display
+  const currency = (
+    display?.currency ??
+    config.topup.currency ??
+    options?.currency ??
+    'USD'
+  ).toUpperCase()
+
+  if (display?.thresholdAmountMajor != null && display.topupAmountMajor != null) {
+    return {
+      enabled: true,
+      triggerType: 'balance',
+      thresholdAmountMajor: display.thresholdAmountMajor,
+      topupAmountMajor: display.topupAmountMajor,
+      currency,
+    }
+  }
+
+  const thresholdMajor = estimateCurrencyMajorFromCredits(
+    config.trigger.thresholdCredits,
+    currency,
+    options?.conversion?.creditsPerMinorUnit,
+    options?.conversion?.displayExchangeRate,
+  )
+  const topupAmountMajor = config.topup.amountMinor / getMinorUnitsPerMajor(currency)
+
+  if (thresholdMajor == null || !Number.isFinite(topupAmountMajor) || topupAmountMajor <= 0) {
+    return null
+  }
+
+  return {
+    enabled: true,
+    triggerType: 'balance',
+    thresholdAmountMajor: Math.max(0, thresholdMajor),
+    topupAmountMajor,
+    currency,
+  }
 }
 
 export function configToForm(

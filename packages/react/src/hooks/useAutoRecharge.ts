@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type {
   AutoRechargeConfig,
   AutoRechargeInput,
+  SaveAutoRechargeInput,
   SaveAutoRechargeResponse,
 } from '@solvapay/server'
 import { useSolvaPay } from './useSolvaPay'
@@ -16,7 +17,7 @@ export type UseAutoRechargeReturn = {
   disabling: boolean
   error: Error | null
   refresh: (force?: boolean) => Promise<void>
-  save: (input: AutoRechargeInput) => Promise<SaveAutoRechargeResponse>
+  save: (input: SaveAutoRechargeInput) => Promise<SaveAutoRechargeResponse>
   disable: () => Promise<{ success: true }>
 }
 
@@ -29,7 +30,8 @@ async function fetchAutoRecharge(
   const transport = config?.transport ?? createHttpTransport(config)
   if (!transport.getAutoRecharge) return null
   const response = await transport.getAutoRecharge()
-  return response.config
+  if (!response.config) return null
+  return response.display ? { ...response.config, display: response.display } : response.config
 }
 
 export function useAutoRecharge(): UseAutoRechargeReturn {
@@ -109,7 +111,7 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
   )
 
   const save = useCallback(
-    async (input: AutoRechargeInput) => {
+    async (input: SaveAutoRechargeInput) => {
       const transport = _config?.transport ?? createHttpTransport(_config)
       if (!transport.saveAutoRecharge) {
         throw new Error('saveAutoRecharge is not available on this transport')
