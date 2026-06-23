@@ -1553,7 +1553,6 @@
   font-size: 0.875rem;
   color: var(--solvapay-muted-foreground);
 }
-
 [data-solvapay-auto-recharge-status] {
   display: inline-flex;
   align-items: center;
@@ -1561,11 +1560,6 @@
   font-weight: 500;
   padding: 0.25rem 0.5rem;
   border-radius: calc(var(--solvapay-radius) - 2px);
-}
-
-[data-solvapay-auto-recharge-status][data-status='pending_setup'] {
-  color: hsl(32 95% 30%);
-  background: color-mix(in srgb, var(--solvapay-warning) 18%, transparent);
 }
 
 [data-solvapay-auto-recharge-status][data-status='failed'] {

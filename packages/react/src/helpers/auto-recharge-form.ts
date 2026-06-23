@@ -172,6 +172,42 @@ export function buildSummaryLine(
   return `When my balance falls below ${thresholdDisplay}, add ${fixedDisplay}.`
 }
 
+export function payloadToForm(
+  payload: AutoRechargeInputPayload,
+  currency: string,
+): AutoRechargeFormState {
+  const base = createDefaultAutoRechargeForm(currency)
+  if (!payload.enabled) {
+    return { ...base, enabled: false }
+  }
+  return {
+    ...base,
+    enabled: true,
+    thresholdAmountMajor: String(payload.thresholdAmountMajor ?? base.thresholdAmountMajor),
+    thresholdUnit: 'currency',
+    topupAmountMajor: String(payload.topupAmountMajor ?? base.topupAmountMajor),
+    topupUnit: 'currency',
+  }
+}
+
+export function buildSummaryLineFromPayload(
+  payload: AutoRechargeInputPayload,
+  currency: string,
+): string | null {
+  if (!payload.enabled) return null
+  const thresholdDisplay = formatAmountWithUnit(
+    String(payload.thresholdAmountMajor ?? 0),
+    'currency',
+    currency,
+  )
+  const fixedDisplay = formatAmountWithUnit(
+    String(payload.topupAmountMajor ?? 0),
+    'currency',
+    currency,
+  )
+  return `When my balance falls below ${thresholdDisplay}, add ${fixedDisplay}.`
+}
+
 export function convertAmountForUnitFlip(
   value: string,
   fromUnit: AmountInputUnit,

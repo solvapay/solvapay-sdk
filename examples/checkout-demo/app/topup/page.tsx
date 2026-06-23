@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import type { AutoRechargeInput } from '@solvapay/server'
-import { AutoRecharge, useBalance } from '@solvapay/react'
+import { AutoRecharge, useAutoRecharge, useBalance } from '@solvapay/react'
 import { AmountPicker } from '@solvapay/react/primitives'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
   const { refetch, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
+  const { refresh: refreshAutoRecharge } = useAutoRecharge()
   const currency = displayCurrency || 'USD'
   const [amount, setAmount] = useState<number | null>(null)
   const [amountCents, setAmountCents] = useState<number | null>(null)
@@ -19,6 +20,7 @@ export default function TopupPage() {
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
     void refetch()
+    void refreshAutoRecharge(true)
   }
 
   const handlePaymentError = (err: Error) => {

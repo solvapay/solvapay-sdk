@@ -138,7 +138,6 @@ export const enCopy: SolvaPayCopy = {
     cancelButton: 'Cancel',
     disableButton: 'Disable automatic top-up',
     savedMessage: 'Automatic top-up settings saved.',
-    stagedMessage: 'Automatic top-up settings staged — complete payment to activate.',
     disabledMessage: 'Automatic top-ups disabled.',
     setupRequiredMessage: 'Confirm your card to activate automatic top-ups.',
     setupHeading: 'Authorize card',
@@ -150,7 +149,6 @@ export const enCopy: SolvaPayCopy = {
     creditsPerRechargeApprox: '~ {credits} credits per recharge',
     currencyPerRecharge: '≈ {amount} per recharge',
     currencyPerRechargeApprox: '~ {amount} per recharge',
-    statusPendingSetup: 'Pending card authorization',
     statusFailed: 'Payment failed — update your card to resume',
   },
   activationFlow: {

@@ -72,6 +72,7 @@ type AutoRechargeContextValue = {
   isApproximate: boolean
   summaryLine: string | null
   savedSummaryLine: string | null
+  deferCardSetup: boolean
   fixedTopupHint: string | null
   open: boolean
   setOpen: (next: boolean) => void
@@ -306,16 +307,6 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     const payload = emitValidation(form)
     if (!payload) return
 
-    if (deferCardSetup) {
-      await onPendingConfig?.(payload)
-      setSetup(null)
-      setStatusMessage(
-        payload.enabled ? copy.autoRecharge.savedMessage : copy.autoRecharge.disabledMessage,
-      )
-      setOpen(false)
-      return
-    }
-
     const result = await autoRecharge.save(payload)
     if (result.setupClientSecret) {
       setSetup(result)
@@ -324,6 +315,9 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
       return
     }
     setSetup(null)
+    if (deferCardSetup) {
+      await onPendingConfig?.(payload)
+    }
     setStatusMessage(
       payload.enabled ? copy.autoRecharge.savedMessage : copy.autoRecharge.disabledMessage,
     )
@@ -390,6 +384,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
       isApproximate,
       summaryLine,
       savedSummaryLine,
+      deferCardSetup,
       fixedTopupHint:
         fixedTopupHint && 'credits' in fixedTopupHint
           ? String(fixedTopupHint.credits)
@@ -430,6 +425,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
       isApproximate,
       summaryLine,
       savedSummaryLine,
+      deferCardSetup,
       fixedTopupHint,
       open,
       setOpen,
@@ -481,7 +477,12 @@ const Card = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function
   forwardedRef,
 ) {
   return (
-    <section ref={forwardedRef} className={className} data-solvapay-auto-recharge-card="" {...rest}>
+    <section
+      ref={forwardedRef}
+      className={className}
+      data-solvapay-auto-recharge-card=""
+      {...rest}
+    >
       {children}
     </section>
   )
@@ -529,7 +530,8 @@ const Trigger = forwardRef<HTMLButtonElement, TriggerProps>(function AutoRecharg
 ) {
   const ctx = useAutoRechargeCtx('Trigger')
   const copy = useCopy()
-  const label = ctx.config
+  const hasExistingConfig = Boolean(ctx.config?.enabled)
+  const label = hasExistingConfig
     ? copy.autoRecharge.modifyTriggerLabel
     : copy.autoRecharge.setupTriggerLabel
 
@@ -1279,14 +1281,16 @@ const Status = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>
     const ctx = useAutoRechargeCtx('Status')
     const copy = useCopy()
     const status = ctx.config?.status
-    if (!status || status === 'active' || status === 'disabled') return null
-
-    const label =
+    if (
+      !status ||
+      status === 'active' ||
+      status === 'disabled' ||
       status === 'pending_setup'
-        ? copy.autoRecharge.statusPendingSetup
-        : status === 'failed'
-          ? copy.autoRecharge.statusFailed
-          : null
+    ) {
+      return null
+    }
+
+    const label = status === 'failed' ? copy.autoRecharge.statusFailed : null
     if (!label) return null
 
     return (

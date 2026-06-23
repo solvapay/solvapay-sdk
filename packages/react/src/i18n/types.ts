@@ -120,7 +120,6 @@ export interface SolvaPayCopy {
     cancelButton: string
     disableButton: string
     savedMessage: string
-    stagedMessage: string
     disabledMessage: string
     setupRequiredMessage: string
     setupHeading: string
@@ -131,7 +130,6 @@ export interface SolvaPayCopy {
     creditsPerRechargeApprox: string
     currencyPerRecharge: string
     currencyPerRechargeApprox: string
-    statusPendingSetup: string
     statusFailed: string
   }
   activationFlow: {

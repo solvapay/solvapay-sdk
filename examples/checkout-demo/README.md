@@ -139,8 +139,11 @@ npx solvapay init
 ## Running the Demo
 
 ```bash
-# Development mode
+# Development mode (rebuilds @solvapay/react, then starts Next.js + ngrok tunnel)
 pnpm dev
+
+# Local Next.js only — no tunnel, no automatic package rebuild
+pnpm dev:local
 
 # Production build
 pnpm build
@@ -148,6 +151,20 @@ pnpm start
 ```
 
 Open [http://localhost:3010](http://localhost:3010) in your browser.
+
+**SDK package changes:** checkout-demo imports `@solvapay/react` from the built
+`packages/react/dist` bundle (not TypeScript source). After editing SDK primitives
+or components, rebuild before the demo picks up UI changes:
+
+```bash
+# From the SDK monorepo root
+pnpm --filter @solvapay/react build
+
+# Or rebuild all workspace packages
+pnpm -w build:packages
+```
+
+`pnpm dev` runs the react build automatically; `pnpm dev:local` does not.
 
 ## Deploy to Cloudflare Workers (DEV-441)
 
@@ -365,6 +382,7 @@ or email OAuth on `web-app-demo.solvapay.app`.
 | OAuth redirect error on prod                         | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs                                                                       |
 | OpenNext build: proxy warning                        | Use `proxy.ts` for the Next.js proxy convention                                                                                                       |
 | `wrangler whoami` missing SolvaPay account           | Request access to Cloudflare account `98aefe33182e11a1b0e5d7fa89a12a6d`                                                                               |
+| SDK UI changes not visible in local demo             | Rebuild `@solvapay/react` (`pnpm --filter @solvapay/react build` from repo root) or use `pnpm dev` instead of `pnpm dev:local`                        |
 
 ## Demo Flow
 

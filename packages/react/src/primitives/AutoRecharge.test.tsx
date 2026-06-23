@@ -85,22 +85,26 @@ function renderModalAutoRecharge(
   props: Partial<React.ComponentProps<typeof AutoRecharge.Root>> = {},
 ) {
   return render(
-    <SolvaPayProvider config={{}}>
+    <SolvaPayProvider config={{ initial: { customerRef: 'cus_test' } }}>
       <AutoRecharge.Root currency="USD" {...props}>
-        <AutoRecharge.Trigger />
+        <AutoRecharge.Card>
+          <AutoRecharge.CardSummary />
+          <AutoRecharge.StatusMessage />
+          <AutoRecharge.Trigger />
+        </AutoRecharge.Card>
         <AutoRecharge.Content>
           <AutoRecharge.Title />
           <AutoRecharge.EnableQuestion />
           <AutoRecharge.EnableRow />
-        <AutoRecharge.Fields>
-          <AutoRecharge.ThresholdField />
-          <AutoRecharge.TopupField />
-          <AutoRecharge.ValidationError />
-        </AutoRecharge.Fields>
-        <AutoRecharge.Actions>
-          <AutoRecharge.CancelButton />
-          <AutoRecharge.SaveButton />
-        </AutoRecharge.Actions>
+          <AutoRecharge.Fields>
+            <AutoRecharge.ThresholdField />
+            <AutoRecharge.TopupField />
+            <AutoRecharge.ValidationError />
+          </AutoRecharge.Fields>
+          <AutoRecharge.Actions>
+            <AutoRecharge.CancelButton />
+            <AutoRecharge.SaveButton />
+          </AutoRecharge.Actions>
         </AutoRecharge.Content>
       </AutoRecharge.Root>
     </SolvaPayProvider>,
@@ -124,6 +128,7 @@ beforeEach(() => {
   autoRechargeMocks.save.mockReset()
   autoRechargeMocks.disable.mockReset()
   autoRechargeMocks.refresh.mockReset()
+  sessionStorage.clear()
 })
 
 describe('AutoRecharge primitive', () => {
@@ -236,22 +241,75 @@ describe('AutoRecharge primitive', () => {
     expect(screen.getByTestId('payment-element')).toBeInTheDocument()
   })
 
-  it('with deferCardSetup, save exposes pending config without SetupIntent UI', async () => {
+  it('with deferCardSetup, save persists to backend and exposes pending config', async () => {
     const onPendingConfig = vi.fn()
+    autoRechargeMocks.save.mockImplementation(async () => {
+      autoRechargeMocks.config = config
+      return { config }
+    })
     renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig })
     openModal()
     enableAutoRecharge()
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     })
-    expect(autoRechargeMocks.save).not.toHaveBeenCalled()
+    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: true, topupAmountMajor: 10 }),
+    )
     expect(onPendingConfig).toHaveBeenCalledWith(
       expect.objectContaining({ enabled: true, topupAmountMajor: 10 }),
     )
     expect(screen.queryByTestId('stripe-elements')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Automatic top-up settings staged — complete payment to activate.'),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('Automatic top-up settings saved.')).toBeInTheDocument()
   })
 
-  it('shows status badge for pending_setup config', () => {
+  it('with deferCardSetup, shows saved summary on card after save', async () => {
+    autoRechargeMocks.save.mockImplementation(async () => {
+      autoRechargeMocks.config = config
+      return { config }
+    })
+    renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig: vi.fn() })
+    openModal()
+    enableAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    expect(
+      screen.getByText(/When my balance falls below .* add .*./),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Modify' })).toBeInTheDocument()
+  })
+
+  it('with deferCardSetup and enabled server config, save updates via API', async () => {
+    autoRechargeMocks.config = config
+    autoRechargeMocks.save.mockResolvedValue({
+      config: {
+        ...config,
+        trigger: { type: 'balance', thresholdCredits: 400 },
+      },
+    })
+    const onPendingConfig = vi.fn()
+    renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig })
+    openModal()
+    fireEvent.change(screen.getByLabelText('Balance threshold'), { target: { value: '4' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
+      expect.objectContaining({ thresholdAmountMajor: 4 }),
+    )
+    expect(onPendingConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ thresholdAmountMajor: 4 }),
+    )
+  })
+
+  it('does not show status badge for pending_setup config', () => {
     autoRechargeMocks.config = { ...config, status: 'pending_setup' }
     render(
       <SolvaPayProvider config={{}}>
@@ -260,7 +318,7 @@ describe('AutoRecharge primitive', () => {
         </AutoRecharge.Root>
       </SolvaPayProvider>,
     )
-    expect(screen.getByText('Pending card authorization')).toBeInTheDocument()
+    expect(screen.queryByText('Pending card authorization')).not.toBeInTheDocument()
   })
 })
 
