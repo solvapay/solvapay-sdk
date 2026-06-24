@@ -128,6 +128,10 @@ export interface SolvaPayCopy {
     setupProcessing: string
     setupAwaitingConfirmation: string
     setupAuthFailed: string
+    invalidThreshold: string
+    thresholdTooLow: string
+    minTopupAmount: string
+    topupBelowThreshold: string
     creditsPerRecharge: string
     creditsPerRechargeApprox: string
     currencyPerRecharge: string

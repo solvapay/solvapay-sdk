@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import type { AutoRechargeConfig } from '@solvapay/server'
-import { buildSummaryLineFromPayload, configToAutoRechargeInput } from './auto-recharge-form'
+import {
+  buildSummaryLineFromPayload,
+  configToAutoRechargeInput,
+  validateAutoRechargeForm,
+  type AutoRechargeFormState,
+} from './auto-recharge-form'
+import { enCopy } from '../i18n/en'
+import { interpolate } from '../i18n/interpolate'
+import { formatPrice } from '../utils/format'
 
 describe('configToAutoRechargeInput', () => {
   const baseConfig: AutoRechargeConfig = {
@@ -84,5 +92,111 @@ describe('buildSummaryLineFromPayload', () => {
         'USD',
       ),
     ).toBeNull()
+  })
+})
+
+describe('validateAutoRechargeForm — per-currency minimums & relationship (DEV-582)', () => {
+  const form = (over: Partial<AutoRechargeFormState> = {}): AutoRechargeFormState => ({
+    enabled: true,
+    thresholdAmountMajor: '5',
+    thresholdUnit: 'currency',
+    topupAmountMajor: '10',
+    topupUnit: 'currency',
+    ...over,
+  })
+
+  // Known Stripe minimums (minor units) mirrored from the backend source of truth.
+  const minTopupMessage = (currency: string, minMinor: number) =>
+    interpolate(enCopy.autoRecharge.minTopupAmount ?? '', {
+      amount: formatPrice(minMinor, currency, { free: '' }),
+    })
+
+  it('rejects a SEK top-up below the SEK minimum (3.00 kr), not the USD $0.50', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '1', topupAmountMajor: '2' }),
+      'SEK',
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(minTopupMessage('SEK', 300))
+      expect(result.error).not.toContain('$0.50')
+    }
+  })
+
+  it('accepts a SEK top-up exactly at the SEK minimum (3.00 kr)', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '1', topupAmountMajor: '3' }),
+      'SEK',
+    )
+    expect(result.ok).toBe(true)
+  })
+
+  it('rejects a JPY top-up below the JPY minimum (50) using zero-decimal units', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '10', topupAmountMajor: '49' }),
+      'JPY',
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(minTopupMessage('JPY', 50))
+    }
+  })
+
+  it('accepts a JPY top-up exactly at the JPY minimum (50)', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '10', topupAmountMajor: '50' }),
+      'JPY',
+    )
+    expect(result.ok).toBe(true)
+  })
+
+  it('accepts a GBP top-up exactly at the GBP minimum (0.30), which the old $0.50 floor wrongly rejected', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '0.3', topupAmountMajor: '0.3' }),
+      'GBP',
+    )
+    expect(result.ok).toBe(true)
+  })
+
+  it('rejects a USD top-up below the USD minimum ($0.50)', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '0.5', topupAmountMajor: '0.01' }),
+      'USD',
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(minTopupMessage('USD', 50))
+    }
+  })
+
+  it('rejects a zero threshold (would never trigger a recharge)', () => {
+    const result = validateAutoRechargeForm(form({ thresholdAmountMajor: '0' }), 'USD')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(enCopy.autoRecharge.thresholdTooLow)
+    }
+  })
+
+  it('rejects a top-up smaller than the threshold (would immediately re-trigger)', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '10', topupAmountMajor: '5' }),
+      'USD',
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(
+        interpolate(enCopy.autoRecharge.topupBelowThreshold ?? '', {
+          amount: formatPrice(1000, 'USD', { free: '' }),
+        }),
+      )
+    }
+  })
+
+  it('accepts a top-up exactly equal to the threshold (boundary)', () => {
+    const result = validateAutoRechargeForm(
+      form({ thresholdAmountMajor: '10', topupAmountMajor: '10' }),
+      'USD',
+    )
+    expect(result.ok).toBe(true)
   })
 })

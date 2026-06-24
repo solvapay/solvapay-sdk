@@ -220,10 +220,12 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const emitValidation = useCallback(
     (next: AutoRechargeFormState) => {
-      const result = validateAutoRechargeForm(next, currency, {
-        creditsPerMinorUnit,
-        displayExchangeRate,
-      })
+      const result = validateAutoRechargeForm(
+        next,
+        currency,
+        { creditsPerMinorUnit, displayExchangeRate },
+        copy.autoRecharge,
+      )
       if (!result.ok) {
         setValidationError(result.error)
         return null
@@ -231,7 +233,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
       setValidationError(null)
       return result.payload
     },
-    [currency, creditsPerMinorUnit, displayExchangeRate],
+    [currency, creditsPerMinorUnit, displayExchangeRate, copy.autoRecharge],
   )
 
   const updateForm = useCallback(

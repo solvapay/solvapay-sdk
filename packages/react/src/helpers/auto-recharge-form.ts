@@ -5,6 +5,27 @@ import type {
 } from '@solvapay/server'
 import { formatPrice, getMinorUnitsPerMajor } from '../utils/format'
 import { estimateCredits, estimateCurrencyMajorFromCredits } from '../utils/credit-estimation'
+import { getStripeMinimumMinor } from './stripe-minimums'
+import { interpolate } from '../i18n/interpolate'
+
+/**
+ * Localized validation copy for the auto-recharge form. Structurally compatible
+ * with the `autoRecharge` slice of the SDK copy, so callers can pass `copy.autoRecharge`
+ * directly. `minTopupAmount` and `topupBelowThreshold` are templates with `{amount}`.
+ */
+export type AutoRechargeValidationMessages = {
+  invalidThreshold: string
+  thresholdTooLow: string
+  minTopupAmount: string
+  topupBelowThreshold: string
+}
+
+const DEFAULT_VALIDATION_MESSAGES: AutoRechargeValidationMessages = {
+  invalidThreshold: 'Enter a valid balance threshold.',
+  thresholdTooLow: 'Balance threshold must be greater than zero.',
+  minTopupAmount: 'Top-up amount must be at least {amount}.',
+  topupBelowThreshold: 'Top-up amount must be at least your balance threshold ({amount}).',
+}
 
 export type AmountInputUnit = 'currency' | 'credits'
 
@@ -64,6 +85,7 @@ export function validateAutoRechargeForm(
   form: AutoRechargeFormState,
   currency: string,
   conversion?: AutoRechargeConversionContext,
+  messages: AutoRechargeValidationMessages = DEFAULT_VALIDATION_MESSAGES,
 ): { ok: true; payload: AutoRechargeInputPayload } | { ok: false; error: string } {
   if (!form.enabled) {
     return {
@@ -82,9 +104,12 @@ export function validateAutoRechargeForm(
     currency: currency.toUpperCase(),
   }
 
+  const minorPerMajor = getMinorUnitsPerMajor(currency)
+  const minMinor = getStripeMinimumMinor(currency)
+
   const thresholdRaw = parseNonNegativeNumber(form.thresholdAmountMajor)
   if (thresholdRaw == null) {
-    return { ok: false, error: 'Enter a valid balance threshold.' }
+    return { ok: false, error: messages.invalidThreshold }
   }
   if (form.thresholdUnit === 'credits') {
     const major = estimateCurrencyMajorFromCredits(
@@ -94,18 +119,26 @@ export function validateAutoRechargeForm(
       conversion?.displayExchangeRate,
     )
     if (major == null) {
-      return { ok: false, error: 'Enter a valid balance threshold.' }
+      return { ok: false, error: messages.invalidThreshold }
     }
     payload.thresholdAmountMajor = major
   } else {
     payload.thresholdAmountMajor = thresholdRaw
   }
 
+  // A zero (or effectively zero) threshold never triggers a recharge for a
+  // non-overdrawable balance, silently defeating the feature.
+  if (payload.thresholdAmountMajor == null || payload.thresholdAmountMajor <= 0) {
+    return { ok: false, error: messages.thresholdTooLow }
+  }
+
   const amountRaw = parsePositiveNumber(form.topupAmountMajor)
   if (amountRaw == null) {
     return {
       ok: false,
-      error: 'Top-up amount must be at least the minimum charge (about $0.50).',
+      error: interpolate(messages.minTopupAmount, {
+        amount: formatPrice(minMinor, currency, { free: '' }),
+      }),
     }
   }
   const amountMajor =
@@ -117,13 +150,30 @@ export function validateAutoRechargeForm(
           conversion?.displayExchangeRate,
         )
       : amountRaw
-  if (amountMajor == null || amountMajor < 0.5) {
+  if (amountMajor == null || Math.round(amountMajor * minorPerMajor) < minMinor) {
     return {
       ok: false,
-      error: 'Top-up amount must be at least the minimum charge (about $0.50).',
+      error: interpolate(messages.minTopupAmount, {
+        amount: formatPrice(minMinor, currency, { free: '' }),
+      }),
     }
   }
   payload.topupAmountMajor = amountMajor
+
+  // The top-up must clear the threshold, otherwise the recharge leaves the
+  // balance below it and re-triggers on the next check.
+  if (amountMajor < payload.thresholdAmountMajor) {
+    return {
+      ok: false,
+      error: interpolate(messages.topupBelowThreshold, {
+        amount: formatPrice(
+          Math.round(payload.thresholdAmountMajor * minorPerMajor),
+          currency,
+          { free: '' },
+        ),
+      }),
+    }
+  }
 
   return { ok: true, payload }
 }

@@ -6,6 +6,8 @@ import { AutoRecharge } from './AutoRecharge'
 import { AutoRecharge as AutoRechargeComponent } from '../components/AutoRecharge'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { enCopy } from '../i18n/en'
+import { interpolate } from '../i18n/interpolate'
+import { formatPrice } from '../utils/format'
 import type { AutoRechargeConfig } from '@solvapay/server'
 
 const config: AutoRechargeConfig = {
@@ -179,8 +181,38 @@ describe('AutoRecharge primitive', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     expect(autoRechargeMocks.save).not.toHaveBeenCalled()
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(/minimum/i)
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        interpolate(enCopy.autoRecharge.minTopupAmount, {
+          amount: formatPrice(50, 'USD', { free: '' }),
+        }),
+      )
     })
+  })
+
+  it('enforces the per-currency minimum for SEK and blocks save, then saves at the minimum (DEV-582)', async () => {
+    autoRechargeMocks.save.mockResolvedValue({ config })
+    renderAutoRecharge({ currency: 'SEK' })
+    enableAutoRecharge()
+    // 1 kr threshold keeps the relationship rule satisfied so we isolate the min check.
+    fireEvent.change(screen.getByLabelText('Balance threshold'), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText('Fixed top-up amount'), { target: { value: '2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    expect(autoRechargeMocks.save).not.toHaveBeenCalled()
+    // Intl inserts a non-breaking space (e.g. "SEK 3"); toHaveTextContent
+    // normalizes DOM whitespace, so normalize the expected string to match.
+    const expectedSekMin = interpolate(enCopy.autoRecharge.minTopupAmount, {
+      amount: formatPrice(300, 'SEK', { free: '' }),
+    }).replace(/\u00a0/g, ' ')
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(expectedSekMin)
+    })
+    expect(screen.getByRole('alert')).not.toHaveTextContent('$0.50')
+
+    fireEvent.change(screen.getByLabelText('Fixed top-up amount'), { target: { value: '3' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    expect(autoRechargeMocks.save).toHaveBeenCalled()
   })
 
   it('calls save with validated payload on submit', async () => {
