@@ -33,6 +33,8 @@ import { withPaymentElementDefaults } from './paymentElementDefaults'
 import { useAutoRecharge } from '../hooks/useAutoRecharge'
 import { useBalance } from '../hooks/useBalance'
 import { useCopy } from '../hooks/useCopy'
+import { waitForAutoRechargeActivation } from './autoRechargeActivation'
+import { readSetupIntentClientSecret, stripSetupIntentParams } from './setupIntentReturn'
 import { interpolate } from '../i18n/interpolate'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
@@ -81,7 +83,7 @@ type AutoRechargeContextValue = {
   focusTrigger: () => void
   save: () => Promise<void>
   disable: () => Promise<void>
-  completeSetup: () => void
+  completeSetup: () => Promise<void>
   flipUnit: (
     valueKey: 'thresholdAmountMajor' | 'topupAmountMajor',
     unitKey: 'thresholdUnit' | 'topupUnit',
@@ -196,6 +198,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
   const [validationError, setValidationError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [setup, setSetup] = useState<SaveAutoRechargeResponse | null>(null)
+
+  // Latest server config, read inside async flows (activation polling) without
+  // re-subscribing the callback to every config change.
+  const latestConfigRef = useRef(autoRecharge.config)
+  useEffect(() => {
+    latestConfigRef.current = autoRecharge.config
+  }, [autoRecharge.config])
 
   useEffect(() => {
     if (autoRecharge.config) {
@@ -344,12 +353,22 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     await onDisabled?.()
   }, [autoRecharge, copy.autoRecharge, onDisabled])
 
-  const completeSetup = useCallback(() => {
+  const completeSetup = useCallback(async () => {
+    // The client-side confirm only proves the SetupIntent was submitted; the
+    // server marks the config `active` once the SetupIntent-succeeded webhook
+    // lands. Poll until the server confirms before claiming "saved", otherwise
+    // a webhook race shows success over a still-`pending_setup` config.
+    const activated = await waitForAutoRechargeActivation({
+      refresh: autoRecharge.refresh,
+      getStatus: () => latestConfigRef.current?.status,
+    })
     setSetup(null)
-    void autoRecharge.refresh()
-    if (form.enabled) {
+    if (!form.enabled) return
+    if (activated) {
       setStatusMessage(copy.autoRecharge.savedMessage)
       setOpen(false)
+    } else {
+      setStatusMessage(copy.autoRecharge.setupAwaitingConfirmation)
     }
   }, [autoRecharge, copy.autoRecharge, form.enabled, setOpen])
 
@@ -1311,15 +1330,49 @@ const Status = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>
 
 type CardSetupProps = {
   setup: SaveAutoRechargeResponse
-  onComplete: () => void
+  onComplete: () => void | Promise<void>
 }
 
-function CardSetupInner({ onComplete }: { onComplete: () => void }) {
+function CardSetupInner({ onComplete }: { onComplete: () => void | Promise<void> }) {
   const copy = useCopy()
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Resume after a 3DS authentication redirect: Stripe sends the browser back to
+  // `return_url` with the SetupIntent client secret in the query string. Without
+  // this the user lands on a blank form and the config stays `pending_setup`.
+  useEffect(() => {
+    if (!stripe) return
+    const clientSecret = readSetupIntentClientSecret(window.location.search)
+    if (!clientSecret) return
+
+    let cancelled = false
+    void (async () => {
+      setProcessing(true)
+      const { setupIntent, error: retrieveError } = await stripe.retrieveSetupIntent(clientSecret)
+      if (cancelled) return
+      stripSetupIntentParams()
+
+      if (retrieveError || !setupIntent) {
+        setError(copy.autoRecharge.setupAuthFailed)
+        setProcessing(false)
+        return
+      }
+
+      if (setupIntent.status === 'succeeded' || setupIntent.status === 'processing') {
+        await onComplete()
+      } else {
+        setError(copy.autoRecharge.setupAuthFailed)
+      }
+      if (!cancelled) setProcessing(false)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [stripe, onComplete, copy.autoRecharge])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -1352,7 +1405,7 @@ function CardSetupInner({ onComplete }: { onComplete: () => void }) {
       return
     }
 
-    onComplete()
+    await onComplete()
     setProcessing(false)
   }
 

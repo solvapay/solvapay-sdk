@@ -5,6 +5,7 @@ import React from 'react'
 import { AutoRecharge } from './AutoRecharge'
 import { AutoRecharge as AutoRechargeComponent } from '../components/AutoRecharge'
 import { SolvaPayProvider } from '../SolvaPayProvider'
+import { enCopy } from '../i18n/en'
 import type { AutoRechargeConfig } from '@solvapay/server'
 
 const config: AutoRechargeConfig = {
@@ -47,12 +48,21 @@ vi.mock('../hooks/useBalance', () => ({
   }),
 }))
 
+const stripeMocks = vi.hoisted(() => ({
+  confirmSetup: vi.fn(),
+  retrieveSetupIntent: vi.fn(),
+  submit: vi.fn(),
+}))
+
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="stripe-elements">{children}</div>
   ),
-  useStripe: () => ({ confirmSetup: vi.fn().mockResolvedValue({ error: undefined }) }),
-  useElements: () => ({ submit: vi.fn().mockResolvedValue({ error: undefined }) }),
+  useStripe: () => ({
+    confirmSetup: stripeMocks.confirmSetup,
+    retrieveSetupIntent: stripeMocks.retrieveSetupIntent,
+  }),
+  useElements: () => ({ submit: stripeMocks.submit }),
   PaymentElement: () => <div data-testid="payment-element" />,
 }))
 
@@ -127,7 +137,13 @@ beforeEach(() => {
   autoRechargeMocks.error = null
   autoRechargeMocks.save.mockReset()
   autoRechargeMocks.disable.mockReset()
-  autoRechargeMocks.refresh.mockReset()
+  autoRechargeMocks.refresh.mockReset().mockResolvedValue(undefined)
+  stripeMocks.confirmSetup.mockReset().mockResolvedValue({ error: undefined })
+  stripeMocks.retrieveSetupIntent.mockReset().mockResolvedValue({
+    setupIntent: { status: 'succeeded' },
+  })
+  stripeMocks.submit.mockReset().mockResolvedValue({ error: undefined })
+  window.history.replaceState({}, '', '/')
   sessionStorage.clear()
 })
 
@@ -391,5 +407,123 @@ describe('AutoRecharge modal flow', () => {
       </SolvaPayProvider>,
     )
     expect(screen.getByRole('button', { name: 'Modify' })).toBeInTheDocument()
+  })
+})
+
+describe('AutoRecharge card setup confirmation (DEV-581)', () => {
+  const pendingConfig: AutoRechargeConfig = { ...config, status: 'pending_setup' }
+
+  function saveReturnsSetupIntent(): void {
+    autoRechargeMocks.config = { ...pendingConfig }
+    autoRechargeMocks.save.mockResolvedValue({
+      config: { ...pendingConfig },
+      setupClientSecret: 'seti_secret',
+      publishableKey: 'pk_test',
+    })
+  }
+
+  async function submitCardSetup(): Promise<void> {
+    // pendingConfig is already enabled, so the form renders without toggling.
+    renderAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: enCopy.autoRecharge.setupSubmit }))
+    })
+  }
+
+  it('marks saved once the server confirms activation', async () => {
+    saveReturnsSetupIntent()
+    autoRechargeMocks.refresh.mockImplementation(async () => {
+      if (autoRechargeMocks.config) autoRechargeMocks.config.status = 'active'
+    })
+
+    await submitCardSetup()
+
+    await waitFor(() => {
+      expect(screen.getByText(enCopy.autoRecharge.savedMessage)).toBeInTheDocument()
+    })
+    expect(autoRechargeMocks.refresh).toHaveBeenCalled()
+  })
+
+  it('shows awaiting confirmation (not saved) when the server never activates', async () => {
+    saveReturnsSetupIntent()
+    // Server stays pending_setup across every poll (webhook never lands in time).
+    autoRechargeMocks.refresh.mockResolvedValue(undefined)
+
+    renderAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    // Do not await the full poll inside act — let waitFor observe the outcome.
+    fireEvent.click(screen.getByRole('button', { name: enCopy.autoRecharge.setupSubmit }))
+
+    await waitFor(
+      () => {
+        expect(screen.getByText(enCopy.autoRecharge.setupAwaitingConfirmation)).toBeInTheDocument()
+      },
+      { timeout: 8000 },
+    )
+    expect(screen.queryByText(enCopy.autoRecharge.savedMessage)).not.toBeInTheDocument()
+  }, 12000)
+
+  it('resumes setup on 3DS redirect-return when the SetupIntent succeeded', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/?setup_intent=seti_1&setup_intent_client_secret=seti_1_secret',
+    )
+    stripeMocks.retrieveSetupIntent.mockResolvedValue({ setupIntent: { status: 'succeeded' } })
+    const onComplete = vi.fn()
+
+    await act(async () => {
+      render(
+        <SolvaPayProvider config={{}}>
+          <AutoRecharge.CardSetup
+            setup={{
+              config: pendingConfig,
+              setupClientSecret: 'seti_1_secret',
+              publishableKey: 'pk_test',
+            }}
+            onComplete={onComplete}
+          />
+        </SolvaPayProvider>,
+      )
+    })
+
+    await waitFor(() => {
+      expect(stripeMocks.retrieveSetupIntent).toHaveBeenCalledWith('seti_1_secret')
+    })
+    expect(onComplete).toHaveBeenCalled()
+    expect(window.location.search).not.toContain('setup_intent_client_secret')
+  })
+
+  it('surfaces an error on 3DS redirect-return when authentication failed', async () => {
+    window.history.replaceState({}, '', '/?setup_intent_client_secret=seti_1_secret')
+    stripeMocks.retrieveSetupIntent.mockResolvedValue({
+      setupIntent: { status: 'requires_payment_method' },
+    })
+    const onComplete = vi.fn()
+
+    await act(async () => {
+      render(
+        <SolvaPayProvider config={{}}>
+          <AutoRecharge.CardSetup
+            setup={{
+              config: pendingConfig,
+              setupClientSecret: 'seti_1_secret',
+              publishableKey: 'pk_test',
+            }}
+            onComplete={onComplete}
+          />
+        </SolvaPayProvider>,
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(enCopy.autoRecharge.setupAuthFailed)).toBeInTheDocument()
+    })
+    expect(onComplete).not.toHaveBeenCalled()
   })
 })

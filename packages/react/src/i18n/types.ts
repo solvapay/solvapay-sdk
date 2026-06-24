@@ -126,6 +126,8 @@ export interface SolvaPayCopy {
     setupDescription: string
     setupSubmit: string
     setupProcessing: string
+    setupAwaitingConfirmation: string
+    setupAuthFailed: string
     creditsPerRecharge: string
     creditsPerRechargeApprox: string
     currencyPerRecharge: string

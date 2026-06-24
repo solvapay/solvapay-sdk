@@ -145,6 +145,8 @@ export const enCopy: SolvaPayCopy = {
       'Authorize a card for automatic top-ups. You will not be charged now.',
     setupSubmit: 'Save card for auto-recharge',
     setupProcessing: 'Authorizing...',
+    setupAwaitingConfirmation: 'Card authorized. Finishing activation — this can take a moment.',
+    setupAuthFailed: 'Card authentication failed. Please try a different card.',
     creditsPerRecharge: '≈ {credits} credits per recharge',
     creditsPerRechargeApprox: '~ {credits} credits per recharge',
     currencyPerRecharge: '≈ {amount} per recharge',
