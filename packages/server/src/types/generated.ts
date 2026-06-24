@@ -108,6 +108,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/payment-intents/{processorPaymentId}/business-details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach business tax details to a payment intent
+         * @description Applies business purchaser details, recalculates tax via Stripe Tax, and updates the payment intent amount.
+         */
+        post: operations["PaymentIntentSdkController_attachBusinessDetails"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/checkout-sessions": {
         parameters: {
             query?: never;
@@ -967,6 +987,27 @@ export interface components {
             productRef?: string;
             customerRef: string;
             planRef?: string;
+        };
+        BusinessDetailsDto: {
+            /** Whether the purchase is on behalf of a business */
+            isBusiness: boolean;
+            /** Legal business name */
+            businessName?: string;
+            /** ISO 3166-1 alpha-2 country code */
+            country?: string;
+            /** Tax / VAT identification number */
+            taxId?: string;
+        };
+        TaxBreakdownResponse: {
+            subtotal: number;
+            taxAmount: number;
+            taxRate: number;
+            treatment: "reverse_charge" | "standard" | "none";
+            total: number;
+            currency: string;
+        };
+        AttachBusinessDetailsResponse: {
+            taxBreakdown: components["schemas"]["TaxBreakdownResponse"];
         };
         CreateCheckoutSessionResponse: {
             /**
@@ -2382,6 +2423,51 @@ export interface operations {
             };
             /** @description Payment not succeeded, invalid request, or forbidden */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    PaymentIntentSdkController_attachBusinessDetails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stripe payment intent ID */
+                processorPaymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BusinessDetailsDto"];
+            };
+        };
+        responses: {
+            /** @description Tax breakdown after applying business details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachBusinessDetailsResponse"];
+                };
+            };
+            /** @description Invalid business details or payment intent state */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Payment intent not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

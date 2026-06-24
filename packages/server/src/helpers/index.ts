@@ -26,6 +26,7 @@ export {
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
+  attachTopupBusinessDetailsCore,
 } from './payment'
 
 // Export checkout helpers

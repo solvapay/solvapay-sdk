@@ -125,6 +125,8 @@ export {
   TopupFormLoading,
   TopupFormError,
   TopupFormLegalFooter,
+  TopupFormBusinessDetails,
+  TopupFormSummary,
   useTopupForm,
 } from './TopupForm'
 

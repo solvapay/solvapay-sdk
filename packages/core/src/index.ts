@@ -115,4 +115,22 @@ export {
   minorUnitsPerMajor,
 } from './credit-display'
 
+export {
+  BusinessDetailsSchema,
+  COUNTRY_TO_TAX_ID_TYPE,
+  SUPPORTED_BUSINESS_COUNTRIES,
+  TAX_ID_TYPES,
+  deriveTaxIdType,
+  validateBusinessDetails,
+  type BusinessDetails,
+  type BusinessDetailsInput,
+  type BusinessDetailsValidationError,
+  type BusinessDetailsValidationIssue,
+  type EuMemberCountry,
+  type SupportedBusinessCountry,
+  type TaxBreakdown,
+  type TaxIdType,
+  type ValidateBusinessDetailsResult,
+} from './business-details'
+
 export const version = '0.1.0'

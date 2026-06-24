@@ -5,6 +5,11 @@
  * Works with standard Web API Request (works everywhere).
  */
 
+import {
+  validateBusinessDetails,
+  type BusinessDetailsInput,
+  type TaxBreakdown,
+} from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import type { TopupProcessResult } from '../types/client'
@@ -372,6 +377,71 @@ const TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000] as const
  * }
  * ```
  */
+/**
+ * Attach business purchase details to a credit-topup payment intent and
+ * retrieve the computed tax breakdown.
+ *
+ * Validates business fields client-side via `@solvapay/core` before
+ * forwarding to the SolvaPay backend.
+ */
+export async function attachTopupBusinessDetailsCore(
+  request: Request,
+  body: {
+    paymentIntentId: string
+  } & BusinessDetailsInput,
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
+): Promise<{ taxBreakdown: TaxBreakdown } | ErrorResult> {
+  try {
+    if (!body.paymentIntentId) {
+      return {
+        error: 'paymentIntentId is required',
+        status: 400,
+      }
+    }
+
+    const validation = validateBusinessDetails({
+      isBusiness: body.isBusiness,
+      businessName: body.businessName,
+      country: body.country,
+      taxId: body.taxId,
+      taxIdType: body.taxIdType,
+    })
+
+    if (!validation.success) {
+      const firstIssue = validation.error.issues[0]
+      return {
+        error: firstIssue?.message ?? 'Invalid business details',
+        status: 400,
+      }
+    }
+
+    const solvaPay = options.solvaPay || createSolvaPay()
+
+    if (typeof solvaPay.attachTopupBusinessDetails !== 'function') {
+      return {
+        error: 'attachTopupBusinessDetails is not available on this SolvaPay client',
+        status: 501,
+      }
+    }
+
+    const details = validation.data
+    const result = await solvaPay.attachTopupBusinessDetails({
+      paymentIntentId: body.paymentIntentId,
+      ...details,
+    })
+
+    return result
+  } catch (error) {
+    return handleRouteError(
+      error,
+      'Attach topup business details',
+      'Failed to attach business details',
+    )
+  }
+}
+
 export async function processTopupPaymentIntentCore(
   request: Request,
   body: {

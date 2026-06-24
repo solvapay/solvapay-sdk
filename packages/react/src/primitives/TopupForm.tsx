@@ -41,6 +41,13 @@ import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
+import { formatPrice } from '../utils/format'
+import {
+  validateBusinessDetails,
+  SUPPORTED_BUSINESS_COUNTRIES,
+  type BusinessDetailsInput,
+  type TaxBreakdown,
+} from '@solvapay/core'
 import type { TopupFormProps } from '../types'
 
 type SubmitState = 'idle' | 'processing' | 'disabled'
@@ -51,6 +58,7 @@ type TopupFormContextValue = {
   currency?: string
   state: TopupFormState
   clientSecret: string | null
+  processorPaymentId: string | null
   stripe: Stripe | null
   elements: StripeElements | null
   isReady: boolean
@@ -59,6 +67,13 @@ type TopupFormContextValue = {
   canSubmit: boolean
   error: string | null
   returnUrl: string
+  businessDetails: BusinessDetailsInput
+  taxBreakdown: TaxBreakdown | null
+  businessDetailsAttached: boolean
+  businessDetailsAttaching: boolean
+  businessDetailsError: string | null
+  fieldErrors: Partial<Record<keyof BusinessDetailsInput, string>>
+  setBusinessDetails: (patch: Partial<BusinessDetailsInput>) => void
   setPaymentInputComplete: (complete: boolean) => void
   submit: () => Promise<void>
 }
@@ -84,6 +99,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     currency,
     onSuccess,
     onError,
+    onTaxChange,
     returnUrl,
     submitButtonText: _submitButtonText,
     buttonClassName: _buttonClassName,
@@ -100,7 +116,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
   // `onSuccess` on backend confirmation) lives next to the existing
   // provider-context read. Optional — transports that don't implement
   // it keep the legacy fire-on-confirm behaviour.
-  const { processTopupPayment } = solva
+  const { processTopupPayment, attachTopupBusinessDetails } = solva
 
   const copy = useCopy()
   const locale = useLocale()
@@ -108,6 +124,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     loading,
     error: topupError,
     clientSecret,
+    processorPaymentId,
     startTopup,
     stripePromise,
   } = useTopup({
@@ -155,12 +172,15 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     amount,
     currency,
     clientSecret,
+    processorPaymentId,
     returnUrl: finalReturnUrl,
     outerError,
     state: dataState,
     onSuccess,
     onError,
+    onTaxChange,
     processTopupPayment,
+    attachTopupBusinessDetails,
   }
 
   const shell = (
@@ -191,11 +211,13 @@ type InnerProps = {
   amount: number
   currency?: string
   clientSecret: string | null
+  processorPaymentId: string | null
   returnUrl: string
   outerError: string | null
   state: TopupFormState
   onSuccess?: TopupFormProps['onSuccess']
   onError?: TopupFormProps['onError']
+  onTaxChange?: TopupFormProps['onTaxChange']
   /**
    * Provider-side backend confirmation hook. When present, `submit`
    * awaits it before firing `onSuccess` so the customer is fully
@@ -216,19 +238,47 @@ type InnerProps = {
     | { status: 'failed' }
     | { status: 'cancelled' }
   >
+  attachTopupBusinessDetails?: (params: {
+    paymentIntentId: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }) => Promise<{ taxBreakdown: TaxBreakdown }>
   children?: React.ReactNode
 }
+
+function mapBusinessFieldErrors(
+  input: BusinessDetailsInput,
+): Partial<Record<keyof BusinessDetailsInput, string>> {
+  const result = validateBusinessDetails(input)
+  if (result.success) return {}
+  const errors: Partial<Record<keyof BusinessDetailsInput, string>> = {}
+  for (const issue of result.error.issues) {
+    const key = issue.path[0]
+    if (typeof key === 'string' && !errors[key as keyof BusinessDetailsInput]) {
+      errors[key as keyof BusinessDetailsInput] = issue.message
+    }
+  }
+  return errors
+}
+
+const defaultBusinessDetails: BusinessDetailsInput = { isBusiness: false }
 
 const Inner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
+  processorPaymentId,
   returnUrl,
   outerError,
   state,
   onSuccess,
   onError,
+  onTaxChange,
   processTopupPayment,
+  attachTopupBusinessDetails,
   children,
 }) => {
   const stripe = useStripe()
@@ -238,9 +288,99 @@ const Inner: React.FC<InnerProps> = ({
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [businessDetails, setBusinessDetailsState] =
+    useState<BusinessDetailsInput>(defaultBusinessDetails)
+  const [taxBreakdown, setTaxBreakdown] = useState<TaxBreakdown | null>(null)
+  const [businessDetailsAttached, setBusinessDetailsAttached] = useState(false)
+  const [businessDetailsAttaching, setBusinessDetailsAttaching] = useState(false)
+  const [businessDetailsError, setBusinessDetailsError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof BusinessDetailsInput, string>>
+  >({})
 
+  const attachRequestIdRef = useRef(0)
+
+  const setBusinessDetails = useCallback((patch: Partial<BusinessDetailsInput>) => {
+    setBusinessDetailsState(prev => {
+      const next = { ...prev, ...patch }
+      if (patch.isBusiness === false) {
+        return { isBusiness: false }
+      }
+      return next
+    })
+    setBusinessDetailsAttached(false)
+    setBusinessDetailsError(null)
+  }, [])
+
+  const runAttach = useCallback(
+    async (input: BusinessDetailsInput): Promise<boolean> => {
+      if (!processorPaymentId || !attachTopupBusinessDetails) {
+        return !attachTopupBusinessDetails
+      }
+
+      const validation = validateBusinessDetails(input)
+      if (!validation.success) {
+        setFieldErrors(mapBusinessFieldErrors(input))
+        return false
+      }
+
+      setFieldErrors({})
+      const requestId = ++attachRequestIdRef.current
+      setBusinessDetailsAttaching(true)
+
+      try {
+        const result = await attachTopupBusinessDetails({
+          paymentIntentId: processorPaymentId,
+          ...validation.data,
+        })
+        if (requestId !== attachRequestIdRef.current) return false
+        setTaxBreakdown(result.taxBreakdown)
+        setBusinessDetailsAttached(true)
+        setBusinessDetailsError(null)
+        onTaxChange?.(result.taxBreakdown)
+        return true
+      } catch (err) {
+        if (requestId !== attachRequestIdRef.current) return false
+        const msg = err instanceof Error ? err.message : String(err)
+        setBusinessDetailsAttached(false)
+        setBusinessDetailsError(msg)
+        return false
+      } finally {
+        if (requestId === attachRequestIdRef.current) {
+          setBusinessDetailsAttaching(false)
+        }
+      }
+    },
+    [processorPaymentId, attachTopupBusinessDetails, onTaxChange],
+  )
+
+  useEffect(() => {
+    if (!processorPaymentId || !attachTopupBusinessDetails) return
+
+    const validation = validateBusinessDetails(businessDetails)
+    if (!validation.success) {
+      setFieldErrors(mapBusinessFieldErrors(businessDetails))
+      setBusinessDetailsAttached(false)
+      return
+    }
+
+    setFieldErrors({})
+    const timer = setTimeout(() => {
+      void runAttach(businessDetails)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [businessDetails, processorPaymentId, attachTopupBusinessDetails, runAttach])
+
+  const requiresBusinessAttach = !!attachTopupBusinessDetails
   const isReady = !!(stripe && elements)
-  const canSubmit = isReady && paymentInputComplete && !isProcessing && !!clientSecret
+  const canSubmit =
+    isReady &&
+    paymentInputComplete &&
+    !isProcessing &&
+    !!clientSecret &&
+    (!requiresBusinessAttach || businessDetailsAttached) &&
+    !businessDetailsAttaching
 
   const submit = useCallback(async () => {
     if (!stripe || !elements || !clientSecret) {
@@ -249,13 +389,20 @@ const Inner: React.FC<InnerProps> = ({
       onError?.(new Error(msg))
       return
     }
+
+    if (requiresBusinessAttach && !businessDetailsAttached) {
+      const attached = await runAttach(businessDetails)
+      if (!attached) {
+        const msg = businessDetailsError ?? 'Complete business details before paying'
+        setError(msg)
+        onError?.(new Error(msg))
+        return
+      }
+    }
+
     setError(null)
     setIsProcessing(true)
 
-    // Stripe requires elements.submit() before confirmPayment() whenever async
-    // work happens between click and confirm. Calling it unconditionally is
-    // safe — it validates the Payment Element and is a no-op otherwise.
-    // https://stripe.com/docs/payments/accept-a-payment-deferred
     const { error: submitError } = await elements.submit()
     if (submitError) {
       const msg = submitError.message || copy.errors.paymentUnexpected
@@ -280,19 +427,6 @@ const Inner: React.FC<InnerProps> = ({
       return
     }
 
-    // Wait for backend confirmation before declaring success. Mirrors
-    // `PaymentForm`'s `processPayment` step: the backend's `/process`
-    // endpoint polls until the PI reaches `succeeded` AND the wallet
-    // observes the credit delta (`processTopupPaymentIntentCore` adds
-    // a post-success balance poll on top of the `/process` PI-status
-    // poll). This eliminates the Stripe-confirm-to-webhook race that
-    // previously left the customer momentarily uncredited at the
-    // moment `onSuccess` fired — the wallet badge would show stale
-    // `0 left` and the next /api/chat send would 402 until the
-    // webhook caught up.
-    //
-    // Transports without `processTopupPayment` skip this step and
-    // keep the legacy fire-on-confirm behaviour.
     let creditsAdded: number | undefined
     if (paymentIntent && processTopupPayment) {
       try {
@@ -306,10 +440,6 @@ const Inner: React.FC<InnerProps> = ({
         if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
           creditsAdded = result.creditsAdded
         }
-        // `timeout` is treated as a soft success — Stripe already
-        // confirmed; the credit will land via webhook within a few
-        // seconds. Fall through and let downstream convergence
-        // (`refetchPurchase` in `recordPaygSuccess`) handle it.
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         setError(msg)
@@ -324,9 +454,23 @@ const Inner: React.FC<InnerProps> = ({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await onSuccess?.(paymentIntent as any, creditsAdded !== undefined ? { creditsAdded } : undefined)
     }
-  }, [stripe, elements, clientSecret, returnUrl, copy, onSuccess, onError, processTopupPayment])
+  }, [
+    stripe,
+    elements,
+    clientSecret,
+    returnUrl,
+    copy,
+    onSuccess,
+    onError,
+    processTopupPayment,
+    requiresBusinessAttach,
+    businessDetailsAttached,
+    runAttach,
+    businessDetails,
+    businessDetailsError,
+  ])
 
-  const effectiveError = error ?? outerError
+  const effectiveError = error ?? outerError ?? businessDetailsError
 
   const ctx = useMemo<TopupFormContextValue>(
     () => ({
@@ -334,6 +478,7 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
+      processorPaymentId,
       stripe: (stripe as Stripe | null) ?? null,
       elements: (elements as StripeElements | null) ?? null,
       isReady,
@@ -342,6 +487,13 @@ const Inner: React.FC<InnerProps> = ({
       canSubmit,
       error: effectiveError,
       returnUrl,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       setPaymentInputComplete,
       submit,
     }),
@@ -350,6 +502,7 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
+      processorPaymentId,
       stripe,
       elements,
       isReady,
@@ -358,6 +511,13 @@ const Inner: React.FC<InnerProps> = ({
       canSubmit,
       effectiveError,
       returnUrl,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       submit,
     ],
   )
@@ -370,6 +530,7 @@ const OfflineInner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
+  processorPaymentId,
   returnUrl,
   outerError,
   state,
@@ -377,12 +538,14 @@ const OfflineInner: React.FC<InnerProps> = ({
 }) => {
   const noopSubmit = useCallback(async () => {}, [])
   const noopSet = useCallback(() => {}, [])
+  const noopBusinessSet = useCallback(() => {}, [])
   const ctx = useMemo<TopupFormContextValue>(
     () => ({
       amount,
       currency,
       state,
       clientSecret,
+      processorPaymentId,
       stripe: null,
       elements: null,
       isReady: false,
@@ -391,10 +554,28 @@ const OfflineInner: React.FC<InnerProps> = ({
       canSubmit: false,
       error: outerError,
       returnUrl,
+      businessDetails: defaultBusinessDetails,
+      taxBreakdown: null,
+      businessDetailsAttached: false,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      fieldErrors: {},
+      setBusinessDetails: noopBusinessSet,
       setPaymentInputComplete: noopSet,
       submit: noopSubmit,
     }),
-    [amount, currency, state, clientSecret, outerError, returnUrl, noopSet, noopSubmit],
+    [
+      amount,
+      currency,
+      state,
+      clientSecret,
+      processorPaymentId,
+      outerError,
+      returnUrl,
+      noopSet,
+      noopSubmit,
+      noopBusinessSet,
+    ],
   )
   return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>
 }
@@ -531,17 +712,274 @@ const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function TopupFormError(
   )
 })
 
+type BusinessDetailsRootProps = React.HTMLAttributes<HTMLDivElement> & {
+  asChild?: boolean
+  children?: React.ReactNode
+}
+
+const BusinessDetailsRoot = forwardRef<HTMLDivElement, BusinessDetailsRootProps>(
+  function TopupFormBusinessDetailsRoot({ asChild, children, ...rest }, forwardedRef) {
+    useTopupCtx('BusinessDetails')
+    const Comp = asChild ? Slot : 'div'
+    return (
+      <Comp ref={forwardedRef} data-solvapay-topup-form-business-details="" {...rest}>
+        {children}
+      </Comp>
+    )
+  },
+)
+
+type BusinessDetailsToggleProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  asChild?: boolean
+}
+
+const BusinessDetailsToggle = forwardRef<HTMLInputElement, BusinessDetailsToggleProps>(
+  function TopupFormBusinessDetailsToggle({ asChild, onChange, ...rest }, forwardedRef) {
+    const ctx = useTopupCtx('BusinessDetails.Toggle')
+    const commonProps = {
+      'data-solvapay-topup-form-business-details-toggle': '',
+      type: 'checkbox',
+      checked: ctx.businessDetails.isBusiness,
+      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
+        ctx.setBusinessDetails({ isBusiness: e.target.checked })
+      }),
+      ...rest,
+    }
+
+    if (asChild) {
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)} />
+      )
+    }
+
+    return <input ref={forwardedRef} {...commonProps} />
+  },
+)
+
+type BusinessDetailsFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  asChild?: boolean
+}
+
+const BusinessDetailsBusinessName = forwardRef<HTMLInputElement, BusinessDetailsFieldProps>(
+  function TopupFormBusinessDetailsBusinessName({ asChild, onChange, ...rest }, forwardedRef) {
+    const ctx = useTopupCtx('BusinessDetails.BusinessName')
+    if (!ctx.businessDetails.isBusiness) return null
+
+    const commonProps = {
+      'data-solvapay-topup-form-business-details-name': '',
+      type: 'text',
+      value: ctx.businessDetails.businessName ?? '',
+      'aria-invalid': ctx.fieldErrors.businessName ? true : undefined,
+      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
+        ctx.setBusinessDetails({ businessName: e.target.value })
+      }),
+      ...rest,
+    }
+
+    if (asChild) {
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)} />
+      )
+    }
+
+    return <input ref={forwardedRef} {...commonProps} />
+  },
+)
+
+type BusinessDetailsCountryProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
+  asChild?: boolean
+}
+
+const BusinessDetailsCountry = forwardRef<HTMLSelectElement, BusinessDetailsCountryProps>(
+  function TopupFormBusinessDetailsCountry({ asChild, onChange, children, ...rest }, forwardedRef) {
+    const ctx = useTopupCtx('BusinessDetails.Country')
+    if (!ctx.businessDetails.isBusiness) return null
+
+    const commonProps = {
+      'data-solvapay-topup-form-business-details-country': '',
+      value: ctx.businessDetails.country ?? '',
+      'aria-invalid': ctx.fieldErrors.country ? true : undefined,
+      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLSelectElement>) => {
+        ctx.setBusinessDetails({ country: e.target.value })
+      }),
+      ...rest,
+    }
+
+    const defaultOptions = (
+      <>
+        <option value="">Select country</option>
+        {SUPPORTED_BUSINESS_COUNTRIES.map(code => (
+          <option key={code} value={code}>
+            {code}
+          </option>
+        ))}
+      </>
+    )
+
+    if (asChild) {
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
+          {children ?? defaultOptions}
+        </Slot>
+      )
+    }
+
+    return (
+      <select ref={forwardedRef} {...commonProps}>
+        {children ?? defaultOptions}
+      </select>
+    )
+  },
+)
+
+const BusinessDetailsTaxId = forwardRef<HTMLInputElement, BusinessDetailsFieldProps>(
+  function TopupFormBusinessDetailsTaxId({ asChild, onChange, ...rest }, forwardedRef) {
+    const ctx = useTopupCtx('BusinessDetails.TaxId')
+    if (!ctx.businessDetails.isBusiness) return null
+
+    const commonProps = {
+      'data-solvapay-topup-form-business-details-tax-id': '',
+      type: 'text',
+      value: ctx.businessDetails.taxId ?? '',
+      'aria-invalid': ctx.fieldErrors.taxId ? true : undefined,
+      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
+        ctx.setBusinessDetails({ taxId: e.target.value })
+      }),
+      ...rest,
+    }
+
+    if (asChild) {
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)} />
+      )
+    }
+
+    return <input ref={forwardedRef} {...commonProps} />
+  },
+)
+
+const BusinessDetails = {
+  Root: BusinessDetailsRoot,
+  Toggle: BusinessDetailsToggle,
+  BusinessName: BusinessDetailsBusinessName,
+  Country: BusinessDetailsCountry,
+  TaxId: BusinessDetailsTaxId,
+} as const
+
+type SummaryRootProps = React.HTMLAttributes<HTMLDivElement> & {
+  asChild?: boolean
+  children?: React.ReactNode
+}
+
+const SummaryRoot = forwardRef<HTMLDivElement, SummaryRootProps>(function TopupFormSummaryRoot(
+  { asChild, children, ...rest },
+  forwardedRef,
+) {
+  useTopupCtx('Summary')
+  const Comp = asChild ? Slot : 'div'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-topup-form-summary="" {...rest}>
+      {children}
+    </Comp>
+  )
+})
+
+type SummaryLeafProps = React.HTMLAttributes<HTMLSpanElement> & { asChild?: boolean }
+
+function useSummaryAmounts() {
+  const ctx = useTopupCtx('Summary')
+  const locale = useLocale()
+  const currency = (ctx.taxBreakdown?.currency ?? ctx.currency ?? 'usd').toLowerCase()
+
+  const subtotalMinor = ctx.taxBreakdown?.subtotal ?? ctx.amount
+  const taxMinor = ctx.taxBreakdown?.taxAmount ?? 0
+  const totalMinor = ctx.taxBreakdown?.total ?? ctx.amount
+
+  return {
+    subtotalFormatted: formatPrice(subtotalMinor, currency, { locale }),
+    taxFormatted: formatPrice(taxMinor, currency, { locale }),
+    totalFormatted: formatPrice(totalMinor, currency, { locale }),
+    taxRate: ctx.taxBreakdown?.taxRate ?? null,
+    treatment: ctx.taxBreakdown?.treatment ?? null,
+    attaching: ctx.businessDetailsAttaching,
+  }
+}
+
+const SummarySubtotal = forwardRef<HTMLSpanElement, SummaryLeafProps>(
+  function TopupFormSummarySubtotal({ asChild, children, ...rest }, forwardedRef) {
+    const { subtotalFormatted } = useSummaryAmounts()
+    const Comp = asChild ? Slot : 'span'
+    return (
+      <Comp ref={forwardedRef} data-solvapay-topup-form-summary-subtotal="" {...rest}>
+        {children ?? subtotalFormatted}
+      </Comp>
+    )
+  },
+)
+
+const SummaryTax = forwardRef<HTMLSpanElement, SummaryLeafProps>(function TopupFormSummaryTax(
+  { asChild, children, ...rest },
+  forwardedRef,
+) {
+  const { taxFormatted, taxRate, treatment } = useSummaryAmounts()
+  const Comp = asChild ? Slot : 'span'
+  const defaultLabel =
+    treatment === 'reverse_charge'
+      ? `VAT reverse charge (${taxFormatted})`
+      : taxRate != null
+        ? `Tax (${Math.round(taxRate * 100)}%)`
+        : 'Tax'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-topup-form-summary-tax="" {...rest}>
+      {children ?? (
+        <>
+          <span>{defaultLabel}</span>{' '}
+          <span data-solvapay-topup-form-summary-tax-amount="">{taxFormatted}</span>
+        </>
+      )}
+    </Comp>
+  )
+})
+
+const SummaryTotal = forwardRef<HTMLSpanElement, SummaryLeafProps>(function TopupFormSummaryTotal(
+  { asChild, children, ...rest },
+  forwardedRef,
+) {
+  const { totalFormatted } = useSummaryAmounts()
+  const Comp = asChild ? Slot : 'span'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-topup-form-summary-total="" {...rest}>
+      {children ?? totalFormatted}
+    </Comp>
+  )
+})
+
+const Summary = {
+  Root: SummaryRoot,
+  Subtotal: SummarySubtotal,
+  Tax: SummaryTax,
+  Total: SummaryTotal,
+} as const
+
 export const TopupFormRoot = Root
 export const TopupFormPaymentElement = PaymentElementSlot
 export const TopupFormSubmitButton = SubmitButton
 export const TopupFormLoading = Loading
 export const TopupFormError = ErrorSlot
 export const TopupFormLegalFooter = LegalFooter
+export const TopupFormBusinessDetails = BusinessDetails
+export const TopupFormSummary = Summary
 
 export const TopupForm = {
   Root,
   AmountPicker: AmountPickerPrimitive.Root,
   PaymentElement: PaymentElementSlot,
+  BusinessDetails,
+  Summary,
   SubmitButton,
   Loading,
   Error: ErrorSlot,

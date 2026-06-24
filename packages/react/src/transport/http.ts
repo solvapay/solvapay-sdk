@@ -52,6 +52,7 @@ export const DEFAULT_ROUTES = {
   processPayment: '/api/process-payment',
   createTopupPayment: '/api/create-topup-payment-intent',
   processTopupPayment: '/api/process-topup-payment',
+  attachTopupBusinessDetails: '/api/attach-topup-business-details',
   customerBalance: '/api/customer-balance',
   cancelRenewal: '/api/cancel-renewal',
   reactivateRenewal: '/api/reactivate-renewal',
@@ -121,6 +122,14 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         body: { paymentIntentId: params.paymentIntentId },
         onErrorContext: 'processTopupPayment',
         errorPrefix: 'Failed to process topup payment',
+      }),
+
+    attachTopupBusinessDetails: params =>
+      request(config, routeFor(config, 'attachTopupBusinessDetails'), {
+        method: 'POST',
+        body: params,
+        onErrorContext: 'attachTopupBusinessDetails',
+        errorPrefix: 'Failed to attach business details',
       }),
 
     getBalance: () =>

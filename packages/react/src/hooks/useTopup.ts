@@ -26,6 +26,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
   const [error, setError] = useState<Error | null>(null)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
   const isStartingRef = useRef(false)
 
   const startTopup = useCallback(async () => {
@@ -76,6 +77,9 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
+      if (result.processorPaymentId) {
+        setProcessorPaymentId(result.processorPaymentId)
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start topup')
       setError(error)
@@ -91,6 +95,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     setError(null)
     setStripePromise(null)
     setClientSecret(null)
+    setProcessorPaymentId(null)
   }, [])
 
   return {
@@ -98,6 +103,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     error,
     stripePromise,
     clientSecret,
+    processorPaymentId,
     startTopup,
     reset,
   }

@@ -27,6 +27,7 @@ import type {
   TopupProcessResult,
   PaymentMethodInfo,
 } from '@solvapay/server'
+import type { TaxBreakdown, TaxIdType } from '@solvapay/core'
 
 export interface TransportBalanceResult {
   credits: number
@@ -153,6 +154,21 @@ export interface SolvaPayTransport {
   processTopupPayment?: (params: {
     paymentIntentId: string
   }) => Promise<TopupProcessResult>
+
+  /**
+   * Attach business purchase details to a credit-topup payment intent
+   * and retrieve the computed tax breakdown. Optional — when omitted,
+   * `TopupForm` skips the attach gate and `Summary` renders the base
+   * amount only.
+   */
+  attachTopupBusinessDetails?: (params: {
+    paymentIntentId: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: TaxIdType
+  }) => Promise<{ taxBreakdown: TaxBreakdown }>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 

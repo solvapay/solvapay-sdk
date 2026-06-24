@@ -4,11 +4,13 @@
 
 import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
+import type { TaxIdType } from '@solvapay/core'
 import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
+  attachTopupBusinessDetailsCore,
   isErrorResult,
 } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
@@ -140,5 +142,26 @@ export async function processTopupPaymentIntent(
   if (!isErrorResult(result)) {
     await invalidatePurchaseCacheForRequest(request)
   }
+  return toNextRouteResponse(result)
+}
+
+/**
+ * Next.js route wrapper for POST /api/attach-topup-business-details.
+ */
+export async function attachTopupBusinessDetails(
+  request: globalThis.Request,
+  body: {
+    paymentIntentId: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: TaxIdType
+  },
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
+): Promise<NextResponse> {
+  const result = await attachTopupBusinessDetailsCore(request, body, options)
   return toNextRouteResponse(result)
 }

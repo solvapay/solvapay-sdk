@@ -169,6 +169,7 @@ export interface TopupPaymentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string
+  processorPaymentId?: string
 }
 
 export interface UseTopupOptions {
@@ -181,6 +182,7 @@ export interface UseTopupReturn {
   error: Error | null
   stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
   clientSecret: string | null
+  processorPaymentId: string | null
   startTopup: () => Promise<void>
   reset: () => void
 }
@@ -211,6 +213,8 @@ export interface TopupFormProps {
     extras?: TopupFormSuccessExtras,
   ) => void | Promise<void>
   onError?: (error: Error) => void
+  /** Called when the tax breakdown updates after attaching business details. */
+  onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
   returnUrl?: string
   submitButtonText?: string
   className?: string
@@ -298,6 +302,7 @@ export interface SolvaPayConfig {
     processPayment?: string // Default: '/api/process-payment'
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
     processTopupPayment?: string // Default: '/api/process-topup-payment'
+    attachTopupBusinessDetails?: string // Default: '/api/attach-topup-business-details'
     customerBalance?: string // Default: '/api/customer-balance'
     cancelRenewal?: string // Default: '/api/cancel-renewal'
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
@@ -468,6 +473,14 @@ export interface SolvaPayContextValue {
   processTopupPayment?: (params: {
     paymentIntentId: string
   }) => Promise<TopupProcessResult>
+  attachTopupBusinessDetails?: (params: {
+    paymentIntentId: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
   activatePlan: (params: {
