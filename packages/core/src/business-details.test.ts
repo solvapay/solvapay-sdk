@@ -3,6 +3,9 @@ import {
   COUNTRY_TO_TAX_ID_TYPE,
   SUPPORTED_BUSINESS_COUNTRIES,
   deriveTaxIdType,
+  getTaxIdExample,
+  getTaxIdFieldLabel,
+  getTaxIdHelperText,
   validateBusinessDetails,
 } from './business-details'
 
@@ -140,6 +143,35 @@ describe('validateBusinessDetails', () => {
       expect(result.data.country).toBeUndefined()
       expect(result.data.taxId).toBeUndefined()
     }
+  })
+})
+
+describe('tax id field helpers', () => {
+  it('returns VAT-aware labels', () => {
+    expect(getTaxIdFieldLabel('SE')).toBe('VAT ID')
+    expect(getTaxIdFieldLabel('GB')).toBe('VAT Number')
+    expect(getTaxIdFieldLabel('US')).toContain('EIN')
+  })
+
+  it('uses EL prefix for Greece examples', () => {
+    expect(getTaxIdExample('GR')).toBe('EL123456789')
+  })
+
+  it('provides examples that pass validation for every supported country', () => {
+    for (const country of SUPPORTED_BUSINESS_COUNTRIES) {
+      const example = getTaxIdExample(country)
+      const result = validateBusinessDetails({
+        isBusiness: true,
+        businessName: 'Example Co',
+        country,
+        taxId: example,
+      })
+      expect(result.success, `expected ${country} example ${example} to validate`).toBe(true)
+    }
+  })
+
+  it('includes the example in helper text', () => {
+    expect(getTaxIdHelperText('SE')).toContain('SE123456789123')
   })
 })
 

@@ -108,6 +108,65 @@ export function deriveTaxIdType(country: SupportedBusinessCountry): TaxIdType {
   return COUNTRY_TO_TAX_ID_TYPE[country]
 }
 
+/** Stripe-aligned example values that pass {@link TAX_ID_REGEX_BY_COUNTRY} validation. */
+export const TAX_ID_EXAMPLE_BY_COUNTRY: Record<SupportedBusinessCountry, string> = {
+  AT: 'ATU12345678',
+  BE: 'BE0123456789',
+  BG: 'BG0123456789',
+  HR: 'HR12345678912',
+  CY: 'CY12345678Z',
+  CZ: 'CZ1234567890',
+  DK: 'DK12345678',
+  EE: 'EE123456789',
+  FI: 'FI12345678',
+  FR: 'FRAB123456789',
+  DE: 'DE123456789',
+  GR: 'EL123456789',
+  HU: 'HU12345678',
+  IE: 'IE1234567AB',
+  IT: 'IT12345678912',
+  LV: 'LV12345678912',
+  LT: 'LT123456789',
+  LU: 'LU12345678',
+  MT: 'MT12345678',
+  NL: 'NL123456789B12',
+  PL: 'PL1234567890',
+  PT: 'PT123456789',
+  RO: 'RO1234567891',
+  SK: 'SK1234567891',
+  SI: 'SI12345678',
+  ES: 'ESA1234567Z',
+  SE: 'SE123456789123',
+  GB: 'GB123456789',
+  US: '12-3456789',
+}
+
+const TAX_ID_FIELD_LABEL_BY_TYPE: Record<TaxIdType, string> = {
+  eu_vat: 'VAT ID',
+  gb_vat: 'VAT Number',
+  us_ein: 'EIN (Employer Identification Number)',
+}
+
+export function getTaxIdFieldLabel(country: SupportedBusinessCountry): string {
+  return TAX_ID_FIELD_LABEL_BY_TYPE[deriveTaxIdType(country)]
+}
+
+export function getTaxIdExample(country: SupportedBusinessCountry): string {
+  return TAX_ID_EXAMPLE_BY_COUNTRY[country]
+}
+
+export function getTaxIdHelperText(country: SupportedBusinessCountry): string {
+  const example = getTaxIdExample(country)
+  const taxIdType = deriveTaxIdType(country)
+  if (taxIdType === 'us_ein') {
+    return `Enter your EIN, e.g. ${example}`
+  }
+  if (taxIdType === 'gb_vat') {
+    return `Enter your full VAT number including the country code, e.g. ${example}`
+  }
+  return `Enter your full VAT ID including the country code, e.g. ${example}`
+}
+
 function isSupportedCountry(value: string): value is SupportedBusinessCountry {
   return (SUPPORTED_BUSINESS_COUNTRIES as readonly string[]).includes(value)
 }

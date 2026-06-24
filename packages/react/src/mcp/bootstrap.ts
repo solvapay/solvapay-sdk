@@ -61,10 +61,12 @@ export interface McpAppBootstrapLike extends McpAppLike {
    * Optional — proxied by `@modelcontextprotocol/ext-apps` `App.readServerResource`.
    * When present, `<McpApp>` reads `solvapay://bootstrap.json` instead of
    * replaying the intent tool on hosts that scrub `structuredContent`.
+   *
+   * Return type kept loose so the real `App` class is structurally assignable
+   * without fighting ext-apps resource-content variance (text vs blob entries).
    */
-  readServerResource?: (params: {
-    uri: string
-  }) => Promise<{ contents?: Array<{ text?: string }> }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readServerResource?: (params: { uri: string }) => Promise<any>
 }
 
 /**
