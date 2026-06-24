@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type {
   AutoRechargeConfig,
-  AutoRechargeInput,
   SaveAutoRechargeInput,
   SaveAutoRechargeResponse,
 } from '@solvapay/server'
