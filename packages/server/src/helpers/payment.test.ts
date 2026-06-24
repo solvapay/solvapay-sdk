@@ -20,7 +20,7 @@ vi.mock('./error', () => ({
 
 import { createSolvaPay } from '../factory'
 import { syncCustomerCore } from './customer'
-import { createPaymentIntentCore, processTopupPaymentIntentCore, attachTopupBusinessDetailsCore } from './payment'
+import { createPaymentIntentCore, processTopupPaymentIntentCore, attachBusinessDetailsCore } from './payment'
 
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
 
@@ -443,18 +443,18 @@ describe('processTopupPaymentIntentCore — post-success balance polling', () =>
   })
 })
 
-describe('attachTopupBusinessDetailsCore', () => {
-  const mockAttachTopupBusinessDetails = vi.fn()
+describe('attachBusinessDetailsCore', () => {
+  const mockAttachBusinessDetails = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateSolvaPay.mockReturnValue({
-      attachTopupBusinessDetails: mockAttachTopupBusinessDetails,
+      attachBusinessDetails: mockAttachBusinessDetails,
     } as never)
   })
 
   it('rejects requests missing paymentIntentId with status 400', async () => {
-    const result = await attachTopupBusinessDetailsCore(fakeRequest(), {
+    const result = await attachBusinessDetailsCore(fakeRequest(), {
       paymentIntentId: '',
       isBusiness: false,
     })
@@ -462,11 +462,11 @@ describe('attachTopupBusinessDetailsCore', () => {
       error: 'paymentIntentId is required',
       status: 400,
     })
-    expect(mockAttachTopupBusinessDetails).not.toHaveBeenCalled()
+    expect(mockAttachBusinessDetails).not.toHaveBeenCalled()
   })
 
   it('rejects invalid business details with status 400', async () => {
-    const result = await attachTopupBusinessDetailsCore(fakeRequest(), {
+    const result = await attachBusinessDetailsCore(fakeRequest(), {
       paymentIntentId: 'pi_test_123',
       isBusiness: true,
       businessName: '',
@@ -474,11 +474,11 @@ describe('attachTopupBusinessDetailsCore', () => {
       taxId: 'SE123',
     })
     expect(result).toMatchObject({ status: 400 })
-    expect(mockAttachTopupBusinessDetails).not.toHaveBeenCalled()
+    expect(mockAttachBusinessDetails).not.toHaveBeenCalled()
   })
 
-  it('forwards validated consumer details to solvaPay.attachTopupBusinessDetails', async () => {
-    mockAttachTopupBusinessDetails.mockResolvedValue({
+  it('forwards validated consumer details to solvaPay.attachBusinessDetails', async () => {
+    mockAttachBusinessDetails.mockResolvedValue({
       taxBreakdown: {
         subtotal: 1000,
         taxAmount: 250,
@@ -489,13 +489,13 @@ describe('attachTopupBusinessDetailsCore', () => {
       },
     })
 
-    const result = await attachTopupBusinessDetailsCore(
+    const result = await attachBusinessDetailsCore(
       fakeRequest(),
       { paymentIntentId: 'pi_test_123', isBusiness: false },
-      { solvaPay: { attachTopupBusinessDetails: mockAttachTopupBusinessDetails } as never },
+      { solvaPay: { attachBusinessDetails: mockAttachBusinessDetails } as never },
     )
 
-    expect(mockAttachTopupBusinessDetails).toHaveBeenCalledWith({
+    expect(mockAttachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
       isBusiness: false,
     })
@@ -512,7 +512,7 @@ describe('attachTopupBusinessDetailsCore', () => {
   })
 
   it('forwards validated business details including tax ID fields', async () => {
-    mockAttachTopupBusinessDetails.mockResolvedValue({
+    mockAttachBusinessDetails.mockResolvedValue({
       taxBreakdown: {
         subtotal: 1000,
         taxAmount: 0,
@@ -523,7 +523,7 @@ describe('attachTopupBusinessDetailsCore', () => {
       },
     })
 
-    await attachTopupBusinessDetailsCore(
+    await attachBusinessDetailsCore(
       fakeRequest(),
       {
         paymentIntentId: 'pi_test_123',
@@ -532,10 +532,10 @@ describe('attachTopupBusinessDetailsCore', () => {
         country: 'SE',
         taxId: 'SE556677889901',
       },
-      { solvaPay: { attachTopupBusinessDetails: mockAttachTopupBusinessDetails } as never },
+      { solvaPay: { attachBusinessDetails: mockAttachBusinessDetails } as never },
     )
 
-    expect(mockAttachTopupBusinessDetails).toHaveBeenCalledWith({
+    expect(mockAttachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
       isBusiness: true,
       businessName: 'Acme AB',

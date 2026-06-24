@@ -129,7 +129,7 @@ export {
   createTopupPaymentIntent,
   processPaymentIntent,
   processTopupPaymentIntent,
-  attachTopupBusinessDetails,
+  attachBusinessDetails,
   createCheckoutSession,
   createCustomerSession,
   activatePlan,

@@ -509,11 +509,12 @@ export interface SolvaPay {
   }): Promise<import('./types/client').ProcessPaymentResult>
 
   /**
-   * Attach business purchase details to a credit-topup payment intent
+   * Attach business purchase details to a payment intent
    * and retrieve the computed tax breakdown.
    */
-  attachTopupBusinessDetails(params: {
+  attachBusinessDetails(params: {
     paymentIntentId: string
+    customerRef?: string
     isBusiness: boolean
     businessName?: string
     country?: string
@@ -956,13 +957,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.processPaymentIntent(params)
     },
 
-    attachTopupBusinessDetails(params) {
-      if (!apiClient.attachTopupBusinessDetails) {
+    attachBusinessDetails(params) {
+      if (!apiClient.attachBusinessDetails) {
         throw new SolvaPayError(
-          'attachTopupBusinessDetails is not available on this API client',
+          'attachBusinessDetails is not available on this API client',
         )
       }
-      return apiClient.attachTopupBusinessDetails(params)
+      return apiClient.attachBusinessDetails(params)
     },
 
     checkLimits(params) {

@@ -302,7 +302,7 @@ export interface SolvaPayConfig {
     processPayment?: string // Default: '/api/process-payment'
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
     processTopupPayment?: string // Default: '/api/process-topup-payment'
-    attachTopupBusinessDetails?: string // Default: '/api/attach-topup-business-details'
+    attachBusinessDetails?: string // Default: '/api/attach-business-details'
     customerBalance?: string // Default: '/api/customer-balance'
     cancelRenewal?: string // Default: '/api/cancel-renewal'
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
@@ -473,8 +473,9 @@ export interface SolvaPayContextValue {
   processTopupPayment?: (params: {
     paymentIntentId: string
   }) => Promise<TopupProcessResult>
-  attachTopupBusinessDetails?: (params: {
+  attachBusinessDetails?: (params: {
     paymentIntentId: string
+    customerRef?: string
     isBusiness: boolean
     businessName?: string
     country?: string

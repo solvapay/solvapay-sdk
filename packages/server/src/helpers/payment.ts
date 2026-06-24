@@ -384,10 +384,11 @@ const TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000] as const
  * Validates business fields client-side via `@solvapay/core` before
  * forwarding to the SolvaPay backend.
  */
-export async function attachTopupBusinessDetailsCore(
+export async function attachBusinessDetailsCore(
   request: Request,
   body: {
     paymentIntentId: string
+    customerRef?: string
   } & BusinessDetailsInput,
   options: {
     solvaPay?: SolvaPay
@@ -419,16 +420,17 @@ export async function attachTopupBusinessDetailsCore(
 
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    if (typeof solvaPay.attachTopupBusinessDetails !== 'function') {
+    if (typeof solvaPay.attachBusinessDetails !== 'function') {
       return {
-        error: 'attachTopupBusinessDetails is not available on this SolvaPay client',
+        error: 'attachBusinessDetails is not available on this SolvaPay client',
         status: 501,
       }
     }
 
     const details = validation.data
-    const result = await solvaPay.attachTopupBusinessDetails({
+    const result = await solvaPay.attachBusinessDetails({
       paymentIntentId: body.paymentIntentId,
+      ...(body.customerRef !== undefined && { customerRef: body.customerRef }),
       ...details,
     })
 
@@ -436,7 +438,7 @@ export async function attachTopupBusinessDetailsCore(
   } catch (error) {
     return handleRouteError(
       error,
-      'Attach topup business details',
+      'Attach business details',
       'Failed to attach business details',
     )
   }

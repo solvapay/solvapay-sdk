@@ -148,7 +148,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     configRef.current = config
     transportRef.current = resolveTransport(config)
     setHasProcessTopupPayment(!!transportRef.current.processTopupPayment)
-    setHasAttachTopupBusinessDetails(!!transportRef.current.attachTopupBusinessDetails)
+    setHasAttachBusinessDetails(!!transportRef.current.attachBusinessDetails)
   }, [config])
 
   const fetchBalanceImpl = useCallback(async () => {
@@ -251,20 +251,21 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     [],
   )
 
-  const attachTopupBusinessDetails = useCallback(
+  const attachBusinessDetails = useCallback(
     (params: {
       paymentIntentId: string
+      customerRef?: string
       isBusiness: boolean
       businessName?: string
       country?: string
       taxId?: string
       taxIdType?: import('@solvapay/core').TaxIdType
-    }) => transportRef.current.attachTopupBusinessDetails!(params),
+    }) => transportRef.current.attachBusinessDetails!(params),
     [],
   )
 
-  const [hasAttachTopupBusinessDetails, setHasAttachTopupBusinessDetails] = useState<boolean>(
-    () => !!transportRef.current.attachTopupBusinessDetails,
+  const [hasAttachBusinessDetails, setHasAttachBusinessDetails] = useState<boolean>(
+    () => !!transportRef.current.attachBusinessDetails,
   )
   useEffect(() => {
     // MCP mode: identity already resolved by the OAuth bridge and carried
@@ -625,8 +626,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       processPayment,
       createTopupPayment,
       processTopupPayment: hasProcessTopupPayment ? processTopupPayment : undefined,
-      attachTopupBusinessDetails: hasAttachTopupBusinessDetails
-        ? attachTopupBusinessDetails
+      attachBusinessDetails: hasAttachBusinessDetails
+        ? attachBusinessDetails
         : undefined,
       cancelRenewal,
       reactivateRenewal,
@@ -646,8 +647,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       createTopupPayment,
       processTopupPayment,
       hasProcessTopupPayment,
-      attachTopupBusinessDetails,
-      hasAttachTopupBusinessDetails,
+      attachBusinessDetails,
+      hasAttachBusinessDetails,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,

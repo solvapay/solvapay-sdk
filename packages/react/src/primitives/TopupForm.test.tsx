@@ -627,17 +627,17 @@ describe('TopupForm business details + summary', () => {
         publishableKey: 'pk_test_123',
         processorPaymentId: 'pi_test_123',
       }),
-      attachTopupBusinessDetails: vi.fn().mockResolvedValue({ taxBreakdown }),
+      attachBusinessDetails: vi.fn().mockResolvedValue({ taxBreakdown }),
       ...overrides,
     })
   }
 
   it('auto-attaches consumer details and enables submit once tax breakdown lands', async () => {
     const onTaxChange = vi.fn()
-    const attachTopupBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
 
     render(
-      <Wrap value={businessCtx({ attachTopupBusinessDetails })}>
+      <Wrap value={businessCtx({ attachBusinessDetails })}>
         <TopupForm.Root amount={1000} currency="USD" onTaxChange={onTaxChange}>
           <TopupForm.PaymentElement />
           <TopupForm.Summary.Root>
@@ -648,8 +648,8 @@ describe('TopupForm business details + summary', () => {
       </Wrap>,
     )
 
-    await waitFor(() => expect(attachTopupBusinessDetails).toHaveBeenCalled())
-    expect(attachTopupBusinessDetails).toHaveBeenCalledWith({
+    await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalled())
+    expect(attachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
       isBusiness: false,
     })
@@ -669,13 +669,13 @@ describe('TopupForm business details + summary', () => {
   })
 
   it('blocks submit until business attach succeeds when business mode is enabled', async () => {
-    const attachTopupBusinessDetails = vi
+    const attachBusinessDetails = vi
       .fn()
       .mockResolvedValueOnce({ taxBreakdown })
       .mockRejectedValueOnce(new Error('Invalid VAT ID'))
 
     render(
-      <Wrap value={businessCtx({ attachTopupBusinessDetails })}>
+      <Wrap value={businessCtx({ attachBusinessDetails })}>
         <TopupForm.Root amount={1000} currency="USD">
           <TopupForm.BusinessDetails.Root>
             <TopupForm.BusinessDetails.Toggle data-testid="business-toggle" />
@@ -689,7 +689,7 @@ describe('TopupForm business details + summary', () => {
       </Wrap>,
     )
 
-    await waitFor(() => expect(attachTopupBusinessDetails).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalledTimes(1))
 
     await waitFor(() =>
       expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
@@ -710,7 +710,7 @@ describe('TopupForm business details + summary', () => {
       })
     })
 
-    await waitFor(() => expect(attachTopupBusinessDetails.mock.calls.length).toBeGreaterThan(1))
+    await waitFor(() => expect(attachBusinessDetails.mock.calls.length).toBeGreaterThan(1))
     expect(screen.getByTestId('submit')).toBeDisabled()
   })
 })

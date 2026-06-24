@@ -156,13 +156,14 @@ export interface SolvaPayTransport {
   }) => Promise<TopupProcessResult>
 
   /**
-   * Attach business purchase details to a credit-topup payment intent
+   * Attach business purchase details to a payment intent
    * and retrieve the computed tax breakdown. Optional — when omitted,
    * `TopupForm` skips the attach gate and `Summary` renders the base
    * amount only.
    */
-  attachTopupBusinessDetails?: (params: {
+  attachBusinessDetails?: (params: {
     paymentIntentId: string
+    customerRef?: string
     isBusiness: boolean
     businessName?: string
     country?: string

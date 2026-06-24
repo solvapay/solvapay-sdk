@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
-import { attachTopupBusinessDetails } from '@solvapay/next'
+import { attachBusinessDetails } from '@solvapay/next'
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  return attachTopupBusinessDetails(request, body)
+  return attachBusinessDetails(request, body)
 }

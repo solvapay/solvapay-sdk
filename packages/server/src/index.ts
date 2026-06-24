@@ -202,7 +202,7 @@ export {
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
-  attachTopupBusinessDetailsCore,
+  attachBusinessDetailsCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,

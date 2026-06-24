@@ -10,7 +10,7 @@ import {
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
-  attachTopupBusinessDetailsCore,
+  attachBusinessDetailsCore,
   isErrorResult,
 } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
@@ -146,9 +146,9 @@ export async function processTopupPaymentIntent(
 }
 
 /**
- * Next.js route wrapper for POST /api/attach-topup-business-details.
+ * Next.js route wrapper for POST /api/attach-business-details.
  */
-export async function attachTopupBusinessDetails(
+export async function attachBusinessDetails(
   request: globalThis.Request,
   body: {
     paymentIntentId: string
@@ -162,6 +162,6 @@ export async function attachTopupBusinessDetails(
     solvaPay?: SolvaPay
   } = {},
 ): Promise<NextResponse> {
-  const result = await attachTopupBusinessDetailsCore(request, body, options)
+  const result = await attachBusinessDetailsCore(request, body, options)
   return toNextRouteResponse(result)
 }

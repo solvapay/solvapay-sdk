@@ -116,7 +116,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
   // `onSuccess` on backend confirmation) lives next to the existing
   // provider-context read. Optional — transports that don't implement
   // it keep the legacy fire-on-confirm behaviour.
-  const { processTopupPayment, attachTopupBusinessDetails } = solva
+  const { processTopupPayment, attachBusinessDetails, customerRef } = solva
 
   const copy = useCopy()
   const locale = useLocale()
@@ -180,7 +180,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     onError,
     onTaxChange,
     processTopupPayment,
-    attachTopupBusinessDetails,
+    attachBusinessDetails,
+    customerRef,
   }
 
   const shell = (
@@ -238,14 +239,16 @@ type InnerProps = {
     | { status: 'failed' }
     | { status: 'cancelled' }
   >
-  attachTopupBusinessDetails?: (params: {
+  attachBusinessDetails?: (params: {
     paymentIntentId: string
+    customerRef?: string
     isBusiness: boolean
     businessName?: string
     country?: string
     taxId?: string
     taxIdType?: import('@solvapay/core').TaxIdType
   }) => Promise<{ taxBreakdown: TaxBreakdown }>
+  customerRef?: string
   children?: React.ReactNode
 }
 
@@ -278,7 +281,8 @@ const Inner: React.FC<InnerProps> = ({
   onError,
   onTaxChange,
   processTopupPayment,
-  attachTopupBusinessDetails,
+  attachBusinessDetails,
+  customerRef,
   children,
 }) => {
   const stripe = useStripe()
@@ -314,8 +318,8 @@ const Inner: React.FC<InnerProps> = ({
 
   const runAttach = useCallback(
     async (input: BusinessDetailsInput): Promise<boolean> => {
-      if (!processorPaymentId || !attachTopupBusinessDetails) {
-        return !attachTopupBusinessDetails
+      if (!processorPaymentId || !attachBusinessDetails) {
+        return !attachBusinessDetails
       }
 
       const validation = validateBusinessDetails(input)
@@ -329,8 +333,9 @@ const Inner: React.FC<InnerProps> = ({
       setBusinessDetailsAttaching(true)
 
       try {
-        const result = await attachTopupBusinessDetails({
+        const result = await attachBusinessDetails({
           paymentIntentId: processorPaymentId,
+          ...(customerRef ? { customerRef } : {}),
           ...validation.data,
         })
         if (requestId !== attachRequestIdRef.current) return false
@@ -351,11 +356,11 @@ const Inner: React.FC<InnerProps> = ({
         }
       }
     },
-    [processorPaymentId, attachTopupBusinessDetails, onTaxChange],
+    [processorPaymentId, attachBusinessDetails, customerRef, onTaxChange],
   )
 
   useEffect(() => {
-    if (!processorPaymentId || !attachTopupBusinessDetails) return
+    if (!processorPaymentId || !attachBusinessDetails) return
 
     const validation = validateBusinessDetails(businessDetails)
     if (!validation.success) {
@@ -370,9 +375,9 @@ const Inner: React.FC<InnerProps> = ({
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [businessDetails, processorPaymentId, attachTopupBusinessDetails, runAttach])
+  }, [businessDetails, processorPaymentId, attachBusinessDetails, runAttach])
 
-  const requiresBusinessAttach = !!attachTopupBusinessDetails
+  const requiresBusinessAttach = !!attachBusinessDetails
   const isReady = !!(stripe && elements)
   const canSubmit =
     isReady &&

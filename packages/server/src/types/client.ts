@@ -7,11 +7,12 @@
 import type { components, operations } from './generated'
 import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
 
-export type AttachTopupBusinessDetailsParams = {
+export type AttachBusinessDetailsParams = {
   paymentIntentId: string
+  customerRef?: string
 } & BusinessDetailsInput
 
-export type AttachTopupBusinessDetailsResult = {
+export type AttachBusinessDetailsResult = {
   taxBreakdown: TaxBreakdown
 }
 
@@ -421,9 +422,9 @@ export interface SolvaPayClient {
   }): Promise<ProcessPaymentResult>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
-  attachTopupBusinessDetails?(
-    params: AttachTopupBusinessDetailsParams,
-  ): Promise<AttachTopupBusinessDetailsResult>
+  attachBusinessDetails?(
+    params: AttachBusinessDetailsParams,
+  ): Promise<AttachBusinessDetailsResult>
 
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {
