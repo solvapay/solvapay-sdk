@@ -141,7 +141,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fetchBalanceRef = useRef<(() => Promise<void>) | null>(null)
   const reconcileRunningRef = useRef(false)
-  const reconcilePollRef = useRef<{ baseline: number; generation: number } | null>(null)
+  const reconcilePollRef = useRef<{ baseline: number; generation: number; pending: number } | null>(null)
 
   const inFlightRef = useRef<string | null>(null)
   const loadedCacheKeysRef = useRef<Set<string>>(
@@ -250,6 +250,11 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   const reconcileBalanceIncreaseImpl = useCallback(async () => {
     if (!transportRef.current.getBalance) return
 
+    const finishReconcilePoll = () => {
+      reconcilePollRef.current = null
+      clearOptimisticGrace()
+    }
+
     reconcileRunningRef.current = true
     try {
       while (reconcilePollRef.current) {
@@ -264,21 +269,29 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
           BALANCE_RECONCILE_DELAYS_MS,
         )
 
-        if (!reconcilePollRef.current || reconcilePollRef.current.generation !== activeGeneration) {
+        const pollState = reconcilePollRef.current
+        if (!pollState || pollState.generation !== activeGeneration) {
           continue
         }
 
-        if (pollResult) {
-          try {
-            const data = await transportRef.current.getBalance!()
-            applyBalanceSnapshot(data)
-          } catch (error) {
-            console.error('[SolvaPayProvider] Failed to reconcile balance after auto-recharge:', error)
-          }
+        if (!pollResult) {
+          finishReconcilePoll()
+          break
         }
 
-        reconcilePollRef.current = null
-        clearOptimisticGrace()
+        try {
+          const data = await transportRef.current.getBalance!()
+          applyBalanceSnapshot(data)
+          pollState.pending -= 1
+          if (pollState.pending > 0) {
+            pollState.baseline = data.credits ?? 0
+            continue
+          }
+        } catch (error) {
+          console.error('[SolvaPayProvider] Failed to reconcile balance after auto-recharge:', error)
+        }
+
+        finishReconcilePoll()
         break
       }
     } finally {
@@ -317,7 +330,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
 
       const nextCredits = creditsValueRef.current ?? 0
       const generation = (reconcilePollRef.current?.generation ?? 0) + 1
-      reconcilePollRef.current = { baseline: nextCredits, generation }
+      const pending = (reconcilePollRef.current?.pending ?? 0) + 1
+      reconcilePollRef.current = { baseline: nextCredits, generation, pending }
       scheduleGraceRefetch(BALANCE_RECONCILE_GRACE_MS)
       if (!reconcileRunningRef.current) {
         void reconcileBalanceIncreaseImpl()

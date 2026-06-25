@@ -270,6 +270,73 @@ describe('SolvaPayProvider - balance (credits)', () => {
     })
   })
 
+  it('reconciles every recharge when back-to-back debits each expect auto-recharge', async () => {
+    let balanceFetchCount = 0
+    fetchSpy.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('customer-balance')) {
+        balanceFetchCount += 1
+        if (balanceFetchCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credits: 10_000, displayCurrency: 'USD' }),
+          })
+        }
+        if (balanceFetchCount <= 4) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credits: 8800, displayCurrency: 'USD' }),
+          })
+        }
+        if (balanceFetchCount <= 8) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credits: 18_800, displayCurrency: 'USD' }),
+          })
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ credits: 28_800, displayCurrency: 'USD' }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ customerRef: 'cus_auto', purchases: [] }),
+      })
+    })
+
+    const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(result.current.customerRef).toBe('cus_auto')
+    })
+
+    await act(async () => {
+      await result.current.balance.refetch()
+    })
+    expect(result.current.balance.credits).toBe(10_000)
+
+    act(() => {
+      result.current.balance.adjustBalance(-600)
+      result.current.balance.reconcileAfterUsageDebit({ expectIncrease: true })
+      result.current.balance.adjustBalance(-600)
+      result.current.balance.reconcileAfterUsageDebit({ expectIncrease: true })
+    })
+    expect(result.current.balance.credits).toBe(8800)
+
+    await act(async () => {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+        await vi.advanceTimersByTimeAsync(delay)
+      }
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+        await vi.advanceTimersByTimeAsync(delay)
+      }
+    })
+
+    await waitFor(() => {
+      expect(result.current.balance.credits).toBe(28_800)
+    })
+  })
+
   it('keeps optimistic debit until grace refetch reconciles with server', async () => {
     fetchSpy.mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('customer-balance')) {
