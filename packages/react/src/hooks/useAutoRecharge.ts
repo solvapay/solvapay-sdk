@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   AutoRechargeConfig,
   SaveAutoRechargeInput,
@@ -47,6 +47,7 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
   const [saving, setSaving] = useState(false)
   const [disabling, setDisabling] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const requestSeq = useRef(0)
 
   const load = useCallback(
     async (force = false) => {
@@ -117,8 +118,10 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
       }
       setSaving(true)
       setError(null)
+      const seq = ++requestSeq.current
       try {
         const result = await transport.saveAutoRecharge(input)
+        if (seq !== requestSeq.current) return result
         autoRechargeCache.set(key, {
           config: result.config,
           promise: null,
@@ -144,9 +147,21 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
     }
     setDisabling(true)
     setError(null)
+    const seq = ++requestSeq.current
     try {
       const result = await transport.disableAutoRecharge()
-      await refresh(true)
+      if (seq === requestSeq.current) {
+        setConfig(current => {
+          const disabledConfig = current ? { ...current, enabled: false } : null
+          autoRechargeCache.set(key, {
+            config: disabledConfig,
+            promise: null,
+            timestamp: Date.now(),
+          })
+          return disabledConfig
+        })
+        await refresh(true)
+      }
       return result
     } catch (caught) {
       const err = caught instanceof Error ? caught : new Error(String(caught))
@@ -155,7 +170,7 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
     } finally {
       setDisabling(false)
     }
-  }, [_config, refresh])
+  }, [_config, key, refresh])
 
   return { config, loading, saving, disabling, error, refresh, save, disable }
 }

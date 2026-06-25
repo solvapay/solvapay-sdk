@@ -25,6 +25,14 @@ function makeFetch(payloads: unknown[]) {
   })
 }
 
+function makeDeferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(res => {
+    resolve = res
+  })
+  return { promise, resolve }
+}
+
 function wrapper(configOverride: Parameters<typeof SolvaPayProvider>[0]['config']) {
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <SolvaPayProvider config={configOverride}>{children}</SolvaPayProvider>
@@ -75,5 +83,96 @@ describe('useAutoRecharge', () => {
       expect.objectContaining({ method: 'PUT' }),
     )
     expect(result.current.config).toMatchObject({ enabled: true })
+  })
+
+  it('optimistically disables config when refresh fails after DELETE', async () => {
+    let getCount = 0
+    const fetchFn = vi.fn().mockImplementation(async (_url, init?: RequestInit) => {
+      if (init?.method === 'DELETE') {
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      getCount += 1
+      if (getCount > 1) {
+        return new Response(JSON.stringify({ message: 'refresh failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({ config }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    const { result } = renderHook(() => useAutoRecharge(), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.config?.enabled).toBe(true)
+
+    await act(async () => {
+      await result.current.disable()
+    })
+
+    expect(result.current.config?.enabled).toBe(false)
+    expect(result.current.error).not.toBeNull()
+  })
+
+  it('ignores a stale save response when disable completes later', async () => {
+    const saveDeferred = makeDeferred<Response>()
+    const disabledConfig: AutoRechargeConfig = { ...config, enabled: false }
+
+    const fetchFn = vi.fn().mockImplementation(async (_url, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        return saveDeferred.promise
+      }
+      if (init?.method === 'DELETE') {
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({ config: disabledConfig }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    const { result } = renderHook(() => useAutoRecharge(), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    let savePromise: Promise<unknown> | undefined
+    await act(async () => {
+      savePromise = result.current.save({
+        enabled: true,
+        triggerType: 'balance',
+        thresholdAmountMajor: 5,
+        topupAmountMajor: 10,
+        currency: 'USD',
+      })
+    })
+
+    await act(async () => {
+      await result.current.disable()
+    })
+
+    await act(async () => {
+      saveDeferred.resolve(
+        new Response(JSON.stringify({ config }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      await savePromise
+    })
+
+    expect(result.current.config?.enabled).toBe(false)
   })
 })
