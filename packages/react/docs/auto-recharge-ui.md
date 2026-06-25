@@ -113,7 +113,7 @@ Shown on the summary card when auto-recharge is paused.
 | UI field | Form state | Config path | Default | Rules |
 | --- | --- | --- | --- | --- |
 | Enable checkbox | `enabled` | `enabled` | `false` (opt-in) | Off by default; threshold and amount fields stay hidden until checked |
-| Threshold | `thresholdAmountMajor` + `thresholdUnit` | `trigger.thresholdCredits` | `5` | Stored as credits; entered in $ or credits |
+| Threshold | `thresholdAmountMajor` + `thresholdUnit` | `trigger.thresholdAmountMinor` | `5` | Stored in display-currency minor units; entered in $ or credits |
 | Fixed amount | `topupAmountMajor` + `topupUnit` | `topup.amountMinor` | `10` | ≥ minimum charge |
 | Payment method | Stripe `PaymentElement` | — | — | Required before enable |
 | Summary | `summaryLine` (`buildSummaryLine`) | derived | — | Updates live |

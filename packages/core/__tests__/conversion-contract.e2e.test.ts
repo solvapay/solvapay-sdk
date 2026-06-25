@@ -109,23 +109,21 @@ describe('conversion contract round-trip', () => {
 })
 
 /** Mirrors post-fix auto-recharge validation threshold storage. */
-function thresholdCreditsFromMajor(thresholdMajor: number, displayExchangeRate: number): number {
-  const thresholdUsdMinor = Math.round((thresholdMajor / displayExchangeRate) * 100)
-  return minorUnitsToCredits(thresholdUsdMinor)
+function thresholdAmountMinorFromMajor(thresholdMajor: number, currency: string): number {
+  return Math.round(thresholdMajor * minorUnitsPerMajor(currency))
 }
 
 describe('auto-recharge threshold round-trip', () => {
   it.each([
-    { currency: 'SEK', rate: SEK_RATE, threshold: 1000 },
-    { currency: 'USD', rate: 1, threshold: 10 },
-    { currency: 'EUR', rate: EUR_RATE, threshold: 50 },
-    { currency: 'JPY', rate: JPY_RATE, threshold: 500 },
+    { currency: 'SEK', threshold: 1000 },
+    { currency: 'USD', threshold: 10 },
+    { currency: 'EUR', threshold: 50 },
+    { currency: 'JPY', threshold: 500 },
   ])(
     '$currency threshold save->store->display round-trips within one minor unit',
-    ({ currency, rate, threshold }) => {
-      const stored = thresholdCreditsFromMajor(threshold, rate)
-      const displayed = estimateCurrencyMajorFromCredits(stored, currency, CPM, rate)
-      expect(displayed).not.toBeNull()
+    ({ currency, threshold }) => {
+      const storedMinor = thresholdAmountMinorFromMajor(threshold, currency)
+      const displayed = storedMinor / minorUnitsPerMajor(currency)
       expect(displayed).toBeCloseTo(threshold, 0)
     },
   )

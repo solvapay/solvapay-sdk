@@ -7,7 +7,7 @@ import type { AutoRechargeConfig } from '@solvapay/server'
 
 const config: AutoRechargeConfig = {
   enabled: true,
-  trigger: { type: 'balance', thresholdCredits: 500 },
+  trigger: { type: 'balance', thresholdAmountMinor: 500 },
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
   fundingSourceType: 'saved_card',
   paymentMethodId: 'pm_123',
@@ -55,13 +55,24 @@ describe('useAutoRecharge', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.config).toMatchObject({
       enabled: true,
-      trigger: { type: 'balance', thresholdCredits: 500 },
+      trigger: { type: 'balance', thresholdAmountMinor: 500 },
     })
     expect(fetchFn).toHaveBeenCalledWith('/api/auto-recharge', expect.any(Object))
   })
 
   it('saves auto-recharge config with PUT semantics', async () => {
-    const fetchFn = makeFetch([{ config: null }, { config }])
+    const savedDisplay = {
+      thresholdAmountMajor: 5,
+      topupAmountMajor: 10,
+      currency: 'USD',
+      formatted: { threshold: '$5', topup: '$10' },
+      exchangeRate: 1,
+      rateSource: 'parity' as const,
+    }
+    const fetchFn = makeFetch([
+      { config: null },
+      { config, display: savedDisplay },
+    ])
     const { result } = renderHook(() => useAutoRecharge(), {
       wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
     })
@@ -82,7 +93,10 @@ describe('useAutoRecharge', () => {
       '/api/auto-recharge',
       expect.objectContaining({ method: 'PUT' }),
     )
-    expect(result.current.config).toMatchObject({ enabled: true })
+    expect(result.current.config).toMatchObject({
+      enabled: true,
+      display: savedDisplay,
+    })
   })
 
   it('optimistically disables config when refresh fails after DELETE', async () => {
@@ -174,5 +188,82 @@ describe('useAutoRecharge', () => {
     })
 
     expect(result.current.config?.enabled).toBe(false)
+  })
+
+  it('ignores a stale refresh that would re-enable after disable completes', async () => {
+    const refreshDeferred = makeDeferred<Response>()
+    let getCount = 0
+
+    const fetchFn = vi.fn().mockImplementation(async (_url, init?: RequestInit) => {
+      if (init?.method === 'DELETE') {
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      getCount += 1
+      if (getCount === 1) {
+        return new Response(JSON.stringify({ config }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return refreshDeferred.promise
+    })
+
+    const { result } = renderHook(() => useAutoRecharge(), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    let disablePromise: Promise<unknown> | undefined
+    await act(async () => {
+      disablePromise = result.current.disable()
+    })
+
+    expect(result.current.config?.enabled).toBe(false)
+
+    await act(async () => {
+      refreshDeferred.resolve(
+        new Response(JSON.stringify({ config }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      await disablePromise
+    })
+
+    expect(result.current.config?.enabled).toBe(false)
+  })
+
+  it('applies an edit save after disable when disable did not run', async () => {
+    const editedConfig: AutoRechargeConfig = {
+      ...config,
+      trigger: { type: 'balance', thresholdAmountMinor: 700 },
+    }
+
+    const fetchFn = makeFetch([
+      { config },
+      { config: editedConfig },
+    ])
+
+    const { result } = renderHook(() => useAutoRecharge(), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.save({
+        enabled: true,
+        triggerType: 'balance',
+        thresholdAmountMajor: 7,
+        topupAmountMajor: 10,
+        currency: 'USD',
+      })
+    })
+
+    expect(result.current.config?.trigger.thresholdAmountMinor).toBe(700)
   })
 })

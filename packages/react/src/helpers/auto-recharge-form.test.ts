@@ -14,7 +14,7 @@ import { formatPrice } from '../utils/format'
 describe('configToAutoRechargeInput', () => {
   const baseConfig: AutoRechargeConfig = {
     enabled: true,
-    trigger: { type: 'balance', thresholdCredits: 450_000 },
+    trigger: { type: 'balance', thresholdAmountMinor: 4500 },
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
     status: 'pending_setup',
     failureCount: 0,
@@ -56,10 +56,9 @@ describe('configToAutoRechargeInput', () => {
     expect(input?.topupAmountMajor).toBe(10)
   })
 
-  it('derives major amounts from credits when display is absent', () => {
+  it('derives major amounts from trigger minor units when display is absent', () => {
     const input = configToAutoRechargeInput(baseConfig, {
       currency: 'USD',
-      conversion: { creditsPerMinorUnit: 100, displayExchangeRate: 1 },
     })
     expect(input?.enabled).toBe(true)
     expect(input?.thresholdAmountMajor).toBe(45)
@@ -74,7 +73,7 @@ describe('configToAutoRechargeInput', () => {
 describe('configToForm (DEV-586: reload must not mis-scale or zero when display is absent)', () => {
   const baseConfig: AutoRechargeConfig = {
     enabled: true,
-    trigger: { type: 'balance', thresholdCredits: 450_000 },
+    trigger: { type: 'balance', thresholdAmountMinor: 4500 },
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
     status: 'active',
     failureCount: 0,
@@ -94,19 +93,14 @@ describe('configToForm (DEV-586: reload must not mis-scale or zero when display 
         },
       },
       'USD',
-      { creditsPerMinorUnit: 100, displayExchangeRate: 1 },
     )
     expect(form.enabled).toBe(true)
     expect(form.thresholdAmountMajor).toBe('50')
     expect(form.topupAmountMajor).toBe('12')
   })
 
-  it('reconstructs currency-correct major amounts from credits when display is absent', () => {
-    const form = configToForm(baseConfig, 'USD', {
-      creditsPerMinorUnit: 100,
-      displayExchangeRate: 1,
-    })
-    // 450_000 credits / (100 creditsPerMinorUnit * 100 minor) = $45, not $4,500 or $0.
+  it('reconstructs currency-correct major amounts from trigger minor units when display is absent', () => {
+    const form = configToForm(baseConfig, 'USD')
     expect(form.thresholdAmountMajor).toBe('45')
     expect(form.topupAmountMajor).toBe('10')
   })
@@ -115,11 +109,10 @@ describe('configToForm (DEV-586: reload must not mis-scale or zero when display 
     const form = configToForm(
       {
         ...baseConfig,
-        trigger: { type: 'balance', thresholdCredits: 500_000 },
+        trigger: { type: 'balance', thresholdAmountMinor: 50_000 },
         topup: { mode: 'fixed', amountMinor: 5000, currency: 'JPY' },
       },
       'JPY',
-      { creditsPerMinorUnit: 100, displayExchangeRate: 1 },
     )
     // JPY is zero-decimal: 5000 minor units == 5000 major, not 50.
     expect(form.topupAmountMajor).toBe('5000')

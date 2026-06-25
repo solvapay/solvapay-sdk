@@ -145,7 +145,7 @@ export type AutoRechargeStatus = 'active' | 'disabled' | 'failed' | 'pending_set
 
 export type AutoRechargeConfig = {
   enabled: boolean
-  trigger: { type: 'balance'; thresholdCredits: number }
+  trigger: { type: 'balance'; thresholdAmountMinor: number }
   topup: { mode: 'fixed'; amountMinor: number; currency: string }
   fundingSourceType?: 'saved_card' | 'tokenized_card'
   paymentMethodId?: string
@@ -153,7 +153,7 @@ export type AutoRechargeConfig = {
   failureCount: number
   lastChargeAt?: string
   updatedAt?: string
-  /** Backend-computed display values — render verbatim, do not divide thresholdCredits. */
+  /** Backend-computed display values — render verbatim; do not derive from trigger fields. */
   display?: AutoRechargeDisplayBlock
 }
 
@@ -198,6 +198,7 @@ export type AutoRechargeResponse = {
 
 export type SaveAutoRechargeResponse = {
   config: AutoRechargeConfig
+  display?: AutoRechargeDisplayBlock
   setupClientSecret?: string
   publishableKey?: string
   stripeAccountId?: string

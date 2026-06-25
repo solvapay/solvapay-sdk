@@ -205,13 +205,23 @@ export function validateAutoRechargeForm(
   return { ok: true, payload }
 }
 
+/** Derive display-currency major units from stored trigger minor units. */
+function triggerAmountMajorFromConfig(config: AutoRechargeConfig): number | null {
+  const topupCurrency = config.topup.currency.toUpperCase()
+  const minorPerMajor = getMinorUnitsPerMajor(topupCurrency)
+  const { thresholdAmountMinor } = config.trigger
+  if (!Number.isFinite(thresholdAmountMinor) || thresholdAmountMinor < 0) {
+    return null
+  }
+  return thresholdAmountMinor / minorPerMajor
+}
+
 /** Map a persisted config back to a payment-intent auto-recharge payload. */
 export function configToAutoRechargeInput(
   config: AutoRechargeConfig,
   options?: {
     display?: AutoRechargeDisplayBlock | null
     currency?: string
-    conversion?: AutoRechargeConversionContext
   },
 ): AutoRechargeInput | null {
   if (!config.enabled) return null
@@ -234,12 +244,7 @@ export function configToAutoRechargeInput(
     }
   }
 
-  const thresholdMajor = estimateCurrencyMajorFromCredits(
-    config.trigger.thresholdCredits,
-    currency,
-    options?.conversion?.creditsPerMinorUnit,
-    options?.conversion?.displayExchangeRate,
-  )
+  const thresholdMajor = triggerAmountMajorFromConfig(config)
   const topupAmountMajor = config.topup.amountMinor / getMinorUnitsPerMajor(currency)
 
   if (thresholdMajor == null || !Number.isFinite(topupAmountMajor) || topupAmountMajor <= 0) {
@@ -255,17 +260,11 @@ export function configToAutoRechargeInput(
   }
 }
 
-export function configToForm(
-  config: AutoRechargeConfig,
-  currency: string,
-  conversion?: AutoRechargeConversionContext,
-): AutoRechargeFormState {
+export function configToForm(config: AutoRechargeConfig, currency: string): AutoRechargeFormState {
   const base = createDefaultAutoRechargeForm(currency)
 
-  // Prefer the backend-computed display block verbatim — it already encodes the
-  // correct credits/currency scaling. The credit-derived fallback below only runs
-  // when `display` is absent (DEV-586), and must thread the real creditsPerMinorUnit
-  // and a currency-correct minor divisor rather than assuming a 2-decimal /100.
+  // Prefer the backend-computed display block verbatim. When absent, derive major
+  // units from stored trigger/top-up minor amounts with a currency-correct divisor.
   const display = config.display
   if (display?.thresholdAmountMajor != null && display.topupAmountMajor != null) {
     const thresholdStr = String(Math.max(0, display.thresholdAmountMajor))
@@ -279,12 +278,7 @@ export function configToForm(
     }
   }
 
-  const thresholdMajor = estimateCurrencyMajorFromCredits(
-    config.trigger.thresholdCredits,
-    currency,
-    conversion?.creditsPerMinorUnit,
-    conversion?.displayExchangeRate,
-  )
+  const thresholdMajor = triggerAmountMajorFromConfig(config)
   const thresholdStr =
     thresholdMajor != null ? String(Math.max(0, thresholdMajor)) : '0'
   const topupStr = String(config.topup.amountMinor / getMinorUnitsPerMajor(currency))
@@ -391,7 +385,6 @@ export function convertAmountForUnitFlip(
 
 export function flipUnitValue(
   anchor: AmountInputAnchor,
-  _currentUnit: AmountInputUnit,
   targetUnit: AmountInputUnit,
   currency: string,
   creditsPerMinorUnit?: number | null,

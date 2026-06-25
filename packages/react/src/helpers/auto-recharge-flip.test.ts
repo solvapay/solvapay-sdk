@@ -14,7 +14,7 @@ function flip(
   currency = 'SEK',
 ): { value: string; unit: AmountInputUnit } {
   const targetUnit: AmountInputUnit = currentUnit === 'currency' ? 'credits' : 'currency'
-  return flipUnitValue(anchor, currentUnit, targetUnit, currency, CPM, SEK_RATE)
+  return flipUnitValue(anchor, targetUnit, currency, CPM, SEK_RATE)
 }
 
 describe('flipUnitValue (DEV-591: snap-back to user-entered base)', () => {
@@ -44,7 +44,6 @@ describe('flipUnitValue (DEV-591: snap-back to user-entered base)', () => {
     for (let i = 0; i < 10; i += 1) {
       const next = flipUnitValue(
         anchor,
-        currentUnit,
         currentUnit === 'currency' ? 'credits' : 'currency',
         'SEK',
         CPM,
@@ -60,29 +59,29 @@ describe('flipUnitValue (DEV-591: snap-back to user-entered base)', () => {
 
   it('derives from updated anchor after user edits in credits', () => {
     const anchor: AmountInputAnchor = { value: '200000', unit: 'credits' }
-    const toCurrency = flipUnitValue(anchor, 'credits', 'currency', 'SEK', CPM, SEK_RATE)
+    const toCurrency = flipUnitValue(anchor, 'currency', 'SEK', CPM, SEK_RATE)
     expect(toCurrency.unit).toBe('currency')
-    const backToCredits = flipUnitValue(anchor, 'currency', 'credits', 'SEK', CPM, SEK_RATE)
+    const backToCredits = flipUnitValue(anchor, 'credits', 'SEK', CPM, SEK_RATE)
     expect(backToCredits.value).toBe('200000')
   })
 
   it('returns value unchanged for invalid or non-positive input', () => {
     expect(
-      flipUnitValue({ value: '', unit: 'currency' }, 'currency', 'credits', 'USD', CPM, 1),
+      flipUnitValue({ value: '', unit: 'currency' }, 'credits', 'USD', CPM, 1),
     ).toEqual({ value: '', unit: 'credits' })
     expect(
-      flipUnitValue({ value: 'abc', unit: 'currency' }, 'currency', 'credits', 'USD', CPM, 1),
+      flipUnitValue({ value: 'abc', unit: 'currency' }, 'credits', 'USD', CPM, 1),
     ).toEqual({ value: 'abc', unit: 'credits' })
     expect(
-      flipUnitValue({ value: '0', unit: 'currency' }, 'currency', 'credits', 'USD', CPM, 1),
+      flipUnitValue({ value: '0', unit: 'currency' }, 'credits', 'USD', CPM, 1),
     ).toEqual({ value: '0', unit: 'credits' })
   })
 
   it('preserves JPY whole-yen anchor on round-trip', () => {
     const anchor: AmountInputAnchor = { value: '500', unit: 'currency' }
     const JPY_RATE = 150
-    const toCredits = flipUnitValue(anchor, 'currency', 'credits', 'JPY', CPM, JPY_RATE)
-    const back = flipUnitValue(anchor, 'credits', 'currency', 'JPY', CPM, JPY_RATE)
+    const toCredits = flipUnitValue(anchor, 'credits', 'JPY', CPM, JPY_RATE)
+    const back = flipUnitValue(anchor, 'currency', 'JPY', CPM, JPY_RATE)
     expect(back.value).toBe('500')
     expect(Number.isInteger(Number(toCredits.value))).toBe(true)
   })

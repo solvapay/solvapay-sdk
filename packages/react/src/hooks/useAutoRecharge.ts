@@ -23,6 +23,13 @@ export type UseAutoRechargeReturn = {
 /** @internal Exported only for tests. */
 export { autoRechargeCache, CACHE_DURATION }
 
+function mergeAutoRechargeConfig(
+  config: AutoRechargeConfig,
+  display?: AutoRechargeConfig['display'],
+): AutoRechargeConfig {
+  return display ? { ...config, display } : config
+}
+
 async function fetchAutoRecharge(
   config: SolvaPayConfig | undefined,
 ): Promise<AutoRechargeConfig | null> {
@@ -30,7 +37,7 @@ async function fetchAutoRecharge(
   if (!transport.getAutoRecharge) return null
   const response = await transport.getAutoRecharge()
   if (!response.config) return null
-  return response.display ? { ...response.config, display: response.display } : response.config
+  return mergeAutoRechargeConfig(response.config, response.display)
 }
 
 export function useAutoRecharge(): UseAutoRechargeReturn {
@@ -51,10 +58,12 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
 
   const load = useCallback(
     async (force = false) => {
+      const seq = requestSeq.current
       const cached = autoRechargeCache.get(key)
       const now = Date.now()
 
       if (!force && cached?.config && now - cached.timestamp < CACHE_DURATION) {
+        if (seq !== requestSeq.current) return
         setConfig(cached.config)
         setLoading(false)
         setError(null)
@@ -65,12 +74,16 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
         setLoading(true)
         try {
           const value = await cached.promise
+          if (seq !== requestSeq.current) return
           setConfig(value)
           setError(null)
         } catch (caught) {
+          if (seq !== requestSeq.current) return
           setError(caught instanceof Error ? caught : new Error(String(caught)))
         } finally {
-          setLoading(false)
+          if (seq === requestSeq.current) {
+            setLoading(false)
+          }
         }
         return
       }
@@ -86,14 +99,18 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
 
       try {
         const value = await promise
+        if (seq !== requestSeq.current) return
         autoRechargeCache.set(key, { config: value, promise: null, timestamp: Date.now() })
         setConfig(value)
       } catch (caught) {
+        if (seq !== requestSeq.current) return
         const err = caught instanceof Error ? caught : new Error(String(caught))
         autoRechargeCache.set(key, { config: null, promise: null, timestamp: Date.now() })
         setError(err)
       } finally {
-        setLoading(false)
+        if (seq === requestSeq.current) {
+          setLoading(false)
+        }
       }
     },
     [_config, key],
@@ -122,12 +139,13 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
       try {
         const result = await transport.saveAutoRecharge(input)
         if (seq !== requestSeq.current) return result
+        const nextConfig = mergeAutoRechargeConfig(result.config, result.display)
         autoRechargeCache.set(key, {
-          config: result.config,
+          config: nextConfig,
           promise: null,
           timestamp: Date.now(),
         })
-        setConfig(result.config)
+        setConfig(nextConfig)
         return result
       } catch (caught) {
         const err = caught instanceof Error ? caught : new Error(String(caught))
@@ -161,6 +179,15 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
           return disabledConfig
         })
         await refresh(true)
+        setConfig(current => {
+          const disabledConfig = current ? { ...current, enabled: false } : null
+          autoRechargeCache.set(key, {
+            config: disabledConfig,
+            promise: null,
+            timestamp: Date.now(),
+          })
+          return disabledConfig
+        })
       }
       return result
     } catch (caught) {

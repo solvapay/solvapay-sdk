@@ -160,10 +160,6 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const autoRecharge = useAutoRecharge()
   const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
-  const conversionContext = useMemo(
-    () => ({ creditsPerMinorUnit, displayExchangeRate }),
-    [creditsPerMinorUnit, displayExchangeRate],
-  )
   const copy = useCopy()
   const titleId = useId()
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -193,7 +189,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const [form, setForm] = useState<AutoRechargeFormState>(() =>
     autoRecharge.config
-      ? configToForm(autoRecharge.config, currency, conversionContext)
+      ? configToForm(autoRecharge.config, currency)
       : createDefaultAutoRechargeForm(currency, defaultTopup),
   )
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -211,9 +207,9 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     if (autoRecharge.config) {
       // Mirror server config into editable local form state when it changes.
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional external-to-local sync
-      setForm(configToForm(autoRecharge.config, currency, conversionContext))
+      setForm(configToForm(autoRecharge.config, currency))
     }
-  }, [autoRecharge.config, currency, conversionContext])
+  }, [autoRecharge.config, currency])
 
   const canToggleUnits = creditsPerMinorUnit != null && creditsPerMinorUnit > 0
   const rate = displayExchangeRate ?? 1
@@ -250,12 +246,12 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const resetForm = useCallback(() => {
     if (autoRecharge.config) {
-      setForm(configToForm(autoRecharge.config, currency, conversionContext))
+      setForm(configToForm(autoRecharge.config, currency))
     } else {
       setForm(createDefaultAutoRechargeForm(currency, defaultTopup))
     }
     setValidationError(null)
-  }, [autoRecharge.config, currency, conversionContext, defaultTopup])
+  }, [autoRecharge.config, currency, defaultTopup])
 
   const flipUnit = useCallback(
     (
@@ -270,7 +266,6 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
         const anchor = { value: prev[baseValueKey], unit: prev[baseUnitKey] }
         const flipped = flipUnitValue(
           anchor,
-          currentUnit,
           nextUnit,
           currency,
           creditsPerMinorUnit,
@@ -320,10 +315,10 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
   const savedSummaryLine = useMemo(() => {
     if (!autoRecharge.config?.enabled) return null
     return buildSummaryLine(
-      configToForm(autoRecharge.config, currency, conversionContext),
+      configToForm(autoRecharge.config, currency),
       currency,
     )
-  }, [autoRecharge.config, currency, conversionContext])
+  }, [autoRecharge.config, currency])
 
   const save = useCallback(async () => {
     const payload = emitValidation(form)

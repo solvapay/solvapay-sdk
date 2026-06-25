@@ -12,7 +12,7 @@ import type { AutoRechargeConfig } from '@solvapay/server'
 
 const config: AutoRechargeConfig = {
   enabled: true,
-  trigger: { type: 'balance', thresholdCredits: 500 },
+  trigger: { type: 'balance', thresholdAmountMinor: 500 },
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
   status: 'active',
   failureCount: 0,
@@ -361,7 +361,7 @@ describe('AutoRecharge primitive', () => {
     autoRechargeMocks.save.mockResolvedValue({
       config: {
         ...config,
-        trigger: { type: 'balance', thresholdCredits: 400 },
+        trigger: { type: 'balance', thresholdAmountMinor: 400 },
       },
     })
     const onPendingConfig = vi.fn()

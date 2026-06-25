@@ -156,7 +156,7 @@ describe('TopupPage payment success', () => {
     mockAutoRecharge({
       config: {
         enabled: true,
-        trigger: { type: 'balance', thresholdCredits: 450_000 },
+        trigger: { type: 'balance', thresholdAmountMinor: 4500 },
         topup: { mode: 'fixed', amountMinor: 1000, currency: 'SEK' },
         status: 'pending_setup',
         failureCount: 0,
