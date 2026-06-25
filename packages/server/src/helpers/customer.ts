@@ -11,12 +11,15 @@ import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { getAuthenticatedUserCore } from './auth'
 
+import type { CreditDisplayBlock } from '../types/client'
+
 export type CustomerBalanceResult = {
   customerRef: string
   credits: number
   displayCurrency: string
   creditsPerMinorUnit: number
   displayExchangeRate: number
+  display?: CreditDisplayBlock
 }
 
 /**

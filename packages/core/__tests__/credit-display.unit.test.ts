@@ -47,4 +47,56 @@ describe('creditsToDisplayMinorUnits', () => {
       }),
     ).toBeNull()
   })
+
+  it('returns zero minor units for zero credits', () => {
+    expect(
+      creditsToDisplayMinorUnits({
+        credits: 0,
+        creditsPerMinorUnit: 100,
+        displayExchangeRate: 9.46,
+        displayCurrency: 'SEK',
+      }),
+    ).toBe(0)
+  })
+
+  it('preserves sign for negative credits', () => {
+    const minor = creditsToDisplayMinorUnits({
+      credits: -10_000,
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+      displayCurrency: 'USD',
+    })
+    expect(minor).toBe(-100)
+  })
+
+  it('converts credits to EUR minor units', () => {
+    const minor = creditsToDisplayMinorUnits({
+      credits: 100_000,
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 0.92,
+      displayCurrency: 'EUR',
+    })
+    expect(minor).toBe(Math.round((100_000 / 100 / 100) * 0.92 * 100))
+  })
+
+  it('rounds half-up at x.5 minor-unit boundaries', () => {
+    const minor = creditsToDisplayMinorUnits({
+      credits: 5_250,
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+      displayCurrency: 'USD',
+    })
+    expect(minor).toBe(53)
+  })
+
+  it('handles large credit balances as exact integers', () => {
+    const minor = creditsToDisplayMinorUnits({
+      credits: 100_000_000,
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 9.46,
+      displayCurrency: 'SEK',
+    })
+    expect(Number.isInteger(minor)).toBe(true)
+    expect(minor).toBeGreaterThan(0)
+  })
 })

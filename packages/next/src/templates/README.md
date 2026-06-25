@@ -1,14 +1,13 @@
-# Middleware Templates
+# Proxy Templates
 
-This directory contains middleware/proxy templates for different Next.js versions.
+This directory contains proxy templates for different Next.js project layouts.
 
 ## Templates
 
-- **`middleware-next15.ts`** - Template for Next.js 15 projects
-  - Place at project root as `middleware.ts`
-- **`middleware-next16.ts`** - Template for Next.js 16 projects with `src/` folder structure
+- **`proxy-root.ts`** - Template for projects without a `src/` folder
+  - Place at project root as `proxy.ts`
+- **`proxy-src.ts`** - Template for projects with `src/` folder structure
   - Place in `src/` folder as `proxy.ts`
-  - Uses `proxy` export to avoid deprecation warnings
 
 ## Usage
 
@@ -20,10 +19,9 @@ For detailed setup instructions, see:
 
 ## File Location Summary
 
-- **Next.js 15**: `middleware.ts` at project root
-- **Next.js 16 without `src/` folder**: `proxy.ts` at project root
-- **Next.js 16 with `src/` folder**: `src/proxy.ts`
+- **Without `src/` folder**: `proxy.ts` at project root
+- **With `src/` folder**: `src/proxy.ts`
 
-## Next.js 16 Changes
+## Next.js Proxy Convention
 
-Next.js 16 renamed "middleware" to "proxy".
+Next.js renamed the file convention from `middleware` to `proxy`.

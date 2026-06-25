@@ -102,6 +102,42 @@ export interface SolvaPayCopy {
     creditEstimateExact: string
     creditEstimateApprox: string
   }
+  autoRecharge: {
+    heading: string
+    description: string
+    settingsHeading: string
+    setupTriggerLabel: string
+    modifyTriggerLabel: string
+    notConfiguredHint: string
+    enableLabel: string
+    enableQuestion: string
+    enableSentence: string
+    thresholdLabel: string
+    thresholdAriaLabel: string
+    fixedAmountLabel: string
+    fixedAmountAriaLabel: string
+    saveButton: string
+    cancelButton: string
+    disableButton: string
+    savedMessage: string
+    disabledMessage: string
+    setupRequiredMessage: string
+    setupHeading: string
+    setupDescription: string
+    setupSubmit: string
+    setupProcessing: string
+    setupAwaitingConfirmation: string
+    setupAuthFailed: string
+    invalidThreshold: string
+    thresholdTooLow: string
+    minTopupAmount: string
+    topupBelowThreshold: string
+    creditsPerRecharge: string
+    creditsPerRechargeApprox: string
+    currencyPerRecharge: string
+    currencyPerRechargeApprox: string
+    statusFailed: string
+  }
   activationFlow: {
     heading: string
     activateButton: string
