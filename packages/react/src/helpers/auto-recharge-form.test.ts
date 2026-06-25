@@ -3,6 +3,7 @@ import type { AutoRechargeConfig } from '@solvapay/server'
 import {
   buildSummaryLineFromPayload,
   configToAutoRechargeInput,
+  configToForm,
   validateAutoRechargeForm,
   type AutoRechargeFormState,
 } from './auto-recharge-form'
@@ -67,6 +68,62 @@ describe('configToAutoRechargeInput', () => {
 
   it('returns null when auto-recharge is disabled', () => {
     expect(configToAutoRechargeInput({ ...baseConfig, enabled: false })).toBeNull()
+  })
+})
+
+describe('configToForm (DEV-586: reload must not mis-scale or zero when display is absent)', () => {
+  const baseConfig: AutoRechargeConfig = {
+    enabled: true,
+    trigger: { type: 'balance', thresholdCredits: 450_000 },
+    topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
+    status: 'active',
+    failureCount: 0,
+  }
+
+  it('prefers the backend display block verbatim when present', () => {
+    const form = configToForm(
+      {
+        ...baseConfig,
+        display: {
+          thresholdAmountMajor: 50,
+          topupAmountMajor: 12,
+          currency: 'USD',
+          formatted: { threshold: '$50', topup: '$12' },
+          exchangeRate: 1,
+          rateSource: 'parity',
+        },
+      },
+      'USD',
+      { creditsPerMinorUnit: 100, displayExchangeRate: 1 },
+    )
+    expect(form.enabled).toBe(true)
+    expect(form.thresholdAmountMajor).toBe('50')
+    expect(form.topupAmountMajor).toBe('12')
+  })
+
+  it('reconstructs currency-correct major amounts from credits when display is absent', () => {
+    const form = configToForm(baseConfig, 'USD', {
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    })
+    // 450_000 credits / (100 creditsPerMinorUnit * 100 minor) = $45, not $4,500 or $0.
+    expect(form.thresholdAmountMajor).toBe('45')
+    expect(form.topupAmountMajor).toBe('10')
+  })
+
+  it('uses a zero-decimal divisor for the top-up on JPY when display is absent', () => {
+    const form = configToForm(
+      {
+        ...baseConfig,
+        trigger: { type: 'balance', thresholdCredits: 500_000 },
+        topup: { mode: 'fixed', amountMinor: 5000, currency: 'JPY' },
+      },
+      'JPY',
+      { creditsPerMinorUnit: 100, displayExchangeRate: 1 },
+    )
+    // JPY is zero-decimal: 5000 minor units == 5000 major, not 50.
+    expect(form.topupAmountMajor).toBe('5000')
+    expect(form.thresholdAmountMajor).not.toBe('0')
   })
 })
 

@@ -234,6 +234,21 @@ export function configToForm(
   conversion?: AutoRechargeConversionContext,
 ): AutoRechargeFormState {
   const base = createDefaultAutoRechargeForm(currency)
+
+  // Prefer the backend-computed display block verbatim — it already encodes the
+  // correct credits/currency scaling. The credit-derived fallback below only runs
+  // when `display` is absent (DEV-586), and must thread the real creditsPerMinorUnit
+  // and a currency-correct minor divisor rather than assuming a 2-decimal /100.
+  const display = config.display
+  if (display?.thresholdAmountMajor != null && display.topupAmountMajor != null) {
+    return {
+      ...base,
+      enabled: config.enabled,
+      thresholdAmountMajor: String(Math.max(0, display.thresholdAmountMajor)),
+      topupAmountMajor: String(display.topupAmountMajor),
+    }
+  }
+
   const thresholdMajor = estimateCurrencyMajorFromCredits(
     config.trigger.thresholdCredits,
     currency,
