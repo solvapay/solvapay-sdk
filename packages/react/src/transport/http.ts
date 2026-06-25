@@ -62,9 +62,7 @@ export const DEFAULT_ROUTES = {
   getProduct: '/api/get-product',
   listPlans: '/api/list-plans',
   getPaymentMethod: '/api/payment-method',
-  getAutoRecharge: '/api/auto-recharge',
-  saveAutoRecharge: '/api/auto-recharge',
-  disableAutoRecharge: '/api/auto-recharge',
+  autoRecharge: '/api/auto-recharge',
   getUsage: '/api/usage',
   getLimits: '/api/limits',
 } as const
@@ -224,14 +222,14 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       }),
 
     getAutoRecharge: () =>
-      request(config, routeFor(config, 'getAutoRecharge'), {
+      request(config, routeFor(config, 'autoRecharge'), {
         method: 'GET',
         onErrorContext: 'getAutoRecharge',
         errorPrefix: 'Failed to load auto-recharge',
       }),
 
     saveAutoRecharge: input =>
-      request(config, routeFor(config, 'saveAutoRecharge'), {
+      request(config, routeFor(config, 'autoRecharge'), {
         method: 'PUT',
         body: input,
         onErrorContext: 'saveAutoRecharge',
@@ -239,7 +237,7 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       }),
 
     disableAutoRecharge: () =>
-      request(config, routeFor(config, 'disableAutoRecharge'), {
+      request(config, routeFor(config, 'autoRecharge'), {
         method: 'DELETE',
         onErrorContext: 'disableAutoRecharge',
         errorPrefix: 'Failed to disable auto-recharge',

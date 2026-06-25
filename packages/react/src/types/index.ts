@@ -324,9 +324,7 @@ export interface SolvaPayConfig {
     createCheckoutSession?: string // Default: '/api/create-checkout-session'
     createCustomerSession?: string // Default: '/api/create-customer-session'
     getPaymentMethod?: string // Default: '/api/payment-method'
-    getAutoRecharge?: string // Default: '/api/auto-recharge'
-    saveAutoRecharge?: string // Default: '/api/auto-recharge'
-    disableAutoRecharge?: string // Default: '/api/auto-recharge'
+    autoRecharge?: string // Default: '/api/auto-recharge'
     getUsage?: string // Default: '/api/usage'
     getLimits?: string // Default: '/api/limits'
   }
