@@ -42,7 +42,7 @@ import { MissingProviderError } from '../utils/errors'
 import {
   buildSummaryLine,
   configToForm,
-  convertAmountForUnitFlip,
+  flipUnitValue,
   createDefaultAutoRechargeForm,
   validateAutoRechargeForm,
   type AmountInputUnit,
@@ -87,8 +87,9 @@ type AutoRechargeContextValue = {
   flipUnit: (
     valueKey: 'thresholdAmountMajor' | 'topupAmountMajor',
     unitKey: 'thresholdUnit' | 'topupUnit',
+    baseValueKey: 'thresholdBaseValue' | 'topupBaseValue',
+    baseUnitKey: 'thresholdBaseUnit' | 'topupBaseUnit',
     currentUnit: AmountInputUnit,
-    currentValue: string,
   ) => void
 }
 
@@ -260,21 +261,31 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     (
       valueKey: 'thresholdAmountMajor' | 'topupAmountMajor',
       unitKey: 'thresholdUnit' | 'topupUnit',
+      baseValueKey: 'thresholdBaseValue' | 'topupBaseValue',
+      baseUnitKey: 'thresholdBaseUnit' | 'topupBaseUnit',
       currentUnit: AmountInputUnit,
-      currentValue: string,
     ) => {
       const nextUnit: AmountInputUnit = currentUnit === 'currency' ? 'credits' : 'currency'
-      const converted = convertAmountForUnitFlip(
-        currentValue,
-        currentUnit,
-        nextUnit,
-        currency,
-        creditsPerMinorUnit,
-        displayExchangeRate,
-      )
-      updateForm({ [unitKey]: nextUnit, [valueKey]: converted } as Partial<AutoRechargeFormState>)
+      setForm(prev => {
+        const anchor = { value: prev[baseValueKey], unit: prev[baseUnitKey] }
+        const flipped = flipUnitValue(
+          anchor,
+          currentUnit,
+          nextUnit,
+          currency,
+          creditsPerMinorUnit,
+          displayExchangeRate,
+        )
+        const next = {
+          ...prev,
+          [unitKey]: flipped.unit,
+          [valueKey]: flipped.value,
+        } as AutoRechargeFormState
+        emitValidation(next)
+        return next
+      })
     },
-    [currency, creditsPerMinorUnit, displayExchangeRate, updateForm],
+    [currency, creditsPerMinorUnit, displayExchangeRate, emitValidation],
   )
 
   const fixedTopupHint = useMemo(() => {
@@ -967,8 +978,15 @@ const AmountField = forwardRef<HTMLInputElement, AmountFieldProps>(function Auto
       unit: ctx.form.thresholdUnit,
       unitKey: 'thresholdUnit' as const,
       valueKey: 'thresholdAmountMajor' as const,
+      baseValueKey: 'thresholdBaseValue' as const,
+      baseUnitKey: 'thresholdBaseUnit' as const,
       mode: ctx.form.thresholdUnit === 'currency' ? 'currency' : 'number',
-      onValue: (value: string) => ctx.updateForm({ thresholdAmountMajor: value }),
+      onValue: (value: string) =>
+        ctx.updateForm({
+          thresholdAmountMajor: value,
+          thresholdBaseValue: value,
+          thresholdBaseUnit: ctx.form.thresholdUnit,
+        }),
     },
     fixed: {
       label: copy.autoRecharge.fixedAmountLabel,
@@ -978,8 +996,15 @@ const AmountField = forwardRef<HTMLInputElement, AmountFieldProps>(function Auto
       unit: ctx.form.topupUnit,
       unitKey: 'topupUnit' as const,
       valueKey: 'topupAmountMajor' as const,
+      baseValueKey: 'topupBaseValue' as const,
+      baseUnitKey: 'topupBaseUnit' as const,
       mode: ctx.form.topupUnit === 'currency' ? 'currency' : 'number',
-      onValue: (value: string) => ctx.updateForm({ topupAmountMajor: value }),
+      onValue: (value: string) =>
+        ctx.updateForm({
+          topupAmountMajor: value,
+          topupBaseValue: value,
+          topupBaseUnit: ctx.form.topupUnit,
+        }),
     },
   }[field]
 
@@ -1031,8 +1056,9 @@ const AmountField = forwardRef<HTMLInputElement, AmountFieldProps>(function Auto
               ctx.flipUnit(
                 fieldConfig.valueKey,
                 fieldConfig.unitKey,
+                fieldConfig.baseValueKey,
+                fieldConfig.baseUnitKey,
                 fieldConfig.unit,
-                fieldConfig.value,
               )
             }
           />

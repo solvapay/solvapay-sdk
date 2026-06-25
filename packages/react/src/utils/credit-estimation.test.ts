@@ -12,14 +12,14 @@ describe('estimateCredits', () => {
 
   it('converts 100 SEK to credits using displayExchangeRate', () => {
     expect(estimateCredits(100, 'SEK', CPM, SEK_RATE)).toBe(
-      Math.floor((10_000 / SEK_RATE) * CPM),
+      Math.round((10_000 / SEK_RATE) * CPM),
     )
     expect(estimateCredits(100, 'SEK', CPM, SEK_RATE)).toBe(105_708)
   })
 
   it('converts 500 JPY using zero-decimal minor units', () => {
     expect(estimateCredits(500, 'JPY', CPM, JPY_RATE)).toBe(
-      Math.floor((500 / JPY_RATE) * CPM),
+      Math.round((500 / JPY_RATE) * CPM),
     )
     expect(estimateCredits(500, 'JPY', CPM, JPY_RATE)).toBe(333)
   })
@@ -50,10 +50,15 @@ describe('estimateCredits', () => {
     expect(estimateCredits(1_000_000, 'USD', CPM, 1)).toBe(10_000_000_000)
   })
 
-  it('floors credits down at fractional boundaries', () => {
+  it('rounds credits at fractional boundaries (symmetric with credits→currency)', () => {
     const result = estimateCredits(1, 'SEK', CPM, 3)
-    expect(result).toBe(Math.floor((100 / 3) * CPM))
+    expect(result).toBe(Math.round((100 / 3) * CPM))
     expect(result).toBe(3333)
+  })
+
+  it('uses Math.round not Math.floor for currency→credits (DEV-591)', () => {
+    // 0.02 USD @ rate 3 → 2 minor / 3 * 100 = 66.67 → round = 67, floor = 66
+    expect(estimateCredits(0.02, 'USD', CPM, 3)).toBe(67)
   })
 })
 

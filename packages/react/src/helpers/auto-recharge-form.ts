@@ -29,12 +29,22 @@ const DEFAULT_VALIDATION_MESSAGES: AutoRechargeValidationMessages = {
 
 export type AmountInputUnit = 'currency' | 'credits'
 
+/** Last user-entered value + unit for a field; restored verbatim on flip-back (DEV-591). */
+export type AmountInputAnchor = {
+  value: string
+  unit: AmountInputUnit
+}
+
 export type AutoRechargeFormState = {
   enabled: boolean
   thresholdAmountMajor: string
   thresholdUnit: AmountInputUnit
+  thresholdBaseValue: string
+  thresholdBaseUnit: AmountInputUnit
   topupAmountMajor: string
   topupUnit: AmountInputUnit
+  topupBaseValue: string
+  topupBaseUnit: AmountInputUnit
 }
 
 export type AutoRechargeConversionContext = {
@@ -43,6 +53,22 @@ export type AutoRechargeConversionContext = {
 }
 
 export type AutoRechargeInputPayload = AutoRechargeInput
+
+function amountAnchors(
+  thresholdValue: string,
+  topupValue: string,
+  unit: AmountInputUnit = 'currency',
+): Pick<
+  AutoRechargeFormState,
+  'thresholdBaseValue' | 'thresholdBaseUnit' | 'topupBaseValue' | 'topupBaseUnit'
+> {
+  return {
+    thresholdBaseValue: thresholdValue,
+    thresholdBaseUnit: unit,
+    topupBaseValue: topupValue,
+    topupBaseUnit: unit,
+  }
+}
 
 export function createDefaultAutoRechargeForm(
   currency: string,
@@ -62,6 +88,7 @@ export function createDefaultAutoRechargeForm(
     thresholdUnit: 'currency',
     topupAmountMajor: topup,
     topupUnit: 'currency',
+    ...amountAnchors(threshold, topup, 'currency'),
   }
 }
 
@@ -241,11 +268,14 @@ export function configToForm(
   // and a currency-correct minor divisor rather than assuming a 2-decimal /100.
   const display = config.display
   if (display?.thresholdAmountMajor != null && display.topupAmountMajor != null) {
+    const thresholdStr = String(Math.max(0, display.thresholdAmountMajor))
+    const topupStr = String(display.topupAmountMajor)
     return {
       ...base,
       enabled: config.enabled,
-      thresholdAmountMajor: String(Math.max(0, display.thresholdAmountMajor)),
-      topupAmountMajor: String(display.topupAmountMajor),
+      thresholdAmountMajor: thresholdStr,
+      topupAmountMajor: topupStr,
+      ...amountAnchors(thresholdStr, topupStr, 'currency'),
     }
   }
 
@@ -255,12 +285,15 @@ export function configToForm(
     conversion?.creditsPerMinorUnit,
     conversion?.displayExchangeRate,
   )
+  const thresholdStr =
+    thresholdMajor != null ? String(Math.max(0, thresholdMajor)) : '0'
+  const topupStr = String(config.topup.amountMinor / getMinorUnitsPerMajor(currency))
   return {
     ...base,
     enabled: config.enabled,
-    thresholdAmountMajor:
-      thresholdMajor != null ? String(Math.max(0, thresholdMajor)) : '0',
-    topupAmountMajor: String(config.topup.amountMinor / getMinorUnitsPerMajor(currency)),
+    thresholdAmountMajor: thresholdStr,
+    topupAmountMajor: topupStr,
+    ...amountAnchors(thresholdStr, topupStr, 'currency'),
   }
 }
 
@@ -299,13 +332,16 @@ export function payloadToForm(
   if (!payload.enabled) {
     return { ...base, enabled: false }
   }
+  const thresholdStr = String(payload.thresholdAmountMajor ?? base.thresholdAmountMajor)
+  const topupStr = String(payload.topupAmountMajor ?? base.topupAmountMajor)
   return {
     ...base,
     enabled: true,
-    thresholdAmountMajor: String(payload.thresholdAmountMajor ?? base.thresholdAmountMajor),
+    thresholdAmountMajor: thresholdStr,
     thresholdUnit: 'currency',
-    topupAmountMajor: String(payload.topupAmountMajor ?? base.topupAmountMajor),
+    topupAmountMajor: topupStr,
     topupUnit: 'currency',
+    ...amountAnchors(thresholdStr, topupStr, 'currency'),
   }
 }
 
@@ -351,4 +387,26 @@ export function convertAmountForUnitFlip(
     displayExchangeRate,
   )
   return major != null ? String(major) : value
+}
+
+export function flipUnitValue(
+  anchor: AmountInputAnchor,
+  _currentUnit: AmountInputUnit,
+  targetUnit: AmountInputUnit,
+  currency: string,
+  creditsPerMinorUnit?: number | null,
+  displayExchangeRate?: number | null,
+): { value: string; unit: AmountInputUnit } {
+  if (targetUnit === anchor.unit) {
+    return { value: anchor.value, unit: anchor.unit }
+  }
+  const converted = convertAmountForUnitFlip(
+    anchor.value,
+    anchor.unit,
+    targetUnit,
+    currency,
+    creditsPerMinorUnit,
+    displayExchangeRate,
+  )
+  return { value: converted, unit: targetUnit }
 }

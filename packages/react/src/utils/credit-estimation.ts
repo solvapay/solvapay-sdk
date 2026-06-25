@@ -11,7 +11,7 @@ export function estimateCredits(
   if (creditsPerMinorUnit == null || creditsPerMinorUnit <= 0) return null
   const rate = displayExchangeRate ?? 1
   const resolvedAmountMinor = Math.round(resolvedAmountMajor * getMinorUnitsPerMajor(currency))
-  return Math.floor((resolvedAmountMinor / rate) * creditsPerMinorUnit)
+  return Math.round((resolvedAmountMinor / rate) * creditsPerMinorUnit)
 }
 
 export function estimateCurrencyMajorFromCredits(

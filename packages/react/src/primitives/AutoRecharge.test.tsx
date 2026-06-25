@@ -29,6 +29,12 @@ const autoRechargeMocks = vi.hoisted(() => ({
   refresh: vi.fn(),
 }))
 
+const balanceMocks = vi.hoisted(() => ({
+  creditsPerMinorUnit: 100,
+  displayExchangeRate: 1,
+  displayCurrency: 'USD',
+}))
+
 vi.mock('../hooks/useAutoRecharge', () => ({
   useAutoRecharge: () => ({
     config: autoRechargeMocks.config,
@@ -44,9 +50,9 @@ vi.mock('../hooks/useAutoRecharge', () => ({
 
 vi.mock('../hooks/useBalance', () => ({
   useBalance: () => ({
-    creditsPerMinorUnit: 100,
-    displayExchangeRate: 1,
-    displayCurrency: 'USD',
+    creditsPerMinorUnit: balanceMocks.creditsPerMinorUnit,
+    displayExchangeRate: balanceMocks.displayExchangeRate,
+    displayCurrency: balanceMocks.displayCurrency,
   }),
 }))
 
@@ -140,6 +146,9 @@ beforeEach(() => {
   autoRechargeMocks.save.mockReset()
   autoRechargeMocks.disable.mockReset()
   autoRechargeMocks.refresh.mockReset().mockResolvedValue(undefined)
+  balanceMocks.creditsPerMinorUnit = 100
+  balanceMocks.displayExchangeRate = 1
+  balanceMocks.displayCurrency = 'USD'
   stripeMocks.confirmSetup.mockReset().mockResolvedValue({ error: undefined })
   stripeMocks.retrieveSetupIntent.mockReset().mockResolvedValue({
     setupIntent: { status: 'succeeded' },
@@ -272,6 +281,19 @@ describe('AutoRecharge primitive', () => {
     expect(autoRechargeMocks.save).toHaveBeenCalledWith(
       expect.objectContaining({ topupAmountMajor: 10 }),
     )
+  })
+
+  it('returns fixed top-up amount to original value after double unit toggle (DEV-591)', () => {
+    balanceMocks.displayExchangeRate = 9.46
+    balanceMocks.displayCurrency = 'SEK'
+    renderAutoRecharge({ currency: 'SEK', defaultTopupAmountMajor: 100 })
+    enableAutoRecharge()
+    const topupInput = screen.getByLabelText('Fixed top-up amount')
+    expect(topupInput).toHaveValue('100')
+    fireEvent.click(screen.getByLabelText('Switch fixed top-up amount to credits'))
+    expect(topupInput).not.toHaveValue('100')
+    fireEvent.click(screen.getByLabelText('Switch fixed top-up amount to currency'))
+    expect(topupInput).toHaveValue('100')
   })
 
   it('shows card setup when save returns setupClientSecret', async () => {

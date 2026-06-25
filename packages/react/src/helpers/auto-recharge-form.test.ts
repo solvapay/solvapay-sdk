@@ -157,8 +157,12 @@ describe('validateAutoRechargeForm — per-currency minimums & relationship (DEV
     enabled: true,
     thresholdAmountMajor: '5',
     thresholdUnit: 'currency',
+    thresholdBaseValue: '5',
+    thresholdBaseUnit: 'currency',
     topupAmountMajor: '10',
     topupUnit: 'currency',
+    topupBaseValue: '10',
+    topupBaseUnit: 'currency',
     ...over,
   })
 
