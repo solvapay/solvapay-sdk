@@ -4,6 +4,7 @@ import { UsageSimulator } from '../UsageSimulator'
 
 const mockAdjustBalance = vi.fn()
 const mockBalanceRefetch = vi.fn()
+const mockReconcileAfterUsageDebit = vi.fn()
 
 vi.mock('@solvapay/react', () => ({
   useBalance: vi.fn(),
@@ -28,6 +29,7 @@ function mockDefaults() {
     creditsPerMinorUnit: 100,
     refetch: mockBalanceRefetch,
     adjustBalance: mockAdjustBalance,
+    reconcileAfterUsageDebit: mockReconcileAfterUsageDebit,
   })
   vi.mocked(usePurchase).mockReturnValue({
     activePurchase: {
@@ -67,11 +69,10 @@ describe('UsageSimulator', () => {
     expect(screen.getByText(/5,000/)).toBeInTheDocument()
   })
 
-  it('calls POST /api/track-usage and adjusts balance on Run Query click', async () => {
+  it('calls POST /api/track-usage with outcome success', async () => {
     render(<UsageSimulator />)
 
-    const button = screen.getByRole('button', { name: /run query/i })
-    fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button', { name: /run query/i }))
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -86,7 +87,76 @@ describe('UsageSimulator', () => {
       )
     })
 
-    expect(mockAdjustBalance).toHaveBeenCalledWith(-1000)
+    const callBody = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(callBody.outcome).toBe('success')
+  })
+
+  it('adjusts balance after server confirms credit debit, not before fetch', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          creditDebit: { debited: true, amount: 1000, unitsRemaining: 4 },
+        }),
+    })
+
+    render(<UsageSimulator />)
+    fireEvent.click(screen.getByRole('button', { name: /run query/i }))
+
+    expect(mockAdjustBalance).not.toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(mockAdjustBalance).toHaveBeenCalledTimes(1)
+      expect(mockAdjustBalance).toHaveBeenCalledWith(-1000)
+      expect(mockReconcileAfterUsageDebit).toHaveBeenCalledTimes(1)
+      expect(mockReconcileAfterUsageDebit).toHaveBeenCalledWith({ expectIncrease: false })
+      expect(mockBalanceRefetch).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('does not invent a balance decrement when the server reports debited:false', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          creditDebit: { debited: false, reason: 'no_active_purchase' },
+        }),
+    })
+
+    render(<UsageSimulator />)
+    fireEvent.click(screen.getByRole('button', { name: /run query/i }))
+
+    await waitFor(() => {
+      expect(mockAdjustBalance).not.toHaveBeenCalled()
+      expect(mockBalanceRefetch).toHaveBeenCalledTimes(1)
+      expect(mockReconcileAfterUsageDebit).not.toHaveBeenCalled()
+    })
+  })
+
+  it('forwards autoRecharge.triggered to reconcileAfterUsageDebit', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          creditDebit: {
+            debited: true,
+            amount: 1000,
+            unitsRemaining: 4,
+            autoRecharge: { triggered: true },
+          },
+        }),
+    })
+
+    render(<UsageSimulator />)
+    fireEvent.click(screen.getByRole('button', { name: /run query/i }))
+
+    await waitFor(() => {
+      expect(mockAdjustBalance).toHaveBeenCalledWith(-1000)
+      expect(mockReconcileAfterUsageDebit).toHaveBeenCalledWith({ expectIncrease: true })
+    })
   })
 
   it('increments session query counter after each run', async () => {

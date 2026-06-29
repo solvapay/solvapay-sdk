@@ -151,6 +151,69 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
 export type PaymentMethodInfo =
   operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
 
+export type AutoRechargeStatus = 'active' | 'disabled' | 'failed' | 'pending_setup'
+
+export type AutoRechargeConfig = {
+  enabled: boolean
+  trigger: { type: 'balance'; thresholdAmountMinor: number }
+  topup: { mode: 'fixed'; amountMinor: number; currency: string }
+  fundingSourceType?: 'saved_card' | 'tokenized_card'
+  paymentMethodId?: string
+  status: AutoRechargeStatus
+  failureCount: number
+  lastChargeAt?: string
+  updatedAt?: string
+  /** Backend-computed display values — render verbatim; do not derive from trigger fields. */
+  display?: AutoRechargeDisplayBlock
+}
+
+export type AutoRechargeDisplayBlock = {
+  thresholdAmountMajor: number
+  topupAmountMajor: number
+  currency: string
+  formatted: {
+    threshold: string
+    topup: string
+  }
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
+export type CreditDisplayBlock = {
+  amountMajor: number
+  currency: string
+  formatted: string
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
+export type AutoRechargeInput = {
+  enabled: boolean
+  triggerType: 'balance'
+  thresholdAmountMajor?: number
+  topupAmountMajor?: number
+  maxRecharges?: number
+  currency: string
+}
+
+/** PUT /sdk/auto-recharge — input plus request-only flags. */
+export type SaveAutoRechargeInput = AutoRechargeInput & {
+  deferSetupIntent?: boolean
+}
+
+export type AutoRechargeResponse = {
+  config: AutoRechargeConfig | null
+  display?: AutoRechargeDisplayBlock
+}
+
+export type SaveAutoRechargeResponse = {
+  config: AutoRechargeConfig
+  display?: AutoRechargeDisplayBlock
+  setupClientSecret?: string
+  publishableKey?: string
+  stripeAccountId?: string
+}
+
 /**
  * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
  */
@@ -174,6 +237,12 @@ export type CreditDebitSkipReason = components['schemas']['CreditDebitSkippedRes
 export type CreditDebitResult =
   | components['schemas']['CreditDebitSuccessResponse']
   | components['schemas']['CreditDebitSkippedResponse']
+
+/**
+ * When `debited: true` and `autoRecharge.triggered: true`, the server initiated
+ * an off-session charge — credits are booked asynchronously via webhook, not inline.
+ */
+export type CreditDebitSuccess = components['schemas']['CreditDebitSuccessResponse']
 
 export type TrackUsageRequest = Omit<
   Partial<components['schemas']['CreateUsageRequest']>,
@@ -392,6 +461,7 @@ export interface SolvaPayClient {
     currency: string
     description?: string
     idempotencyKey?: string
+    autoRecharge?: AutoRechargeInput
   }): Promise<{
     processorPaymentId: string
     clientSecret: string
@@ -439,6 +509,7 @@ export interface SolvaPayClient {
     displayCurrency: string
     creditsPerMinorUnit: number
     displayExchangeRate: number
+    display?: CreditDisplayBlock
   }>
 
   // POST: /v1/sdk/checkout-sessions
@@ -456,4 +527,15 @@ export interface SolvaPayClient {
 
   // GET: /v1/sdk/payment-method?customerRef=...
   getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
+
+  // GET: /v1/sdk/auto-recharge?customerRef=...
+  getAutoRecharge?(params: { customerRef: string }): Promise<AutoRechargeResponse>
+
+  // PUT: /v1/sdk/auto-recharge
+  saveAutoRecharge?(
+    params: SaveAutoRechargeInput & { customerRef: string },
+  ): Promise<SaveAutoRechargeResponse>
+
+  // DELETE: /v1/sdk/auto-recharge?customerRef=...
+  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: true }>
 }

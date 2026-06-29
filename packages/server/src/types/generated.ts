@@ -1604,6 +1604,14 @@ export interface components {
              * @example 99
              */
             unitsRemaining: number;
+            autoRecharge?: components["schemas"]["AutoRechargeTriggeredResponse"];
+        };
+        AutoRechargeTriggeredResponse: {
+            /**
+             * Whether the server initiated an auto-recharge charge after this debit
+             * @example true
+             */
+            triggered: boolean;
         };
         CreditDebitSkippedResponse: {
             /** @enum {number} */

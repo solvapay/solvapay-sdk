@@ -16,6 +16,7 @@ import type { TopupProcessResult } from '../types/client'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
+import { pollBalanceUntilIncreased, TOPUP_BALANCE_POLL_DELAYS_MS } from './balance-poll'
 
 /**
  * Create a payment intent for a customer to purchase a plan.
@@ -141,6 +142,7 @@ export async function createTopupPaymentIntentCore(
     amount: number
     currency: string
     description?: string
+    autoRecharge?: import('../types/client').AutoRechargeInput
   },
   options: {
     solvaPay?: SolvaPay
@@ -198,6 +200,7 @@ export async function createTopupPaymentIntentCore(
       amount: body.amount,
       currency: body.currency,
       description: body.description,
+      ...(body.autoRecharge ? { autoRecharge: body.autoRecharge } : {}),
     })
 
     return {
@@ -295,15 +298,6 @@ export async function processPaymentIntentCore(
     return handleRouteError(error, 'Process payment intent', 'Payment processing failed')
   }
 }
-
-/**
- * Backoff schedule for the post-process balance poll. Sums to ~7.5s,
- * leaving meaningful headroom over the backend's PI-status poll (~10s)
- * for the credit-booking tail (processor-fee lookups, slow Mongo
- * writes) without making the user wait noticeably longer than the
- * previous 2s post-PI buffer.
- */
-const TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000] as const
 
 /**
  * Process a credit-topup payment intent after client-side confirmation.
@@ -523,16 +517,13 @@ export async function processTopupPaymentIntentCore(
       return { status: 'succeeded' }
     }
 
-    for (const delay of TOPUP_BALANCE_POLL_DELAYS_MS) {
-      await new Promise<void>(resolve => setTimeout(resolve, delay))
-      try {
-        const post = await solvaPay.getCustomerBalance({ customerRef })
-        if (post.credits > preCredits) {
-          return { status: 'succeeded', creditsAdded: post.credits - preCredits }
-        }
-      } catch {
-        // ignore — try the next delay
-      }
+    const pollResult = await pollBalanceUntilIncreased(
+      () => solvaPay.getCustomerBalance({ customerRef }),
+      preCredits,
+      TOPUP_BALANCE_POLL_DELAYS_MS,
+    )
+    if (pollResult) {
+      return { status: 'succeeded', creditsAdded: pollResult.creditsAdded }
     }
 
     // Soft success — webhook was genuinely stalled; downstream

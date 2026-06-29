@@ -26,14 +26,40 @@ import type {
   ProcessPaymentResult,
   TopupProcessResult,
   PaymentMethodInfo,
+  AutoRechargeInput,
+  SaveAutoRechargeInput,
+  AutoRechargeResponse,
+  SaveAutoRechargeResponse,
 } from '@solvapay/server'
 import type { TaxBreakdown, TaxIdType } from '@solvapay/core'
+
+export type CreditDisplayBlock = {
+  amountMajor: number
+  currency: string
+  formatted: string
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
+export type AutoRechargeDisplayBlock = {
+  thresholdAmountMajor: number
+  topupAmountMajor: number
+  currency: string
+  formatted: {
+    threshold: string
+    topup: string
+  }
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
 
 export interface TransportBalanceResult {
   credits: number
   displayCurrency: string
   creditsPerMinorUnit: number
   displayExchangeRate: number
+  /** Backend-computed display values — render verbatim, do not reconvert. */
+  display?: CreditDisplayBlock
 }
 
 /**
@@ -101,6 +127,9 @@ export interface SolvaPayTransport {
    * adapters omit (the field is on the bootstrap customer snapshot).
    */
   getPaymentMethod?: () => Promise<PaymentMethodInfo>
+  getAutoRecharge?: () => Promise<AutoRechargeResponse>
+  saveAutoRecharge?: (input: SaveAutoRechargeInput) => Promise<SaveAutoRechargeResponse>
+  disableAutoRecharge?: () => Promise<{ success: true }>
   /**
    * Optional: fetch the authenticated customer's usage snapshot for the
    * active usage-based plan. When omitted, `useUsage()` falls back to
@@ -116,10 +145,7 @@ export interface SolvaPayTransport {
    * `remaining` / `withinLimits` with `loading: false` (graceful fallback,
    * matching `useUsage`'s behaviour when `getUsage` is absent).
    */
-  getLimits?: (params: {
-    productRef: string
-    meterName?: string
-  }) => Promise<TransportLimitsResult>
+  getLimits?: (params: { productRef: string; meterName?: string }) => Promise<TransportLimitsResult>
 
   createPayment: (params: {
     planRef?: string
@@ -137,6 +163,7 @@ export interface SolvaPayTransport {
   createTopupPayment: (params: {
     amount: number
     currency?: string
+    autoRecharge?: import('@solvapay/server').AutoRechargeInput
   }) => Promise<TopupPaymentResult>
 
   /**
@@ -151,9 +178,7 @@ export interface SolvaPayTransport {
    * legacy behaviour. The HTTP transport always implements it; new
    * transports SHOULD too.
    */
-  processTopupPayment?: (params: {
-    paymentIntentId: string
-  }) => Promise<TopupProcessResult>
+  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
 
   /**
    * Attach business purchase details to a payment intent
@@ -175,10 +200,7 @@ export interface SolvaPayTransport {
 
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
 
-  activatePlan: (params: {
-    productRef: string
-    planRef: string
-  }) => Promise<ActivatePlanResult>
+  activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
 
   createCheckoutSession: (params?: {
     planRef?: string

@@ -14,7 +14,7 @@ import type {
 } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
 import type { PartialSolvaPayCopy } from '../i18n/types'
-import type { SolvaPayTransport } from '../transport/types'
+import type { SolvaPayTransport, CreditDisplayBlock } from '../transport/types'
 
 export interface PurchaseInfo {
   reference: string
@@ -175,6 +175,7 @@ export interface TopupPaymentResult {
 export interface UseTopupOptions {
   amount: number
   currency?: string
+  autoRecharge?: import('@solvapay/server').AutoRechargeInput
 }
 
 export interface UseTopupReturn {
@@ -202,6 +203,7 @@ export interface TopupFormSuccessExtras {
 export interface TopupFormProps {
   amount: number
   currency?: string
+  autoRecharge?: import('@solvapay/server').AutoRechargeInput
   /**
    * Fires once the customer is fully credited. `extras.creditsAdded`
    * carries the wallet delta observed by the backend helper's
@@ -269,8 +271,22 @@ export interface BalanceStatus {
   displayCurrency: string | null
   creditsPerMinorUnit: number | null
   displayExchangeRate: number | null
+  /** Backend-computed display block — render verbatim when present. */
+  display: CreditDisplayBlock | null
   refetch: () => Promise<void>
+  /**
+   * Optimistically adjusts the in-memory balance. Does not start auto-recharge
+   * reconcile polling — call {@link reconcileAfterUsageDebit} with the server
+   * signal after a confirmed usage debit when auto-recharge may apply.
+   */
   adjustBalance: (credits: number) => void
+  /**
+   * Poll for balance increase after a confirmed server-side usage debit when
+   * the server reported `autoRecharge.triggered: true`. The backend is the sole
+   * authority on threshold evaluation; pass `{ expectIncrease: true }` only when
+   * the track-usage response includes that signal.
+   */
+  reconcileAfterUsageDebit: (opts?: { expectIncrease?: boolean }) => void
 }
 
 /**
@@ -313,6 +329,7 @@ export interface SolvaPayConfig {
     createCheckoutSession?: string // Default: '/api/create-checkout-session'
     createCustomerSession?: string // Default: '/api/create-customer-session'
     getPaymentMethod?: string // Default: '/api/payment-method'
+    autoRecharge?: string // Default: '/api/auto-recharge'
     getUsage?: string // Default: '/api/usage'
     getLimits?: string // Default: '/api/limits'
   }
@@ -456,6 +473,7 @@ export interface SolvaPayContextValue {
   createTopupPayment: (params: {
     amount: number
     currency?: string
+    autoRecharge?: import('@solvapay/server').AutoRechargeInput
   }) => Promise<TopupPaymentResult>
   /**
    * Process a credit-topup payment intent after Stripe's `confirmPayment`
@@ -470,9 +488,7 @@ export interface SolvaPayContextValue {
    * confirm (legacy behaviour). The default HTTP transport always
    * implements it.
    */
-  processTopupPayment?: (params: {
-    paymentIntentId: string
-  }) => Promise<TopupProcessResult>
+  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
   attachBusinessDetails?: (params: {
     paymentIntentId: string
     customerRef?: string
@@ -484,10 +500,7 @@ export interface SolvaPayContextValue {
   }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
-  activatePlan: (params: {
-    productRef: string
-    planRef: string
-  }) => Promise<ActivatePlanResult>
+  activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
   balance: BalanceStatus
