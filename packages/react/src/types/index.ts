@@ -13,6 +13,7 @@ import type {
   PurchaseCheckResult,
 } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
+import type { TaxBehavior } from '@solvapay/core'
 import type { PartialSolvaPayCopy } from '../i18n/types'
 import type { SolvaPayTransport, CreditDisplayBlock } from '../transport/types'
 
@@ -583,6 +584,7 @@ export interface Plan {
   updatedAt?: string
   interval?: string
   metadata?: Record<string, unknown>
+  taxBehavior?: TaxBehavior
 }
 
 /**

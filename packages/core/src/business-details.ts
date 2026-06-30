@@ -303,12 +303,33 @@ export function validateBusinessDetails(input: BusinessDetailsInput): ValidateBu
   return { success: true, data: parsed.data }
 }
 
+export const TAX_BEHAVIORS = ['auto', 'inclusive', 'exclusive'] as const
+export type TaxBehavior = (typeof TAX_BEHAVIORS)[number]
+
+export const TAX_EXCLUSIVE_CURRENCIES = ['USD', 'CAD'] as const
+
+export function resolveTaxBehavior(
+  behavior: TaxBehavior,
+  currency: string,
+): 'inclusive' | 'exclusive' {
+  if (behavior === 'inclusive' || behavior === 'exclusive') {
+    return behavior
+  }
+  const normalizedCurrency = currency.toUpperCase()
+  return TAX_EXCLUSIVE_CURRENCIES.includes(
+    normalizedCurrency as (typeof TAX_EXCLUSIVE_CURRENCIES)[number],
+  )
+    ? 'exclusive'
+    : 'inclusive'
+}
+
 export type TaxBreakdown = {
   subtotal: number
   taxAmount: number
   taxRate: number
-  treatment: 'reverse_charge' | 'standard' | 'none'
+  treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting'
   total: number
   currency: string
+  inclusive: boolean
 }
 

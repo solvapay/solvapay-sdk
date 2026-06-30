@@ -82,11 +82,23 @@ export declare function validateBusinessDetails(
   input: BusinessDetailsInput,
 ): ValidateBusinessDetailsResult
 
+export declare const TAX_BEHAVIORS: readonly ['auto', 'inclusive', 'exclusive']
+
+export type TaxBehavior = (typeof TAX_BEHAVIORS)[number]
+
+export declare const TAX_EXCLUSIVE_CURRENCIES: readonly ['USD', 'CAD']
+
+export declare function resolveTaxBehavior(
+  behavior: TaxBehavior,
+  currency: string,
+): 'inclusive' | 'exclusive'
+
 export type TaxBreakdown = {
   subtotal: number
   taxAmount: number
   taxRate: number
-  treatment: 'reverse_charge' | 'standard' | 'none'
+  treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting'
   total: number
   currency: string
+  inclusive: boolean
 }

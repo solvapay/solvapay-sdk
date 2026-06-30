@@ -1002,9 +1002,10 @@ export interface components {
             subtotal: number;
             taxAmount: number;
             taxRate: number;
-            treatment: "reverse_charge" | "standard" | "none";
+            treatment: "reverse_charge" | "standard" | "none" | "not_collecting";
             total: number;
             currency: string;
+            inclusive: boolean;
         };
         AttachBusinessDetailsResponse: {
             taxBreakdown: components["schemas"]["TaxBreakdownResponse"];
@@ -1169,6 +1170,11 @@ export interface components {
             createdAt: string;
             /** @description Last update timestamp */
             updatedAt: string;
+            /**
+             * Tax inclusion behavior for business checkout
+             * @enum {string}
+             */
+            taxBehavior?: "auto" | "inclusive" | "exclusive";
         };
         CreatePlanRequest: {
             name: string;
@@ -1216,6 +1222,8 @@ export interface components {
             maxActiveUsers?: number;
             accessExpiryDays?: number;
             default?: boolean;
+            /** @enum {string} */
+            taxBehavior?: "auto" | "inclusive" | "exclusive";
         };
         UpdatePlanRequest: {
             name?: string;
@@ -1250,6 +1258,8 @@ export interface components {
                 [key: string]: unknown;
             };
             default?: boolean;
+            /** @enum {string} */
+            taxBehavior?: "auto" | "inclusive" | "exclusive";
         };
         CreateProductRequest: {
             name: string;

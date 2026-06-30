@@ -6,6 +6,7 @@ import {
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
+  resolveTaxBehavior,
   validateBusinessDetails,
 } from './business-details'
 
@@ -172,6 +173,27 @@ describe('tax id field helpers', () => {
 
   it('includes the example in helper text', () => {
     expect(getTaxIdHelperText('SE')).toContain('SE123456789123')
+  })
+})
+
+describe('resolveTaxBehavior', () => {
+  it('resolves auto to exclusive for USD and CAD', () => {
+    expect(resolveTaxBehavior('auto', 'USD')).toBe('exclusive')
+    expect(resolveTaxBehavior('auto', 'CAD')).toBe('exclusive')
+    expect(resolveTaxBehavior('auto', 'usd')).toBe('exclusive')
+    expect(resolveTaxBehavior('auto', 'cad')).toBe('exclusive')
+  })
+
+  it('resolves auto to inclusive for other currencies', () => {
+    expect(resolveTaxBehavior('auto', 'EUR')).toBe('inclusive')
+    expect(resolveTaxBehavior('auto', 'SEK')).toBe('inclusive')
+    expect(resolveTaxBehavior('auto', 'GBP')).toBe('inclusive')
+    expect(resolveTaxBehavior('auto', 'eur')).toBe('inclusive')
+  })
+
+  it('passes through explicit inclusive and exclusive values', () => {
+    expect(resolveTaxBehavior('inclusive', 'USD')).toBe('inclusive')
+    expect(resolveTaxBehavior('exclusive', 'EUR')).toBe('exclusive')
   })
 })
 
