@@ -15,8 +15,8 @@ the workflows do the rest.
 
 Every push to `dev` runs the full pre-publish gate:
 
-1. `pnpm test` — unit tests for every workspace package.
-2. `pnpm build:packages` — every publishable package builds to `dist/`.
+1. `pnpm build:packages` — every publishable package builds to `dist/`.
+2. `pnpm test` — unit tests for every workspace package.
 3. `pnpm validate:fetch-runtime` — asserts `@solvapay/server/fetch` and
    `@solvapay/mcp/fetch` load cleanly in a bare Web-standards
    environment (no `node:`-prefixed imports, no leaked Node builtins).
