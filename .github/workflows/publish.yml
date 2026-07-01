@@ -74,9 +74,12 @@ jobs:
           version: 9.6.0
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
+        run: |
+          DENO_VERSION=2.7.4
+          curl -fsSL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" -o /tmp/deno.zip
+          unzip -o /tmp/deno.zip -d /tmp/deno
+          sudo install -m 755 /tmp/deno/deno /usr/local/bin/deno
+          deno --version
 
       - name: Get pnpm store directory
         id: pnpm-cache
