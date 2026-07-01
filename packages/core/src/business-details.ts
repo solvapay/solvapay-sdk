@@ -185,11 +185,22 @@ export const BusinessDetailsSchema = z
     isBusiness: z.boolean(),
     businessName: z.string().optional(),
     country: z.string().optional(),
+    customerCountry: z.string().optional(),
     taxId: z.string().optional(),
     taxIdType: z.enum(TAX_ID_TYPES).optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.isBusiness) {
+      if (data.customerCountry?.trim()) {
+        const customerCountryUpper = data.customerCountry.trim().toUpperCase()
+        if (!isSupportedCountry(customerCountryUpper)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Billing country is not supported for tax calculation',
+            path: ['customerCountry'],
+          })
+        }
+      }
       return
     }
 
@@ -240,6 +251,10 @@ export const BusinessDetailsSchema = z
   })
   .transform(data => {
     if (!data.isBusiness) {
+      const customerCountry = data.customerCountry?.trim().toUpperCase()
+      if (customerCountry && isSupportedCountry(customerCountry)) {
+        return { isBusiness: false as const, customerCountry }
+      }
       return { isBusiness: false as const }
     }
 
@@ -260,12 +275,13 @@ export type BusinessDetailsInput = {
   isBusiness: boolean
   businessName?: string
   country?: string
+  customerCountry?: string
   taxId?: string
   taxIdType?: TaxIdType
 }
 
 export type BusinessDetails =
-  | { isBusiness: false }
+  | { isBusiness: false; customerCountry?: SupportedBusinessCountry }
   | {
       isBusiness: true
       businessName: string

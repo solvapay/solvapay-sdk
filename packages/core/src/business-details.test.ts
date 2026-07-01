@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BusinessDetailsSchema,
   COUNTRY_TO_TAX_ID_TYPE,
   SUPPORTED_BUSINESS_COUNTRIES,
   deriveTaxIdType,
@@ -202,6 +203,33 @@ describe('BusinessDetailsSchema', () => {
     expect(SUPPORTED_BUSINESS_COUNTRIES.length).toBeGreaterThan(0)
     for (const country of SUPPORTED_BUSINESS_COUNTRIES) {
       expect(COUNTRY_TO_TAX_ID_TYPE[country]).toBeDefined()
+    }
+  })
+
+  it('preserves customerCountry on the non-business branch', () => {
+    const result = BusinessDetailsSchema.parse({
+      isBusiness: false,
+      customerCountry: 'se',
+    })
+
+    expect(result).toEqual({ isBusiness: false, customerCountry: 'SE' })
+  })
+
+  it('rejects unsupported customerCountry for non-business purchases', () => {
+    const result = validateBusinessDetails({
+      isBusiness: false,
+      customerCountry: 'ZZ',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ['customerCountry'],
+          }),
+        ]),
+      )
     }
   })
 })

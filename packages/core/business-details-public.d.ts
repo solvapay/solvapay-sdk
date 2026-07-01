@@ -51,12 +51,13 @@ export type BusinessDetailsInput = {
   isBusiness: boolean
   businessName?: string
   country?: string
+  customerCountry?: string
   taxId?: string
   taxIdType?: TaxIdType
 }
 
 export type BusinessDetails =
-  | { isBusiness: false }
+  | { isBusiness: false; customerCountry?: SupportedBusinessCountry }
   | {
       isBusiness: true
       businessName: string
