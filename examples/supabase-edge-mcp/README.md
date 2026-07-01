@@ -29,8 +29,8 @@ examples/supabase-edge-mcp/
         └── mcp/
             ├── index.ts                   Deno.serve(createSolvaPayMcpFetch(…))
             ├── demo-tools.ts              paywalled tool handlers (runtime-neutral copy)
-            ├── deno.json                  PRODUCTION import map → npm:@solvapay/*
-            ├── deno.local.json            LOCAL-DEV import map → file:../../../../packages/*
+            ├── deno.json                  PRODUCTION import map → npm:@solvapay/*@preview
+            ├── deno.local.json            CI validate + local serve → same @preview pins
             └── mcp-app.html               build artefact (copied from ../../../dist/)
 ```
 
@@ -173,12 +173,12 @@ curl -s http://localhost:54321/functions/v1/mcp/.well-known/oauth-authorization-
 
 The function ships with **two** deno.json files side by side:
 
-| File                                      | Mode        | Bare specifier resolution                                       |
-| ----------------------------------------- | ----------- | --------------------------------------------------------------- |
-| `supabase/functions/mcp/deno.json`        | production  | `"@solvapay/mcp": "npm:@solvapay/mcp"` — published npm releases |
-| `supabase/functions/mcp/deno.local.json`  | local dev   | `"@solvapay/mcp": "file:../../../../packages/mcp/dist/index.js"` |
+| File                                      | Mode                      | Bare specifier resolution                                       |
+| ----------------------------------------- | ------------------------- | --------------------------------------------------------------- |
+| `supabase/functions/mcp/deno.json`        | production deploy         | `"@solvapay/mcp": "npm:@solvapay/mcp@preview"` — mutable preview dist-tag |
+| `supabase/functions/mcp/deno.local.json`  | CI validate + local serve | same `@preview` pins (checks last-published preview, not workspace source) |
 
-The function source uses bare specifiers only (`import … from '@solvapay/mcp'`, never `'npm:@solvapay/mcp'`) so the import map alone picks the resolution. `supabase functions deploy` picks up `deno.json`; `pnpm validate` and `pnpm serve:local` pass `--import-map=…/deno.local.json` explicitly so you're always type-checking against the current workspace source, not the last-published npm release.
+The function source uses bare specifiers only (`import … from '@solvapay/mcp'`, never `'npm:@solvapay/mcp'`) so the import map alone picks the resolution. `supabase functions deploy` picks up `deno.json`; `pnpm validate` and `pnpm serve:local` pass `--config=…/deno.local.json` explicitly so CI type-checks against the last-published `@preview` npm release (one-commit-late regression detection).
 
 ## What the function does on each request
 

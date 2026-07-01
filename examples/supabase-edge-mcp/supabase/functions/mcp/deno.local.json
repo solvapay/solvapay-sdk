@@ -1,4 +1,6 @@
 {
+  "minimumDependencyAge": 0,
+  "lock": false,
   "nodeModulesDir": "auto",
   "imports": {
     "@solvapay/mcp": "npm:@solvapay/mcp@preview",
