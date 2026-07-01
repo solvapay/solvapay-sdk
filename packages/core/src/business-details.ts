@@ -39,6 +39,51 @@ export type EuMemberCountry = (typeof EU_MEMBER_COUNTRIES)[number]
 export const SUPPORTED_BUSINESS_COUNTRIES = [...EU_MEMBER_COUNTRIES, 'GB', 'US'] as const
 export type SupportedBusinessCountry = (typeof SUPPORTED_BUSINESS_COUNTRIES)[number]
 
+/** Stripe Connect English display names for supported business countries. */
+export const BUSINESS_COUNTRY_DISPLAY_NAMES: Record<SupportedBusinessCountry, string> = {
+  AT: 'Austria',
+  BE: 'Belgium',
+  BG: 'Bulgaria',
+  HR: 'Croatia',
+  CY: 'Cyprus',
+  CZ: 'Czechia',
+  DK: 'Denmark',
+  EE: 'Estonia',
+  FI: 'Finland',
+  FR: 'France',
+  DE: 'Germany',
+  GR: 'Greece',
+  HU: 'Hungary',
+  IE: 'Ireland',
+  IT: 'Italy',
+  LV: 'Latvia',
+  LT: 'Lithuania',
+  LU: 'Luxembourg',
+  MT: 'Malta',
+  NL: 'Netherlands',
+  PL: 'Poland',
+  PT: 'Portugal',
+  RO: 'Romania',
+  SK: 'Slovakia',
+  SI: 'Slovenia',
+  ES: 'Spain',
+  SE: 'Sweden',
+  GB: 'United Kingdom',
+  US: 'United States of America',
+}
+
+export type BusinessCountryOption = {
+  value: SupportedBusinessCountry
+  label: string
+}
+
+export const BUSINESS_COUNTRY_OPTIONS: BusinessCountryOption[] = SUPPORTED_BUSINESS_COUNTRIES.map(
+  code => ({
+    value: code,
+    label: BUSINESS_COUNTRY_DISPLAY_NAMES[code],
+  }),
+).sort((a, b) => a.label.localeCompare(b.label))
+
 export const COUNTRY_TO_TAX_ID_TYPE: Record<SupportedBusinessCountry, TaxIdType> = {
   AT: 'eu_vat',
   BE: 'eu_vat',

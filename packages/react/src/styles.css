@@ -579,8 +579,9 @@
   border-radius: var(--solvapay-radius);
   cursor: pointer;
   font: inherit;
-  font-weight: 500;
-  padding: 0.75rem 1rem;
+  font-weight: 600;
+  padding: 0.875rem 1rem;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--solvapay-accent) 24%, transparent);
   transition:
     background-color 120ms ease,
     opacity 120ms ease;
@@ -619,6 +620,150 @@
   border: 1px solid var(--solvapay-destructive);
   border-radius: var(--solvapay-radius);
   background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+ * BusinessDetails / TaxSummary (PaymentForm + TopupForm)
+ * -------------------------------------------------------------------------- */
+
+.solvapay-checkout-business-details,
+[data-solvapay-payment-form-business-details],
+[data-solvapay-topup-form-business-details] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: none;
+  padding: 0;
+}
+
+.solvapay-checkout-business-toggle,
+[data-solvapay-payment-form-business-details-toggle],
+[data-solvapay-topup-form-business-details-toggle] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--solvapay-accent);
+  cursor: pointer;
+}
+
+.solvapay-business-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.solvapay-business-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.solvapay-business-field-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--solvapay-muted-foreground);
+  margin-bottom: 0.5rem;
+}
+
+.solvapay-business-field-hint {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-payment-form-business-details-name],
+[data-solvapay-payment-form-business-details-country],
+[data-solvapay-payment-form-business-details-tax-id],
+[data-solvapay-topup-form-business-details-name],
+[data-solvapay-topup-form-business-details-country],
+[data-solvapay-topup-form-business-details-tax-id] {
+  width: 100%;
+  height: 2.5rem;
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  font: inherit;
+  padding: 0 0.75rem;
+  color: var(--solvapay-accent);
+  transition: border-color 120ms ease;
+}
+
+[data-solvapay-payment-form-business-details-name]:focus,
+[data-solvapay-payment-form-business-details-country]:focus,
+[data-solvapay-payment-form-business-details-tax-id]:focus,
+[data-solvapay-topup-form-business-details-name]:focus,
+[data-solvapay-topup-form-business-details-country]:focus,
+[data-solvapay-topup-form-business-details-tax-id]:focus {
+  outline: none;
+  border-color: var(--solvapay-accent);
+  box-shadow: 0 0 0 1px var(--solvapay-accent);
+}
+
+.solvapay-checkout-tax-summary,
+[data-solvapay-payment-form-summary],
+[data-solvapay-topup-form-summary] {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: none;
+  border-top: 1px solid var(--solvapay-border);
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.solvapay-tax-summary-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+}
+
+.solvapay-tax-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+}
+
+.solvapay-tax-summary-row > dt {
+  color: var(--solvapay-muted-foreground);
+  font-weight: 400;
+}
+
+.solvapay-tax-summary-row > dd {
+  margin: 0;
+  color: var(--solvapay-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.solvapay-tax-summary-row--total > dt,
+.solvapay-tax-summary-row--total > dd {
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-payment-form-summary-tax-note],
+[data-solvapay-topup-form-summary-tax-note] {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+.solvapay-secure-note {
+  display: block;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--solvapay-muted-foreground);
+  margin: 0;
 }
 
 /* -----------------------------------------------------------------------------
@@ -1059,8 +1204,9 @@
   border-radius: var(--solvapay-radius);
   cursor: pointer;
   font: inherit;
-  font-weight: 500;
-  padding: 0.75rem 1rem;
+  font-weight: 600;
+  padding: 0.875rem 1rem;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--solvapay-accent) 24%, transparent);
   transition:
     background-color 120ms ease,
     opacity 120ms ease;

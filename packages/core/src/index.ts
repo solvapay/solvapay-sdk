@@ -117,6 +117,8 @@ export {
 
 export {
   BusinessDetailsSchema,
+  BUSINESS_COUNTRY_DISPLAY_NAMES,
+  BUSINESS_COUNTRY_OPTIONS,
   COUNTRY_TO_TAX_ID_TYPE,
   SUPPORTED_BUSINESS_COUNTRIES,
   TAX_BEHAVIORS,
@@ -129,6 +131,7 @@ export {
   getTaxIdHelperText,
   resolveTaxBehavior,
   validateBusinessDetails,
+  type BusinessCountryOption,
   type BusinessDetails,
   type BusinessDetailsInput,
   type BusinessDetailsValidationError,

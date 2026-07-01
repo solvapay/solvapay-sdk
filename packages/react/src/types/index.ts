@@ -79,6 +79,7 @@ export interface PaymentIntentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string // Backend customer reference
+  processorPaymentId?: string
 }
 
 /**
@@ -754,6 +755,8 @@ export interface PaymentFormProps {
    * passed — compose `<PaymentForm.TermsCheckbox />` yourself.
    */
   requireTermsAcceptance?: boolean
+  /** Fired when business-details attach returns an updated tax breakdown. */
+  onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
 }
 
 export interface UseTopupAmountSelectorOptions {

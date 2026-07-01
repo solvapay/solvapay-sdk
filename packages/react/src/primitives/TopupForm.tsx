@@ -41,14 +41,19 @@ import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
-import { formatPrice } from '../utils/format'
 import {
-  validateBusinessDetails,
-  SUPPORTED_BUSINESS_COUNTRIES,
   type BusinessDetailsInput,
   type TaxBreakdown,
 } from '@solvapay/core'
 import type { TopupFormProps } from '../types'
+import {
+  useBusinessDetailsAttach,
+  defaultBusinessDetails,
+} from '../hooks/useBusinessDetailsAttach'
+import {
+  createBusinessDetailsParts,
+  createTaxSummaryParts,
+} from '../components/businessCheckoutParts'
 
 type SubmitState = 'idle' | 'processing' | 'disabled'
 type TopupFormState = 'loading' | 'ready' | 'error'
@@ -254,23 +259,6 @@ type InnerProps = {
   children?: React.ReactNode
 }
 
-function mapBusinessFieldErrors(
-  input: BusinessDetailsInput,
-): Partial<Record<keyof BusinessDetailsInput, string>> {
-  const result = validateBusinessDetails(input)
-  if (result.success) return {}
-  const errors: Partial<Record<keyof BusinessDetailsInput, string>> = {}
-  for (const issue of result.error.issues) {
-    const key = issue.path[0]
-    if (typeof key === 'string' && !errors[key as keyof BusinessDetailsInput]) {
-      errors[key as keyof BusinessDetailsInput] = issue.message
-    }
-  }
-  return errors
-}
-
-const defaultBusinessDetails: BusinessDetailsInput = { isBusiness: false }
-
 const Inner: React.FC<InnerProps> = ({
   amount,
   currency,
@@ -294,92 +282,24 @@ const Inner: React.FC<InnerProps> = ({
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [businessDetails, setBusinessDetailsState] =
-    useState<BusinessDetailsInput>(defaultBusinessDetails)
-  const [taxBreakdown, setTaxBreakdown] = useState<TaxBreakdown | null>(null)
-  const [businessDetailsAttached, setBusinessDetailsAttached] = useState(false)
-  const [businessDetailsAttaching, setBusinessDetailsAttaching] = useState(false)
-  const [businessDetailsError, setBusinessDetailsError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof BusinessDetailsInput, string>>
-  >({})
 
-  const attachRequestIdRef = useRef(0)
+  const {
+    businessDetails,
+    setBusinessDetails,
+    fieldErrors,
+    taxBreakdown,
+    businessDetailsAttached,
+    businessDetailsAttaching,
+    businessDetailsError,
+    requiresBusinessAttach,
+    runAttach,
+  } = useBusinessDetailsAttach({
+    processorPaymentId,
+    attachBusinessDetails,
+    customerRef,
+    onTaxChange,
+  })
 
-  const setBusinessDetails = useCallback((patch: Partial<BusinessDetailsInput>) => {
-    setBusinessDetailsState(prev => {
-      const next = { ...prev, ...patch }
-      if (patch.isBusiness === false) {
-        return { isBusiness: false }
-      }
-      return next
-    })
-    setBusinessDetailsAttached(false)
-    setBusinessDetailsError(null)
-  }, [])
-
-  const runAttach = useCallback(
-    async (input: BusinessDetailsInput): Promise<boolean> => {
-      if (!processorPaymentId || !attachBusinessDetails) {
-        return !attachBusinessDetails
-      }
-
-      const validation = validateBusinessDetails(input)
-      if (!validation.success) {
-        setFieldErrors(mapBusinessFieldErrors(input))
-        return false
-      }
-
-      setFieldErrors({})
-      const requestId = ++attachRequestIdRef.current
-      setBusinessDetailsAttaching(true)
-
-      try {
-        const result = await attachBusinessDetails({
-          paymentIntentId: processorPaymentId,
-          ...(customerRef ? { customerRef } : {}),
-          ...validation.data,
-        })
-        if (requestId !== attachRequestIdRef.current) return false
-        setTaxBreakdown(result.taxBreakdown)
-        setBusinessDetailsAttached(true)
-        setBusinessDetailsError(null)
-        onTaxChange?.(result.taxBreakdown)
-        return true
-      } catch (err) {
-        if (requestId !== attachRequestIdRef.current) return false
-        const msg = err instanceof Error ? err.message : String(err)
-        setBusinessDetailsAttached(false)
-        setBusinessDetailsError(msg)
-        return false
-      } finally {
-        if (requestId === attachRequestIdRef.current) {
-          setBusinessDetailsAttaching(false)
-        }
-      }
-    },
-    [processorPaymentId, attachBusinessDetails, customerRef, onTaxChange],
-  )
-
-  useEffect(() => {
-    if (!processorPaymentId || !attachBusinessDetails) return
-
-    const validation = validateBusinessDetails(businessDetails)
-    if (!validation.success) {
-      setFieldErrors(mapBusinessFieldErrors(businessDetails))
-      setBusinessDetailsAttached(false)
-      return
-    }
-
-    setFieldErrors({})
-    const timer = setTimeout(() => {
-      void runAttach(businessDetails)
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [businessDetails, processorPaymentId, attachBusinessDetails, runAttach])
-
-  const requiresBusinessAttach = !!attachBusinessDetails
   const isReady = !!(stripe && elements)
   const canSubmit =
     isReady &&
@@ -719,258 +639,27 @@ const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function TopupFormError(
   )
 })
 
-type BusinessDetailsRootProps = React.HTMLAttributes<HTMLDivElement> & {
-  asChild?: boolean
-  children?: React.ReactNode
-}
-
-const BusinessDetailsRoot = forwardRef<HTMLDivElement, BusinessDetailsRootProps>(
-  function TopupFormBusinessDetailsRoot({ asChild, children, ...rest }, forwardedRef) {
-    useTopupCtx('BusinessDetails')
-    const Comp = asChild ? Slot : 'div'
-    return (
-      <Comp ref={forwardedRef} data-solvapay-topup-form-business-details="" {...rest}>
-        {children}
-      </Comp>
-    )
-  },
-)
-
-type BusinessDetailsToggleProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  asChild?: boolean
-}
-
-const BusinessDetailsToggle = forwardRef<HTMLInputElement, BusinessDetailsToggleProps>(
-  function TopupFormBusinessDetailsToggle({ asChild, onChange, ...rest }, forwardedRef) {
-    const ctx = useTopupCtx('BusinessDetails.Toggle')
-    const commonProps = {
-      'data-solvapay-topup-form-business-details-toggle': '',
-      type: 'checkbox',
-      checked: ctx.businessDetails.isBusiness,
-      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
-        ctx.setBusinessDetails({ isBusiness: e.target.checked })
-      }),
-      ...rest,
-    }
-
-    if (asChild) {
-      return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)} />
-      )
-    }
-
-    return <input ref={forwardedRef} {...commonProps} />
-  },
-)
-
-type BusinessDetailsFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  asChild?: boolean
-}
-
-const BusinessDetailsBusinessName = forwardRef<HTMLInputElement, BusinessDetailsFieldProps>(
-  function TopupFormBusinessDetailsBusinessName({ asChild, onChange, ...rest }, forwardedRef) {
-    const ctx = useTopupCtx('BusinessDetails.BusinessName')
-    if (!ctx.businessDetails.isBusiness) return null
-
-    const commonProps = {
-      'data-solvapay-topup-form-business-details-name': '',
-      type: 'text',
-      value: ctx.businessDetails.businessName ?? '',
-      'aria-invalid': ctx.fieldErrors.businessName ? true : undefined,
-      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
-        ctx.setBusinessDetails({ businessName: e.target.value })
-      }),
-      ...rest,
-    }
-
-    if (asChild) {
-      return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)} />
-      )
-    }
-
-    return <input ref={forwardedRef} {...commonProps} />
-  },
-)
-
-type BusinessDetailsCountryProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
-  asChild?: boolean
-}
-
-const BusinessDetailsCountry = forwardRef<HTMLSelectElement, BusinessDetailsCountryProps>(
-  function TopupFormBusinessDetailsCountry({ asChild, onChange, children, ...rest }, forwardedRef) {
-    const ctx = useTopupCtx('BusinessDetails.Country')
-    if (!ctx.businessDetails.isBusiness) return null
-
-    const commonProps = {
-      'data-solvapay-topup-form-business-details-country': '',
-      value: ctx.businessDetails.country ?? '',
-      'aria-invalid': ctx.fieldErrors.country ? true : undefined,
-      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLSelectElement>) => {
-        ctx.setBusinessDetails({ country: e.target.value })
-      }),
-      ...rest,
-    }
-
-    const defaultOptions = (
-      <>
-        <option value="">Select country</option>
-        {SUPPORTED_BUSINESS_COUNTRIES.map(code => (
-          <option key={code} value={code}>
-            {code}
-          </option>
-        ))}
-      </>
-    )
-
-    if (asChild) {
-      return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
-          {children ?? defaultOptions}
-        </Slot>
-      )
-    }
-
-    return (
-      <select ref={forwardedRef} {...commonProps}>
-        {children ?? defaultOptions}
-      </select>
-    )
-  },
-)
-
-const BusinessDetailsTaxId = forwardRef<HTMLInputElement, BusinessDetailsFieldProps>(
-  function TopupFormBusinessDetailsTaxId({ asChild, onChange, ...rest }, forwardedRef) {
-    const ctx = useTopupCtx('BusinessDetails.TaxId')
-    if (!ctx.businessDetails.isBusiness) return null
-
-    const commonProps = {
-      'data-solvapay-topup-form-business-details-tax-id': '',
-      type: 'text',
-      value: ctx.businessDetails.taxId ?? '',
-      'aria-invalid': ctx.fieldErrors.taxId ? true : undefined,
-      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
-        ctx.setBusinessDetails({ taxId: e.target.value })
-      }),
-      ...rest,
-    }
-
-    if (asChild) {
-      return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)} />
-      )
-    }
-
-    return <input ref={forwardedRef} {...commonProps} />
-  },
-)
-
-const BusinessDetails = {
-  Root: BusinessDetailsRoot,
-  Toggle: BusinessDetailsToggle,
-  BusinessName: BusinessDetailsBusinessName,
-  Country: BusinessDetailsCountry,
-  TaxId: BusinessDetailsTaxId,
-} as const
-
-type SummaryRootProps = React.HTMLAttributes<HTMLDivElement> & {
-  asChild?: boolean
-  children?: React.ReactNode
-}
-
-const SummaryRoot = forwardRef<HTMLDivElement, SummaryRootProps>(function TopupFormSummaryRoot(
-  { asChild, children, ...rest },
-  forwardedRef,
-) {
-  useTopupCtx('Summary')
-  const Comp = asChild ? Slot : 'div'
-  return (
-    <Comp ref={forwardedRef} data-solvapay-topup-form-summary="" {...rest}>
-      {children}
-    </Comp>
-  )
-})
-
-type SummaryLeafProps = React.HTMLAttributes<HTMLSpanElement> & { asChild?: boolean }
-
-function useSummaryAmounts() {
-  const ctx = useTopupCtx('Summary')
-  const locale = useLocale()
-  const currency = (ctx.taxBreakdown?.currency ?? ctx.currency ?? 'usd').toLowerCase()
-
-  const subtotalMinor = ctx.taxBreakdown?.subtotal ?? ctx.amount
-  const taxMinor = ctx.taxBreakdown?.taxAmount ?? 0
-  const totalMinor = ctx.taxBreakdown?.total ?? ctx.amount
-
+function useTopupBusinessCtx(part: string) {
+  const ctx = useTopupCtx(part)
   return {
-    subtotalFormatted: formatPrice(subtotalMinor, currency, { locale }),
-    taxFormatted: formatPrice(taxMinor, currency, { locale }),
-    totalFormatted: formatPrice(totalMinor, currency, { locale }),
-    taxRate: ctx.taxBreakdown?.taxRate ?? null,
-    treatment: ctx.taxBreakdown?.treatment ?? null,
-    attaching: ctx.businessDetailsAttaching,
+    businessDetails: ctx.businessDetails,
+    setBusinessDetails: ctx.setBusinessDetails,
+    fieldErrors: ctx.fieldErrors,
   }
 }
 
-const SummarySubtotal = forwardRef<HTMLSpanElement, SummaryLeafProps>(
-  function TopupFormSummarySubtotal({ asChild, children, ...rest }, forwardedRef) {
-    const { subtotalFormatted } = useSummaryAmounts()
-    const Comp = asChild ? Slot : 'span'
-    return (
-      <Comp ref={forwardedRef} data-solvapay-topup-form-summary-subtotal="" {...rest}>
-        {children ?? subtotalFormatted}
-      </Comp>
-    )
-  },
-)
+function useTopupSummaryCtx(part: string) {
+  const ctx = useTopupCtx(part)
+  return {
+    taxBreakdown: ctx.taxBreakdown,
+    businessDetailsAttaching: ctx.businessDetailsAttaching,
+    baseAmountMinor: ctx.amount,
+    currency: ctx.currency ?? 'usd',
+  }
+}
 
-const SummaryTax = forwardRef<HTMLSpanElement, SummaryLeafProps>(function TopupFormSummaryTax(
-  { asChild, children, ...rest },
-  forwardedRef,
-) {
-  const { taxFormatted, taxRate, treatment } = useSummaryAmounts()
-  const Comp = asChild ? Slot : 'span'
-  const defaultLabel =
-    treatment === 'reverse_charge'
-      ? `VAT reverse charge (${taxFormatted})`
-      : taxRate != null
-        ? `Tax (${Math.round(taxRate * 100)}%)`
-        : 'Tax'
-  return (
-    <Comp ref={forwardedRef} data-solvapay-topup-form-summary-tax="" {...rest}>
-      {children ?? (
-        <>
-          <span>{defaultLabel}</span>{' '}
-          <span data-solvapay-topup-form-summary-tax-amount="">{taxFormatted}</span>
-        </>
-      )}
-    </Comp>
-  )
-})
-
-const SummaryTotal = forwardRef<HTMLSpanElement, SummaryLeafProps>(function TopupFormSummaryTotal(
-  { asChild, children, ...rest },
-  forwardedRef,
-) {
-  const { totalFormatted } = useSummaryAmounts()
-  const Comp = asChild ? Slot : 'span'
-  return (
-    <Comp ref={forwardedRef} data-solvapay-topup-form-summary-total="" {...rest}>
-      {children ?? totalFormatted}
-    </Comp>
-  )
-})
-
-const Summary = {
-  Root: SummaryRoot,
-  Subtotal: SummarySubtotal,
-  Tax: SummaryTax,
-  Total: SummaryTotal,
-} as const
+const BusinessDetails = createBusinessDetailsParts(useTopupBusinessCtx, 'topup-form')
+const Summary = createTaxSummaryParts(useTopupSummaryCtx, 'topup-form')
 
 export const TopupFormRoot = Root
 export const TopupFormPaymentElement = PaymentElementSlot

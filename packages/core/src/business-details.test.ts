@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   BusinessDetailsSchema,
+  BUSINESS_COUNTRY_DISPLAY_NAMES,
+  BUSINESS_COUNTRY_OPTIONS,
   COUNTRY_TO_TAX_ID_TYPE,
   SUPPORTED_BUSINESS_COUNTRIES,
   deriveTaxIdType,
@@ -10,6 +12,33 @@ import {
   resolveTaxBehavior,
   validateBusinessDetails,
 } from './business-details'
+
+describe('BUSINESS_COUNTRY_OPTIONS', () => {
+  it('provides a non-empty label for every supported country', () => {
+    for (const country of SUPPORTED_BUSINESS_COUNTRIES) {
+      expect(BUSINESS_COUNTRY_DISPLAY_NAMES[country].trim().length).toBeGreaterThan(0)
+    }
+
+    expect(BUSINESS_COUNTRY_OPTIONS).toHaveLength(SUPPORTED_BUSINESS_COUNTRIES.length)
+    for (const option of BUSINESS_COUNTRY_OPTIONS) {
+      expect(option.label.trim().length).toBeGreaterThan(0)
+      expect(option.value).toBeDefined()
+    }
+  })
+
+  it('sorts options alphabetically by label', () => {
+    const labels = BUSINESS_COUNTRY_OPTIONS.map(option => option.label)
+    const sortedLabels = [...labels].sort((a, b) => a.localeCompare(b))
+    expect(labels).toEqual(sortedLabels)
+  })
+
+  it('uses Stripe-aligned English labels', () => {
+    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.DE).toBe('Germany')
+    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.US).toBe('United States of America')
+    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.GB).toBe('United Kingdom')
+    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.CZ).toBe('Czechia')
+  })
+})
 
 describe('deriveTaxIdType', () => {
   it('returns eu_vat for EU member states', () => {

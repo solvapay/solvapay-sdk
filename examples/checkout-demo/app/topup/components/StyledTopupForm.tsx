@@ -91,36 +91,15 @@ export function StyledTopupForm({
           className="payment-form-wrapper space-y-4"
         >
           <TopupForm.PaymentElement />
-          <TopupForm.BusinessDetails.Root className="space-y-3 rounded-lg border border-slate-200 p-4">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <TopupForm.BusinessDetails.Toggle />
-              I&apos;m purchasing as a business
-            </label>
-            <TopupForm.BusinessDetails.BusinessName
-              placeholder="Business name"
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-            />
-            <TopupForm.BusinessDetails.Country className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm" />
-            <TopupForm.BusinessDetails.TaxId
-              placeholder="Tax / VAT ID"
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-            />
+          <TopupForm.BusinessDetails.Root>
+            <TopupForm.BusinessDetails.Fields />
           </TopupForm.BusinessDetails.Root>
-          <TopupForm.Summary.Root className="space-y-2 rounded-lg border border-slate-200 p-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Subtotal</span>
-              <TopupForm.Summary.Subtotal className="font-medium text-slate-900" />
-            </div>
-            <div className="flex justify-between">
-              <TopupForm.Summary.Tax className="text-slate-600" />
-            </div>
-            <div className="flex justify-between border-t border-slate-200 pt-2">
-              <span className="font-medium text-slate-900">Total due</span>
-              <TopupForm.Summary.Total className="font-semibold text-slate-900" />
-            </div>
+          <TopupForm.Summary.Root>
+            <TopupForm.Summary.Rows />
           </TopupForm.Summary.Root>
           <TopupForm.Loading />
           <TopupForm.Error className="text-sm text-red-600" />
+          <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
           <TopupForm.SubmitButton asChild>
             <button className={actionButtonClassName}>
               Pay {formatAmount(amountCents, currency)}

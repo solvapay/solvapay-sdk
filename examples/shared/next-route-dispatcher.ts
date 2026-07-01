@@ -29,6 +29,7 @@ import {
   reactivateRenewal,
   saveAutoRecharge,
   syncCustomer,
+  attachBusinessDetails,
 } from '@solvapay/next'
 import type { SolvaPay } from '@solvapay/server'
 
@@ -130,6 +131,27 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
       return processTopupPaymentIntent(
         request,
         { paymentIntentId: String(body.paymentIntentId) },
+        { solvaPay },
+      )
+    },
+    'attach-business-details': async request => {
+      const body = await bodyJson(request)
+      const taxIdTypeRaw = body.taxIdType
+      const taxIdType =
+        taxIdTypeRaw === 'eu_vat' || taxIdTypeRaw === 'gb_vat' || taxIdTypeRaw === 'us_ein'
+          ? taxIdTypeRaw
+          : undefined
+      return attachBusinessDetails(
+        request,
+        {
+          paymentIntentId: String(body.paymentIntentId),
+          isBusiness: Boolean(body.isBusiness),
+          ...(body.businessName ? { businessName: String(body.businessName) } : {}),
+          ...(body.country ? { country: String(body.country) } : {}),
+          ...(body.taxId ? { taxId: String(body.taxId) } : {}),
+          ...(taxIdType ? { taxIdType } : {}),
+          ...(body.customerRef ? { customerRef: String(body.customerRef) } : {}),
+        },
         { solvaPay },
       )
     },
