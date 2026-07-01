@@ -1,6 +1,7 @@
 'use client'
 
 import { useCustomer } from '@solvapay/react'
+import type { AutoRechargeInput } from '@solvapay/server'
 import { TopupForm } from '@solvapay/react/primitives'
 import { actionButtonClassName } from '../../components/ui/Button'
 import '../../checkout/payment-form.css'
@@ -8,6 +9,7 @@ import '../../checkout/payment-form.css'
 interface StyledTopupFormProps {
   amountCents: number
   currency: string
+  autoRecharge?: AutoRechargeInput
   creditsPerMinorUnit?: number | null
   displayExchangeRate?: number | null
   onSuccess: () => void
@@ -27,6 +29,7 @@ function formatAmount(cents: number, currency: string): string {
 export function StyledTopupForm({
   amountCents,
   currency,
+  autoRecharge,
   creditsPerMinorUnit,
   displayExchangeRate,
   onSuccess,
@@ -82,6 +85,7 @@ export function StyledTopupForm({
         <TopupForm.Root
           amount={amountCents}
           currency={currency}
+          autoRecharge={autoRecharge}
           onSuccess={onSuccess}
           onError={onError}
           className="payment-form-wrapper space-y-4"

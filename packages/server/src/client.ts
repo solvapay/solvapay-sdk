@@ -636,6 +636,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           amount: params.amount,
           currency: params.currency,
           description: params.description,
+          ...(params.autoRecharge ? { autoRecharge: params.autoRecharge } : {}),
         }),
       })
 
@@ -932,6 +933,58 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
         throw new SolvaPayError(`Get payment method failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
+      }
+
+      return await res.json()
+    },
+
+    async getAutoRecharge(params) {
+      const url = new URL(`${base}/v1/sdk/auto-recharge`)
+      url.searchParams.set('customerRef', params.customerRef)
+
+      const res = await fetch(url.toString(), { method: 'GET', headers })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get auto-recharge failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
+      }
+
+      return await res.json()
+    },
+
+    async saveAutoRecharge(params) {
+      const res = await fetch(`${base}/v1/sdk/auto-recharge`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Save auto-recharge failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
+      }
+
+      return await res.json()
+    },
+
+    async disableAutoRecharge(params) {
+      const url = new URL(`${base}/v1/sdk/auto-recharge`)
+      url.searchParams.set('customerRef', params.customerRef)
+
+      const res = await fetch(url.toString(), { method: 'DELETE', headers })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Disable auto-recharge failed (${res.status}): ${error}`, {
           status: res.status,
         })
       }

@@ -61,11 +61,11 @@ jobs:
       - name: Check dependency health
         run: pnpm deps:check
 
-      - name: Run tests
-        run: pnpm test
-
       - name: Build packages
         run: pnpm build:packages
+
+      - name: Run tests
+        run: pnpm test
 
       - name: Validate fetch-runtime — Node gate
         run: pnpm validate:fetch-runtime

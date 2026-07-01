@@ -13,7 +13,7 @@ const EXAMPLE_QUERIES = [
 ]
 
 export function UsageSimulator() {
-  const { credits, adjustBalance } = useBalance()
+  const { credits, adjustBalance, reconcileAfterUsageDebit, refetch } = useBalance()
   const { activePurchase } = usePurchase()
 
   const productRef =
@@ -40,8 +40,6 @@ export function UsageSimulator() {
     setIsRunning(true)
     setError(null)
 
-    adjustBalance(-creditsPerUnit)
-
     try {
       const token = await getAccessToken()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -54,6 +52,7 @@ export function UsageSimulator() {
           actionType: 'api_call',
           units: 1,
           productRef,
+          outcome: 'success',
           description: query,
           metadata: { toolName: 'knowledge_search', query },
         }),
@@ -64,9 +63,24 @@ export function UsageSimulator() {
         throw new Error(data.error || 'Request failed')
       }
 
+      const data = (await res.json()) as {
+        creditDebit?:
+          | { debited: true; amount: number; autoRecharge?: { triggered: boolean } }
+          | { debited: false }
+      }
+
+      if (data.creditDebit?.debited === true) {
+        adjustBalance(-data.creditDebit.amount)
+        reconcileAfterUsageDebit?.({
+          expectIncrease: data.creditDebit.autoRecharge?.triggered === true,
+        })
+        await refetch()
+      } else {
+        await refetch()
+      }
+
       setSessionQueries(prev => prev + 1)
     } catch (err) {
-      adjustBalance(creditsPerUnit)
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
       setIsRunning(false)
