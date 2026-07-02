@@ -23,15 +23,12 @@ export default function TopupPage() {
     return (
       configToAutoRechargeInput(savedAutoRechargeConfig, {
         currency,
-        conversion: { creditsPerMinorUnit, displayExchangeRate },
       }) ?? undefined
     )
   }, [
     pendingAutoRecharge,
     savedAutoRechargeConfig,
     currency,
-    creditsPerMinorUnit,
-    displayExchangeRate,
   ])
 
   const handlePaymentSuccess = () => {

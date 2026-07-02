@@ -28,6 +28,11 @@
   ],
   "author": "SolvaPay Inc.",
   "license": "MIT",
+  "pnpm": {
+    "overrides": {
+      "next": "16.2.7"
+    }
+  },
   "scripts": {
     "build": "turbo build --concurrency 16",
     "build:examples": "turbo build --filter=@example/*",

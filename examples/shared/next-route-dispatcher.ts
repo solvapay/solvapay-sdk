@@ -32,25 +32,26 @@ import {
 } from '@solvapay/next'
 import type { SolvaPay } from '@solvapay/server'
 
-type Handler = (request: NextRequest) => Promise<NextResponse>
+/** Route handlers return the web-standard `Response` so `@solvapay/next` helpers compiled against a different Next.js patch version stay assignable. */
+type Handler = (request: NextRequest) => Promise<Response>
 
 export type SolvaPayRouteHandlers = {
   GET: (
     request: NextRequest,
     ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<NextResponse>
+  ) => Promise<Response>
   POST: (
     request: NextRequest,
     ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<NextResponse>
+  ) => Promise<Response>
   PUT: (
     request: NextRequest,
     ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<NextResponse>
+  ) => Promise<Response>
   DELETE: (
     request: NextRequest,
     ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<NextResponse>
+  ) => Promise<Response>
 }
 
 async function bodyJson(request: NextRequest): Promise<Record<string, unknown>> {
@@ -169,7 +170,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ solvapay: string[] }> },
-  ): Promise<NextResponse> {
+  ): Promise<Response> {
     const key = await resolveRouteKey(params)
     const handler = key ? getRoutes[key] : undefined
     if (!handler) {
@@ -181,7 +182,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ solvapay: string[] }> },
-  ): Promise<NextResponse> {
+  ): Promise<Response> {
     const key = await resolveRouteKey(params)
     const handler = key ? postRoutes[key] : undefined
     if (!handler) {
@@ -193,7 +194,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ solvapay: string[] }> },
-  ): Promise<NextResponse> {
+  ): Promise<Response> {
     const key = await resolveRouteKey(params)
     const handler = key ? putRoutes[key] : undefined
     if (!handler) {
@@ -205,7 +206,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ solvapay: string[] }> },
-  ): Promise<NextResponse> {
+  ): Promise<Response> {
     const key = await resolveRouteKey(params)
     const handler = key ? deleteRoutes[key] : undefined
     if (!handler) {

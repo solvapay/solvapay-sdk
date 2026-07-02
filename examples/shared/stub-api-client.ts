@@ -545,6 +545,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
       processorPaymentId,
       clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
       publishableKey: 'pk_test_stub_demo_key',
+      amount: 2900,
+      currency: 'USD',
     }
   }
 
