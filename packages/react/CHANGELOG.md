@@ -1,5 +1,32 @@
 # @solvapay/react changelog
 
+## 1.4.0
+
+### Minor Changes
+
+- 6e4f5cf: Collapse auto-recharge transport route overrides to a single `api.autoRecharge` key (replaces `getAutoRecharge`, `saveAutoRecharge`, and `disableAutoRecharge` route keys).
+- 349777e: Auto-recharge can now be configured in the same top-up payment as the initial card charge, so integrators do not need a separate SetupIntent step before checkout.
+  - **`@solvapay/react`**: `AutoRecharge` adds `deferCardSetup` and `onPendingConfig` to stage settings until payment; `useTopup`, `TopupForm`, and `createTopupPayment` accept optional `autoRecharge`; `balance.reconcileAfterUsageDebit()` starts post-debit polling without false bumps from optimistic debits alone.
+  - **`@solvapay/server`**: `createTopupPaymentIntentCore` forwards optional `autoRecharge` to the SDK payment-intent API.
+  - **`@solvapay/next`**: `createTopupPaymentIntent` route helper accepts the same `autoRecharge` body field.
+
+### Patch Changes
+
+- 2644836: Fix balance reconciliation stopping after the first auto-recharge when multiple usage debits trigger back-to-back.
+  - **`balance.reconcileAfterUsageDebit`**: tracks a pending recharge count so each expected top-up is polled and applied before reconciliation finishes, instead of clearing after the first observed increase.
+
+- 5aa4aee: Fix lossy credit↔currency rounding when toggling auto-recharge amount units.
+  - **`estimateCredits`** now uses `Math.round` (matching credits→currency) instead of `Math.floor`.
+  - **Unit toggle** snaps back to the last user-entered value instead of re-deriving from the rounded display, so repeated flips no longer drift by a minor unit.
+
+- 349777e: Financial boundary hardening: backend `display.*` blocks are the source of truth for credit and currency rendering.
+  - **`@solvapay/core`**: conversion-contract e2e extended to pin backend display formulas against the core reference.
+  - **`@solvapay/react`**: `TransportBalanceResult` and `BalanceStatus` accept optional `display` from the balance API; negative `adjustBalance` schedules a grace refetch; usage demo refetches after debit.
+  - **`@solvapay/server`**: `AutoRechargeConfig`, balance, and credit-debit types document backend-computed `display` blocks and `autoRecharge.triggered` as charge-initiated (not credits booked inline).
+
+- Updated dependencies [349777e]
+  - @solvapay/core@1.1.1
+
 ## 1.3.0
 
 ### Minor Changes
