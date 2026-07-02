@@ -25,6 +25,14 @@ const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
 const describeIntegration =
   USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
 
+/** Customer-facing charge in minor units (presentment currency). */
+function presentmentAmount(intent: {
+  amount: number
+  originalAmount?: number
+}): number {
+  return intent.originalAmount ?? intent.amount
+}
+
 describeIntegration('Multi-Currency Plans — Real Backend', () => {
   let apiClient: ReturnType<typeof createSolvaPayClient>
   let solvaPay: ReturnType<typeof createSolvaPay>
@@ -155,6 +163,7 @@ describeIntegration('Multi-Currency Plans — Real Backend', () => {
     })
 
     expect(intent.currency?.toUpperCase()).toBe(providerCurrency)
+    expect(presentmentAmount(intent)).toBe(defaultOptionPrice)
     expect(intent.amount).toBeGreaterThan(0)
     expect(intent.clientSecret).toBeDefined()
     expect(intent.processorPaymentId).toBeDefined()
@@ -170,7 +179,7 @@ describeIntegration('Multi-Currency Plans — Real Backend', () => {
       currency: secondaryCurrency,
     })
 
-    expect(intent.amount).toBe(alternateOptionPrice)
+    expect(presentmentAmount(intent)).toBe(alternateOptionPrice)
     expect(intent.currency?.toUpperCase()).toBe(secondaryCurrency)
     expect(intent.clientSecret).toBeDefined()
   })
@@ -193,9 +202,9 @@ describeIntegration('Multi-Currency Plans — Real Backend', () => {
 
     expect(defaultIntent.currency?.toUpperCase()).toBe(providerCurrency)
     expect(altIntent.currency?.toUpperCase()).toBe(secondaryCurrency)
-    expect(altIntent.amount).toBe(alternateOptionPrice)
+    expect(presentmentAmount(altIntent)).toBe(alternateOptionPrice)
     if (defaultOptionPrice !== alternateOptionPrice) {
-      expect(defaultIntent.amount).not.toBe(altIntent.amount)
+      expect(presentmentAmount(defaultIntent)).not.toBe(presentmentAmount(altIntent))
     }
   })
 
@@ -209,7 +218,7 @@ describeIntegration('Multi-Currency Plans — Real Backend', () => {
       currency: secondaryCurrency,
     })
 
-    expect(intent.amount).toBe(alternateOptionPrice)
+    expect(presentmentAmount(intent)).toBe(alternateOptionPrice)
     expect(intent.currency?.toUpperCase()).toBe(secondaryCurrency)
   })
 

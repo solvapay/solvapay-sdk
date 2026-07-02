@@ -15,8 +15,8 @@ the workflows do the rest.
 
 Every push to `dev` runs the full pre-publish gate:
 
-1. `pnpm test` — unit tests for every workspace package.
-2. `pnpm build:packages` — every publishable package builds to `dist/`.
+1. `pnpm build:packages` — every publishable package builds to `dist/`.
+2. `pnpm test` — unit tests for every workspace package.
 3. `pnpm validate:fetch-runtime` — asserts `@solvapay/server/fetch` and
    `@solvapay/mcp/fetch` load cleanly in a bare Web-standards
    environment (no `node:`-prefixed imports, no leaked Node builtins).
@@ -98,6 +98,12 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 - A new dep got pulled into `@solvapay/server/fetch` or `@solvapay/mcp/fetch`
   that pulls a `node:`-prefixed builtin. Remove the offending dep or
   gate it behind a runtime detector before importing.
+
+### Deno gate fails with "minimum dependency date" / "minimumDependencyAge"
+
+- Deno 2.9+ blocks npm packages published within 24h by default. The
+  supabase-edge-mcp import maps must set `"minimumDependencyAge": 0`
+  because the gate resolves mutable `@preview` tags.
 
 ### `changeset version --snapshot preview` publishes no packages
 

@@ -452,6 +452,13 @@ export interface SolvaPayClient {
     clientSecret: string
     publishableKey: string
     accountId?: string
+    /** USD ledger amount in minor units. */
+    amount: number
+    /** Presentment amount in minor units (matches `currency`). */
+    originalAmount?: number
+    currency?: string
+    exchangeRate?: number
+    status?: string
   }>
 
   // POST: /v1/sdk/payment-intents (purpose: credit_topup)
