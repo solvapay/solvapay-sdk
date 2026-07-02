@@ -113,11 +113,11 @@ export default function HomePage() {
             </div>
           ) : activePurchase ? (
             <p className="text-slate-600">
-              You're on the{' '}
+              You&apos;re on the{' '}
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activePurchase.productName}
+                {activePurchase.planSnapshot?.name ?? activePurchase.productName}
               </span>{' '}
-              product
+              plan
             </p>
           ) : shouldShowCancelledNotice && cancelledPurchase ? (
             <div className="space-y-2">
