@@ -4,7 +4,6 @@ import { useCustomer } from '@solvapay/react'
 import type { AutoRechargeInput } from '@solvapay/server'
 import { TopupForm } from '@solvapay/react/primitives'
 import { actionButtonClassName } from '../../components/ui/Button'
-import '../../checkout/payment-form.css'
 
 interface StyledTopupFormProps {
   amountCents: number
@@ -40,15 +39,15 @@ export function StyledTopupForm({
   const exchangeRate = displayExchangeRate ?? 1
 
   return (
-    <div className="space-y-6">
-      <div className="pb-6 border-b border-slate-200">
+    <section className="space-y-6">
+      <dl className="pb-6 border-b border-slate-200">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-sm text-slate-600">Top-up type:</span>
-          <span className="text-sm font-medium text-slate-900">Credit Top-Up</span>
+          <dt className="text-sm text-slate-600">Top-up type:</dt>
+          <dd className="text-sm font-medium text-slate-900">Credit Top-Up</dd>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-slate-600">Amount:</span>
-          <div className="text-right">
+          <dt className="text-sm text-slate-600">Amount:</dt>
+          <dd className="text-right">
             <span className="text-lg font-bold text-slate-900">
               {formatAmount(amountCents, currency)}
             </span>
@@ -61,25 +60,25 @@ export function StyledTopupForm({
                 credits
               </p>
             )}
-          </div>
+          </dd>
         </div>
-      </div>
+      </dl>
 
-      <div className="space-y-3">
+      <section className="space-y-3">
         <h2 className="text-sm font-medium text-slate-900">Customer</h2>
-        <div className="space-y-3">
+        <dl className="space-y-3">
           <div>
-            <div className="text-xs text-slate-500 mb-1">Email</div>
-            <div className="text-sm text-slate-900">{customer.email || '—'}</div>
+            <dt className="text-xs text-slate-500 mb-1">Email</dt>
+            <dd className="text-sm text-slate-900">{customer.email || '—'}</dd>
           </div>
           <div>
-            <div className="text-xs text-slate-500 mb-1">Name</div>
-            <div className="text-sm text-slate-900">{customer.name || '—'}</div>
+            <dt className="text-xs text-slate-500 mb-1">Name</dt>
+            <dd className="text-sm text-slate-900">{customer.name || '—'}</dd>
           </div>
-        </div>
-      </div>
+        </dl>
+      </section>
 
-      <div className="space-y-3">
+      <section className="space-y-3">
         <h2 className="text-sm font-medium text-slate-900">Payment</h2>
 
         <TopupForm.Root
@@ -88,7 +87,7 @@ export function StyledTopupForm({
           autoRecharge={autoRecharge}
           onSuccess={onSuccess}
           onError={onError}
-          className="payment-form-wrapper space-y-4"
+          className="space-y-4"
         >
           <TopupForm.PaymentElement />
           <TopupForm.BusinessDetails.Root>
@@ -106,19 +105,19 @@ export function StyledTopupForm({
             </button>
           </TopupForm.SubmitButton>
         </TopupForm.Root>
-      </div>
+      </section>
 
-      <div className="pt-4 border-t border-slate-200 space-y-2">
+      <footer className="pt-4 border-t border-slate-200 space-y-2">
         <p className="text-xs text-slate-400 text-center">Powered by SolvaPay</p>
-        <div className="flex justify-center space-x-4 text-xs text-slate-400">
+        <nav className="flex justify-center space-x-4 text-xs text-slate-400">
           <button className="hover:text-slate-600 transition-colors">Terms</button>
           <button className="hover:text-slate-600 transition-colors">Privacy</button>
-        </div>
-      </div>
+        </nav>
+      </footer>
 
       <button onClick={onBack} className="text-sm text-slate-600 hover:text-slate-900 block">
         ← Change amount
       </button>
-    </div>
+    </section>
   )
 }
