@@ -3486,7 +3486,7 @@ export interface operations {
                 /** @description Filter by customer reference */
                 customerRef?: string;
                 /** @description Include free recurring purchases and free auto-enrollments (default true) */
-                includeFree?: unknown;
+                includeFree?: boolean;
             };
             header?: never;
             path?: never;
