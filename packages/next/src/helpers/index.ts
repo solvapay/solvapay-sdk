@@ -12,7 +12,12 @@ export { getAuthenticatedUser } from './auth'
 export { syncCustomer, getCustomerBalance } from './customer'
 
 // Export payment helpers
-export { createPaymentIntent, createTopupPaymentIntent, processPaymentIntent, processTopupPaymentIntent } from './payment'
+export {
+  createPaymentIntent,
+  createTopupPaymentIntent,
+  processPaymentIntent,
+  processTopupPaymentIntent,
+} from './payment'
 
 // Export checkout helpers
 export { createCheckoutSession, createCustomerSession } from './checkout'
@@ -22,6 +27,9 @@ export { activatePlan } from './activation'
 
 // Export payment-method helpers
 export { getPaymentMethod } from './payment-method'
+
+// Export auto-recharge helpers
+export { disableAutoRecharge, getAutoRecharge, saveAutoRecharge } from './auto-recharge'
 
 // Export purchase cancellation & reactivation helpers
 export { cancelRenewal, reactivateRenewal } from './renewal'
@@ -37,7 +45,11 @@ export { getProduct } from './product'
 export { trackUsage } from './usage'
 
 // Export middleware helpers
-export { createAuth0AuthMiddleware, createAuthMiddleware, createSupabaseAuthMiddleware } from './middleware'
+export {
+  createAuth0AuthMiddleware,
+  createAuthMiddleware,
+  createSupabaseAuthMiddleware,
+} from './middleware'
 export type {
   Auth0AuthMiddlewareOptions,
   AuthMiddlewareOptions,

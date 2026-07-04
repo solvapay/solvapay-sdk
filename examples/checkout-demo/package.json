@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_OPTIONS='--disable-warning=DEP0205' next dev --port 3010",
+    "dev": "bash scripts/dev-with-tunnel.sh",
+    "dev:local": "NODE_OPTIONS='--disable-warning=DEP0205' next dev --port 3010",
+    "dev:tunnel": "bash scripts/dev-with-tunnel.sh",
     "build": "next build",
     "build:opennext": "opennextjs-cloudflare build",
     "build:opennext:prod": "dotenv -e .env.prod -- opennextjs-cloudflare build",

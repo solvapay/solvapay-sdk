@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Auto-Recharge UI — layout reference</title>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --field-border: #cbd5e1;
+    --field-bg: #f8fafc;
+    --ink: #0f172a;
+    --ink-2: #334155;
+    --muted: #64748b;
+    --faint: #94a3b8;
+    --accent: #0f172a;
+    --accent-ink: #3730a3;
+    --accent-bg: #eef2ff;
+    --success: #10b981;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 40px 24px 80px;
+  }
+  header { max-width: 1040px; margin: 0 auto 32px; }
+  header h1 { font-size: 24px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.5; }
+  .gallery {
+    max-width: 1040px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 28px; align-items: start;
+  }
+  .frame {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .frame > .label {
+    font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
+  }
+
+  .card {
+    max-width: 460px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    box-shadow: 0 1px 3px rgba(15,23,42,.08);
+  }
+  .title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .sub { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+
+  .modal-wrap { position: relative; max-width: 520px; }
+  .modal-backdrop {
+    position: absolute; inset: -20px;
+    background: rgba(15,23,42,.45); border-radius: 16px;
+  }
+  .modal {
+    position: relative; background: var(--card);
+    border-radius: 12px; padding: 24px;
+    box-shadow: 0 10px 25px rgba(15,23,42,.15);
+  }
+  .modal-title { font-size: 18px; font-weight: 600; color: var(--ink); margin-bottom: 16px; }
+  .question { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 10px; }
+  .enable-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; font-size: 14px; color: var(--ink); line-height: 1.5; }
+  .enable-row input { margin-top: 3px; accent-color: var(--success); }
+
+  .field { margin-bottom: 16px; }
+  .field-label { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 8px; }
+  .input-row {
+    display: flex; align-items: center;
+    border: 1px solid var(--field-border); border-radius: 8px; padding: 10px 12px;
+  }
+  .prefix { color: var(--muted); margin-right: 4px; }
+  .input-val { flex: 1; font-size: 16px; color: var(--ink); }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+  button { font: inherit; cursor: pointer; }
+  .btn-ghost { border: 1px solid var(--field-border); background: #fff; color: var(--ink-2); border-radius: 8px; padding: 9px 16px; font-size: 14px; font-weight: 500; }
+  .btn-primary { border: none; background: var(--accent); color: #fff; border-radius: 8px; padding: 9px 18px; font-size: 14px; font-weight: 600; }
+  .btn-trigger { border: none; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; }
+  .btn-block { width: 100%; padding: 11px; }
+
+  .field-label-sm { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .stripe-box { border: 1px dashed var(--field-border); background: var(--field-bg); border-radius: 8px; padding: 16px; margin-bottom: 8px; }
+  .stripe-line { height: 38px; border: 1px solid var(--border); border-radius: 6px; background: #fff; display: flex; align-items: center; padding: 0 12px; color: var(--faint); font-size: 13px; }
+  .stripe-line + .stripe-row { margin-top: 10px; }
+  .stripe-row { display: flex; gap: 10px; }
+  .stripe-row .stripe-line { flex: 1; }
+  .secured { font-size: 11px; color: var(--faint); margin-bottom: 16px; }
+
+  .banner { max-width: 460px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
+  .banner .icon { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #dc2626; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .banner .bt { font-size: 14px; font-weight: 600; color: #b91c1c; }
+  .banner .bd { font-size: 13px; color: #991b1b; margin-top: 2px; }
+  .btn-danger { margin-top: 10px; border: 1px solid #dc2626; background: #fff; color: #b91c1c; border-radius: 7px; padding: 7px 14px; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Auto-Recharge UI — layout reference</h1>
+    <p>Summary card + modal dialog mapped onto <code>AutoRechargeConfig</code>. Checkbox opt-in,
+    stacked threshold + amount fields, right-aligned Cancel / Save settings. Open this file in a browser to view styled.</p>
+  </header>
+
+  <div class="gallery">
+
+    <!-- 1. Summary card -->
+    <div class="frame">
+      <div class="label">1 · Closed — summary card</div>
+      <div class="card">
+        <div class="title">Auto recharge</div>
+        <div class="sub">When your credit balance falls below a threshold, your saved payment method will be charged to bring it back up.</div>
+        <button class="btn-trigger">Set up auto-recharge</button>
+      </div>
+    </div>
+
+    <!-- 2. Modal dialog -->
+    <div class="frame">
+      <div class="label">2 · Settings dialog — enabled</div>
+      <div class="modal-wrap">
+        <div class="modal-backdrop"></div>
+        <div class="modal">
+          <div class="modal-title">Auto recharge settings</div>
+          <div class="question">Would you like to set up automatic recharge?</div>
+          <div class="enable-row">
+            <input type="checkbox" checked />
+            <span>Yes, automatically recharge my card when my credit balance falls below a threshold</span>
+          </div>
+          <div class="field">
+            <div class="field-label">When balance falls below</div>
+            <div class="input-row"><span class="prefix">$</span><span class="input-val">5</span></div>
+          </div>
+          <div class="field">
+            <div class="field-label">Add this amount</div>
+            <div class="input-row"><span class="prefix">$</span><span class="input-val">10</span></div>
+            <div class="hint">≈ 1,000 credits per recharge</div>
+          </div>
+          <div class="actions">
+            <button class="btn-ghost">Cancel</button>
+            <button class="btn-primary">Save settings</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Setup -->
+    <div class="frame">
+      <div class="label">3 · First-time setup (no saved card)</div>
+      <div class="card">
+        <div class="field-label-sm">Payment method</div>
+        <div class="stripe-box">
+          <div class="stripe-line">Card number</div>
+          <div class="stripe-row">
+            <div class="stripe-line">MM / YY</div>
+            <div class="stripe-line">CVC</div>
+          </div>
+        </div>
+        <div class="secured">Secured by Stripe</div>
+        <button class="btn-primary btn-block">Set up auto-recharge</button>
+      </div>
+    </div>
+
+    <!-- 4. Failed banner -->
+    <div class="frame">
+      <div class="label">4 · Failed recharge (status / failureCount)</div>
+      <div class="banner">
+        <div class="icon">!</div>
+        <div>
+          <div class="bt">Auto-recharge paused</div>
+          <div class="bd">Your last recharge failed. Update your payment method to re-enable automatic top-ups.</div>
+          <button class="btn-danger">Update card</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

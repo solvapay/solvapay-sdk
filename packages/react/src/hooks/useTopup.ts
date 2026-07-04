@@ -20,7 +20,7 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * @param options.currency - ISO 4217 currency code (default: 'usd')
  */
 export function useTopup(options: UseTopupOptions): UseTopupReturn {
-  const { amount, currency } = options
+  const { amount, currency, autoRecharge } = options
   const { createTopupPayment, customerRef, updateCustomerRef } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -43,7 +43,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     setError(null)
 
     try {
-      const result = await createTopupPayment({ amount, currency })
+      const result = await createTopupPayment({ amount, currency, autoRecharge })
 
       if (!result || typeof result !== 'object') {
         throw new Error('Invalid topup payment intent response from server')
@@ -83,7 +83,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
       setLoading(false)
       isStartingRef.current = false
     }
-  }, [amount, currency, createTopupPayment, customerRef, updateCustomerRef, loading])
+  }, [amount, currency, autoRecharge, createTopupPayment, customerRef, updateCustomerRef, loading])
 
   const reset = useCallback(() => {
     isStartingRef.current = false

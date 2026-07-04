@@ -18,6 +18,7 @@
   --solvapay-border: hsl(214 32% 91%);
   --solvapay-destructive: hsl(0 72% 51%);
   --solvapay-warning: hsl(38 92% 50%);
+  --solvapay-success: hsl(142 71% 45%);
   --solvapay-radius: 0.5rem;
   --solvapay-font: inherit;
 }
@@ -1099,6 +1100,518 @@
   border: 1px solid var(--solvapay-destructive);
   border-radius: var(--solvapay-radius);
   background: color-mix(in srgb, var(--solvapay-destructive) 6%, transparent);
+}
+
+/* -----------------------------------------------------------------------------
+ * AutoRecharge
+ * -------------------------------------------------------------------------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[data-solvapay-auto-recharge],
+.solvapay-auto-recharge {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--solvapay-border);
+  font-family: var(--solvapay-font);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+[data-solvapay-auto-recharge-card],
+.solvapay-auto-recharge-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  padding: 1rem;
+}
+
+[data-solvapay-auto-recharge-card-heading],
+.solvapay-auto-recharge-card-heading {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-card-summary],
+.solvapay-auto-recharge-card-summary {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--solvapay-muted-foreground);
+  line-height: 1.5;
+}
+
+[data-solvapay-auto-recharge-trigger],
+.solvapay-auto-recharge-trigger {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.875rem;
+  transition: background-color 120ms ease;
+}
+
+[data-solvapay-auto-recharge-trigger]:hover:not(:disabled),
+.solvapay-auto-recharge-trigger:hover:not(:disabled) {
+  background: var(--solvapay-accent-hover);
+}
+
+[data-solvapay-auto-recharge-trigger]:focus-visible,
+.solvapay-auto-recharge-trigger:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+[data-solvapay-auto-recharge-trigger]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-solvapay-auto-recharge-portal] {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+[data-solvapay-auto-recharge-overlay] {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 23 42 / 0.45);
+}
+
+[data-solvapay-auto-recharge-content],
+.solvapay-auto-recharge-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 32.5rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: var(--solvapay-surface);
+  border: 1px solid var(--solvapay-border);
+  border-radius: calc(var(--solvapay-radius) + 4px);
+  padding: 1.5rem;
+  box-shadow:
+    0 10px 15px -3px rgb(15 23 42 / 0.1),
+    0 4px 6px -4px rgb(15 23 42 / 0.1);
+}
+
+[data-solvapay-auto-recharge-title],
+.solvapay-auto-recharge-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-question],
+.solvapay-auto-recharge-question {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-enable-row],
+.solvapay-auto-recharge-enable-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+[data-solvapay-auto-recharge-enable][data-appearance='checkbox'] {
+  appearance: auto;
+  position: static;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--solvapay-border);
+  background: var(--solvapay-surface);
+  cursor: pointer;
+}
+
+[data-solvapay-auto-recharge-enable][data-appearance='checkbox']::before {
+  content: none;
+}
+
+[data-solvapay-auto-recharge-enable][data-appearance='checkbox']:checked {
+  background: var(--solvapay-success);
+  border-color: var(--solvapay-success);
+}
+
+[data-solvapay-auto-recharge-enable-sentence],
+.solvapay-auto-recharge-enable-sentence {
+  font-size: 0.875rem;
+  color: var(--solvapay-accent);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+[data-solvapay-auto-recharge-cancel],
+.solvapay-auto-recharge-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--solvapay-surface);
+  color: var(--solvapay-accent);
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.625rem 1rem;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+[data-solvapay-auto-recharge-cancel]:hover:not(:disabled),
+.solvapay-auto-recharge-cancel:hover:not(:disabled) {
+  background: var(--solvapay-muted);
+  border-color: var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-cancel]:focus-visible,
+.solvapay-auto-recharge-cancel:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+[data-solvapay-auto-recharge-header],
+.solvapay-auto-recharge-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+[data-solvapay-auto-recharge-heading-group] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+[data-solvapay-auto-recharge-heading] {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-auto-recharge-description] {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-auto-recharge-enable] {
+  appearance: none;
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--solvapay-border);
+  background: var(--solvapay-muted);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+[data-solvapay-auto-recharge-enable]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: var(--solvapay-surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  transition: transform 120ms ease;
+}
+
+[data-solvapay-auto-recharge-enable]:checked {
+  background: var(--solvapay-success);
+  border-color: var(--solvapay-success);
+}
+
+[data-solvapay-auto-recharge-enable]:checked::before {
+  transform: translateX(1.25rem);
+}
+
+[data-solvapay-auto-recharge-enable]:focus-visible {
+  outline: 2px solid var(--solvapay-accent);
+  outline-offset: 2px;
+}
+
+[data-solvapay-auto-recharge-enable]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-solvapay-auto-recharge-body],
+.solvapay-auto-recharge-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+[data-solvapay-auto-recharge-body][data-state='closed'] {
+  display: none;
+}
+
+[data-solvapay-auto-recharge-summary] {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-auto-recharge-field] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+[data-solvapay-auto-recharge-field] > label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-amount-row] {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--solvapay-border);
+  border-radius: var(--solvapay-radius);
+  background: var(--solvapay-surface);
+  overflow: hidden;
+}
+
+[data-solvapay-auto-recharge-amount-row]:focus-within {
+  border-color: var(--solvapay-accent);
+  box-shadow: 0 0 0 1px var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-currency-prefix] {
+  padding: 0.75rem 0 0.75rem 0.75rem;
+  color: var(--solvapay-muted-foreground);
+  font-size: 1rem;
+}
+
+[data-solvapay-auto-recharge-amount] {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0.75rem;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-amount]:focus {
+  outline: none;
+}
+
+[data-solvapay-auto-recharge-unit-toggle] {
+  border: none;
+  background: transparent;
+  color: var(--solvapay-muted-foreground);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.75rem;
+  cursor: pointer;
+}
+
+[data-solvapay-auto-recharge-unit-toggle]:hover {
+  color: var(--solvapay-accent);
+}
+
+[data-solvapay-auto-recharge-hint] {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-auto-recharge-actions] {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+[data-solvapay-auto-recharge-actions] > li {
+  display: contents;
+}
+
+[data-solvapay-auto-recharge-save],
+.solvapay-auto-recharge-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.625rem 1rem;
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+[data-solvapay-auto-recharge-save]:hover:not(:disabled),
+.solvapay-auto-recharge-save:hover:not(:disabled) {
+  background: var(--solvapay-accent-hover);
+}
+
+[data-solvapay-auto-recharge-save]:disabled,
+[data-solvapay-auto-recharge-save][data-state='disabled'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-solvapay-auto-recharge-save][data-state='processing'] {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+[data-solvapay-auto-recharge-disable],
+.solvapay-auto-recharge-disable {
+  border: none;
+  background: transparent;
+  color: var(--solvapay-muted-foreground);
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 0.625rem 0.5rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-solvapay-auto-recharge-validation-error],
+[data-solvapay-auto-recharge-error],
+.solvapay-auto-recharge-error {
+  margin: 0;
+  color: var(--solvapay-destructive);
+  font-size: 0.875rem;
+}
+
+[data-solvapay-auto-recharge-status-message],
+.solvapay-auto-recharge-status-message {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--solvapay-muted-foreground);
+}
+[data-solvapay-auto-recharge-status] {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: calc(var(--solvapay-radius) - 2px);
+}
+
+[data-solvapay-auto-recharge-status][data-status='failed'] {
+  color: var(--solvapay-destructive);
+  background: color-mix(in srgb, var(--solvapay-destructive) 10%, transparent);
+}
+
+[data-solvapay-auto-recharge-loading],
+.solvapay-auto-recharge-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--solvapay-muted-foreground);
+  font-size: 0.875rem;
+}
+
+[data-solvapay-auto-recharge-setup] {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-solvapay-auto-recharge-setup] h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+[data-solvapay-auto-recharge-setup] p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-auto-recharge-setup-submit] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--solvapay-accent);
+  color: var(--solvapay-accent-foreground);
+  border: none;
+  border-radius: var(--solvapay-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.625rem 1rem;
+}
+
+[data-solvapay-auto-recharge-setup-error] {
+  margin: 0;
+  color: var(--solvapay-destructive);
+  font-size: 0.875rem;
 }
 
 /* -----------------------------------------------------------------------------

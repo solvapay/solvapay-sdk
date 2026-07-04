@@ -114,11 +114,7 @@ export async function checkPurchase(
 }
 
 // Re-export cache functions for backward compatibility
-export {
-  clearPurchaseCache,
-  clearAllPurchaseCache,
-  getPurchaseCacheStats,
-} from './cache'
+export { clearPurchaseCache, clearAllPurchaseCache, getPurchaseCacheStats } from './cache'
 
 // Export route helpers
 export {
@@ -138,6 +134,9 @@ export {
   getMerchant,
   getProduct,
   getPaymentMethod,
+  getAutoRecharge,
+  saveAutoRecharge,
+  disableAutoRecharge,
   trackUsage,
   createAuth0AuthMiddleware,
   createAuthMiddleware,

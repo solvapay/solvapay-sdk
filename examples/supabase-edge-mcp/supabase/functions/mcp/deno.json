@@ -1,4 +1,5 @@
 {
+  "minimumDependencyAge": 0,
   "nodeModulesDir": "auto",
   "imports": {
     "@modelcontextprotocol/sdk/": "npm:/@modelcontextprotocol/sdk@^1.29.0/",
