@@ -950,10 +950,10 @@ export interface components {
              */
             requiresPayment: boolean;
             /**
-             * Whether the plan is publicly selectable. Enterprise plans (false) are hidden from customer-facing catalog and can only be granted via direct assignment.
-             * @example true
+             * Whether the plan is hidden from the customer-facing catalog. Enterprise plans (true) do not appear in checkout or the SDK catalog and can only be granted via direct assignment.
+             * @example false
              */
-            selectable: boolean;
+            hidden: boolean;
             /**
              * Whether the plan is active
              * @example true
@@ -1224,7 +1224,7 @@ export interface components {
             maxActiveUsers?: number;
             accessExpiryDays?: number;
             default?: boolean;
-            selectable?: boolean;
+            hidden?: boolean;
         };
         PlanPricingOptionDto: {
             /**
@@ -1357,10 +1357,10 @@ export interface components {
              */
             requiresPayment: boolean;
             /**
-             * Whether the plan is publicly selectable. When false, the plan is hidden from customer-facing surfaces and can only be granted via direct assignment (enterprise plans).
-             * @example true
+             * Whether the plan is hidden from customer-facing surfaces. When true, the plan does not appear in checkout or the SDK catalog and can only be granted via direct assignment (enterprise plans).
+             * @example false
              */
-            selectable: boolean;
+            hidden: boolean;
             /**
              * Whether the plan is active (derived from status)
              * @example true
@@ -1413,7 +1413,7 @@ export interface components {
                 [key: string]: unknown;
             };
             default?: boolean;
-            selectable?: boolean;
+            hidden?: boolean;
         };
         CreateCustomerRequest: {
             /** Format: email */
