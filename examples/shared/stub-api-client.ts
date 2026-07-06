@@ -946,6 +946,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         updatedAt: now,
         freeUnits: this.freeTierLimit,
         limit: this.freeTierLimit,
+        hidden: false,
       },
       {
         type: 'recurring',
@@ -960,6 +961,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         createdAt: now,
         updatedAt: now,
         limit: 0,
+        hidden: false,
       },
     ]
   }
@@ -988,6 +990,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       status: 'active',
       createdAt: now,
       updatedAt: now,
+      hidden: false,
     }
   }
 
@@ -1012,6 +1015,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       status: 'active',
       createdAt: now,
       updatedAt: now,
+      hidden: false,
     }
   }
 
