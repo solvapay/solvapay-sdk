@@ -3,7 +3,12 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { AutoRechargeInput } from '@solvapay/server'
-import { AutoRecharge, configToAutoRechargeInput, useAutoRecharge, useBalance } from '@solvapay/react'
+import {
+  AutoRecharge,
+  configToAutoRechargeInput,
+  useAutoRecharge,
+  useBalance,
+} from '@solvapay/react'
 import { AmountPicker } from '@solvapay/react/primitives'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
@@ -20,16 +25,8 @@ export default function TopupPage() {
   const paymentAutoRecharge = useMemo((): AutoRechargeInput | undefined => {
     if (pendingAutoRecharge) return pendingAutoRecharge
     if (!savedAutoRechargeConfig?.enabled) return undefined
-    return (
-      configToAutoRechargeInput(savedAutoRechargeConfig, {
-        currency,
-      }) ?? undefined
-    )
-  }, [
-    pendingAutoRecharge,
-    savedAutoRechargeConfig,
-    currency,
-  ])
+    return configToAutoRechargeInput(savedAutoRechargeConfig, { currency }) ?? undefined
+  }, [pendingAutoRecharge, savedAutoRechargeConfig, currency])
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
