@@ -11,6 +11,7 @@ import type {
   PurchaseInfo,
   Merchant,
 } from '../../../types'
+import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
 function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
   return {
@@ -74,15 +75,12 @@ function buildCtx(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
+    balance: mockBalanceStatus({
       credits,
       displayCurrency: 'USD',
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    }),
     _config: config ?? { transport: makeTransport() },
     ...overrides,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,15 +121,12 @@ describe('<McpCustomerDetailsCard>', () => {
   it('shows ~SEK 150.92 for 159,600 credits (not 100x inflated)', () => {
     const ctx = buildCtx(
       {
-        balance: {
-          loading: false,
+        balance: mockBalanceStatus({
           credits: 159_600,
           displayCurrency: 'SEK',
           creditsPerMinorUnit: 100,
           displayExchangeRate: 9.46,
-          refetch: vi.fn(),
-          adjustBalance: vi.fn(),
-        },
+        }),
       },
       [],
       159_600,

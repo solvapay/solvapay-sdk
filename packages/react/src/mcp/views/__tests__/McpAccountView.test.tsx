@@ -4,6 +4,7 @@ import React from 'react'
 import { McpAccountView } from '../McpAccountView'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo } from '../../../types'
+import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
 function makeTransport(
   overrides: Partial<NonNullable<SolvaPayConfig['transport']>> = {},
@@ -53,15 +54,7 @@ function buildCtx(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus({ credits }),
     _config: { transport: makeTransport() },
     ...overrides,
   }

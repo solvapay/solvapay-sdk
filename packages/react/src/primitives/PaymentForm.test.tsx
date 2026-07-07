@@ -16,6 +16,7 @@ import { productCache } from '../hooks/useProduct'
 import { merchantCache } from '../hooks/useMerchant'
 import { MissingProviderError } from '../utils/errors'
 import type { Plan, PurchaseInfo, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 // ---------- Paid-plan success-branch mocks ----------
 //
@@ -287,15 +288,7 @@ const PaidHarness: React.FC<{
       cancelRenewal: vi.fn(),
       reactivateRenewal: vi.fn(),
       activatePlan: vi.fn(),
-      balance: {
-        loading: false,
-        credits: null,
-        displayCurrency: null,
-        creditsPerMinorUnit: null,
-        displayExchangeRate: null,
-        refetch: vi.fn(),
-        adjustBalance: vi.fn(),
-      },
+      balance: mockBalanceStatus(),
     }),
     [purchases, refetchPurchase, upsertPurchase],
   )
@@ -553,15 +546,7 @@ const OptionsHarness: React.FC<{
       cancelRenewal: vi.fn(),
       reactivateRenewal: vi.fn(),
       activatePlan: vi.fn(),
-      balance: {
-        loading: false,
-        credits: null,
-        displayCurrency: null,
-        creditsPerMinorUnit: null,
-        displayExchangeRate: null,
-        refetch: vi.fn(),
-        adjustBalance: vi.fn(),
-      },
+      balance: mockBalanceStatus(),
     }),
     [],
   )

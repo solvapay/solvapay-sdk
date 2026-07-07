@@ -6,6 +6,7 @@ import { TopupForm, useTopupForm } from './TopupForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 // Captures the last `options` prop received by the mocked Stripe
 // `PaymentElement` so integration tests can assert `TopupForm.PaymentElement`
@@ -73,15 +74,7 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }

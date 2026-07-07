@@ -9,6 +9,7 @@ import { enCopy } from '../i18n/en'
 import { interpolate } from '../i18n/interpolate'
 import { formatPrice } from '../utils/format'
 import type { AutoRechargeConfig } from '@solvapay/server'
+import { makeProviderInitial } from '../test-helpers/makeProviderInitial'
 
 const config: AutoRechargeConfig = {
   enabled: true,
@@ -103,7 +104,7 @@ function renderModalAutoRecharge(
   props: Partial<React.ComponentProps<typeof AutoRecharge.Root>> = {},
 ) {
   return render(
-    <SolvaPayProvider config={{ initial: { customerRef: 'cus_test' } }}>
+    <SolvaPayProvider config={{ initial: makeProviderInitial() }}>
       <AutoRecharge.Root currency="USD" {...props}>
         <AutoRecharge.Card>
           <AutoRecharge.CardSummary />

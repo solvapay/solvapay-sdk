@@ -5,6 +5,7 @@ import React from 'react'
 import { TopupForm } from '../TopupForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 // Mock Stripe modules
 vi.mock('@stripe/react-stripe-js', () => ({
@@ -42,15 +43,7 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }

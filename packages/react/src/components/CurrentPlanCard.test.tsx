@@ -6,6 +6,7 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import { paymentMethodCache } from '../hooks/usePaymentMethod'
 import type { PurchaseInfo, SolvaPayContextValue, SolvaPayConfig } from '../types'
 import type { PaymentMethodInfo } from '@solvapay/server'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function buildCtx(
   activePurchase: PurchaseInfo | null,
@@ -31,15 +32,7 @@ function buildCtx(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     _config: config,
     ...rest,
   }
@@ -155,15 +148,12 @@ describe('CurrentPlanCard', () => {
   it('renders usage-based plan without a date line', async () => {
     const ctx = buildCtx(usageBasedPurchase, {
       config: { transport: makeTransport() },
-      balance: {
-        loading: false,
+      balance: mockBalanceStatus({
         credits: 500,
         displayCurrency: 'USD',
         creditsPerMinorUnit: 1,
         displayExchangeRate: 1,
-        refetch: vi.fn(),
-        adjustBalance: vi.fn(),
-      },
+      }),
     })
     render(<Renderer ctx={ctx} />)
 

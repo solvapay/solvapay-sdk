@@ -14,6 +14,7 @@ import { productCache } from '../hooks/useProduct'
 import { merchantCache } from '../hooks/useMerchant'
 import type { Plan, SolvaPayContextValue } from '../types'
 import type { PaymentIntent } from '@stripe/stripe-js'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 const retrievePaymentIntent = vi.fn()
 const handleNextAction = vi.fn()
@@ -75,17 +76,7 @@ const paidPlan: Plan = {
 }
 
 function mockBalance(): SolvaPayContextValue['balance'] {
-  return {
-    loading: false,
-    credits: null,
-    displayCurrency: null,
-    creditsPerMinorUnit: null,
-    displayExchangeRate: null,
-    display: null,
-    refetch: vi.fn(),
-    adjustBalance: vi.fn(),
-    reconcileAfterUsageDebit: vi.fn(),
-  }
+  return mockBalanceStatus()
 }
 
 function seedCaches() {
@@ -96,7 +87,7 @@ function seedCaches() {
     timestamp: Date.now(),
   })
   merchantCache.set('/api/merchant', {
-    merchant: { publishableKey: 'pk_test' },
+    merchant: { displayName: 'Acme', legalName: 'Acme Inc' },
     promise: null,
     timestamp: Date.now(),
   })
