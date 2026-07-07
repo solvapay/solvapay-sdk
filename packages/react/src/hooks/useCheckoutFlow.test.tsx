@@ -20,6 +20,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCheckoutFlow } from './useCheckoutFlow'
+import { readPaymentIntentClientSecret } from '../primitives/paymentIntentReturn'
 import { PlanSelector, usePlanSelector } from '../primitives/PlanSelector'
 import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
@@ -34,6 +35,14 @@ import type {
 } from '../types'
 
 const productRef = 'prd_test'
+
+vi.mock('../primitives/paymentIntentReturn', async importOriginal => {
+  const actual = await importOriginal<typeof import('../primitives/paymentIntentReturn')>()
+  return {
+    ...actual,
+    readPaymentIntentClientSecret: vi.fn(actual.readPaymentIntentClientSecret),
+  }
+})
 
 const paygPlan: Plan = {
   reference: 'pln_payg',
@@ -179,6 +188,10 @@ function makeWrapper(opts: WrapperOptions = {}): {
 beforeEach(() => {
   plansCache.clear()
   merchantCache.clear()
+  vi.mocked(readPaymentIntentClientSecret).mockImplementation(search => {
+    const value = new URLSearchParams(search).get('payment_intent_client_secret')
+    return value && value.length > 0 ? value : undefined
+  })
 })
 
 afterEach(() => {
@@ -207,6 +220,29 @@ describe('useCheckoutFlow — initial state', () => {
     const { result } = renderHook(() => useCheckoutFlow({ productRef, initialStep: 'amount' }), {
       wrapper: Wrapper,
     })
+    expect(result.current.step).toBe('amount')
+  })
+})
+
+describe('useCheckoutFlow — Stripe return resume', () => {
+  it('starts on the payment step when payment_intent_client_secret is in the URL', async () => {
+    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce('pi_return_secret')
+
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    expect(result.current.step).toBe('payment')
+  })
+
+  it('keeps the configured initialStep when no Stripe return params are present', () => {
+    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce(undefined)
+
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useCheckoutFlow({ productRef, initialStep: 'amount' }),
+      { wrapper: Wrapper },
+    )
     expect(result.current.step).toBe('amount')
   })
 })

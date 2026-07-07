@@ -256,9 +256,11 @@ export const enCopy: SolvaPayCopy = {
     unknownError: 'Unknown error',
     stripeUnavailable: 'Stripe is not available. Please refresh the page.',
     paymentIntentUnavailable: 'Payment intent not available. Please refresh the page.',
-    cardElementMissing: 'Card element not found',
+    paymentElementMissing: 'Payment element not found',
     paymentUnexpected: 'An unexpected error occurred.',
     paymentProcessingFailed: 'Payment processing failed. Please try again or contact support.',
+    paymentPending:
+      'Your payment is being confirmed. You will be notified once it completes.',
     paymentRequires3ds:
       'Payment requires additional authentication. Please complete the verification.',
     paymentProcessingTimeout: 'Payment processing timed out — webhooks may not be configured',

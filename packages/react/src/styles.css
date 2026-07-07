@@ -24,7 +24,7 @@
 }
 
 /* -----------------------------------------------------------------------------
- * Spinner (shared across PaymentForm, TopupForm, StripePaymentFormWrapper)
+ * Spinner (shared across PaymentForm, TopupForm)
  * -------------------------------------------------------------------------- */
 
 @keyframes solvapay-spin {
@@ -539,6 +539,32 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+[data-solvapay-payment-form-customer-email],
+[data-solvapay-payment-form-customer-name] {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+[data-solvapay-payment-form-customer-email] > dt,
+[data-solvapay-payment-form-customer-name] > dt {
+  color: var(--solvapay-muted-foreground);
+}
+
+[data-solvapay-payment-form-customer-email] > dt::after,
+[data-solvapay-payment-form-customer-name] > dt::after {
+  content: ':';
+}
+
+[data-solvapay-payment-form-customer-email] > dd,
+[data-solvapay-payment-form-customer-name] > dd {
+  margin: 0;
+  color: var(--solvapay-accent);
+  font-weight: 500;
 }
 
 [data-solvapay-payment-form-customer-email] input,

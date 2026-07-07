@@ -15,7 +15,6 @@ export { TopupForm } from './TopupForm'
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
 export { PurchaseGate } from './components/PurchaseGate'
 export { Spinner } from './components/Spinner'
-export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 export { BalanceBadge } from './components/BalanceBadge'
 export { CheckoutSummary } from './components/CheckoutSummary'
 export { MandateText } from './components/MandateText'
@@ -192,10 +191,13 @@ export { deriveVariant } from './utils/checkoutVariant'
 export { resolveCta } from './utils/checkoutCta'
 export { confirmPayment } from './utils/confirmPayment'
 export type {
-  ConfirmPaymentMode,
   ConfirmPaymentInput,
   ConfirmPaymentResult,
 } from './utils/confirmPayment'
+export {
+  readPaymentIntentClientSecret,
+  stripPaymentIntentParams,
+} from './primitives/paymentIntentReturn'
 
 // Transport — unified data-access surface. Use with SolvaPayProvider via
 // `config.transport`. See `@solvapay/react/mcp` for an MCP implementation.

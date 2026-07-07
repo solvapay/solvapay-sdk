@@ -36,7 +36,6 @@ import type {
   PaymentFormSummary,
   PaymentFormCustomerFields,
   PaymentFormPaymentElement,
-  PaymentFormCardElement,
   PaymentFormMandateText,
   PaymentFormTermsCheckbox,
   PaymentFormSubmitButton,
@@ -163,7 +162,6 @@ type _PaymentFormShape = CompoundShape<
   | 'Summary'
   | 'CustomerFields'
   | 'PaymentElement'
-  | 'CardElement'
   | 'MandateText'
   | 'TermsCheckbox'
   | 'SubmitButton'
@@ -178,8 +176,6 @@ const _PaymentFormCustomerFields: ComponentProps<typeof PaymentFormCustomerField
   null as unknown as ComponentProps<typeof PaymentFormCustomerFields>
 const _PaymentFormPaymentElement: ComponentProps<typeof PaymentFormPaymentElement> =
   null as unknown as ComponentProps<typeof PaymentFormPaymentElement>
-const _PaymentFormCardElement: ComponentProps<typeof PaymentFormCardElement> =
-  null as unknown as ComponentProps<typeof PaymentFormCardElement>
 const _PaymentFormMandateText: ComponentProps<typeof PaymentFormMandateText> =
   null as unknown as ComponentProps<typeof PaymentFormMandateText>
 const _PaymentFormTermsCheckbox: ComponentProps<typeof PaymentFormTermsCheckbox> =
@@ -370,7 +366,6 @@ void [
   _PaymentFormSummary,
   _PaymentFormCustomerFields,
   _PaymentFormPaymentElement,
-  _PaymentFormCardElement,
   _PaymentFormMandateText,
   _PaymentFormTermsCheckbox,
   _PaymentFormSubmitButton,

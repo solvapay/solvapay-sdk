@@ -6,7 +6,7 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
 
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmCardPayment: vi.fn() })),
+  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
 }))
 
 function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {

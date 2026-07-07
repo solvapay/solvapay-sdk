@@ -38,9 +38,8 @@ vi.mock('@stripe/react-stripe-js', async () => {
   return {
     Elements: ({ children }: { children: React.ReactNode }) =>
       ReactMod.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-    useStripe: () => ({ confirmPayment: vi.fn(), confirmCardPayment: vi.fn() }),
+    useStripe: () => ({ confirmPayment: vi.fn() }),
     useElements: () => ({ getElement: vi.fn(), submit: vi.fn() }),
-    CardElement: () => ReactMod.createElement('div', { 'data-testid': 'card-element' }),
     PaymentElement: ({
       onChange,
       options,

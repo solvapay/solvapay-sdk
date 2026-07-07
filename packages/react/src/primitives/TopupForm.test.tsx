@@ -25,7 +25,6 @@ vi.mock('@stripe/react-stripe-js', () => ({
     React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
   useStripe: () => ({ confirmPayment: stripeMocks.confirmPayment }),
   useElements: () => ({ getElement: vi.fn(), submit: stripeMocks.submit }),
-  CardElement: () => React.createElement('div', { 'data-testid': 'card-element' }),
   PaymentElement: (props: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: any
@@ -43,7 +42,7 @@ vi.mock('@stripe/react-stripe-js', () => ({
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmCardPayment: vi.fn() })),
+  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
 }))
 
 function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {

@@ -17,9 +17,8 @@
  * that compose multiple cards. Consumers who want it can opt back in
  * via the `LegalFooter` namespace member or by composing their own tree.
  *
- * Full control (swap PaymentElement for CardElement, reorder, compose with
- * shadcn/Tailwind) is available via the primitives at
- * `@solvapay/react/primitives`.
+ * Full control (reorder slots, compose with shadcn/Tailwind) is available via
+ * the primitives at `@solvapay/react/primitives`.
  */
 
 import React from 'react'
@@ -28,7 +27,6 @@ import {
   PaymentFormSummary,
   PaymentFormCustomerFields,
   PaymentFormPaymentElement,
-  PaymentFormCardElement,
   PaymentFormMandateText,
   PaymentFormTermsCheckbox,
   PaymentFormSubmitButton,
@@ -71,7 +69,6 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   Summary: typeof PaymentFormSummary
   CustomerFields: typeof PaymentFormCustomerFields
   PaymentElement: typeof PaymentFormPaymentElement
-  CardElement: typeof PaymentFormCardElement
   MandateText: typeof PaymentFormMandateText
   TermsCheckbox: typeof PaymentFormTermsCheckbox
   SubmitButton: typeof PaymentFormSubmitButton
@@ -82,7 +79,6 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   Summary: PaymentFormSummary,
   CustomerFields: PaymentFormCustomerFields,
   PaymentElement: PaymentFormPaymentElement,
-  CardElement: PaymentFormCardElement,
   MandateText: PaymentFormMandateText,
   TermsCheckbox: PaymentFormTermsCheckbox,
   SubmitButton: PaymentFormSubmitButton,

@@ -10,7 +10,7 @@
 import type { Plan } from '../../types'
 import { formatPrice } from '../../utils/format'
 import { isPaygPlan } from '../../utils/isPayg'
-import { resolvePlanPricingOption, type PlanPricingOption } from '../../utils/planPricing'
+import { type PlanPricingOption } from '../../utils/planPricing'
 
 export type CheckoutStep = 'plan' | 'amount' | 'payment' | 'success'
 
@@ -63,13 +63,26 @@ export function isPayg(plan: BootstrapPlanLike | null | undefined): boolean {
   return isPaygPlan(plan ?? null)
 }
 
+/** Plan rows from the SDK satisfy the bootstrap subset used by checkout steps. */
+export function toBootstrapPlanLike(plan: Plan | null): BootstrapPlanLike | null {
+  return plan
+}
+
 /** Sort PAYG first, then recurring ascending by price. */
 export function planSortByPaygFirstThenAsc(a: Plan, b: Plan): number {
-  const aPayg = isPayg(a as unknown as BootstrapPlanLike)
-  const bPayg = isPayg(b as unknown as BootstrapPlanLike)
+  const aPayg = isPayg(toBootstrapPlanLike(a))
+  const bPayg = isPayg(toBootstrapPlanLike(b))
   if (aPayg && !bPayg) return -1
   if (!aPayg && bPayg) return 1
   return (a.price ?? 0) - (b.price ?? 0)
+}
+
+function resolveBootstrapPlanPricing(plan: BootstrapPlanLike): PlanPricingOption {
+  const options =
+    plan.pricingOptions && plan.pricingOptions.length > 0
+      ? plan.pricingOptions
+      : [{ currency: plan.currency ?? 'USD', price: plan.price ?? 0, default: true }]
+  return options.find(option => option.default) ?? options[0]
 }
 
 /**
@@ -98,11 +111,11 @@ export function buildDefaultCheckoutPlanFilter(
   allPlans: readonly Plan[],
 ): (plan: Plan, index: number) => boolean {
   const hasNonPaygPaid = allPlans.some(
-    p => p.requiresPayment !== false && !isPayg(p as unknown as BootstrapPlanLike),
+    p => p.requiresPayment !== false && !isPayg(toBootstrapPlanLike(p)),
   )
   return plan => {
     if (plan.requiresPayment === false) return false
-    if (hasNonPaygPaid && isPayg(plan as unknown as BootstrapPlanLike)) return false
+    if (hasNonPaygPaid && isPayg(toBootstrapPlanLike(plan))) return false
     return true
   }
 }
@@ -116,8 +129,7 @@ export function formatContinueLabel(
   if (isPayg(plan)) {
     return `Continue with ${plan.name ?? 'Pay as you go'}`
   }
-  const option =
-    pricingOption ?? resolvePlanPricingOption(plan as unknown as Plan, null)
+  const option = pricingOption ?? resolveBootstrapPlanPricing(plan)
   const currency = option.currency.toUpperCase()
   const priceLabel = formatPrice(option.price ?? 0, currency, { locale })
   const cycle = plan.billingCycle ? `/${shortCycle(plan.billingCycle)}` : ''

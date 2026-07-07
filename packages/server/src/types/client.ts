@@ -92,6 +92,7 @@ export type ProcessPaymentResult =
       oneTimePurchase: OneTimePurchaseInfo
     }
   | { status: 'succeeded' }
+  | { status: 'processing' }
   | { status: 'timeout'; message?: string }
   | { status: 'failed' }
   | { status: 'cancelled' }
@@ -123,6 +124,7 @@ export type ProcessPaymentResult =
  */
 export type TopupProcessResult =
   | { status: 'succeeded'; creditsAdded?: number }
+  | { status: 'processing' }
   | { status: 'timeout'; message?: string }
   | { status: 'failed' }
   | { status: 'cancelled' }

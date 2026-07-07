@@ -42,6 +42,10 @@ import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { TopupFormProps } from '../types'
+import {
+  readPaymentIntentClientSecret,
+  stripPaymentIntentParams,
+} from './paymentIntentReturn'
 
 type SubmitState = 'idle' | 'processing' | 'disabled'
 type TopupFormState = 'loading' | 'ready' | 'error'
@@ -78,7 +82,7 @@ type RootProps = TopupFormProps & {
   children?: React.ReactNode
 }
 
-const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props, forwardedRef) {
+const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, forwardedRef) {
   const {
     amount,
     currency,
@@ -137,7 +141,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     return { clientSecret, locale: locale as StripeElementLocale | undefined }
   }, [clientSecret, locale])
 
-  const Comp = asChild ? Slot : 'div'
+  const Comp = asChild ? Slot : 'section'
 
   const outerError = !hasAmount
     ? copy.errors.configMissingAmount
@@ -167,8 +171,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
 
   const shell = (
     <Comp
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ref={forwardedRef as any}
+      ref={forwardedRef as React.Ref<HTMLElement>}
       className={className}
       data-solvapay-topup-form=""
       data-state={dataState}
@@ -214,6 +217,7 @@ type InnerProps = {
    */
   processTopupPayment?: (params: { paymentIntentId: string }) => Promise<
     | { status: 'succeeded'; creditsAdded?: number }
+    | { status: 'processing' }
     | { status: 'timeout'; message?: string }
     | { status: 'failed' }
     | { status: 'cancelled' }
@@ -240,6 +244,89 @@ const Inner: React.FC<InnerProps> = ({
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const returnResumeStarted = useRef(false)
+
+  useEffect(() => {
+    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
+    if (!returnClientSecret) return
+    returnResumeStarted.current = true
+
+    let cancelled = false
+    void (async () => {
+      setIsProcessing(true)
+      setError(null)
+
+      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
+      if (cancelled) return
+      stripPaymentIntentParams()
+
+      if (retrieved.error || !retrieved.paymentIntent) {
+        setError(copy.errors.paymentUnexpected)
+        setIsProcessing(false)
+        return
+      }
+
+      let paymentIntent = retrieved.paymentIntent
+      if (paymentIntent.status === 'requires_action') {
+        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+        if (cancelled) return
+        if (actionResult.error || !actionResult.paymentIntent) {
+          setError(copy.errors.paymentRequires3ds)
+          setIsProcessing(false)
+          return
+        }
+        paymentIntent = actionResult.paymentIntent
+      }
+
+      if (paymentIntent.status === 'processing') {
+        setError(copy.errors.paymentPending)
+        setIsProcessing(false)
+        return
+      }
+
+      if (paymentIntent.status !== 'succeeded') {
+        setError(copy.errors.paymentProcessingFailed)
+        setIsProcessing(false)
+        return
+      }
+
+      let creditsAdded: number | undefined
+      if (processTopupPayment) {
+        try {
+          const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
+          if (result.status === 'processing') {
+            setError(copy.errors.paymentPending)
+            setIsProcessing(false)
+            return
+          }
+          if (result.status === 'failed' || result.status === 'cancelled') {
+            setError(copy.errors.paymentUnexpected)
+            setIsProcessing(false)
+            onError?.(new Error(`Topup ${result.status}`))
+            return
+          }
+          if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
+            creditsAdded = result.creditsAdded
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setError(msg)
+          setIsProcessing(false)
+          onError?.(err instanceof Error ? err : new Error(msg))
+          return
+        }
+      }
+
+      if (cancelled) return
+      setIsProcessing(false)
+      await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [stripe, copy, processTopupPayment, onSuccess, onError])
 
   const isReady = !!(stripe && elements)
   const canSubmit = isReady && paymentInputComplete && !isProcessing && !!clientSecret
@@ -282,6 +369,12 @@ const Inner: React.FC<InnerProps> = ({
       return
     }
 
+    if (paymentIntent?.status === 'processing') {
+      setError(copy.errors.paymentPending)
+      setIsProcessing(false)
+      return
+    }
+
     // Wait for backend confirmation before declaring success. Mirrors
     // `PaymentForm`'s `processPayment` step: the backend's `/process`
     // endpoint polls until the PI reaches `succeeded` AND the wallet
@@ -299,6 +392,11 @@ const Inner: React.FC<InnerProps> = ({
     if (paymentIntent && processTopupPayment) {
       try {
         const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
+        if (result.status === 'processing') {
+          setError(copy.errors.paymentPending)
+          setIsProcessing(false)
+          return
+        }
         if (result.status === 'failed' || result.status === 'cancelled') {
           setError(copy.errors.paymentUnexpected)
           setIsProcessing(false)
@@ -323,8 +421,10 @@ const Inner: React.FC<InnerProps> = ({
 
     setIsProcessing(false)
     if (paymentIntent) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await onSuccess?.(paymentIntent as any, creditsAdded !== undefined ? { creditsAdded } : undefined)
+      await onSuccess?.(
+        paymentIntent,
+        creditsAdded !== undefined ? { creditsAdded } : undefined,
+      )
     }
   }, [stripe, elements, clientSecret, returnUrl, copy, onSuccess, onError, processTopupPayment])
 
@@ -412,20 +512,20 @@ const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
   if (!stripe || !elements) return null
   if (!isReady) {
     return (
-      <div data-solvapay-topup-form-loading="">
+      <output data-solvapay-topup-form-loading="">
         <Spinner size="sm" />
-      </div>
+      </output>
     )
   }
 
   return (
-    <div data-solvapay-topup-form-payment-element="">
+    <section data-solvapay-topup-form-payment-element="">
       <StripePaymentElement
         options={withPaymentElementDefaults(options)}
         onChange={e => setPaymentInputComplete(e.complete)}
         key={locale || 'default'}
       />
-    </div>
+    </section>
   )
 }
 
@@ -479,8 +579,7 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
             )
           : children
       return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
+        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
           {slotChild}
         </Slot>
       )
@@ -496,31 +595,55 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
   },
 )
 
-type SlotProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
+type LoadingSlotProps = React.HTMLAttributes<HTMLOutputElement> & { asChild?: boolean }
+type ErrorSlotProps = React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
 
-const Loading = forwardRef<HTMLDivElement, SlotProps>(function TopupFormLoading(
+const Loading = forwardRef<HTMLOutputElement, LoadingSlotProps>(function TopupFormLoading(
   { asChild, children, ...rest },
   forwardedRef,
 ) {
   const ctx = useTopupCtx('Loading')
   if (ctx.state !== 'loading') return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot
+        ref={forwardedRef as React.Ref<HTMLElement>}
+        data-solvapay-topup-form-loading=""
+        {...rest}
+      >
+        {children ?? <Spinner size="sm" />}
+      </Slot>
+    )
+  }
   return (
-    <Comp ref={forwardedRef} data-solvapay-topup-form-loading="" {...rest}>
+    <output ref={forwardedRef} data-solvapay-topup-form-loading="" {...rest}>
       {children ?? <Spinner size="sm" />}
-    </Comp>
+    </output>
   )
 })
 
-const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function TopupFormError(
+const ErrorSlot = forwardRef<HTMLParagraphElement, ErrorSlotProps>(function TopupFormError(
   { asChild, children, ...rest },
   forwardedRef,
 ) {
   const ctx = useTopupCtx('Error')
   if (!ctx.error) return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot
+        ref={forwardedRef as React.Ref<HTMLElement>}
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-solvapay-topup-form-error=""
+        {...rest}
+      >
+        {children ?? ctx.error}
+      </Slot>
+    )
+  }
   return (
-    <Comp
+    <p
       ref={forwardedRef}
       role="alert"
       aria-live="assertive"
@@ -529,7 +652,7 @@ const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function TopupFormError(
       {...rest}
     >
       {children ?? ctx.error}
-    </Comp>
+    </p>
   )
 })
 

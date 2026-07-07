@@ -3,14 +3,9 @@ import { confirmPayment } from './confirmPayment'
 import { enCopy } from '../i18n/en'
 import type { Stripe, StripeElements } from '@stripe/stripe-js'
 
-// Loose `unknown` overrides because the Stripe types for confirmPayment /
-// confirmCardPayment carry an exact discriminated union (`{ paymentIntent }`
-// XOR `{ error }`) that's awkward to satisfy in tests; the cast at the
-// return is what makes this safe inside the file.
 function makeStripe(overrides: Record<string, unknown>): Stripe {
   return {
     confirmPayment: vi.fn(),
-    confirmCardPayment: vi.fn(),
     ...overrides,
   } as unknown as Stripe
 }
@@ -23,7 +18,7 @@ function makeElements(element: unknown, submitResult: unknown = {}): StripeEleme
 }
 
 describe('confirmPayment', () => {
-  it('uses confirmPayment for payment-element mode', async () => {
+  it('uses confirmPayment for the Payment Element', async () => {
     const confirmPaymentFn = vi.fn().mockResolvedValue({
       paymentIntent: { status: 'succeeded', id: 'pi_1' },
     })
@@ -34,7 +29,6 @@ describe('confirmPayment', () => {
       stripe,
       elements,
       clientSecret: 'cs_1',
-      mode: 'payment-element',
       returnUrl: 'https://example.com/return',
       copy: enCopy,
     })
@@ -50,7 +44,7 @@ describe('confirmPayment', () => {
     )
   })
 
-  it('calls elements.submit() before stripe.confirmPayment() for payment-element mode', async () => {
+  it('calls elements.submit() before stripe.confirmPayment()', async () => {
     const callOrder: string[] = []
     const submitFn = vi.fn(async () => {
       callOrder.push('submit')
@@ -70,7 +64,6 @@ describe('confirmPayment', () => {
       stripe,
       elements,
       clientSecret: 'cs_order',
-      mode: 'payment-element',
       returnUrl: 'https://example.com/return',
       copy: enCopy,
     })
@@ -91,7 +84,6 @@ describe('confirmPayment', () => {
       stripe,
       elements,
       clientSecret: 'cs_submit_err',
-      mode: 'payment-element',
       returnUrl: 'https://example.com/return',
       copy: enCopy,
     })
@@ -103,34 +95,47 @@ describe('confirmPayment', () => {
     expect(confirmPaymentFn).not.toHaveBeenCalled()
   })
 
-  it('uses confirmCardPayment for card-element mode', async () => {
-    const confirmCardFn = vi.fn().mockResolvedValue({
-      paymentIntent: { status: 'succeeded', id: 'pi_2' },
+  it('resolves frictionless 3DS in-page to succeeded without requires_action (card 4000000000003055)', async () => {
+    const handleNextAction = vi.fn()
+    const confirmPaymentFn = vi.fn().mockResolvedValue({
+      paymentIntent: { status: 'succeeded', id: 'pi_frictionless_3055' },
     })
-    const stripe = makeStripe({ confirmCardPayment: confirmCardFn })
-    const cardEl = { __tag: 'card' }
-    const elements = makeElements(cardEl)
+    const stripe = makeStripe({ confirmPayment: confirmPaymentFn, handleNextAction })
+    const elements = makeElements({ __tag: 'payment' })
 
     const result = await confirmPayment({
       stripe,
       elements,
-      clientSecret: 'cs_2',
-      mode: 'card-element',
+      clientSecret: 'cs_frictionless',
       returnUrl: 'https://example.com/return',
-      billingDetails: { email: 'a@b.com' },
       copy: enCopy,
     })
 
     expect(result.status).toBe('succeeded')
-    expect(confirmCardFn).toHaveBeenCalledWith(
-      'cs_2',
-      expect.objectContaining({
-        payment_method: expect.objectContaining({
-          card: cardEl,
-          billing_details: { email: 'a@b.com' },
-        }),
-      }),
+    expect(confirmPaymentFn).toHaveBeenCalledWith(
+      expect.objectContaining({ redirect: 'if_required' }),
     )
+    expect(handleNextAction).not.toHaveBeenCalled()
+  })
+
+  it('maps processing status to pending', async () => {
+    const stripe = makeStripe({
+      confirmPayment: vi
+        .fn()
+        .mockResolvedValue({ paymentIntent: { status: 'processing', id: 'pi_proc' } }),
+    })
+    const elements = makeElements({ __tag: 'payment' })
+    const result = await confirmPayment({
+      stripe,
+      elements,
+      clientSecret: 'cs',
+      returnUrl: 'https://example.com',
+      copy: enCopy,
+    })
+    expect(result.status).toBe('pending')
+    if (result.status === 'pending') {
+      expect(result.message).toBe(enCopy.errors.paymentPending)
+    }
   })
 
   it('maps requires_action status', async () => {
@@ -144,7 +149,6 @@ describe('confirmPayment', () => {
       stripe,
       elements,
       clientSecret: 'cs',
-      mode: 'payment-element',
       returnUrl: 'https://example.com',
       copy: enCopy,
     })
@@ -162,7 +166,6 @@ describe('confirmPayment', () => {
       stripe,
       elements,
       clientSecret: 'cs',
-      mode: 'payment-element',
       returnUrl: 'https://example.com',
       copy: enCopy,
     })
@@ -171,12 +174,11 @@ describe('confirmPayment', () => {
 
   it('returns error when no element is mounted', async () => {
     const stripe = makeStripe({ confirmPayment: vi.fn() })
-    const elements = makeElements(null)
+    const elements = makeElements(undefined)
     const result = await confirmPayment({
       stripe,
       elements,
       clientSecret: 'cs',
-      mode: 'payment-element',
       returnUrl: 'https://example.com',
       copy: enCopy,
     })

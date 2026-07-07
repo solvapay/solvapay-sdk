@@ -289,8 +289,9 @@ export interface SolvaPayCopy {
     unknownError: string
     stripeUnavailable: string
     paymentIntentUnavailable: string
-    cardElementMissing: string
+    paymentElementMissing: string
     paymentUnexpected: string
+    paymentPending: string
     paymentProcessingFailed: string
     paymentRequires3ds: string
     paymentProcessingTimeout: string

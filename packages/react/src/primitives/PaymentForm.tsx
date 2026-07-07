@@ -28,7 +28,6 @@ import {
   useStripe,
   useElements,
   PaymentElement as StripePaymentElement,
-  CardElement as StripeCardElement,
 } from '@stripe/react-stripe-js'
 import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
 import { Slot } from './slot'
@@ -57,6 +56,10 @@ import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
 import { confirmPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
+import {
+  readPaymentIntentClientSecret,
+  stripPaymentIntentParams,
+} from './paymentIntentReturn'
 import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { resolveCta } from '../utils/checkoutCta'
@@ -68,6 +71,7 @@ import type {
   PrefillCustomer,
   Plan,
 } from '../types'
+import type { ActivatePlanResult } from '@solvapay/server'
 
 // ---------- helpers ----------
 
@@ -94,7 +98,7 @@ type PaymentFormRootProps = PaymentFormProps & {
   children?: React.ReactNode
 }
 
-const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
+const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
   function PaymentFormRoot(props, forwardedRef) {
     const {
       planRef,
@@ -173,35 +177,37 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
 
     if (!hasPlanOrProduct) {
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
           data-state="error"
         >
-          <div data-solvapay-payment-form-error="">{copy.errors.configMissingPlanOrProduct}</div>
-        </div>
+          <p role="alert" data-solvapay-payment-form-error="">
+            {copy.errors.configMissingPlanOrProduct}
+          </p>
+        </section>
       )
     }
 
     if (checkoutError) {
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
           data-state="error"
         >
-          <div data-solvapay-payment-form-error="">
+          <p role="alert" data-solvapay-payment-form-error="">
             {copy.errors.paymentInitFailed} {checkoutError.message || copy.errors.unknownError}
-          </div>
-        </div>
+          </p>
+        </section>
       )
     }
 
     if (isFreePlan && resolvedPlan) {
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
@@ -222,13 +228,13 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
           >
             {children}
           </FreeInner>
-        </div>
+        </section>
       )
     }
 
     if (shouldRenderElements && elementsOptions) {
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
@@ -254,21 +260,21 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
               {children}
             </PaidInner>
           </Elements>
-        </div>
+        </section>
       )
     }
 
     return (
-      <div
+      <section
         ref={forwardedRef}
         className={className}
         data-solvapay-payment-form=""
         data-state="loading"
       >
-        <div data-solvapay-payment-form-loading="">
+        <output data-solvapay-payment-form-loading="">
           <Spinner size="md" />
-        </div>
-      </div>
+        </output>
+      </section>
     )
   },
 )
@@ -320,6 +326,108 @@ const PaidInner: React.FC<{
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const returnResumeStarted = useRef(false)
+
+  useEffect(() => {
+    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
+    if (!returnClientSecret) return
+    returnResumeStarted.current = true
+
+    let cancelled = false
+    void (async () => {
+      setIsProcessing(true)
+      setError(null)
+
+      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
+      if (cancelled) return
+      stripPaymentIntentParams()
+
+      if (retrieved.error || !retrieved.paymentIntent) {
+        setError(copy.errors.paymentUnexpected)
+        setIsProcessing(false)
+        return
+      }
+
+      let paymentIntent = retrieved.paymentIntent
+      if (paymentIntent.status === 'requires_action') {
+        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+        if (cancelled) return
+        if (actionResult.error || !actionResult.paymentIntent) {
+          setError(copy.errors.paymentRequires3ds)
+          setIsProcessing(false)
+          return
+        }
+        paymentIntent = actionResult.paymentIntent
+      }
+
+      if (paymentIntent.status === 'processing') {
+        setError(copy.errors.paymentPending)
+        setIsProcessing(false)
+        return
+      }
+
+      if (paymentIntent.status !== 'succeeded') {
+        setError(copy.errors.paymentProcessingFailed)
+        setIsProcessing(false)
+        return
+      }
+
+      const reconcileResult = await reconcilePayment({
+        paymentIntentId: paymentIntent.id,
+        productRef,
+        planRef: planRef || resolvedPlanRef || undefined,
+        processPayment,
+        refetchPurchase: refetch,
+        copy,
+      })
+
+      if (cancelled) return
+
+      if (reconcileResult.status === 'success') {
+        const r = reconcileResult.result
+        if (r && 'type' in r && r.type === 'recurring') {
+          upsertPurchase(r.purchase)
+        } else if (r && 'type' in r && r.type === 'one-time') {
+          upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
+        } else {
+          try {
+            await refetch()
+          } catch (error) {
+            console.error('[PaymentForm] secondary purchase refetch failed after return-path success', error)
+          }
+        }
+        onSuccess?.(paymentIntent)
+        onResult?.({ kind: 'paid', paymentIntent })
+        setIsProcessing(false)
+        return
+      }
+
+      const msg =
+        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
+          ? reconcileResult.error.message
+          : copy.errors.paymentProcessingFailed
+      setError(msg)
+      onError?.(reconcileResult.error)
+      setIsProcessing(false)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    stripe,
+    copy,
+    productRef,
+    planRef,
+    resolvedPlanRef,
+    processPayment,
+    refetch,
+    upsertPurchase,
+    onSuccess,
+    onResult,
+    onError,
+  ])
 
   const isReady = !!(stripe && elements)
 
@@ -356,7 +464,6 @@ const PaidInner: React.FC<{
         stripe: stripe as Stripe,
         elements: elements as StripeElements,
         clientSecret,
-        mode: elementKind,
         returnUrl,
         billingDetails: {
           name: customer.name ?? prefillCustomer?.name,
@@ -376,9 +483,13 @@ const PaidInner: React.FC<{
         return
       }
 
-      const paymentIntent = result.paymentIntent
+      if (result.status === 'pending') {
+        setError(result.message)
+        return
+      }
+
       const reconcileResult = await reconcilePayment({
-        paymentIntentId: paymentIntent.id as string,
+        paymentIntentId: result.paymentIntent.id,
         productRef,
         planRef: planRef || resolvedPlanRef || undefined,
         processPayment,
@@ -405,21 +516,19 @@ const PaidInner: React.FC<{
         } else {
           try {
             await refetch()
-          } catch {
-            // Compat shim already refetched; swallow secondary failure.
+          } catch (error) {
+            console.error('[PaymentForm] secondary purchase refetch failed after submit success', error)
           }
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pi = paymentIntent as any
-        onSuccess?.(pi)
-        const paid: PaymentResult = { kind: 'paid', paymentIntent: pi }
+        onSuccess?.(result.paymentIntent)
+        const paid: PaymentResult = { kind: 'paid', paymentIntent: result.paymentIntent }
         onResult?.(paid)
         return
       }
 
       const msg =
-        reconcileResult.status === 'timeout'
+        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
           ? reconcileResult.error.message
           : copy.errors.paymentProcessingFailed
       setError(msg)
@@ -559,15 +668,9 @@ const FreeInner: React.FC<{
     try {
       if (onFreePlan) {
         await onFreePlan(plan)
-        onResult?.({
-          kind: 'activated',
-          result: {
-            status: 'activated',
-            productRef,
-            planRef: plan.reference,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any,
-        })
+        const activationResult: ActivatePlanResult = { status: 'activated' }
+        const activated: ActivationResult = { kind: 'activated', result: activationResult }
+        onResult?.(activated)
         return
       }
       await activate({ productRef, planRef: plan.reference })
@@ -656,12 +759,12 @@ const MandateTextPrimitive: React.FC<MandateTextPrimitiveProps> = props => {
   )
 }
 
-type CustomerFieldsProps = React.HTMLAttributes<HTMLDivElement> & {
+type CustomerFieldsProps = React.HTMLAttributes<HTMLElement> & {
   asChild?: boolean
   readOnly?: boolean
 }
 
-const CustomerFields = forwardRef<HTMLDivElement, CustomerFieldsProps>(
+const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
   function PaymentFormCustomerFields(
     { asChild, readOnly: _readOnly = true, children, ...rest },
     ref,
@@ -675,22 +778,22 @@ const CustomerFields = forwardRef<HTMLDivElement, CustomerFieldsProps>(
 
     if (!email && !name) return null
 
-    const Comp = asChild ? Slot : 'div'
+    const Comp = asChild ? Slot : 'section'
     return (
       <Comp ref={ref} data-solvapay-payment-form-customer-fields="" {...rest}>
         {children ?? (
           <>
             {email && (
-              <div data-solvapay-payment-form-customer-email="">
-                <span>{copy.customer.emailLabel}: </span>
-                <span>{email}</span>
-              </div>
+              <dl data-solvapay-payment-form-customer-email="">
+                <dt>{copy.customer.emailLabel}</dt>
+                <dd>{email}</dd>
+              </dl>
             )}
             {name && (
-              <div data-solvapay-payment-form-customer-name="">
-                <span>{copy.customer.nameLabel}: </span>
-                <span>{name}</span>
-              </div>
+              <dl data-solvapay-payment-form-customer-name="">
+                <dt>{copy.customer.nameLabel}</dt>
+                <dd>{name}</dd>
+              </dl>
             )}
           </>
         )}
@@ -715,48 +818,20 @@ const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
 
   if (!isReady) {
     return (
-      <div data-solvapay-payment-form-loading="">
+      <output data-solvapay-payment-form-loading="">
         <Spinner size="sm" />
-      </div>
+      </output>
     )
   }
 
   return (
-    <div data-solvapay-payment-form-payment-element="">
+    <section data-solvapay-payment-form-payment-element="">
       <StripePaymentElement
         options={withPaymentElementDefaults(options)}
         onChange={e => setPaymentInputComplete(e.complete)}
         key={locale || 'default'}
       />
-    </div>
-  )
-}
-
-type CardElementProps = {
-  options?: React.ComponentProps<typeof StripeCardElement>['options']
-}
-
-const CardElementSlot: React.FC<CardElementProps> = ({ options }) => {
-  const { setElementKind, setPaymentInputComplete, isReady, stripe, elements } = usePaymentForm()
-
-  useEffect(() => {
-    if (stripe && elements) setElementKind('card-element')
-  }, [setElementKind, stripe, elements])
-
-  if (!stripe || !elements) return null
-
-  if (!isReady) {
-    return (
-      <div data-solvapay-payment-form-loading="">
-        <Spinner size="sm" />
-      </div>
-    )
-  }
-
-  return (
-    <div data-solvapay-payment-form-card-element="">
-      <StripeCardElement options={options} onChange={e => setPaymentInputComplete(e.complete)} />
-    </div>
+    </section>
   )
 }
 
@@ -867,8 +942,7 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
             )
           : children
       return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={ref as any} {...(buttonProps as Record<string, unknown>)}>
+        <Slot ref={ref as React.Ref<HTMLElement>} {...(buttonProps as Record<string, unknown>)}>
           {slotChild}
         </Slot>
       )
@@ -888,33 +962,52 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
   },
 )
 
-type LoadingProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
+type LoadingProps = React.HTMLAttributes<HTMLOutputElement> & { asChild?: boolean }
 
-const Loading = forwardRef<HTMLDivElement, LoadingProps>(function PaymentFormLoading(
+const Loading = forwardRef<HTMLOutputElement, LoadingProps>(function PaymentFormLoading(
   { asChild, children, ...rest },
   ref,
 ) {
   const ctx = usePaymentForm()
   if (ctx.isReady && ctx.clientSecret) return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot ref={ref as React.Ref<HTMLElement>} data-solvapay-payment-form-loading="" {...rest}>
+        {children ?? <Spinner size="sm" />}
+      </Slot>
+    )
+  }
   return (
-    <Comp ref={ref} data-solvapay-payment-form-loading="" {...rest}>
+    <output ref={ref} data-solvapay-payment-form-loading="" {...rest}>
       {children ?? <Spinner size="sm" />}
-    </Comp>
+    </output>
   )
 })
 
-type ErrorProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
+type ErrorProps = React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
 
-const ErrorSlot = forwardRef<HTMLDivElement, ErrorProps>(function PaymentFormError(
+const ErrorSlot = forwardRef<HTMLParagraphElement, ErrorProps>(function PaymentFormError(
   { asChild, children, ...rest },
   ref,
 ) {
   const ctx = usePaymentForm()
   if (!ctx.error) return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot
+        ref={ref as React.Ref<HTMLElement>}
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-solvapay-payment-form-error=""
+        {...rest}
+      >
+        {children ?? ctx.error}
+      </Slot>
+    )
+  }
   return (
-    <Comp
+    <p
       ref={ref}
       role="alert"
       aria-live="assertive"
@@ -923,7 +1016,7 @@ const ErrorSlot = forwardRef<HTMLDivElement, ErrorProps>(function PaymentFormErr
       {...rest}
     >
       {children ?? ctx.error}
-    </Comp>
+    </p>
   )
 })
 
@@ -933,7 +1026,6 @@ export const PaymentFormRoot = Root
 export const PaymentFormSummary = Summary
 export const PaymentFormCustomerFields = CustomerFields
 export const PaymentFormPaymentElement = PaymentElementSlot
-export const PaymentFormCardElement = CardElementSlot
 export const PaymentFormMandateText = MandateTextPrimitive
 export const PaymentFormTermsCheckbox = TermsCheckbox
 export const PaymentFormSubmitButton = SubmitButton
@@ -946,7 +1038,6 @@ export const PaymentForm = {
   Summary,
   CustomerFields,
   PaymentElement: PaymentElementSlot,
-  CardElement: CardElementSlot,
   MandateText: MandateTextPrimitive,
   TermsCheckbox,
   SubmitButton,
