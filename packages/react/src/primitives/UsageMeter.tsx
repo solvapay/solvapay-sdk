@@ -128,7 +128,7 @@ const Root = forwardRef<HTMLDivElement, UsageMeterRootProps>(function UsageMeter
   )
 
   const rootClass = [classNames?.root ?? 'solvapay-usage-meter', className].filter(Boolean).join(' ')
-  const Comp = asChild ? Slot : 'div'
+  const Comp = asChild ? Slot : 'section'
   return (
     <UsageMeterContext.Provider value={ctx}>
       <Comp
@@ -179,6 +179,7 @@ const Label = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>
   const ctx = useUsageMeterCtx('Label')
   const copy = useCopy()
   if (!ctx.usage) return null
+
   if (ctx.isUnlimited) {
     return (
       <span
@@ -291,6 +292,7 @@ const Loading = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>
     <div
       ref={forwardedRef}
       data-solvapay-usage-meter-loading=""
+      role="status"
       className={className ?? 'solvapay-usage-meter-loading'}
       {...rest}
     >

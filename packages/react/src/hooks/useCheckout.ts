@@ -11,6 +11,7 @@ export interface UseCheckoutReturn {
   error: Error | null
   stripePromise: Promise<Stripe | null> | null
   clientSecret: string | null
+  processorPaymentId: string | null
   resolvedPlanRef: string | null
   startCheckout: () => Promise<void>
   reset: () => void
@@ -111,6 +112,7 @@ export function useCheckout(options: {
   const [error, setError] = useState<Error | null>(null)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
   const [resolvedPlanRef, setResolvedPlanRef] = useState<string | null>(planRef || null)
   const isStartingRef = useRef(false)
 
@@ -184,6 +186,9 @@ export function useCheckout(options: {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
+      if (result.processorPaymentId) {
+        setProcessorPaymentId(result.processorPaymentId)
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start checkout')
       setError(error)
@@ -209,6 +214,7 @@ export function useCheckout(options: {
     setError(null)
     setStripePromise(null)
     setClientSecret(null)
+    setProcessorPaymentId(null)
     setResolvedPlanRef(planRef || null)
   }, [planRef])
 
@@ -217,6 +223,7 @@ export function useCheckout(options: {
     error,
     stripePromise,
     clientSecret,
+    processorPaymentId,
     resolvedPlanRef,
     startCheckout,
     reset,

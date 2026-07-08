@@ -10,10 +10,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./business-details": {
+      "types": "./dist/business-details-public.d.ts",
+      "import": "./dist/business-details-public.js",
+      "require": "./dist/business-details-public.cjs"
     }
   },
   "files": [
     "dist",
+    "business-details-public.d.ts",
     "README.md"
   ],
   "publishConfig": {
@@ -26,8 +32,8 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
+    "build": "tsup src/index.ts src/business-details-public.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && cp business-details-public.d.ts dist/business-details-public.d.ts",
+    "dev": "tsup src/index.ts src/business-details-public.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",

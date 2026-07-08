@@ -16,6 +16,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     let cancelled = false
 
     const initializeAuth = async () => {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        if (!cancelled) {
+          setIsAuthenticated(false)
+          setIsLoading(false)
+        }
+        return
+      }
+
       try {
         const userId = await getOrCreateCustomerId()
         if (!cancelled) {

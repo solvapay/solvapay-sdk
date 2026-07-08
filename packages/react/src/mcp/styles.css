@@ -479,6 +479,68 @@ body {
   gap: 12px;
 }
 
+/* Business purchase / VAT — collapsed by default; fields expand inline on toggle. */
+.solvapay-mcp-business-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  border-radius: 8px;
+}
+
+.solvapay-mcp-business-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #475569);
+  cursor: pointer;
+}
+
+.solvapay-mcp-business-details:not(:has([data-solvapay-topup-form-business-details-toggle]:checked)):not(
+    :has([data-solvapay-payment-form-business-details-toggle]:checked)
+  )
+  .solvapay-mcp-business-field {
+  display: none;
+}
+
+.solvapay-mcp-business-field {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.solvapay-mcp-tax-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-subtotal],
+.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-tax],
+.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-total],
+.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-subtotal],
+.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-tax],
+.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-total] {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-total],
+.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-total] {
+  font-weight: 600;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border-secondary, #e2e8f0);
+}
+
 /* Pay-with-card step header: amount being purchased is the hero, the
  * customer's existing balance drops to a muted context line. The
  * AmountPicker step and the Success step keep the prominent

@@ -6,6 +6,7 @@ import {
   filterPurchases,
   getActivePurchases,
   getCancelledPurchasesWithEndDate,
+  getPrimaryPurchase,
 } from '../purchases'
 import type { PurchaseInfo } from '../../types'
 
@@ -160,6 +161,28 @@ describe('isPlanPurchase', () => {
       metadata: { purpose: 'gift_credit' },
     })
     expect(isPlanPurchase(purchase)).toBe(false)
+  })
+})
+
+describe('getPrimaryPurchase', () => {
+  it('selects a zero-amount usage-based active purchase (PAYG activation parity)', () => {
+    const paygActivation = createPurchase({
+      reference: 'pur_payg',
+      amount: 0,
+      planSnapshot: {
+        reference: 'pln_payg',
+        planType: 'usage-based',
+        name: 'Pay as you go',
+        creditsPerUnit: 4,
+      },
+    })
+
+    expect(getPrimaryPurchase([paygActivation])).toMatchObject({
+      reference: 'pur_payg',
+      amount: 0,
+      planSnapshot: expect.objectContaining({ planType: 'usage-based' }),
+    })
+    expect(isPaidPurchase(paygActivation)).toBe(false)
   })
 })
 

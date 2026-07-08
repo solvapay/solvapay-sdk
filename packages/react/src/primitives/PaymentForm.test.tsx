@@ -85,6 +85,26 @@ vi.mock('../utils/processPaymentResult', () => ({
   reconcilePayment: vi.fn().mockResolvedValue({ status: 'success' }),
 }))
 
+const attachHookMock = vi.hoisted(() => ({
+  runAttach: vi.fn().mockResolvedValue(true),
+  setBusinessDetails: vi.fn(),
+}))
+
+vi.mock('../hooks/useBusinessDetailsAttach', () => ({
+  defaultBusinessDetails: { isBusiness: false },
+  useBusinessDetailsAttach: vi.fn(() => ({
+    businessDetails: { isBusiness: false },
+    setBusinessDetails: attachHookMock.setBusinessDetails,
+    fieldErrors: {},
+    taxBreakdown: null,
+    businessDetailsAttached: true,
+    businessDetailsAttaching: false,
+    businessDetailsError: null,
+    requiresBusinessAttach: false,
+    runAttach: attachHookMock.runAttach,
+  })),
+}))
+
 const freePlan: Plan = {
   reference: 'pln_free',
   name: 'Free',

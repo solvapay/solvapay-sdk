@@ -53,10 +53,11 @@ function deriveUsage(purchase: PurchaseInfo | null): UsageSnapshot | null {
   const snap = purchase.planSnapshot
   const usage = purchase.usage
   const meterRef = snap?.meterRef ?? null
+  const creditsPerUnit = snap?.creditsPerUnit
+  const isCreditBased = typeof creditsPerUnit === 'number' && creditsPerUnit > 0
   const total = typeof snap?.limit === 'number' ? snap.limit : null
-  // Only treat this as usage-based when we have a meter OR a usage payload.
-  // Pure one-time / recurring plans don't populate either.
-  if (meterRef === null && !usage) return null
+  // Only treat this as usage-based when we have a meter, usage payload, or credit gating.
+  if (meterRef === null && !usage && !isCreditBased) return null
   const used = typeof usage?.used === 'number' ? usage.used : 0
   const remaining = total !== null ? Math.max(0, total - used) : null
   const percentUsed =
@@ -71,6 +72,11 @@ function deriveUsage(purchase: PurchaseInfo | null): UsageSnapshot | null {
     ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
     ...(purchase.reference ? { purchaseRef: purchase.reference } : {}),
   }
+}
+
+function isCreditBasedPurchase(purchase: PurchaseInfo | null): boolean {
+  const creditsPerUnit = purchase?.planSnapshot?.creditsPerUnit
+  return typeof creditsPerUnit === 'number' && creditsPerUnit > 0
 }
 
 export function useUsage(): UseUsageReturn {
@@ -120,7 +126,8 @@ export function useUsage(): UseUsageReturn {
   const percentUsed = usage?.percentUsed ?? null
   const isApproachingLimit = percentUsed !== null && percentUsed >= 80 && percentUsed < 100
   const isAtLimit = percentUsed !== null && percentUsed >= 100
-  const isUnlimited = usage !== null && usage.total === null
+  const isUnlimited =
+    usage !== null && usage.total === null && !isCreditBasedPurchase(activePurchase ?? null)
 
   return {
     usage,

@@ -78,6 +78,7 @@ describe('buildSolvaPayDescriptors', () => {
     expect(names).toEqual(
       [
         MCP_TOOL_NAMES.activatePlan,
+        MCP_TOOL_NAMES.attachBusinessDetails,
         MCP_TOOL_NAMES.cancelRenewal,
         MCP_TOOL_NAMES.createCheckoutSession,
         MCP_TOOL_NAMES.createCustomerSession,
@@ -117,6 +118,7 @@ describe('buildSolvaPayDescriptors', () => {
 
     // UI-transport tools (state-change, no LLM use) all tag themselves.
     const uiOnlyTools = [
+      MCP_TOOL_NAMES.attachBusinessDetails,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
       MCP_TOOL_NAMES.createTopupPayment,

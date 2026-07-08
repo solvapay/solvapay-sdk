@@ -426,4 +426,41 @@ describe('CurrentPlanCard', () => {
     await screen.findByText('Your plan')
     expect(document.querySelector('[data-solvapay-cancelled-notice]')).toBeNull()
   })
+
+  it('renders credit-based PAYG plan name and does not show unlimited usage label', async () => {
+    const paygPurchase: PurchaseInfo = {
+      reference: 'purchase_payg',
+      productName: 'Widget API',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00Z',
+      amount: 0,
+      currency: 'USD',
+      planRef: 'plan_payg',
+      planSnapshot: {
+        planType: 'usage-based',
+        reference: 'plan_payg',
+        name: 'Pay as you go',
+        creditsPerUnit: 4,
+        meterRef: 'requests',
+      },
+      usage: { used: 0 },
+    }
+    const ctx = buildCtx(paygPurchase, {
+      config: { transport: makeTransport() },
+      balance: {
+        loading: false,
+        credits: 100,
+        displayCurrency: 'USD',
+        creditsPerMinorUnit: 1,
+        displayExchangeRate: 1,
+        refetch: vi.fn(),
+        adjustBalance: vi.fn(),
+      },
+    })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByText('Unlimited')).toBeNull()
+    expect(document.querySelector('[data-solvapay-current-plan-balance-line]')).toBeTruthy()
+  })
 })

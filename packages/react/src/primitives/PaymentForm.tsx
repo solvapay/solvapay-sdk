@@ -65,6 +65,14 @@ import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { resolveCta } from '../utils/checkoutCta'
 import { formatPrice } from '../utils/format'
+import {
+  useBusinessDetailsAttach,
+  defaultBusinessDetails,
+} from '../hooks/useBusinessDetailsAttach'
+import {
+  createBusinessDetailsParts,
+  createTaxSummaryParts,
+} from '../components/businessCheckoutParts'
 import type {
   ActivationResult,
   PaymentFormProps,
@@ -120,6 +128,8 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
     const solva = useContext(SolvaPayContext)
     if (!solva) throw new MissingProviderError('PaymentForm')
 
+    const { attachBusinessDetails, customerRef } = solva
+
     const copy = useCopy()
     const locale = useLocale()
     const planSelection = usePlanSelection()
@@ -136,6 +146,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
       loading: checkoutLoading,
       error: checkoutError,
       clientSecret,
+      processorPaymentId,
       startCheckout,
       stripePromise,
       resolvedPlanRef,
@@ -250,6 +261,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
               resolvedPlanRef={resolvedPlanRef}
               plan={resolvedPlan ?? null}
               clientSecret={clientSecret!}
+              processorPaymentId={processorPaymentId}
               returnUrl={finalReturnUrl}
               submitButtonText={submitButtonText}
               buttonClassName={buttonClassName}
@@ -257,6 +269,9 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
               onSuccess={onSuccess}
               onResult={onResult}
               onError={onError}
+              onTaxChange={props.onTaxChange}
+              attachBusinessDetails={attachBusinessDetails}
+              customerRef={customerRef}
             >
               {children}
             </PaidInner>
@@ -289,6 +304,7 @@ const PaidInner: React.FC<{
   resolvedPlanRef: string | null
   plan: Plan | null
   clientSecret: string
+  processorPaymentId: string | null
   returnUrl: string
   submitButtonText?: string
   buttonClassName?: string
@@ -296,6 +312,17 @@ const PaidInner: React.FC<{
   onSuccess?: PaymentFormProps['onSuccess']
   onResult?: PaymentFormProps['onResult']
   onError?: PaymentFormProps['onError']
+  onTaxChange?: PaymentFormProps['onTaxChange']
+  attachBusinessDetails?: (params: {
+    paymentIntentId: string
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+  customerRef?: string
   children?: React.ReactNode
 }> = ({
   planRef,
@@ -304,6 +331,7 @@ const PaidInner: React.FC<{
   resolvedPlanRef,
   plan,
   clientSecret,
+  processorPaymentId,
   returnUrl,
   submitButtonText,
   buttonClassName,
@@ -311,6 +339,9 @@ const PaidInner: React.FC<{
   onSuccess,
   onResult,
   onError,
+  onTaxChange,
+  attachBusinessDetails,
+  customerRef,
   children,
 }) => {
   const stripe = useStripe()
@@ -319,6 +350,30 @@ const PaidInner: React.FC<{
   const customer = useCustomer()
   const { processPayment, upsertPurchase } = useSolvaPay()
   const { refetch } = usePurchase()
+
+  const refreshElements = useCallback(async () => {
+    if (elements) {
+      await elements.fetchUpdates()
+    }
+  }, [elements])
+
+  const {
+    businessDetails,
+    setBusinessDetails,
+    fieldErrors,
+    taxBreakdown,
+    businessDetailsAttached,
+    businessDetailsAttaching,
+    businessDetailsError,
+    requiresBusinessAttach,
+    runAttach,
+  } = useBusinessDetailsAttach({
+    processorPaymentId,
+    attachBusinessDetails,
+    customerRef,
+    onTaxChange,
+    refreshElements,
+  })
 
   const [elementKind, setElementKind] = useState<PaymentElementKind>(
     children ? null : 'payment-element',
@@ -438,6 +493,8 @@ const PaidInner: React.FC<{
     !!elementKind &&
     paymentInputComplete &&
     (!requireTermsAcceptance || termsAccepted) &&
+    (!requiresBusinessAttach || businessDetailsAttached) &&
+    !businessDetailsAttaching &&
     !isProcessing
 
   const submit = useCallback(async () => {
@@ -448,6 +505,16 @@ const PaidInner: React.FC<{
       onError?.(new Error(msg))
       return
     }
+    if (requiresBusinessAttach && !businessDetailsAttached) {
+      const attached = await runAttach(businessDetails)
+      if (!attached) {
+        const msg = businessDetailsError ?? 'Complete business details before paying'
+        setError(msg)
+        onError?.(new Error(msg))
+        return
+      }
+    }
+
     setError(undefined)
     setIsProcessing(true)
 
@@ -556,7 +623,14 @@ const PaidInner: React.FC<{
     onSuccess,
     onResult,
     onError,
+    requiresBusinessAttach,
+    businessDetailsAttached,
+    runAttach,
+    businessDetails,
+    businessDetailsError,
   ])
+
+  const effectiveError = error ?? businessDetailsError
 
   const contextValue: PaymentFormContextValue = useMemo(
     () => ({
@@ -566,6 +640,7 @@ const PaidInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret,
+      processorPaymentId,
       stripe: (stripe as Stripe | null) ?? null,
       elements: (elements as StripeElements | null) ?? null,
       isProcessing,
@@ -574,11 +649,18 @@ const PaidInner: React.FC<{
       termsAccepted,
       requireTermsAcceptance,
       canSubmit,
-      error: error ?? null,
+      error: effectiveError ?? null,
       elementKind,
       returnUrl,
       submitButtonText,
       buttonClassName,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       setElementKind,
       setPaymentInputComplete,
       setTermsAccepted,
@@ -591,6 +673,7 @@ const PaidInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret,
+      processorPaymentId,
       stripe,
       elements,
       isProcessing,
@@ -599,11 +682,18 @@ const PaidInner: React.FC<{
       termsAccepted,
       requireTermsAcceptance,
       canSubmit,
-      error,
+      effectiveError,
       elementKind,
       returnUrl,
       submitButtonText,
       buttonClassName,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       submit,
     ],
   )
@@ -693,6 +783,7 @@ const FreeInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret: null,
+      processorPaymentId: null,
       stripe: null,
       elements: null,
       isProcessing,
@@ -706,6 +797,13 @@ const FreeInner: React.FC<{
       returnUrl: '',
       submitButtonText,
       buttonClassName,
+      businessDetails: defaultBusinessDetails,
+      taxBreakdown: null,
+      businessDetailsAttached: false,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      fieldErrors: {},
+      setBusinessDetails: () => {},
       setElementKind: () => {},
       setPaymentInputComplete: () => {},
       setTermsAccepted,
@@ -741,6 +839,8 @@ const Summary: React.FC<SummaryProps> = props => {
       {...props}
       planRef={ctx.planRef || ctx.resolvedPlanRef || undefined}
       productRef={ctx.productRef}
+      taxBreakdown={ctx.taxBreakdown}
+      baseAmountMinor={ctx.plan?.price ?? 0}
     />
   )
 }
@@ -924,11 +1024,14 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
         ? 'disabled'
         : 'idle'
 
-    const amountFormatted = formatPrice(
-      plan?.price ?? ctx.plan?.price ?? 0,
-      plan?.currency ?? ctx.plan?.currency ?? 'usd',
-      { locale, free: copy.interval.free },
-    )
+    const planCurrency = plan?.currency ?? ctx.plan?.currency ?? 'usd'
+    const baseMinor = ctx.taxBreakdown?.total ?? plan?.price ?? ctx.plan?.price ?? 0
+    const amountFormatted = formatPrice(baseMinor, ctx.taxBreakdown?.currency ?? planCurrency, {
+      locale,
+      interval: variant === 'recurring' ? plan?.interval ?? ctx.plan?.interval : undefined,
+      intervalCount: variant === 'recurring' ? 1 : undefined,
+      free: copy.interval.free,
+    })
 
     const label = resolveCta({
       variant,
@@ -1054,6 +1157,28 @@ const ErrorSlot = forwardRef<HTMLParagraphElement, ErrorProps>(function PaymentF
   )
 })
 
+function usePaymentBusinessCtx(_part: string) {
+  const ctx = usePaymentForm()
+  return {
+    businessDetails: ctx.businessDetails,
+    setBusinessDetails: ctx.setBusinessDetails,
+    fieldErrors: ctx.fieldErrors,
+  }
+}
+
+function usePaymentSummaryCtx(_part: string) {
+  const ctx = usePaymentForm()
+  return {
+    taxBreakdown: ctx.taxBreakdown,
+    businessDetailsAttaching: ctx.businessDetailsAttaching,
+    baseAmountMinor: ctx.plan?.price ?? 0,
+    currency: ctx.taxBreakdown?.currency ?? ctx.plan?.currency ?? 'usd',
+  }
+}
+
+const BusinessDetails = createBusinessDetailsParts(usePaymentBusinessCtx, 'payment-form')
+const TaxSummary = createTaxSummaryParts(usePaymentSummaryCtx, 'payment-form')
+
 // ---------- Exports ----------
 
 export const PaymentFormRoot = Root
@@ -1067,6 +1192,8 @@ export const PaymentFormSubmitButton = SubmitButton
 export const PaymentFormLoading = Loading
 export const PaymentFormError = ErrorSlot
 export const PaymentFormLegalFooter = LegalFooter
+export const PaymentFormBusinessDetails = BusinessDetails
+export const PaymentFormTaxSummary = TaxSummary
 
 export const PaymentForm = {
   Root,
@@ -1074,6 +1201,8 @@ export const PaymentForm = {
   CustomerFields,
   PaymentElement: PaymentElementSlot,
   CardElement: CardElementSlot,
+  BusinessDetails,
+  TaxSummary,
   MandateText: MandateTextPrimitive,
   TermsCheckbox,
   SubmitButton,
