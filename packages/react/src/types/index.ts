@@ -13,6 +13,7 @@ import type {
   PurchaseCheckResult,
 } from '@solvapay/server'
 import type { AuthAdapter } from '../adapters/auth'
+import type { TaxBehavior } from '@solvapay/core'
 import type { PartialSolvaPayCopy } from '../i18n/types'
 import type { SolvaPayTransport, CreditDisplayBlock } from '../transport/types'
 
@@ -78,6 +79,7 @@ export interface PaymentIntentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string // Backend customer reference
+  processorPaymentId?: string
 }
 
 /**
@@ -169,6 +171,7 @@ export interface TopupPaymentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string
+  processorPaymentId?: string
 }
 
 export interface UseTopupOptions {
@@ -182,6 +185,7 @@ export interface UseTopupReturn {
   error: Error | null
   stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
   clientSecret: string | null
+  processorPaymentId: string | null
   startTopup: () => Promise<void>
   reset: () => void
 }
@@ -213,6 +217,8 @@ export interface TopupFormProps {
     extras?: TopupFormSuccessExtras,
   ) => void | Promise<void>
   onError?: (error: Error) => void
+  /** Called when the tax breakdown updates after attaching business details. */
+  onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
   returnUrl?: string
   submitButtonText?: string
   className?: string
@@ -314,6 +320,7 @@ export interface SolvaPayConfig {
     processPayment?: string // Default: '/api/process-payment'
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
     processTopupPayment?: string // Default: '/api/process-topup-payment'
+    attachBusinessDetails?: string // Default: '/api/attach-business-details'
     customerBalance?: string // Default: '/api/customer-balance'
     cancelRenewal?: string // Default: '/api/cancel-renewal'
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
@@ -484,6 +491,15 @@ export interface SolvaPayContextValue {
    * implements it.
    */
   processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
+  attachBusinessDetails?: (params: {
+    paymentIntentId: string
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
   activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
@@ -569,6 +585,7 @@ export interface Plan {
   updatedAt?: string
   interval?: string
   metadata?: Record<string, unknown>
+  taxBehavior?: TaxBehavior
 }
 
 /**
@@ -738,6 +755,8 @@ export interface PaymentFormProps {
    * passed — compose `<PaymentForm.TermsCheckbox />` yourself.
    */
   requireTermsAcceptance?: boolean
+  /** Fired when business-details attach returns an updated tax breakdown. */
+  onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
 }
 
 export interface UseTopupAmountSelectorOptions {

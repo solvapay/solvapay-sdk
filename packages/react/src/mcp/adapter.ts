@@ -99,6 +99,9 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
     createTopupPayment: params =>
       callTool(MCP_TOOL_NAMES.createTopupPayment, pickDefined({ ...params })),
 
+    attachBusinessDetails: params =>
+      callTool(MCP_TOOL_NAMES.attachBusinessDetails, pickDefined({ ...params })),
+
     cancelRenewal: params => callTool(MCP_TOOL_NAMES.cancelRenewal, pickDefined({ ...params })),
 
     reactivateRenewal: params =>

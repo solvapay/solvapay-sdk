@@ -35,7 +35,10 @@ import {
   PaymentFormLoading,
   PaymentFormError,
   PaymentFormLegalFooter,
+  PaymentFormBusinessDetails,
+  PaymentFormTaxSummary,
 } from './primitives/PaymentForm'
+import { usePaymentForm } from './components/PaymentFormContext'
 import type { PaymentFormProps, PrefillCustomer } from './types'
 
 type PaymentFormRootProps = PaymentFormProps & {
@@ -49,6 +52,7 @@ const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({
 }) => (
   <>
     <Primitive.Summary />
+    <PaidBusinessSlots />
     <Primitive.CustomerFields />
     <Primitive.PaymentElement />
     <Primitive.Error />
@@ -57,6 +61,22 @@ const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({
     <Primitive.SubmitButton />
   </>
 )
+
+function PaidBusinessSlots() {
+  const ctx = usePaymentForm()
+  if (!ctx.clientSecret) return null
+  return (
+    <>
+      <Primitive.BusinessDetails.Root>
+        <Primitive.BusinessDetails.Fields />
+      </Primitive.BusinessDetails.Root>
+      <Primitive.TaxSummary.Root>
+        <Primitive.TaxSummary.Rows />
+      </Primitive.TaxSummary.Root>
+      <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
+    </>
+  )
+}
 
 const PaymentFormBase: React.FC<PaymentFormRootProps> = props => {
   const { children, requireTermsAcceptance = false } = props
@@ -78,6 +98,8 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   Loading: typeof PaymentFormLoading
   Error: typeof PaymentFormError
   LegalFooter: typeof PaymentFormLegalFooter
+  BusinessDetails: typeof PaymentFormBusinessDetails
+  TaxSummary: typeof PaymentFormTaxSummary
 } = Object.assign(PaymentFormBase, {
   Summary: PaymentFormSummary,
   CustomerFields: PaymentFormCustomerFields,
@@ -89,4 +111,6 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   Loading: PaymentFormLoading,
   Error: PaymentFormError,
   LegalFooter: PaymentFormLegalFooter,
+  BusinessDetails: PaymentFormBusinessDetails,
+  TaxSummary: PaymentFormTaxSummary,
 })

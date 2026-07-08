@@ -78,6 +78,27 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
         onSuccess={onSuccess as any}
       >
         <PaymentForm.Loading />
+        <PaymentForm.BusinessDetails.Root className={cx.businessDetails}>
+          <label className={cx.businessToggle}>
+            <PaymentForm.BusinessDetails.Toggle />
+            I&apos;m purchasing as a business
+          </label>
+          <PaymentForm.BusinessDetails.BusinessName
+            className={cx.businessField}
+            placeholder="Business name"
+          />
+          <PaymentForm.BusinessDetails.Country className={cx.businessField} />
+          <PaymentForm.BusinessDetails.TaxId
+            className={cx.businessField}
+            placeholder="Tax / VAT ID"
+          />
+        </PaymentForm.BusinessDetails.Root>
+        <PaymentForm.TaxSummary.Root className={cx.taxSummary}>
+          <PaymentForm.TaxSummary.Subtotal />
+          <PaymentForm.TaxSummary.Tax />
+          <PaymentForm.TaxSummary.Total />
+          <PaymentForm.TaxSummary.TaxNote />
+        </PaymentForm.TaxSummary.Root>
         <PaymentForm.PaymentElement />
         <PaymentForm.Error className={cx.error} />
         <PaymentForm.MandateText />

@@ -31,6 +31,7 @@ import type {
   AutoRechargeResponse,
   SaveAutoRechargeResponse,
 } from '@solvapay/server'
+import type { TaxBreakdown, TaxIdType } from '@solvapay/core'
 
 export type CreditDisplayBlock = {
   amountMajor: number
@@ -178,6 +179,22 @@ export interface SolvaPayTransport {
    * transports SHOULD too.
    */
   processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
+
+  /**
+   * Attach business purchase details to a payment intent
+   * and retrieve the computed tax breakdown. Optional — when omitted,
+   * `TopupForm` skips the attach gate and `Summary` renders the base
+   * amount only.
+   */
+  attachBusinessDetails?: (params: {
+    paymentIntentId: string
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: TaxIdType
+  }) => Promise<{ taxBreakdown: TaxBreakdown }>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 

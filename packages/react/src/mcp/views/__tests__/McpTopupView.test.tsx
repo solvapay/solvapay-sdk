@@ -31,7 +31,22 @@ vi.mock('../../../primitives/TopupForm', () => {
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span data-testid="topup-submit">{children}</span>
   )
-  return { TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton } }
+  const BusinessDetails = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Toggle: () => null,
+    BusinessName: () => null,
+    Country: () => null,
+    TaxId: () => null,
+    Fields: () => null,
+  }
+  const Summary = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Subtotal: () => null,
+    Tax: () => null,
+    Total: () => null,
+    Rows: () => null,
+  }
+  return { TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary } }
 })
 
 vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))

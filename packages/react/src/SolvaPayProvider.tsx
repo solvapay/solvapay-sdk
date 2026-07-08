@@ -158,6 +158,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     configRef.current = config
     transportRef.current = resolveTransport(config)
     setHasProcessTopupPayment(!!transportRef.current.processTopupPayment)
+    setHasAttachBusinessDetails(!!transportRef.current.attachBusinessDetails)
   }, [config])
 
   const fetchBalanceImpl = useCallback(async () => {
@@ -377,6 +378,23 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     (params: { paymentIntentId: string }): Promise<TopupProcessResult> =>
       transportRef.current.processTopupPayment!(params),
     [],
+  )
+
+  const attachBusinessDetails = useCallback(
+    (params: {
+      paymentIntentId: string
+      customerRef?: string
+      isBusiness: boolean
+      businessName?: string
+      country?: string
+      taxId?: string
+      taxIdType?: import('@solvapay/core').TaxIdType
+    }) => transportRef.current.attachBusinessDetails!(params),
+    [],
+  )
+
+  const [hasAttachBusinessDetails, setHasAttachBusinessDetails] = useState<boolean>(
+    () => !!transportRef.current.attachBusinessDetails,
   )
   useEffect(() => {
     // MCP mode: identity already resolved by the OAuth bridge and carried
@@ -742,6 +760,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       processPayment,
       createTopupPayment,
       processTopupPayment: hasProcessTopupPayment ? processTopupPayment : undefined,
+      attachBusinessDetails: hasAttachBusinessDetails
+        ? attachBusinessDetails
+        : undefined,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,
@@ -760,6 +781,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       createTopupPayment,
       processTopupPayment,
       hasProcessTopupPayment,
+      attachBusinessDetails,
+      hasAttachBusinessDetails,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,

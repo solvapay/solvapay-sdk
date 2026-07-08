@@ -5,6 +5,16 @@
  */
 
 import type { components, operations } from './generated'
+import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
+
+export type AttachBusinessDetailsParams = {
+  paymentIntentId: string
+  customerRef?: string
+} & BusinessDetailsInput
+
+export type AttachBusinessDetailsResult = {
+  taxBreakdown: TaxBreakdown
+}
 
 export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
@@ -487,6 +497,11 @@ export interface SolvaPayClient {
     customerRef: string
     planRef?: string
   }): Promise<ProcessPaymentResult>
+
+  // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
+  attachBusinessDetails?(
+    params: AttachBusinessDetailsParams,
+  ): Promise<AttachBusinessDetailsResult>
 
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {

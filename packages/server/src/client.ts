@@ -680,6 +680,35 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
+    // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
+    async attachBusinessDetails(params) {
+      const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/business-details`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          isBusiness: params.isBusiness,
+          ...(params.businessName !== undefined && { businessName: params.businessName }),
+          ...(params.country !== undefined && { country: params.country }),
+          ...(params.taxId !== undefined && { taxId: params.taxId }),
+          ...(params.taxIdType !== undefined && { taxIdType: params.taxIdType }),
+          ...(params.customerRef !== undefined && { customerRef: params.customerRef }),
+        }),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(
+          `Attach business details failed (${res.status}): ${error}`,
+          { status: res.status },
+        )
+      }
+
+      return await res.json()
+    },
+
     // POST: /v1/sdk/purchases/{purchaseRef}/cancel
     async cancelPurchase(params) {
       const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/cancel`

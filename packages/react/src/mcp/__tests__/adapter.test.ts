@@ -88,6 +88,7 @@ describe('createMcpAppAdapter', () => {
       'createPayment',
       'processPayment',
       'createTopupPayment',
+      'attachBusinessDetails',
       'cancelRenewal',
       'reactivateRenewal',
       'activatePlan',

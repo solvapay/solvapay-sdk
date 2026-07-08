@@ -250,6 +250,26 @@ function EmbeddedTopup({
           }}
         >
           <TopupForm.Loading />
+          <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
+            <label className={cx.businessToggle}>
+              <TopupForm.BusinessDetails.Toggle />
+              I&apos;m purchasing as a business
+            </label>
+            <TopupForm.BusinessDetails.BusinessName
+              className={cx.businessField}
+              placeholder="Business name"
+            />
+            <TopupForm.BusinessDetails.Country className={cx.businessField} />
+            <TopupForm.BusinessDetails.TaxId
+              className={cx.businessField}
+              placeholder="Tax / VAT ID"
+            />
+          </TopupForm.BusinessDetails.Root>
+          <TopupForm.Summary.Root className={cx.taxSummary}>
+            <TopupForm.Summary.Subtotal />
+            <TopupForm.Summary.Tax />
+            <TopupForm.Summary.Total />
+          </TopupForm.Summary.Root>
           <TopupForm.PaymentElement />
           <TopupForm.Error className={cx.error} />
           <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
