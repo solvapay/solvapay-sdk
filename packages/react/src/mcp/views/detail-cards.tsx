@@ -19,6 +19,10 @@ import { useMerchant } from '../../hooks/useMerchant'
 import { formatPrice } from '../../utils/format'
 import { useHostLocale } from '../useHostLocale'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
+import {
+  resolveSellerOrganizationNumberDisplay,
+  resolveSellerTaxDisplay,
+} from './resolveSellerTaxDisplay'
 
 export interface McpCustomerDetailsCardProps {
   classNames?: McpViewClassNames
@@ -50,16 +54,16 @@ function DetailRow({
   labelMuted?: string
 }) {
   return (
-    <div className="solvapay-mcp-detail-row">
+    <>
       {label ? (
-        <span className={`solvapay-mcp-detail-label ${labelMuted ?? ''}`.trim()}>{label}</span>
+        <dt className={`solvapay-mcp-detail-label ${labelMuted ?? ''}`.trim()}>{label}</dt>
       ) : null}
-      <span
-        className={`solvapay-mcp-detail-value${mono ? ' solvapay-mcp-detail-value-mono' : ''} ${muted ?? ''}`.trim()}
+      <dd
+        className={`solvapay-mcp-detail-row solvapay-mcp-detail-value${mono ? ' solvapay-mcp-detail-value-mono' : ''} ${muted ?? ''}`.trim()}
       >
         {value}
-      </span>
-    </div>
+      </dd>
+    </>
   )
 }
 
@@ -81,10 +85,10 @@ export function McpCustomerDetailsCard({
 
   if (loading && !customerRef) {
     return (
-      <div className={cx.card} aria-busy="true">
+      <section className={cx.card} aria-busy="true" aria-label="Your account">
         <h2 className={cx.heading}>Your account</h2>
         <p className={cx.muted}>Loading…</p>
-      </div>
+      </section>
     )
   }
 
@@ -108,7 +112,7 @@ export function McpCustomerDetailsCard({
   return (
     <section className={`${cx.card} solvapay-mcp-customer-card`.trim()} aria-label="Your account">
       <h2 className={cx.heading}>Your account</h2>
-      <div className="solvapay-mcp-detail-grid">
+      <dl className="solvapay-mcp-detail-grid">
         <DetailRow value={displayName} muted={cx.muted} />
         {email ? <DetailRow value={email} muted={cx.muted} /> : null}
         {customerRef ? (
@@ -122,7 +126,7 @@ export function McpCustomerDetailsCard({
         ) : null}
 
         {showBalance ? (
-          <div className="solvapay-mcp-detail-row solvapay-mcp-detail-balance-row">
+          <dd className="solvapay-mcp-detail-row solvapay-mcp-detail-balance-row">
             <div className="solvapay-mcp-detail-balance-copy">
               <span className="solvapay-mcp-detail-value">
                 {Intl.NumberFormat(locale).format(credits ?? 0)} credits
@@ -144,9 +148,9 @@ export function McpCustomerDetailsCard({
                 Top up
               </button>
             ) : null}
-          </div>
+          </dd>
         ) : null}
-      </div>
+      </dl>
     </section>
   )
 }
@@ -172,10 +176,10 @@ export function McpSellerDetailsCard({
 
   if (loading && !merchant) {
     return (
-      <div className={cx.card} aria-busy="true">
+      <section className={cx.card} aria-busy="true" aria-label="Seller">
         <h2 className={cx.heading}>Seller</h2>
         <p className={cx.muted}>Loading…</p>
-      </div>
+      </section>
     )
   }
 
@@ -186,36 +190,39 @@ export function McpSellerDetailsCard({
   const supportEmail = merchant.supportEmail
   const supportUrl = merchant.supportUrl
 
+  const taxDisplay = resolveSellerTaxDisplay(merchant)
+  const organizationNumber = resolveSellerOrganizationNumberDisplay(merchant, taxDisplay)
+
   return (
     <section className={cx.card} aria-label="Seller">
-      <div className="solvapay-mcp-detail-heading-row">
+      <header className="solvapay-mcp-detail-heading-row">
         <h2 className={cx.heading}>Seller</h2>
         {showVerifiedBadge ? (
           <span className="solvapay-mcp-verified-badge" aria-label="Verified seller">
             <span aria-hidden="true">✓</span> Verified seller
           </span>
         ) : null}
-      </div>
+      </header>
 
-      <div className="solvapay-mcp-detail-grid">
+      <dl className="solvapay-mcp-detail-grid">
         <DetailRow value={merchant.displayName} muted={cx.muted} />
         {merchant.legalName && merchant.legalName !== merchant.displayName ? (
           <DetailRow value={merchant.legalName} muted={cx.muted} />
         ) : null}
 
         {supportEmail ? (
-          <div className="solvapay-mcp-detail-row">
+          <dd className="solvapay-mcp-detail-row">
             <a
               className="solvapay-mcp-detail-link"
               href={`mailto:${supportEmail}`}
             >
               {supportEmail}
             </a>
-          </div>
+          </dd>
         ) : null}
 
         {supportUrl ? (
-          <div className="solvapay-mcp-detail-row">
+          <dd className="solvapay-mcp-detail-row">
             <a
               className="solvapay-mcp-detail-link"
               href={supportUrl}
@@ -224,13 +231,33 @@ export function McpSellerDetailsCard({
             >
               Support centre
             </a>
-          </div>
+          </dd>
+        ) : null}
+
+        {organizationNumber ? (
+          <DetailRow
+            label="Company number"
+            value={organizationNumber}
+            mono
+            labelMuted={cx.muted}
+            muted={cx.muted}
+          />
+        ) : null}
+
+        {taxDisplay.kind === 'provided' ? (
+          <DetailRow
+            label={taxDisplay.label}
+            value={taxDisplay.value}
+            mono
+            labelMuted={cx.muted}
+            muted={cx.muted}
+          />
         ) : null}
 
         {merchant.country ? (
           <DetailRow label="Country" value={merchant.country} labelMuted={cx.muted} />
         ) : null}
-      </div>
+      </dl>
     </section>
   )
 }
