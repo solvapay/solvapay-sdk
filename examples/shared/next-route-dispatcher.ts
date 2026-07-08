@@ -29,19 +29,20 @@ import {
   reactivateRenewal,
   saveAutoRecharge,
   syncCustomer,
+  attachBusinessDetails,
 } from '@solvapay/next'
 import type { SolvaPay } from '@solvapay/server'
 
-/** Route handlers return the web-standard `Response` so `@solvapay/next` helpers compiled against a different Next.js patch version stay assignable. */
-type Handler = (request: NextRequest) => Promise<Response>
+/** Route handlers accept the web-standard `Request` so `@solvapay/next` helpers compiled against a different Next.js patch version stay assignable. */
+type Handler = (request: Request) => Promise<Response>
 
 export type SolvaPayRouteHandlers = {
   GET: (
-    request: NextRequest,
+    request: Request,
     ctx: { params: Promise<{ solvapay: string[] }> },
   ) => Promise<Response>
   POST: (
-    request: NextRequest,
+    request: Request,
     ctx: { params: Promise<{ solvapay: string[] }> },
   ) => Promise<Response>
   PUT: (
@@ -54,7 +55,7 @@ export type SolvaPayRouteHandlers = {
   ) => Promise<Response>
 }
 
-async function bodyJson(request: NextRequest): Promise<Record<string, unknown>> {
+async function bodyJson(request: Request): Promise<Record<string, unknown>> {
   try {
     return (await request.json()) as Record<string, unknown>
   } catch {
@@ -134,6 +135,27 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
         { solvaPay },
       )
     },
+    'attach-business-details': async request => {
+      const body = await bodyJson(request)
+      const taxIdTypeRaw = body.taxIdType
+      const taxIdType =
+        taxIdTypeRaw === 'eu_vat' || taxIdTypeRaw === 'gb_vat' || taxIdTypeRaw === 'us_ein'
+          ? taxIdTypeRaw
+          : undefined
+      return attachBusinessDetails(
+        request,
+        {
+          paymentIntentId: String(body.paymentIntentId),
+          isBusiness: Boolean(body.isBusiness),
+          ...(body.businessName ? { businessName: String(body.businessName) } : {}),
+          ...(body.country ? { country: String(body.country) } : {}),
+          ...(body.taxId ? { taxId: String(body.taxId) } : {}),
+          ...(taxIdType ? { taxIdType } : {}),
+          ...(body.customerRef ? { customerRef: String(body.customerRef) } : {}),
+        },
+        { solvaPay },
+      )
+    },
     'activate-plan': async request => {
       const body = await bodyJson(request)
       return activatePlan(
@@ -168,7 +190,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   }
 
   async function GET(
-    request: NextRequest,
+    request: Request,
     { params }: { params: Promise<{ solvapay: string[] }> },
   ): Promise<Response> {
     const key = await resolveRouteKey(params)
@@ -180,7 +202,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   }
 
   async function POST(
-    request: NextRequest,
+    request: Request,
     { params }: { params: Promise<{ solvapay: string[] }> },
   ): Promise<Response> {
     const key = await resolveRouteKey(params)

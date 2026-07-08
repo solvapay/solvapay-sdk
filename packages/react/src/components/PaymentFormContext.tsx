@@ -1,6 +1,7 @@
 'use client'
 import React, { createContext, useContext } from 'react'
 import type { Stripe, StripeElements } from '@stripe/stripe-js'
+import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
 import type { Plan, PrefillCustomer } from '../types'
 
 export type PaymentElementKind = 'payment-element' | 'card-element' | null
@@ -12,6 +13,7 @@ export interface PaymentFormContextValue {
   resolvedPlanRef: string | null
   plan: Plan | null
   clientSecret: string | null
+  processorPaymentId: string | null
   stripe: Stripe | null
   elements: StripeElements | null
   isProcessing: boolean
@@ -25,6 +27,13 @@ export interface PaymentFormContextValue {
   returnUrl: string
   submitButtonText?: string
   buttonClassName?: string
+  businessDetails: BusinessDetailsInput
+  taxBreakdown: TaxBreakdown | null
+  businessDetailsAttached: boolean
+  businessDetailsAttaching: boolean
+  businessDetailsError: string | null
+  fieldErrors: Partial<Record<keyof BusinessDetailsInput, string>>
+  setBusinessDetails: (patch: Partial<BusinessDetailsInput>) => void
   setElementKind: (k: PaymentElementKind) => void
   setPaymentInputComplete: (complete: boolean) => void
   setTermsAccepted: (accepted: boolean) => void

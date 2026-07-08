@@ -40,6 +40,7 @@ import {
   createCustomerSessionCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
+  attachBusinessDetailsCore,
   isErrorResult,
   processPaymentIntentCore,
   reactivatePurchaseCore,
@@ -569,6 +570,58 @@ export function buildSolvaPayDescriptors(
         const result = await createTopupPaymentIntentCore(
           buildRequest(extra, { method: 'POST' }),
           { amount, currency, description },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.attachBusinessDetails,
+    description:
+      UI_ONLY_PREFIX +
+      'Attach business purchase details to a payment intent and retrieve the computed tax breakdown.',
+    inputSchema: {
+      paymentIntentId: z.string(),
+      isBusiness: z.boolean(),
+      businessName: z.string().optional(),
+      country: z.string().optional(),
+      taxId: z.string().optional(),
+      taxIdType: z.enum(['eu_vat', 'gb_vat', 'us_ein']).optional(),
+    },
+    meta: uiToolMeta,
+    annotations: solvapayTool({}),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.attachBusinessDetails, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const paymentIntentId =
+          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const isBusiness = args.isBusiness === true
+        const businessName =
+          typeof args.businessName === 'string' ? args.businessName : undefined
+        const country = typeof args.country === 'string' ? args.country : undefined
+        const taxId = typeof args.taxId === 'string' ? args.taxId : undefined
+        const taxIdType =
+          args.taxIdType === 'eu_vat' ||
+          args.taxIdType === 'gb_vat' ||
+          args.taxIdType === 'us_ein'
+            ? args.taxIdType
+            : undefined
+
+        const result = await attachBusinessDetailsCore(
+          buildRequest(extra, { method: 'POST' }),
+          {
+            paymentIntentId,
+            customerRef: auth,
+            isBusiness,
+            ...(businessName !== undefined && { businessName }),
+            ...(country !== undefined && { country }),
+            ...(taxId !== undefined && { taxId }),
+            ...(taxIdType !== undefined && { taxIdType }),
+          },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

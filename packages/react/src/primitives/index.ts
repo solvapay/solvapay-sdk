@@ -19,6 +19,10 @@ export {
   CheckoutSummaryPrice,
   CheckoutSummaryTrial,
   CheckoutSummaryTaxNote,
+  CheckoutSummarySubtotal,
+  CheckoutSummaryTax,
+  CheckoutSummaryTotal,
+  CheckoutSummaryTaxTreatmentNote,
   useCheckoutSummary,
 } from './CheckoutSummary'
 
@@ -52,6 +56,8 @@ export {
   PaymentFormLoading,
   PaymentFormError,
   PaymentFormLegalFooter,
+  PaymentFormBusinessDetails,
+  PaymentFormTaxSummary,
 } from './PaymentForm'
 
 export {
@@ -125,6 +131,8 @@ export {
   TopupFormLoading,
   TopupFormError,
   TopupFormLegalFooter,
+  TopupFormBusinessDetails,
+  TopupFormSummary,
   useTopupForm,
 } from './TopupForm'
 

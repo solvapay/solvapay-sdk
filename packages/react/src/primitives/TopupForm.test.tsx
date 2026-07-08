@@ -607,3 +607,110 @@ describe('TopupForm.PaymentElement default options', () => {
     })
   })
 })
+
+describe('TopupForm business details + summary', () => {
+  const taxBreakdown = {
+    subtotal: 1000,
+    taxAmount: 250,
+    taxRate: 0.25,
+    treatment: 'standard' as const,
+    total: 1250,
+    currency: 'USD',
+  }
+
+  function businessCtx(
+    overrides?: Partial<SolvaPayContextValue>,
+  ): SolvaPayContextValue {
+    return ctx({
+      createTopupPayment: vi.fn().mockResolvedValue({
+        clientSecret: 'pi_topup_secret',
+        publishableKey: 'pk_test_123',
+        processorPaymentId: 'pi_test_123',
+      }),
+      attachBusinessDetails: vi.fn().mockResolvedValue({ taxBreakdown }),
+      ...overrides,
+    })
+  }
+
+  it('auto-attaches consumer details and enables submit once tax breakdown lands', async () => {
+    const onTaxChange = vi.fn()
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
+
+    render(
+      <Wrap value={businessCtx({ attachBusinessDetails })}>
+        <TopupForm.Root amount={1000} currency="USD" onTaxChange={onTaxChange}>
+          <TopupForm.PaymentElement />
+          <TopupForm.Summary.Root>
+            <TopupForm.Summary.Total data-testid="total" />
+          </TopupForm.Summary.Root>
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalled())
+    expect(attachBusinessDetails).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_test_123',
+      isBusiness: false,
+    })
+    await waitFor(() => expect(onTaxChange).toHaveBeenCalledWith(taxBreakdown))
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+  })
+
+  it('blocks submit until business attach succeeds when business mode is enabled', async () => {
+    const attachBusinessDetails = vi
+      .fn()
+      .mockResolvedValueOnce({ taxBreakdown })
+      .mockRejectedValueOnce(new Error('Invalid VAT ID'))
+
+    render(
+      <Wrap value={businessCtx({ attachBusinessDetails })}>
+        <TopupForm.Root amount={1000} currency="USD">
+          <TopupForm.BusinessDetails.Root>
+            <TopupForm.BusinessDetails.Toggle data-testid="business-toggle" />
+            <TopupForm.BusinessDetails.BusinessName data-testid="business-name" />
+            <TopupForm.BusinessDetails.Country data-testid="business-country" />
+            <TopupForm.BusinessDetails.TaxId data-testid="business-tax-id" />
+          </TopupForm.BusinessDetails.Root>
+          <TopupForm.PaymentElement />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalledTimes(1))
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('business-toggle'))
+      fireEvent.change(screen.getByTestId('business-name'), {
+        target: { value: 'Acme AB' },
+      })
+      fireEvent.change(screen.getByTestId('business-country'), { target: { value: 'SE' } })
+      fireEvent.change(screen.getByTestId('business-tax-id'), {
+        target: { value: 'SE556677889901' },
+      })
+    })
+
+    await waitFor(() => expect(attachBusinessDetails.mock.calls.length).toBeGreaterThan(1))
+    expect(screen.getByTestId('submit')).toBeDisabled()
+  })
+})

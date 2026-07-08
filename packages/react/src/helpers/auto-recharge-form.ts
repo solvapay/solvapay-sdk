@@ -222,6 +222,7 @@ export function configToAutoRechargeInput(
   options?: {
     display?: AutoRechargeDisplayBlock | null
     currency?: string
+    conversion?: { creditsPerMinorUnit?: number | null; displayExchangeRate?: number | null }
   },
 ): AutoRechargeInput | null {
   if (!config.enabled) return null

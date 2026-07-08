@@ -676,9 +676,16 @@ function PaygPayment({ className }: { className?: string }) {
         onSuccess={(intent, extras) => flow.notifyPaymentSuccess(intent, extras)}
       >
         <TopupForm.Loading />
+        <TopupForm.BusinessDetails.Root className="solvapay-checkout-business-details">
+          <TopupForm.BusinessDetails.Fields />
+        </TopupForm.BusinessDetails.Root>
+        <TopupForm.Summary.Root className="solvapay-checkout-tax-summary">
+          <TopupForm.Summary.Rows />
+        </TopupForm.Summary.Root>
         <TopupForm.PaymentElement />
         <TopupForm.Error className="solvapay-checkout-error" />
         <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
+        <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
         <TopupForm.SubmitButton className="solvapay-checkout-pay-button">
           Pay {formatPrice(amountMinor, currency, { locale })}
         </TopupForm.SubmitButton>
@@ -724,9 +731,16 @@ function RecurringPayment({ className }: { className?: string }) {
         onSuccess={(intent: PaymentIntent) => flow.notifyPaymentSuccess(intent)}
       >
         <PaymentForm.Loading />
+        <PaymentForm.BusinessDetails.Root className="solvapay-checkout-business-details">
+          <PaymentForm.BusinessDetails.Fields />
+        </PaymentForm.BusinessDetails.Root>
+        <PaymentForm.TaxSummary.Root className="solvapay-checkout-tax-summary">
+          <PaymentForm.TaxSummary.Rows />
+        </PaymentForm.TaxSummary.Root>
         <PaymentForm.PaymentElement />
         <PaymentForm.Error className="solvapay-checkout-error" />
         <PaymentForm.MandateText />
+        <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
         <PaymentForm.SubmitButton className="solvapay-checkout-pay-button">
           {isRecurring ? `Subscribe — ${priceLine}` : `Pay ${formattedAmount}`}
         </PaymentForm.SubmitButton>
