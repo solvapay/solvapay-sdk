@@ -30,7 +30,7 @@ isProject: false
 
 ## Why
 
-While fixing the chat-checkout-demo's "Reset identity" button (chip in the chat header → popover → reset), we discovered the demo's `resetAnonymousCustomerRef()` only cleared its own anonymous-ref localStorage key. The SDK *also* persists a resolved customer ref in three internal keys:
+While fixing the chat-checkout-demo's "Reset identity" button (chip in the chat header → popover → reset), we discovered the demo's `resetAnonymousCustomerRef()` only cleared its own anonymous-ref localStorage key. The SDK _also_ persists a resolved customer ref in three internal keys:
 
 - `solvapay_customerRef`
 - `solvapay_customerRef_expiry`
@@ -38,7 +38,7 @@ While fixing the chat-checkout-demo's "Reset identity" button (chip in the chat 
 
 set in [`packages/react/src/utils/headers.ts`](solvapay-sdk/packages/react/src/utils/headers.ts) and consumed by `buildRequestHeaders` to attach `x-solvapay-customer-ref` on every transport call.
 
-The SDK's userId-mismatch invalidation in [`SolvaPayProvider.tsx:254-259`](solvapay-sdk/packages/react/src/SolvaPayProvider.tsx) is supposed to clear that cache when the auth adapter returns a different `userId`, **but** it only fires *after* the auth adapter resolves async post-mount. The first `transport.checkPurchase()` after a page reload races that effect, and on cache hit it ships the stale `x-solvapay-customer-ref` header — the backend honours it and returns the *same* customer back, so the chip re-renders with the prior `cus_*` even though the demo minted a fresh `anon_*`.
+The SDK's userId-mismatch invalidation in [`SolvaPayProvider.tsx:254-259`](solvapay-sdk/packages/react/src/SolvaPayProvider.tsx) is supposed to clear that cache when the auth adapter returns a different `userId`, **but** it only fires _after_ the auth adapter resolves async post-mount. The first `transport.checkPurchase()` after a page reload races that effect, and on cache hit it ships the stale `x-solvapay-customer-ref` header — the backend honours it and returns the _same_ customer back, so the chip re-renders with the prior `cus_*` even though the demo minted a fresh `anon_*`.
 
 The chat-checkout-demo's current fix is to wipe `solvapay_customerRef*` directly from the demo:
 
@@ -59,7 +59,7 @@ That works but is the wrong layering — every SDK consumer that wants to switch
 
 - **Public**: a `resetCustomer()` method on the `SolvaPayContextValue` returned by `useSolvaPay()`. Calling it wipes the cached ref, resets provider state to "no customer", and optionally re-runs auth detection so a fresh customer materialises in-place (no page reload required).
 - **Public, secondary**: re-export `clearCachedCustomerRef` from `@solvapay/react` as a standalone util for non-React callers (rare — most consumers will be inside a provider).
-- **Out of scope**: any backend-side customer deletion; this is a *client-side identity reset* only. The backend customer record persists and may be re-resolved if the same `externalRef` reappears.
+- **Out of scope**: any backend-side customer deletion; this is a _client-side identity reset_ only. The backend customer record persists and may be re-resolved if the same `externalRef` reappears.
 
 ## Architecture
 
@@ -117,38 +117,35 @@ export { clearCachedCustomerRef } from './utils/headers'
 In [`packages/react/src/SolvaPayProvider.tsx`](solvapay-sdk/packages/react/src/SolvaPayProvider.tsx), next to `updateCustomerRef`:
 
 ```ts
-const resetCustomer = useCallback(
-  async (options?: { refetch?: boolean }) => {
-    clearCachedCustomerRef()
+const resetCustomer = useCallback(async (options?: { refetch?: boolean }) => {
+  clearCachedCustomerRef()
 
-    setInternalCustomerRef(undefined)
-    setUserId(null)
-    setIsAuthenticated(false)
-    setPurchaseData({ purchases: [] })
-    setPurchaseError(null)
-    setLoading(false)
-    setIsRefetching(false)
+  setInternalCustomerRef(undefined)
+  setUserId(null)
+  setIsAuthenticated(false)
+  setPurchaseData({ purchases: [] })
+  setPurchaseError(null)
+  setLoading(false)
+  setIsRefetching(false)
 
-    setCreditsValue(null)
-    setDisplayCurrencyValue(null)
-    setCreditsPerMinorUnitValue(null)
-    setDisplayExchangeRateValue(null)
-    setBalanceLoading(false)
-    balanceLoadedRef.current = false
+  setCreditsValue(null)
+  setDisplayCurrencyValue(null)
+  setCreditsPerMinorUnitValue(null)
+  setDisplayExchangeRateValue(null)
+  setBalanceLoading(false)
+  balanceLoadedRef.current = false
 
-    loadedCacheKeysRef.current.clear()
-    inFlightRef.current = null
-    balanceInFlightRef.current = false
+  loadedCacheKeysRef.current.clear()
+  inFlightRef.current = null
+  balanceInFlightRef.current = false
 
-    if (options?.refetch === false) return
+  if (options?.refetch === false) return
 
-    // Re-run auth detection so the next adapter.getUserId() drives a
-    // fresh checkPurchase. The existing detectAuth effect is keyed on
-    // userId, which we just nulled — it'll re-fire on the next render.
-    // Nothing to await here unless we hoist detectAuth out of the effect.
-  },
-  [],
-)
+  // Re-run auth detection so the next adapter.getUserId() drives a
+  // fresh checkPurchase. The existing detectAuth effect is keyed on
+  // userId, which we just nulled — it'll re-fire on the next render.
+  // Nothing to await here unless we hoist detectAuth out of the effect.
+}, [])
 ```
 
 Open questions to resolve in implementation:
@@ -187,7 +184,7 @@ const { resetCustomer } = useSolvaPay()
 
 const handleReset = async () => {
   resetAnonymousCustomerRef() // mints a new anon_* on next getAnonymousCustomerRef call
-  await resetCustomer()       // wipes SDK cache + refetches with the new identity
+  await resetCustomer() // wipes SDK cache + refetches with the new identity
   setOpen(false)
 }
 ```
@@ -196,7 +193,7 @@ The page-reload UX still works for consumers who prefer it; pass `{ refetch: fal
 
 ## Out of scope (flagged for later)
 
-- A *backend-side* "delete this customer" endpoint — different concern, requires GDPR/audit handling
+- A _backend-side_ "delete this customer" endpoint — different concern, requires GDPR/audit handling
 - An auth-adapter `signOut()` lifecycle hook — we currently rely on the auth adapter's `getToken() → null` to trigger the existing clear path. Worth documenting the relationship but no API change here
 - Any change to `setCachedCustomerRef`'s 24h TTL — adequate today
 

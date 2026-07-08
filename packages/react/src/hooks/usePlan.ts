@@ -41,9 +41,7 @@ export function usePlan(options: UsePlanOptions): UsePlanReturn {
       }
       if (!productRef) {
         setLoading(false)
-        setError(
-          new Error('usePlan: productRef is required to resolve a plan reference'),
-        )
+        setError(new Error('usePlan: productRef is required to resolve a plan reference'))
         return
       }
 
@@ -54,13 +52,7 @@ export function usePlan(options: UsePlanOptions): UsePlanReturn {
         const p = findPlan(cached.plans)
         setPlan(p)
         setLoading(false)
-        setError(
-          p
-            ? null
-            : new Error(
-                `Plan "${planRef}" not found in product "${productRef}"`,
-              ),
-        )
+        setError(p ? null : new Error(`Plan "${planRef}" not found in product "${productRef}"`))
         return
       }
 
@@ -70,13 +62,7 @@ export function usePlan(options: UsePlanOptions): UsePlanReturn {
           const plans = await cached.promise
           const p = findPlan(plans)
           setPlan(p)
-          setError(
-            p
-              ? null
-              : new Error(
-                  `Plan "${planRef}" not found in product "${productRef}"`,
-                ),
-          )
+          setError(p ? null : new Error(`Plan "${planRef}" not found in product "${productRef}"`))
         } catch (err) {
           setError(err instanceof Error ? err : new Error('Failed to load plan'))
         } finally {

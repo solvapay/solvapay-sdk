@@ -45,10 +45,7 @@ describe('useProduct', () => {
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.product).toEqual(product)
-    expect(fetchFn).toHaveBeenCalledWith(
-      '/api/get-product?productRef=prd_x',
-      expect.any(Object),
-    )
+    expect(fetchFn).toHaveBeenCalledWith('/api/get-product?productRef=prd_x', expect.any(Object))
   })
 
   it('dedupes concurrent lookups by productRef', async () => {
@@ -70,10 +67,7 @@ describe('useProduct', () => {
     })
 
     await waitFor(() =>
-      expect(fetchFn).toHaveBeenCalledWith(
-        '/my/product?productRef=prd_x',
-        expect.any(Object),
-      ),
+      expect(fetchFn).toHaveBeenCalledWith('/my/product?productRef=prd_x', expect.any(Object)),
     )
   })
 })

@@ -6,19 +6,19 @@ todos:
     content: "Backend: in `processPaymentIntent` controller/service, construct a full `PurchaseInfo` (with `planSnapshot.planType: 'one-time'`) for one-time purchases and return it under `purchase` alongside the existing `oneTimePurchase` (dual-write). Update `@ApiOkResponse` schema. Regenerate SDK types."
     status: pending
   - id: sdk-collapse-type
-    content: "SDK: collapse `ProcessPaymentResult` to `{ status, purchase: PurchaseInfo, oneTimePurchase?: deprecated, type?: deprecated }`. Mark `OneTimePurchaseInfo` and the legacy fields `@deprecated`."
+    content: 'SDK: collapse `ProcessPaymentResult` to `{ status, purchase: PurchaseInfo, oneTimePurchase?: deprecated, type?: deprecated }`. Mark `OneTimePurchaseInfo` and the legacy fields `@deprecated`.'
     status: pending
   - id: sdk-converge-consumers
     content: "SDK: replace the `if (type === 'recurring')` branch in `PaymentForm.PaidInner` with an unconditional `upsertPurchase(reconcile.result.purchase)`. Delete `normalizeOneTimePurchase` and its tests. Drop the `type` field from `examples/shared/stub-api-client.ts`."
     status: pending
   - id: sdk-hard-remove
-    content: "SDK (follow-up release): delete `OneTimePurchaseInfo`, the `oneTimePurchase` field, the `type` field, and their re-exports. Backend stops dual-writing `oneTimePurchase`. Add changeset entry flagging the breaking type change."
+    content: 'SDK (follow-up release): delete `OneTimePurchaseInfo`, the `oneTimePurchase` field, the `type` field, and their re-exports. Backend stops dual-writing `oneTimePurchase`. Add changeset entry flagging the breaking type change.'
     status: pending
   - id: backend-drop-2s-wait
-    content: "Backend: remove the `await new Promise(r => setTimeout(r, 2000))` in `payment-intent.sdk.controller.ts` — the controller now constructs the `PurchaseInfo` synchronously, so the blind wait compensates for nothing."
+    content: 'Backend: remove the `await new Promise(r => setTimeout(r, 2000))` in `payment-intent.sdk.controller.ts` — the controller now constructs the `PurchaseInfo` synchronously, so the blind wait compensates for nothing.'
     status: pending
   - id: verify-end-to-end
-    content: "Manual + automated verify: chat-checkout-demo subscription→lifetime flips badge in one render with no setTimeout in the success path; `rg -n \"OneTimePurchaseInfo|oneTimePurchase\" packages/react/src` clean of non-test references."
+    content: 'Manual + automated verify: chat-checkout-demo subscription→lifetime flips badge in one render with no setTimeout in the success path; `rg -n "OneTimePurchaseInfo|oneTimePurchase" packages/react/src` clean of non-test references.'
     status: pending
 isProject: false
 ---
@@ -49,6 +49,7 @@ So: `oneTimePurchase` is a separate field today purely because the backend const
 But the field has **never been populated on the wire** — the backend's `processPaymentIntent` only ever returned `{ status, message? }`, so any integrator who typed against `oneTimePurchase` was reading `undefined` at runtime. Type-only consumers (variable/function-signature annotations) are theoretically possible but provably useless.
 
 This means:
+
 - The hard removal in Step 4 IS a breaking type change semver-wise (next major release, e.g. `2.0.0`).
 - Practical runtime impact on integrators is zero — nothing depended on it working because it never worked.
 - A deprecation cycle (Step 2) is the polite path; a same-major hard removal is justifiable on the grounds that no functional code can possibly depend on the field. Pick based on release cadence preference.
@@ -100,7 +101,9 @@ export interface ProcessPaymentResult {
 }
 
 /** @deprecated removed in next major */
-export interface OneTimePurchaseInfo { /* unchanged */ }
+export interface OneTimePurchaseInfo {
+  /* unchanged */
+}
 ```
 
 The discriminated union becomes a single shape; the legacy fields stay optional + deprecated for one minor release.

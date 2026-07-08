@@ -66,7 +66,9 @@ const createInstallProgressReporter = (): ((message: string) => void) => {
   return message => {
     const line = `📦 ${message}`
     const paddedLine =
-      line.length < lastRenderedLength ? `${line}${' '.repeat(lastRenderedLength - line.length)}` : line
+      line.length < lastRenderedLength
+        ? `${line}${' '.repeat(lastRenderedLength - line.length)}`
+        : line
 
     process.stdout.write(`\r${paddedLine}`)
     lastRenderedLength = line.length
@@ -214,7 +216,9 @@ export const runInitInDirectory = async ({
 
   const projectCheck = await ensureNodeProject({ cwd, autoCreate: options.yes })
   if (projectCheck.action === 'cancelled') {
-    process.stdout.write('Initialization cancelled. Run `npm init -y` first, then `solvapay init`.\n')
+    process.stdout.write(
+      'Initialization cancelled. Run `npm init -y` first, then `solvapay init`.\n',
+    )
     return
   }
 
@@ -293,7 +297,7 @@ export const runInitInDirectory = async ({
     const recoveryLines = isLivePromotionGap
       ? [
           '   Your sandbox account exists, but your live environment',
-          '   isn\'t fully promoted yet. Switch to live in the SolvaPay',
+          "   isn't fully promoted yet. Switch to live in the SolvaPay",
           '   Console (https://app.solvapay.com), then re-run',
           '   `npx solvapay init` to pick up the live credentials.',
           '',
@@ -306,13 +310,7 @@ export const runInitInDirectory = async ({
           '   to pick up the new credentials.',
         ]
     process.stdout.write(
-      [
-        '',
-        `❌ Provider account not found${envLabel}.`,
-        '',
-        ...recoveryLines,
-        '',
-      ].join('\n'),
+      ['', `❌ Provider account not found${envLabel}.`, '', ...recoveryLines, ''].join('\n'),
     )
     throw new Error(
       `Provider account not found${envLabel} — finish onboarding in the SolvaPay Console and re-run \`npx solvapay init\`.`,
@@ -349,7 +347,11 @@ export const runInitInDirectory = async ({
 
   const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, { cwd })
   const environmentLabel = exchange.environment ? ` (${exchange.environment})` : ''
-  if (envWrite.action === 'created' || envWrite.action === 'appended' || envWrite.action === 'updated') {
+  if (
+    envWrite.action === 'created' ||
+    envWrite.action === 'appended' ||
+    envWrite.action === 'updated'
+  ) {
     process.stdout.write(`📝 Secret key saved to .env${environmentLabel}\n`)
   } else {
     process.stdout.write(`📝 Kept existing SOLVAPAY_SECRET_KEY in .env${environmentLabel}\n`)

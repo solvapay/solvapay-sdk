@@ -63,9 +63,7 @@ app.get('/', (_req, res) => {
       simulateProviderLogin: 'x-provider-user-id (required)',
       optionalProfile: ['x-provider-user-email', 'x-provider-user-name'],
     },
-    example: [
-      'curl -H "x-provider-user-id: auth0|demo-user" http://localhost:3002/tasks',
-    ],
+    example: ['curl -H "x-provider-user-id: auth0|demo-user" http://localhost:3002/tasks'],
   })
 })
 

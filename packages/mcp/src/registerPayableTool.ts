@@ -105,10 +105,7 @@ export interface RegisterPayableToolOptions<
    * Override customer-ref extraction. Defaults to the MCP adapter's
    * behavior (reads `extra.authInfo.extra.customer_ref`).
    */
-  getCustomerRef?: (
-    args: Record<string, unknown>,
-    extra?: McpToolExtra,
-  ) => string | Promise<string>
+  getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
   /**
    * Additional `_meta` merged onto the tool **descriptor** (the tool
    * advertisement returned by `tools/list`).
@@ -185,9 +182,7 @@ export function registerPayableTool<
     ...(hasIcons ? { icons } : {}),
   }
   const hasUi = Object.keys(mergedUi).length > 0
-  const toolMeta: Record<string, unknown> = hasUi
-    ? { ...baseMeta, ui: mergedUi }
-    : { ...baseMeta }
+  const toolMeta: Record<string, unknown> = hasUi ? { ...baseMeta, ui: mergedUi } : { ...baseMeta }
 
   // Sensible default: paywalled data tools are most often read-only
   // queries (search, fetch, quote). State-mutating merchant tools

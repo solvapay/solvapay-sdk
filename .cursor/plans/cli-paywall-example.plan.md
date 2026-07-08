@@ -6,10 +6,10 @@ todos:
     content: "Prerequisite: verify /v1/customer/auth/register accepts token_endpoint_auth_method: 'none' for PKCE public clients; coordinate backend change if needed"
     status: pending
   - id: core-envelopes
-    content: "Add versioned envelope Zod schemas to @solvapay/core: PaywallGateEnvelopeV1, EstimateEnvelopeV1, SettlementEnvelopeV1, with a payment[] discriminated union so additional payment methods can be added without breaking parsers"
+    content: 'Add versioned envelope Zod schemas to @solvapay/core: PaywallGateEnvelopeV1, EstimateEnvelopeV1, SettlementEnvelopeV1, with a payment[] discriminated union so additional payment methods can be added without breaking parsers'
     status: pending
   - id: core-settlement-adapter
-    content: "Add SettlementAdapter interface to @solvapay/core (quote, authorize, settle); ship CreditsSettlementAdapter as first implementation; add an interface-only stub (NotImplementedError) for a second adapter to validate the interface accommodates wallet-signed payment flows"
+    content: 'Add SettlementAdapter interface to @solvapay/core (quote, authorize, settle); ship CreditsSettlementAdapter as first implementation; add an interface-only stub (NotImplementedError) for a second adapter to validate the interface accommodates wallet-signed payment flows'
     status: pending
   - id: auth-pkce-client
     content: Add SolvapayPkceClient to @solvapay/auth (createPkce, registerDynamic, authorizeUrl, exchangeWithVerifier, refresh, revoke) with unit tests mocking fetch
@@ -18,34 +18,34 @@ todos:
     content: Add intentToolNames option to buildGateMessage in @solvapay/server (non-breaking, default unchanged); snapshot tests for MCP default + CLI override
     status: pending
   - id: example-scaffold
-    content: "Scaffold examples/cli-paywall-app: package.json (bin: extract-cli), tsup, .env.example, bootstrap.ts using bootstrapPaygProduct"
+    content: 'Scaffold examples/cli-paywall-app: package.json (bin: extract-cli), tsup, .env.example, bootstrap.ts using bootstrapPaygProduct'
     status: pending
   - id: example-output-modes
     content: "Implement output.ts + gate.ts: mode detection (TTY / NO_COLOR / --gate-format / env), stdout/stderr discipline, human chalk vs JSON-on-stderr using @solvapay/core's PaywallGateEnvelopeV1"
     status: pending
   - id: example-auth-tty
-    content: "Implement TTY-gated login: SolvapayPkceClient + localhost callback server + browser handoff; refuse to login from pipe and emit a JSON gate envelope explaining how the developer should run login"
+    content: 'Implement TTY-gated login: SolvapayPkceClient + localhost callback server + browser handoff; refuse to login from pipe and emit a JSON gate envelope explaining how the developer should run login'
     status: pending
   - id: example-credentials
-    content: "Implement credentials store: XDG-aware ~/.config/solvapay/credentials.json with chmod 600 on POSIX; Windows warning + plaintext fallback; .lock sentinel for refresh serialisation"
+    content: 'Implement credentials store: XDG-aware ~/.config/solvapay/credentials.json with chmod 600 on POSIX; Windows warning + plaintext fallback; .lock sentinel for refresh serialisation'
     status: pending
   - id: example-with-paywall
-    content: "Implement local withPaywall helper: load creds -> resolve customerRef via userinfo -> paywall.decide() routed through CreditsSettlementAdapter -> handler+trackUsage or emit gate per mode"
+    content: 'Implement local withPaywall helper: load creds -> resolve customerRef via userinfo -> paywall.decide() routed through CreditsSettlementAdapter -> handler+trackUsage or emit gate per mode'
     status: pending
   - id: example-commands
-    content: "Implement commands: extract (paid, reads stdin, writes stdout), balance (JSON stdout), topup (URL stdout), login/logout/whoami; --estimate flag returning a parseable quote"
+    content: 'Implement commands: extract (paid, reads stdin, writes stdout), balance (JSON stdout), topup (URL stdout), login/logout/whoami; --estimate flag returning a parseable quote'
     status: pending
   - id: example-settlement-receipt
-    content: "Emit SettlementEnvelopeV1 on stderr after each paid call (used, balance_after); optional fields reserved so additional settlement methods can extend the receipt without breaking parsers"
+    content: 'Emit SettlementEnvelopeV1 on stderr after each paid call (used, balance_after); optional fields reserved so additional settlement methods can extend the receipt without breaking parsers'
     status: pending
   - id: example-readme
-    content: "Write README with two walkthroughs: human flow and agent-pipeline flow (find | xargs extract-cli with mid-pipeline gate + retry)"
+    content: 'Write README with two walkthroughs: human flow and agent-pipeline flow (find | xargs extract-cli with mid-pipeline gate + retry)'
     status: pending
   - id: tests
-    content: "vitest coverage: envelope schemas roundtrip, PKCE happy path (mocked fetch), credentials store roundtrip, withPaywall allow/gate branches via CreditsSettlementAdapter, output-mode detection table, gate/settlement envelope snapshots (human + JSON)"
+    content: 'vitest coverage: envelope schemas roundtrip, PKCE happy path (mocked fetch), credentials store roundtrip, withPaywall allow/gate branches via CreditsSettlementAdapter, output-mode detection table, gate/settlement envelope snapshots (human + JSON)'
     status: pending
   - id: changeset
-    content: "Add changesets for @solvapay/core (envelopes + SettlementAdapter), @solvapay/auth (PKCE), @solvapay/server (intentToolNames); update SDK root README with link to the new example"
+    content: 'Add changesets for @solvapay/core (envelopes + SettlementAdapter), @solvapay/auth (PKCE), @solvapay/server (intentToolNames); update SDK root README with link to the new example'
     status: pending
 isProject: false
 ---
@@ -61,6 +61,7 @@ Shipped as an example, not a published `@solvapay/cli-sdk` package. If real merc
 ## Scope: in vs out
 
 **In:**
+
 - `@solvapay/core`: versioned envelope Zod schemas + `SettlementAdapter` interface + `CreditsSettlementAdapter` + a stub second adapter to validate the interface shape
 - `@solvapay/auth`: `SolvapayPkceClient` (PKCE primitives + DCR helper). The MCP bridge example reimplements PKCE inline today in [examples/mcp-oauth-bridge/scripts/run-oauth-flow.ts](examples/mcp-oauth-bridge/scripts/run-oauth-flow.ts); lifting it into `@solvapay/auth` avoids duplication.
 - `@solvapay/server`: `intentToolNames` option on [`buildGateMessage`](packages/server/src/paywall-state.ts) -- non-breaking, default keeps MCP names; serves any non-MCP transport that wants to substitute its own tool names in the gate copy
@@ -68,6 +69,7 @@ Shipped as an example, not a published `@solvapay/cli-sdk` package. If real merc
 - Backend confirmation: `/v1/customer/auth/register` accepts `token_endpoint_auth_method: 'none'` for PKCE public clients
 
 **Out:**
+
 - New `@solvapay/cli-sdk` published package
 - Opinionated `createSolvaPayCli` builder
 - Cross-platform keychain (file with `chmod 600` on POSIX; Windows out of scope for v1)
@@ -101,7 +103,12 @@ Emits a `PaywallGateEnvelopeV1` on stderr (NDJSON-shaped, one line):
   "message": "Out of credits",
   "intent": "topup",
   "payment": [
-    { "method": "credits", "checkoutUrl": "https://checkout.solvapay.com/...", "amount": 5, "currency": "USD" }
+    {
+      "method": "credits",
+      "checkoutUrl": "https://checkout.solvapay.com/...",
+      "amount": 5,
+      "currency": "USD"
+    }
   ]
 }
 ```
@@ -144,7 +151,7 @@ Agents budgeting before a `find ... | xargs extract-cli` fan-out.
 After every successful paid call:
 
 ```json
-{"envelope":"solvapay_settlement_v1","used":3,"balance_after":1277}
+{ "envelope": "solvapay_settlement_v1", "used": 3, "balance_after": 1277 }
 ```
 
 Optional extension fields (`authorized`, `asset`, `tx`, `facilitator`) are reserved in the schema for future settlement methods. Optional output (`SOLVAPAY_RECEIPT=off` to suppress); on by default in agent mode.
@@ -178,7 +185,12 @@ Add Zod schemas + adapter interface:
 ```ts
 export const PaywallGateEnvelopeV1 = z.object({
   envelope: z.literal('solvapay_gate_v1'),
-  state: z.enum(['topup_required', 'upgrade_required', 'activation_required', 'reactivation_required']),
+  state: z.enum([
+    'topup_required',
+    'upgrade_required',
+    'activation_required',
+    'reactivation_required',
+  ]),
   message: z.string(),
   intent: z.string(),
   payment: z.array(PaymentOptionV1).min(1),
@@ -213,7 +225,9 @@ export interface SettlementAdapter {
   settle(input: SettleInput): Promise<SettlementReceipt>
 }
 
-export class CreditsSettlementAdapter implements SettlementAdapter { /* wraps existing paywall.decide+trackUsage */ }
+export class CreditsSettlementAdapter implements SettlementAdapter {
+  /* wraps existing paywall.decide+trackUsage */
+}
 ```
 
 Stabilising envelope shapes (versioned, Zod-validated) before a second payment method ships avoids breaking parsers later. Cheaper to design the discriminated union once than to migrate consumers.
@@ -229,9 +243,24 @@ export class SolvapayPkceClient {
   constructor(config: { apiBaseUrl: string; clientId?: string })
 
   createPkce(): { codeVerifier: string; codeChallenge: string }
-  registerDynamic(opts: { clientName: string; redirectUri: string; productRef?: string }): Promise<{ clientId: string }>
-  authorizeUrl(opts: { clientId: string; redirectUri: string; codeChallenge: string; state: string; productRef?: string }): string
-  exchangeWithVerifier(opts: { code: string; codeVerifier: string; clientId: string; redirectUri: string }): Promise<TokenResponse>
+  registerDynamic(opts: {
+    clientName: string
+    redirectUri: string
+    productRef?: string
+  }): Promise<{ clientId: string }>
+  authorizeUrl(opts: {
+    clientId: string
+    redirectUri: string
+    codeChallenge: string
+    state: string
+    productRef?: string
+  }): string
+  exchangeWithVerifier(opts: {
+    code: string
+    codeVerifier: string
+    clientId: string
+    redirectUri: string
+  }): Promise<TokenResponse>
   refresh(opts: { refreshToken: string; clientId: string }): Promise<TokenResponse>
   revoke(opts: { token: string; clientId: string }): Promise<void>
 }
@@ -277,7 +306,7 @@ examples/cli-paywall-app/
   .env.example
 ```
 
-Built on raw `commander` + `@solvapay/server` + `@solvapay/core`'s adapter + `@solvapay/auth`'s new PKCE client. No new SDK abstractions in the example -- the example *is* the abstraction. ~400 lines total target.
+Built on raw `commander` + `@solvapay/server` + `@solvapay/core`'s adapter + `@solvapay/auth`'s new PKCE client. No new SDK abstractions in the example -- the example _is_ the abstraction. ~400 lines total target.
 
 ### Key invariants the example enforces
 
@@ -306,13 +335,13 @@ Two walkthroughs:
 
 ## Risk register
 
-| Risk | Mitigation |
-|--|--|
-| Backend doesn't support public PKCE clients | Verify before any other work; small backend PR if needed |
-| Windows users | Documented gap; example logs a warning and stores plaintext on Windows v1 |
-| Concurrent CLI invocations racing on refresh | `.lock` sentinel; document the limit |
-| Envelope shape gets baked in too soon | Versioned (`solvapay_gate_v1` etc.); `payment[]` is a discriminated union so methods are additive; older parsers ignore unknown methods. Zod schemas in `@solvapay/core` define exactly one canonical version per envelope. |
-| Long tail of DCR'd public clients on the backend | Reuse `clientId` across machines for the same user (cached in credentials file); document as known limitation otherwise |
+| Risk                                             | Mitigation                                                                                                                                                                                                                  |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend doesn't support public PKCE clients      | Verify before any other work; small backend PR if needed                                                                                                                                                                    |
+| Windows users                                    | Documented gap; example logs a warning and stores plaintext on Windows v1                                                                                                                                                   |
+| Concurrent CLI invocations racing on refresh     | `.lock` sentinel; document the limit                                                                                                                                                                                        |
+| Envelope shape gets baked in too soon            | Versioned (`solvapay_gate_v1` etc.); `payment[]` is a discriminated union so methods are additive; older parsers ignore unknown methods. Zod schemas in `@solvapay/core` define exactly one canonical version per envelope. |
+| Long tail of DCR'd public clients on the backend | Reuse `clientId` across machines for the same user (cached in credentials file); document as known limitation otherwise                                                                                                     |
 
 ## Out of scope (explicit)
 

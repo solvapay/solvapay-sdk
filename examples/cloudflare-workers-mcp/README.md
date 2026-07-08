@@ -136,7 +136,7 @@ overrides land on the prod Worker's vars instead of the example
 Worker's.
 
 Your `SOLVAPAY_SECRET_KEY` stays in `.env` (or `.env.prod`) for
-`wrangler dev` but is *not* re-uploaded on every deploy — it lives
+`wrangler dev` but is _not_ re-uploaded on every deploy — it lives
 on the Worker as a proper Secret (via the one-time `wrangler secret
 put` above; use `--env production` for the prod target) and persists
 across deploys. Rotating it is a single `wrangler secret put` +

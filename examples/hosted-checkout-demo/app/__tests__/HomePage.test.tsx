@@ -120,9 +120,7 @@ describe('HomePage', () => {
     render(<HomePage />)
     fireEvent.click(screen.getByRole('button', { name: /upgrade/i }))
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /upgrade/i })).not.toBeDisabled(),
-    )
+    await waitFor(() => expect(screen.getByRole('button', { name: /upgrade/i })).not.toBeDisabled())
   })
 
   it('calls POST /api/create-customer-session on manage purchase click', async () => {

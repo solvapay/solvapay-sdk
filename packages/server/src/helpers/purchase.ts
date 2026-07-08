@@ -59,9 +59,7 @@ export async function checkPurchaseCore(
 
         if (customer && customer.customerRef) {
           if (customer.externalRef && customer.externalRef === userId) {
-            const filteredPurchases = (customer.purchases || []).filter(
-              p => p.status === 'active',
-            )
+            const filteredPurchases = (customer.purchases || []).filter(p => p.status === 'active')
 
             return {
               customerRef: customer.customerRef,

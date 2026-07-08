@@ -172,9 +172,7 @@ describe('PlanSelector (default-tree shim)', () => {
         />
       </SolvaPayProvider>,
     )
-    const monthlyCard = (
-      await screen.findByText('Monthly')
-    ).closest('button') as HTMLButtonElement
+    const monthlyCard = (await screen.findByText('Monthly')).closest('button') as HTMLButtonElement
     expect(monthlyCard.disabled).toBe(true)
     expect(monthlyCard.getAttribute('data-state')).toBe('current')
     expect(onSelect).not.toHaveBeenCalled()
@@ -250,7 +248,9 @@ describe('PlanSelector primitive', () => {
     )
     await waitFor(() => expect(screen.getByText('Monthly')).toBeTruthy())
     expect(screen.getByTestId('root').getAttribute('data-solvapay-plan-selector')).toBe('')
-    expect(screen.getByTestId('heading').getAttribute('data-solvapay-plan-selector-heading')).toBe('')
+    expect(screen.getByTestId('heading').getAttribute('data-solvapay-plan-selector-heading')).toBe(
+      '',
+    )
     expect(screen.getByTestId('grid').getAttribute('data-solvapay-plan-selector-grid')).toBe('')
     const monthlyCard = screen.getByText('Monthly').closest('button') as HTMLButtonElement
     expect(monthlyCard.getAttribute('data-state')).toBeTruthy()

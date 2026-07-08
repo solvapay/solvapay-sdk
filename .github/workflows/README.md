@@ -78,12 +78,12 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 ## Quick Reference
 
-| Action                   | How to trigger                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| Publish preview snapshot | Push to `dev`                                                                  |
-| Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR   |
-| Write a changeset        | `pnpm changeset` (interactive)                                                 |
-| Inspect pending releases | `pnpm changeset status --verbose`                                              |
+| Action                   | How to trigger                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| Publish preview snapshot | Push to `dev`                                                                   |
+| Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR    |
+| Write a changeset        | `pnpm changeset` (interactive)                                                  |
+| Inspect pending releases | `pnpm changeset status --verbose`                                               |
 | Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx scripts/validate-fetch-runtime.ts`) |
 
 ## Troubleshooting

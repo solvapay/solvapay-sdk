@@ -5,11 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useBalance, usePlans, useSolvaPay } from '@solvapay/react'
 import type { Plan } from '@solvapay/react'
-import {
-  CheckoutSteps,
-  PlanSelector,
-  useCheckoutStepsContext,
-} from '@solvapay/react/primitives'
+import { CheckoutSteps, PlanSelector, useCheckoutStepsContext } from '@solvapay/react/primitives'
 import type { SuccessMeta } from '@solvapay/react/primitives'
 
 const buttonClassName =
@@ -83,8 +79,8 @@ function PaygExistingCreditsPanel({
       <p className="text-sm text-slate-600">
         {alreadyOnPayg
           ? `You already have ${new Intl.NumberFormat().format(credits)} credits on Pay as you go.`
-          : `You have ${new Intl.NumberFormat().format(credits)} credits ready — activate Pay as you go to use them.`}
-        {' '}Choose Subscription above to switch plans, or top up if you need more.
+          : `You have ${new Intl.NumberFormat().format(credits)} credits ready — activate Pay as you go to use them.`}{' '}
+        Choose Subscription above to switch plans, or top up if you need more.
       </p>
       <button
         type="button"

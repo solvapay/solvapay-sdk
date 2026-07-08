@@ -25,11 +25,7 @@ export const CancelledPlanNotice: React.FC<CancelledPlanNoticeProps> = ({
 }) => {
   const rootClass = ['solvapay-cancelled-notice', className].filter(Boolean).join(' ')
   return (
-    <Primitive.Root
-      onReactivated={onReactivated}
-      onError={onError}
-      className={rootClass}
-    >
+    <Primitive.Root onReactivated={onReactivated} onError={onError} className={rootClass}>
       <Primitive.Heading className="solvapay-cancelled-notice-heading" />
       <div className="solvapay-cancelled-notice-details">
         <Primitive.Expires className="solvapay-cancelled-notice-expires" />

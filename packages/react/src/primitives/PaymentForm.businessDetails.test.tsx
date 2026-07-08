@@ -130,13 +130,7 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
   }
 }
 
-function Wrap({
-  value,
-  children,
-}: {
-  value: SolvaPayContextValue
-  children: React.ReactNode
-}) {
+function Wrap({ value, children }: { value: SolvaPayContextValue; children: React.ReactNode }) {
   return React.createElement(SolvaPayContext.Provider, { value }, children)
 }
 

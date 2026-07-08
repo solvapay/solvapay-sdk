@@ -55,9 +55,7 @@ function makeTransport(
     getMerchant: vi.fn(),
     getProduct: vi.fn(),
     listPlans: vi.fn(),
-    getPaymentMethod: vi
-      .fn<() => Promise<PaymentMethodInfo>>()
-      .mockResolvedValue({ kind: 'none' }),
+    getPaymentMethod: vi.fn<() => Promise<PaymentMethodInfo>>().mockResolvedValue({ kind: 'none' }),
     ...overrides,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
@@ -160,9 +158,7 @@ describe('CurrentPlanCard', () => {
     await screen.findByText('Your plan')
     expect(screen.queryByText(/Next billing|Expires/)).toBeNull()
     // BalanceBadge container rendered
-    expect(
-      document.querySelector('[data-solvapay-current-plan-balance-line]'),
-    ).toBeTruthy()
+    expect(document.querySelector('[data-solvapay-current-plan-balance-line]')).toBeTruthy()
   })
 
   it('renders card payment-method line when the hook returns a card', async () => {
@@ -210,9 +206,7 @@ describe('CurrentPlanCard', () => {
     await screen.findByText('Your plan')
     // Wait a tick so the hook has time to flip to error state
     await waitFor(() => {
-      expect(
-        document.querySelector('[data-solvapay-current-plan-payment-method]'),
-      ).toBeNull()
+      expect(document.querySelector('[data-solvapay-current-plan-payment-method]')).toBeNull()
     })
   })
 

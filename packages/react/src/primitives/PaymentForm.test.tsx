@@ -57,11 +57,7 @@ vi.mock('@stripe/react-stripe-js', async () => {
       }, [onChange])
       return ReactMod.createElement('div', { 'data-testid': 'payment-element' })
     },
-    CardElement: ({
-      onChange,
-    }: {
-      onChange?: (e: { complete: boolean }) => void
-    }) => {
+    CardElement: ({ onChange }: { onChange?: (e: { complete: boolean }) => void }) => {
       ReactMod.useEffect(() => {
         onChange?.({ complete: true })
       }, [onChange])
@@ -267,13 +263,7 @@ const PaidHarness: React.FC<{
   initialPurchases?: PurchaseInfo[]
   children?: React.ReactNode
   paymentSlot?: 'payment-element' | 'card-element' | 'none'
-}> = ({
-  onError,
-  onSuccess,
-  initialPurchases = [],
-  children,
-  paymentSlot = 'payment-element',
-}) => {
+}> = ({ onError, onSuccess, initialPurchases = [], children, paymentSlot = 'payment-element' }) => {
   const [purchases, setPurchases] = React.useState<PurchaseInfo[]>(initialPurchases)
 
   const upsertPurchase = React.useMemo(
@@ -520,9 +510,7 @@ describe('PaymentForm post-success purchase merge', () => {
     })
 
     const onSuccess = vi.fn()
-    render(
-      <PaidHarness onSuccess={onSuccess} initialPurchases={[seededRecurringPurchase]} />,
-    )
+    render(<PaidHarness onSuccess={onSuccess} initialPurchases={[seededRecurringPurchase]} />)
     const button = await clickSubmitAndSettle()
 
     await waitFor(() => {

@@ -4,13 +4,7 @@ import { merchantCache } from '../../hooks/useMerchant'
 import { productCache } from '../../hooks/useProduct'
 import { plansCache } from '../../hooks/usePlans'
 import { paymentMethodCache } from '../../hooks/usePaymentMethod'
-import type {
-  Merchant,
-  Plan,
-  Product,
-  SolvaPayConfig,
-  SolvaPayProviderInitial,
-} from '../../types'
+import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../../types'
 import type { SolvaPayTransport } from '../../transport/types'
 
 function makeTransport(): SolvaPayTransport {
@@ -33,9 +27,7 @@ function makeTransport(): SolvaPayTransport {
   } as any
 }
 
-function makeInitial(
-  overrides: Partial<SolvaPayProviderInitial> = {},
-): SolvaPayProviderInitial {
+function makeInitial(overrides: Partial<SolvaPayProviderInitial> = {}): SolvaPayProviderInitial {
   const merchant: Merchant = {
     displayName: 'Acme',
     legalName: 'Acme Inc',

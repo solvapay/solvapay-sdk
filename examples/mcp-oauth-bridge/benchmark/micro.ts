@@ -52,11 +52,7 @@ function extractTaskId(result: unknown): string | null {
   }
 }
 
-async function runIteration(
-  client: McpClient,
-  records: ToolLatencyRecord[],
-  iterationNum: number,
-) {
+async function runIteration(client: McpClient, records: ToolLatencyRecord[], iterationNum: number) {
   const createResult = await client.callTool('create_task', {
     title: `Benchmark task ${iterationNum}`,
     description: `Created by benchmark iteration ${iterationNum}`,

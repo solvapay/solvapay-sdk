@@ -67,9 +67,10 @@ export interface Adapter<TContext = any, TResult = any> {
  * reimplement the interface directly.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export abstract class AbstractAdapter<TContext = any, TResult = any>
-  implements Adapter<TContext, TResult>
-{
+export abstract class AbstractAdapter<TContext = any, TResult = any> implements Adapter<
+  TContext,
+  TResult
+> {
   abstract extractArgs(
     context: TContext,
   ): Promise<Record<string, unknown>> | Record<string, unknown>

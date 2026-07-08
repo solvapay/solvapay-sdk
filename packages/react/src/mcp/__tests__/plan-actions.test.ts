@@ -53,7 +53,11 @@ describe('resolvePlanActions', () => {
   }
 
   it('PAYG: topUp, no cancel, no portal when cardless', () => {
-    const actions = resolvePlanActions({ purchase: usageBasedPurchase, planCount: 2, paidPlanCount: 1 })
+    const actions = resolvePlanActions({
+      purchase: usageBasedPurchase,
+      planCount: 2,
+      paidPlanCount: 1,
+    })
     expect(actions.topUp).toBe(true)
     expect(actions.cancel).toBe(false)
     expect(actions.managePortal).toBe(true)
@@ -62,7 +66,11 @@ describe('resolvePlanActions', () => {
   })
 
   it('recurring unlimited: cancel + portal, no topUp', () => {
-    const actions = resolvePlanActions({ purchase: unlimitedPurchase, planCount: 2, paidPlanCount: 2 })
+    const actions = resolvePlanActions({
+      purchase: unlimitedPurchase,
+      planCount: 2,
+      paidPlanCount: 2,
+    })
     expect(actions.topUp).toBe(false)
     expect(actions.cancel).toBe(true)
     expect(actions.managePortal).toBe(true)
@@ -70,7 +78,11 @@ describe('resolvePlanActions', () => {
   })
 
   it('recurring metered: cancel + portal, no topUp', () => {
-    const actions = resolvePlanActions({ purchase: meteredPurchase, planCount: 3, paidPlanCount: 2 })
+    const actions = resolvePlanActions({
+      purchase: meteredPurchase,
+      planCount: 3,
+      paidPlanCount: 2,
+    })
     expect(actions.topUp).toBe(false)
     expect(actions.cancel).toBe(true)
     expect(actions.managePortal).toBe(true)
@@ -85,7 +97,11 @@ describe('resolvePlanActions', () => {
   })
 
   it('changePlan hidden when no other plans exist', () => {
-    const actions = resolvePlanActions({ purchase: unlimitedPurchase, planCount: 1, paidPlanCount: 1 })
+    const actions = resolvePlanActions({
+      purchase: unlimitedPurchase,
+      planCount: 1,
+      paidPlanCount: 1,
+    })
     expect(actions.changePlan).toBe(false)
   })
 })
@@ -96,9 +112,9 @@ describe('resolveActivityStrip', () => {
     expect(resolveActivityStrip({ planSnapshot: { planType: 'recurring' } })).toBe(
       'recurring-unlimited-renew',
     )
-    expect(resolveActivityStrip({ planSnapshot: { planType: 'recurring', meterRef: 'mtr_x' } })).toBe(
-      'recurring-metered-usage',
-    )
+    expect(
+      resolveActivityStrip({ planSnapshot: { planType: 'recurring', meterRef: 'mtr_x' } }),
+    ).toBe('recurring-metered-usage')
     expect(resolveActivityStrip({ planSnapshot: { planType: 'free' } })).toBe('free-usage')
     expect(resolveActivityStrip({ planSnapshot: { planType: 'trial' } })).toBe('free-usage')
     expect(resolveActivityStrip(null)).toBe('none')

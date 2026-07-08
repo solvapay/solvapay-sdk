@@ -262,10 +262,7 @@ describe('scaffold.mjs — end-to-end oauth2-client-credentials', () => {
       '--selections',
       OAUTH_SELECTIONS,
     ])
-    expect(
-      result.exitCode,
-      `scaffold.mjs failed:\n--stderr--\n${result.stderr}`,
-    ).toBe(0)
+    expect(result.exitCode, `scaffold.mjs failed:\n--stderr--\n${result.stderr}`).toBe(0)
     const summary = JSON.parse(result.stdout) as {
       mode: string
       operationsGenerated: Array<{ operationId: string; tier: string }>
@@ -296,7 +293,7 @@ describe('scaffold.mjs — end-to-end oauth2-client-credentials', () => {
     const freeTool = await readFile(path.join(target, 'src', 'tools', 'getCompany.ts'), 'utf8')
     expect(freeTool).toContain('const token = await getAccessToken(env)')
     expect(freeTool).toContain('authorization: `Bearer ${token}`')
-    expect(freeTool).toContain("ctx.server.registerTool(")
+    expect(freeTool).toContain('ctx.server.registerTool(')
 
     const env = await readFile(path.join(target, '.env'), 'utf8')
     expect(env).toMatch(/^UPSTREAM_OAUTH_TOKEN_URL=https:\/\/api\.example-roaring\.test\/token$/m)
@@ -307,10 +304,7 @@ describe('scaffold.mjs — end-to-end oauth2-client-credentials', () => {
     expect(env).not.toMatch(/^UPSTREAM_OAUTH_AUDIENCE=/m)
 
     // upstreamOAuth.ts ships from _base, untouched by overlay.
-    const helper = await readFile(
-      path.join(target, 'src', 'lib', 'upstreamOAuth.ts'),
-      'utf8',
-    )
+    const helper = await readFile(path.join(target, 'src', 'lib', 'upstreamOAuth.ts'), 'utf8')
     expect(helper).toContain('export async function getAccessToken')
     expect(helper).toContain("grant_type: 'client_credentials'")
   })

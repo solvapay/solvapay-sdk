@@ -5,10 +5,7 @@ import type { PartialSolvaPayCopy, SolvaPayCopy } from './types'
  * section of `SolvaPayCopy` is itself a flat record, so a two-level spread is
  * sufficient — no recursive walk needed.
  */
-export function mergeCopy(
-  defaults: SolvaPayCopy,
-  overrides?: PartialSolvaPayCopy,
-): SolvaPayCopy {
+export function mergeCopy(defaults: SolvaPayCopy, overrides?: PartialSolvaPayCopy): SolvaPayCopy {
   if (!overrides) return defaults
 
   // Clone defaults, then overlay each overridden section. The assignment uses

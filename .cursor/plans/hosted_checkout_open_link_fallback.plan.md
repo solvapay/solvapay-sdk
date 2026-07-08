@@ -80,6 +80,7 @@ onClick={async (e) => {
 ```
 
 Semantics:
+
 - Host accepts → `{ opened: true }` → we `preventDefault` (the sandboxed anchor would have been blocked anyway).
 - Host refuses or method absent → `{ opened: false }` → native anchor click proceeds.
 

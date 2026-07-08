@@ -144,4 +144,3 @@ export interface NextAdapterOptions {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transformResponse?: (result: any) => any
 }
-

@@ -133,8 +133,8 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       const products = await apiClient.listProducts()
       const fixturePrefix = 'SDK Payment Integration Fixture'
-      const existingFixture = products.find((p: any) =>
-        typeof p?.name === 'string' && p.name.startsWith(fixturePrefix),
+      const existingFixture = products.find(
+        (p: any) => typeof p?.name === 'string' && p.name.startsWith(fixturePrefix),
       )
 
       if (existingFixture) {
@@ -155,7 +155,10 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       usageBasedPlan =
         plans.find(
-          (p: any) => p.type === 'usage-based' && Number(p.creditsPerUnit || 0) > 0 && Number(p.freeUnits || 0) > 0,
+          (p: any) =>
+            p.type === 'usage-based' &&
+            Number(p.creditsPerUnit || 0) > 0 &&
+            Number(p.freeUnits || 0) > 0,
         ) || null
 
       if (!usageBasedPlan) {
@@ -319,7 +322,12 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
     if (!SOLVAPAY_SECRET_KEY || !STRIPE_TEST_SECRET_KEY) return
 
     try {
-      if (createdFixturePlan && apiClient?.deletePlan && defaultProduct?.reference && usageBasedPlan?.reference) {
+      if (
+        createdFixturePlan &&
+        apiClient?.deletePlan &&
+        defaultProduct?.reference &&
+        usageBasedPlan?.reference
+      ) {
         await apiClient.deletePlan(defaultProduct.reference, usageBasedPlan.reference)
       }
       if (createdFixtureProduct && apiClient?.deleteProduct && defaultProduct?.reference) {
@@ -536,7 +544,9 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       expect(creditsBeforeUsage).toBeGreaterThanOrEqual(0)
 
       if (!initialLimits.withinLimits || creditsBeforeUsage === 0) {
-        console.log('ℹ️  Environment has no spendable initial units; skipping exact deduction assertion')
+        console.log(
+          'ℹ️  Environment has no spendable initial units; skipping exact deduction assertion',
+        )
         return
       }
 

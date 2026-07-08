@@ -15,12 +15,7 @@
  * hook or by conditionally mounting children.
  */
 
-import React, {
-  createContext,
-  forwardRef,
-  useContext,
-  useMemo,
-} from 'react'
+import React, { createContext, forwardRef, useContext, useMemo } from 'react'
 import { Slot } from './slot'
 import { useBalance } from '../hooks/useBalance'
 import { useProduct } from '../hooks/useProduct'
@@ -80,7 +75,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CreditGateRoot(
   const { product } = useProduct(productRef)
 
   const hasCredits = credits != null && credits >= minCredits
-  const state: GateState = loading && credits == null ? 'loading' : hasCredits ? 'allowed' : 'blocked'
+  const state: GateState =
+    loading && credits == null ? 'loading' : hasCredits ? 'allowed' : 'blocked'
 
   const ctx = useMemo<CreditGateContextValue>(
     () => ({
@@ -98,12 +94,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CreditGateRoot(
   const Comp = asChild ? Slot : 'div'
   return (
     <CreditGateContext.Provider value={ctx}>
-      <Comp
-        ref={forwardedRef}
-        data-solvapay-credit-gate=""
-        data-state={state}
-        {...rest}
-      >
+      <Comp ref={forwardedRef} data-solvapay-credit-gate="" data-state={state} {...rest}>
         {children}
       </Comp>
     </CreditGateContext.Provider>
@@ -154,10 +145,7 @@ const Topup: React.FC<TopupProps> = ({ amount, currency }) => {
   const ctx = useGateCtx('Topup')
   if (ctx.state !== 'blocked') return null
   return (
-    <TopupFormShim
-      amount={amount ?? ctx.topupAmount}
-      currency={currency ?? ctx.topupCurrency}
-    />
+    <TopupFormShim amount={amount ?? ctx.topupAmount} currency={currency ?? ctx.topupCurrency} />
   )
 }
 

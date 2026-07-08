@@ -119,10 +119,7 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export {
-  applyHideToolsByAudience,
-  defaultIsChatGptRequest,
-} from './hideToolsByAudience'
+export { applyHideToolsByAudience, defaultIsChatGptRequest } from './hideToolsByAudience'
 export type {
   ApplyHideToolsByAudienceContext,
   ApplyHideToolsByAudienceExtra,
@@ -130,15 +127,9 @@ export type {
   HideToolsByAudienceBypass,
 } from './hideToolsByAudience'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts, deriveIcons } from './descriptors'
-export type {
-  BuildSolvaPayDescriptorsOptions,
-  SolvaPayDescriptorBundle,
-} from './descriptors'
+export type { BuildSolvaPayDescriptorsOptions, SolvaPayDescriptorBundle } from './descriptors'
 
-export {
-  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-  SOLVAPAY_BOOTSTRAP_URI,
-} from './resources/bootstrap'
+export { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 
 export {
   SOLVAPAY_OVERVIEW_MARKDOWN,
@@ -163,10 +154,7 @@ export {
   resolveOAuthPaths,
   withoutTrailingSlash,
 } from './oauth-discovery'
-export type {
-  OAuthAuthorizationServerOptions,
-  OAuthBridgePaths,
-} from './oauth-discovery'
+export type { OAuthAuthorizationServerOptions, OAuthBridgePaths } from './oauth-discovery'
 
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'

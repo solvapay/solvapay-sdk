@@ -7,16 +7,11 @@ vi.mock('@solvapay/server', () => ({
   cancelPurchaseCore: vi.fn(),
   getAuthenticatedUserCore: vi.fn(),
   isErrorResult: vi.fn(
-    (r: unknown) =>
-      typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
+    (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
 }))
 
-import {
-  getMerchantCore,
-  getPaymentMethodCore,
-  cancelPurchaseCore,
-} from '@solvapay/server'
+import { getMerchantCore, getPaymentMethodCore, cancelPurchaseCore } from '@solvapay/server'
 import { toNextRouteResponse } from '../_response'
 import { getMerchant } from '../merchant'
 import { getPaymentMethod } from '../payment-method'

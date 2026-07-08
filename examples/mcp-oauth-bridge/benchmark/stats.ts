@@ -80,10 +80,10 @@ export function computeAggregate(records: ToolLatencyRecord[]): ToolStats {
   }
 }
 
-export function computeProxyBreakdown(
-  records: ToolLatencyRecord[],
-): ProxyBreakdownStats | null {
-  const subrequests = records.filter(r => r.proxySubrequestMs != null).map(r => r.proxySubrequestMs!)
+export function computeProxyBreakdown(records: ToolLatencyRecord[]): ProxyBreakdownStats | null {
+  const subrequests = records
+    .filter(r => r.proxySubrequestMs != null)
+    .map(r => r.proxySubrequestMs!)
   const upstreams = records.filter(r => r.proxyUpstreamMs != null).map(r => r.proxyUpstreamMs!)
 
   if (subrequests.length === 0 && upstreams.length === 0) return null

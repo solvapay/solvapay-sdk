@@ -145,6 +145,7 @@ Recommend: **keep narrow**. Keep `isAuthenticated` token-derived, document expli
 ## Consumers of `isAuthenticated` to audit
 
 Inside the provider:
+
 - `fetchBalanceImpl`'s early-return guard (L147)
 - `fetchPurchase`'s early-return guard (L289)
 - The customer-ref-tied effect at L495

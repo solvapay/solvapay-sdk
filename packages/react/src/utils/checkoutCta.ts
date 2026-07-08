@@ -42,7 +42,7 @@ export function resolveCta(input: ResolveCtaInput): string {
       product?.name ??
       (typeof plan?.metadata?.productName === 'string'
         ? plan.metadata.productName
-        : plan?.name ?? 'service')
+        : (plan?.name ?? 'service'))
     return interpolate(copy.cta.startUsing, { product: productName })
   }
 

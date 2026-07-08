@@ -14,17 +14,14 @@ const mockAdapter = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createWrapper(props?: Record<string, any>) {
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(
-      SolvaPayProvider,
-      {
-        config: {
-          auth: { adapter: mockAdapter },
-        },
-        ...props,
-        children,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any,
-    )
+    React.createElement(SolvaPayProvider, {
+      config: {
+        auth: { adapter: mockAdapter },
+      },
+      ...props,
+      children,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
   Wrapper.displayName = 'TestWrapper'
   return Wrapper
 }
@@ -69,7 +66,8 @@ describe('SolvaPayProvider - balance (credits)', () => {
 
   function getBalanceCalls() {
     return fetchSpy.mock.calls.filter(
-      (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('customer-balance'),
+      (call: unknown[]) =>
+        typeof call[0] === 'string' && (call[0] as string).includes('customer-balance'),
     )
   }
 
@@ -78,7 +76,8 @@ describe('SolvaPayProvider - balance (credits)', () => {
 
     await waitFor(() => {
       const purchaseCalls = fetchSpy.mock.calls.filter(
-        (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('check-purchase'),
+        (call: unknown[]) =>
+          typeof call[0] === 'string' && (call[0] as string).includes('check-purchase'),
       )
       expect(purchaseCalls.length).toBeGreaterThanOrEqual(1)
     })

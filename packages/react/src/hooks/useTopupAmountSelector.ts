@@ -71,29 +71,23 @@ export function useTopupAmountSelector(
     return selectedAmount
   }, [selectedAmount, customAmount])
 
-  const selectQuickAmount = useCallback(
-    (amount: number) => {
-      setSelectedAmount(amount)
-      setCustomAmountRaw('')
-      setError(null)
-    },
-    [],
-  )
+  const selectQuickAmount = useCallback((amount: number) => {
+    setSelectedAmount(amount)
+    setCustomAmountRaw('')
+    setError(null)
+  }, [])
 
-  const setCustomAmount = useCallback(
-    (value: string) => {
-      const sanitized = value.replace(/[^0-9.]/g, '')
-      const dotIndex = sanitized.indexOf('.')
-      const cleaned =
-        dotIndex === -1
-          ? sanitized
-          : sanitized.slice(0, dotIndex + 1) + sanitized.slice(dotIndex + 1).replace(/\./g, '')
-      setCustomAmountRaw(cleaned)
-      setSelectedAmount(null)
-      setError(null)
-    },
-    [],
-  )
+  const setCustomAmount = useCallback((value: string) => {
+    const sanitized = value.replace(/[^0-9.]/g, '')
+    const dotIndex = sanitized.indexOf('.')
+    const cleaned =
+      dotIndex === -1
+        ? sanitized
+        : sanitized.slice(0, dotIndex + 1) + sanitized.slice(dotIndex + 1).replace(/\./g, '')
+    setCustomAmountRaw(cleaned)
+    setSelectedAmount(null)
+    setError(null)
+  }, [])
 
   const validate = useCallback((): boolean => {
     if (resolvedAmount == null) {

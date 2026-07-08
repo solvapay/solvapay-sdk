@@ -76,11 +76,7 @@ const probePeerWarningsWithFrozenInstall = (): string[] => {
   const hasPeerWarnings = combinedOutput.includes('Issues with peer dependencies found')
 
   if (installProbe.status !== 0) {
-    const trimmedOutput = combinedOutput
-      .trim()
-      .split('\n')
-      .slice(-12)
-      .join('\n')
+    const trimmedOutput = combinedOutput.trim().split('\n').slice(-12).join('\n')
     return [
       `Unable to probe peer dependencies with frozen install (exit ${installProbe.status ?? 'unknown'}).\n${trimmedOutput}`,
     ]
@@ -92,7 +88,9 @@ const probePeerWarningsWithFrozenInstall = (): string[] => {
 
   const warningLines = combinedOutput
     .split('\n')
-    .filter(line => line.includes('Issues with peer dependencies found') || line.includes('✕ unmet peer'))
+    .filter(
+      line => line.includes('Issues with peer dependencies found') || line.includes('✕ unmet peer'),
+    )
 
   if (warningLines.length === 0) {
     return ['pnpm reported peer dependency issues during frozen install']
@@ -137,7 +135,9 @@ const findCriticalMajorDrift = (packages: ListedPackage[]): string[] => {
 
     const details = [...majorMap.entries()]
       .sort((a, b) => a[0] - b[0])
-      .map(([major, packagesUsingMajor]) => `v${major} (${[...packagesUsingMajor].sort().join(', ')})`)
+      .map(
+        ([major, packagesUsingMajor]) => `v${major} (${[...packagesUsingMajor].sort().join(', ')})`,
+      )
       .join(' vs ')
 
     issues.push(`${library}: ${details}`)

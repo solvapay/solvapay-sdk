@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import { createSolvaPay, createSolvaPayClient } from '../src/index'
 import { createTask, getTask, listTasks, deleteTask, clearAllTasks } from '@solvapay/demo-services'
-import {
-  createTestPlan,
-  createTestProduct,
-  deleteTestProduct,
-} from '@solvapay/test-utils'
+import { createTestPlan, createTestProduct, deleteTestProduct } from '@solvapay/test-utils'
 
 /**
  * SolvaPay Server SDK - Backend Integration Tests (Isolated Test Fixtures)
@@ -72,7 +68,12 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
   let testCustomerRef: string
   let defaultProduct: { reference: string; name: string }
   let defaultPlan: { reference: string; freeUnits?: number }
-  let creditPlan: { reference: string; freeUnits: number; creditsPerUnit?: number; currency: string }
+  let creditPlan: {
+    reference: string
+    freeUnits: number
+    creditsPerUnit?: number
+    currency: string
+  }
 
   beforeAll(async () => {
     if (!SOLVAPAY_SECRET_KEY) {
@@ -603,11 +604,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
      * Helper: burn through free units quickly using bulk trackUsage calls.
      * Leaves `leaveRemaining` units so the caller can test the boundary.
      */
-    async function burnFreeUnits(
-      customerRef: string,
-      total: number,
-      leaveRemaining: number,
-    ) {
+    async function burnFreeUnits(customerRef: string, total: number, leaveRemaining: number) {
       const toBurn = Math.max(0, total - leaveRemaining)
       const batchSize = 50
       for (let offset = 0; offset < toBurn; offset += batchSize) {
@@ -638,7 +635,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
 
       const freeUnits = initialCheck.remaining
-      console.log(`\n📊 Testing free tier exhaustion: ${freeUnits} units on "${defaultPlan.reference}"`)
+      console.log(
+        `\n📊 Testing free tier exhaustion: ${freeUnits} units on "${defaultPlan.reference}"`,
+      )
 
       if (freeUnits <= 0 || !initialCheck.withinLimits) {
         console.log('⏭️  Skipping free-tier exhaustion assertions: customer starts with no credits')
@@ -823,7 +822,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       Authorization: `Bearer ${SOLVAPAY_SECRET_KEY}`,
     }
 
-    async function rawUsagePost(body: Record<string, unknown>): Promise<{ status: number; body: any }> {
+    async function rawUsagePost(
+      body: Record<string, unknown>,
+    ): Promise<{ status: number; body: any }> {
       const res = await fetch(`${BASE_URL}/v1/sdk/usages`, {
         method: 'POST',
         headers: authHeaders,
@@ -831,11 +832,17 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
       const text = await res.text()
       let json: any
-      try { json = JSON.parse(text) } catch { json = text }
+      try {
+        json = JSON.parse(text)
+      } catch {
+        json = text
+      }
       return { status: res.status, body: json }
     }
 
-    async function rawBulkUsagePost(body: Record<string, unknown>): Promise<{ status: number; body: any }> {
+    async function rawBulkUsagePost(
+      body: Record<string, unknown>,
+    ): Promise<{ status: number; body: any }> {
       const res = await fetch(`${BASE_URL}/v1/sdk/usages/bulk`, {
         method: 'POST',
         headers: authHeaders,
@@ -843,7 +850,11 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
       const text = await res.text()
       let json: any
-      try { json = JSON.parse(text) } catch { json = text }
+      try {
+        json = JSON.parse(text)
+      } catch {
+        json = text
+      }
       return { status: res.status, body: json }
     }
 
@@ -1031,9 +1042,27 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
     it('should record bulk usage with new fields', async () => {
       const events = [
-        { customerRef: usageCustomerRef, actionType: 'api_call', units: 1, outcome: 'success', metadata: { toolName: 'tool_a' } },
-        { customerRef: usageCustomerRef, actionType: 'transaction', units: 2, outcome: 'success', metadata: { toolName: 'tool_b' } },
-        { customerRef: usageCustomerRef, actionType: 'email', units: 1, outcome: 'fail', description: 'delivery failed' },
+        {
+          customerRef: usageCustomerRef,
+          actionType: 'api_call',
+          units: 1,
+          outcome: 'success',
+          metadata: { toolName: 'tool_a' },
+        },
+        {
+          customerRef: usageCustomerRef,
+          actionType: 'transaction',
+          units: 2,
+          outcome: 'success',
+          metadata: { toolName: 'tool_b' },
+        },
+        {
+          customerRef: usageCustomerRef,
+          actionType: 'email',
+          units: 1,
+          outcome: 'fail',
+          description: 'delivery failed',
+        },
       ]
 
       const res = await rawBulkUsagePost({ events })
@@ -1095,7 +1124,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       expect(afterLimits.remaining).toBeLessThan(initialRemaining)
       expect(afterLimits.remaining).toBe(initialRemaining - unitsToTrack)
-      console.log(`  limits: ${initialRemaining} -> ${afterLimits.remaining} after ${unitsToTrack} units`)
+      console.log(
+        `  limits: ${initialRemaining} -> ${afterLimits.remaining} after ${unitsToTrack} units`,
+      )
     })
   })
 
@@ -1252,7 +1283,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(balanceResult.credits).toBeGreaterThanOrEqual(0)
       expect(balanceResult.displayCurrency).toBeDefined()
 
-      console.log(`✅ getCustomerBalance: credits=${balanceResult.credits}, currency=${balanceResult.displayCurrency}`)
+      console.log(
+        `✅ getCustomerBalance: credits=${balanceResult.credits}, currency=${balanceResult.displayCurrency}`,
+      )
     })
 
     it('should assign credits and debit them once for idempotent usage retries', async () => {
@@ -1379,15 +1412,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     // longer auto-grant credits on activation, so there is no standalone
     // path to "initial credits -> deduct -> remaining decreased" without a
     // Stripe sandbox payment confirmation.
-    it.skip(
-      'should deduct credits and decrement remaining units on usage consumption (covered by payment suite)',
-      async () => {},
-    )
+    it.skip('should deduct credits and decrement remaining units on usage consumption (covered by payment suite)', async () => {})
 
-    it.skip(
-      'should consume credits when calling protected functions on usage-based plan (covered by payment suite)',
-      async () => {},
-    )
+    it.skip('should consume credits when calling protected functions on usage-based plan (covered by payment suite)', async () => {})
 
     it('should fire paywall with topup info when credits are exhausted', async () => {
       // Usage-based plans activate straight into "topup required" now — no
@@ -1427,7 +1454,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         }),
       ).rejects.toThrow('Payment required')
 
-      console.log(`✅ Paywall fired on topup-required activation: checkoutUrl=${exhausted.checkoutUrl}, confirmationUrl=${exhausted.confirmationUrl}`)
+      console.log(
+        `✅ Paywall fired on topup-required activation: checkoutUrl=${exhausted.checkoutUrl}, confirmationUrl=${exhausted.confirmationUrl}`,
+      )
     })
 
     it('should return topup information in MCP handler when credits exhausted', async () => {
@@ -1452,9 +1481,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(result).toHaveProperty('content')
       expect(result.content[0].type).toBe('text')
       expect(result.isError).toBe(false)
-      expect(['payment_required', 'activation_required']).toContain(
-        result.structuredContent?.kind,
-      )
+      expect(['payment_required', 'activation_required']).toContain(result.structuredContent?.kind)
       expect(typeof result.content[0].text).toBe('string')
       expect(result.content[0].text.length).toBeGreaterThan(0)
 
@@ -1483,7 +1510,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(result.publishableKey).toBeDefined()
       expect(typeof result.publishableKey).toBe('string')
 
-      console.log(`✅ createTopupPaymentIntent: processorPaymentId=${result.processorPaymentId}, has clientSecret=${!!result.clientSecret}, has publishableKey=${!!result.publishableKey}`)
+      console.log(
+        `✅ createTopupPaymentIntent: processorPaymentId=${result.processorPaymentId}, has clientSecret=${!!result.clientSecret}, has publishableKey=${!!result.publishableKey}`,
+      )
     })
   })
 })

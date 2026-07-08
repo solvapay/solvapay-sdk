@@ -42,13 +42,8 @@ export interface UseBusinessDetailsAttachReturn {
 export function useBusinessDetailsAttach(
   options: UseBusinessDetailsAttachOptions,
 ): UseBusinessDetailsAttachReturn {
-  const {
-    processorPaymentId,
-    attachBusinessDetails,
-    customerRef,
-    onTaxChange,
-    refreshElements,
-  } = options
+  const { processorPaymentId, attachBusinessDetails, customerRef, onTaxChange, refreshElements } =
+    options
 
   const [businessDetails, setBusinessDetailsState] =
     useState<BusinessDetailsInput>(defaultBusinessDetails)

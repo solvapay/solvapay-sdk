@@ -20,7 +20,11 @@ vi.mock('./error', () => ({
 
 import { createSolvaPay } from '../factory'
 import { syncCustomerCore } from './customer'
-import { createPaymentIntentCore, processTopupPaymentIntentCore, attachBusinessDetailsCore } from './payment'
+import {
+  createPaymentIntentCore,
+  processTopupPaymentIntentCore,
+  attachBusinessDetailsCore,
+} from './payment'
 
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
 

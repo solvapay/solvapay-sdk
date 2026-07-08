@@ -16,9 +16,7 @@ vi.mock('../components/UsageSimulator', () => ({
 
 import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 
-function mockDefaults(
-  balanceOverrides: Partial<ReturnType<typeof useBalance>> = {},
-) {
+function mockDefaults(balanceOverrides: Partial<ReturnType<typeof useBalance>> = {}) {
   vi.mocked(useBalance).mockReturnValue({
     credits: 31_500,
     loading: false,

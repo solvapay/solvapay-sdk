@@ -14,17 +14,14 @@ const mockAdapter = {
 
 function createWrapper(props?: Record<string, unknown>) {
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(
-      SolvaPayProvider,
-      {
-        config: {
-          auth: { adapter: mockAdapter },
-        },
-        ...props,
-        children,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any,
-    )
+    React.createElement(SolvaPayProvider, {
+      config: {
+        auth: { adapter: mockAdapter },
+      },
+      ...props,
+      children,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
   Wrapper.displayName = 'TestWrapper'
   return Wrapper
 }
@@ -175,8 +172,7 @@ describe('SolvaPayProvider - createTopupPayment', () => {
     })
 
     const processCalls = fetchSpy.mock.calls.filter(
-      (call: unknown[]) =>
-        typeof call[0] === 'string' && call[0].includes('/custom/process-topup'),
+      (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('/custom/process-topup'),
     )
     expect(processCalls).toHaveLength(1)
   })

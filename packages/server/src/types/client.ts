@@ -501,9 +501,7 @@ export interface SolvaPayClient {
   }): Promise<ProcessPaymentResult>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
-  attachBusinessDetails?(
-    params: AttachBusinessDetailsParams,
-  ): Promise<AttachBusinessDetailsResult>
+  attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
 
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {

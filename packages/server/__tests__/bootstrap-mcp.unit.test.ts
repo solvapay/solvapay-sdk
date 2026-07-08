@@ -65,7 +65,14 @@ describe('MCP bootstrap SDK wrapper', () => {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
       plans: [
-        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 1000 },
+        {
+          key: 'free',
+          name: 'Free',
+          price: 0,
+          currency: 'USD',
+          type: 'recurring',
+          freeUnits: 1000,
+        },
         { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
       ],
       tools: [{ name: 'list_docs', planKeys: ['free'] }],
@@ -83,14 +90,15 @@ describe('MCP bootstrap SDK wrapper', () => {
   })
 
   it('throws SolvaPayError with status/body details on bootstrap failure', async () => {
-    vi.mocked(fetch).mockImplementation(async () =>
-      new Response(
-        JSON.stringify({
-          code: 'UNKNOWN_PLAN_KEY',
-          message: 'tool "search_docs" references unknown plan key "enterprise"',
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      ),
+    vi.mocked(fetch).mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            code: 'UNKNOWN_PLAN_KEY',
+            message: 'tool "search_docs" references unknown plan key "enterprise"',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } },
+        ),
     )
 
     const client = createSolvaPayClient({
@@ -169,14 +177,15 @@ describe('MCP bootstrap SDK wrapper', () => {
   })
 
   it('throws SolvaPayError with status/body details on configure MCP plans failure', async () => {
-    vi.mocked(fetch).mockImplementation(async () =>
-      new Response(
-        JSON.stringify({
-          code: 'UNKNOWN_PLAN_KEY',
-          message: 'tool "search_docs" references unknown plan key "enterprise"',
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      ),
+    vi.mocked(fetch).mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            code: 'UNKNOWN_PLAN_KEY',
+            message: 'tool "search_docs" references unknown plan key "enterprise"',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } },
+        ),
     )
 
     const client = createSolvaPayClient({
@@ -199,7 +208,10 @@ describe('MCP bootstrap SDK wrapper', () => {
   it('exposes bootstrap helper on createSolvaPay with delegated apiClient call', async () => {
     const bootstrapMcpProduct = vi.fn().mockResolvedValue({
       product: { reference: 'prd_TEST123' },
-      mcpServer: { mcpProxyUrl: 'https://docs-assistant.mcp.solvapay.com/mcp', url: 'https://origin.example.com/mcp' },
+      mcpServer: {
+        mcpProxyUrl: 'https://docs-assistant.mcp.solvapay.com/mcp',
+        url: 'https://origin.example.com/mcp',
+      },
       planMap: {},
     })
 
@@ -215,7 +227,14 @@ describe('MCP bootstrap SDK wrapper', () => {
       name: 'Docs Assistant',
       originUrl: 'https://origin.example.com/mcp',
       plans: [
-        { key: 'free', name: 'Free', price: 0, currency: 'USD', type: 'recurring', freeUnits: 1000 },
+        {
+          key: 'free',
+          name: 'Free',
+          price: 0,
+          currency: 'USD',
+          type: 'recurring',
+          freeUnits: 1000,
+        },
         { key: 'pro', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
       ],
     }
@@ -227,7 +246,10 @@ describe('MCP bootstrap SDK wrapper', () => {
   it('exposes configure MCP plans helper on createSolvaPay with delegated apiClient call', async () => {
     const configureMcpPlans = vi.fn().mockResolvedValue({
       product: { reference: 'prd_TEST123' },
-      mcpServer: { mcpProxyUrl: 'https://docs-assistant.mcp.solvapay.com/mcp', url: 'https://origin.example.com/mcp' },
+      mcpServer: {
+        mcpProxyUrl: 'https://docs-assistant.mcp.solvapay.com/mcp',
+        url: 'https://origin.example.com/mcp',
+      },
       planMap: {},
     })
 
@@ -307,7 +329,14 @@ describe('MCP bootstrap SDK wrapper', () => {
     const request: McpBootstrapRequest = {
       originUrl: 'https://origin.example.com/mcp',
       plans: [
-        { key: 'free', name: 'Starter', price: 0, currency: 'USD', type: 'recurring', freeUnits: 500 },
+        {
+          key: 'free',
+          name: 'Starter',
+          price: 0,
+          currency: 'USD',
+          type: 'recurring',
+          freeUnits: 500,
+        },
         { key: 'pro', name: 'Pro', price: 2000, currency: 'USD' },
       ],
       tools: [tool],
@@ -380,9 +409,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     expect(result?.planMap.free.name).toBe('Free')
     expect(Object.keys(result?.planMap || {})).toHaveLength(1)
 
-    const sentBody = JSON.parse(
-      (vi.mocked(fetch).mock.calls[0][1] as any).body,
-    )
+    const sentBody = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as any).body)
     expect(sentBody.plans).toHaveLength(1)
     expect(sentBody.plans[0].price).toBe(0)
   })
@@ -440,9 +467,7 @@ describe('MCP bootstrap SDK wrapper', () => {
     expect(result?.planMap.free).toBeDefined()
     expect(result?.planMap.pro).toBeDefined()
 
-    const sentBody = JSON.parse(
-      (vi.mocked(fetch).mock.calls[0][1] as any).body,
-    )
+    const sentBody = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as any).body)
     expect(sentBody.plans).toHaveLength(2)
     expect(sentBody.plans[0].price).toBe(0)
     expect(sentBody.plans[1].price).toBe(4900)

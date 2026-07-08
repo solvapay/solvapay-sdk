@@ -50,9 +50,7 @@ export type PaywallState =
  * the full discriminated union; `classifyPaywallState` will never
  * return it under current backend behaviour.
  */
-export function classifyPaywallState(
-  limits: LimitResponseWithPlan | null,
-): PaywallState {
+export function classifyPaywallState(limits: LimitResponseWithPlan | null): PaywallState {
   if (!limits) return { kind: 'upgrade_required' }
 
   if (limits.activationRequired === true) {
@@ -66,8 +64,7 @@ export function classifyPaywallState(
   // backend that emits the structured balance uses it for
   // usage-based tiers. We treat either signal as usage-based so
   // the topup path fires when the plan list is missing.
-  const isUsageBased =
-    activePlan?.type === 'usage-based' || limits.balance !== undefined
+  const isUsageBased = activePlan?.type === 'usage-based' || limits.balance !== undefined
   // Coalesce the two credit-balance channels. Nested wins when
   // present (richer schema on newer backends); fall back to the
   // top-level optional field. `undefined` means "we can't
@@ -101,10 +98,7 @@ export function classifyPaywallState(
  * Kept as a pure string so the adapter layer can concatenate it with
  * an optional narrator prefix without parsing structured copy.
  */
-export function buildGateMessage(
-  state: PaywallState,
-  gate: PaywallStructuredContent,
-): string {
+export function buildGateMessage(state: PaywallState, gate: PaywallStructuredContent): string {
   const url = gate.checkoutUrl && gate.checkoutUrl.length > 0 ? gate.checkoutUrl : null
   const openClause = url ? `, or open ${url} in a browser` : ''
 

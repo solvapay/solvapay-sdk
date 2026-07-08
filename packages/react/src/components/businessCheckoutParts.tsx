@@ -433,7 +433,10 @@ export function createTaxSummaryParts(
     { asChild, children, ...rest },
     forwardedRef,
   ) {
-    const { taxRate, treatment, inclusive, taxFormatted } = useSummaryAmounts(useCtx, 'Summary.Rows')
+    const { taxRate, treatment, inclusive, taxFormatted } = useSummaryAmounts(
+      useCtx,
+      'Summary.Rows',
+    )
     const showTaxRow = shouldShowTaxRow(treatment, taxRate)
     const vatLabel = formatVatSummaryLabel({
       treatment: treatment ?? 'standard',

@@ -5,10 +5,7 @@ import type { CancelResult, ReactivateResult, ActivatePlanResult } from '../type
 export interface PurchaseActions {
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
-  activatePlan: (params: {
-    productRef: string
-    planRef: string
-  }) => Promise<ActivatePlanResult>
+  activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
   isCancelling: boolean
   isReactivating: boolean
   isActivating: boolean

@@ -44,8 +44,8 @@ export function useProduct(productRef: string | undefined): UseProductReturn {
 
   const cacheKey = productRef ? cacheKeyFor(_config, productRef) : ''
 
-  const [product, setProduct] = useState<Product | null>(
-    () => (productRef ? (productCache.get(cacheKey)?.product ?? null) : null),
+  const [product, setProduct] = useState<Product | null>(() =>
+    productRef ? (productCache.get(cacheKey)?.product ?? null) : null,
   )
   const [loading, setLoading] = useState(() => {
     if (!productRef) return false

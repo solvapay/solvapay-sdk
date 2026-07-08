@@ -86,9 +86,7 @@ describe('Navigation', () => {
     render(<Navigation />)
     fireEvent.click(screen.getByRole('button', { name: /upgrade/i }))
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /redirecting/i })).toBeDisabled(),
-    )
+    await waitFor(() => expect(screen.getByRole('button', { name: /redirecting/i })).toBeDisabled())
   })
 
   it('double-click fires only one fetch — shared lock blocks duplicate checkout session', async () => {

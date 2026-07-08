@@ -12,17 +12,14 @@ const mockAdapter = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createWrapper(props?: Record<string, any>) {
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(
-      SolvaPayProvider,
-      {
-        config: {
-          auth: { adapter: mockAdapter },
-        },
-        ...props,
-        children,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any,
-    )
+    React.createElement(SolvaPayProvider, {
+      config: {
+        auth: { adapter: mockAdapter },
+      },
+      ...props,
+      children,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
   Wrapper.displayName = 'TestWrapper'
   return Wrapper
 }
@@ -92,17 +89,18 @@ describe('SolvaPayProvider - purchase state management', () => {
         expect(result.current.purchase.purchases).toHaveLength(1)
       })
 
-      fetchSpy.mockImplementation(() =>
-        new Promise(resolve => {
-          setTimeout(
-            () =>
-              resolve({
-                ok: true,
-                json: () => Promise.resolve(PURCHASE_UPDATED),
-              }),
-            200,
-          )
-        }),
+      fetchSpy.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            setTimeout(
+              () =>
+                resolve({
+                  ok: true,
+                  json: () => Promise.resolve(PURCHASE_UPDATED),
+                }),
+              200,
+            )
+          }),
       )
 
       await act(async () => {

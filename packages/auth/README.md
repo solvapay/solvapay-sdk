@@ -30,16 +30,15 @@ import { createSolvaPay } from '@solvapay/server'
 const auth = new SupabaseAuthAdapter({ jwtSecret: process.env.SUPABASE_JWT_SECRET! })
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY! })
 
-export const POST = solvaPay.payable({ product: 'my-api' }).next(
-  async args => ({ result: 'success' }),
-  {
+export const POST = solvaPay
+  .payable({ product: 'my-api' })
+  .next(async args => ({ result: 'success' }), {
     getCustomerRef: async req => {
       const userId = await auth.getUserIdFromRequest(req)
       if (!userId) throw new Error('Unauthorized')
       return userId
     },
-  },
-)
+  })
 ```
 
 ## Mock adapter (tests)

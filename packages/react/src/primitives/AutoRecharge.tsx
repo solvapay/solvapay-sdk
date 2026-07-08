@@ -314,10 +314,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const savedSummaryLine = useMemo(() => {
     if (!autoRecharge.config?.enabled) return null
-    return buildSummaryLine(
-      configToForm(autoRecharge.config, currency),
-      currency,
-    )
+    return buildSummaryLine(configToForm(autoRecharge.config, currency), currency)
   }, [autoRecharge.config, currency])
 
   const save = useCallback(async () => {
@@ -506,12 +503,7 @@ const Card = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function
   forwardedRef,
 ) {
   return (
-    <section
-      ref={forwardedRef}
-      className={className}
-      data-solvapay-auto-recharge-card=""
-      {...rest}
-    >
+    <section ref={forwardedRef} className={className} data-solvapay-auto-recharge-card="" {...rest}>
       {children}
     </section>
   )
@@ -1325,12 +1317,7 @@ const Status = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>
     const ctx = useAutoRechargeCtx('Status')
     const copy = useCopy()
     const status = ctx.config?.status
-    if (
-      !status ||
-      status === 'active' ||
-      status === 'disabled' ||
-      status === 'pending_setup'
-    ) {
+    if (!status || status === 'active' || status === 'disabled' || status === 'pending_setup') {
       return null
     }
 

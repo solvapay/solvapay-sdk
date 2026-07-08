@@ -82,9 +82,7 @@ vi.mock('../components/StyledTopupForm', () => ({
 
 import { useAutoRecharge, useBalance } from '@solvapay/react'
 
-function mockAutoRecharge(
-  overrides: Partial<ReturnType<typeof useAutoRecharge>> = {},
-) {
+function mockAutoRecharge(overrides: Partial<ReturnType<typeof useAutoRecharge>> = {}) {
   vi.mocked(useAutoRecharge).mockReturnValue({
     config: null,
     loading: false,
@@ -98,9 +96,7 @@ function mockAutoRecharge(
   })
 }
 
-function mockBalance(
-  overrides: Partial<ReturnType<typeof useBalance>> = {},
-) {
+function mockBalance(overrides: Partial<ReturnType<typeof useBalance>> = {}) {
   vi.mocked(useBalance).mockReturnValue({
     credits: 0,
     loading: false,

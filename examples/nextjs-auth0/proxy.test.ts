@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-const {
-  middlewareHandlerMock,
-  createAuth0AuthMiddlewareMock,
-  auth0Mock,
-} = vi.hoisted(() => ({
+const { middlewareHandlerMock, createAuth0AuthMiddlewareMock, auth0Mock } = vi.hoisted(() => ({
   middlewareHandlerMock: vi.fn(),
   createAuth0AuthMiddlewareMock: vi.fn(() => middlewareHandlerMock),
   auth0Mock: {

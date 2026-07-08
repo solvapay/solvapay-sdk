@@ -13,10 +13,8 @@ vi.mock('next/link', () => ({
 const flowPanelCalls: Array<Record<string, unknown>> = []
 vi.mock('@solvapay/react', () => ({
   usePurchase: () => ({ activePurchase: null }),
-  CancelledPlanNotice: () =>
-    React.createElement('div', { 'data-testid': 'cancelled-notice' }),
-  CancelPlanButton: () =>
-    React.createElement('button', { 'data-testid': 'cancel-plan' }, 'cancel'),
+  CancelledPlanNotice: () => React.createElement('div', { 'data-testid': 'cancelled-notice' }),
+  CancelPlanButton: () => React.createElement('button', { 'data-testid': 'cancel-plan' }, 'cancel'),
 }))
 vi.mock('../components/CheckoutFlowPanel', () => ({
   CheckoutFlowPanel: (props: Record<string, unknown>) => {

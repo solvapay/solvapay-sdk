@@ -27,12 +27,12 @@ The `SOLVAPAY_SECRET_KEY` stays server-only. The browser only sees `NEXT_PUBLIC_
 
 This example is the **canonical web reference** for mapping Auth0 users to SolvaPay customers. Read the inline comments in `proxy.ts`, `lib/auth0.ts`, and `components/solvapay-provider.tsx` for the full contract.
 
-| Field | Source | SolvaPay usage | Browser? |
-|-------|--------|----------------|----------|
-| `externalRef` / customer ref | Auth0 `sub` | Stable billing identity via `x-user-id` | No — set server-side in `proxy.ts` |
-| Auth0 ID token | Auth0 session | Optional email/name on first customer create | No — forwarded server-side only |
-| Auth0 access token | Auth0 API | **Never** sent to SolvaPay | Stays at integrator edge |
-| `SOLVAPAY_SECRET_KEY` | Dashboard | All SDK/server billing calls | Server-only |
+| Field                        | Source        | SolvaPay usage                               | Browser?                           |
+| ---------------------------- | ------------- | -------------------------------------------- | ---------------------------------- |
+| `externalRef` / customer ref | Auth0 `sub`   | Stable billing identity via `x-user-id`      | No — set server-side in `proxy.ts` |
+| Auth0 ID token               | Auth0 session | Optional email/name on first customer create | No — forwarded server-side only    |
+| Auth0 access token           | Auth0 API     | **Never** sent to SolvaPay                   | Stays at integrator edge           |
+| `SOLVAPAY_SECRET_KEY`        | Dashboard     | All SDK/server billing calls                 | Server-only                        |
 
 **Auth0 app type:** create a **Regular Web Application** in the Auth0 Dashboard (not SPA/Native) so the session uses an httpOnly cookie and `/auth/login|callback|logout` work via `proxy.ts`.
 
@@ -127,11 +127,11 @@ Open [http://localhost:3013](http://localhost:3013).
 
 All endpoints require an authenticated Auth0 session (401 otherwise).
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/tasks` | List tasks for the current user |
-| `POST` | `/api/tasks` | Create a task `{ "title": "..." }` — paywalled + metered (402 when out of credits) |
-| `DELETE` | `/api/tasks?id={taskId}` | Delete a task |
+| Method   | Path                     | Description                                                                        |
+| -------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| `GET`    | `/api/tasks`             | List tasks for the current user                                                    |
+| `POST`   | `/api/tasks`             | Create a task `{ "title": "..." }` — paywalled + metered (402 when out of credits) |
+| `DELETE` | `/api/tasks?id={taskId}` | Delete a task                                                                      |
 
 SolvaPay route wrappers (`@solvapay/next`), all resolving the customer from `x-user-id`:
 

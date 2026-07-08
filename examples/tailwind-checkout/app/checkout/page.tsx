@@ -6,16 +6,15 @@ import { PaymentForm, PlanSelector } from '@solvapay/react/primitives'
 const PRODUCT_REF = process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
 
 if (!PRODUCT_REF) {
-  throw new Error("Could not find the solvapay product key. Make sure that you've run the init script, and that you have a product on your solvapay account before you try out the demos")
+  throw new Error(
+    "Could not find the solvapay product key. Make sure that you've run the init script, and that you have a product on your solvapay account before you try out the demos",
+  )
 }
 
 export default function CheckoutPage() {
   return (
     <main className="mx-auto max-w-xl px-6 py-12">
-      <Link
-        href="/"
-        className="mb-8 inline-block text-sm text-slate-500 hover:text-slate-900"
-      >
+      <Link href="/" className="mb-8 inline-block text-sm text-slate-500 hover:text-slate-900">
         ← Back
       </Link>
 

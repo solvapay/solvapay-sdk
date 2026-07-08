@@ -7,11 +7,14 @@ export function useInputFocus<T extends HTMLElement>(options?: {
   const inputRef = useRef<T>(null)
   const focus = useCallback((opts?: FocusOptions) => inputRef.current?.focus(opts), [])
 
-  useEffect(() => {
-    if (options?.autoFocus) {
-      requestAnimationFrame(() => focus())
-    }
-  }, options?.deps ?? [options?.autoFocus])
+  useEffect(
+    () => {
+      if (options?.autoFocus) {
+        requestAnimationFrame(() => focus())
+      }
+    },
+    options?.deps ?? [options?.autoFocus],
+  )
 
   return { inputRef, focus }
 }

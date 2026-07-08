@@ -93,8 +93,7 @@ export function McpCustomerDetailsCard({
   }
 
   const displayName = name?.trim() || 'Customer'
-  const showBalance =
-    !hideBalance && typeof credits === 'number' && credits > 0
+  const showBalance = !hideBalance && typeof credits === 'number' && credits > 0
 
   const displayMinor =
     showBalance &&
@@ -133,8 +132,7 @@ export function McpCustomerDetailsCard({
               </span>
               {displayMinor !== null ? (
                 <span className={`solvapay-mcp-detail-value-mono ${cx.muted}`.trim()}>
-                  ~
-                  {formatPrice(displayMinor, displayCurrency ?? 'USD', { locale, free: '' })}
+                  ~{formatPrice(displayMinor, displayCurrency ?? 'USD', { locale, free: '' })}
                 </span>
               ) : null}
             </div>
@@ -212,10 +210,7 @@ export function McpSellerDetailsCard({
 
         {supportEmail ? (
           <dd className="solvapay-mcp-detail-row">
-            <a
-              className="solvapay-mcp-detail-link"
-              href={`mailto:${supportEmail}`}
-            >
+            <a className="solvapay-mcp-detail-link" href={`mailto:${supportEmail}`}>
               {supportEmail}
             </a>
           </dd>

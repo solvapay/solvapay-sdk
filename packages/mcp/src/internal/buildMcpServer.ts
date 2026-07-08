@@ -52,12 +52,16 @@ export type HideToolsByAudienceConfig =
  * Splits the array shorthand from the object form so factories can
  * accept either without each unwrapping by hand.
  */
-export function normaliseHideToolsByAudience(
-  config: HideToolsByAudienceConfig | undefined,
-): { audiences: readonly string[] | undefined; options: ApplyHideToolsByAudienceOptions } {
+export function normaliseHideToolsByAudience(config: HideToolsByAudienceConfig | undefined): {
+  audiences: readonly string[] | undefined
+  options: ApplyHideToolsByAudienceOptions
+} {
   if (!config) return { audiences: undefined, options: {} }
   if (Array.isArray(config)) return { audiences: config, options: {} }
-  const obj = config as { audiences: readonly string[]; bypassWhen?: ApplyHideToolsByAudienceOptions['bypassWhen'] }
+  const obj = config as {
+    audiences: readonly string[]
+    bypassWhen?: ApplyHideToolsByAudienceOptions['bypassWhen']
+  }
   return {
     audiences: obj.audiences,
     options: obj.bypassWhen !== undefined ? { bypassWhen: obj.bypassWhen } : {},

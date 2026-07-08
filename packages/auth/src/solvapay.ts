@@ -55,7 +55,7 @@ export class SolvapayAuthAdapter implements AuthAdapter {
       }
 
       const userInfo = await response.json()
-      
+
       // Return subject (User ID) or customer reference
       return userInfo.sub || userInfo.id || userInfo.customerRef || null
     } catch {
@@ -145,7 +145,7 @@ export class SolvapayOAuthClient {
     // or using a known path relative to apiBaseUrl if available.
     // For now, assuming it's near the token endpoint.
     const revokeUrl = this.config.tokenUrl.replace('/token', '/revoke')
-    
+
     const body = new URLSearchParams({
       token,
       client_id: this.config.clientId,
@@ -163,30 +163,29 @@ export class SolvapayOAuthClient {
       body: body.toString(),
     })
   }
-  
+
   /**
    * Get user info using access token
    */
   async getUserInfo(accessToken: string, userInfoUrl?: string): Promise<Record<string, unknown>> {
-      // If userInfoUrl is not provided, try to guess from tokenUrl or config
-      // But typically this client is used alongside the adapter which knows the base URL
-      if (!userInfoUrl) {
-          throw new Error('userInfoUrl is required')
-      }
-      
-      const response = await fetch(userInfoUrl, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json',
-        },
-      })
+    // If userInfoUrl is not provided, try to guess from tokenUrl or config
+    // But typically this client is used alongside the adapter which knows the base URL
+    if (!userInfoUrl) {
+      throw new Error('userInfoUrl is required')
+    }
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch user info: ${response.status}`)
-      }
+    const response = await fetch(userInfoUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+    })
 
-      return response.json() as Promise<Record<string, unknown>>
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user info: ${response.status}`)
+    }
+
+    return response.json() as Promise<Record<string, unknown>>
   }
 }
-

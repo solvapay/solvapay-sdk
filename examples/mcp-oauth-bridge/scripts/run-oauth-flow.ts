@@ -15,11 +15,7 @@ type DynamicClientRegistrationResponse = {
 }
 
 function base64UrlEncode(buffer: Buffer) {
-  return buffer
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
+  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
 function createPkce() {
@@ -50,18 +46,21 @@ async function main() {
   )
 
   console.log('3) Dynamic client registration')
-  const registration = await fetchJson<DynamicClientRegistrationResponse>(metadata.registration_endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const registration = await fetchJson<DynamicClientRegistrationResponse>(
+    metadata.registration_endpoint,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_name: 'MCP OAuth Bridge Script Client',
+        redirect_uris: [redirectUri],
+        grant_types: ['authorization_code', 'refresh_token'],
+        response_types: ['code'],
+      }),
     },
-    body: JSON.stringify({
-      client_name: 'MCP OAuth Bridge Script Client',
-      redirect_uris: [redirectUri],
-      grant_types: ['authorization_code', 'refresh_token'],
-      response_types: ['code'],
-    }),
-  })
+  )
 
   const state = crypto.randomUUID()
   const { codeVerifier, codeChallenge } = createPkce()

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { usePurchase, usePurchaseStatus } from '@solvapay/react'
 import { getAccessToken } from './lib/supabase'
-import { acquireCheckoutLock, releaseCheckoutLock, useCheckoutInProgress } from './lib/checkout-guard'
+import {
+  acquireCheckoutLock,
+  releaseCheckoutLock,
+  useCheckoutInProgress,
+} from './lib/checkout-guard'
 
 export default function HomePage() {
   const productRef = process.env.NEXT_PUBLIC_PRODUCT_REF
@@ -14,12 +18,7 @@ export default function HomePage() {
   // Note: Plans are handled on the hosted checkout page, so we pass empty array
   // Purchase status is determined by amount field: amount > 0 = paid, amount === 0 or undefined = free
   // Use hasPaidPurchase and activePurchase consistently throughout the component
-  const {
-    loading: purchasesLoading,
-    refetch,
-    hasPaidPurchase,
-    activePurchase,
-  } = usePurchase()
+  const { loading: purchasesLoading, refetch, hasPaidPurchase, activePurchase } = usePurchase()
 
   // Refetch purchases on mount to ensure we have latest data after navigation
   // This is especially important when creating a new account or after account changes
@@ -230,8 +229,8 @@ export default function HomePage() {
                     ) : null
                   })()}
                   <p className="text-xs text-amber-700 mt-1">
-                    You'll continue to have access to {cancelledPurchase.productName} features
-                    until this date
+                    You'll continue to have access to {cancelledPurchase.productName} features until
+                    this date
                   </p>
                 </div>
               ) : (
@@ -312,8 +311,8 @@ export default function HomePage() {
                     ) : null
                   })()}
                   <p className="text-xs text-amber-700">
-                    You'll continue to have access to {cancelledPurchase.productName} features
-                    until this date
+                    You'll continue to have access to {cancelledPurchase.productName} features until
+                    this date
                   </p>
                 </div>
               ) : (

@@ -1,6 +1,10 @@
 import { createRequire } from 'node:module'
 import type { SolvaPayClient } from './types'
-import { createVirtualTools, type VirtualToolDefinition, type VirtualToolsOptions } from './virtual-tools'
+import {
+  createVirtualTools,
+  type VirtualToolDefinition,
+  type VirtualToolsOptions,
+} from './virtual-tools'
 import type { McpToolExtra } from './types'
 
 type ZodRawShape = Record<string, unknown>
@@ -19,7 +23,10 @@ export interface McpServerLike {
   ) => unknown
 }
 
-export interface RegisterVirtualToolsMcpOptions extends Omit<VirtualToolsOptions, 'getCustomerRef'> {
+export interface RegisterVirtualToolsMcpOptions extends Omit<
+  VirtualToolsOptions,
+  'getCustomerRef'
+> {
   getCustomerRef?: VirtualToolsOptions['getCustomerRef']
   filter?: (definition: VirtualToolDefinition) => boolean
   mapDefinition?: (definition: VirtualToolDefinition) => VirtualToolDefinition

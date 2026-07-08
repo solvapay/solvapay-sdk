@@ -131,8 +131,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
           units: results.length,
           nudge: {
             kind: 'low-balance',
-            message:
-              'Running low on credits — call the `topup` tool to add more.',
+            message: 'Running low on credits — call the `topup` tool to add more.',
           },
         },
       )
@@ -150,8 +149,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
 
   registerPayable('predict_price_chart', {
     title: 'Predict price chart (Oracle demo)',
-    description:
-      `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band; always renders as an interactive line chart artifact in the host. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
+    description: `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band; always renders as an interactive line chart artifact in the host. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
@@ -194,8 +192,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
 
   registerPayable('predict_direction', {
     title: 'Predict direction (Oracle demo)',
-    description:
-      `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon; always renders as a compact verdict card artifact in the host. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
+    description: `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon; always renders as a compact verdict card artifact in the host. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),

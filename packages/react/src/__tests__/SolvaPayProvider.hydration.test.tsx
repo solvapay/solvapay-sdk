@@ -37,9 +37,7 @@ function makeTransport(overrides: Partial<SolvaPayTransport> = {}): SolvaPayTran
   } as any
 }
 
-function makeInitial(
-  overrides: Partial<SolvaPayProviderInitial> = {},
-): SolvaPayProviderInitial {
+function makeInitial(overrides: Partial<SolvaPayProviderInitial> = {}): SolvaPayProviderInitial {
   return {
     customerRef: 'cus_42',
     purchase: {

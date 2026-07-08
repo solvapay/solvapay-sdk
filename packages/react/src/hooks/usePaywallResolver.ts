@@ -58,9 +58,7 @@ function balanceCoversNextUnit(
   return false
 }
 
-export function usePaywallResolver(
-  content: PaywallStructuredContent,
-): UsePaywallResolverReturn {
+export function usePaywallResolver(content: PaywallStructuredContent): UsePaywallResolverReturn {
   const { activePurchase, hasPaidPurchase, refetch: refetchPurchase } = usePurchase()
   const { credits, refetch: refetchBalance } = useBalance()
 

@@ -24,10 +24,7 @@ interface TestSolvaPayClient {
     publishableKey: string
     accountId?: string
   }>
-  checkLimits(params: {
-    customerRef: string
-    productRef: string
-  }): Promise<{
+  checkLimits(params: { customerRef: string; productRef: string }): Promise<{
     withinLimits: boolean
     remaining: number
     plan: string

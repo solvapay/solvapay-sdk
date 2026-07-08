@@ -14,11 +14,7 @@
  * @since 1.2.0
  */
 
-import type {
-  LimitPlanSummary,
-  LimitResponseWithPlan,
-  PaywallStructuredContent,
-} from './types'
+import type { LimitPlanSummary, LimitResponseWithPlan, PaywallStructuredContent } from './types'
 import { buildGateMessage, classifyPaywallState } from './paywall-state'
 
 /**
@@ -44,10 +40,7 @@ function allPaidPlansArePayg(plans: LimitPlanSummary[] | undefined): boolean {
   return paidPlans.every(p => p.type === 'usage-based' || p.type === 'hybrid')
 }
 
-export function buildPaywallGate(
-  productRef: string,
-  limits: LimitsLike,
-): PaywallStructuredContent {
+export function buildPaywallGate(productRef: string, limits: LimitsLike): PaywallStructuredContent {
   const checkoutUrl = limits.checkoutUrl
 
   // `classifyPaywallState` requires the `plan` field — fall back to the

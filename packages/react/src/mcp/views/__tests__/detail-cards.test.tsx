@@ -5,12 +5,7 @@ import { McpCustomerDetailsCard, McpSellerDetailsCard } from '../detail-cards'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../../transport/cache-key'
-import type {
-  SolvaPayContextValue,
-  SolvaPayConfig,
-  PurchaseInfo,
-  Merchant,
-} from '../../../types'
+import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
 import type { SolvaPayTransport } from '../../../transport/types'
 import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 

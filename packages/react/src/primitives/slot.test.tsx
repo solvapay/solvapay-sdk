@@ -24,12 +24,7 @@ describe('Slot', () => {
 
   it('forwards data-* and aria-* attributes to the child', () => {
     const { getByTestId } = render(
-      <Slot
-        data-testid="node"
-        data-state="selected"
-        aria-pressed="true"
-        aria-label="card"
-      >
+      <Slot data-testid="node" data-state="selected" aria-pressed="true" aria-label="card">
         <button type="button">child</button>
       </Slot>,
     )

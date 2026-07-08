@@ -4,7 +4,11 @@ import Link from 'next/link'
 import { ProductBadge, usePurchase } from '@solvapay/react'
 import { Button } from './ui/Button'
 import { signOut, getAccessToken } from '../lib/supabase'
-import { acquireCheckoutLock, releaseCheckoutLock, useCheckoutInProgress } from '../lib/checkout-guard'
+import {
+  acquireCheckoutLock,
+  releaseCheckoutLock,
+  useCheckoutInProgress,
+} from '../lib/checkout-guard'
 import { useState, useCallback } from 'react'
 
 /**

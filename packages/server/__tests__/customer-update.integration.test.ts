@@ -24,8 +24,7 @@ const USE_REAL_BACKEND = process.env.USE_REAL_BACKEND === 'true'
 const SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY
 const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
 
-const describeIntegration =
-  USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
+const describeIntegration = USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
 
 describeIntegration('Customer Update & externalRef Backfill — Real Backend', () => {
   let apiClient: SolvaPayClient
@@ -136,10 +135,7 @@ describeIntegration('Customer Update & externalRef Backfill — Real Backend', (
 
       // A third call with only the externalRef (no email hint) still resolves
       // — proving the fast getCustomer({externalRef}) path works.
-      const thirdRef = await createSolvaPay({ apiClient }).ensureCustomer(
-        externalRef,
-        externalRef,
-      )
+      const thirdRef = await createSolvaPay({ apiClient }).ensureCustomer(externalRef, externalRef)
       expect(thirdRef).toBe(firstRef)
     })
   })

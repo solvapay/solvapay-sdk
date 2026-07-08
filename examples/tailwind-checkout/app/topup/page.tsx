@@ -12,10 +12,7 @@ export default function TopupPage() {
 
   return (
     <main className="mx-auto max-w-xl px-6 py-12">
-      <Link
-        href="/"
-        className="mb-8 inline-block text-sm text-slate-500 hover:text-slate-900"
-      >
+      <Link href="/" className="mb-8 inline-block text-sm text-slate-500 hover:text-slate-900">
         ← Back
       </Link>
 

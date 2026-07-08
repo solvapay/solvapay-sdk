@@ -24,7 +24,10 @@ export function releaseCheckoutLock(): void {
 
 export function useCheckoutInProgress(): boolean {
   return useSyncExternalStore(
-    (cb) => { listeners.add(cb); return () => listeners.delete(cb) },
+    cb => {
+      listeners.add(cb)
+      return () => listeners.delete(cb)
+    },
     () => inProgress,
     () => false,
   )

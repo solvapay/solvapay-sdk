@@ -11,10 +11,7 @@
  */
 
 import React from 'react'
-import {
-  ActivationFlow as Primitive,
-  useActivationFlow,
-} from '../primitives/ActivationFlow'
+import { ActivationFlow as Primitive, useActivationFlow } from '../primitives/ActivationFlow'
 export type { ActivationFlowStep } from '../primitives/ActivationFlow'
 import {
   AmountPicker as AmountPickerPrimitive,
@@ -68,9 +65,7 @@ const AmountStep: React.FC = () => {
   const copy = useCopy()
   return (
     <Primitive.AmountPicker>
-      <h3 className="solvapay-activation-flow-topup-heading">
-        {copy.activationFlow.topupHeading}
-      </h3>
+      <h3 className="solvapay-activation-flow-topup-heading">{copy.activationFlow.topupHeading}</h3>
       <p className="solvapay-activation-flow-topup-subheading">
         {copy.activationFlow.topupSubheading}
       </p>
@@ -130,9 +125,7 @@ const RetryingStep: React.FC = () => {
   const copy = useCopy()
   return (
     <Primitive.Retrying className="solvapay-activation-flow-retrying">
-      <h3 className="solvapay-activation-flow-heading">
-        {copy.activationFlow.retryingHeading}
-      </h3>
+      <h3 className="solvapay-activation-flow-heading">{copy.activationFlow.retryingHeading}</h3>
       <p>{copy.activationFlow.retryingSubheading}</p>
     </Primitive.Retrying>
   )
@@ -155,11 +148,7 @@ const ErrorStep: React.FC = () => {
   return (
     <div className="solvapay-activation-flow-error" role="alert">
       <p>{ctx.error}</p>
-      <button
-        type="button"
-        onClick={ctx.reset}
-        className="solvapay-activation-flow-try-again"
-      >
+      <button type="button" onClick={ctx.reset} className="solvapay-activation-flow-try-again">
         {copy.activationFlow.tryAgainButton}
       </button>
     </div>
@@ -171,11 +160,7 @@ const BackButton: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const copy = useCopy()
   if (ctx.step !== 'summary') return null
   return (
-    <button
-      type="button"
-      onClick={onBack}
-      className="solvapay-activation-flow-back"
-    >
+    <button type="button" onClick={onBack} className="solvapay-activation-flow-back">
       {copy.activationFlow.backButton}
     </button>
   )

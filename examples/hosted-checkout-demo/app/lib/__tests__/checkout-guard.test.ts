@@ -41,14 +41,20 @@ describe('useCheckoutInProgress', () => {
 
   it('becomes true after lock is acquired', () => {
     const { result } = renderHook(() => useCheckoutInProgress())
-    act(() => { acquireCheckoutLock() })
+    act(() => {
+      acquireCheckoutLock()
+    })
     expect(result.current).toBe(true)
   })
 
   it('returns to false after lock is released', () => {
     const { result } = renderHook(() => useCheckoutInProgress())
-    act(() => { acquireCheckoutLock() })
-    act(() => { releaseCheckoutLock() })
+    act(() => {
+      acquireCheckoutLock()
+    })
+    act(() => {
+      releaseCheckoutLock()
+    })
     expect(result.current).toBe(false)
   })
 
@@ -58,7 +64,9 @@ describe('useCheckoutInProgress', () => {
     const { result: r1 } = renderHook(() => useCheckoutInProgress())
     const { result: r2 } = renderHook(() => useCheckoutInProgress())
 
-    act(() => { acquireCheckoutLock() })
+    act(() => {
+      acquireCheckoutLock()
+    })
 
     expect(r1.current).toBe(true)
     expect(r2.current).toBe(true)

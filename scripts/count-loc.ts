@@ -284,9 +284,7 @@ const buildTable = (rows: Array<{ label: string; counters: GroupCounters }>) => 
   )
 
   const renderRow = (cells: string[]) =>
-    cells
-      .map((cell, i) => (i === 0 ? cell.padEnd(widths[i]) : cell.padStart(widths[i])))
-      .join('  ')
+    cells.map((cell, i) => (i === 0 ? cell.padEnd(widths[i]) : cell.padStart(widths[i]))).join('  ')
 
   const separator = widths.map(w => '-'.repeat(w)).join('  ')
 

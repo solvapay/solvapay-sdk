@@ -21,10 +21,7 @@ const GEMINI_THINKING_BUDGET = 0
 // while the worker/server is warm.
 const SYSTEM_INSTRUCTION_TTL_MS = 60_000
 
-const systemInstructionCache = new Map<
-  string,
-  { value: Promise<string>; expiresAt: number }
->()
+const systemInstructionCache = new Map<string, { value: Promise<string>; expiresAt: number }>()
 
 interface ChatRequestBody {
   productRef: string
