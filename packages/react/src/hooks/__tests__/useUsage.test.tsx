@@ -121,4 +121,29 @@ describe('useUsage', () => {
     expect(result.current.usage).toBeNull()
     expect(result.current.percentUsed).toBeNull()
   })
+
+  it('does not report credit-gated usage-based plans as unlimited', () => {
+    setPurchase({
+      activePurchase: {
+        reference: 'pur_payg',
+        productName: 'API',
+        productRef: 'prd_api',
+        status: 'active',
+        startDate: '2025-01-01',
+        planSnapshot: {
+          name: 'Pay as you go',
+          planType: 'usage-based',
+          creditsPerUnit: 4,
+          meterRef: 'requests',
+        },
+        usage: { used: 0 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    })
+    setTransport()
+    const { result } = renderHook(() => useUsage())
+
+    expect(result.current.usage).not.toBeNull()
+    expect(result.current.isUnlimited).toBe(false)
+  })
 })

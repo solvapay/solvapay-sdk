@@ -62,11 +62,19 @@ export interface McpAppBootstrapLike extends McpAppLike {
    * When present, `<McpApp>` reads `solvapay://bootstrap.json` instead of
    * replaying the intent tool on hosts that scrub `structuredContent`.
    *
-   * Return type kept loose so the real `App` class is structurally assignable
-   * without fighting ext-apps resource-content variance (text vs blob entries).
+   * Return shape is intentionally loose so ext-apps `App` (text + blob
+   * resource contents) is structurally assignable without fighting variance.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readServerResource?: (params: { uri: string }) => Promise<any>
+  readServerResource?: (params: {
+    uri: string
+  }) => Promise<{
+    contents?: ReadonlyArray<{
+      text?: string
+      blob?: string
+      uri?: string
+      mimeType?: string
+    }>
+  }>
 }
 
 /**

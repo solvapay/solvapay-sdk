@@ -33,6 +33,7 @@ import {
 } from '@solvapay/next'
 import type { SolvaPay } from '@solvapay/server'
 
+/** Route handlers accept the web-standard `Request` so `@solvapay/next` helpers compiled against a different Next.js patch version stay assignable. */
 type Handler = (request: Request) => Promise<Response>
 
 export type SolvaPayRouteHandlers = {
