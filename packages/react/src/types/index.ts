@@ -94,6 +94,12 @@ export interface Merchant {
   termsUrl?: string
   privacyUrl?: string
   country?: string
+  /** Company registration number (EIN, Companies House No, Org No). */
+  companyNumber?: string
+  /** Tax identification number (US: EIN). */
+  taxId?: string
+  /** VAT identification number (UK/EU). */
+  vatNumber?: string
   defaultCurrency?: string
   /**
    * Full set of currencies (including `defaultCurrency`) the customer may
