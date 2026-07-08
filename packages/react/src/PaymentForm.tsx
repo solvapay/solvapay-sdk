@@ -27,6 +27,7 @@ import {
   PaymentFormSummary,
   PaymentFormCustomerFields,
   PaymentFormPaymentElement,
+  PaymentFormCardElement,
   PaymentFormMandateText,
   PaymentFormTermsCheckbox,
   PaymentFormSubmitButton,
@@ -69,6 +70,8 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   Summary: typeof PaymentFormSummary
   CustomerFields: typeof PaymentFormCustomerFields
   PaymentElement: typeof PaymentFormPaymentElement
+  /** @deprecated Use `PaymentElement` instead. */
+  CardElement: typeof PaymentFormCardElement
   MandateText: typeof PaymentFormMandateText
   TermsCheckbox: typeof PaymentFormTermsCheckbox
   SubmitButton: typeof PaymentFormSubmitButton
@@ -79,6 +82,7 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   Summary: PaymentFormSummary,
   CustomerFields: PaymentFormCustomerFields,
   PaymentElement: PaymentFormPaymentElement,
+  CardElement: PaymentFormCardElement,
   MandateText: PaymentFormMandateText,
   TermsCheckbox: PaymentFormTermsCheckbox,
   SubmitButton: PaymentFormSubmitButton,

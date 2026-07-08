@@ -57,6 +57,16 @@ vi.mock('@stripe/react-stripe-js', async () => {
       }, [onChange])
       return ReactMod.createElement('div', { 'data-testid': 'payment-element' })
     },
+    CardElement: ({
+      onChange,
+    }: {
+      onChange?: (e: { complete: boolean }) => void
+    }) => {
+      ReactMod.useEffect(() => {
+        onChange?.({ complete: true })
+      }, [onChange])
+      return ReactMod.createElement('section', { 'data-testid': 'card-element' })
+    },
   }
 })
 
@@ -236,7 +246,14 @@ const PaidHarness: React.FC<{
   onSuccess?: (paymentIntent: unknown) => void
   initialPurchases?: PurchaseInfo[]
   children?: React.ReactNode
-}> = ({ onError, onSuccess, initialPurchases = [], children }) => {
+  paymentSlot?: 'payment-element' | 'card-element' | 'none'
+}> = ({
+  onError,
+  onSuccess,
+  initialPurchases = [],
+  children,
+  paymentSlot = 'payment-element',
+}) => {
   const [purchases, setPurchases] = React.useState<PurchaseInfo[]>(initialPurchases)
 
   const upsertPurchase = React.useMemo(
@@ -301,7 +318,8 @@ const PaidHarness: React.FC<{
         onError={onError}
         onSuccess={onSuccess}
       >
-        <PaymentForm.PaymentElement />
+        {paymentSlot === 'payment-element' && <PaymentForm.PaymentElement />}
+        {paymentSlot === 'card-element' && <PaymentForm.CardElement />}
         {children}
         <PaymentForm.SubmitButton data-testid="submit" />
         <PaymentForm.Error data-testid="err" />
@@ -506,6 +524,59 @@ describe('PaymentForm post-success purchase merge', () => {
     })
     // Started with 1 recurring row; one-time merge should bump it to 2.
     expect(paidHarnessRef.current?.currentPurchases().length).toBe(2)
+  })
+})
+
+describe('PaymentForm CardElement compatibility', () => {
+  const CardPaidHarness: React.FC = () => <PaidHarness paymentSlot="card-element" />
+
+  beforeEach(() => {
+    plansCache.clear()
+    productCache.clear()
+    merchantCache.clear()
+    plansCache.set('prd_paid', {
+      plans: [paidPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_paid', {
+      product: { reference: 'prd_paid', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    merchantCache.set('/api/merchant', {
+      merchant: { legalName: 'Acme', displayName: 'Acme' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+  })
+
+  it('routes submit through confirmPayment with card-element mode', async () => {
+    const confirmPaymentMock = (await import('../utils/confirmPayment'))
+      .confirmPayment as ReturnType<typeof vi.fn>
+    confirmPaymentMock.mockClear()
+
+    render(<CardPaidHarness />)
+
+    expect(await screen.findByTestId('card-element')).toBeInTheDocument()
+    expect(screen.queryByTestId('payment-element')).not.toBeInTheDocument()
+
+    const button = await screen.findByTestId('submit')
+    await waitFor(() => {
+      expect(button.getAttribute('data-state')).toBe('idle')
+    })
+
+    await act(async () => {
+      fireEvent.click(button)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(confirmPaymentMock).toHaveBeenCalledWith(
+        expect.objectContaining({ mode: 'card-element' }),
+      )
+    })
   })
 })
 

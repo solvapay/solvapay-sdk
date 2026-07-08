@@ -1,5 +1,24 @@
 # @solvapay/server changelog
 
+## 1.4.0
+
+### Minor Changes
+
+- 853e13f: Gate payment success on real confirmation while keeping legacy Card Element APIs as deprecated compatibility shims.
+
+  **Deprecated (`@solvapay/react`):**
+  - `StripePaymentFormWrapper`, `PaymentForm.CardElement` / `PaymentFormCardElement`, and `ConfirmPaymentMode: 'card-element'` remain available but are deprecated — migrate to `PaymentForm.PaymentElement` with the Payment Element. These APIs will be removed in the next major release.
+  - `errors.cardElementMissing` is restored alongside `errors.paymentElementMissing` for Card Element callers.
+
+  **Added:**
+  - `paymentIntentReturn` helpers and return-path resume in `PaymentForm` / `TopupForm`.
+  - `processing` is treated as pending (not error) in `confirmPayment`, `reconcilePayment`, and backend `/process`.
+  - `ConfirmPaymentResult` adds a `pending` status for async payment methods.
+  - `confirmPayment` accepts optional `mode` (defaults to `'payment-element'`).
+
+  **`@solvapay/server`:**
+  - `ProcessPaymentResult` and `TopupProcessResult` include a `processing` status.
+
 ## 1.3.0
 
 ### Minor Changes

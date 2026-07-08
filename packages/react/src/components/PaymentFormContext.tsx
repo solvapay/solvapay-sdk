@@ -3,7 +3,7 @@ import React, { createContext, useContext } from 'react'
 import type { Stripe, StripeElements } from '@stripe/stripe-js'
 import type { Plan, PrefillCustomer } from '../types'
 
-export type PaymentElementKind = 'payment-element' | null
+export type PaymentElementKind = 'payment-element' | 'card-element' | null
 
 export interface PaymentFormContextValue {
   planRef?: string

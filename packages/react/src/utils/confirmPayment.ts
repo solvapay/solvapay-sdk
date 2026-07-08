@@ -1,11 +1,28 @@
-import type { Stripe, StripeElements, PaymentIntent } from '@stripe/stripe-js'
+import type {
+  Stripe,
+  StripeElements,
+  PaymentIntent,
+  StripePaymentElement,
+  StripeCardElement,
+} from '@stripe/stripe-js'
 import type { SolvaPayCopy } from '../i18n/types'
 import { interpolate } from '../i18n/interpolate'
+
+/**
+ * @deprecated `'card-element'` is slated for removal in the next major.
+ * Use `'payment-element'` with `PaymentForm.PaymentElement`.
+ */
+export type ConfirmPaymentMode = 'payment-element' | 'card-element'
 
 export type ConfirmPaymentInput = {
   stripe: Stripe
   elements: StripeElements
   clientSecret: string
+  /**
+   * @deprecated `'card-element'` is slated for removal in the next major.
+   * Defaults to `'payment-element'`.
+   */
+  mode?: ConfirmPaymentMode
   returnUrl: string
   /** Billing details from `useCustomer()` (echoed from backend). */
   billingDetails?: { email?: string; name?: string }
@@ -27,37 +44,58 @@ export type ConfirmPaymentResult =
   | { status: 'error'; message: string }
 
 /**
- * Wrap Stripe Payment Element confirmation for SolvaPay checkout forms.
+ * Wrap Stripe confirmation so callers don't have to branch between
+ * `confirmPayment` (PaymentElement) and `confirmCardPayment` (CardElement).
  */
 export async function confirmPayment(
   input: ConfirmPaymentInput,
 ): Promise<ConfirmPaymentResult> {
   const { stripe, elements, clientSecret, returnUrl, billingDetails, copy } = input
+  const mode = input.mode ?? 'payment-element'
 
   try {
-    const paymentElement = elements.getElement('payment')
-    if (!paymentElement) {
-      return { status: 'error', message: copy.errors.paymentElementMissing }
-    }
-
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      return {
-        status: 'error',
-        message: submitError.message || copy.errors.paymentUnexpected,
+    if (mode === 'payment-element') {
+      const paymentElement = elements.getElement('payment') as StripePaymentElement | null
+      if (!paymentElement) {
+        return { status: 'error', message: copy.errors.paymentElementMissing }
       }
+
+      const { error: submitError } = await elements.submit()
+      if (submitError) {
+        return {
+          status: 'error',
+          message: submitError.message || copy.errors.paymentUnexpected,
+        }
+      }
+
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: returnUrl,
+          payment_method_data: billingDetails
+            ? { billing_details: billingDetails }
+            : undefined,
+        },
+        redirect: 'if_required',
+      })
+
+      if (error) {
+        return { status: 'error', message: error.message || copy.errors.paymentUnexpected }
+      }
+      return mapIntent(paymentIntent, copy)
     }
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      clientSecret,
-      confirmParams: {
-        return_url: returnUrl,
-        payment_method_data: billingDetails
-          ? { billing_details: billingDetails }
-          : undefined,
+    const cardElement = elements.getElement('card') as StripeCardElement | null
+    if (!cardElement) {
+      return { status: 'error', message: copy.errors.cardElementMissing }
+    }
+
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: billingDetails,
       },
-      redirect: 'if_required',
     })
 
     if (error) {

@@ -45,6 +45,7 @@ export {
   PaymentFormSummary,
   PaymentFormCustomerFields,
   PaymentFormPaymentElement,
+  PaymentFormCardElement,
   PaymentFormMandateText,
   PaymentFormTermsCheckbox,
   PaymentFormSubmitButton,

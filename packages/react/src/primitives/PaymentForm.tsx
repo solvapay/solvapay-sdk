@@ -28,6 +28,7 @@ import {
   useStripe,
   useElements,
   PaymentElement as StripePaymentElement,
+  CardElement as StripeCardElement,
 } from '@stripe/react-stripe-js'
 import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
 import { Slot } from './slot'
@@ -325,7 +326,7 @@ const PaidInner: React.FC<{
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | undefined>(undefined)
   const returnResumeStarted = useRef(false)
 
   useEffect(() => {
@@ -337,7 +338,7 @@ const PaidInner: React.FC<{
     let cancelled = false
     void (async () => {
       setIsProcessing(true)
-      setError(null)
+      setError(undefined)
 
       const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
       if (cancelled) return
@@ -447,7 +448,7 @@ const PaidInner: React.FC<{
       onError?.(new Error(msg))
       return
     }
-    setError(null)
+    setError(undefined)
     setIsProcessing(true)
 
     // Wrap the entire post-`setIsProcessing(true)` block in try/finally so
@@ -464,6 +465,7 @@ const PaidInner: React.FC<{
         stripe: stripe as Stripe,
         elements: elements as StripeElements,
         clientSecret,
+        mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
         returnUrl,
         billingDetails: {
           name: customer.name ?? prefillCustomer?.name,
@@ -572,7 +574,7 @@ const PaidInner: React.FC<{
       termsAccepted,
       requireTermsAcceptance,
       canSubmit,
-      error,
+      error: error ?? null,
       elementKind,
       returnUrl,
       submitButtonText,
@@ -640,7 +642,7 @@ const FreeInner: React.FC<{
   const { refetch } = usePurchase()
   const { activate, state, error: activationError, result: activationResult } = useActivation()
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
+  const [localError, setLocalError] = useState<string | undefined>(undefined)
   const resultFiredRef = useRef(false)
 
   useEffect(() => {
@@ -664,7 +666,7 @@ const FreeInner: React.FC<{
       onError?.(new Error(msg))
       return
     }
-    setLocalError(null)
+    setLocalError(undefined)
     try {
       if (onFreePlan) {
         await onFreePlan(plan)
@@ -831,6 +833,38 @@ const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
         onChange={e => setPaymentInputComplete(e.complete)}
         key={locale || 'default'}
       />
+    </section>
+  )
+}
+
+type CardElementProps = {
+  options?: React.ComponentProps<typeof StripeCardElement>['options']
+}
+
+/**
+ * @deprecated Use `PaymentForm.PaymentElement` instead. Slated for removal in
+ * the next major release.
+ */
+const CardElementSlot: React.FC<CardElementProps> = ({ options }) => {
+  const { setElementKind, setPaymentInputComplete, isReady, stripe, elements } = usePaymentForm()
+
+  useEffect(() => {
+    if (stripe && elements) setElementKind('card-element')
+  }, [setElementKind, stripe, elements])
+
+  if (!stripe || !elements) return null
+
+  if (!isReady) {
+    return (
+      <output data-solvapay-payment-form-loading="">
+        <Spinner size="sm" />
+      </output>
+    )
+  }
+
+  return (
+    <section data-solvapay-payment-form-card-element="">
+      <StripeCardElement options={options} onChange={e => setPaymentInputComplete(e.complete)} />
     </section>
   )
 }
@@ -1026,6 +1060,7 @@ export const PaymentFormRoot = Root
 export const PaymentFormSummary = Summary
 export const PaymentFormCustomerFields = CustomerFields
 export const PaymentFormPaymentElement = PaymentElementSlot
+export const PaymentFormCardElement = CardElementSlot
 export const PaymentFormMandateText = MandateTextPrimitive
 export const PaymentFormTermsCheckbox = TermsCheckbox
 export const PaymentFormSubmitButton = SubmitButton
@@ -1038,6 +1073,7 @@ export const PaymentForm = {
   Summary,
   CustomerFields,
   PaymentElement: PaymentElementSlot,
+  CardElement: CardElementSlot,
   MandateText: MandateTextPrimitive,
   TermsCheckbox,
   SubmitButton,

@@ -15,6 +15,7 @@ export { TopupForm } from './TopupForm'
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
 export { PurchaseGate } from './components/PurchaseGate'
 export { Spinner } from './components/Spinner'
+export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 export { BalanceBadge } from './components/BalanceBadge'
 export { CheckoutSummary } from './components/CheckoutSummary'
 export { MandateText } from './components/MandateText'
@@ -158,6 +159,7 @@ export type { CheckoutVariant } from './utils/checkoutVariant'
 export type { CurrentPlanCardProps, CurrentPlanCardClassNames } from './components/CurrentPlanCard'
 export type { AutoRechargeProps } from './components/AutoRecharge'
 export type { LaunchCustomerPortalButtonProps } from './components/LaunchCustomerPortalButton'
+export type { StripePaymentFormWrapperProps } from './components/StripePaymentFormWrapper'
 export type {
   UpdatePaymentMethodButtonProps,
   UpdatePaymentMethodButtonMode,
@@ -193,6 +195,7 @@ export { confirmPayment } from './utils/confirmPayment'
 export type {
   ConfirmPaymentInput,
   ConfirmPaymentResult,
+  ConfirmPaymentMode,
 } from './utils/confirmPayment'
 export {
   readPaymentIntentClientSecret,

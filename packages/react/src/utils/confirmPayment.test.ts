@@ -6,6 +6,7 @@ import type { Stripe, StripeElements } from '@stripe/stripe-js'
 function makeStripe(overrides: Record<string, unknown>): Stripe {
   return {
     confirmPayment: vi.fn(),
+    confirmCardPayment: vi.fn(),
     ...overrides,
   } as unknown as Stripe
 }
@@ -116,6 +117,57 @@ describe('confirmPayment', () => {
       expect.objectContaining({ redirect: 'if_required' }),
     )
     expect(handleNextAction).not.toHaveBeenCalled()
+  })
+
+  it('defaults to the Payment Element path when mode is omitted', async () => {
+    const confirmPaymentFn = vi.fn().mockResolvedValue({
+      paymentIntent: { status: 'succeeded', id: 'pi_default_mode' },
+    })
+    const stripe = makeStripe({ confirmPayment: confirmPaymentFn })
+    const elements = makeElements({ __tag: 'payment' })
+
+    const result = await confirmPayment({
+      stripe,
+      elements,
+      clientSecret: 'cs_default',
+      returnUrl: 'https://example.com/return',
+      copy: enCopy,
+    })
+
+    expect(result.status).toBe('succeeded')
+    expect(elements.submit).toHaveBeenCalledTimes(1)
+    expect(confirmPaymentFn).toHaveBeenCalled()
+  })
+
+  it('uses confirmCardPayment for card-element mode', async () => {
+    const confirmCardFn = vi.fn().mockResolvedValue({
+      paymentIntent: { status: 'succeeded', id: 'pi_2' },
+    })
+    const stripe = makeStripe({ confirmCardPayment: confirmCardFn })
+    const cardEl = { __tag: 'card' }
+    const elements = makeElements(cardEl)
+
+    const result = await confirmPayment({
+      stripe,
+      elements,
+      clientSecret: 'cs_2',
+      mode: 'card-element',
+      returnUrl: 'https://example.com/return',
+      billingDetails: { email: 'a@b.com' },
+      copy: enCopy,
+    })
+
+    expect(result.status).toBe('succeeded')
+    expect(elements.submit).not.toHaveBeenCalled()
+    expect(confirmCardFn).toHaveBeenCalledWith(
+      'cs_2',
+      expect.objectContaining({
+        payment_method: expect.objectContaining({
+          card: cardEl,
+          billing_details: { email: 'a@b.com' },
+        }),
+      }),
+    )
   })
 
   it('maps processing status to pending', async () => {

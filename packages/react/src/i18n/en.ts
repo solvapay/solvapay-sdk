@@ -257,6 +257,8 @@ export const enCopy: SolvaPayCopy = {
     stripeUnavailable: 'Stripe is not available. Please refresh the page.',
     paymentIntentUnavailable: 'Payment intent not available. Please refresh the page.',
     paymentElementMissing: 'Payment element not found',
+    /** @deprecated Use `paymentElementMissing`. Kept for Card Element compatibility. */
+    cardElementMissing: 'Card element not found',
     paymentUnexpected: 'An unexpected error occurred.',
     paymentProcessingFailed: 'Payment processing failed. Please try again or contact support.',
     paymentPending:

@@ -290,6 +290,8 @@ export interface SolvaPayCopy {
     stripeUnavailable: string
     paymentIntentUnavailable: string
     paymentElementMissing: string
+    /** @deprecated Use `paymentElementMissing`. Slated for removal in the next major. */
+    cardElementMissing: string
     paymentUnexpected: string
     paymentPending: string
     paymentProcessingFailed: string
