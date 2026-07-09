@@ -89,7 +89,6 @@ export const POST = payable.next(handler) // Next.js App Router
 
 ```tsx
 import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
-
 ;<SolvaPayProvider>
   <CheckoutLayout productRef="prd_myapi" prefillCustomer={{ email }} />
 </SolvaPayProvider>
