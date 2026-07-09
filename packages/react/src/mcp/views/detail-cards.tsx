@@ -12,17 +12,13 @@
  */
 
 import React from 'react'
-import { creditsToDisplayMinorUnits } from '@solvapay/core'
+import { creditsToDisplayMinorUnits, resolveSellerIdentityDisplay } from '@solvapay/core'
 import { useBalance } from '../../hooks/useBalance'
 import { useCustomer } from '../../hooks/useCustomer'
 import { useMerchant } from '../../hooks/useMerchant'
 import { formatPrice } from '../../utils/format'
 import { useHostLocale } from '../useHostLocale'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
-import {
-  resolveSellerOrganizationNumberDisplay,
-  resolveSellerTaxDisplay,
-} from './resolveSellerTaxDisplay'
 
 export interface McpCustomerDetailsCardProps {
   classNames?: McpViewClassNames
@@ -93,8 +89,7 @@ export function McpCustomerDetailsCard({
   }
 
   const displayName = name?.trim() || 'Customer'
-  const showBalance =
-    !hideBalance && typeof credits === 'number' && credits > 0
+  const showBalance = !hideBalance && typeof credits === 'number' && credits > 0
 
   const displayMinor =
     showBalance &&
@@ -133,8 +128,7 @@ export function McpCustomerDetailsCard({
               </span>
               {displayMinor !== null ? (
                 <span className={`solvapay-mcp-detail-value-mono ${cx.muted}`.trim()}>
-                  ~
-                  {formatPrice(displayMinor, displayCurrency ?? 'USD', { locale, free: '' })}
+                  ~{formatPrice(displayMinor, displayCurrency ?? 'USD', { locale, free: '' })}
                 </span>
               ) : null}
             </div>
@@ -190,8 +184,12 @@ export function McpSellerDetailsCard({
   const supportEmail = merchant.supportEmail
   const supportUrl = merchant.supportUrl
 
-  const taxDisplay = resolveSellerTaxDisplay(merchant)
-  const organizationNumber = resolveSellerOrganizationNumberDisplay(merchant, taxDisplay)
+  const sellerIdentity = resolveSellerIdentityDisplay({
+    country: merchant.country,
+    vatNumber: merchant.vatNumber,
+    taxId: merchant.taxId,
+    companyNumber: merchant.companyNumber,
+  })
 
   return (
     <section className={cx.card} aria-label="Seller">
@@ -212,10 +210,7 @@ export function McpSellerDetailsCard({
 
         {supportEmail ? (
           <dd className="solvapay-mcp-detail-row">
-            <a
-              className="solvapay-mcp-detail-link"
-              href={`mailto:${supportEmail}`}
-            >
+            <a className="solvapay-mcp-detail-link" href={`mailto:${supportEmail}`}>
               {supportEmail}
             </a>
           </dd>
@@ -234,20 +229,20 @@ export function McpSellerDetailsCard({
           </dd>
         ) : null}
 
-        {organizationNumber ? (
+        {sellerIdentity.companyNumber ? (
           <DetailRow
-            label="Company number"
-            value={organizationNumber}
+            label={sellerIdentity.companyNumber.label}
+            value={sellerIdentity.companyNumber.value}
             mono
             labelMuted={cx.muted}
             muted={cx.muted}
           />
         ) : null}
 
-        {taxDisplay.kind === 'provided' ? (
+        {sellerIdentity.taxIdentifier ? (
           <DetailRow
-            label={taxDisplay.label}
-            value={taxDisplay.value}
+            label={sellerIdentity.taxIdentifier.label}
+            value={sellerIdentity.taxIdentifier.value}
             mono
             labelMuted={cx.muted}
             muted={cx.muted}

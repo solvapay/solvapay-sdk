@@ -5,12 +5,7 @@ import { McpCustomerDetailsCard, McpSellerDetailsCard } from '../detail-cards'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../../transport/cache-key'
-import type {
-  SolvaPayContextValue,
-  SolvaPayConfig,
-  PurchaseInfo,
-  Merchant,
-} from '../../../types'
+import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
 import type { SolvaPayTransport } from '../../../transport/types'
 import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
@@ -218,7 +213,7 @@ describe('<McpSellerDetailsCard>', () => {
     const config = seedMerchant(merchant)
     const ctx = buildCtx({}, [], 0, config)
     renderWith(ctx, <McpSellerDetailsCard />)
-    expect(screen.getByText('EIN (Employer Identification Number)')).toBeTruthy()
+    expect(screen.getByText('EIN')).toBeTruthy()
     // The tax id doubles as the org number, so it appears exactly once and the
     // company-number line is suppressed.
     expect(screen.getAllByText('12-3456789')).toHaveLength(1)
@@ -232,6 +227,6 @@ describe('<McpSellerDetailsCard>', () => {
     renderWith(ctx, <McpSellerDetailsCard />)
     expect(screen.queryByText('Company number')).toBeNull()
     expect(screen.queryByText('VAT number')).toBeNull()
-    expect(screen.queryByText('EIN (Employer Identification Number)')).toBeNull()
+    expect(screen.queryByText('EIN')).toBeNull()
   })
 })
