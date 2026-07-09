@@ -179,9 +179,7 @@ describe('AutoRecharge primitive', () => {
   it('shows balance threshold summary with natural phrasing', () => {
     renderAutoRecharge({ currency: 'SEK' })
     enableAutoRecharge()
-    expect(
-      screen.getByText(/When my balance falls below .* add .*./),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/When my balance falls below .* add .*./)).toBeInTheDocument()
   })
 
   it('rejects invalid values inline before save', async () => {
@@ -244,7 +242,8 @@ describe('AutoRecharge primitive', () => {
 
   it('shows disable button when config exists', () => {
     autoRechargeMocks.config = config
-    renderAutoRecharge({}, (
+    renderAutoRecharge(
+      {},
       <>
         <AutoRecharge.Header />
         <AutoRecharge.Body>
@@ -253,8 +252,8 @@ describe('AutoRecharge primitive', () => {
             <AutoRecharge.DisableButton />
           </AutoRecharge.Actions>
         </AutoRecharge.Body>
-      </>
-    ))
+      </>,
+    )
     expect(screen.getByRole('button', { name: 'Disable automatic top-up' })).toBeInTheDocument()
   })
 
@@ -351,9 +350,7 @@ describe('AutoRecharge primitive', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    expect(
-      screen.getByText(/When my balance falls below .* add .*./),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/When my balance falls below .* add .*./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Modify' })).toBeInTheDocument()
   })
 

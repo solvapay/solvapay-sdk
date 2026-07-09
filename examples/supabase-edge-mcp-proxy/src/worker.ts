@@ -65,8 +65,7 @@ function forwardRequest(req: Request, target: URL): Request {
   return new Request(target.toString(), {
     method: req.method,
     headers,
-    body:
-      req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+    body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
     redirect: 'manual',
   })
 }

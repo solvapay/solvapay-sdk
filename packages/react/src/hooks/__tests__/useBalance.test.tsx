@@ -6,9 +6,7 @@ import { SolvaPayContext } from '../../SolvaPayProvider'
 import type { SolvaPayContextValue, BalanceStatus } from '../../types'
 import { mockBalanceStatus } from '../../test-helpers/mockBalanceStatus'
 
-function createMockContext(
-  balanceOverrides?: Partial<BalanceStatus>,
-): SolvaPayContextValue {
+function createMockContext(balanceOverrides?: Partial<BalanceStatus>): SolvaPayContextValue {
   return {
     purchase: {
       loading: false,

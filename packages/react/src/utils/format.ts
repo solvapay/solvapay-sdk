@@ -97,8 +97,7 @@ export function formatPrice(
 
   if (!interval) return formatted
 
-  const suffix =
-    intervalCount > 1 ? `${intervalCount} ${interval}s` : interval
+  const suffix = intervalCount > 1 ? `${intervalCount} ${interval}s` : interval
   return `${formatted} / ${suffix}`
 }
 

@@ -20,15 +20,11 @@ describe('formatPrice', () => {
 
     it('trims trailing zeros on whole SEK amounts', () => {
       // Intl inserts NBSP between the currency code and the number.
-      expect(formatPrice(10000, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe(
-        'SEK 100',
-      )
+      expect(formatPrice(10000, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe('SEK 100')
     })
 
     it('keeps two decimals on fractional SEK amounts', () => {
-      expect(formatPrice(10050, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe(
-        'SEK 100.50',
-      )
+      expect(formatPrice(10050, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe('SEK 100.50')
     })
 
     it('renders sv-SE SEK whole amount without decimals', () => {
@@ -45,16 +41,10 @@ describe('formatPrice', () => {
 
     it('renders currency code when currencyDisplay is code', () => {
       expect(
-        formatPrice(1000, 'usd', { locale: 'en', currencyDisplay: 'code' }).replace(
-          /\u00A0/g,
-          ' ',
-        ),
+        formatPrice(1000, 'usd', { locale: 'en', currencyDisplay: 'code' }).replace(/\u00A0/g, ' '),
       ).toBe('USD 10')
       expect(
-        formatPrice(5000, 'gbp', { locale: 'en', currencyDisplay: 'code' }).replace(
-          /\u00A0/g,
-          ' ',
-        ),
+        formatPrice(5000, 'gbp', { locale: 'en', currencyDisplay: 'code' }).replace(/\u00A0/g, ' '),
       ).toBe('GBP 50')
     })
   })

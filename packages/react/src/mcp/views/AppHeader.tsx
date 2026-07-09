@@ -97,10 +97,7 @@ export interface AppHeaderProps {
 function useMerchantSafe(): Merchant | null {
   const ctx = useContext(SolvaPayContext)
   if (!ctx?._config) return null
-  const key = createTransportCacheKey(
-    ctx._config,
-    ctx._config.api?.getMerchant ?? '/api/merchant',
-  )
+  const key = createTransportCacheKey(ctx._config, ctx._config.api?.getMerchant ?? '/api/merchant')
   return merchantCache.get(key)?.merchant ?? null
 }
 
@@ -111,7 +108,7 @@ function getInitials(name: string): string {
   if (parts.length >= 2) {
     return parts
       .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
+      .map(part => part[0]?.toUpperCase() ?? '')
       .join('')
   }
   // Single word: prefer a camelCase split (`SolvaPay` → `SP`),

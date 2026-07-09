@@ -93,8 +93,6 @@ describe('formatPaygRate', () => {
   })
 
   it('renders formatted credits per call', () => {
-    expect(formatPaygRate({ ...payg, creditsPerUnit: 1000 }, 'en-US')).toBe(
-      '1,000 credits / call',
-    )
+    expect(formatPaygRate({ ...payg, creditsPerUnit: 1000 }, 'en-US')).toBe('1,000 credits / call')
   })
 })

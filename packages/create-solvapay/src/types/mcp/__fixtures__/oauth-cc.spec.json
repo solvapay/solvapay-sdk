@@ -5,9 +5,7 @@
     "version": "1.0.0",
     "description": "Minimal OpenAPI fixture exercising oauth2 with the clientCredentials flow. Used by smoke + unit tests for the create-mcp-app oauth2 client_credentials path."
   },
-  "servers": [
-    { "url": "https://api.example-roaring.test" }
-  ],
+  "servers": [{ "url": "https://api.example-roaring.test" }],
   "paths": {
     "/companies/{orgnr}": {
       "get": {

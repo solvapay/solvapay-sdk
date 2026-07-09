@@ -348,7 +348,9 @@ export type ValidateBusinessDetailsResult =
   | { success: true; data: BusinessDetails }
   | { success: false; error: BusinessDetailsValidationError }
 
-export function validateBusinessDetails(input: BusinessDetailsInput): ValidateBusinessDetailsResult {
+export function validateBusinessDetails(
+  input: BusinessDetailsInput,
+): ValidateBusinessDetailsResult {
   const parsed = BusinessDetailsSchema.safeParse(input)
   if (!parsed.success) {
     return {
@@ -393,4 +395,3 @@ export type TaxBreakdown = {
   currency: string
   inclusive: boolean
 }
-

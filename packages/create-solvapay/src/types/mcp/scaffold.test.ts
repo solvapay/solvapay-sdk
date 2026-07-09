@@ -195,14 +195,9 @@ describe('copyDir + applyOverlay (round-trip)', () => {
       )
       await applyOverlay(overlay, target, {
         substitutions: new Map([[PLACEHOLDERS.TOOL_NAME, 'fetchPet']]),
-        renameMap: new Map([
-          ['src/tools/_placeholder.ts', 'src/tools/fetchPet.ts'],
-        ]),
+        renameMap: new Map([['src/tools/_placeholder.ts', 'src/tools/fetchPet.ts']]),
       })
-      const written = await readFile(
-        path.join(target, 'src', 'tools', 'fetchPet.ts'),
-        'utf8',
-      )
+      const written = await readFile(path.join(target, 'src', 'tools', 'fetchPet.ts'), 'utf8')
       expect(written).toContain('export const id = "fetchPet"')
     } finally {
       await rm(overlay, { recursive: true, force: true })
@@ -247,7 +242,9 @@ describe('resolveLatestSolvapayVersions', () => {
     }
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      const name = decodeURIComponent(url.replace('https://registry.npmjs.org/', '').replace('/latest', ''))
+      const name = decodeURIComponent(
+        url.replace('https://registry.npmjs.org/', '').replace('/latest', ''),
+      )
       return new Response(JSON.stringify({ version: versions[name] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -283,9 +280,7 @@ describe('resolveLatestSolvapayVersions', () => {
   })
 
   it('falls back when the registry returns a non-2xx response', async () => {
-    globalThis.fetch = vi.fn(
-      async () => new Response('not found', { status: 404 }),
-    ) as typeof fetch
+    globalThis.fetch = vi.fn(async () => new Response('not found', { status: 404 })) as typeof fetch
 
     const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })
     for (const dep of SOLVAPAY_RUNTIME_DEPS) {
@@ -332,7 +327,11 @@ describe('patchSolvapayVersions', () => {
         zod: '^4.3.6',
       },
     }
-    await writeFile(path.join(target, 'package.json'), `${JSON.stringify(original, null, 2)}\n`, 'utf8')
+    await writeFile(
+      path.join(target, 'package.json'),
+      `${JSON.stringify(original, null, 2)}\n`,
+      'utf8',
+    )
 
     await patchSolvapayVersions(
       target,
@@ -359,7 +358,11 @@ describe('patchSolvapayVersions', () => {
     const original = {
       dependencies: { '@solvapay/mcp': '^0.2.5' },
     }
-    await writeFile(path.join(target, 'package.json'), `${JSON.stringify(original, null, 2)}\n`, 'utf8')
+    await writeFile(
+      path.join(target, 'package.json'),
+      `${JSON.stringify(original, null, 2)}\n`,
+      'utf8',
+    )
 
     await patchSolvapayVersions(target, new Map([['@solvapay/mcp', '0.0.0-preview-abcdef1']]))
 
@@ -373,7 +376,11 @@ describe('patchSolvapayVersions', () => {
     const original = {
       dependencies: { '@solvapay/mcp': '^0.2.5' },
     }
-    await writeFile(path.join(target, 'package.json'), `${JSON.stringify(original, null, 2)}\n`, 'utf8')
+    await writeFile(
+      path.join(target, 'package.json'),
+      `${JSON.stringify(original, null, 2)}\n`,
+      'utf8',
+    )
 
     await patchSolvapayVersions(
       target,

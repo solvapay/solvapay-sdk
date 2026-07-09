@@ -18,10 +18,7 @@ const CACHE_DURATION = 5 * 60 * 1000
 export { paymentMethodCache, CACHE_DURATION }
 
 function cacheKeyFor(config: SolvaPayConfig | undefined): string {
-  return createTransportCacheKey(
-    config,
-    config?.api?.getPaymentMethod || '/api/payment-method',
-  )
+  return createTransportCacheKey(config, config?.api?.getPaymentMethod || '/api/payment-method')
 }
 
 async function fetchPaymentMethod(

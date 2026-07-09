@@ -170,8 +170,9 @@ type _PaymentFormShape = CompoundShape<
   | 'Loading'
   | 'Error'
 >
-const _PaymentFormRoot: ComponentProps<typeof PaymentFormRoot> =
-  null as unknown as ComponentProps<typeof PaymentFormRoot>
+const _PaymentFormRoot: ComponentProps<typeof PaymentFormRoot> = null as unknown as ComponentProps<
+  typeof PaymentFormRoot
+>
 const _PaymentFormSummary: ComponentProps<typeof PaymentFormSummary> =
   null as unknown as ComponentProps<typeof PaymentFormSummary>
 const _PaymentFormCustomerFields: ComponentProps<typeof PaymentFormCustomerFields> =
@@ -236,8 +237,9 @@ const _AmountPickerCustom: ComponentProps<typeof AmountPickerCustom> =
 const _AmountPickerConfirm: ComponentProps<typeof AmountPickerConfirm> =
   null as unknown as ComponentProps<typeof AmountPickerConfirm>
 
-const _BalanceBadge: ComponentProps<typeof BalanceBadge> =
-  null as unknown as ComponentProps<typeof BalanceBadge>
+const _BalanceBadge: ComponentProps<typeof BalanceBadge> = null as unknown as ComponentProps<
+  typeof BalanceBadge
+>
 
 const _CancelPlanButton: ComponentProps<typeof CancelPlanButton> =
   null as unknown as ComponentProps<typeof CancelPlanButton>
@@ -259,9 +261,8 @@ const _CancelledPlanNoticeHeading: ComponentProps<typeof CancelledPlanNoticeHead
   null as unknown as ComponentProps<typeof CancelledPlanNoticeHeading>
 const _CancelledPlanNoticeExpires: ComponentProps<typeof CancelledPlanNoticeExpires> =
   null as unknown as ComponentProps<typeof CancelledPlanNoticeExpires>
-const _CancelledPlanNoticeDaysRemaining: ComponentProps<
-  typeof CancelledPlanNoticeDaysRemaining
-> = null as unknown as ComponentProps<typeof CancelledPlanNoticeDaysRemaining>
+const _CancelledPlanNoticeDaysRemaining: ComponentProps<typeof CancelledPlanNoticeDaysRemaining> =
+  null as unknown as ComponentProps<typeof CancelledPlanNoticeDaysRemaining>
 const _CancelledPlanNoticeAccessUntil: ComponentProps<typeof CancelledPlanNoticeAccessUntil> =
   null as unknown as ComponentProps<typeof CancelledPlanNoticeAccessUntil>
 const _CancelledPlanNoticeCancelledOn: ComponentProps<typeof CancelledPlanNoticeCancelledOn> =
@@ -276,18 +277,21 @@ type _CreditGateShape = CompoundShape<
   typeof CreditGate,
   'Root' | 'Heading' | 'Subheading' | 'Topup' | 'Loading' | 'Error'
 >
-const _CreditGateRoot: ComponentProps<typeof CreditGateRoot> =
-  null as unknown as ComponentProps<typeof CreditGateRoot>
+const _CreditGateRoot: ComponentProps<typeof CreditGateRoot> = null as unknown as ComponentProps<
+  typeof CreditGateRoot
+>
 const _CreditGateHeading: ComponentProps<typeof CreditGateHeading> =
   null as unknown as ComponentProps<typeof CreditGateHeading>
 const _CreditGateSubheading: ComponentProps<typeof CreditGateSubheading> =
   null as unknown as ComponentProps<typeof CreditGateSubheading>
-const _CreditGateTopup: ComponentProps<typeof CreditGateTopup> =
-  null as unknown as ComponentProps<typeof CreditGateTopup>
+const _CreditGateTopup: ComponentProps<typeof CreditGateTopup> = null as unknown as ComponentProps<
+  typeof CreditGateTopup
+>
 const _CreditGateLoading: ComponentProps<typeof CreditGateLoading> =
   null as unknown as ComponentProps<typeof CreditGateLoading>
-const _CreditGateError: ComponentProps<typeof CreditGateError> =
-  null as unknown as ComponentProps<typeof CreditGateError>
+const _CreditGateError: ComponentProps<typeof CreditGateError> = null as unknown as ComponentProps<
+  typeof CreditGateError
+>
 
 type _PurchaseGateShape = CompoundShape<
   typeof PurchaseGate,
@@ -308,29 +312,35 @@ type _TopupFormShape = CompoundShape<
   typeof TopupForm,
   'Root' | 'PaymentElement' | 'SubmitButton' | 'Loading' | 'Error'
 >
-const _TopupFormRoot: ComponentProps<typeof TopupFormRoot> =
-  null as unknown as ComponentProps<typeof TopupFormRoot>
+const _TopupFormRoot: ComponentProps<typeof TopupFormRoot> = null as unknown as ComponentProps<
+  typeof TopupFormRoot
+>
 const _TopupFormPaymentElement: ComponentProps<typeof TopupFormPaymentElement> =
   null as unknown as ComponentProps<typeof TopupFormPaymentElement>
 const _TopupFormSubmitButton: ComponentProps<typeof TopupFormSubmitButton> =
   null as unknown as ComponentProps<typeof TopupFormSubmitButton>
 const _TopupFormLoading: ComponentProps<typeof TopupFormLoading> =
   null as unknown as ComponentProps<typeof TopupFormLoading>
-const _TopupFormError: ComponentProps<typeof TopupFormError> =
-  null as unknown as ComponentProps<typeof TopupFormError>
+const _TopupFormError: ComponentProps<typeof TopupFormError> = null as unknown as ComponentProps<
+  typeof TopupFormError
+>
 
-const _MandateText: ComponentProps<typeof MandateText> =
-  null as unknown as ComponentProps<typeof MandateText>
+const _MandateText: ComponentProps<typeof MandateText> = null as unknown as ComponentProps<
+  typeof MandateText
+>
 const _MandateTextProps: MandateTextProps = null as unknown as MandateTextProps
 
-const _ProductBadge: ComponentProps<typeof ProductBadge> =
-  null as unknown as ComponentProps<typeof ProductBadge>
-const _PlanBadge: ComponentProps<typeof PlanBadge> =
-  null as unknown as ComponentProps<typeof PlanBadge>
+const _ProductBadge: ComponentProps<typeof ProductBadge> = null as unknown as ComponentProps<
+  typeof ProductBadge
+>
+const _PlanBadge: ComponentProps<typeof PlanBadge> = null as unknown as ComponentProps<
+  typeof PlanBadge
+>
 
 const _Slot: ComponentProps<typeof Slot> = null as unknown as ComponentProps<typeof Slot>
-const _Slottable: ComponentProps<typeof Slottable> =
-  null as unknown as ComponentProps<typeof Slottable>
+const _Slottable: ComponentProps<typeof Slottable> = null as unknown as ComponentProps<
+  typeof Slottable
+>
 
 // Keep the compiler honest about every binding above being "used" without
 // introducing runtime side effects. `void` over an object expression is

@@ -111,8 +111,7 @@ describe('buildSolvaPayDescriptors', () => {
       const tool = tools.find(t => t.name === name)
       expect(tool).toBeTruthy()
       expect((tool!.meta as Record<string, unknown>).audience).toBeUndefined()
-      const visibility = (tool!.meta as { ui?: { visibility?: readonly string[] } }).ui
-        ?.visibility
+      const visibility = (tool!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility
       expect(visibility).not.toEqual(['app'])
     }
 
@@ -153,7 +152,11 @@ describe('buildSolvaPayDescriptors', () => {
       publicBaseUrl: 'https://example.com',
     })
 
-    for (const name of [MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.manageAccount]) {
+    for (const name of [
+      MCP_TOOL_NAMES.upgrade,
+      MCP_TOOL_NAMES.topup,
+      MCP_TOOL_NAMES.manageAccount,
+    ]) {
       const tool = tools.find(t => t.name === name)!
       expect(tool.annotations).toMatchObject({
         openWorldHint: true,
@@ -403,9 +406,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
               status: 404,
             })
           }),
-          getProduct: vi
-            .fn()
-            .mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
+          getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
           listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),
         } as unknown as SolvaPayClient,
       }),

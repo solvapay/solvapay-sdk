@@ -92,9 +92,7 @@ async function main(): Promise<void> {
   }
   if (!typeId) {
     if (nonInteractive) {
-      process.stderr.write(
-        '--type <kind> is required in non-interactive mode.\n\n' + HELP_TEXT,
-      )
+      process.stderr.write('--type <kind> is required in non-interactive mode.\n\n' + HELP_TEXT)
       process.exitCode = 2
       return
     }
@@ -103,9 +101,7 @@ async function main(): Promise<void> {
 
   const factory = PROJECT_TYPES[typeId]
   if (!factory) {
-    process.stderr.write(
-      `Unknown --type: ${typeId}. Valid: ${PROJECT_TYPE_IDS.join(', ')}\n`,
-    )
+    process.stderr.write(`Unknown --type: ${typeId}. Valid: ${PROJECT_TYPE_IDS.join(', ')}\n`)
     process.exitCode = 2
     return
   }
@@ -115,7 +111,10 @@ async function main(): Promise<void> {
   await type.run({ target, projectName, common: args, raw: rawArgv })
 }
 
-async function resolveProjectName(value: string | undefined, nonInteractive: boolean): Promise<string> {
+async function resolveProjectName(
+  value: string | undefined,
+  nonInteractive: boolean,
+): Promise<string> {
   let raw = value
   if (!raw) {
     if (nonInteractive) {

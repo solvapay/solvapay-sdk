@@ -118,12 +118,24 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
   const [loading, setLoading] = useState(() => plans.length === 0)
   const [error, setError] = useState<Error | null>(null)
 
-  useEffect(() => { fetcherRef.current = effectiveFetcher }, [effectiveFetcher])
-  useEffect(() => { filterRef.current = filter }, [filter])
-  useEffect(() => { sortByRef.current = sortBy }, [sortBy])
-  useEffect(() => { autoSelectFirstPaidRef.current = autoSelectFirstPaid }, [autoSelectFirstPaid])
-  useEffect(() => { initialPlanRefRef.current = initialPlanRef }, [initialPlanRef])
-  useEffect(() => { selectionReadyRef.current = selectionReady }, [selectionReady])
+  useEffect(() => {
+    fetcherRef.current = effectiveFetcher
+  }, [effectiveFetcher])
+  useEffect(() => {
+    filterRef.current = filter
+  }, [filter])
+  useEffect(() => {
+    sortByRef.current = sortBy
+  }, [sortBy])
+  useEffect(() => {
+    autoSelectFirstPaidRef.current = autoSelectFirstPaid
+  }, [autoSelectFirstPaid])
+  useEffect(() => {
+    initialPlanRefRef.current = initialPlanRef
+  }, [initialPlanRef])
+  useEffect(() => {
+    selectionReadyRef.current = selectionReady
+  }, [selectionReady])
 
   // Wrapped setter that tracks user-initiated selection
   const setSelectedPlanIndex = useCallback((index: number) => {
@@ -166,11 +178,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         try {
           setLoading(true)
           const fetchedPlans = await cached.promise
-          const processedPlans = processPlans(
-            fetchedPlans,
-            filterRef.current,
-            sortByRef.current,
-          )
+          const processedPlans = processPlans(fetchedPlans, filterRef.current, sortByRef.current)
           setPlans(processedPlans)
           setError(null)
           applyInitialSelection(processedPlans)
@@ -182,17 +190,8 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
         return
       }
 
-      if (
-        !force &&
-        cached &&
-        cached.plans.length > 0 &&
-        now - cached.timestamp < CACHE_DURATION
-      ) {
-        const processedPlans = processPlans(
-          cached.plans,
-          filterRef.current,
-          sortByRef.current,
-        )
+      if (!force && cached && cached.plans.length > 0 && now - cached.timestamp < CACHE_DURATION) {
+        const processedPlans = processPlans(cached.plans, filterRef.current, sortByRef.current)
         setPlans(processedPlans)
         setLoading(false)
         setError(null)
@@ -211,11 +210,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
 
         plansCache.set(productRef, { plans: fetchedPlans, timestamp: now, promise: null })
 
-        const processedPlans = processPlans(
-          fetchedPlans,
-          filterRef.current,
-          sortByRef.current,
-        )
+        const processedPlans = processPlans(fetchedPlans, filterRef.current, sortByRef.current)
         setPlans(processedPlans)
         applyInitialSelection(processedPlans)
       } catch (err) {

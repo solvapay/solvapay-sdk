@@ -43,10 +43,7 @@ function makeClient(blocking: boolean): SolvaPayClient {
 describe('createMCPHandler auto-converts PaywallError', () => {
   it('returns a PaywallToolResult when the paywall fires', async () => {
     const { createMCPHandler } = createPaywall({ apiClient: makeClient(true) })
-    const handler = createMCPHandler(
-      { product: 'prd_test' },
-      async () => ({ ok: true }),
-    )
+    const handler = createMCPHandler({ product: 'prd_test' }, async () => ({ ok: true }))
 
     const result = (await handler({ auth: { customer_ref: 'cus_test' } })) as {
       isError?: boolean
@@ -59,10 +56,7 @@ describe('createMCPHandler auto-converts PaywallError', () => {
 
   it('passes successful responses through unchanged', async () => {
     const { createMCPHandler } = createPaywall({ apiClient: makeClient(false) })
-    const handler = createMCPHandler(
-      { product: 'prd_test' },
-      async () => ({ ok: true }),
-    )
+    const handler = createMCPHandler({ product: 'prd_test' }, async () => ({ ok: true }))
 
     const result = await handler({ auth: { customer_ref: 'cus_test' } })
     expect(result).toEqual({ ok: true })

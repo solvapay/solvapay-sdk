@@ -18,9 +18,9 @@ describe('createSolvaPayClient - createTopupPaymentIntent', () => {
       accountId: 'acct_789',
     }
 
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify(mockResponse), { status: 200 }),
-    )
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(mockResponse), { status: 200 }))
 
     const client = createSolvaPayClient({ apiKey, apiBaseUrl: baseUrl })
     const result = await client.createTopupPaymentIntent!({

@@ -31,9 +31,9 @@ describe('createSolvaPayClient().createCustomer — response mapping', () => {
       apiBaseUrl: 'http://localhost',
     })
 
-    await expect(
-      client.createCustomer!({ email: 'a@b.c', metadata: {} }),
-    ).resolves.toEqual({ customerRef: 'cus_xyz' })
+    await expect(client.createCustomer!({ email: 'a@b.c', metadata: {} })).resolves.toEqual({
+      customerRef: 'cus_xyz',
+    })
   })
 
   it('prefers reference over customerRef when both are present', async () => {
@@ -43,9 +43,9 @@ describe('createSolvaPayClient().createCustomer — response mapping', () => {
       apiBaseUrl: 'http://localhost',
     })
 
-    await expect(
-      client.createCustomer!({ email: 'a@b.c', metadata: {} }),
-    ).resolves.toEqual({ customerRef: 'cus_from_reference' })
+    await expect(client.createCustomer!({ email: 'a@b.c', metadata: {} })).resolves.toEqual({
+      customerRef: 'cus_from_reference',
+    })
   })
 
   it('falls back to customerRef when the backend shape lacks reference', async () => {
@@ -55,8 +55,8 @@ describe('createSolvaPayClient().createCustomer — response mapping', () => {
       apiBaseUrl: 'http://localhost',
     })
 
-    await expect(
-      client.createCustomer!({ email: 'a@b.c', metadata: {} }),
-    ).resolves.toEqual({ customerRef: 'cus_from_customerRef' })
+    await expect(client.createCustomer!({ email: 'a@b.c', metadata: {} })).resolves.toEqual({
+      customerRef: 'cus_from_customerRef',
+    })
   })
 })

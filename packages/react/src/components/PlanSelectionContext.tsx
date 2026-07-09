@@ -38,9 +38,7 @@ export interface PlanSelectionProviderProps {
 export const PlanSelectionProvider: React.FC<PlanSelectionProviderProps> = ({
   value,
   children,
-}) => (
-  <PlanSelectionContext.Provider value={value}>{children}</PlanSelectionContext.Provider>
-)
+}) => <PlanSelectionContext.Provider value={value}>{children}</PlanSelectionContext.Provider>
 
 /**
  * Reads the current plan-selection context. Returns `null` when called outside

@@ -18,10 +18,7 @@ function makeClient(
     externalRef?: string
   }>,
 ) {
-  const customers = new Map<
-    string,
-    { customerRef: string; email: string; externalRef?: string }
-  >()
+  const customers = new Map<string, { customerRef: string; email: string; externalRef?: string }>()
   for (const c of seed) customers.set(c.customerRef, { ...c })
 
   const calls = {
@@ -81,7 +78,9 @@ function makeClient(
       const existing = findByEmail(email)
       if (existing) {
         throw new Error(
-          'Create customer failed (409): Customer with identifier email ' + email + ' already exists',
+          'Create customer failed (409): Customer with identifier email ' +
+            email +
+            ' already exists',
         )
       }
       const customerRef = 'cus_' + Math.random().toString(36).slice(2, 10)
@@ -124,11 +123,10 @@ describe('ensureCustomer — backfills externalRef via updateCustomer', () => {
   it('resolves email-matched customer and backfills externalRef on 409', async () => {
     const solvapay = createSolvaPay({ apiClient: mock.client })
 
-    const resolved = await solvapay.ensureCustomer(
-      'supabase-user-id',
-      'supabase-user-id',
-      { email: 'alice@example.com', name: 'Alice' },
-    )
+    const resolved = await solvapay.ensureCustomer('supabase-user-id', 'supabase-user-id', {
+      email: 'alice@example.com',
+      name: 'Alice',
+    })
 
     expect(resolved).toBe('cus_stale')
     expect(mock.customers.get('cus_stale')?.externalRef).toBe('supabase-user-id')
@@ -163,9 +161,7 @@ describe('ensureCustomer — backfills externalRef via updateCustomer', () => {
 
 describe('SolvaPayClient.updateCustomer wiring', () => {
   it('is called with (customerRef, patch) when backfilling', async () => {
-    const mock = makeClient([
-      { customerRef: 'cus_fresh', email: 'carol@example.com' },
-    ])
+    const mock = makeClient([{ customerRef: 'cus_fresh', email: 'carol@example.com' }])
     const spyUpdate = vi.spyOn(mock.client, 'updateCustomer')
 
     const solvapay = createSolvaPay({ apiClient: mock.client })

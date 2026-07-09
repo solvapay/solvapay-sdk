@@ -42,7 +42,5 @@ export function creditsToDisplayMinorUnits(input: {
   const { credits, creditsPerMinorUnit, displayExchangeRate, displayCurrency } = input
   if (!creditsPerMinorUnit || creditsPerMinorUnit <= 0) return null
   const usdMajor = credits / creditsPerMinorUnit / 100
-  return Math.round(
-    usdMajor * (displayExchangeRate || 1) * minorUnitsPerMajor(displayCurrency),
-  )
+  return Math.round(usdMajor * (displayExchangeRate || 1) * minorUnitsPerMajor(displayCurrency))
 }

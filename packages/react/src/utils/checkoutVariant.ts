@@ -4,12 +4,7 @@ import type { Plan } from '../types'
  * Checkout "shape" — drives the mandate variant, the submit-button CTA, and
  * the button `aria-label` in lockstep so those three strings always agree.
  */
-export type CheckoutVariant =
-  | 'recurring'
-  | 'oneTime'
-  | 'topup'
-  | 'usageMetered'
-  | 'freeTier'
+export type CheckoutVariant = 'recurring' | 'oneTime' | 'topup' | 'usageMetered' | 'freeTier'
 
 /**
  * Derive the variant from the plan's type + billing model. Unknown or missing
@@ -19,10 +14,7 @@ export type CheckoutVariant =
  * to the `'freeTier'` variant. Metered free/usage plans stay on
  * `'usageMetered'` because the mandate copy there already covers pay-as-you-go.
  */
-export function deriveVariant(
-  plan: Plan | null | undefined,
-  mode?: 'topup',
-): CheckoutVariant {
+export function deriveVariant(plan: Plan | null | undefined, mode?: 'topup'): CheckoutVariant {
   if (mode === 'topup') return 'topup'
   if (!plan?.type) return 'oneTime'
 

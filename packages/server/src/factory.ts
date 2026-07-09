@@ -664,9 +664,7 @@ export interface SolvaPay {
    * @param params.customerRef - Customer reference
    * @returns Customer reference, credits, and display currency
    */
-  getCustomerBalance(params: {
-    customerRef: string
-  }): Promise<{
+  getCustomerBalance(params: { customerRef: string }): Promise<{
     customerRef: string
     credits: number
     displayCurrency: string
@@ -960,9 +958,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     attachBusinessDetails(params) {
       if (!apiClient.attachBusinessDetails) {
-        throw new SolvaPayError(
-          'attachBusinessDetails is not available on this API client',
-        )
+        throw new SolvaPayError('attachBusinessDetails is not available on this API client')
       }
       return apiClient.attachBusinessDetails(params)
     },

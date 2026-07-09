@@ -6,11 +6,7 @@ import { McpHostInfoProvider } from '../../hooks/useHostInfo'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../../transport/cache-key'
-import type {
-  Merchant,
-  SolvaPayConfig,
-  SolvaPayContextValue,
-} from '../../../types'
+import type { Merchant, SolvaPayConfig, SolvaPayContextValue } from '../../../types'
 
 function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
   return {
@@ -55,14 +51,10 @@ function renderWithContext(
   opts: { config?: SolvaPayConfig; hostName?: string | null } = {},
 ) {
   const { config, hostName = null } = opts
-  const tree = (
-    <McpHostInfoProvider hostName={hostName}>{node}</McpHostInfoProvider>
-  )
+  const tree = <McpHostInfoProvider hostName={hostName}>{node}</McpHostInfoProvider>
   if (!config) return render(tree)
   return render(
-    <SolvaPayContext.Provider value={buildCtx(config)}>
-      {tree}
-    </SolvaPayContext.Provider>,
+    <SolvaPayContext.Provider value={buildCtx(config)}>{tree}</SolvaPayContext.Provider>,
   )
 }
 
@@ -80,9 +72,9 @@ describe('<AppHeader>', () => {
         logoUrl: 'https://acme.test/logo.png',
       })
       const { container } = renderWithContext(<AppHeader />, { config })
-      const img = container.querySelector('img.solvapay-mcp-app-header-icon') as
-        | HTMLImageElement
-        | null
+      const img = container.querySelector(
+        'img.solvapay-mcp-app-header-icon',
+      ) as HTMLImageElement | null
       expect(img).not.toBeNull()
       expect(img?.src).toBe('https://acme.test/icon.png')
     })
@@ -94,9 +86,9 @@ describe('<AppHeader>', () => {
         logoUrl: 'https://acme.test/logo.png',
       })
       const { container } = renderWithContext(<AppHeader />, { config })
-      const img = container.querySelector('img.solvapay-mcp-app-header-icon') as
-        | HTMLImageElement
-        | null
+      const img = container.querySelector(
+        'img.solvapay-mcp-app-header-icon',
+      ) as HTMLImageElement | null
       expect(img?.src).toBe('https://acme.test/logo.png')
     })
 
@@ -107,9 +99,7 @@ describe('<AppHeader>', () => {
       })
       const { container } = renderWithContext(<AppHeader />, { config })
       expect(container.querySelector('img.solvapay-mcp-app-header-icon')).toBeNull()
-      const initials = container.querySelector(
-        '.solvapay-mcp-app-header-initials',
-      )
+      const initials = container.querySelector('.solvapay-mcp-app-header-initials')
       expect(initials?.textContent).toBe('AC')
     })
 
@@ -125,26 +115,18 @@ describe('<AppHeader>', () => {
         iconUrl: 'https://acme.test/icon.png',
       })
       const { container } = renderWithContext(<AppHeader />, { config })
-      const img = container.querySelector<HTMLImageElement>(
-        'img.solvapay-mcp-app-header-icon',
-      )
+      const img = container.querySelector<HTMLImageElement>('img.solvapay-mcp-app-header-icon')
       expect(img).not.toBeNull()
       expect(img?.style.display).toBe('none')
-      const initialsBefore = container.querySelector(
-        '.solvapay-mcp-app-header-initials',
-      )
+      const initialsBefore = container.querySelector('.solvapay-mcp-app-header-initials')
       expect(initialsBefore?.textContent).toBe('AC')
 
       fireEvent.load(img as HTMLImageElement)
 
-      const imgAfter = container.querySelector<HTMLImageElement>(
-        'img.solvapay-mcp-app-header-icon',
-      )
+      const imgAfter = container.querySelector<HTMLImageElement>('img.solvapay-mcp-app-header-icon')
       expect(imgAfter).not.toBeNull()
       expect(imgAfter?.style.display).toBe('')
-      expect(
-        container.querySelector('.solvapay-mcp-app-header-initials'),
-      ).toBeNull()
+      expect(container.querySelector('.solvapay-mcp-app-header-initials')).toBeNull()
     })
 
     it('skips the initials flash when the image is already complete on mount (warm cache)', () => {
@@ -185,20 +167,15 @@ describe('<AppHeader>', () => {
           iconUrl: 'https://acme.test/icon.png',
         })
         const { container } = renderWithContext(<AppHeader />, { config })
-        const img = container.querySelector<HTMLImageElement>(
-          'img.solvapay-mcp-app-header-icon',
-        )
+        const img = container.querySelector<HTMLImageElement>('img.solvapay-mcp-app-header-icon')
         expect(img).not.toBeNull()
         expect(img?.style.display).toBe('')
-        expect(
-          container.querySelector('.solvapay-mcp-app-header-initials'),
-        ).toBeNull()
+        expect(container.querySelector('.solvapay-mcp-app-header-initials')).toBeNull()
       } finally {
         if (completeDescriptor) {
           Object.defineProperty(HTMLImageElement.prototype, 'complete', completeDescriptor)
         } else {
-          delete (HTMLImageElement.prototype as unknown as { complete?: unknown })
-            .complete
+          delete (HTMLImageElement.prototype as unknown as { complete?: unknown }).complete
         }
         if (naturalHeightDescriptor) {
           Object.defineProperty(
@@ -207,9 +184,11 @@ describe('<AppHeader>', () => {
             naturalHeightDescriptor,
           )
         } else {
-          delete (HTMLImageElement.prototype as unknown as {
-            naturalHeight?: unknown
-          }).naturalHeight
+          delete (
+            HTMLImageElement.prototype as unknown as {
+              naturalHeight?: unknown
+            }
+          ).naturalHeight
         }
       }
     })
@@ -230,9 +209,7 @@ describe('<AppHeader>', () => {
       // Simulate the browser's image-load failure.
       fireEvent.error(img as HTMLImageElement)
       expect(container.querySelector('img.solvapay-mcp-app-header-icon')).toBeNull()
-      const initials = container.querySelector(
-        '.solvapay-mcp-app-header-initials',
-      )
+      const initials = container.querySelector('.solvapay-mcp-app-header-initials')
       expect(initials?.textContent).toBe('AC')
     })
   })
@@ -252,12 +229,8 @@ describe('<AppHeader>', () => {
     it('falls back to "SolvaPay" when no merchant is cached', () => {
       // No SolvaPayContext, no cache entry — pre-bootstrap scenario.
       const { container } = renderWithContext(<AppHeader />)
-      expect(container.querySelector('.solvapay-mcp-app-header-name')?.textContent).toBe(
-        'SolvaPay',
-      )
-      expect(container.querySelector('.solvapay-mcp-app-header-initials')?.textContent).toBe(
-        'SP',
-      )
+      expect(container.querySelector('.solvapay-mcp-app-header-name')?.textContent).toBe('SolvaPay')
+      expect(container.querySelector('.solvapay-mcp-app-header-initials')?.textContent).toBe('SP')
     })
   })
 
@@ -374,10 +347,9 @@ describe('<AppHeader>', () => {
         displayName: 'Acme',
         legalName: 'Acme Inc.',
       })
-      const { container } = renderWithContext(
-        <AppHeader classNames={{ appHeaderName: '' }} />,
-        { config },
-      )
+      const { container } = renderWithContext(<AppHeader classNames={{ appHeaderName: '' }} />, {
+        config,
+      })
       // Name span still renders, just without a class.
       const name = container.querySelector('header')?.querySelector('span:not([aria-hidden])')
       expect(name?.textContent).toBe('Acme')
@@ -401,13 +373,13 @@ describe('<AppHeader>', () => {
           }}
         />,
       )
-      const img = container.querySelector('img.solvapay-mcp-app-header-icon') as
-        | HTMLImageElement
-        | null
+      const img = container.querySelector(
+        'img.solvapay-mcp-app-header-icon',
+      ) as HTMLImageElement | null
       expect(img?.src).toBe('https://prop.test/icon.png')
-      expect(
-        container.querySelector('.solvapay-mcp-app-header-name')?.textContent,
-      ).toBe('Prop Merchant')
+      expect(container.querySelector('.solvapay-mcp-app-header-name')?.textContent).toBe(
+        'Prop Merchant',
+      )
     })
 
     it('prefers the prop merchant over a cached one', () => {
@@ -426,12 +398,12 @@ describe('<AppHeader>', () => {
         />,
         { config },
       )
-      expect(
-        container.querySelector('.solvapay-mcp-app-header-name')?.textContent,
-      ).toBe('Prop Merchant')
-      const img = container.querySelector('img.solvapay-mcp-app-header-icon') as
-        | HTMLImageElement
-        | null
+      expect(container.querySelector('.solvapay-mcp-app-header-name')?.textContent).toBe(
+        'Prop Merchant',
+      )
+      const img = container.querySelector(
+        'img.solvapay-mcp-app-header-icon',
+      ) as HTMLImageElement | null
       expect(img?.src).toBe('https://prop.test/icon.png')
     })
 
@@ -444,12 +416,8 @@ describe('<AppHeader>', () => {
       const { container } = renderWithContext(<AppHeader merchant={null} />, {
         config,
       })
-      expect(
-        container.querySelector('.solvapay-mcp-app-header-name')?.textContent,
-      ).toBe('SolvaPay')
-      expect(
-        container.querySelector('.solvapay-mcp-app-header-initials')?.textContent,
-      ).toBe('SP')
+      expect(container.querySelector('.solvapay-mcp-app-header-name')?.textContent).toBe('SolvaPay')
+      expect(container.querySelector('.solvapay-mcp-app-header-initials')?.textContent).toBe('SP')
     })
 
     it('merchant=undefined falls through to the cache (default behaviour)', () => {
@@ -458,9 +426,9 @@ describe('<AppHeader>', () => {
         legalName: 'Cached Inc.',
       })
       const { container } = renderWithContext(<AppHeader />, { config })
-      expect(
-        container.querySelector('.solvapay-mcp-app-header-name')?.textContent,
-      ).toBe('Cached Merchant')
+      expect(container.querySelector('.solvapay-mcp-app-header-name')?.textContent).toBe(
+        'Cached Merchant',
+      )
     })
   })
 

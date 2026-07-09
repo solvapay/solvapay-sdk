@@ -60,10 +60,7 @@ describe('listProducts', () => {
   })
 
   it('returns a warning on network failure', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new Error('offline')),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
 
     const result = await listProducts('https://api.solvapay.com', 'sk_test')
 

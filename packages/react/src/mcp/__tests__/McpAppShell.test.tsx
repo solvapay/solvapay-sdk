@@ -6,12 +6,7 @@ import type { McpBootstrap } from '../bootstrap'
 import { SolvaPayContext } from '../../SolvaPayProvider'
 import { merchantCache } from '../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../transport/cache-key'
-import type {
-  SolvaPayContextValue,
-  SolvaPayConfig,
-  Merchant,
-  PurchaseInfo,
-} from '../../types'
+import type { SolvaPayContextValue, SolvaPayConfig, Merchant, PurchaseInfo } from '../../types'
 
 function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
   return {
@@ -100,10 +95,7 @@ function renderShell(
 ) {
   return render(
     <SolvaPayContext.Provider value={ctx}>
-      <McpAppShell
-        bootstrap={{ ...baseBootstrap, ...bootstrap }}
-        {...props}
-      />
+      <McpAppShell bootstrap={{ ...baseBootstrap, ...bootstrap }} {...props} />
     </SolvaPayContext.Provider>,
   )
 }
@@ -193,7 +185,13 @@ describe('<McpAppShell>', () => {
           bootstrap={{
             ...baseBootstrap,
             view: 'usage' as never,
-            customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+            customer: {
+              ref: 'cus_1',
+              purchase: null,
+              paymentMethod: null,
+              balance: null,
+              usage: null,
+            },
           }}
           views={{ checkout: Checkout, account: Account }}
         />

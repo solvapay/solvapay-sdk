@@ -286,7 +286,9 @@ export interface SolvapayWebhookOptions {
   onEvent: (event: WebhookEvent) => void | Promise<void>
 }
 
-export function solvapayWebhook(options: SolvapayWebhookOptions): (req: Request) => Promise<Response> {
+export function solvapayWebhook(
+  options: SolvapayWebhookOptions,
+): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const secret =
       options.secret ||

@@ -8,21 +8,21 @@ from the agent.
 
 ## Intent tools (LLM-callable, dual-audience)
 
-| Tool | Purpose | When to use |
-| --- | --- | --- |
-| `upgrade` | Start or change a paid plan for the current customer | User says "upgrade", "change plan", "buy", "subscribe" |
+| Tool             | Purpose                                                       | When to use                                                 |
+| ---------------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
+| `upgrade`        | Start or change a paid plan for the current customer          | User says "upgrade", "change plan", "buy", "subscribe"      |
 | `manage_account` | Show current plan, balance, payment method, cancel/reactivate | User says "my account", "current plan", "cancel", "billing" |
-| `topup` | Add SolvaPay credits (pay-as-you-go) | User says "top up", "add credits", "buy credits" |
-| `check_usage` | Show used/remaining credits, reset date | User says "how many credits", "usage", "remaining" |
-| `activate_plan` | Pick a plan from the picker, or activate a specific `planRef` | User says "activate", or the agent needs to enumerate plans |
+| `topup`          | Add SolvaPay credits (pay-as-you-go)                          | User says "top up", "add credits", "buy credits"            |
+| `check_usage`    | Show used/remaining credits, reset date                       | User says "how many credits", "usage", "remaining"          |
+| `activate_plan`  | Pick a plan from the picker, or activate a specific `planRef` | User says "activate", or the agent needs to enumerate plans |
 
 All five intent tools accept an optional `mode: 'ui' | 'text' | 'auto'`
 argument:
 
 - `'ui'` (default) — emit the UI-resource ref on `_meta.ui` plus a
   one-line placeholder in `content[0]` (e.g. `"Opened your {product}
-  account. Balance: 865,500 credits (~SEK 802.48). Pass mode:'text' for
-  a markdown summary."`). Keeps UI-rendering hosts (MCP Inspector,
+account. Balance: 865,500 credits (~SEK 802.48). Pass mode:'text' for
+a markdown summary."`). Keeps UI-rendering hosts (MCP Inspector,
   ChatGPT Apps, Claude Desktop) tidy — the iframe already carries the
   rich detail. `structuredContent` still holds the full
   `BootstrapPayload` so agents have full grounding.
@@ -82,25 +82,25 @@ it.
 Which host renders what — important so integrators know which mode to
 test against.
 
-| Host | UI iframe | Text | `ui://` resource | Notes |
-| --- | --- | --- | --- | --- |
-| **Claude Desktop** | ✓ | ✓ (collapsed) | ✓ | Default rendering for the SolvaPay MCP Apps we ship. |
-| **Claude Code CLI** | — | ✓ | ignored | Text-only; `**bold**` + `` `code` `` render via ANSI. |
-| **Cursor IDE** | ✓ | ✓ | ✓ | Renders UI iframes as of recent builds; falls back cleanly. |
-| **ChatGPT MCP connectors** | ✓ | ✓ | via Apps SDK | No slash-command UI; About view lists commands as plain copy. |
-| **`basic-host`** | ✓ | ✓ | ✓ | Dev harness; echoes both. |
-| **Programmatic (n8n, agents)** | — | ✓ | ignored | Agents parse `structuredContent`; narrated text is secondary. |
+| Host                           | UI iframe | Text          | `ui://` resource | Notes                                                         |
+| ------------------------------ | --------- | ------------- | ---------------- | ------------------------------------------------------------- |
+| **Claude Desktop**             | ✓         | ✓ (collapsed) | ✓                | Default rendering for the SolvaPay MCP Apps we ship.          |
+| **Claude Code CLI**            | —         | ✓             | ignored          | Text-only; `**bold**` + `` `code` `` render via ANSI.         |
+| **Cursor IDE**                 | ✓         | ✓             | ✓                | Renders UI iframes as of recent builds; falls back cleanly.   |
+| **ChatGPT MCP connectors**     | ✓         | ✓             | via Apps SDK     | No slash-command UI; About view lists commands as plain copy. |
+| **`basic-host`**               | ✓         | ✓             | ✓                | Dev harness; echoes both.                                     |
+| **Programmatic (n8n, agents)** | —         | ✓             | ignored          | Agents parse `structuredContent`; narrated text is secondary. |
 
 ## Demo data tools (LLM-callable, paywall-gated)
 
 Enabled when `DEMO_TOOLS !== 'false'` — see
 [`src/demo-tools.ts`](src/demo-tools.ts).
 
-| Tool | Purpose | When to use |
-| --- | --- | --- |
-| `search_knowledge` | Returns 3 deterministic stub snippets for a query | Exercise the paywall from `basic-host` — each call consumes 1 credit |
-| `get_market_quote` | Returns a deterministic fake market quote | Second tool so you can show the paywall firing on something other than `search_knowledge` |
-| `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response |
+| Tool                 | Purpose                                                                                            | When to use                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `search_knowledge`   | Returns 3 deterministic stub snippets for a query                                                  | Exercise the paywall from `basic-host` — each call consumes 1 credit                      |
+| `get_market_quote`   | Returns a deterministic fake market quote                                                          | Second tool so you can show the paywall firing on something other than `search_knowledge` |
+| `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response     |
 
 All three are wrapped with `solvaPay.payable().mcp()` via
 `registerPayable` so the credit balance decrements per call, and the
@@ -133,15 +133,15 @@ implementations land in V1.1 weeks after V1.
 
 ## UI-only state-change tools (tagged `_meta.audience: 'ui'`)
 
-| Tool | Purpose |
-| --- | --- |
-| `create_checkout_session` | Returns `{ sessionId, checkoutUrl }` for hosted checkout (fallback branch) |
-| `create_customer_session` | Returns `{ sessionId, customerUrl }` for the SolvaPay customer portal |
-| `create_payment_intent` | Creates the Stripe PaymentIntent consumed by the embedded `<PaymentForm>` |
-| `process_payment` | Records the Stripe confirmation and creates the SolvaPay purchase |
-| `create_topup_payment_intent` | Creates the Stripe PaymentIntent for a top-up |
-| `cancel_renewal` | Cancels auto-renewal on an active purchase |
-| `reactivate_renewal` | Undoes a pending cancellation |
+| Tool                          | Purpose                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `create_checkout_session`     | Returns `{ sessionId, checkoutUrl }` for hosted checkout (fallback branch) |
+| `create_customer_session`     | Returns `{ sessionId, customerUrl }` for the SolvaPay customer portal      |
+| `create_payment_intent`       | Creates the Stripe PaymentIntent consumed by the embedded `<PaymentForm>`  |
+| `process_payment`             | Records the Stripe confirmation and creates the SolvaPay purchase          |
+| `create_topup_payment_intent` | Creates the Stripe PaymentIntent for a top-up                              |
+| `cancel_renewal`              | Cancels auto-renewal on an active purchase                                 |
+| `reactivate_renewal`          | Undoes a pending cancellation                                              |
 
 These are called exclusively by the client-side React primitives
 mounted inside the iframe. Hosts that implement `_meta.audience`
@@ -151,16 +151,16 @@ their descriptions.
 
 ## Slash-command prompts
 
-| Prompt | Args | What it sends |
-| --- | --- | --- |
-| `/upgrade` | `{ planRef? }` | "Show me the upgrade options" / "Activate plan `planRef`" |
-| `/manage_account` | — | "Show me my SolvaPay account" |
-| `/topup` | `{ amount? }` | "I want to top up my SolvaPay credits" |
-| `/check_usage` | — | "How much SolvaPay credit have I used?" |
-| `/activate_plan` | `{ planRef? }` | "What plans can I activate?" / "Activate `planRef`" |
-| `/search_knowledge` (demo) | `{ query? }` | "Search the knowledge base for `query`" |
-| `/get_market_quote` (demo) | `{ symbol? }` | "Get the current market quote for `symbol`" |
-| `/query_sales_trends` (demo) | `{ range? }` | "Query sales trends for `range`" — triggers a `low-balance` nudge when credits are low |
+| Prompt                       | Args           | What it sends                                                                          |
+| ---------------------------- | -------------- | -------------------------------------------------------------------------------------- |
+| `/upgrade`                   | `{ planRef? }` | "Show me the upgrade options" / "Activate plan `planRef`"                              |
+| `/manage_account`            | —              | "Show me my SolvaPay account"                                                          |
+| `/topup`                     | `{ amount? }`  | "I want to top up my SolvaPay credits"                                                 |
+| `/check_usage`               | —              | "How much SolvaPay credit have I used?"                                                |
+| `/activate_plan`             | `{ planRef? }` | "What plans can I activate?" / "Activate `planRef`"                                    |
+| `/search_knowledge` (demo)   | `{ query? }`   | "Search the knowledge base for `query`"                                                |
+| `/get_market_quote` (demo)   | `{ symbol? }`  | "Get the current market quote for `symbol`"                                            |
+| `/query_sales_trends` (demo) | `{ range? }`   | "Query sales trends for `range`" — triggers a `low-balance` nudge when credits are low |
 
 ## Docs resource
 

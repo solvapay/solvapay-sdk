@@ -94,7 +94,8 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
             await onSuccess(paymentIntent)
             setMessage('Payment successful!')
           } catch (err) {
-            const caught = err instanceof Error ? err : new Error(copy.errors.paymentProcessingFailed)
+            const caught =
+              err instanceof Error ? err : new Error(copy.errors.paymentProcessingFailed)
             setMessage(copy.errors.paymentProcessingFailed)
             setIsProcessing(false)
             onError?.(caught)
@@ -138,8 +139,7 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
         fontSize: '17px',
         lineHeight: '24px',
         color: '#1e293b',
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         '::placeholder': {
           color: '#94a3b8',
         },
@@ -169,7 +169,12 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
       ) : (
         <output
           data-solvapay-payment-form-loading=""
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52px' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '52px',
+          }}
         >
           <Spinner size="sm" />
         </output>

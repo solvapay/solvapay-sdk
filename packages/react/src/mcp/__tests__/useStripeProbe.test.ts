@@ -63,9 +63,7 @@ describe('useStripeProbe', () => {
   beforeEach(() => {
     loadStripeMock.mockReset()
     // Ensure prior tests' probe hosts can't leak into the next assert.
-    document.body
-      .querySelectorAll(PROBE_HOST_SELECTOR)
-      .forEach((el) => el.remove())
+    document.body.querySelectorAll(PROBE_HOST_SELECTOR).forEach(el => el.remove())
   })
 
   afterEach(() => {

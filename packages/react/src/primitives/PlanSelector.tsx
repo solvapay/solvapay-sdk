@@ -159,7 +159,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
   }, [purchases])
 
   const resolvedCurrentPlanRef =
-    currentPlanRef === null ? null : currentPlanRef ?? autoCurrentPlanRef
+    currentPlanRef === null ? null : (currentPlanRef ?? autoCurrentPlanRef)
 
   const isCurrent = useCallback(
     (ref: string) => resolvedCurrentPlanRef === ref,
@@ -169,10 +169,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
     (ref: string) => plans.find(p => p.reference === ref)?.requiresPayment === false,
     [plans],
   )
-  const isPopular = useCallback(
-    (ref: string) => popularPlanRef === ref,
-    [popularPlanRef],
-  )
+  const isPopular = useCallback((ref: string) => popularPlanRef === ref, [popularPlanRef])
 
   const select = useCallback(
     (ref: string) => {
@@ -355,15 +352,16 @@ const Grid = forwardRef<HTMLDivElement, GridProps>(function PlanSelectorGrid(
         // "active, no action available"). Selectable PAYG-current
         // plans flip to 'selected' once the user clicks them so the
         // selection feedback isn't masked by the persistent badge.
-        const state: CardState = isCurrent && !isPaygCurrent
-          ? 'current'
-          : selected
-            ? 'selected'
-            : isCurrent
-              ? 'current'
-              : isFree
-                ? 'disabled'
-                : 'idle'
+        const state: CardState =
+          isCurrent && !isPaygCurrent
+            ? 'current'
+            : selected
+              ? 'selected'
+              : isCurrent
+                ? 'current'
+                : isFree
+                  ? 'disabled'
+                  : 'idle'
         const pricingOptions = getPlanPricingOptions(plan)
         const selectedOption = ctx.getSelectedOption(plan)
         const cardCtx: CardContextValue = {
@@ -440,13 +438,14 @@ const CardName = forwardRef<HTMLSpanElement, LeafProps>(function PlanSelectorCar
   // Plans configured without an explicit `name` would previously
   // collapse the card into a nameless price. Fall back to a
   // type-derived label so every card has a title.
-  const fallback = card.plan.requiresPayment === false
-    ? 'Free'
-    : card.plan.type === 'usage-based'
-      ? 'Pay as you go'
-      : card.plan.type === 'recurring'
-        ? 'Plan'
-        : null
+  const fallback =
+    card.plan.requiresPayment === false
+      ? 'Free'
+      : card.plan.type === 'usage-based'
+        ? 'Pay as you go'
+        : card.plan.type === 'recurring'
+          ? 'Plan'
+          : null
   const label = card.plan.name ?? fallback
   if (!label && children == null) return null
   const Comp = asChild ? Slot : 'span'

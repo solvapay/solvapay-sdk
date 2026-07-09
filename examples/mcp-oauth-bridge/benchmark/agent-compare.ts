@@ -227,16 +227,17 @@ async function runAgentTask(
 
     if (toolUseBlocks.length === 0) {
       const textBlocks = content.filter(b => b.type === 'text')
-      const stopText = textBlocks.map(b => b.text ?? '').join(' ').slice(0, 200)
+      const stopText = textBlocks
+        .map(b => b.text ?? '')
+        .join(' ')
+        .slice(0, 200)
       console.error(
         `[${label}]     turn=${turn} STOP (no tool_use). text: ${stopText || '(empty)'}`,
       )
       break
     }
 
-    console.error(
-      `[${label}]     turn=${turn} tools: ${toolUseBlocks.map(b => b.name).join(', ')}`,
-    )
+    console.error(`[${label}]     turn=${turn} tools: ${toolUseBlocks.map(b => b.name).join(', ')}`)
 
     messages.push({ role: 'assistant', content })
 
@@ -270,7 +271,13 @@ async function runAgentTask(
     messages.push({ role: 'user', content: toolResults })
   }
 
-  return { toolCalls: records.length, toolTimeMs, llmTimeMs, wallTimeMs: performance.now() - wallStart, records }
+  return {
+    toolCalls: records.length,
+    toolTimeMs,
+    llmTimeMs,
+    wallTimeMs: performance.now() - wallStart,
+    records,
+  }
 }
 
 async function benchmarkEndpoint(endpoint: EndpointConfig): Promise<EndpointResult> {
@@ -296,7 +303,9 @@ async function benchmarkEndpoint(endpoint: EndpointConfig): Promise<EndpointResu
       `[${endpoint.label}]   tool=${t.name} desc=${t.description.length}ch schema={keys:[${schemaKeys}], hasType:${hasType}}`,
     )
   }
-  console.error(`[${endpoint.label}] Discovered ${tools.length} tools: ${tools.map(t => t.name).join(', ')}`)
+  console.error(
+    `[${endpoint.label}] Discovered ${tools.length} tools: ${tools.map(t => t.name).join(', ')}`,
+  )
 
   const runResults: RunResult[] = []
   for (let i = 0; i < runs; i++) {
@@ -404,14 +413,16 @@ function formatReport(results: EndpointResult[]): string {
     const cells = [metricName]
     for (const r of results) cells.push(fmt(getter(r.aggregate)))
     if (baseline) {
-      for (const r of nonBaseline) cells.push(`+${fmt(getter(r.aggregate) - getter(baseline.aggregate))}`)
+      for (const r of nonBaseline)
+        cells.push(`+${fmt(getter(r.aggregate) - getter(baseline.aggregate))}`)
     }
     lines.push(`| ${cells.join(' | ')} |`)
   }
 
   // End-to-end impact per non-baseline endpoint
   if (baseline && nonBaseline.length > 0) {
-    const baselineAvgToolTime = baseline.runs.reduce((s, r) => s + r.toolTimeMs, 0) / baseline.runs.length
+    const baselineAvgToolTime =
+      baseline.runs.reduce((s, r) => s + r.toolTimeMs, 0) / baseline.runs.length
     const baselineAvgCalls = baseline.runs.reduce((s, r) => s + r.toolCalls, 0) / runs
 
     lines.push('', '### End-to-End Impact', '')

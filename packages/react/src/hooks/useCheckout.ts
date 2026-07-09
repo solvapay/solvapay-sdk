@@ -44,10 +44,7 @@ async function resolvePlanRef(
   const res = await fetchFn(url, { method: 'GET', headers })
 
   if (!res.ok) {
-    const message = await readErrorMessage(
-      res,
-      `Failed to fetch plans for product "${productRef}"`,
-    )
+    const message = await readErrorMessage(res, `Failed to fetch plans for product "${productRef}"`)
     throw new Error(message)
   }
 

@@ -5,9 +5,7 @@
     "version": "1.0.0",
     "description": "Minimal OpenAPI fixture exercising the apiKey-multi path: two static credential headers (AppKey + AppToken) required together, no token exchange. Deliberately NOT named client-id/secret — the kind is generic over N headers. Used by unit + smoke tests for create-mcp-app."
   },
-  "servers": [
-    { "url": "https://api.acme-widgets.test" }
-  ],
+  "servers": [{ "url": "https://api.acme-widgets.test" }],
   "paths": {
     "/widgets/{id}": {
       "get": {

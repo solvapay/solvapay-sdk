@@ -70,8 +70,7 @@ export function resolveSellerOrganizationNumberDisplay(
   merchant: Merchant | null | undefined,
   taxDisplay: SellerTaxDisplay,
 ): string | null {
-  const organizationNumber =
-    normalize(merchant?.companyNumber) ?? normalize(merchant?.taxId)
+  const organizationNumber = normalize(merchant?.companyNumber) ?? normalize(merchant?.taxId)
   if (!organizationNumber) return null
 
   if (taxDisplay.kind === 'provided' && organizationNumber === taxDisplay.value) {

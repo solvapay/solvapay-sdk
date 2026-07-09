@@ -238,10 +238,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // the pill commits to the real `remaining` — typically "0 left" +
   // upgrade CTA — instead of stalling on a never-resolving skeleton.
   const usageResolving =
-    plansLoading ||
-    purchaseLoading ||
-    limitRemaining === null ||
-    autoActivatingFreePlan
+    plansLoading || purchaseLoading || limitRemaining === null || autoActivatingFreePlan
   // Once `purchase` confirms the customer is on a paid tier, we can
   // commit to "Premium" / "Lifetime" even if other inputs are still
   // settling — the runtime counter doesn't apply to paid entitlements.
@@ -370,11 +367,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </div>
         {checkoutState ? (
           <div className="absolute inset-0 overflow-y-auto bg-white/95 backdrop-blur-sm">
-            <InlineCheckout
-              state={checkoutState}
-              onSuccess={onFormSuccess}
-              onUnlock={onUnlock}
-            />
+            <InlineCheckout state={checkoutState} onSuccess={onFormSuccess} onUnlock={onUnlock} />
           </div>
         ) : (
           <div className="absolute bottom-0 inset-x-0">

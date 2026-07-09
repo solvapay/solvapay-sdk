@@ -50,9 +50,7 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
 
 function renderWithProvider(ui: React.ReactElement, context?: Partial<SolvaPayContextValue>) {
   const ctx = createMockContext(context)
-  return render(
-    React.createElement(SolvaPayContext.Provider, { value: ctx }, ui),
-  )
+  return render(React.createElement(SolvaPayContext.Provider, { value: ctx }, ui))
 }
 
 describe('TopupForm', () => {

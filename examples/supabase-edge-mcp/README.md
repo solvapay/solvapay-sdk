@@ -123,22 +123,22 @@ curl -s "$WORKER/.well-known/oauth-authorization-server" | jq '.issuer'
 
 In MCPJam Inspector:
 
-| Field | Value |
-| ----- | ----- |
-| **URL** | `https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev` |
-| **Auth** | OAuth |
-| **Protocol** | `2025-06-18` |
-| **Registration** | Dynamic Client Registration (DCR) |
+| Field            | Value                                                          |
+| ---------------- | -------------------------------------------------------------- |
+| **URL**          | `https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev` |
+| **Auth**         | OAuth                                                          |
+| **Protocol**     | `2025-06-18`                                                   |
+| **Registration** | Dynamic Client Registration (DCR)                              |
 
 Do **not** use the raw Supabase URL in MCPJam — OAuth discovery will fail.
 
 ### Quick reference — what runs where
 
-| Component | URL | Purpose |
-| --------- | --- | ------- |
-| Supabase function | `https://<ref>.supabase.co/functions/v1/mcp` | MCP server + OAuth bridge (backend) |
-| Cloudflare proxy | `https://supabase-edge-mcp-proxy.<sub>.workers.dev` | Root URL for MCP clients + RFC 9728 discovery |
-| MCPJam | proxy URL above | Browser MCP client |
+| Component         | URL                                                 | Purpose                                       |
+| ----------------- | --------------------------------------------------- | --------------------------------------------- |
+| Supabase function | `https://<ref>.supabase.co/functions/v1/mcp`        | MCP server + OAuth bridge (backend)           |
+| Cloudflare proxy  | `https://supabase-edge-mcp-proxy.<sub>.workers.dev` | Root URL for MCP clients + RFC 9728 discovery |
+| MCPJam            | proxy URL above                                     | Browser MCP client                            |
 
 ## Setup (Supabase only — no MCPJam)
 
@@ -173,10 +173,10 @@ curl -s http://localhost:54321/functions/v1/mcp/.well-known/oauth-authorization-
 
 The function ships with **two** deno.json files side by side:
 
-| File                                      | Mode                      | Bare specifier resolution                                       |
-| ----------------------------------------- | ------------------------- | --------------------------------------------------------------- |
-| `supabase/functions/mcp/deno.json`        | production deploy         | `"@solvapay/mcp": "npm:@solvapay/mcp@preview"` — mutable preview dist-tag |
-| `supabase/functions/mcp/deno.local.json`  | CI validate + local serve | same `@preview` pins (checks last-published preview, not workspace source) |
+| File                                     | Mode                      | Bare specifier resolution                                                  |
+| ---------------------------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| `supabase/functions/mcp/deno.json`       | production deploy         | `"@solvapay/mcp": "npm:@solvapay/mcp@preview"` — mutable preview dist-tag  |
+| `supabase/functions/mcp/deno.local.json` | CI validate + local serve | same `@preview` pins (checks last-published preview, not workspace source) |
 
 The function source uses bare specifiers only (`import … from '@solvapay/mcp'`, never `'npm:@solvapay/mcp'`) so the import map alone picks the resolution. `supabase functions deploy` picks up `deno.json`; `pnpm validate` and `pnpm serve:local` pass `--config=…/deno.local.json` explicitly so CI type-checks against the last-published `@preview` npm release (one-commit-late regression detection).
 
@@ -184,12 +184,12 @@ The function source uses bare specifiers only (`import … from '@solvapay/mcp'`
 
 `createSolvaPayMcpFetchHandler` is a single `(req: Request) => Promise<Response>` function that internally routes on `new URL(req.url).pathname`:
 
-| Path prefix                                                    | Behaviour                                                                                            |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource`, `/.well-known/openid-configuration` | Serves the issuer-scoped OAuth discovery JSON (mirror of `buildOAuthDiscovery()` in `@solvapay/mcp-core`). |
-| `/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`  | Proxies to the SolvaPay OAuth backend with byte-verbatim body forwarding (so `+` vs `%20` in form-encoded bodies survives unchanged) and normalised error shapes. |
-| `/mcp` (or whatever you set `mcpPath` to)                      | JSON-RPC MCP transport. Bearer-authenticated; 401 + `WWW-Authenticate` challenge on missing/invalid token. |
-| `OPTIONS *`                                                    | CORS preflight. Mirrors `Origin` only when it matches `/^(cursor|vscode|vscode-webview|claude):\/\/.+$/` — native-scheme clients only. |
+| Path prefix                                                                                                             | Behaviour                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------- | ----------------------------------------------- |
+| `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource`, `/.well-known/openid-configuration` | Serves the issuer-scoped OAuth discovery JSON (mirror of `buildOAuthDiscovery()` in `@solvapay/mcp-core`).                                                        |
+| `/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`                                                  | Proxies to the SolvaPay OAuth backend with byte-verbatim body forwarding (so `+` vs `%20` in form-encoded bodies survives unchanged) and normalised error shapes. |
+| `/mcp` (or whatever you set `mcpPath` to)                                                                               | JSON-RPC MCP transport. Bearer-authenticated; 401 + `WWW-Authenticate` challenge on missing/invalid token.                                                        |
+| `OPTIONS *`                                                                                                             | CORS preflight. Mirrors `Origin` only when it matches `/^(cursor                                                                                                  | vscode | vscode-webview | claude):\/\/.+$/` — native-scheme clients only. |
 
 See [`packages/mcp-fetch/src/handler.ts`](../../packages/mcp-fetch/src/handler.ts) for the exact implementation.
 

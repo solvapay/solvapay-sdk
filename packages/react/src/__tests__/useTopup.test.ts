@@ -109,10 +109,9 @@ describe('useTopup', () => {
     }
     const ctx = createMockContext({ createTopupPayment })
 
-    const { result } = renderHook(
-      () => useTopup({ amount: 5000, currency: 'usd', autoRecharge }),
-      { wrapper: createWrapper(ctx) },
-    )
+    const { result } = renderHook(() => useTopup({ amount: 5000, currency: 'usd', autoRecharge }), {
+      wrapper: createWrapper(ctx),
+    })
 
     await act(async () => {
       await result.current.startTopup()
@@ -187,12 +186,11 @@ describe('useTopup', () => {
       resolvePromise = resolve
     })
 
-    const createTopupPayment = vi.fn().mockImplementation(
-      () =>
-        hangingPromise.then(() => ({
-          clientSecret: 'cs',
-          publishableKey: 'pk',
-        })),
+    const createTopupPayment = vi.fn().mockImplementation(() =>
+      hangingPromise.then(() => ({
+        clientSecret: 'cs',
+        publishableKey: 'pk',
+      })),
     )
     const ctx = createMockContext({ createTopupPayment })
 

@@ -47,9 +47,7 @@ export type ConfirmPaymentResult =
  * Wrap Stripe confirmation so callers don't have to branch between
  * `confirmPayment` (PaymentElement) and `confirmCardPayment` (CardElement).
  */
-export async function confirmPayment(
-  input: ConfirmPaymentInput,
-): Promise<ConfirmPaymentResult> {
+export async function confirmPayment(input: ConfirmPaymentInput): Promise<ConfirmPaymentResult> {
   const { stripe, elements, clientSecret, returnUrl, billingDetails, copy } = input
   const mode = input.mode ?? 'payment-element'
 
@@ -73,9 +71,7 @@ export async function confirmPayment(
         clientSecret,
         confirmParams: {
           return_url: returnUrl,
-          payment_method_data: billingDetails
-            ? { billing_details: billingDetails }
-            : undefined,
+          payment_method_data: billingDetails ? { billing_details: billingDetails } : undefined,
         },
         redirect: 'if_required',
       })

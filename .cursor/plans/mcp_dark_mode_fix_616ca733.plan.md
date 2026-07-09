@@ -74,10 +74,7 @@ File: [packages/react/src/mcp/styles.css](packages/react/src/mcp/styles.css)
   --solvapay-muted: var(--color-background-tertiary, var(--solvapay-muted));
   --solvapay-border: var(--color-border-secondary, var(--solvapay-border));
   --solvapay-accent: var(--color-text-primary, var(--solvapay-accent));
-  --solvapay-accent-foreground: var(
-    --color-background-primary,
-    var(--solvapay-accent-foreground)
-  );
+  --solvapay-accent-foreground: var(--color-background-primary, var(--solvapay-accent-foreground));
   --solvapay-muted-foreground: var(--color-text-secondary, var(--solvapay-muted-foreground));
   --solvapay-destructive: var(--color-text-danger, var(--solvapay-destructive));
   --solvapay-warning: var(--color-text-warning, var(--solvapay-warning));
@@ -129,7 +126,7 @@ File: [packages/react/src/mcp/styles.css](packages/react/src/mcp/styles.css)
 box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
 ```
 
-  Then add a dark fallback via the `[data-theme="dark"]` block:
+Then add a dark fallback via the `[data-theme="dark"]` block:
 
 ```css
 [data-theme='dark'] {
@@ -142,7 +139,6 @@ box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
 ### 5. Manual verification recipe
 
 - In [examples/mcp-checkout-app/mcp-app.html](examples/mcp-checkout-app/mcp-app.html), no code change needed. Document the toggle in `examples/mcp-checkout-app/README.md` (one short paragraph):
-
   1. `pnpm --filter mcp-checkout-app dev`.
   2. Open the preview, then in DevTools run `document.documentElement.setAttribute('data-theme','dark')` to simulate a dark host. Run again with `'light'` to return.
   3. Walk the four surfaces that regress today (plan grid, top-up amount picker, account details, success receipt) — each should now render on a dark surface with legible text.

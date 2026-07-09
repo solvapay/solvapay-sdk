@@ -12,7 +12,10 @@
 
 import React from 'react'
 
-export interface BackLinkProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+export interface BackLinkProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'children'
+> {
   /** Visible label; typically `"Back to my account"` or `"Change amount"`. */
   label: string
   /** Optional override for the arrow glyph (defaults to `←`). */

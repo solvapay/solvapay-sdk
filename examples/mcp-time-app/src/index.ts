@@ -5,12 +5,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { createMcpOAuthBridge } from '@solvapay/mcp/express'
 import { createServer } from './server'
-import {
-  mcpPublicBaseUrl,
-  paywallEnabled,
-  solvapayApiBaseUrl,
-  solvapayProductRef,
-} from './config'
+import { mcpPublicBaseUrl, paywallEnabled, solvapayApiBaseUrl, solvapayProductRef } from './config'
 
 type JsonRpcId = string | number | null
 type SessionEntry = {

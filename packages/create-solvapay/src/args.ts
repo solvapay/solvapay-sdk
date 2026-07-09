@@ -214,7 +214,9 @@ export function toInitOptions(common: ParsedCommonArgs): InitCommandOptions {
 
 const KEBAB_RE = /^[a-z][a-z0-9-]*$/
 
-export function sanitizeProjectName(name: string): { ok: true; name: string } | { ok: false; reason: string } {
+export function sanitizeProjectName(
+  name: string,
+): { ok: true; name: string } | { ok: false; reason: string } {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'project name is empty' }
   const lower = trimmed
@@ -234,7 +236,9 @@ export function sanitizeProjectName(name: string): { ok: true; name: string } | 
 
 const CAMEL_RE = /^[a-z][a-zA-Z0-9]*$/
 
-export function validateToolName(name: string): { ok: true; name: string } | { ok: false; reason: string } {
+export function validateToolName(
+  name: string,
+): { ok: true; name: string } | { ok: false; reason: string } {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'tool name is empty' }
   if (!CAMEL_RE.test(trimmed)) {

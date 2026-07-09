@@ -81,9 +81,7 @@ describe('buildSpecShapeAdvisories', () => {
   it('recommends apiKey-multi when an operation requires multiple header schemes', () => {
     const advisories = buildSpecShapeAdvisories({
       servers: ['https://api.example.com'],
-      operations: [
-        op('getWidget', '/api/widgets/{id}', [{ clientId: [], clientSecret: [] }]),
-      ],
+      operations: [op('getWidget', '/api/widgets/{id}', [{ clientId: [], clientSecret: [] }])],
       schemes: [
         {
           name: 'clientId',
@@ -121,7 +119,12 @@ describe('scaffold.mjs — upstreamBaseUrl', () => {
       await writeFile(specPath, JSON.stringify(makeSpec()), 'utf8')
       await writeFile(selectionsPath, JSON.stringify(makeSelections()), 'utf8')
 
-      const result = await spawnScript('scaffold.mjs', [specPath, target, '--selections', selectionsPath])
+      const result = await spawnScript('scaffold.mjs', [
+        specPath,
+        target,
+        '--selections',
+        selectionsPath,
+      ])
 
       expect(result.exitCode).not.toBe(0)
       expect(result.stderr).toContain('upstreamBaseUrl')
@@ -147,7 +150,12 @@ describe('scaffold.mjs — upstreamBaseUrl', () => {
         'utf8',
       )
 
-      const result = await spawnScript('scaffold.mjs', [specPath, target, '--selections', selectionsPath])
+      const result = await spawnScript('scaffold.mjs', [
+        specPath,
+        target,
+        '--selections',
+        selectionsPath,
+      ])
 
       expect(result.exitCode, result.stderr).toBe(0)
       const tool = await readFile(path.join(target, 'src', 'tools', 'getStatus.ts'), 'utf8')

@@ -475,10 +475,9 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     })
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
-    expect(onSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'pi_test_123' }),
-      { creditsAdded: 250 },
-    )
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: 'pi_test_123' }), {
+      creditsAdded: 250,
+    })
   })
 
   it('omits the extras argument when the backend does not surface creditsAdded', async () => {
@@ -610,9 +609,7 @@ describe('TopupForm business details + summary', () => {
     currency: 'USD',
   }
 
-  function businessCtx(
-    overrides?: Partial<SolvaPayContextValue>,
-  ): SolvaPayContextValue {
+  function businessCtx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     return ctx({
       createTopupPayment: vi.fn().mockResolvedValue({
         clientSecret: 'pi_topup_secret',

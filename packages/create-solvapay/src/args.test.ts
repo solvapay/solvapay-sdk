@@ -96,7 +96,13 @@ describe('parseArgs', () => {
 
 describe('parseMcpArgs', () => {
   it('parses --openapi <value>', () => {
-    const result = parseMcpArgs(['my-app', '--type', 'mcp', '--openapi', 'https://api.example.com/openapi.json'])
+    const result = parseMcpArgs([
+      'my-app',
+      '--type',
+      'mcp',
+      '--openapi',
+      'https://api.example.com/openapi.json',
+    ])
     expect(result.openapi).toBe('https://api.example.com/openapi.json')
   })
 

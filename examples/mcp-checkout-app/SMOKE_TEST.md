@@ -121,7 +121,7 @@ the gate narration.
 
 Select **Pay as you go** and click `Continue with Pay as you go`.
 
-**Expect** *(step transitions: plan → amount → payment → success)*:
+**Expect** _(step transitions: plan → amount → payment → success)_:
 
 - Click fires `activate_plan({ planRef: <payg> })` immediately. The
   active PAYG purchase is created server-side (eager activation — no
@@ -142,14 +142,14 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
   the terminal state.
 - The SDK has already fired `notifySuccess({ kind: 'topup' })` ->
   `app.sendMessage` posting `Topped up $18.00. Ready to keep
-  working.` to the chat. The agent picks that up and re-invokes
+working.` to the chat. The agent picks that up and re-invokes
   the original `/search_knowledge` call automatically.
 
 ### 5b. Recurring branch — pay → confirm
 
 Alternative path: select **Pro** in step 4 instead of PAYG.
 
-**Expect** *(step transitions: plan → payment → success)*:
+**Expect** _(step transitions: plan → payment → success)_:
 
 - Click `Continue with Pro — $18/mo`. SDK skips the amount picker
   and jumps straight to `step: 'payment'`.
@@ -191,7 +191,7 @@ Switch **Account → Top up → Account**.
 - Resize to narrow (<816px): sidebar hides; the primary action card
   renders first, then **Your account**, then **Seller** inline below.
 - No account screen shows product description or a `Current plan and
-  usage` overline.
+usage` overline.
 
 ### Narrated text fallback (any step, text-only host)
 

@@ -81,7 +81,13 @@ describe('narrateManageAccount', () => {
         plans: [
           { planType: 'free', name: 'Free' },
           { planType: 'usage-based', name: 'Starter', price: 1, currency: 'USD' },
-          { planType: 'recurring', name: 'Unlimited', price: 50000, currency: 'USD', billingCycle: 'monthly' },
+          {
+            planType: 'recurring',
+            name: 'Unlimited',
+            price: 50000,
+            currency: 'USD',
+            billingCycle: 'monthly',
+          },
         ] as never,
       }),
     )
@@ -243,7 +249,13 @@ describe('narrateUpgrade', () => {
       basePayload({
         plans: [
           { planType: 'free', name: 'Free' } as never,
-          { planType: 'recurring', name: 'Pro', price: 20000, currency: 'USD', billingCycle: 'monthly' } as never,
+          {
+            planType: 'recurring',
+            name: 'Pro',
+            price: 20000,
+            currency: 'USD',
+            billingCycle: 'monthly',
+          } as never,
         ],
       }),
     )
@@ -383,7 +395,13 @@ describe('narratedToolResult', () => {
     const upgradePayload = basePayload({
       view: 'checkout',
       plans: [
-        { planType: 'recurring', name: 'Pro', price: 2000, currency: 'USD', billingCycle: 'monthly' },
+        {
+          planType: 'recurring',
+          name: 'Pro',
+          price: 2000,
+          currency: 'USD',
+          billingCycle: 'monthly',
+        },
       ] as never,
     })
     const r = narratedToolResult('upgrade', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })

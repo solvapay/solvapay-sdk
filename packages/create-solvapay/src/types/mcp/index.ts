@@ -75,7 +75,10 @@ async function run(opts: RunOptions): Promise<void> {
   })
 }
 
-async function resolveOpenapiSpec(value: string | undefined, nonInteractive: boolean): Promise<string> {
+async function resolveOpenapiSpec(
+  value: string | undefined,
+  nonInteractive: boolean,
+): Promise<string> {
   if (value && value.trim()) return value.trim()
   if (nonInteractive) {
     throw new Error('--openapi <url|path> is required in non-interactive from-openapi mode.')
@@ -91,7 +94,10 @@ async function resolveOpenapiSpec(value: string | undefined, nonInteractive: boo
   return trimmed
 }
 
-async function resolveToolName(value: string | undefined, nonInteractive: boolean): Promise<string> {
+async function resolveToolName(
+  value: string | undefined,
+  nonInteractive: boolean,
+): Promise<string> {
   if (value) {
     const validated = validateToolName(value)
     if (!validated.ok) throw new Error(validated.reason)
@@ -100,7 +106,9 @@ async function resolveToolName(value: string | undefined, nonInteractive: boolea
   if (nonInteractive || !stdin.isTTY) {
     return DEFAULT_TOOL_NAME
   }
-  const answer = (await ask(`Placeholder tool name (camelCase, default ${DEFAULT_TOOL_NAME}): `)).trim()
+  const answer = (
+    await ask(`Placeholder tool name (camelCase, default ${DEFAULT_TOOL_NAME}): `)
+  ).trim()
   if (!answer) return DEFAULT_TOOL_NAME
   const validated = validateToolName(answer)
   if (!validated.ok) throw new Error(validated.reason)

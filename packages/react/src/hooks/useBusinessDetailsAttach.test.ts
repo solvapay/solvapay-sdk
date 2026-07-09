@@ -19,9 +19,7 @@ describe('useBusinessDetailsAttach', () => {
   })
 
   it('returns requiresBusinessAttach false when attach transport is absent', () => {
-    const { result } = renderHook(() =>
-      useBusinessDetailsAttach({ processorPaymentId: 'pi_test' }),
-    )
+    const { result } = renderHook(() => useBusinessDetailsAttach({ processorPaymentId: 'pi_test' }))
     expect(result.current.requiresBusinessAttach).toBe(false)
   })
 

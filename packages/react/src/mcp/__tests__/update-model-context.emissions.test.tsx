@@ -26,11 +26,7 @@ vi.mock('../../primitives/TopupForm', () => {
     children?: React.ReactNode
   }> = ({ onSuccess, children }) => (
     <div data-testid="topup-form-stub">
-      <button
-        type="button"
-        data-testid="topup-form-submit"
-        onClick={() => onSuccess?.()}
-      >
+      <button type="button" data-testid="topup-form-submit" onClick={() => onSuccess?.()}>
         submit topup
       </button>
       {children}
@@ -58,7 +54,15 @@ vi.mock('../../primitives/TopupForm', () => {
     Rows: () => null,
   }
   return {
-    TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary },
+    TopupForm: {
+      Root,
+      Loading,
+      PaymentElement,
+      Error: ErrorSlot,
+      SubmitButton,
+      BusinessDetails,
+      Summary,
+    },
   }
 })
 
@@ -278,13 +282,9 @@ describe('Phase 1 — McpCheckoutView emits on plan commit', () => {
   it('notifies the host when the user continues from the plan picker', async () => {
     const app = makeApp()
     renderCheckout(app)
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     act(() => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
     await waitFor(() => {
       expect(app.updateModelContext).toHaveBeenCalled()
@@ -321,9 +321,11 @@ describe('Phase 1 — McpCheckoutView emits on successful payment', () => {
       expect(app.updateModelContext).toHaveBeenCalled()
     })
     const text =
-      (app.updateModelContext.mock.calls[0][0] as {
-        content?: Array<{ type: string; text: string }>
-      }).content?.[0]?.text ?? ''
+      (
+        app.updateModelContext.mock.calls[0][0] as {
+          content?: Array<{ type: string; text: string }>
+        }
+      ).content?.[0]?.text ?? ''
     expect(text).toMatch(/[Aa]ctivated/)
     expect(text).toMatch(/Pro/)
   })
@@ -338,9 +340,7 @@ describe('Phase 1 — McpTopupView emits on amount commit', () => {
     const ctx = buildCtx(config)
     return render(
       <SolvaPayContext.Provider value={ctx}>
-        <McpBridgeProvider
-          app={app as unknown as Parameters<typeof McpBridgeProvider>[0]['app']}
-        >
+        <McpBridgeProvider app={app as unknown as Parameters<typeof McpBridgeProvider>[0]['app']}>
           <McpTopupView publishableKey="pk_test" returnUrl="https://example.test/r" />
         </McpBridgeProvider>
       </SolvaPayContext.Provider>,
@@ -362,9 +362,11 @@ describe('Phase 1 — McpTopupView emits on amount commit', () => {
       expect(app.updateModelContext).toHaveBeenCalled()
     })
     const text =
-      (app.updateModelContext.mock.calls[0][0] as {
-        content?: Array<{ type: string; text: string }>
-      }).content?.[0]?.text ?? ''
+      (
+        app.updateModelContext.mock.calls[0][0] as {
+          content?: Array<{ type: string; text: string }>
+        }
+      ).content?.[0]?.text ?? ''
     expect(text).toMatch(/top.?up/i)
   })
 })

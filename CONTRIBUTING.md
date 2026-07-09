@@ -70,14 +70,14 @@ pnpm dev
 
 Each package has specific constraints:
 
-| Package | Constraints |
-| --- | --- |
-| `@solvapay/core` | No Node/browser globals (pure TypeScript, runtime-agnostic) |
-| `@solvapay/server` | Node + Edge runtime support (automatic detection via export conditions) |
-| `@solvapay/react` | Browser-only, no secrets, peer deps on React |
-| `@solvapay/react-supabase` | Browser-only, peer deps on React and Supabase |
-| `@solvapay/auth` | Server-side auth adapters, Edge-compatible |
-| `@solvapay/next` | Next.js-specific, peer dep on Next.js |
+| Package                    | Constraints                                                             |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `@solvapay/core`           | No Node/browser globals (pure TypeScript, runtime-agnostic)             |
+| `@solvapay/server`         | Node + Edge runtime support (automatic detection via export conditions) |
+| `@solvapay/react`          | Browser-only, no secrets, peer deps on React                            |
+| `@solvapay/react-supabase` | Browser-only, peer deps on React and Supabase                           |
+| `@solvapay/auth`           | Server-side auth adapters, Edge-compatible                              |
+| `@solvapay/next`           | Next.js-specific, peer dep on Next.js                                   |
 
 ## PR Checklist
 
@@ -109,12 +109,12 @@ pnpm changeset
 
 Pick the right bump level per affected package:
 
-| Level     | When                                                                     |
-| --------- | ------------------------------------------------------------------------ |
-| **patch** | Bug fix, internal refactor, dep-only update — no public API change       |
-| **minor** | New public API — additive and backwards-compatible                       |
-| **major** | Removed/renamed API, changed signature, behaviour break — anything that  |
-|           | would make an existing consumer's build / runtime regress after upgrade  |
+| Level     | When                                                                    |
+| --------- | ----------------------------------------------------------------------- |
+| **patch** | Bug fix, internal refactor, dep-only update — no public API change      |
+| **minor** | New public API — additive and backwards-compatible                      |
+| **major** | Removed/renamed API, changed signature, behaviour break — anything that |
+|           | would make an existing consumer's build / runtime regress after upgrade |
 
 The changeset body is a short markdown description that ends up verbatim in each affected package's `CHANGELOG.md`. Lead with **what changed for consumers**, not implementation detail.
 
@@ -132,7 +132,7 @@ When one `@solvapay/*` package lists another as a **peerDependency**, use `works
 "peerDependencies": { "@solvapay/auth": "workspace:*" }
 ```
 
-`.changeset/config.json` sets `onlyUpdatePeerDependentsWhenOutOfRange: true`, and a peer-range change is a **major** bump by convention. `workspace:*` publishes as the *exact* current version, so **any** bump to that peer — even a patch — puts the range out of range and forces Changesets to bump **every dependent to a new major**. `workspace:^` publishes as `^<version>`, so patch/minor peer bumps stay in range.
+`.changeset/config.json` sets `onlyUpdatePeerDependentsWhenOutOfRange: true`, and a peer-range change is a **major** bump by convention. `workspace:*` publishes as the _exact_ current version, so **any** bump to that peer — even a patch — puts the range out of range and forces Changesets to bump **every dependent to a new major**. `workspace:^` publishes as `^<version>`, so patch/minor peer bumps stay in range.
 
 > **Pre-1.0 peers:** `workspace:^` on a `0.x` peer publishes as `^0.2.4`, which only satisfies `0.2.x` — a future `0.3.0` will still cascade. That is correct semver; discuss with the team before choosing a looser range.
 

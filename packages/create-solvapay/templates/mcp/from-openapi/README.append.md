@@ -1,4 +1,3 @@
-
 ## OpenAPI mode notes
 
 This project was scaffolded from an OpenAPI spec.

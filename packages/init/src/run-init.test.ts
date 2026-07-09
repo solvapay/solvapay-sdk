@@ -129,11 +129,10 @@ describe('runInitInDirectory', () => {
       'npm install @solvapay/server@latest @solvapay/core@latest @solvapay/auth@latest',
     )
     vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue(undefined)
-    vi.mocked(formatConfiguredProductLabel).mockImplementation(
-      (productRef, products) =>
-        products.find(product => product.reference === productRef)?.name
-          ? `${products.find(product => product.reference === productRef)?.name} (${productRef})`
-          : productRef,
+    vi.mocked(formatConfiguredProductLabel).mockImplementation((productRef, products) =>
+      products.find(product => product.reference === productRef)?.name
+        ? `${products.find(product => product.reference === productRef)?.name} (${productRef})`
+        : productRef,
     )
     vi.spyOn(process.stdout, 'write').mockImplementation(chunk => {
       output.push(String(chunk))
@@ -143,7 +142,10 @@ describe('runInitInDirectory', () => {
 
   it('threads cwd through ensureNodeProject and env writes', async () => {
     mockSuccessfulAuth()
-    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
 
     await runInitInDirectory({ cwd: TEST_CWD })
 
@@ -156,7 +158,10 @@ describe('runInitInDirectory', () => {
   it('prints manual URL when browser fails to open', async () => {
     mockSuccessfulAuth()
     vi.mocked(openAuthUrl).mockResolvedValue(false)
-    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
 
     await runInitInDirectory({ cwd: TEST_CWD })
 
@@ -178,7 +183,9 @@ describe('runInitInDirectory', () => {
     mockSuccessfulAuth()
     vi.mocked(verifyMerchant).mockResolvedValue({ status: 'not_found' })
 
-    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow(/Provider account not found/i)
+    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow(
+      /Provider account not found/i,
+    )
 
     // Hard-fail must skip the destructive setup steps — the project
     // should be untouched when the merchant probe fails.
@@ -193,7 +200,10 @@ describe('runInitInDirectory', () => {
       ok: false,
       warning: 'network unavailable',
     })
-    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'network_error' })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'network_error',
+    })
 
     await runInitInDirectory({ cwd: TEST_CWD })
 
@@ -207,7 +217,10 @@ describe('runInitInDirectory', () => {
       command: 'npm install @solvapay/server@latest @solvapay/core@latest @solvapay/auth@latest',
       warning: 'Installer exited with code 1',
     })
-    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
 
     await runInitInDirectory({ cwd: TEST_CWD })
 
@@ -251,7 +264,10 @@ describe('runInitInDirectory', () => {
       action: 'created',
     })
     mockSuccessfulAuth()
-    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
 
     await runInitInDirectory({ cwd: TEST_CWD })
 
@@ -371,11 +387,9 @@ describe('runInitInDirectory', () => {
 
     await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
 
-    expect(pickProductInteractive).toHaveBeenCalledWith(
-      'https://api.solvapay.com',
-      'sk_test_123',
-      { yes: true },
-    )
+    expect(pickProductInteractive).toHaveBeenCalledWith('https://api.solvapay.com', 'sk_test_123', {
+      yes: true,
+    })
     expect(writeSolvaPayProductRefToEnv).not.toHaveBeenCalled()
     expect(output.join('')).toContain('No product ref was saved')
   })
@@ -438,7 +452,10 @@ describe('runInitInDirectory', () => {
 
   it('skips installSolvaPaySdk when skipSdkInstall is true', async () => {
     mockSuccessfulAuth()
-    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
 
     await runInitInDirectory({ cwd: TEST_CWD, skipSdkInstall: true })
 

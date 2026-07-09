@@ -700,10 +700,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(
-          `Attach business details failed (${res.status}): ${error}`,
-          { status: res.status },
-        )
+        throw new SolvaPayError(`Attach business details failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
       }
 
       return await res.json()

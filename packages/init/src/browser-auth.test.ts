@@ -112,15 +112,14 @@ describe('waitForExchange', () => {
     expect(result.secretKey).toBe('sk_test_abc')
     expect(result.email).toBe('dev@example.com')
     expect(fetchSpy).toHaveBeenCalledTimes(2)
-    const init = (fetchSpy.mock.calls[0] ?? [])[1] as { headers?: Record<string, string> } | undefined
+    const init = (fetchSpy.mock.calls[0] ?? [])[1] as
+      | { headers?: Record<string, string> }
+      | undefined
     expect(init?.headers?.Authorization).toBe('Bearer poll-tok')
   })
 
   it('returns expired when the timeout window elapses', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ status: 202 }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 202 }))
 
     const promise = waitForExchange('https://api.solvapay.com', session)
     // Advance well beyond the 10-minute window
@@ -133,13 +132,11 @@ describe('waitForExchange', () => {
   it('returns cancelled when the API signals cancellation', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ status: 'cancelled' }),
-        }),
+      vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'cancelled' }),
+      }),
     )
 
     const promise = waitForExchange('https://api.solvapay.com', session)
@@ -213,9 +210,7 @@ describe('verifyMerchant', () => {
   })
 
   it('returns ok on 2xx response', async () => {
-    const fetchSpy = vi
-      .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) })
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) })
     vi.stubGlobal('fetch', fetchSpy)
 
     const result = await verifyMerchant('https://api.solvapay.com', 'sk_test')

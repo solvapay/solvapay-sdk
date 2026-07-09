@@ -56,11 +56,7 @@ const DefaultTree: React.FC<{ showCreditEstimate: boolean }> = ({ showCreditEsti
       <p className="solvapay-amount-picker-label">{selectAmountLabel}</p>
       <div className="solvapay-amount-picker-pills">
         {ctx.quickAmounts.map(amount => (
-          <Primitive.Option
-            key={amount}
-            amount={amount}
-            className="solvapay-amount-picker-pill"
-          />
+          <Primitive.Option key={amount} amount={amount} className="solvapay-amount-picker-pill" />
         ))}
       </div>
       <div className="solvapay-amount-picker-custom-wrapper">

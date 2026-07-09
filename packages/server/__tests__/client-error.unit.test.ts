@@ -52,9 +52,7 @@ describe('createSolvaPayClient — SolvaPayError carries upstream HTTP status', 
   })
 
   it('preserves 404 status on getProduct', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('not found', { status: 404 }),
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('not found', { status: 404 }))
 
     const client = createSolvaPayClient({ apiKey, apiBaseUrl: baseUrl })
 
@@ -62,9 +60,7 @@ describe('createSolvaPayClient — SolvaPayError carries upstream HTTP status', 
   })
 
   it('still throws a SolvaPayError instance (backwards compatible)', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('boom', { status: 500 }),
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('boom', { status: 500 }))
 
     const client = createSolvaPayClient({ apiKey, apiBaseUrl: baseUrl })
 

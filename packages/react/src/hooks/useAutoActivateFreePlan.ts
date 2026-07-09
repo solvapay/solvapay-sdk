@@ -121,10 +121,7 @@ export function useAutoActivateFreePlan(
   // skip activation entirely so the consumer can commit to the real
   // backend value instead of stalling on a skeleton.
   const shouldActivate =
-    enabled &&
-    activationRequired === true &&
-    Boolean(productRef) &&
-    Boolean(freePlan?.reference)
+    enabled && activationRequired === true && Boolean(productRef) && Boolean(freePlan?.reference)
 
   useEffect(() => {
     if (!shouldActivate || !productRef || !freePlan?.reference) return

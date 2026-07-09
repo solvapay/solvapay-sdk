@@ -29,14 +29,16 @@ export async function getProductCore(
       }
     }
 
-    const apiClient = options.solvaPay?.apiClient ?? (() => {
-      const config = getSolvaPayConfig()
-      if (!config.apiKey) return null
-      return createSolvaPayClient({
-        apiKey: config.apiKey,
-        apiBaseUrl: config.apiBaseUrl,
-      })
-    })()
+    const apiClient =
+      options.solvaPay?.apiClient ??
+      (() => {
+        const config = getSolvaPayConfig()
+        if (!config.apiKey) return null
+        return createSolvaPayClient({
+          apiKey: config.apiKey,
+          apiBaseUrl: config.apiBaseUrl,
+        })
+      })()
 
     if (!apiClient) {
       return {

@@ -149,9 +149,7 @@ export function getOrCreateAnonymousCustomerRef(
  *
  * @since 1.2.0
  */
-export function resetAnonymousCustomerRef(
-  storageKey: string = DEFAULT_ANON_STORAGE_KEY,
-): void {
+export function resetAnonymousCustomerRef(storageKey: string = DEFAULT_ANON_STORAGE_KEY): void {
   if (typeof window === 'undefined') return
   window.localStorage.removeItem(storageKey)
   window.localStorage.removeItem('solvapay_customerRef')

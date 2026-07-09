@@ -98,7 +98,9 @@ export const ensureNodeProject = async (
   return { filePath: packageJsonPath, action: 'created' }
 }
 
-export const detectPackageManager = async (cwd: string = process.cwd()): Promise<PackageManager> => {
+export const detectPackageManager = async (
+  cwd: string = process.cwd(),
+): Promise<PackageManager> => {
   const lockfiles: Array<{ file: string; packageManager: PackageManager }> = [
     { file: 'pnpm-lock.yaml', packageManager: 'pnpm' },
     { file: 'yarn.lock', packageManager: 'yarn' },

@@ -28,11 +28,7 @@
  * `registerAppTool` call.
  */
 
-import type {
-  LimitResponseWithPlan,
-  ProtectHandlerContext,
-  SolvaPay,
-} from '@solvapay/server'
+import type { LimitResponseWithPlan, ProtectHandlerContext, SolvaPay } from '@solvapay/server'
 import { buildNudgeMessage, isPaywallStructuredContent } from '@solvapay/server'
 import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { buildResponseContext } from './response-context'
@@ -65,10 +61,7 @@ export interface BuildPayableHandlerContext {
    * Override customer-ref extraction. Defaults to the MCP adapter's
    * behavior (reads `extra.authInfo.extra.customer_ref`).
    */
-  getCustomerRef?: (
-    args: Record<string, unknown>,
-    extra?: McpToolExtra,
-  ) => string | Promise<string>
+  getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
 }
 
 /**
@@ -212,8 +205,7 @@ async function unwrapResponseEnvelope(
   // `content[0].text` — narrator override via `options.text`, otherwise
   // the existing JSON-serialised merchant data. V1.1 may introduce a
   // merchant-data narrator; V1 keeps the current behaviour.
-  const baseText =
-    typeof textOverride === 'string' ? textOverride : JSON.stringify(data)
+  const baseText = typeof textOverride === 'string' ? textOverride : JSON.stringify(data)
 
   // Append the nudge copy as a text suffix. Prefer the merchant-
   // supplied `nudge.message`; fall back to `buildNudgeMessage` for an

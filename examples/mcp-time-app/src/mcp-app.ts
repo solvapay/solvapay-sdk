@@ -62,7 +62,11 @@ function toPaywallResult(value: unknown): PaywallResult | null {
   const checkoutUrl = value.checkoutUrl
   const message = value.message
 
-  if (kind === 'payment_required' && typeof checkoutUrl === 'string' && typeof message === 'string') {
+  if (
+    kind === 'payment_required' &&
+    typeof checkoutUrl === 'string' &&
+    typeof message === 'string'
+  ) {
     return { kind, checkoutUrl, message }
   }
 

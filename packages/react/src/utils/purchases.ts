@@ -37,9 +37,7 @@ export function getActivePurchases(purchases: PurchaseInfo[]): PurchaseInfo[] {
  * Returns purchases with cancelledAt set and status === 'active' that have a future endDate.
  * Backend keeps cancelled purchases as 'active' until expiration.
  */
-export function getCancelledPurchasesWithEndDate(
-  purchases: PurchaseInfo[],
-): PurchaseInfo[] {
+export function getCancelledPurchasesWithEndDate(purchases: PurchaseInfo[]): PurchaseInfo[] {
   const now = new Date()
   return purchases.filter(purchase => {
     return (
@@ -54,9 +52,7 @@ export function getCancelledPurchasesWithEndDate(
 /**
  * Get the most recent purchase by startDate
  */
-export function getMostRecentPurchase(
-  purchases: PurchaseInfo[],
-): PurchaseInfo | null {
+export function getMostRecentPurchase(purchases: PurchaseInfo[]): PurchaseInfo | null {
   if (purchases.length === 0) return null
 
   return purchases.reduce((latest, current) => {

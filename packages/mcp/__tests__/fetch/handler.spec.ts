@@ -67,9 +67,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       apiBaseUrl,
       productRef,
     })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
-    )
+    const res = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
     expect(res.status).toBe(200)
     const body = (await res.json()) as { resource: string }
     expect(body.resource).toBe(publicBaseUrl)
