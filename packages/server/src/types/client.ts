@@ -387,7 +387,6 @@ export interface SolvaPayClient {
       reference: string
       name: string
       description?: string
-      status?: string
     }>
   >
 

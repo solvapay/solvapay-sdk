@@ -1004,11 +1004,6 @@ export interface components {
             /** @description Free-form product type */
             productType?: string;
             /**
-             * Product status
-             * @example active
-             */
-            status: string;
-            /**
              * Product balance in cents
              * @example 0
              */
@@ -1054,8 +1049,6 @@ export interface components {
             description?: string;
             imageUrl?: string;
             productType?: string;
-            /** @enum {string} */
-            status?: "active" | "inactive" | "suspended";
             config: {
                 fulfillmentType?: string;
                 validityPeriod?: number;
@@ -2707,7 +2700,7 @@ export interface operations {
                 /** @description Search by name or description */
                 search?: string;
                 /** @description Filter by status */
-                status?: "active" | "inactive" | "suspended";
+                status?: "active" | "inactive";
                 /** @description Filter no-code MCP integration products */
                 isMcpPay?: boolean;
             };
