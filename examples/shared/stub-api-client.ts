@@ -684,7 +684,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
       reference: productRef,
       name: 'Demo Product',
       description: 'A stubbed product for local development and example builds.',
-      status: 'active',
       balance: 0,
       totalTransactions: 0,
       isMcpPay: false,

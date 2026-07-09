@@ -5,6 +5,7 @@ import React from 'react'
 import { PaymentForm } from './PaymentForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 const attachHookMock = vi.hoisted(() => ({
   runAttach: vi.fn().mockResolvedValue(true),
@@ -116,15 +117,13 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
+    balance: mockBalanceStatus({
       loading: false,
       credits: null,
       displayCurrency: null,
       creditsPerMinorUnit: null,
       displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    }),
     _config: undefined,
     ...overrides,
   }
