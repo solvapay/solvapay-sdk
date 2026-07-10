@@ -18,6 +18,7 @@ describe('configToAutoRechargeInput', () => {
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
     status: 'pending_setup',
     failureCount: 0,
+    monthlySpendMinor: 0,
   }
 
   it('prefers backend display block when present on config', () => {
@@ -77,6 +78,7 @@ describe('configToForm (DEV-586: reload must not mis-scale or zero when display 
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
     status: 'active',
     failureCount: 0,
+    monthlySpendMinor: 0,
   }
 
   it('prefers the backend display block verbatim when present', () => {

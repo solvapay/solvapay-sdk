@@ -13,6 +13,7 @@ const config: AutoRechargeConfig = {
   paymentMethodId: 'pm_123',
   status: 'active',
   failureCount: 0,
+  monthlySpendMinor: 0,
 }
 
 function makeFetch(payloads: unknown[]) {
@@ -265,5 +266,42 @@ describe('useAutoRecharge', () => {
     })
 
     expect(result.current.config?.trigger.thresholdAmountMinor).toBe(700)
+  })
+
+  it('forwards maxMonthlySpendMajor on save and exposes cap fields on reload', async () => {
+    const cappedConfig: AutoRechargeConfig = {
+      ...config,
+      maxMonthlySpendMinor: 10_000,
+      monthlySpendMinor: 2000,
+      monthlySpendPeriod: '2026-07',
+    }
+    const fetchFn = makeFetch([{ config: null }, { config: cappedConfig }])
+
+    const { result } = renderHook(() => useAutoRecharge(), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.save({
+        enabled: true,
+        triggerType: 'balance',
+        thresholdAmountMajor: 5,
+        topupAmountMajor: 10,
+        maxMonthlySpendMajor: 100,
+        currency: 'USD',
+      })
+    })
+
+    const lastCall = fetchFn.mock.calls.at(-1)
+    expect(lastCall?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"maxMonthlySpendMajor":100'),
+      }),
+    )
+    expect(result.current.config?.maxMonthlySpendMinor).toBe(10_000)
+    expect(result.current.config?.monthlySpendMinor).toBe(2000)
   })
 })

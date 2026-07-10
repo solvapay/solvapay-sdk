@@ -17,6 +17,7 @@ const config: AutoRechargeConfig = {
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
   status: 'active',
   failureCount: 0,
+  monthlySpendMinor: 0,
 }
 
 const autoRechargeMocks = vi.hoisted(() => ({
