@@ -90,6 +90,8 @@ On success, `cancelledAt` is cleared and `autoRenew` is restored. A `purchase.up
 
 Activates a product for a customer on a specific plan without going through checkout. Useful for free plans, credit-based activation, or programmatic plan assignment.
 
+Usage-based (PAYG) plans are **topup-first**: a customer whose credit balance does not cover at least one unit receives `topup_required` and no purchase is created. Route them through a top-up first, then re-run `activatePlan` to create the active purchase. Free plans activate immediately; paid recurring / hybrid plans return `payment_required`.
+
 <CodeGroup>
 
 ```typescript Next.js helper
