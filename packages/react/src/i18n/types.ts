@@ -132,10 +132,20 @@ export interface SolvaPayCopy {
     thresholdTooLow: string
     minTopupAmount: string
     topupBelowThreshold: string
+    invalidMaxMonthlySpend: string
+    maxMonthlySpendBelowTopup: string
+    advancedToggleLabel: string
+    maxMonthlySpendLabel: string
+    maxMonthlySpendAriaLabel: string
+    maxMonthlySpendPlaceholder: string
+    maxMonthlySpendHelper: string
+    monthlySpendLine: string
+    statusMonthlyCapReached: string
     creditsPerRecharge: string
     creditsPerRechargeApprox: string
     currencyPerRecharge: string
     currencyPerRechargeApprox: string
+    taxDisclosure: string
     statusFailed: string
   }
   activationFlow: {

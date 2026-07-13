@@ -56,6 +56,7 @@ export function AutoRecharge({
         <Primitive.CardHeading className="solvapay-auto-recharge-card-heading" />
         <Primitive.CardSummary className="solvapay-auto-recharge-card-summary" />
         <Primitive.StatusMessage className="solvapay-auto-recharge-status-message" />
+        <Primitive.MonthlySpend className="solvapay-auto-recharge-monthly-spend" />
         <Primitive.Status className="solvapay-auto-recharge-status" />
         <Primitive.Trigger className="solvapay-auto-recharge-trigger" />
       </Primitive.Card>
@@ -67,6 +68,10 @@ export function AutoRecharge({
         <Primitive.Fields className="solvapay-auto-recharge-fields">
           <Primitive.ThresholdField />
           <Primitive.TopupField className="solvapay-auto-recharge-topup-field" />
+          <Primitive.AdvancedToggle className="solvapay-auto-recharge-advanced-toggle" />
+          <Primitive.AdvancedFields className="solvapay-auto-recharge-advanced-fields">
+            <Primitive.MaxMonthlySpendField />
+          </Primitive.AdvancedFields>
           <Primitive.ValidationError className="solvapay-auto-recharge-validation-error" />
         </Primitive.Fields>
         <Primitive.Setup />

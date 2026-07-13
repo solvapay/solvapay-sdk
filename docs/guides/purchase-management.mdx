@@ -277,7 +277,7 @@ a per-currency Stripe minimum on the top-up amount.
 - **Credits mint on charge success.** Credits are booked when the off-session charge succeeds; the webhook is an idempotent backstop, not the primary path.
 - **Deferred setup stages the config.** With `deferSetupIntent` / `deferCardSetup`, the config is `pending_setup` and is **not** armed until the card is saved on the top-up charge and the status flips to `active`.
 - **Live FX, no stored credit threshold.** The threshold is stored in display-currency minor units and re-resolved to credits at trigger time — there's no persisted `thresholdCredits`.
-- **Monthly spend cap.** An optional `maxMonthlySpendMajor` limits how much auto-recharge spend is allowed per UTC calendar month. The config stays `active` when the cap is hit — charges resume automatically next month. Read `monthlySpendMinor` / `monthlySpendPeriod` on the config to show current-period spend.
+- **Monthly spend cap.** An optional `maxMonthlySpendMajor` limits how much auto-recharge spend is allowed per UTC calendar month. The config stays `active` when the cap is hit — charges resume automatically next month. The `<AutoRecharge>` component exposes the cap under **Advanced** and shows current-period spend on the summary card; read `monthlySpendMinor` / `monthlySpendPeriod` on the config when building a custom UI.
 
 <Warning>
 `autoRecharge.triggered: true` on a usage/debit response means an off-session

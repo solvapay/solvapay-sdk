@@ -140,6 +140,7 @@ function enableAutoRecharge(): void {
 }
 
 beforeEach(() => {
+  vi.useRealTimers()
   autoRechargeMocks.config = null
   autoRechargeMocks.loading = false
   autoRechargeMocks.saving = false
@@ -183,6 +184,12 @@ describe('AutoRecharge primitive', () => {
     expect(
       screen.getByText(/When my balance falls below .* add .*./),
     ).toBeInTheDocument()
+  })
+
+  it('shows plus applicable tax disclosure when auto-recharge is enabled', () => {
+    renderAutoRecharge({ currency: 'SEK' })
+    enableAutoRecharge()
+    expect(screen.getByText(enCopy.autoRecharge.taxDisclosure)).toBeInTheDocument()
   })
 
   it('rejects invalid values inline before save', async () => {
@@ -391,6 +398,79 @@ describe('AutoRecharge primitive', () => {
       </SolvaPayProvider>,
     )
     expect(screen.queryByText('Pending card authorization')).not.toBeInTheDocument()
+  })
+
+  it('shows Advanced toggle and max monthly spend field when expanded', () => {
+    renderAutoRecharge()
+    enableAutoRecharge()
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
+    expect(screen.getByLabelText('Maximum monthly spend')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('No limit')).toBeInTheDocument()
+    expect(
+      screen.getByText('Leave blank to allow unlimited auto-reloaded credits per month.'),
+    ).toBeInTheDocument()
+  })
+
+  it('saves maxMonthlySpendMajor when the advanced cap is set', async () => {
+    autoRechargeMocks.save.mockResolvedValue({ config })
+    renderAutoRecharge()
+    enableAutoRecharge()
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
+    fireEvent.change(screen.getByLabelText('Maximum monthly spend'), {
+      target: { value: '100' },
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
+      expect.objectContaining({ maxMonthlySpendMajor: 100 }),
+    )
+  })
+
+  it('shows monthly spend limit reached status when cap would be exceeded', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-07-15T12:00:00Z'))
+      autoRechargeMocks.config = {
+        ...config,
+        maxMonthlySpendMinor: 10_000,
+        monthlySpendMinor: 9500,
+        monthlySpendPeriod: '2026-07',
+      }
+      render(
+        <SolvaPayProvider config={{}}>
+          <AutoRecharge.Root currency="USD">
+            <AutoRecharge.Status />
+          </AutoRecharge.Root>
+        </SolvaPayProvider>,
+      )
+      expect(screen.getByText('Monthly spend limit reached')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows monthly spend line when config has a cap', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-07-15T12:00:00Z'))
+      autoRechargeMocks.config = {
+        ...config,
+        maxMonthlySpendMinor: 10_000,
+        monthlySpendMinor: 4500,
+        monthlySpendPeriod: '2026-07',
+      }
+      render(
+        <SolvaPayProvider config={{}}>
+          <AutoRecharge.Root currency="USD">
+            <AutoRecharge.MonthlySpend />
+          </AutoRecharge.Root>
+        </SolvaPayProvider>,
+      )
+      expect(screen.getByText('$45 / $100 this month')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
