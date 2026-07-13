@@ -1,6 +1,7 @@
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import type { ProjectType } from '../registry'
+import type { RunOptions } from '../../args'
 import {
   inferMcpMode,
   MCP_HELP_TEXT,

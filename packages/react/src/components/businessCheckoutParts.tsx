@@ -32,11 +32,22 @@ export function mapBusinessFieldErrors(
   const errors: Partial<Record<keyof BusinessDetailsInput, string>> = {}
   for (const issue of result.error.issues) {
     const key = issue.path[0]
-    if (typeof key === 'string' && !errors[key as keyof BusinessDetailsInput]) {
-      errors[key as keyof BusinessDetailsInput] = issue.message
+    if (typeof key === 'string' && isBusinessDetailsKey(key) && !errors[key]) {
+      errors[key] = issue.message
     }
   }
   return errors
+}
+
+function isBusinessDetailsKey(key: PropertyKey): key is keyof BusinessDetailsInput {
+  return (
+    key === 'isBusiness' ||
+    key === 'businessName' ||
+    key === 'country' ||
+    key === 'customerCountry' ||
+    key === 'taxId' ||
+    key === 'taxIdType'
+  )
 }
 
 export type BusinessDetailsContextSlice = {
@@ -59,8 +70,10 @@ function attr(prefix: AttrPrefix, suffix: string): string {
   return `data-solvapay-${prefix}-${suffix}`
 }
 
+const SUPPORTED_BUSINESS_COUNTRIES_SET = new Set<string>(SUPPORTED_BUSINESS_COUNTRIES)
+
 function isSupportedBusinessCountry(value: string): value is SupportedBusinessCountry {
-  return (SUPPORTED_BUSINESS_COUNTRIES as readonly string[]).includes(value)
+  return SUPPORTED_BUSINESS_COUNTRIES_SET.has(value)
 }
 
 function resolveTaxIdLabel(country: string): string {
@@ -108,7 +121,11 @@ function shouldShowTaxRow(treatment: TaxBreakdown['treatment'] | null, taxRate: 
   return taxRate > 0
 }
 
-type SlotSpreadProps = Record<string, unknown>
+type DataAttr = Record<`data-solvapay-${string}`, ''>
+
+type ToggleCommonProps = React.InputHTMLAttributes<HTMLInputElement> & DataAttr
+type FieldCommonProps = React.InputHTMLAttributes<HTMLInputElement> & DataAttr
+type CountryCommonProps = React.SelectHTMLAttributes<HTMLSelectElement> & DataAttr
 
 export function createBusinessDetailsParts(
   useCtx: (part: string) => BusinessDetailsContextSlice,
@@ -147,10 +164,10 @@ export function createBusinessDetailsParts(
         ctx.setBusinessDetails({ isBusiness: e.target.checked })
       }),
       ...rest,
-    }
+    } satisfies ToggleCommonProps
 
     if (asChild) {
-      return <Slot ref={forwardedRef} {...(commonProps as SlotSpreadProps)} />
+      return <Slot ref={forwardedRef} {...commonProps} />
     }
 
     return <input ref={forwardedRef} {...commonProps} />
@@ -172,10 +189,10 @@ export function createBusinessDetailsParts(
           ctx.setBusinessDetails({ businessName: e.target.value })
         }),
         ...rest,
-      }
+      } satisfies FieldCommonProps
 
       if (asChild) {
-        return <Slot ref={forwardedRef} {...(commonProps as SlotSpreadProps)} />
+        return <Slot ref={forwardedRef} {...commonProps} />
       }
 
       return <input ref={forwardedRef} {...commonProps} />
@@ -199,7 +216,7 @@ export function createBusinessDetailsParts(
         ctx.setBusinessDetails({ country: e.target.value })
       }),
       ...rest,
-    }
+    } satisfies CountryCommonProps
 
     const defaultOptions = (
       <>
@@ -214,7 +231,7 @@ export function createBusinessDetailsParts(
 
     if (asChild) {
       return (
-        <Slot ref={forwardedRef} {...(commonProps as SlotSpreadProps)}>
+        <Slot ref={forwardedRef} {...commonProps}>
           {children ?? defaultOptions}
         </Slot>
       )
@@ -243,10 +260,10 @@ export function createBusinessDetailsParts(
         ctx.setBusinessDetails({ taxId: e.target.value })
       }),
       ...rest,
-    }
+    } satisfies FieldCommonProps
 
     if (asChild) {
-      return <Slot ref={forwardedRef} {...(commonProps as SlotSpreadProps)} />
+      return <Slot ref={forwardedRef} {...commonProps} />
     }
 
     return <input ref={forwardedRef} {...commonProps} />
@@ -293,7 +310,7 @@ export function createBusinessDetailsParts(
 
     if (asChild) {
       return (
-        <Slot ref={forwardedRef} {...(rest as SlotSpreadProps)}>
+        <Slot ref={forwardedRef} {...rest}>
           {content}
         </Slot>
       )
@@ -482,7 +499,7 @@ export function createTaxSummaryParts(
 
     if (asChild) {
       return (
-        <Slot ref={forwardedRef} {...(rest as SlotSpreadProps)}>
+        <Slot ref={forwardedRef} {...rest}>
           {content}
         </Slot>
       )

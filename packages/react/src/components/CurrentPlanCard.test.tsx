@@ -447,15 +447,13 @@ describe('CurrentPlanCard', () => {
     }
     const ctx = buildCtx(paygPurchase, {
       config: { transport: makeTransport() },
-      balance: {
+      balance: mockBalanceStatus({
         loading: false,
         credits: 100,
         displayCurrency: 'USD',
         creditsPerMinorUnit: 1,
         displayExchangeRate: 1,
-        refetch: vi.fn(),
-        adjustBalance: vi.fn(),
-      },
+      }),
     })
     render(<Renderer ctx={ctx} />)
 

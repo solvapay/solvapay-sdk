@@ -30,7 +30,7 @@ import {
   PaymentElement as StripePaymentElement,
   CardElement as StripeCardElement,
 } from '@stripe/react-stripe-js'
-import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
+import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { LegalFooter } from './LegalFooter'
@@ -169,7 +169,8 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
         !clientSecret
       ) {
         hasInitializedRef.current = true
-        startCheckout().catch(() => {
+        startCheckout().catch(error => {
+          console.error('[PaymentForm] startCheckout failed', error)
           hasInitializedRef.current = false
         })
       }
@@ -182,7 +183,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
 
     const elementsOptions = useMemo(() => {
       if (!clientSecret) return undefined
-      return { clientSecret, locale: locale as StripeElementLocale | undefined }
+      return { clientSecret, locale: toStripeElementLocale(locale) }
     }, [clientSecret, locale])
 
     const shouldRenderElements = !!(stripePromise && clientSecret)
@@ -244,7 +245,8 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
       )
     }
 
-    if (shouldRenderElements && elementsOptions) {
+    if (shouldRenderElements && elementsOptions && clientSecret) {
+      const resolvedClientSecret = clientSecret
       return (
         <section
           ref={forwardedRef}
@@ -253,14 +255,14 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           data-state="ready"
           data-variant="paid"
         >
-          <Elements key={clientSecret!} stripe={stripePromise} options={elementsOptions}>
+          <Elements key={resolvedClientSecret} stripe={stripePromise} options={elementsOptions}>
             <PaidInner
               planRef={effectivePlanRef}
               productRef={effectiveProductRef}
               prefillCustomer={prefillCustomer}
               resolvedPlanRef={resolvedPlanRef}
               plan={resolvedPlan ?? null}
-              clientSecret={clientSecret!}
+              clientSecret={resolvedClientSecret}
               processorPaymentId={processorPaymentId}
               returnUrl={finalReturnUrl}
               submitButtonText={submitButtonText}
@@ -381,7 +383,7 @@ const PaidInner: React.FC<{
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
   const returnResumeStarted = useRef(false)
 
   useEffect(() => {
@@ -393,7 +395,7 @@ const PaidInner: React.FC<{
     let cancelled = false
     void (async () => {
       setIsProcessing(true)
-      setError(undefined)
+      setError(null)
 
       const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
       if (cancelled) return
@@ -515,8 +517,11 @@ const PaidInner: React.FC<{
       }
     }
 
-    setError(undefined)
+    setError(null)
     setIsProcessing(true)
+
+    const confirmedStripe = stripe
+    const confirmedElements = elements
 
     // Wrap the entire post-`setIsProcessing(true)` block in try/finally so
     // any thrown error in confirmPayment, reconcilePayment, upsertPurchase,
@@ -529,8 +534,8 @@ const PaidInner: React.FC<{
     // current crash, but future contract drift can't wedge the form.
     try {
       const result = await confirmPayment({
-        stripe: stripe as Stripe,
-        elements: elements as StripeElements,
+        stripe: confirmedStripe,
+        elements: confirmedElements,
         clientSecret,
         mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
         returnUrl,
@@ -641,8 +646,8 @@ const PaidInner: React.FC<{
       plan,
       clientSecret,
       processorPaymentId,
-      stripe: (stripe as Stripe | null) ?? null,
-      elements: (elements as StripeElements | null) ?? null,
+      stripe,
+      elements,
       isProcessing,
       isReady,
       paymentInputComplete,
@@ -740,8 +745,8 @@ const FreeInner: React.FC<{
       resultFiredRef.current = true
       const res: ActivationResult = { kind: 'activated', result: activationResult }
       onResult?.(res)
-      refetch().catch(() => {
-        // refetch errors are non-fatal for activation success
+      refetch().catch(error => {
+        console.error('[PaymentForm] purchase refetch failed after activation', error)
       })
     }
   }, [state, activationResult, onResult, refetch])

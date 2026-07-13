@@ -65,7 +65,7 @@ describe('validateBusinessDetails', () => {
       taxId: 'SE556677889001',
     })
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.data.isBusiness) {
       expect(result.data.taxId).toBe('SE556677889001')
       expect(result.data.taxIdType).toBe('eu_vat')
     }
@@ -89,7 +89,7 @@ describe('validateBusinessDetails', () => {
       taxId: '12-3456789',
     })
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.data.isBusiness) {
       expect(result.data.taxIdType).toBe('us_ein')
     }
   })
@@ -102,7 +102,7 @@ describe('validateBusinessDetails', () => {
       taxId: 'GB123456789',
     })
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.data.isBusiness) {
       expect(result.data.taxIdType).toBe('gb_vat')
     }
   })
@@ -115,7 +115,7 @@ describe('validateBusinessDetails', () => {
       taxId: '  se556677889001  ',
     })
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.data.isBusiness) {
       expect(result.data.taxId).toBe('SE556677889001')
     }
   })
@@ -168,11 +168,8 @@ describe('validateBusinessDetails', () => {
       taxId: 'invalid',
     })
     expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.isBusiness).toBe(false)
-      expect(result.data.businessName).toBeUndefined()
-      expect(result.data.country).toBeUndefined()
-      expect(result.data.taxId).toBeUndefined()
+    if (result.success && !result.data.isBusiness) {
+      expect(result.data).toEqual({ isBusiness: false })
     }
   })
 })

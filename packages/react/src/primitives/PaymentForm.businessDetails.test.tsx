@@ -26,10 +26,26 @@ vi.mock('../hooks/useBusinessDetailsAttach', () => ({
   })),
 }))
 
+import type { PaymentIntentResult } from '@stripe/stripe-js'
+import type { TaxBreakdown } from '@solvapay/core'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
+
+const mockTaxBreakdown: TaxBreakdown = {
+  subtotal: 1000,
+  taxAmount: 0,
+  taxRate: 0,
+  treatment: 'none',
+  total: 1000,
+  currency: 'usd',
+  inclusive: false,
+}
+
 const stripeMocks = vi.hoisted(() => ({
-  submit: vi.fn<(...args: unknown[]) => Promise<{ error?: { message: string } }>>(),
-  confirmPayment: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
-  fetchUpdates: vi.fn<() => Promise<void>>(),
+  submit: vi.fn<() => Promise<{ error?: { message: string } }>>(),
+  confirmPayment: vi.fn<
+    () => Promise<PaymentIntentResult>
+  >(),
+  fetchUpdates: vi.fn<() => Promise<{ error?: { message: string } }>>(),
 }))
 
 vi.mock('@stripe/react-stripe-js', () => ({
@@ -116,15 +132,7 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     _config: undefined,
     ...overrides,
   }
@@ -147,12 +155,12 @@ describe('PaymentForm business details + tax summary', () => {
     stripeMocks.confirmPayment.mockResolvedValue({
       error: undefined,
       paymentIntent: { id: 'pi_test_123', status: 'succeeded' },
-    })
+    } as PaymentIntentResult)
     attachHookMock.runAttach.mockResolvedValue(true)
   })
 
   it('wires processorPaymentId and attach transport into useBusinessDetailsAttach', async () => {
-    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: {} })
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: mockTaxBreakdown })
     const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
 
     render(
@@ -190,7 +198,7 @@ describe('PaymentForm business details + tax summary', () => {
   })
 
   it('passes refreshElements callback to useBusinessDetailsAttach', async () => {
-    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: {} })
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: mockTaxBreakdown })
     const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
 
     render(
