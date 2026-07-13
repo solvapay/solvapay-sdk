@@ -839,7 +839,7 @@ const Summary: React.FC<SummaryProps> = props => {
       {...props}
       planRef={ctx.planRef || ctx.resolvedPlanRef || undefined}
       productRef={ctx.productRef}
-      taxBreakdown={ctx.taxBreakdown}
+      taxBreakdown={ctx.businessDetails.isBusiness ? ctx.taxBreakdown : null}
       baseAmountMinor={ctx.plan?.price ?? 0}
     />
   )
@@ -1173,6 +1173,7 @@ function usePaymentSummaryCtx(_part: string) {
     businessDetailsAttaching: ctx.businessDetailsAttaching,
     baseAmountMinor: ctx.plan?.price ?? 0,
     currency: ctx.taxBreakdown?.currency ?? ctx.plan?.currency ?? 'usd',
+    isBusiness: ctx.businessDetails.isBusiness,
   }
 }
 

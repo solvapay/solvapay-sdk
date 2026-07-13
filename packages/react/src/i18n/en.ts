@@ -121,7 +121,7 @@ export const enCopy: SolvaPayCopy = {
   autoRecharge: {
     heading: 'Auto recharge',
     description:
-      'Automatically top up so you never run out — recommended for production. You can turn this off anytime.',
+      'Automatically top up when your balance runs low, so you never run out. You can turn this off anytime.',
     settingsHeading: 'Auto recharge settings',
     setupTriggerLabel: 'Set up auto-recharge',
     modifyTriggerLabel: 'Modify',

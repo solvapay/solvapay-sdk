@@ -27,6 +27,7 @@ function makeSummaryCtx(overrides?: Partial<TaxSummaryContextSlice>): TaxSummary
     businessDetailsAttaching: false,
     baseAmountMinor: 1000,
     currency: 'usd',
+    isBusiness: true,
     ...overrides,
   }
 }
@@ -138,6 +139,18 @@ describe('createTaxSummaryParts.Rows', () => {
 
     expect(screen.queryByText(/VAT/)).not.toBeInTheDocument()
     expect(screen.getByText('Total')).toBeInTheDocument()
+  })
+
+  it('renders nothing for consumer checkouts', () => {
+    const ctx = makeSummaryCtx({
+      isBusiness: false,
+      taxBreakdown: inclusiveBreakdown,
+    })
+    const { Rows } = createTaxSummaryParts(() => ctx, 'payment-form')
+
+    const { container } = render(<Rows />)
+
+    expect(container).toBeEmptyDOMElement()
   })
 })
 

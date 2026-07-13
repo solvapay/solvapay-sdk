@@ -165,7 +165,7 @@ describe('AutoRecharge primitive', () => {
     const toggle = screen.getByLabelText('Enable auto-recharge')
     expect(toggle).toBeInTheDocument()
     expect(toggle).not.toBeChecked()
-    expect(screen.getByText(/recommended for production/i)).toBeInTheDocument()
+    expect(screen.getByText(/when your balance runs low/i)).toBeInTheDocument()
   })
 
   it('shows threshold and amount controls when enabled', () => {

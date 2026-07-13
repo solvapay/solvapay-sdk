@@ -50,6 +50,7 @@ export type TaxSummaryContextSlice = {
   businessDetailsAttaching: boolean
   baseAmountMinor: number
   currency: string
+  isBusiness: boolean
 }
 
 type AttrPrefix = 'topup-form' | 'payment-form'
@@ -348,7 +349,8 @@ export function createTaxSummaryParts(
     { asChild, children, ...rest },
     forwardedRef,
   ) {
-    useCtx('Summary')
+    const ctx = useCtx('Summary')
+    if (!ctx.isBusiness) return null
     const Comp = asChild ? Slot : 'section'
     return (
       <Comp ref={forwardedRef} {...{ [attr(prefix, 'summary')]: '' }} {...rest}>
@@ -363,7 +365,9 @@ export function createTaxSummaryParts(
     { asChild, children, ...rest },
     forwardedRef,
   ) {
+    const ctx = useCtx('Summary.Subtotal')
     const { subtotalFormatted } = useSummaryAmounts(useCtx, 'Summary.Subtotal')
+    if (!ctx.isBusiness) return null
     const Comp = asChild ? Slot : 'span'
     return (
       <Comp ref={forwardedRef} {...{ [attr(prefix, 'summary-subtotal')]: '' }} {...rest}>
@@ -376,7 +380,9 @@ export function createTaxSummaryParts(
     { asChild, children, ...rest },
     forwardedRef,
   ) {
+    const ctx = useCtx('Summary.Tax')
     const { taxFormatted, taxRate, treatment, inclusive } = useSummaryAmounts(useCtx, 'Summary.Tax')
+    if (!ctx.isBusiness) return null
     const Comp = asChild ? Slot : 'span'
     const defaultLabel = formatVatSummaryLabel({
       treatment: treatment ?? 'standard',
@@ -399,7 +405,9 @@ export function createTaxSummaryParts(
     { asChild, children, ...rest },
     forwardedRef,
   ) {
+    const ctx = useCtx('Summary.Total')
     const { totalFormatted } = useSummaryAmounts(useCtx, 'Summary.Total')
+    if (!ctx.isBusiness) return null
     const Comp = asChild ? Slot : 'span'
     return (
       <Comp ref={forwardedRef} {...{ [attr(prefix, 'summary-total')]: '' }} {...rest}>
@@ -412,7 +420,9 @@ export function createTaxSummaryParts(
     HTMLParagraphElement,
     React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
   >(function TaxSummaryTaxNote({ asChild, children, ...rest }, forwardedRef) {
+    const ctx = useCtx('Summary.TaxNote')
     const { treatment } = useSummaryAmounts(useCtx, 'Summary.TaxNote')
+    if (!ctx.isBusiness) return null
     if (!treatment || treatment === 'standard') return null
     const Comp = asChild ? Slot : 'p'
     const defaultNote =
@@ -433,7 +443,9 @@ export function createTaxSummaryParts(
     { asChild, children, ...rest },
     forwardedRef,
   ) {
+    const ctx = useCtx('Summary.Rows')
     const { taxRate, treatment, inclusive, taxFormatted } = useSummaryAmounts(useCtx, 'Summary.Rows')
+    if (!ctx.isBusiness) return null
     const showTaxRow = shouldShowTaxRow(treatment, taxRate)
     const vatLabel = formatVatSummaryLabel({
       treatment: treatment ?? 'standard',

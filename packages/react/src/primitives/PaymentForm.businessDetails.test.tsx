@@ -238,10 +238,53 @@ describe('PaymentForm business details + tax summary', () => {
     expect(screen.getByText('Country')).toBeInTheDocument()
   })
 
-  it('exposes TaxSummary.Rows with Total label and VAT copy', async () => {
+  it('hides TaxSummary.Rows for consumer checkouts even when tax breakdown exists', async () => {
     const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
     vi.mocked(useBusinessDetailsAttach).mockReturnValue({
       businessDetails: { isBusiness: false },
+      setBusinessDetails: attachHookMock.setBusinessDetails,
+      fieldErrors: {},
+      taxBreakdown: {
+        subtotal: 800,
+        taxAmount: 200,
+        taxRate: 0.25,
+        treatment: 'standard',
+        total: 1000,
+        currency: 'EUR',
+        inclusive: true,
+      },
+      businessDetailsAttached: true,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      requiresBusinessAttach: true,
+      runAttach: attachHookMock.runAttach,
+    })
+
+    render(
+      <Wrap value={ctx({ attachBusinessDetails: vi.fn() })}>
+        <PaymentForm.Root planRef="pln_test" productRef="prd_test">
+          <PaymentForm.TaxSummary.Root>
+            <PaymentForm.TaxSummary.Rows />
+          </PaymentForm.TaxSummary.Root>
+        </PaymentForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Total')).not.toBeInTheDocument()
+      expect(screen.queryByText('Subtotal')).not.toBeInTheDocument()
+    })
+  })
+
+  it('exposes TaxSummary.Rows with Total label and VAT copy for business checkouts', async () => {
+    const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
+    vi.mocked(useBusinessDetailsAttach).mockReturnValue({
+      businessDetails: {
+        isBusiness: true,
+        businessName: 'Acme GmbH',
+        country: 'DE',
+        taxId: 'DE123456789',
+      },
       setBusinessDetails: attachHookMock.setBusinessDetails,
       fieldErrors: {},
       taxBreakdown: {

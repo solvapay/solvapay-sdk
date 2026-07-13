@@ -772,6 +772,7 @@ function useTopupSummaryCtx(part: string) {
     businessDetailsAttaching: ctx.businessDetailsAttaching,
     baseAmountMinor: ctx.amount,
     currency: ctx.currency ?? 'usd',
+    isBusiness: ctx.businessDetails.isBusiness,
   }
 }
 
