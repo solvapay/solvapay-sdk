@@ -45,6 +45,7 @@ function isBusinessDetailsKey(key: PropertyKey): key is keyof BusinessDetailsInp
     key === 'businessName' ||
     key === 'country' ||
     key === 'customerCountry' ||
+    key === 'customerName' ||
     key === 'taxId' ||
     key === 'taxIdType'
   )

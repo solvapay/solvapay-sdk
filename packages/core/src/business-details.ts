@@ -231,6 +231,7 @@ export const BusinessDetailsSchema = z
     businessName: z.string().optional(),
     country: z.string().optional(),
     customerCountry: z.string().optional(),
+    customerName: z.string().max(100).optional(),
     taxId: z.string().optional(),
     taxIdType: z.enum(TAX_ID_TYPES).optional(),
   })
@@ -247,14 +248,6 @@ export const BusinessDetailsSchema = z
         }
       }
       return
-    }
-
-    if (!data.businessName?.trim()) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Business name is required',
-        path: ['businessName'],
-      })
     }
 
     if (!data.country?.trim()) {
@@ -276,17 +269,7 @@ export const BusinessDetailsSchema = z
       return
     }
 
-    if (!data.taxId?.trim()) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Tax ID is required',
-        path: ['taxId'],
-      })
-      return
-    }
-
-    const normalizedTaxId = normalizeTaxId(data.taxId)
-    if (!isValidTaxIdForCountry(countryUpper, normalizedTaxId)) {
+    if (data.taxId?.trim() && !isValidTaxIdForCountry(countryUpper, data.taxId)) {
       ctx.addIssue({
         code: 'custom',
         message: `Enter a valid tax ID for ${countryUpper}`,
@@ -295,24 +278,33 @@ export const BusinessDetailsSchema = z
     }
   })
   .transform(data => {
+    const customerName = data.customerName?.trim()
+
     if (!data.isBusiness) {
       const customerCountry = data.customerCountry?.trim().toUpperCase()
       if (customerCountry && isSupportedCountry(customerCountry)) {
-        return { isBusiness: false as const, customerCountry }
+        return {
+          isBusiness: false as const,
+          customerCountry,
+          ...(customerName && { customerName }),
+        }
       }
-      return { isBusiness: false as const }
+      return {
+        isBusiness: false as const,
+        ...(customerName && { customerName }),
+      }
     }
 
     const country = data.country!.trim().toUpperCase() as SupportedBusinessCountry
-    const taxId = normalizeTaxId(data.taxId!)
-    const taxIdType = deriveTaxIdType(country)
+    const businessName = data.businessName?.trim()
+    const taxId = data.taxId?.trim() ? normalizeTaxId(data.taxId) : undefined
 
     return {
       isBusiness: true as const,
-      businessName: data.businessName!.trim(),
       country,
-      taxId,
-      taxIdType,
+      ...(businessName && { businessName }),
+      ...(taxId && { taxId, taxIdType: deriveTaxIdType(country) }),
+      ...(customerName && { customerName }),
     }
   })
 
@@ -321,18 +313,20 @@ export type BusinessDetailsInput = {
   businessName?: string
   country?: string
   customerCountry?: string
+  customerName?: string
   taxId?: string
   taxIdType?: TaxIdType
 }
 
 export type BusinessDetails =
-  | { isBusiness: false; customerCountry?: SupportedBusinessCountry }
+  | { isBusiness: false; customerCountry?: SupportedBusinessCountry; customerName?: string }
   | {
       isBusiness: true
-      businessName: string
       country: SupportedBusinessCountry
-      taxId: string
-      taxIdType: TaxIdType
+      businessName?: string
+      taxId?: string
+      taxIdType?: TaxIdType
+      customerName?: string
     }
 
 export type BusinessDetailsValidationIssue = {

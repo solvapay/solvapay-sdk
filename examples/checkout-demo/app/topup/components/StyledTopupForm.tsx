@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useCustomer } from '@solvapay/react'
 import type { AutoRechargeInput } from '@solvapay/server'
 import { TopupForm } from '@solvapay/react/primitives'
@@ -36,6 +37,7 @@ export function StyledTopupForm({
   onBack,
 }: StyledTopupFormProps) {
   const customer = useCustomer()
+  const [customerName, setCustomerName] = useState('')
   const exchangeRate = displayExchangeRate ?? 1
 
   return (
@@ -73,7 +75,16 @@ export function StyledTopupForm({
           </div>
           <div>
             <dt className="text-xs text-slate-500 mb-1">Name</dt>
-            <dd className="text-sm text-slate-900">{customer.name || '—'}</dd>
+            <dd>
+              <input
+                type="text"
+                value={customerName}
+                onChange={event => setCustomerName(event.target.value)}
+                placeholder="Optional"
+                aria-label="Name"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              />
+            </dd>
           </div>
         </dl>
       </section>

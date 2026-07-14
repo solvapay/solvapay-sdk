@@ -380,6 +380,7 @@ const PaidInner: React.FC<{
   const [elementKind, setElementKind] = useState<PaymentElementKind>(
     children ? null : 'payment-element',
   )
+  const [customerName, setCustomerName] = useState('')
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -540,7 +541,7 @@ const PaidInner: React.FC<{
         mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
         returnUrl,
         billingDetails: {
-          name: customer.name ?? prefillCustomer?.name,
+          ...(customerName.trim() && { name: customerName.trim() }),
           email: customer.email ?? prefillCustomer?.email,
         },
         copy,
@@ -617,6 +618,7 @@ const PaidInner: React.FC<{
     elementKind,
     returnUrl,
     customer,
+    customerName,
     prefillCustomer,
     copy,
     processPayment,
@@ -659,6 +661,8 @@ const PaidInner: React.FC<{
       returnUrl,
       submitButtonText,
       buttonClassName,
+      customerName,
+      setCustomerName,
       businessDetails,
       taxBreakdown,
       businessDetailsAttached,
@@ -692,6 +696,8 @@ const PaidInner: React.FC<{
       returnUrl,
       submitButtonText,
       buttonClassName,
+      customerName,
+      setCustomerName,
       businessDetails,
       taxBreakdown,
       businessDetailsAttached,
@@ -802,6 +808,8 @@ const FreeInner: React.FC<{
       returnUrl: '',
       submitButtonText,
       buttonClassName,
+      customerName: '',
+      setCustomerName: () => {},
       businessDetails: defaultBusinessDetails,
       taxBreakdown: null,
       businessDetailsAttached: false,
@@ -878,12 +886,11 @@ const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
   ) {
     const copy = useCopy()
     const customer = useCustomer()
-    const { prefillCustomer } = usePaymentForm()
+    const { prefillCustomer, customerName, setCustomerName, setBusinessDetails } = usePaymentForm()
 
     const email = customer.email ?? prefillCustomer?.email
-    const name = customer.name ?? prefillCustomer?.name
 
-    if (!email && !name) return null
+    if (!email) return null
 
     const Comp = asChild ? Slot : 'section'
     return (
@@ -896,12 +903,24 @@ const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
                 <dd>{email}</dd>
               </dl>
             )}
-            {name && (
-              <dl data-solvapay-payment-form-customer-name="">
-                <dt>{copy.customer.nameLabel}</dt>
-                <dd>{name}</dd>
-              </dl>
-            )}
+            <dl data-solvapay-payment-form-customer-name="">
+              <dt>{copy.customer.nameLabel}</dt>
+              <dd>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={event => {
+                    const nextName = event.target.value
+                    setCustomerName(nextName)
+                    setBusinessDetails({
+                      customerName: nextName.trim() || undefined,
+                    })
+                  }}
+                  placeholder="Optional"
+                  aria-label={copy.customer.nameLabel}
+                />
+              </dd>
+            </dl>
           </>
         )}
       </Comp>
