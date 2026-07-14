@@ -4,8 +4,10 @@
  * Step 2 — PAYG amount picker. Only renders on the PAYG branch; the
  * recurring branch transitions directly from `plan` to `payment`.
  *
- * Activation has already happened at the plan step (the `activate_plan`
- * call behind the "Continue with Pay as you go" button), so clicking
+ * Topup-first: the plan is NOT active yet. The plan-step `activate_plan`
+ * call returned `topup_required` for a zero-balance customer and created
+ * no purchase — the active PAYG purchase only materializes after this
+ * top-up succeeds (the flow re-activates once credits land). Clicking
  * `Continue` here just commits the topup amount and advances to the
  * payment step. No network call on this transition.
  */

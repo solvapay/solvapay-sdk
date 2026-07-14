@@ -527,7 +527,7 @@ export interface paths {
         put?: never;
         /**
          * Activate a plan for a customer
-         * @description Activates a specific plan on a product for a customer. Usage-based (PAYG) plans activate eagerly (returning an active purchase so the SDK can proceed to the top-up step), while free, recurring, and hybrid plans keep strict semantics and may return `payment_required` or `topup_required`.
+         * @description Activates a specific plan on a product for a customer. Usage-based (PAYG) plans are topup-first: a zero-balance customer receives `topup_required` and only activates after a successful top-up, while free plans activate immediately and paid recurring / hybrid plans return `payment_required`.
          */
         post: operations["ActivateSdkController_activate"];
         delete?: never;

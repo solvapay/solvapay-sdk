@@ -465,6 +465,41 @@ describe('useCheckoutFlow — PAYG branch', () => {
     expect(onPurchaseSuccess).toHaveBeenCalledTimes(1)
     expect(onPurchaseSuccess).toHaveBeenCalledWith(expect.objectContaining({ branch: 'payg' }))
   })
+
+  it('re-activates the plan on PAYG success so the purchase materializes after top-up (topup-first)', async () => {
+    // Topup-first: the plan-step activate returns `topup_required` (no
+    // purchase). The active PAYG purchase must be created AFTER the top-up
+    // lands — so `activatePlan` is called a second time on success.
+    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
+    const { Wrapper } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    // Plan-step probe.
+    expect(activate).toHaveBeenCalledTimes(1)
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    expect(result.current.step).toBe('success')
+    // Second activation creates the plan purchase now that credits landed.
+    expect(activate).toHaveBeenCalledTimes(2)
+    expect(activate).toHaveBeenLastCalledWith({ productRef, planRef: 'pln_payg' })
+  })
 })
 
 // ------------------------------------------------------------------
