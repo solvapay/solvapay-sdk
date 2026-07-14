@@ -2,9 +2,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
+import type { PaymentIntentResult } from '@stripe/stripe-js'
+import type { TaxBreakdown } from '@solvapay/core'
 import { PaymentForm } from './PaymentForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 const attachHookMock = vi.hoisted(() => ({
   runAttach: vi.fn().mockResolvedValue(true),
@@ -25,10 +28,6 @@ vi.mock('../hooks/useBusinessDetailsAttach', () => ({
     runAttach: attachHookMock.runAttach,
   })),
 }))
-
-import type { PaymentIntentResult } from '@stripe/stripe-js'
-import type { TaxBreakdown } from '@solvapay/core'
-import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 const mockTaxBreakdown: TaxBreakdown = {
   subtotal: 1000,
