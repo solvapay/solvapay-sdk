@@ -4,6 +4,10 @@ import {
   buildSummaryLineFromPayload,
   configToAutoRechargeInput,
   configToForm,
+  currentSpendPeriod,
+  effectiveMonthlySpend,
+  formatMonthlySpendLine,
+  isMonthlySpendCapReached,
   validateAutoRechargeForm,
   type AutoRechargeFormState,
 } from './auto-recharge-form'
@@ -18,6 +22,7 @@ describe('configToAutoRechargeInput', () => {
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
     status: 'pending_setup',
     failureCount: 0,
+    monthlySpendMinor: 0,
   }
 
   it('prefers backend display block when present on config', () => {
@@ -68,6 +73,14 @@ describe('configToAutoRechargeInput', () => {
   it('returns null when auto-recharge is disabled', () => {
     expect(configToAutoRechargeInput({ ...baseConfig, enabled: false })).toBeNull()
   })
+
+  it('carries maxMonthlySpendMajor when config has a cap', () => {
+    const input = configToAutoRechargeInput({
+      ...baseConfig,
+      maxMonthlySpendMinor: 10_000,
+    })
+    expect(input?.maxMonthlySpendMajor).toBe(100)
+  })
 })
 
 describe('configToForm (DEV-586: reload must not mis-scale or zero when display is absent)', () => {
@@ -77,6 +90,7 @@ describe('configToForm (DEV-586: reload must not mis-scale or zero when display 
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
     status: 'active',
     failureCount: 0,
+    monthlySpendMinor: 0,
   }
 
   it('prefers the backend display block verbatim when present', () => {
@@ -118,6 +132,11 @@ describe('configToForm (DEV-586: reload must not mis-scale or zero when display 
     expect(form.topupAmountMajor).toBe('5000')
     expect(form.thresholdAmountMajor).not.toBe('0')
   })
+
+  it('round-trips maxMonthlySpendMinor into the form cap field', () => {
+    const form = configToForm({ ...baseConfig, maxMonthlySpendMinor: 10_000 }, 'USD')
+    expect(form.maxMonthlySpendMajor).toBe('100')
+  })
 })
 
 describe('buildSummaryLineFromPayload', () => {
@@ -156,6 +175,7 @@ describe('validateAutoRechargeForm — per-currency minimums & relationship (DEV
     topupUnit: 'currency',
     topupBaseValue: '10',
     topupBaseUnit: 'currency',
+    maxMonthlySpendMajor: '',
     ...over,
   })
 
@@ -252,5 +272,115 @@ describe('validateAutoRechargeForm — per-currency minimums & relationship (DEV
       'USD',
     )
     expect(result.ok).toBe(true)
+  })
+})
+
+describe('validateAutoRechargeForm — monthly spend cap (DEV-635)', () => {
+  const form = (over: Partial<AutoRechargeFormState> = {}): AutoRechargeFormState => ({
+    enabled: true,
+    thresholdAmountMajor: '5',
+    thresholdUnit: 'currency',
+    thresholdBaseValue: '5',
+    thresholdBaseUnit: 'currency',
+    topupAmountMajor: '10',
+    topupUnit: 'currency',
+    topupBaseValue: '10',
+    topupBaseUnit: 'currency',
+    maxMonthlySpendMajor: '',
+    ...over,
+  })
+
+  it('treats a blank cap as unlimited', () => {
+    const result = validateAutoRechargeForm(form(), 'USD')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.payload.maxMonthlySpendMajor).toBeUndefined()
+    }
+  })
+
+  it('rejects an invalid cap', () => {
+    const result = validateAutoRechargeForm(form({ maxMonthlySpendMajor: 'abc' }), 'USD')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(enCopy.autoRecharge.invalidMaxMonthlySpend)
+    }
+  })
+
+  it('rejects a cap below the top-up amount', () => {
+    const result = validateAutoRechargeForm(form({ maxMonthlySpendMajor: '5' }), 'USD')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(
+        interpolate(enCopy.autoRecharge.maxMonthlySpendBelowTopup, {
+          amount: formatPrice(1000, 'USD', { free: '' }),
+        }),
+      )
+    }
+  })
+
+  it('accepts a valid cap and emits maxMonthlySpendMajor', () => {
+    const result = validateAutoRechargeForm(form({ maxMonthlySpendMajor: '100' }), 'USD')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.payload.maxMonthlySpendMajor).toBe(100)
+    }
+  })
+})
+
+describe('monthly spend helpers (DEV-635)', () => {
+  const july2026 = new Date('2026-07-15T12:00:00Z')
+
+  it('currentSpendPeriod returns UTC YYYY-MM', () => {
+    expect(currentSpendPeriod(july2026)).toBe('2026-07')
+  })
+
+  it('effectiveMonthlySpend resets when the period does not match', () => {
+    expect(
+      effectiveMonthlySpend(
+        { monthlySpendMinor: 4500, monthlySpendPeriod: '2026-06' },
+        july2026,
+      ),
+    ).toBe(0)
+  })
+
+  it('effectiveMonthlySpend returns spend for the current period', () => {
+    expect(
+      effectiveMonthlySpend(
+        { monthlySpendMinor: 4500, monthlySpendPeriod: '2026-07' },
+        july2026,
+      ),
+    ).toBe(4500)
+  })
+
+  it('isMonthlySpendCapReached includes the pending top-up in the check', () => {
+    expect(
+      isMonthlySpendCapReached(
+        {
+          maxMonthlySpendMinor: 10_000,
+          monthlySpendMinor: 9500,
+          monthlySpendPeriod: '2026-07',
+          topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
+        },
+        july2026,
+      ),
+    ).toBe(true)
+  })
+
+  it('formatMonthlySpendLine renders spent / cap for the current month', () => {
+    const line = formatMonthlySpendLine(
+      {
+        enabled: true,
+        trigger: { type: 'balance', thresholdAmountMinor: 500 },
+        topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
+        maxMonthlySpendMinor: 10_000,
+        monthlySpendMinor: 4500,
+        monthlySpendPeriod: '2026-07',
+        status: 'active',
+        failureCount: 0,
+      },
+      'USD',
+      july2026,
+    )
+    expect(line).toBe('$45 / $100 this month')
   })
 })

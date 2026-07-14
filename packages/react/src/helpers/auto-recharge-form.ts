@@ -18,6 +18,8 @@ export type AutoRechargeValidationMessages = {
   thresholdTooLow: string
   minTopupAmount: string
   topupBelowThreshold: string
+  invalidMaxMonthlySpend: string
+  maxMonthlySpendBelowTopup: string
 }
 
 const DEFAULT_VALIDATION_MESSAGES: AutoRechargeValidationMessages = {
@@ -25,6 +27,9 @@ const DEFAULT_VALIDATION_MESSAGES: AutoRechargeValidationMessages = {
   thresholdTooLow: 'Balance threshold must be greater than zero.',
   minTopupAmount: 'Top-up amount must be at least {amount}.',
   topupBelowThreshold: 'Top-up amount must be at least your balance threshold ({amount}).',
+  invalidMaxMonthlySpend: 'Maximum monthly spend must be a positive amount.',
+  maxMonthlySpendBelowTopup:
+    'Maximum monthly spend must be at least your top-up amount ({amount}).',
 }
 
 export type AmountInputUnit = 'currency' | 'credits'
@@ -45,6 +50,7 @@ export type AutoRechargeFormState = {
   topupUnit: AmountInputUnit
   topupBaseValue: string
   topupBaseUnit: AmountInputUnit
+  maxMonthlySpendMajor: string
 }
 
 export type AutoRechargeConversionContext = {
@@ -88,8 +94,54 @@ export function createDefaultAutoRechargeForm(
     thresholdUnit: 'currency',
     topupAmountMajor: topup,
     topupUnit: 'currency',
+    maxMonthlySpendMajor: '',
     ...amountAnchors(threshold, topup, 'currency'),
   }
+}
+
+/** UTC calendar month key (`YYYY-MM`) for monthly spend tracking. */
+export function currentSpendPeriod(now: Date = new Date()): string {
+  const year = now.getUTCFullYear()
+  const month = now.getUTCMonth() + 1
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
+export function effectiveMonthlySpend(
+  config: Pick<AutoRechargeConfig, 'monthlySpendMinor' | 'monthlySpendPeriod'>,
+  now: Date = new Date(),
+): number {
+  if (config.monthlySpendPeriod !== currentSpendPeriod(now)) {
+    return 0
+  }
+  return config.monthlySpendMinor ?? 0
+}
+
+export function isMonthlySpendCapReached(
+  config: Pick<
+    AutoRechargeConfig,
+    'maxMonthlySpendMinor' | 'monthlySpendMinor' | 'monthlySpendPeriod' | 'topup'
+  >,
+  now: Date = new Date(),
+): boolean {
+  if (config.maxMonthlySpendMinor == null) return false
+  const effectiveSpend = effectiveMonthlySpend(config, now)
+  return effectiveSpend + config.topup.amountMinor > config.maxMonthlySpendMinor
+}
+
+export function formatMonthlySpendLine(
+  config: AutoRechargeConfig,
+  currency: string,
+  now: Date = new Date(),
+): string | null {
+  if (config.maxMonthlySpendMinor == null) return null
+  const spent = effectiveMonthlySpend(config, now)
+  return `${formatPrice(spent, currency, { free: '' })} / ${formatPrice(config.maxMonthlySpendMinor, currency, { free: '' })} this month`
+}
+
+function maxMonthlySpendMajorFromConfig(config: AutoRechargeConfig, currency: string): string {
+  if (config.maxMonthlySpendMinor == null) return ''
+  const minorPerMajor = getMinorUnitsPerMajor(currency)
+  return String(config.maxMonthlySpendMinor / minorPerMajor)
 }
 
 function parsePositiveNumber(value: string): number | null {
@@ -202,6 +254,22 @@ export function validateAutoRechargeForm(
     }
   }
 
+  if (form.maxMonthlySpendMajor.trim().length > 0) {
+    const max = parsePositiveNumber(form.maxMonthlySpendMajor)
+    if (max == null) {
+      return { ok: false, error: messages.invalidMaxMonthlySpend }
+    }
+    if (max < amountMajor) {
+      return {
+        ok: false,
+        error: interpolate(messages.maxMonthlySpendBelowTopup, {
+          amount: formatPrice(Math.round(amountMajor * minorPerMajor), currency, { free: '' }),
+        }),
+      }
+    }
+    payload.maxMonthlySpendMajor = max
+  }
+
   return { ok: true, payload }
 }
 
@@ -242,6 +310,12 @@ export function configToAutoRechargeInput(
       thresholdAmountMajor: display.thresholdAmountMajor,
       topupAmountMajor: display.topupAmountMajor,
       currency,
+      ...(config.maxMonthlySpendMinor != null
+        ? {
+            maxMonthlySpendMajor:
+              config.maxMonthlySpendMinor / getMinorUnitsPerMajor(currency),
+          }
+        : {}),
     }
   }
 
@@ -258,6 +332,11 @@ export function configToAutoRechargeInput(
     thresholdAmountMajor: Math.max(0, thresholdMajor),
     topupAmountMajor,
     currency,
+    ...(config.maxMonthlySpendMinor != null
+      ? {
+          maxMonthlySpendMajor: config.maxMonthlySpendMinor / getMinorUnitsPerMajor(currency),
+        }
+      : {}),
   }
 }
 
@@ -275,6 +354,7 @@ export function configToForm(config: AutoRechargeConfig, currency: string): Auto
       enabled: config.enabled,
       thresholdAmountMajor: thresholdStr,
       topupAmountMajor: topupStr,
+      maxMonthlySpendMajor: maxMonthlySpendMajorFromConfig(config, currency),
       ...amountAnchors(thresholdStr, topupStr, 'currency'),
     }
   }
@@ -288,6 +368,7 @@ export function configToForm(config: AutoRechargeConfig, currency: string): Auto
     enabled: config.enabled,
     thresholdAmountMajor: thresholdStr,
     topupAmountMajor: topupStr,
+    maxMonthlySpendMajor: maxMonthlySpendMajorFromConfig(config, currency),
     ...amountAnchors(thresholdStr, topupStr, 'currency'),
   }
 }
@@ -329,6 +410,8 @@ export function payloadToForm(
   }
   const thresholdStr = String(payload.thresholdAmountMajor ?? base.thresholdAmountMajor)
   const topupStr = String(payload.topupAmountMajor ?? base.topupAmountMajor)
+  const capStr =
+    payload.maxMonthlySpendMajor != null ? String(payload.maxMonthlySpendMajor) : ''
   return {
     ...base,
     enabled: true,
@@ -336,6 +419,7 @@ export function payloadToForm(
     thresholdUnit: 'currency',
     topupAmountMajor: topupStr,
     topupUnit: 'currency',
+    maxMonthlySpendMajor: capStr,
     ...amountAnchors(thresholdStr, topupStr, 'currency'),
   }
 }

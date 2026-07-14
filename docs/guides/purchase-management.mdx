@@ -258,7 +258,7 @@ accept an `AutoRechargeInput`:
 | `triggerType` | `'balance'` | Yes | Only balance-based triggering is supported |
 | `thresholdAmountMajor` | `number` | When enabled | Balance level (display-currency major units) that triggers a recharge. Must be `> 0` |
 | `topupAmountMajor` | `number` | When enabled | Fixed recharge amount. Must be `>= thresholdAmountMajor` |
-| `maxRecharges` | `number` | No | Optional lifetime cap on automatic recharges |
+| `maxMonthlySpendMajor` | `number` | No | Optional monthly spend cap in display-currency major units. Resets each UTC calendar month; blank means unlimited |
 | `currency` | `string` | Yes | ISO 4217 currency, must be a supported top-up currency |
 
 `SaveAutoRechargeInput` also accepts `deferSetupIntent?: boolean` — set it to
@@ -279,7 +279,7 @@ a per-currency Stripe minimum on the top-up amount.
 - **Credits mint on charge success.** Credits are booked when the off-session charge succeeds; the webhook is an idempotent backstop, not the primary path.
 - **Deferred setup stages the config.** With `deferSetupIntent` / `deferCardSetup`, the config is `pending_setup` and is **not** armed until the card is saved on the top-up charge and the status flips to `active`.
 - **Live FX, no stored credit threshold.** The threshold is stored in display-currency minor units and re-resolved to credits at trigger time — there's no persisted `thresholdCredits`.
-- **`maxRecharges` completion.** When the cap is reached, the config's status becomes `completed` and no further recharges occur.
+- **Monthly spend cap.** An optional `maxMonthlySpendMajor` limits how much auto-recharge spend is allowed per UTC calendar month. The config stays `active` when the cap is hit — charges resume automatically next month. The `<AutoRecharge>` component exposes the cap under **Advanced** and shows current-period spend on the summary card; read `monthlySpendMinor` / `monthlySpendPeriod` on the config when building a custom UI.
 
 <Warning>
 `autoRecharge.triggered: true` on a usage/debit response means an off-session

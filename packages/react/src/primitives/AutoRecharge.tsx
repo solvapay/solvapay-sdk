@@ -45,6 +45,8 @@ import {
   flipUnitValue,
   createDefaultAutoRechargeForm,
   validateAutoRechargeForm,
+  isMonthlySpendCapReached,
+  effectiveMonthlySpend,
   type AmountInputUnit,
   type AutoRechargeFormState,
   type AutoRechargeInputPayload,
@@ -889,6 +891,7 @@ const Fields = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTML
             <Summary />
             <ThresholdField />
             <TopupField />
+            <MaxMonthlySpendField />
             <ValidationError />
           </>
         )}
@@ -930,6 +933,7 @@ const Body = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTMLFi
             <Summary />
             <ThresholdField />
             <TopupField />
+            <MaxMonthlySpendField />
             <ValidationError />
             <Actions />
           </>
@@ -942,11 +946,15 @@ const Body = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTMLFi
 const Summary = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   function AutoRechargeSummary({ className, children, ...rest }, forwardedRef) {
     const ctx = useAutoRechargeCtx('Summary')
+    const copy = useCopy()
     if (!ctx.summaryLine) return null
     return (
-      <p ref={forwardedRef} className={className} data-solvapay-auto-recharge-summary="" {...rest}>
-        {children ?? ctx.summaryLine}
-      </p>
+      <div data-solvapay-auto-recharge-summary="">
+        <p ref={forwardedRef} className={className} {...rest}>
+          {children ?? ctx.summaryLine}
+        </p>
+        <p className="text-xs text-muted-foreground">{copy.autoRecharge.taxDisclosure}</p>
+      </div>
     )
   },
 )
@@ -1085,6 +1093,70 @@ const TopupField = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLPar
         <AmountField field="fixed" />
         <Hint />
       </section>
+    )
+  },
+)
+
+const MaxMonthlySpendField = forwardRef<
+  HTMLInputElement,
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, 'children'>
+>(function AutoRechargeMaxMonthlySpendField({ onChange, className, ...rest }, forwardedRef) {
+  const ctx = useAutoRechargeCtx('MaxMonthlySpendField')
+  const copy = useCopy()
+  const inputId = useId()
+  const prefix = getCurrencySymbol(ctx.currency)
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value.replace(/[^0-9.]/g, '')
+    ctx.updateForm({ maxMonthlySpendMajor: raw })
+  }
+
+  return (
+    <section data-solvapay-auto-recharge-field="" data-field="max-monthly-spend">
+      <label htmlFor={inputId}>{copy.autoRecharge.maxMonthlySpendLabel}</label>
+      <span data-solvapay-auto-recharge-amount-row="">
+        <span data-solvapay-auto-recharge-currency-prefix="" aria-hidden="true">
+          {prefix}
+        </span>
+        <input
+          ref={forwardedRef}
+          id={inputId}
+          data-solvapay-auto-recharge-amount=""
+          data-field="max-monthly-spend"
+          type="text"
+          inputMode="decimal"
+          placeholder={copy.autoRecharge.maxMonthlySpendPlaceholder}
+          value={ctx.form.maxMonthlySpendMajor}
+          aria-label={copy.autoRecharge.maxMonthlySpendAriaLabel}
+          onChange={composeEventHandlers(onChange, handleChange)}
+          className={className}
+          {...rest}
+        />
+      </span>
+      <p data-solvapay-auto-recharge-max-spend-helper="">{copy.autoRecharge.maxMonthlySpendHelper}</p>
+    </section>
+  )
+})
+
+const MonthlySpend = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  function AutoRechargeMonthlySpend({ className, children, ...rest }, forwardedRef) {
+    const ctx = useAutoRechargeCtx('MonthlySpend')
+    const copy = useCopy()
+    if (!ctx.config?.maxMonthlySpendMinor) return null
+    const spent = effectiveMonthlySpend(ctx.config)
+    return (
+      <p
+        ref={forwardedRef}
+        className={className}
+        data-solvapay-auto-recharge-monthly-spend=""
+        {...rest}
+      >
+        {children ??
+          interpolate(copy.autoRecharge.monthlySpendLine, {
+            spent: formatPrice(spent, ctx.currency, { free: '' }),
+            cap: formatPrice(ctx.config.maxMonthlySpendMinor, ctx.currency, { free: '' }),
+          })}
+      </p>
     )
   },
 )
@@ -1320,33 +1392,35 @@ const StatusMessage = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTML
   },
 )
 
-const Status = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(
+const Status = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   function AutoRechargeStatus({ className, ...rest }, forwardedRef) {
     const ctx = useAutoRechargeCtx('Status')
     const copy = useCopy()
     const status = ctx.config?.status
-    if (
-      !status ||
-      status === 'active' ||
-      status === 'disabled' ||
-      status === 'pending_setup'
-    ) {
-      return null
-    }
+    const monthlyCapReached = ctx.config ? isMonthlySpendCapReached(ctx.config) : false
+    const failedLabel = status === 'failed' ? copy.autoRecharge.statusFailed : null
+    const capLabel = monthlyCapReached ? copy.autoRecharge.statusMonthlyCapReached : null
 
-    const label = status === 'failed' ? copy.autoRecharge.statusFailed : null
-    if (!label) return null
+    if (!failedLabel && !capLabel) return null
 
     return (
-      <span
+      <div
         ref={forwardedRef}
         className={className}
-        data-solvapay-auto-recharge-status=""
-        data-status={status}
+        data-solvapay-auto-recharge-status-group=""
         {...rest}
       >
-        {label}
-      </span>
+        {failedLabel ? (
+          <span data-solvapay-auto-recharge-status="" data-status="failed">
+            {failedLabel}
+          </span>
+        ) : null}
+        {capLabel ? (
+          <span data-solvapay-auto-recharge-status="" data-status="monthly-cap-reached">
+            {capLabel}
+          </span>
+        ) : null}
+      </div>
     )
   },
 )
@@ -1509,6 +1583,8 @@ export const AutoRechargeBody = Body
 export const AutoRechargeSummary = Summary
 export const AutoRechargeThresholdField = ThresholdField
 export const AutoRechargeTopupField = TopupField
+export const AutoRechargeMaxMonthlySpendField = MaxMonthlySpendField
+export const AutoRechargeMonthlySpend = MonthlySpend
 export const AutoRechargeAmountField = AmountField
 export const AutoRechargeUnitToggle = UnitToggle
 export const AutoRechargeHint = Hint
@@ -1544,6 +1620,8 @@ export const AutoRecharge = {
   Summary,
   ThresholdField,
   TopupField,
+  MaxMonthlySpendField,
+  MonthlySpend,
   AmountField,
   UnitToggle,
   Hint,

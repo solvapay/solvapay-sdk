@@ -4,7 +4,8 @@ import React from 'react'
 import { BALANCE_RECONCILE_DELAYS_MS } from '@solvapay/server'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { useSolvaPay } from '../hooks/useSolvaPay'
-import { autoRechargeCache } from '../hooks/useAutoRecharge'
+import { useAutoRecharge } from '../hooks/useAutoRecharge'
+import { autoRechargeCache } from '../hooks/autoRechargeCache'
 
 const mockAdapter = {
   getToken: vi.fn().mockResolvedValue('test-token'),
@@ -413,5 +414,97 @@ describe('SolvaPayProvider - balance (credits)', () => {
 
     expect(getBalanceCalls().length).toBe(callsBeforeAdjust + 1)
     expect(result.current.balance.credits).toBe(1000)
+  })
+
+  it('invalidates auto-recharge cache after confirmed balance increase from usage debit', async () => {
+    const initialAutoRecharge = {
+      enabled: true,
+      trigger: { type: 'balance' as const, thresholdAmountMinor: 500 },
+      topup: { mode: 'fixed' as const, amountMinor: 1000, currency: 'USD' },
+      status: 'active' as const,
+      failureCount: 0,
+      maxMonthlySpendMinor: 10_000,
+      monthlySpendMinor: 0,
+      monthlySpendPeriod: '2026-07',
+    }
+    const rechargedAutoRecharge = {
+      ...initialAutoRecharge,
+      monthlySpendMinor: 1000,
+    }
+
+    let balanceFetchCount = 0
+    let autoRechargeFetchCount = 0
+
+    fetchSpy.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('customer-balance')) {
+        balanceFetchCount += 1
+        if (balanceFetchCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credits: 1000, displayCurrency: 'USD' }),
+          })
+        }
+        if (balanceFetchCount <= 3) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ credits: 400, displayCurrency: 'USD' }),
+          })
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ credits: 10_000, displayCurrency: 'USD' }),
+        })
+      }
+      if (typeof url === 'string' && url.includes('auto-recharge')) {
+        autoRechargeFetchCount += 1
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              config: autoRechargeFetchCount === 1 ? initialAutoRecharge : rechargedAutoRecharge,
+            }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ customerRef: 'cus_auto', purchases: [] }),
+      })
+    })
+
+    const { result: balanceResult } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+    const { result: autoRechargeResult } = renderHook(() => useAutoRecharge(), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => {
+      expect(balanceResult.current.customerRef).toBe('cus_auto')
+    })
+
+    await waitFor(() => {
+      expect(autoRechargeResult.current.loading).toBe(false)
+    })
+    expect(autoRechargeResult.current.config?.monthlySpendMinor).toBe(0)
+    expect(autoRechargeFetchCount).toBe(1)
+
+    await act(async () => {
+      await balanceResult.current.balance.refetch()
+    })
+
+    act(() => {
+      balanceResult.current.balance.adjustBalance(-600)
+      balanceResult.current.balance.reconcileAfterUsageDebit({ expectIncrease: true })
+    })
+
+    await act(async () => {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+        await vi.advanceTimersByTimeAsync(delay)
+      }
+    })
+
+    await waitFor(() => {
+      expect(balanceResult.current.balance.credits).toBe(10_000)
+      expect(autoRechargeResult.current.config?.monthlySpendMinor).toBe(1000)
+    })
+    expect(autoRechargeFetchCount).toBe(2)
   })
 })

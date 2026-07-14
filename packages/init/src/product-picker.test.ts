@@ -33,6 +33,28 @@ describe('pickProductInteractive', () => {
     expect(output.join('')).toContain('https://app.solvapay.com/products')
   })
 
+  it('does not report zero products when total is positive', async () => {
+    vi.mocked(listProducts).mockResolvedValue({
+      ok: true,
+      products: [
+        {
+          reference: 'prd_abc',
+          name: 'API Gateway',
+          status: '',
+          createdAt: '',
+        },
+      ],
+      total: 3,
+    })
+
+    const result = await pickProductInteractive('https://api.solvapay.com', 'sk_test', {
+      yes: true,
+    })
+
+    expect(result).toEqual({ action: 'skipped', reason: 'non_interactive_requires_product' })
+    expect(output.join('')).not.toContain('No products found')
+  })
+
   it('requires an explicit product under --yes instead of auto-picking', async () => {
     vi.mocked(listProducts).mockResolvedValue({
       ok: true,

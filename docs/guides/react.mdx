@@ -327,9 +327,10 @@ that route fall back to firing on Stripe confirmation.
 
 A drop-in component that lets a customer turn on automatic credit top-ups. It
 renders a summary card with a trigger that opens a modal for configuring a
-balance **threshold** and a **fixed top-up amount**. When enabled, SolvaPay
-charges the saved card off-session and mints credits whenever the balance falls
-below the threshold — no manual checkout.
+balance **threshold**, a **fixed top-up amount**, and an optional **monthly spend
+cap** (under **Advanced**). When enabled, SolvaPay charges the saved card
+off-session and mints credits whenever the balance falls below the threshold — no
+manual checkout.
 
 ```tsx
 import { AutoRecharge } from '@solvapay/react'
@@ -358,9 +359,16 @@ function AutoRechargeSettings() {
 
 The form is opt-in (`enabled: false` by default). Amounts can be entered in
 either display currency or credits; the component handles the Stripe SetupIntent
-and the 3DS redirect return internally. If a series of off-session charges keeps
+and the 3DS redirect return internally. Set an optional `maxMonthlySpendMajor` cap
+(blank = unlimited) in the form. The summary card shows current-period
+spend when a cap is configured, and a **Monthly spend limit reached** status when
+the next recharge would exceed the cap. If a series of off-session charges keeps
 declining, the card shows a text-only "payment failed" status — see the
 [failed-recharge guidance](#credit-top-ups--auto-recharge) for building a card-update prompt.
+
+For full layout control, compose the primitive from `@solvapay/react/primitives`:
+`AutoRecharge.MaxMonthlySpendField`,
+`AutoRecharge.MonthlySpend`, and `AutoRecharge.Status` (cap-reached and failed badges).
 
 ## Hooks
 
@@ -583,11 +591,10 @@ function AutoRechargeStatus() {
 - `loading` / `saving` / `disabling` — in-flight state flags.
 - `error` — the last error, or `null`.
 - `refresh(force?)` — re-fetch the config.
-- `save(input)` — set or update the config. Accepts `SaveAutoRechargeInput` (see the [top-up section](#credit-top-ups--auto-recharge) for the `maxRecharges` cap and `deferSetupIntent`).
+- `save(input)` — set or update the config. Accepts `SaveAutoRechargeInput` (see the [top-up section](#credit-top-ups--auto-recharge) for the `maxMonthlySpendMajor` cap and `deferSetupIntent`).
 - `disable()` — turn auto-recharge off.
 
-`config.status` is `active`, `disabled`, `pending_setup`, `failed`, or
-`completed` (the last is returned once a `maxRecharges` cap is reached). Read
+`config.status` is `active`, `disabled`, `pending_setup`, or `failed`. Read
 `config.failureCount` alongside `status === 'failed'` to decide when to prompt
 the customer to update their card.
 
@@ -838,11 +845,14 @@ minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP,
 `30 kr` for SEK/NOK, `2.50 kr` for DKK), and the currency must be one of the
 provider's supported top-up currencies.
 
-An optional `maxRecharges` cap limits the total number of automatic recharges.
-It is **API-only** — there's no field in the `<AutoRecharge>` form — so set it
-through `useAutoRecharge().save({ ..., maxRecharges })` (or the route directly).
-Once the cap is reached, the config's status becomes `completed` and no further
-recharges occur.
+An optional `maxMonthlySpendMajor` cap limits how much auto-recharge spend is
+allowed per UTC calendar month. Set it in the `<AutoRecharge>` form under
+**Advanced** (or pass it through `useAutoRecharge().save({ ..., maxMonthlySpendMajor })`
+and the `/api/auto-recharge` route). When the cap is hit mid-month, the config
+stays `active` and charges resume automatically next UTC month. The drop-in
+component shows a spend line (`$45 / $100 this month`) and a **Monthly spend limit
+reached** status when applicable; read `config.monthlySpendMinor` and
+`config.monthlySpendPeriod` if you build a custom UI.
 
 Thresholds and amounts are stored in **display-currency minor units** and
 re-resolved to credits against **live FX** at trigger time (no fixed credit

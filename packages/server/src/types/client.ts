@@ -163,6 +163,9 @@ export type AutoRechargeConfig = {
   paymentMethodId?: string
   status: AutoRechargeStatus
   failureCount: number
+  maxMonthlySpendMinor?: number
+  monthlySpendMinor: number
+  monthlySpendPeriod?: string
   lastChargeAt?: string
   updatedAt?: string
   /** Backend-computed display values — render verbatim; do not derive from trigger fields. */
@@ -194,7 +197,7 @@ export type AutoRechargeInput = {
   triggerType: 'balance'
   thresholdAmountMajor?: number
   topupAmountMajor?: number
-  maxRecharges?: number
+  maxMonthlySpendMajor?: number
   currency: string
 }
 
@@ -500,9 +503,7 @@ export interface SolvaPayClient {
   }): Promise<ProcessPaymentResult>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
-  attachBusinessDetails?(
-    params: AttachBusinessDetailsParams,
-  ): Promise<AttachBusinessDetailsResult>
+  attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
 
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {

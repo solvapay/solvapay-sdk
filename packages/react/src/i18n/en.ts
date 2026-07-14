@@ -151,10 +151,21 @@ export const enCopy: SolvaPayCopy = {
     thresholdTooLow: 'Balance threshold must be greater than zero.',
     minTopupAmount: 'Top-up amount must be at least {amount}.',
     topupBelowThreshold: 'Top-up amount must be at least your balance threshold ({amount}).',
+    invalidMaxMonthlySpend: 'Maximum monthly spend must be a positive amount.',
+    maxMonthlySpendBelowTopup:
+      'Maximum monthly spend must be at least your top-up amount ({amount}).',
+    maxMonthlySpendLabel: 'Maximum monthly spend (optional)',
+    maxMonthlySpendAriaLabel: 'Maximum monthly spend',
+    maxMonthlySpendPlaceholder: 'No limit',
+    maxMonthlySpendHelper:
+      'Leave blank to allow unlimited auto-reloaded credits per month.',
+    monthlySpendLine: '{spent} / {cap} this month',
+    statusMonthlyCapReached: 'Monthly spend limit reached',
     creditsPerRecharge: '≈ {credits} credits per recharge',
     creditsPerRechargeApprox: '~ {credits} credits per recharge',
     currencyPerRecharge: '≈ {amount} per recharge',
     currencyPerRechargeApprox: '~ {amount} per recharge',
+    taxDisclosure: 'Plus applicable tax.',
     statusFailed: 'Payment failed — update your card to resume',
   },
   activationFlow: {
