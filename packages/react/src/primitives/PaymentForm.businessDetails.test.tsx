@@ -2,9 +2,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
+import type { PaymentIntentResult } from '@stripe/stripe-js'
+import type { TaxBreakdown } from '@solvapay/core'
 import { PaymentForm } from './PaymentForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 const attachHookMock = vi.hoisted(() => ({
   runAttach: vi.fn().mockResolvedValue(true),
@@ -26,10 +29,22 @@ vi.mock('../hooks/useBusinessDetailsAttach', () => ({
   })),
 }))
 
+const mockTaxBreakdown: TaxBreakdown = {
+  subtotal: 1000,
+  taxAmount: 0,
+  taxRate: 0,
+  treatment: 'none',
+  total: 1000,
+  currency: 'usd',
+  inclusive: false,
+}
+
 const stripeMocks = vi.hoisted(() => ({
-  submit: vi.fn<(...args: unknown[]) => Promise<{ error?: { message: string } }>>(),
-  confirmPayment: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
-  fetchUpdates: vi.fn<() => Promise<void>>(),
+  submit: vi.fn<() => Promise<{ error?: { message: string } }>>(),
+  confirmPayment: vi.fn<
+    () => Promise<PaymentIntentResult>
+  >(),
+  fetchUpdates: vi.fn<() => Promise<{ error?: { message: string } }>>(),
 }))
 
 vi.mock('@stripe/react-stripe-js', () => ({
@@ -116,15 +131,7 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     _config: undefined,
     ...overrides,
   }
@@ -147,12 +154,12 @@ describe('PaymentForm business details + tax summary', () => {
     stripeMocks.confirmPayment.mockResolvedValue({
       error: undefined,
       paymentIntent: { id: 'pi_test_123', status: 'succeeded' },
-    })
+    } as PaymentIntentResult)
     attachHookMock.runAttach.mockResolvedValue(true)
   })
 
   it('wires processorPaymentId and attach transport into useBusinessDetailsAttach', async () => {
-    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: {} })
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: mockTaxBreakdown })
     const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
 
     render(
@@ -190,7 +197,7 @@ describe('PaymentForm business details + tax summary', () => {
   })
 
   it('passes refreshElements callback to useBusinessDetailsAttach', async () => {
-    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: {} })
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: mockTaxBreakdown })
     const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
 
     render(
@@ -238,10 +245,53 @@ describe('PaymentForm business details + tax summary', () => {
     expect(screen.getByText('Country')).toBeInTheDocument()
   })
 
-  it('exposes TaxSummary.Rows with Total label and VAT copy', async () => {
+  it('hides TaxSummary.Rows for consumer checkouts even when tax breakdown exists', async () => {
     const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
     vi.mocked(useBusinessDetailsAttach).mockReturnValue({
       businessDetails: { isBusiness: false },
+      setBusinessDetails: attachHookMock.setBusinessDetails,
+      fieldErrors: {},
+      taxBreakdown: {
+        subtotal: 800,
+        taxAmount: 200,
+        taxRate: 0.25,
+        treatment: 'standard',
+        total: 1000,
+        currency: 'EUR',
+        inclusive: true,
+      },
+      businessDetailsAttached: true,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      requiresBusinessAttach: true,
+      runAttach: attachHookMock.runAttach,
+    })
+
+    render(
+      <Wrap value={ctx({ attachBusinessDetails: vi.fn() })}>
+        <PaymentForm.Root planRef="pln_test" productRef="prd_test">
+          <PaymentForm.TaxSummary.Root>
+            <PaymentForm.TaxSummary.Rows />
+          </PaymentForm.TaxSummary.Root>
+        </PaymentForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Total')).not.toBeInTheDocument()
+      expect(screen.queryByText('Subtotal')).not.toBeInTheDocument()
+    })
+  })
+
+  it('exposes TaxSummary.Rows with Total label and VAT copy for business checkouts', async () => {
+    const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
+    vi.mocked(useBusinessDetailsAttach).mockReturnValue({
+      businessDetails: {
+        isBusiness: true,
+        businessName: 'Acme GmbH',
+        country: 'DE',
+        taxId: 'DE123456789',
+      },
       setBusinessDetails: attachHookMock.setBusinessDetails,
       fieldErrors: {},
       taxBreakdown: {

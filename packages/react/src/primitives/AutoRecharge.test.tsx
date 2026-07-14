@@ -8,6 +8,7 @@ import { SolvaPayProvider } from '../SolvaPayProvider'
 import { enCopy } from '../i18n/en'
 import { interpolate } from '../i18n/interpolate'
 import { formatPrice } from '../utils/format'
+import type { Stripe } from '@stripe/stripe-js'
 import type { AutoRechargeConfig } from '@solvapay/server'
 import { makeProviderInitial } from '../test-helpers/makeProviderInitial'
 
@@ -20,12 +21,21 @@ const config: AutoRechargeConfig = {
   monthlySpendMinor: 0,
 }
 
-const autoRechargeMocks = vi.hoisted(() => ({
-  config: null as AutoRechargeConfig | null,
+const autoRechargeMocks = vi.hoisted((): {
+  config: AutoRechargeConfig | null
+  loading: boolean
+  saving: boolean
+  disabling: boolean
+  error: Error | null
+  save: ReturnType<typeof vi.fn>
+  disable: ReturnType<typeof vi.fn>
+  refresh: ReturnType<typeof vi.fn>
+} => ({
+  config: null,
   loading: false,
   saving: false,
   disabling: false,
-  error: null as Error | null,
+  error: null,
   save: vi.fn(),
   disable: vi.fn(),
   refresh: vi.fn(),
@@ -77,7 +87,12 @@ vi.mock('@stripe/react-stripe-js', () => ({
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({})),
+  loadStripe: vi.fn(() =>
+    Promise.resolve({
+      confirmSetup: stripeMocks.confirmSetup,
+      retrieveSetupIntent: stripeMocks.retrieveSetupIntent,
+    } satisfies Pick<Stripe, 'confirmSetup' | 'retrieveSetupIntent'>),
+  ),
 }))
 
 function renderAutoRecharge(
@@ -167,7 +182,7 @@ describe('AutoRecharge primitive', () => {
     const toggle = screen.getByLabelText('Enable auto-recharge')
     expect(toggle).toBeInTheDocument()
     expect(toggle).not.toBeChecked()
-    expect(screen.getByText(/recommended for production/i)).toBeInTheDocument()
+    expect(screen.getByText(/when your balance runs low/i)).toBeInTheDocument()
   })
 
   it('shows threshold and amount controls when enabled', () => {

@@ -14,6 +14,8 @@ export type AttachBusinessDetailsFn = (params: {
   isBusiness: boolean
   businessName?: string
   country?: string
+  customerCountry?: string
+  customerName?: string
   taxId?: string
   taxIdType?: import('@solvapay/core').TaxIdType
 }) => Promise<{ taxBreakdown: TaxBreakdown }>

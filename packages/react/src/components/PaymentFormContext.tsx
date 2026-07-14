@@ -27,6 +27,8 @@ export interface PaymentFormContextValue {
   returnUrl: string
   submitButtonText?: string
   buttonClassName?: string
+  customerName: string
+  setCustomerName: (name: string) => void
   businessDetails: BusinessDetailsInput
   taxBreakdown: TaxBreakdown | null
   businessDetailsAttached: boolean

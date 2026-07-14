@@ -30,7 +30,8 @@ import {
   useElements,
   PaymentElement as StripePaymentElement,
 } from '@stripe/react-stripe-js'
-import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
+import type { Stripe, StripeElements } from '@stripe/stripe-js'
+import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { AmountPicker as AmountPickerPrimitive } from './AmountPicker'
@@ -97,10 +98,11 @@ function useTopupCtx(part: string): TopupFormContextValue {
   return ctx
 }
 
-type RootProps = TopupFormProps & {
-  asChild?: boolean
-  children?: React.ReactNode
-}
+type RootProps = TopupFormProps &
+  Omit<React.ComponentPropsWithoutRef<'section'>, keyof TopupFormProps | 'children'> & {
+    asChild?: boolean
+    children?: React.ReactNode
+  }
 
 const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, forwardedRef) {
   const {
@@ -117,7 +119,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     asChild,
     children,
     ...rest
-  } = props as RootProps & Record<string, unknown>
+  } = props
 
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('TopupForm')
@@ -149,7 +151,8 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
   useEffect(() => {
     if (!hasInitializedRef.current && hasAmount && !loading && !topupError && !clientSecret) {
       hasInitializedRef.current = true
-      startTopup().catch(() => {
+      startTopup().catch(error => {
+        console.error('[TopupForm] startTopup failed', error)
         hasInitializedRef.current = false
       })
     }
@@ -160,7 +163,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret, locale: locale as StripeElementLocale | undefined }
+    return { clientSecret, locale: toStripeElementLocale(locale) }
   }, [clientSecret, locale])
 
   const Comp = asChild ? Slot : 'section'
@@ -500,8 +503,8 @@ const Inner: React.FC<InnerProps> = ({
       state,
       clientSecret,
       processorPaymentId,
-      stripe: (stripe as Stripe | null) ?? null,
-      elements: (elements as StripeElements | null) ?? null,
+      stripe,
+      elements,
       isReady,
       isProcessing,
       paymentInputComplete,
@@ -772,6 +775,7 @@ function useTopupSummaryCtx(part: string) {
     businessDetailsAttaching: ctx.businessDetailsAttaching,
     baseAmountMinor: ctx.amount,
     currency: ctx.currency ?? 'usd',
+    isBusiness: ctx.businessDetails.isBusiness,
   }
 }
 

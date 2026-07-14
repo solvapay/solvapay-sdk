@@ -400,6 +400,8 @@ export async function attachBusinessDetailsCore(
       isBusiness: body.isBusiness,
       businessName: body.businessName,
       country: body.country,
+      customerCountry: body.customerCountry,
+      customerName: body.customerName,
       taxId: body.taxId,
       taxIdType: body.taxIdType,
     })

@@ -30,7 +30,7 @@ import {
   PaymentElement as StripePaymentElement,
   CardElement as StripeCardElement,
 } from '@stripe/react-stripe-js'
-import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
+import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { LegalFooter } from './LegalFooter'
@@ -169,7 +169,8 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
         !clientSecret
       ) {
         hasInitializedRef.current = true
-        startCheckout().catch(() => {
+        startCheckout().catch(error => {
+          console.error('[PaymentForm] startCheckout failed', error)
           hasInitializedRef.current = false
         })
       }
@@ -182,7 +183,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
 
     const elementsOptions = useMemo(() => {
       if (!clientSecret) return undefined
-      return { clientSecret, locale: locale as StripeElementLocale | undefined }
+      return { clientSecret, locale: toStripeElementLocale(locale) }
     }, [clientSecret, locale])
 
     const shouldRenderElements = !!(stripePromise && clientSecret)
@@ -244,7 +245,8 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
       )
     }
 
-    if (shouldRenderElements && elementsOptions) {
+    if (shouldRenderElements && elementsOptions && clientSecret) {
+      const resolvedClientSecret = clientSecret
       return (
         <section
           ref={forwardedRef}
@@ -253,14 +255,14 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           data-state="ready"
           data-variant="paid"
         >
-          <Elements key={clientSecret!} stripe={stripePromise} options={elementsOptions}>
+          <Elements key={resolvedClientSecret} stripe={stripePromise} options={elementsOptions}>
             <PaidInner
               planRef={effectivePlanRef}
               productRef={effectiveProductRef}
               prefillCustomer={prefillCustomer}
               resolvedPlanRef={resolvedPlanRef}
               plan={resolvedPlan ?? null}
-              clientSecret={clientSecret!}
+              clientSecret={resolvedClientSecret}
               processorPaymentId={processorPaymentId}
               returnUrl={finalReturnUrl}
               submitButtonText={submitButtonText}
@@ -378,10 +380,11 @@ const PaidInner: React.FC<{
   const [elementKind, setElementKind] = useState<PaymentElementKind>(
     children ? null : 'payment-element',
   )
+  const [customerName, setCustomerName] = useState('')
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
   const returnResumeStarted = useRef(false)
 
   useEffect(() => {
@@ -393,7 +396,7 @@ const PaidInner: React.FC<{
     let cancelled = false
     void (async () => {
       setIsProcessing(true)
-      setError(undefined)
+      setError(null)
 
       const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
       if (cancelled) return
@@ -515,8 +518,11 @@ const PaidInner: React.FC<{
       }
     }
 
-    setError(undefined)
+    setError(null)
     setIsProcessing(true)
+
+    const confirmedStripe = stripe
+    const confirmedElements = elements
 
     // Wrap the entire post-`setIsProcessing(true)` block in try/finally so
     // any thrown error in confirmPayment, reconcilePayment, upsertPurchase,
@@ -529,13 +535,13 @@ const PaidInner: React.FC<{
     // current crash, but future contract drift can't wedge the form.
     try {
       const result = await confirmPayment({
-        stripe: stripe as Stripe,
-        elements: elements as StripeElements,
+        stripe: confirmedStripe,
+        elements: confirmedElements,
         clientSecret,
         mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
         returnUrl,
         billingDetails: {
-          name: customer.name ?? prefillCustomer?.name,
+          ...(customerName.trim() && { name: customerName.trim() }),
           email: customer.email ?? prefillCustomer?.email,
         },
         copy,
@@ -612,6 +618,7 @@ const PaidInner: React.FC<{
     elementKind,
     returnUrl,
     customer,
+    customerName,
     prefillCustomer,
     copy,
     processPayment,
@@ -641,8 +648,8 @@ const PaidInner: React.FC<{
       plan,
       clientSecret,
       processorPaymentId,
-      stripe: (stripe as Stripe | null) ?? null,
-      elements: (elements as StripeElements | null) ?? null,
+      stripe,
+      elements,
       isProcessing,
       isReady,
       paymentInputComplete,
@@ -654,6 +661,8 @@ const PaidInner: React.FC<{
       returnUrl,
       submitButtonText,
       buttonClassName,
+      customerName,
+      setCustomerName,
       businessDetails,
       taxBreakdown,
       businessDetailsAttached,
@@ -687,6 +696,8 @@ const PaidInner: React.FC<{
       returnUrl,
       submitButtonText,
       buttonClassName,
+      customerName,
+      setCustomerName,
       businessDetails,
       taxBreakdown,
       businessDetailsAttached,
@@ -740,8 +751,8 @@ const FreeInner: React.FC<{
       resultFiredRef.current = true
       const res: ActivationResult = { kind: 'activated', result: activationResult }
       onResult?.(res)
-      refetch().catch(() => {
-        // refetch errors are non-fatal for activation success
+      refetch().catch(error => {
+        console.error('[PaymentForm] purchase refetch failed after activation', error)
       })
     }
   }, [state, activationResult, onResult, refetch])
@@ -797,6 +808,8 @@ const FreeInner: React.FC<{
       returnUrl: '',
       submitButtonText,
       buttonClassName,
+      customerName: '',
+      setCustomerName: () => {},
       businessDetails: defaultBusinessDetails,
       taxBreakdown: null,
       businessDetailsAttached: false,
@@ -839,7 +852,7 @@ const Summary: React.FC<SummaryProps> = props => {
       {...props}
       planRef={ctx.planRef || ctx.resolvedPlanRef || undefined}
       productRef={ctx.productRef}
-      taxBreakdown={ctx.taxBreakdown}
+      taxBreakdown={ctx.businessDetails.isBusiness ? ctx.taxBreakdown : null}
       baseAmountMinor={ctx.plan?.price ?? 0}
     />
   )
@@ -873,12 +886,11 @@ const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
   ) {
     const copy = useCopy()
     const customer = useCustomer()
-    const { prefillCustomer } = usePaymentForm()
+    const { prefillCustomer, customerName, setCustomerName, setBusinessDetails } = usePaymentForm()
 
     const email = customer.email ?? prefillCustomer?.email
-    const name = customer.name ?? prefillCustomer?.name
 
-    if (!email && !name) return null
+    if (!email) return null
 
     const Comp = asChild ? Slot : 'section'
     return (
@@ -891,12 +903,24 @@ const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
                 <dd>{email}</dd>
               </dl>
             )}
-            {name && (
-              <dl data-solvapay-payment-form-customer-name="">
-                <dt>{copy.customer.nameLabel}</dt>
-                <dd>{name}</dd>
-              </dl>
-            )}
+            <dl data-solvapay-payment-form-customer-name="">
+              <dt>{copy.customer.nameLabel}</dt>
+              <dd>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={event => {
+                    const nextName = event.target.value
+                    setCustomerName(nextName)
+                    setBusinessDetails({
+                      customerName: nextName.trim() || undefined,
+                    })
+                  }}
+                  placeholder="Optional"
+                  aria-label={copy.customer.nameLabel}
+                />
+              </dd>
+            </dl>
           </>
         )}
       </Comp>
@@ -1173,6 +1197,7 @@ function usePaymentSummaryCtx(_part: string) {
     businessDetailsAttaching: ctx.businessDetailsAttaching,
     baseAmountMinor: ctx.plan?.price ?? 0,
     currency: ctx.taxBreakdown?.currency ?? ctx.plan?.currency ?? 'usd',
+    isBusiness: ctx.businessDetails.isBusiness,
   }
 }
 

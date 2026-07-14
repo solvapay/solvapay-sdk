@@ -1,4 +1,5 @@
 {
+  // Use `pnpm typecheck` — `tsc -b --noEmit` fails with TS6310 on composite references.
   "extends": "./tsconfig.base.json",
   "files": [],
   "references": [

@@ -29,3 +29,11 @@ export {
   type TaxIdType,
   type ValidateBusinessDetailsResult,
 } from './business-details'
+
+export {
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  getSellerTaxIdentifierDisplayLabel,
+  resolveSellerIdentityDisplay,
+  type SellerIdentityDisplay,
+  type SellerIdentityRow,
+} from './seller-identity'

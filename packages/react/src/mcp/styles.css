@@ -807,10 +807,10 @@ body {
 }
 
 .solvapay-mcp-detail-label {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .solvapay-mcp-detail-value {

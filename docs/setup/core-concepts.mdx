@@ -180,8 +180,8 @@ const result = await activatePlan(request, {
 Activation policy by plan type:
 
 - **Free** — always `activated`.
-- **Usage-based (PAYG)** — `activated` immediately at zero balance. The customer can start using the product and pay per action; top-up is a separate optional step via `createTopupPaymentIntent`.
-- **Recurring / hybrid** — return `topup_required` or `payment_required` when the customer has no credits and no card on file. Route them to checkout before granting access.
+- **Usage-based (PAYG)** — topup-first: returns `topup_required` at zero balance and only `activated` once the customer's credit balance covers at least one unit. Route the customer through a top-up (`createTopupPaymentIntent`) first, then re-run `activatePlan` to create the active purchase.
+- **Recurring / hybrid** — return `payment_required` when the customer has no card on file. Route them to checkout before granting access.
 
 When the customer already has an active purchase on a different plan, `activatePlan` automatically expires the old purchase and creates a new one.
 

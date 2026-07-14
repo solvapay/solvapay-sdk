@@ -120,22 +120,36 @@ describe('validateBusinessDetails', () => {
     }
   })
 
-  it('rejects missing businessName when isBusiness is true', () => {
+  it('accepts business purchase with country only', () => {
     const result = validateBusinessDetails({
       isBusiness: true,
-      businessName: '',
       country: 'SE',
-      taxId: 'SE556677889001',
     })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
+    if (result.success && result.data.isBusiness) {
+      expect(result.data.country).toBe('SE')
+      expect(result.data.businessName).toBeUndefined()
+      expect(result.data.taxId).toBeUndefined()
+    }
   })
 
-  it('rejects missing taxId when isBusiness is true', () => {
+  it('includes customerName on the non-business branch when provided', () => {
+    const result = validateBusinessDetails({
+      isBusiness: false,
+      customerCountry: 'SE',
+      customerName: 'Jane Doe',
+    })
+    expect(result.success).toBe(true)
+    if (result.success && !result.data.isBusiness) {
+      expect(result.data.customerName).toBe('Jane Doe')
+    }
+  })
+
+  it('rejects invalid tax ID format when tax ID is provided', () => {
     const result = validateBusinessDetails({
       isBusiness: true,
-      businessName: 'Nordic AB',
-      country: 'SE',
-      taxId: '',
+      country: 'DE',
+      taxId: 'DE12',
     })
     expect(result.success).toBe(false)
   })
@@ -169,10 +183,7 @@ describe('validateBusinessDetails', () => {
     })
     expect(result.success).toBe(true)
     if (result.success && !result.data.isBusiness) {
-      expect(result.data.isBusiness).toBe(false)
-      expect(result.data).not.toHaveProperty('businessName')
-      expect(result.data).not.toHaveProperty('country')
-      expect(result.data).not.toHaveProperty('taxId')
+      expect(result.data).toEqual({ isBusiness: false })
     }
   })
 })

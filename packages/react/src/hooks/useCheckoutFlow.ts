@@ -298,6 +298,12 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setError(null)
     setStatus('activating')
     try {
+      // Topup-first: for a zero-balance PAYG plan the backend returns
+      // `topup_required` here and creates NO purchase — that's the
+      // expected result, not an error. We treat it as "proceed to the
+      // top-up amount step" and DO NOT consider the plan active. The
+      // active purchase only materializes after a successful top-up
+      // (see `recordPaygSuccess`, which re-activates once credits land).
       await transport.activatePlan({ productRef, planRef: selectedPlanRef })
       setStatus('idle')
       setStep('amount')
@@ -364,6 +370,20 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       if (creditsAddedFromBackend !== undefined && creditsAddedFromBackend > 0) {
         adjustBalance(creditsAddedFromBackend)
       }
+      // Topup-first: the plan purchase does NOT exist yet — the plan-step
+      // `activatePlan` returned `topup_required` (zero balance) and
+      // created nothing. Now that the top-up has landed (TopupForm awaits
+      // backend confirmation before firing success), re-activate to
+      // materialize the active PAYG purchase, mirroring the
+      // `ActivationFlow` primitive's self-healing re-activation. Idempotent
+      // — the backend short-circuits to `already_active` if it somehow
+      // exists. Fire-and-forget like the refetch below; `useLimits`
+      // re-reads on the resulting `purchases` change.
+      if (selectedPlanRef) {
+        Promise.resolve(transport.activatePlan({ productRef, planRef: selectedPlanRef })).catch(
+          () => {},
+        )
+      }
       // Drive `useLimits` (it auto-refetches on `purchases` ref change)
       // and the balance side-effect (it picks up the credit via the
       // `purchases-change` effect inside `useBalance`'s caller). One
@@ -389,10 +409,13 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       creditsPerMinorUnit,
       displayExchangeRate,
       locale,
+      productRef,
       refetchPurchase,
       selectedAmountMinor,
+      selectedPlanRef,
       selectedPlanShape,
       topupCurrency,
+      transport,
     ],
   )
 
