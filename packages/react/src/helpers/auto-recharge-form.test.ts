@@ -176,7 +176,6 @@ describe('validateAutoRechargeForm — per-currency minimums & relationship (DEV
     topupBaseValue: '10',
     topupBaseUnit: 'currency',
     maxMonthlySpendMajor: '',
-    showAdvanced: false,
     ...over,
   })
 
@@ -288,7 +287,6 @@ describe('validateAutoRechargeForm — monthly spend cap (DEV-635)', () => {
     topupBaseValue: '10',
     topupBaseUnit: 'currency',
     maxMonthlySpendMajor: '',
-    showAdvanced: false,
     ...over,
   })
 

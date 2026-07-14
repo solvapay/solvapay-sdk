@@ -68,10 +68,7 @@ export function AutoRecharge({
         <Primitive.Fields className="solvapay-auto-recharge-fields">
           <Primitive.ThresholdField />
           <Primitive.TopupField className="solvapay-auto-recharge-topup-field" />
-          <Primitive.AdvancedToggle className="solvapay-auto-recharge-advanced-toggle" />
-          <Primitive.AdvancedFields className="solvapay-auto-recharge-advanced-fields">
-            <Primitive.MaxMonthlySpendField />
-          </Primitive.AdvancedFields>
+          <Primitive.MaxMonthlySpendField />
           <Primitive.ValidationError className="solvapay-auto-recharge-validation-error" />
         </Primitive.Fields>
         <Primitive.Setup />

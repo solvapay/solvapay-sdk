@@ -851,10 +851,7 @@ const EnableSwitch = forwardRef<HTMLInputElement, EnableSwitchProps>(
       'aria-label': copy.autoRecharge.enableLabel,
       disabled: ctx.loading || ctx.saving || ctx.disabling || !!ctx.setup,
       onChange: composeEventHandlers(onChange, (event: React.ChangeEvent<HTMLInputElement>) => {
-        ctx.updateForm({
-          enabled: event.currentTarget.checked,
-          showAdvanced: event.currentTarget.checked ? ctx.form.showAdvanced : false,
-        })
+        ctx.updateForm({ enabled: event.currentTarget.checked })
       }),
       className,
       ...rest,
@@ -894,8 +891,7 @@ const Fields = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTML
             <Summary />
             <ThresholdField />
             <TopupField />
-            <AdvancedToggle />
-            <AdvancedFields />
+            <MaxMonthlySpendField />
             <ValidationError />
           </>
         )}
@@ -937,8 +933,7 @@ const Body = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTMLFi
             <Summary />
             <ThresholdField />
             <TopupField />
-            <AdvancedToggle />
-            <AdvancedFields />
+            <MaxMonthlySpendField />
             <ValidationError />
             <Actions />
           </>
@@ -1098,61 +1093,6 @@ const TopupField = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLPar
         <AmountField field="fixed" />
         <Hint />
       </section>
-    )
-  },
-)
-
-type AdvancedToggleProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
-
-const AdvancedToggle = forwardRef<HTMLButtonElement, AdvancedToggleProps>(
-  function AutoRechargeAdvancedToggle(
-    { asChild, onClick, children, className, ...rest },
-    forwardedRef,
-  ) {
-    const ctx = useAutoRechargeCtx('AdvancedToggle')
-    const copy = useCopy()
-    const commonProps = {
-      'data-solvapay-auto-recharge-advanced-toggle': '',
-      type: 'button' as const,
-      onClick: composeEventHandlers(onClick, (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault()
-        ctx.updateForm({ showAdvanced: !ctx.form.showAdvanced })
-      }),
-      className,
-      ...rest,
-    }
-
-    if (asChild) {
-      return (
-        <Slot
-          ref={forwardedRef as React.Ref<HTMLElement>}
-          {...(commonProps as Record<string, unknown>)}
-        >
-          {children ?? copy.autoRecharge.advancedToggleLabel}
-        </Slot>
-      )
-    }
-    return (
-      <button ref={forwardedRef} {...commonProps}>
-        {children ?? copy.autoRecharge.advancedToggleLabel}
-      </button>
-    )
-  },
-)
-
-const AdvancedFields = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  function AutoRechargeAdvancedFields({ className, children, ...rest }, forwardedRef) {
-    const ctx = useAutoRechargeCtx('AdvancedFields')
-    if (!ctx.form.showAdvanced) return null
-    return (
-      <div
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-auto-recharge-advanced-fields=""
-        {...rest}
-      >
-        {children ?? <MaxMonthlySpendField />}
-      </div>
     )
   },
 )
@@ -1643,8 +1583,6 @@ export const AutoRechargeBody = Body
 export const AutoRechargeSummary = Summary
 export const AutoRechargeThresholdField = ThresholdField
 export const AutoRechargeTopupField = TopupField
-export const AutoRechargeAdvancedToggle = AdvancedToggle
-export const AutoRechargeAdvancedFields = AdvancedFields
 export const AutoRechargeMaxMonthlySpendField = MaxMonthlySpendField
 export const AutoRechargeMonthlySpend = MonthlySpend
 export const AutoRechargeAmountField = AmountField
@@ -1682,8 +1620,6 @@ export const AutoRecharge = {
   Summary,
   ThresholdField,
   TopupField,
-  AdvancedToggle,
-  AdvancedFields,
   MaxMonthlySpendField,
   MonthlySpend,
   AmountField,

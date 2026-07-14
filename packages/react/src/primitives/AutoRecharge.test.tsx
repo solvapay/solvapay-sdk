@@ -415,10 +415,9 @@ describe('AutoRecharge primitive', () => {
     expect(screen.queryByText('Pending card authorization')).not.toBeInTheDocument()
   })
 
-  it('shows Advanced toggle and max monthly spend field when expanded', () => {
+  it('shows max monthly spend field when auto-recharge is enabled', () => {
     renderAutoRecharge()
     enableAutoRecharge()
-    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
     expect(screen.getByLabelText('Maximum monthly spend')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('No limit')).toBeInTheDocument()
     expect(
@@ -426,11 +425,10 @@ describe('AutoRecharge primitive', () => {
     ).toBeInTheDocument()
   })
 
-  it('saves maxMonthlySpendMajor when the advanced cap is set', async () => {
+  it('saves maxMonthlySpendMajor when the cap is set', async () => {
     autoRechargeMocks.save.mockResolvedValue({ config })
     renderAutoRecharge()
     enableAutoRecharge()
-    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
     fireEvent.change(screen.getByLabelText('Maximum monthly spend'), {
       target: { value: '100' },
     })

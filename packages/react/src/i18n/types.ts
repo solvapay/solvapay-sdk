@@ -134,7 +134,6 @@ export interface SolvaPayCopy {
     topupBelowThreshold: string
     invalidMaxMonthlySpend: string
     maxMonthlySpendBelowTopup: string
-    advancedToggleLabel: string
     maxMonthlySpendLabel: string
     maxMonthlySpendAriaLabel: string
     maxMonthlySpendPlaceholder: string

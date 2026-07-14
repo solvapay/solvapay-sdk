@@ -154,7 +154,6 @@ export const enCopy: SolvaPayCopy = {
     invalidMaxMonthlySpend: 'Maximum monthly spend must be a positive amount.',
     maxMonthlySpendBelowTopup:
       'Maximum monthly spend must be at least your top-up amount ({amount}).',
-    advancedToggleLabel: 'Advanced',
     maxMonthlySpendLabel: 'Maximum monthly spend (optional)',
     maxMonthlySpendAriaLabel: 'Maximum monthly spend',
     maxMonthlySpendPlaceholder: 'No limit',

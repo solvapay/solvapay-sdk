@@ -51,7 +51,6 @@ export type AutoRechargeFormState = {
   topupBaseValue: string
   topupBaseUnit: AmountInputUnit
   maxMonthlySpendMajor: string
-  showAdvanced: boolean
 }
 
 export type AutoRechargeConversionContext = {
@@ -96,7 +95,6 @@ export function createDefaultAutoRechargeForm(
     topupAmountMajor: topup,
     topupUnit: 'currency',
     maxMonthlySpendMajor: '',
-    showAdvanced: false,
     ...amountAnchors(threshold, topup, 'currency'),
   }
 }
@@ -422,7 +420,6 @@ export function payloadToForm(
     topupAmountMajor: topupStr,
     topupUnit: 'currency',
     maxMonthlySpendMajor: capStr,
-    showAdvanced: capStr.length > 0,
     ...amountAnchors(thresholdStr, topupStr, 'currency'),
   }
 }

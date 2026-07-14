@@ -160,8 +160,6 @@ export {
   AutoRechargeSummary,
   AutoRechargeThresholdField,
   AutoRechargeTopupField,
-  AutoRechargeAdvancedToggle,
-  AutoRechargeAdvancedFields,
   AutoRechargeMaxMonthlySpendField,
   AutoRechargeMonthlySpend,
   AutoRechargeAmountField,

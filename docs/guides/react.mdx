@@ -359,15 +359,15 @@ function AutoRechargeSettings() {
 
 The form is opt-in (`enabled: false` by default). Amounts can be entered in
 either display currency or credits; the component handles the Stripe SetupIntent
-and the 3DS redirect return internally. Expand **Advanced** to set an optional
-`maxMonthlySpendMajor` cap (blank = unlimited). The summary card shows current-period
+and the 3DS redirect return internally. Set an optional `maxMonthlySpendMajor` cap
+(blank = unlimited) in the form. The summary card shows current-period
 spend when a cap is configured, and a **Monthly spend limit reached** status when
 the next recharge would exceed the cap. If a series of off-session charges keeps
 declining, the card shows a text-only "payment failed" status — see the
 [failed-recharge guidance](#credit-top-ups--auto-recharge) for building a card-update prompt.
 
 For full layout control, compose the primitive from `@solvapay/react/primitives`:
-`AutoRecharge.AdvancedToggle`, `AutoRecharge.MaxMonthlySpendField`,
+`AutoRecharge.MaxMonthlySpendField`,
 `AutoRecharge.MonthlySpend`, and `AutoRecharge.Status` (cap-reached and failed badges).
 
 ## Hooks
