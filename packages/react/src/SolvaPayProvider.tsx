@@ -25,6 +25,10 @@ import {
   BALANCE_RECONCILE_GRACE_MS,
 } from './helpers/auto-recharge-cache'
 import {
+  autoRechargeCacheKeyFor,
+  invalidateAutoRecharge,
+} from './hooks/autoRechargeCache'
+import {
   filterPurchases,
   isPaidPurchase,
   isPlanPurchase,
@@ -283,6 +287,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
         try {
           const data = await transportRef.current.getBalance!()
           applyBalanceSnapshot(data)
+          invalidateAutoRecharge(autoRechargeCacheKeyFor(configRef.current))
           pollState.pending -= 1
           if (pollState.pending > 0) {
             pollState.baseline = data.credits ?? 0

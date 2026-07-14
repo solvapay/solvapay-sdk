@@ -2,7 +2,13 @@ import React from 'react'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SolvaPayProvider } from '../../SolvaPayProvider'
-import { autoRechargeCache, useAutoRecharge } from '../useAutoRecharge'
+import {
+  autoRechargeCache,
+  CACHE_DURATION,
+  autoRechargeCacheKeyFor,
+  invalidateAutoRecharge,
+} from '../autoRechargeCache'
+import { useAutoRecharge } from '../useAutoRecharge'
 import type { AutoRechargeConfig } from '@solvapay/server'
 
 const config: AutoRechargeConfig = {
@@ -303,5 +309,77 @@ describe('useAutoRecharge', () => {
     )
     expect(result.current.config?.maxMonthlySpendMinor).toBe(10_000)
     expect(result.current.config?.monthlySpendMinor).toBe(2000)
+  })
+
+  it('syncs config to all hook instances after refresh on another instance', async () => {
+    const initialConfig: AutoRechargeConfig = {
+      ...config,
+      maxMonthlySpendMinor: 10_000,
+      monthlySpendMinor: 0,
+      monthlySpendPeriod: '2026-07',
+    }
+    const updatedConfig: AutoRechargeConfig = {
+      ...initialConfig,
+      monthlySpendMinor: 4500,
+    }
+    const fetchFn = makeFetch([{ config: initialConfig }, { config: updatedConfig }])
+    const providerConfig = { fetch: fetchFn as unknown as typeof fetch }
+    const hookWrapper = wrapper(providerConfig)
+
+    const { result: resultA } = renderHook(() => useAutoRecharge(), { wrapper: hookWrapper })
+    const { result: resultB } = renderHook(() => useAutoRecharge(), { wrapper: hookWrapper })
+
+    await waitFor(() => expect(resultA.current.loading).toBe(false))
+    expect(resultA.current.config?.monthlySpendMinor).toBe(0)
+    expect(resultB.current.config?.monthlySpendMinor).toBe(0)
+
+    await act(async () => {
+      await resultA.current.refresh(true)
+    })
+
+    await waitFor(() => {
+      expect(resultA.current.config?.monthlySpendMinor).toBe(4500)
+      expect(resultB.current.config?.monthlySpendMinor).toBe(4500)
+    })
+  })
+
+  it('re-fetches on cache invalidation bypassing the TTL', async () => {
+    const staleConfig: AutoRechargeConfig = {
+      ...config,
+      maxMonthlySpendMinor: 10_000,
+      monthlySpendMinor: 0,
+      monthlySpendPeriod: '2026-07',
+    }
+    const freshConfig: AutoRechargeConfig = {
+      ...staleConfig,
+      monthlySpendMinor: 4500,
+    }
+    const fetchFn = makeFetch([{ config: staleConfig }, { config: freshConfig }])
+    const providerConfig = { fetch: fetchFn as unknown as typeof fetch }
+    const hookWrapper = wrapper(providerConfig)
+
+    const { result } = renderHook(() => useAutoRecharge(), { wrapper: hookWrapper })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.config?.monthlySpendMinor).toBe(0)
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+
+    const key = autoRechargeCacheKeyFor(providerConfig)
+    const cached = autoRechargeCache.get(key)
+    expect(cached?.config?.monthlySpendMinor).toBe(0)
+    autoRechargeCache.set(key, {
+      config: cached?.config ?? null,
+      promise: null,
+      timestamp: Date.now() - CACHE_DURATION - 1,
+    })
+
+    await act(async () => {
+      invalidateAutoRecharge(key)
+    })
+
+    await waitFor(() => {
+      expect(result.current.config?.monthlySpendMinor).toBe(4500)
+    })
+    expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 })

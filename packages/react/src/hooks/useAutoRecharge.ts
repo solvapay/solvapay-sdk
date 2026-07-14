@@ -7,7 +7,7 @@ import type {
 import { useSolvaPay } from './useSolvaPay'
 import { createHttpTransport } from '../transport/http'
 import type { SolvaPayConfig } from '../types'
-import { autoRechargeCache, autoRechargeCacheKeyFor, CACHE_DURATION } from './autoRechargeCache'
+import { autoRechargeCache, autoRechargeCacheKeyFor, CACHE_DURATION, subscribeAutoRecharge, writeAutoRechargeCache } from './autoRechargeCache'
 
 export type UseAutoRechargeReturn = {
   config: AutoRechargeConfig | null
@@ -91,7 +91,7 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
       setLoading(true)
       setError(null)
       const promise = fetchAutoRecharge(_config)
-      autoRechargeCache.set(key, {
+      writeAutoRechargeCache(key, {
         config: cached?.config ?? null,
         promise,
         timestamp: now,
@@ -100,12 +100,16 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
       try {
         const value = await promise
         if (seq !== requestSeq.current) return
-        autoRechargeCache.set(key, { config: value, promise: null, timestamp: Date.now() })
+        writeAutoRechargeCache(key, { config: value, promise: null, timestamp: Date.now() })
         setConfig(value)
       } catch (caught) {
         if (seq !== requestSeq.current) return
         const err = caught instanceof Error ? caught : new Error(String(caught))
-        autoRechargeCache.set(key, { config: null, promise: null, timestamp: Date.now() })
+        writeAutoRechargeCache(key, {
+          config: cached?.config ?? null,
+          promise: null,
+          timestamp: Date.now(),
+        })
         setError(err)
       } finally {
         if (seq === requestSeq.current) {
@@ -119,6 +123,17 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    return subscribeAutoRecharge(key, () => {
+      const cached = autoRechargeCache.get(key)
+      if (cached) {
+        setConfig(cached.config)
+        return
+      }
+      void load(true)
+    })
+  }, [key, load])
 
   const refresh = useCallback(
     async (force = true) => {
@@ -140,7 +155,7 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
         const result = await transport.saveAutoRecharge(input)
         if (seq !== requestSeq.current) return result
         const nextConfig = mergeAutoRechargeConfig(result.config, result.display)
-        autoRechargeCache.set(key, {
+        writeAutoRechargeCache(key, {
           config: nextConfig,
           promise: null,
           timestamp: Date.now(),
@@ -171,7 +186,7 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
       if (seq === requestSeq.current) {
         setConfig(current => {
           const disabledConfig = current ? { ...current, enabled: false } : null
-          autoRechargeCache.set(key, {
+          writeAutoRechargeCache(key, {
             config: disabledConfig,
             promise: null,
             timestamp: Date.now(),
@@ -181,7 +196,7 @@ export function useAutoRecharge(): UseAutoRechargeReturn {
         await refresh(true)
         setConfig(current => {
           const disabledConfig = current ? { ...current, enabled: false } : null
-          autoRechargeCache.set(key, {
+          writeAutoRechargeCache(key, {
             config: disabledConfig,
             promise: null,
             timestamp: Date.now(),
