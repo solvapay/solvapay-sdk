@@ -35,7 +35,6 @@
   },
   "scripts": {
     "build": "turbo build --concurrency 16",
-    "typecheck": "pnpm build:packages",
     "build:examples": "turbo build --filter=@example/*",
     "build:packages": "turbo build --filter=@solvapay/* --filter=solvapay --filter=create-solvapay",
     "clean": "turbo clean",
