@@ -2333,7 +2333,7 @@ export interface components {
        * Current config status
        * @enum {string}
        */
-      status: 'active' | 'disabled' | 'failed' | 'completed' | 'pending_setup'
+      status: 'active' | 'disabled' | 'failed' | 'pending_setup'
       /**
        * Consecutive failure count
        * @example 0
