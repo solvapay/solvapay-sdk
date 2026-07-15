@@ -25,10 +25,10 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "nodemon": "^3.1.14",
-    "rollup": "^4.60.1",
-    "tsx": "^4.21.0",
+    "rollup": "^4.62.2",
+    "tsx": "^4.23.1",
     "typescript": "^5.9.3",
-    "vite": "^8.0.6",
-    "vite-plugin-singlefile": "^2.3.2"
+    "vite": "^8.1.4",
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }
