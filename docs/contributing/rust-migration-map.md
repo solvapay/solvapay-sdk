@@ -21,9 +21,9 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | Step | Title | Phase | Status | PR / commit | "Done when" verified | Handoff |
 | ---: | --- | --- | --- | --- | --- | --- |
 | 1 | OpenAPI snapshot + regen script | Phase 0 | Done | — | `pnpm snapshot:openapi:check` zero diff + idempotent; `pnpm test:contract` green; CI offline steps added | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
-| 2 | SDK contract manifest | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
-| 3 | Fixture harness | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
-| 4 | Webhook-signature fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
+| 2 | SDK contract manifest | Phase 0 | Done | `3edcb72b` | `pnpm manifest:check` green (schema, coverage, OpenAPI cross-check); `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
+| 3 | Fixture harness | Phase 0 | Done | — | Sample fixtures pass end to end via `pnpm test:contract` (`webhook-verification/accept`, `timestamp-too-old`, `client/create-payment-intent-success`) | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
+| 4 | Webhook-signature fixtures | Phase 0 | Done | — | Full §6.1 axis set (17 webhook fixtures) passes via harness against both node and edge `verifyWebhook`; `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 5 | Retry-schedule fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 6 | Paywall fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 7 | Client request/response fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
@@ -82,6 +82,30 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 
 <!-- running per-step bullets accumulate here as each step lands -->
 - Step 1 (OpenAPI snapshot + regen script): Checked in path-filtered source + derived snapshot, shared `scripts/lib/openapi-pipeline.ts`, `scripts/snapshot-openapi.ts` (`--from-url` / `--from-file` / `--check`), `pnpm test:contract`, offline CI gates; `generate-types.ts` imports the shared pipeline — "done when" verified: `pnpm snapshot:openapi:check` zero diff + idempotent; contract tests green
+- Step 2 (SDK contract manifest): Checked in `contract/manifest/sdk-contract.yaml` + Zod schema/CLI (`scripts/lib/manifest-schema.ts`, `scripts/manifest.ts`), `pnpm manifest:validate` / `manifest:check` with offline OpenAPI route/DTO cross-check — "done when" verified at `3edcb72b`
+- Step 3 (Fixture harness): Zod §5.3 schema + TS runner (`scripts/lib/fixture-schema.ts`, `scripts/lib/fixture-harness.ts`), discovery suite `scripts/contract-fixtures.test.ts`, samples under `contract/fixtures/` — "done when" verified: three sample fixtures pass end to end via `pnpm test:contract`
+- Step 4 (Webhook-signature fixtures): Full §6.1 axis under `contract/fixtures/webhook-verification/` (17 cases); `createDefaultRegistry` registers both `node` and `edge` `verifyWebhook` bindings — "done when" verified: every fixture replays green against both implementations via `pnpm test:contract`
+
+#### Step 2 decisions for future handoffs
+
+- **Manifest location:** `contract/manifest/sdk-contract.yaml` is the canonical public-API catalog (operations, top-level, core helpers, facade, error templates, defaults, name overrides).
+- **Offline CI:** `pnpm manifest:check` never hits a live server; routes/DTO refs cross-check against `contract/openapi/sdk-v1.snapshot.json`.
+- **Name overrides:** manual per-language names only via `nameOverrides`; emitters must not hard-code renames.
+
+#### Step 3 decisions for future handoffs
+
+- **Fixture directory:** `contract/fixtures/<suite>/<case>.json` — discovered recursively by `scripts/contract-fixtures.test.ts` (picked up by existing `pnpm test:contract`; no CI workflow change).
+- **Registry design:** `FixtureRegistry` maps `input.fn` → one or more `{ id, invoke }` bindings so step 4 can register both node and edge `verifyWebhook` under the same name; step 3 registers `verifyWebhook` (`node`) and `createPaymentIntent` (`client`) only.
+- **Clock / RNG / fetch patching:** harness patches `Date.now`, `Math.random` (mulberry32 from `rngSeed`), and `globalThis.fetch` for the binding call and restores in `finally` — SDK code stays unchanged in Phase 0.
+- **Error codes:** TS harness asserts `expect.error.name` + byte-exact `message` (+ `status` when given). §5.3 `kind` / `code` are Rust-era taxonomy carried in fixtures for later runners; not invented or asserted on the TS side (resolved via manifest message templates in Rust).
+- **Dev dependency:** root `package.json` adds `"@solvapay/server": "workspace:*"` so the harness imports the built package (same ordering as CI: `build:packages` → `test:contract`).
+
+#### Step 4 decisions for future handoffs
+
+- **Axis file naming:** `webhook-verification/<axis>.json` — one file per §6.1 axis (accept variants, five error codes, ±299/±301 boundaries, exact 300 s edge, malformed/invalid variants). Shared constants: clock `2026-07-01T00:00:00Z`, secret `whsec_test_fixture_secret`, same event body as Step 3 samples.
+- **Dual-binding replay:** `createDefaultRegistry` registers `verifyWebhook` twice (`id: 'node'` from `@solvapay/server`, `id: 'edge'` from `@solvapay/server/edge`). Harness awaits promises and patches `Date.now` globally — no special async path needed. Proves the Node/Edge duplicates have not drifted.
+- **Exact-boundary at 300 s:** reject condition is `age > 300` (not `>=`), so `t = now - 300` is an **accept** fixture (`accept-boundary-300s.json`); `±301` are `timestamp_too_old`.
+- **HMAC values:** computed once with `node:crypto` (`sha256(secret, "{t}.{body}")` hex); no generator script checked in — harness replay proves each value.
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …
