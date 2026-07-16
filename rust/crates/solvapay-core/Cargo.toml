@@ -1,0 +1,17 @@
+[package]
+name = "solvapay-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Pure SolvaPay SDK logic — no HTTP, no tokio, no wasm-bindgen"
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+subtle = { workspace = true }
+
+[lints]
+workspace = true

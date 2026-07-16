@@ -24,10 +24,10 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 2 | SDK contract manifest | Phase 0 | Done | `3edcb72b` | `pnpm manifest:check` green (schema, coverage, OpenAPI cross-check); `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 3 | Fixture harness | Phase 0 | Done | — | Sample fixtures pass end to end via `pnpm test:contract` (`webhook-verification/accept`, `timestamp-too-old`, `client/create-payment-intent-success`) | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 4 | Webhook-signature fixtures | Phase 0 | Done | — | Full §6.1 axis set (17 webhook fixtures) passes via harness against both node and edge `verifyWebhook`; `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
-| 5 | Retry-schedule fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
+| 5 | Retry-schedule fixtures | Phase 0 | Done | — | Full §6.2 set (13 retry fixtures) passes via harness against real `withRetry`; `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 6 | Paywall fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 7 | Client request/response fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
-| 8 | Scaffold cargo workspace | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
+| 8 | Scaffold cargo workspace | Phase 1 | Done | — | CI rust job: fmt, clippy deny, no-unwrap gate, native + wasm32 build, no-tokio tree, `cargo test`, empty fixture suite (`parsed=N executed=0 skipped-unbound=N`) | [Phase 1](#phase-1--pure-dependency-free-logic) |
 | 9 | Business details | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
 | 10 | Credit display + seller identity | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
 | 11 | Retry policy engine | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
@@ -85,6 +85,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - Step 2 (SDK contract manifest): Checked in `contract/manifest/sdk-contract.yaml` + Zod schema/CLI (`scripts/lib/manifest-schema.ts`, `scripts/manifest.ts`), `pnpm manifest:validate` / `manifest:check` with offline OpenAPI route/DTO cross-check — "done when" verified at `3edcb72b`
 - Step 3 (Fixture harness): Zod §5.3 schema + TS runner (`scripts/lib/fixture-schema.ts`, `scripts/lib/fixture-harness.ts`), discovery suite `scripts/contract-fixtures.test.ts`, samples under `contract/fixtures/` — "done when" verified: three sample fixtures pass end to end via `pnpm test:contract`
 - Step 4 (Webhook-signature fixtures): Full §6.1 axis under `contract/fixtures/webhook-verification/` (17 cases); `createDefaultRegistry` registers both `node` and `edge` `verifyWebhook` bindings — "done when" verified: every fixture replays green against both implementations via `pnpm test:contract`
+- Step 5 (Retry-schedule fixtures): Full §6.2 axis under `contract/fixtures/retry-schedule/` (13 cases); harness `withRetry` binding + `installDelayRecorder` — "done when" verified: every fixture replays green against real `withRetry` via `pnpm test:contract`
 
 #### Step 2 decisions for future handoffs
 
@@ -107,6 +108,13 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Exact-boundary at 300 s:** reject condition is `age > 300` (not `>=`), so `t = now - 300` is an **accept** fixture (`accept-boundary-300s.json`); `±301` are `timestamp_too_old`.
 - **HMAC values:** computed once with `node:crypto` (`sha256(secret, "{t}.{body}")` hex); no generator script checked in — harness replay proves each value.
 
+#### Step 5 decisions for future handoffs
+
+- **Scenario-in-args:** `input.args` carries a declarative retry scenario (`attempts`, optional `options` / `shouldRetry` / `onRetry`); the binding synthesizes closures. No schema change — `args` remains `z.record(string, unknown)`.
+- **Observation, not throw:** every retry fixture uses `expect.result` with `{ delays, events, outcome }`; terminal rejection is `{ type: "rejected", name, message }` so Rust/Python runners never need a panic path for these cases.
+- **Delay recorder:** patch `globalThis.setTimeout` to record `ms`, push `sleep:<ms>`, and fire the callback synchronously — asserts computed delays, never wall-clock. Restored in binding `finally` and via harness `GlobalSnapshot`.
+- **Single binding:** `withRetry` is the same export from `./utils` on both node and edge entry points — register once (`id: 'server'`), unlike step 4's dual `verifyWebhook`.
+
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …
 - **Why:** …
@@ -122,9 +130,19 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Open dependency:** automated drift vs backend CI needs a backend-published OpenAPI artifact (flag for backend team). See open-items index.
 - **`contract/` is the Phase 0 contract-freeze root.** Step 2 → `contract/manifest/`; steps 3–7 → `contract/fixtures/`.
 
-### Phase 1 — Pure, dependency-free logic — Not started
+### Phase 1 — Pure, dependency-free logic — In progress
 
 <!-- running per-step bullets accumulate here as each step lands -->
+- Step 8 (Scaffold cargo workspace): `rust/` workspace with `solvapay-core` + `fixture-runner`, pinned `rust-toolchain.toml` (1.96.0 + wasm32), Clippy/workspace deny of unwrap/expect/panic, ripgrep `scripts/check-no-unwrap.sh`, CI `rust` job (native + wasm32, no-tokio, empty fixture suite) — "done when" verified locally; see §15 note 6
+
+#### Step 8 decisions for future handoffs
+
+- **Workspace root:** `rust/` at repo root (§4.3 layout); `Cargo.lock` committed; `rust/target/` gitignored.
+- **Toolchain pin:** `rust/rust-toolchain.toml` channel `1.96.0`, components `clippy`/`rustfmt`, target `wasm32-unknown-unknown`.
+- **Core deps only:** `solvapay-core` may depend on `serde`, `hmac`, `sha2`, `subtle` — nothing else until a later step widens the allow-list.
+- **Fixture runner:** reads the same Phase 0 JSON under `contract/fixtures/`; empty binding registry → parse all, execute none, exit 0 with `parsed=N executed=0 skipped-unbound=N`. Bindings register in steps 9+.
+- **No-unwrap enforcement:** `[workspace.lints.clippy]` deny + `rust/scripts/check-no-unwrap.sh` (skips `#[cfg(test)]` / `tests.rs`). Test modules may unwrap under `#[allow(...)]`.
+- **WASM profile:** `[profile.wasm-release]` (`opt-level = "z"`, LTO, `panic = "abort"`, `codegen-units = 1`) ready for later wasm builds — not used by step 8 CI yet.
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …

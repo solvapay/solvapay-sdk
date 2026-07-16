@@ -38,3 +38,6 @@ research-tmp/
 
 # Contract / snapshot CLI test scratch
 scripts/.tmp/
+
+# Rust
+rust/target/

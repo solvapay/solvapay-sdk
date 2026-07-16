@@ -76,6 +76,55 @@ jobs:
       - name: Check SDK contract manifest (offline)
         run: pnpm manifest:check
 
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        # rust-toolchain.toml pins channel, clippy, rustfmt, wasm32-unknown-unknown
+        run: rustup show
+
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy (unwrap/expect/panic deny)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: no-unwrap ripgrep gate
+        run: ./scripts/check-no-unwrap.sh
+
+      - name: cargo build (native)
+        run: cargo build --workspace
+
+      - name: cargo test
+        run: cargo test --workspace
+
+      - name: cargo build solvapay-core (wasm32)
+        run: cargo build -p solvapay-core --target wasm32-unknown-unknown
+
+      - name: assert tokio absent from solvapay-core graph
+        run: |
+          tree="$(cargo tree -p solvapay-core --target wasm32-unknown-unknown)"
+          if printf '%s\n' "$tree" | grep -qi 'tokio'; then
+            echo "tokio must not appear in solvapay-core's dependency graph" >&2
+            printf '%s\n' "$tree"
+            exit 1
+          fi
+          echo "OK: tokio absent from solvapay-core graph"
+
+      - name: empty fixture suite
+        run: cargo run -q -p fixture-runner -- ../contract/fixtures
+
   documentation:
     name: Documentation Validation
     runs-on: ubuntu-latest
