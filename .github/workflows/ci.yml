@@ -73,6 +73,9 @@ jobs:
       - name: Check OpenAPI snapshot (offline)
         run: pnpm snapshot:openapi:check
 
+      - name: Check SDK contract manifest (offline)
+        run: pnpm manifest:check
+
   documentation:
     name: Documentation Validation
     runs-on: ubuntu-latest

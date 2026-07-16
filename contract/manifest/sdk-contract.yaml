@@ -1,0 +1,1563 @@
+# SDK contract manifest — Phase 0 Step 2
+# Canonical public-API catalog for cross-language parity.
+# Validated by: pnpm manifest:check
+#
+# Go callable-surface methods take ctx context.Context as the first parameter
+# (defaults.goContextFirstParam). Emitters must not invent this parameter.
+
+operations:
+  checkLimits:
+    route:
+      method: POST
+      path: /v1/sdk/limits
+    names:
+      ts: checkLimits
+      py: check_limits
+      rb: check_limits
+      go: CheckLimits
+      rust: check_limits
+    optionalOnClient: false
+    request: CheckLimitsRequest
+    response: LimitResponseWithPlan
+    overlays: [includeCheckoutSession, CheckLimitsRequest, LimitResponseWithPlan]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Check limits failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  trackUsage:
+    route:
+      method: POST
+      path: /v1/sdk/usages
+    names:
+      ts: trackUsage
+      py: track_usage
+      rb: track_usage
+      go: TrackUsage
+      rust: track_usage
+    optionalOnClient: false
+    request: TrackUsageRequest
+    response: UsageRecordResponse
+    overlays: [TrackUsageRequest]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Track usage failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  trackUsageBulk:
+    route:
+      method: POST
+      path: /v1/sdk/usages/bulk
+    names:
+      ts: trackUsageBulk
+      py: track_usage_bulk
+      rb: track_usage_bulk
+      go: TrackUsageBulk
+      rust: track_usage_bulk
+    optionalOnClient: true
+    request: TrackUsageBulkRequest
+    response: BulkUsageResponse
+    overlays: [TrackUsageBulkRequest]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Track usage bulk failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  createCustomer:
+    route:
+      method: POST
+      path: /v1/sdk/customers
+    names:
+      ts: createCustomer
+      py: create_customer
+      rb: create_customer
+      go: CreateCustomer
+      rust: create_customer
+    optionalOnClient: true
+    request: CreateCustomerRequest
+    response: CreateCustomerResult
+    overlays: [CreateCustomerResult]
+    normalization:
+      - "map reference||customerRef → { customerRef }"
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Create customer failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  updateCustomer:
+    route:
+      method: PATCH
+      path: /v1/sdk/customers/{reference}
+    names:
+      ts: updateCustomer
+      py: update_customer
+      rb: update_customer
+      go: UpdateCustomer
+      rust: update_customer
+    optionalOnClient: true
+    request: UpdateCustomerRequest
+    response: UpdateCustomerResult
+    overlays: [UpdateCustomerResult]
+    normalization:
+      - "map reference||customerRef → { customerRef }"
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Update customer failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getCustomer:
+    route:
+      method: GET
+      path: /v1/sdk/customers/{reference}
+    names:
+      ts: getCustomer
+      py: get_customer
+      rb: get_customer
+      go: GetCustomer
+      rust: get_customer
+    optionalOnClient: false
+    request: GetCustomerParams
+    response: CustomerResponseMapped
+    overlays: [GetCustomerParams, CustomerResponseMapped]
+    normalization:
+      - accept direct customer object
+      - accept bare customer array
+      - "accept { customers: [...] } / { customer: {...} } wrappers"
+      - map reference → customerRef; default purchases to []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get customer failed ({status}): {body}"
+      cases:
+        - messageTemplate: One of customerRef, externalRef, or email must be provided
+        - messageTemplate: "No customer found with externalRef: {externalRef}"
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  assignCredits:
+    route:
+      method: POST
+      path: /v1/sdk/customers/{reference}/credits
+    names:
+      ts: assignCredits
+      py: assign_credits
+      rb: assign_credits
+      go: AssignCredits
+      rust: assign_credits
+    optionalOnClient: true
+    request: AssignCreditsRequest
+    response: GrantCustomerCreditsResponse
+    overlays: [AssignCreditsRequest]
+    normalization: []
+    idempotency:
+      kind: headerForwarded
+      header: Idempotency-Key
+    errors:
+      default:
+        messageTemplate: "Assign credits failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getMerchant:
+    route:
+      method: GET
+      path: /v1/sdk/merchant
+    names:
+      ts: getMerchant
+      py: get_merchant
+      rb: get_merchant
+      go: GetMerchant
+      rust: get_merchant
+    optionalOnClient: true
+    response: SdkMerchantResponseDto
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get merchant failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getPlatformConfig:
+    route:
+      method: GET
+      path: /v1/sdk/platform-config
+    names:
+      ts: getPlatformConfig
+      py: get_platform_config
+      rb: get_platform_config
+      go: GetPlatformConfig
+      rust: get_platform_config
+    optionalOnClient: true
+    response: SdkPlatformConfigResponseDto
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get platform config failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getProduct:
+    route:
+      method: GET
+      path: /v1/sdk/products/{productRef}
+    names:
+      ts: getProduct
+      py: get_product
+      rb: get_product
+      go: GetProduct
+      rust: get_product
+    optionalOnClient: true
+    response: SdkProductResponse
+    overlays: []
+    normalization:
+      - "merge { ...result.data, ...result }"
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get product failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  listProducts:
+    route:
+      method: GET
+      path: /v1/sdk/products
+    names:
+      ts: listProducts
+      py: list_products
+      rb: list_products
+      go: ListProducts
+      rust: list_products
+    optionalOnClient: true
+    response: ListProductsResult
+    overlays: [ListProductsResult]
+    normalization:
+      - "accept bare array or { products } wrapper"
+      - unwrap nested data field
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "List products failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  createProduct:
+    route:
+      method: POST
+      path: /v1/sdk/products
+    names:
+      ts: createProduct
+      py: create_product
+      rb: create_product
+      go: CreateProduct
+      rust: create_product
+    optionalOnClient: true
+    request: CreateProductRequest
+    response: CreateProductResult
+    overlays: [CreateProductResult]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Create product failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  bootstrapMcpProduct:
+    route:
+      method: POST
+      path: /v1/sdk/products/mcp/bootstrap
+    names:
+      ts: bootstrapMcpProduct
+      py: bootstrap_mcp_product
+      rb: bootstrap_mcp_product
+      go: BootstrapMcpProduct
+      rust: bootstrap_mcp_product
+    optionalOnClient: true
+    request: McpBootstrapDto
+    response: McpBootstrapResponse
+    overlays: [McpBootstrapResponse]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Bootstrap MCP product failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  configureMcpPlans:
+    route:
+      method: PUT
+      path: /v1/sdk/products/{productRef}/mcp/plans
+    names:
+      ts: configureMcpPlans
+      py: configure_mcp_plans
+      rb: configure_mcp_plans
+      go: ConfigureMcpPlans
+      rust: configure_mcp_plans
+    optionalOnClient: true
+    request: ConfigureMcpPlansDto
+    response: ConfigureMcpPlansResponse
+    overlays: [ConfigureMcpPlansResponse]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Configure MCP plans failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  updateProduct:
+    route:
+      method: PUT
+      path: /v1/sdk/products/{productRef}
+    names:
+      ts: updateProduct
+      py: update_product
+      rb: update_product
+      go: UpdateProduct
+      rust: update_product
+    optionalOnClient: true
+    request: UpdateProductRequest
+    response: SdkProductResponse
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Update product failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  deleteProduct:
+    route:
+      method: DELETE
+      path: /v1/sdk/products/{productRef}
+    names:
+      ts: deleteProduct
+      py: delete_product
+      rb: delete_product
+      go: DeleteProduct
+      rust: delete_product
+    optionalOnClient: true
+    response: void
+    overlays: [void]
+    normalization:
+      - treat HTTP 404 as success
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Delete product failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  cloneProduct:
+    route:
+      method: POST
+      path: /v1/sdk/products/{productRef}/clone
+    names:
+      ts: cloneProduct
+      py: clone_product
+      rb: clone_product
+      go: CloneProduct
+      rust: clone_product
+    optionalOnClient: true
+    request: CloneProductDto
+    response: CloneProductResult
+    overlays: [CloneProductResult]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Clone product failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  listPlans:
+    route:
+      method: GET
+      path: /v1/sdk/products/{productRef}/plans
+    names:
+      ts: listPlans
+      py: list_plans
+      rb: list_plans
+      go: ListPlans
+      rust: list_plans
+    optionalOnClient: true
+    response: Plan
+    overlays: []
+    normalization:
+      - "accept bare array or { plans } wrapper"
+      - unwrap nested data field
+      - "merge { ...data, ...plan } with price precedence plan.price ?? data.price; delete data key"
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "List plans failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  createPlan:
+    route:
+      method: POST
+      path: /v1/sdk/products/{productRef}/plans
+    names:
+      ts: createPlan
+      py: create_plan
+      rb: create_plan
+      go: CreatePlan
+      rust: create_plan
+    optionalOnClient: true
+    request: CreatePlanRequest
+    response: Plan
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Create plan failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  updatePlan:
+    route:
+      method: PUT
+      path: /v1/sdk/products/{productRef}/plans/{planRef}
+    names:
+      ts: updatePlan
+      py: update_plan
+      rb: update_plan
+      go: UpdatePlan
+      rust: update_plan
+    optionalOnClient: true
+    request: UpdatePlanRequest
+    response: Plan
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Update plan failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  deletePlan:
+    route:
+      method: DELETE
+      path: /v1/sdk/products/{productRef}/plans/{planRef}
+    names:
+      ts: deletePlan
+      py: delete_plan
+      rb: delete_plan
+      go: DeletePlan
+      rust: delete_plan
+    optionalOnClient: true
+    response: void
+    overlays: [void]
+    normalization:
+      - treat HTTP 404 as success
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Delete plan failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  createPaymentIntent:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents
+    names:
+      ts: createPaymentIntent
+      py: create_payment_intent
+      rb: create_payment_intent
+      go: CreatePaymentIntent
+      rust: create_payment_intent
+    optionalOnClient: true
+    request: CreatePaymentIntentParams
+    response: CreatePaymentIntentResult
+    overlays: [CreatePaymentIntentParams, CreatePaymentIntentResult]
+    normalization: []
+    idempotency:
+      kind: autoKey
+      format: "payment-{planRef}-{epochMs}-{random9}"
+    errors:
+      default:
+        messageTemplate: "Create payment intent failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  createTopupPaymentIntent:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents
+    names:
+      ts: createTopupPaymentIntent
+      py: create_topup_payment_intent
+      rb: create_topup_payment_intent
+      go: CreateTopupPaymentIntent
+      rust: create_topup_payment_intent
+    optionalOnClient: true
+    request: CreateTopupPaymentIntentParams
+    response: CreateTopupPaymentIntentResult
+    overlays: [CreateTopupPaymentIntentParams, CreateTopupPaymentIntentResult, AutoRechargeInput, topupProjection]
+    normalization: []
+    idempotency:
+      kind: autoKey
+      format: "topup-{epochMs}-{random9}"
+    errors:
+      default:
+        messageTemplate: "Create topup payment intent failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  cancelPurchase:
+    route:
+      method: POST
+      path: /v1/sdk/purchases/{purchaseRef}/cancel
+    names:
+      ts: cancelPurchase
+      py: cancel_purchase
+      rb: cancel_purchase
+      go: CancelPurchase
+      rust: cancel_purchase
+    optionalOnClient: true
+    request: CancelPurchaseRequest
+    response: PurchaseInfo
+    overlays: []
+    normalization:
+      - "extract nested { purchase } when present; else top-level object with reference"
+      - validate JSON parseability of response body
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Cancel purchase failed ({status}): {body}"
+      cases:
+        - messageTemplate: "Purchase not found: {body}"
+          status: 404
+        - messageTemplate: "Purchase cannot be cancelled or does not belong to provider: {body}"
+          status: 400
+        - messageTemplate: "Invalid JSON response from cancel purchase endpoint: {bodyPrefix200}"
+        - messageTemplate: Invalid response structure from cancel purchase endpoint
+        - messageTemplate: Invalid purchase data in cancel purchase response
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  reactivatePurchase:
+    route:
+      method: POST
+      path: /v1/sdk/purchases/{purchaseRef}/reactivate
+    names:
+      ts: reactivatePurchase
+      py: reactivate_purchase
+      rb: reactivate_purchase
+      go: ReactivatePurchase
+      rust: reactivate_purchase
+    optionalOnClient: true
+    response: PurchaseInfo
+    overlays: []
+    normalization:
+      - "extract nested { purchase } when present; else top-level object with reference"
+      - validate JSON parseability of response body
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Reactivate purchase failed ({status}): {body}"
+      cases:
+        - messageTemplate: "Purchase not found: {body}"
+          status: 404
+        - messageTemplate: "Purchase cannot be reactivated: {body}"
+          status: 400
+        - messageTemplate: "Invalid JSON response from reactivate purchase endpoint: {bodyPrefix200}"
+        - messageTemplate: Invalid response structure from reactivate purchase endpoint
+        - messageTemplate: Invalid purchase data in reactivate purchase response
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  processPaymentIntent:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents/{processorPaymentId}/process
+    names:
+      ts: processPaymentIntent
+      py: process_payment_intent
+      rb: process_payment_intent
+      go: ProcessPaymentIntent
+      rust: process_payment_intent
+    optionalOnClient: true
+    request: ProcessPaymentIntentParams
+    response: ProcessPaymentResult
+    overlays: [ProcessPaymentIntentParams, ProcessPaymentResult, OneTimePurchaseInfo, TopupProcessResult, topupProjection]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Process payment failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  attachBusinessDetails:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents/{processorPaymentId}/business-details
+    names:
+      ts: attachBusinessDetails
+      py: attach_business_details
+      rb: attach_business_details
+      go: AttachBusinessDetails
+      rust: attach_business_details
+    optionalOnClient: true
+    request: AttachBusinessDetailsParams
+    response: AttachBusinessDetailsResult
+    overlays: [AttachBusinessDetailsParams, AttachBusinessDetailsResult]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Attach business details failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getUserInfo:
+    route:
+      method: POST
+      path: /v1/sdk/user-info
+    names:
+      ts: getUserInfo
+      py: get_user_info
+      rb: get_user_info
+      go: GetUserInfo
+      rust: get_user_info
+    optionalOnClient: true
+    request: UserInfoRequest
+    response: UserInfoResponse
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get user info failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getCustomerBalance:
+    route:
+      method: GET
+      path: /v1/sdk/customers/{reference}/balance
+    names:
+      ts: getCustomerBalance
+      py: get_customer_balance
+      rb: get_customer_balance
+      go: GetCustomerBalance
+      rust: get_customer_balance
+    optionalOnClient: true
+    request: GetCustomerBalanceParams
+    response: CustomerBalanceResponse
+    overlays: [GetCustomerBalanceParams, CreditDisplayBlock]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get customer balance failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  createCheckoutSession:
+    route:
+      method: POST
+      path: /v1/sdk/checkout-sessions
+    names:
+      ts: createCheckoutSession
+      py: create_checkout_session
+      rb: create_checkout_session
+      go: CreateCheckoutSession
+      rust: create_checkout_session
+    optionalOnClient: false
+    request: CreateCheckoutSessionRequest
+    response: CreateCheckoutSessionResponse
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Create checkout session failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  createCustomerSession:
+    route:
+      method: POST
+      path: /v1/sdk/customers/customer-sessions
+    names:
+      ts: createCustomerSession
+      py: create_customer_session
+      rb: create_customer_session
+      go: CreateCustomerSession
+      rust: create_customer_session
+    optionalOnClient: false
+    request: CreateCustomerSessionRequest
+    response: CreateCustomerSessionResponse
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Create customer session failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  activatePlan:
+    route:
+      method: POST
+      path: /v1/sdk/activate
+    names:
+      ts: activatePlan
+      py: activate_plan
+      rb: activate_plan
+      go: ActivatePlan
+      rust: activate_plan
+    optionalOnClient: true
+    request: ActivatePlanDto
+    response: ActivatePlanResponseDto
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Activate plan failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getPaymentMethod:
+    route:
+      method: GET
+      path: /v1/sdk/payment-method
+    names:
+      ts: getPaymentMethod
+      py: get_payment_method
+      rb: get_payment_method
+      go: GetPaymentMethod
+      rust: get_payment_method
+    optionalOnClient: true
+    request: GetPaymentMethodParams
+    response: PaymentMethodInfo
+    overlays: [GetPaymentMethodParams, PaymentMethodInfo]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get payment method failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  getAutoRecharge:
+    route:
+      method: GET
+      path: /v1/sdk/auto-recharge
+    names:
+      ts: getAutoRecharge
+      py: get_auto_recharge
+      rb: get_auto_recharge
+      go: GetAutoRecharge
+      rust: get_auto_recharge
+    optionalOnClient: true
+    request: GetAutoRechargeParams
+    response: AutoRechargeResponse
+    overlays: [GetAutoRechargeParams, AutoRechargeResponse, AutoRechargeConfig]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Get auto-recharge failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  saveAutoRecharge:
+    route:
+      method: PUT
+      path: /v1/sdk/auto-recharge
+    names:
+      ts: saveAutoRecharge
+      py: save_auto_recharge
+      rb: save_auto_recharge
+      go: SaveAutoRecharge
+      rust: save_auto_recharge
+    optionalOnClient: true
+    request: SaveAutoRechargeInput
+    response: SaveAutoRechargeResponse
+    overlays: [SaveAutoRechargeInput, AutoRechargeConfig]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Save auto-recharge failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  disableAutoRecharge:
+    route:
+      method: DELETE
+      path: /v1/sdk/auto-recharge
+    names:
+      ts: disableAutoRecharge
+      py: disable_auto_recharge
+      rb: disable_auto_recharge
+      go: DisableAutoRecharge
+      rust: disable_auto_recharge
+    optionalOnClient: true
+    request: DisableAutoRechargeParams
+    response: DisableAutoRechargeResponse
+    overlays: [DisableAutoRechargeParams]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "Disable auto-recharge failed ({status}): {body}"
+      cases: []
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+
+topLevel:
+  verifyWebhook:
+    names:
+      ts: verifyWebhook
+      py: verify_webhook
+      rb: verify_webhook
+      go: VerifyWebhook
+      rust: verify_webhook
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  withRetry:
+    names:
+      ts: withRetry
+      py: with_retry
+      rb: with_retry
+      go: WithRetry
+      rust: with_retry
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  buildPaywallGate:
+    names:
+      ts: buildPaywallGate
+      py: build_paywall_gate
+      rb: build_paywall_gate
+      go: BuildPaywallGate
+      rust: build_paywall_gate
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  buildGateMessage:
+    names:
+      ts: buildGateMessage
+      py: build_gate_message
+      rb: build_gate_message
+      go: BuildGateMessage
+      rust: build_gate_message
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  buildNudgeMessage:
+    names:
+      ts: buildNudgeMessage
+      py: build_nudge_message
+      rb: build_nudge_message
+      go: BuildNudgeMessage
+      rust: build_nudge_message
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  classifyPaywallState:
+    names:
+      ts: classifyPaywallState
+      py: classify_paywall_state
+      rb: classify_paywall_state
+      go: ClassifyPaywallState
+      rust: classify_paywall_state
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  paywallErrorToClientPayload:
+    names:
+      ts: paywallErrorToClientPayload
+      py: paywall_error_to_client_payload
+      rb: paywall_error_to_client_payload
+      go: PaywallErrorToClientPayload
+      rust: paywall_error_to_client_payload
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  SolvaPayError:
+    names:
+      ts: SolvaPayError
+      py: SolvaPayError
+      rb: SolvaPayError
+      go: SolvaPayError
+      rust: SolvaPayError
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  PaywallError:
+    names:
+      ts: PaywallError
+      py: PaywallError
+      rb: PaywallError
+      go: PaywallError
+      rust: PaywallError
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+
+coreHelpers:
+  validateBusinessDetails:
+    names:
+      ts: validateBusinessDetails
+      py: validate_business_details
+      rb: validate_business_details
+      go: ValidateBusinessDetails
+      rust: validate_business_details
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  deriveTaxIdType:
+    names:
+      ts: deriveTaxIdType
+      py: derive_tax_id_type
+      rb: derive_tax_id_type
+      go: DeriveTaxIdType
+      rust: derive_tax_id_type
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  resolveTaxBehavior:
+    names:
+      ts: resolveTaxBehavior
+      py: resolve_tax_behavior
+      rb: resolve_tax_behavior
+      go: ResolveTaxBehavior
+      rust: resolve_tax_behavior
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  getTaxIdExample:
+    names:
+      ts: getTaxIdExample
+      py: get_tax_id_example
+      rb: get_tax_id_example
+      go: GetTaxIdExample
+      rust: get_tax_id_example
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  getTaxIdFieldLabel:
+    names:
+      ts: getTaxIdFieldLabel
+      py: get_tax_id_field_label
+      rb: get_tax_id_field_label
+      go: GetTaxIdFieldLabel
+      rust: get_tax_id_field_label
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  getTaxIdHelperText:
+    names:
+      ts: getTaxIdHelperText
+      py: get_tax_id_helper_text
+      rb: get_tax_id_helper_text
+      go: GetTaxIdHelperText
+      rust: get_tax_id_helper_text
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  BUSINESS_COUNTRY_DISPLAY_NAMES:
+    names:
+      ts: BUSINESS_COUNTRY_DISPLAY_NAMES
+      py: BUSINESS_COUNTRY_DISPLAY_NAMES
+      rb: BUSINESS_COUNTRY_DISPLAY_NAMES
+      go: BUSINESS_COUNTRY_DISPLAY_NAMES
+      rust: BUSINESS_COUNTRY_DISPLAY_NAMES
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  BUSINESS_COUNTRY_OPTIONS:
+    names:
+      ts: BUSINESS_COUNTRY_OPTIONS
+      py: BUSINESS_COUNTRY_OPTIONS
+      rb: BUSINESS_COUNTRY_OPTIONS
+      go: BUSINESS_COUNTRY_OPTIONS
+      rust: BUSINESS_COUNTRY_OPTIONS
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  COUNTRY_TO_TAX_ID_TYPE:
+    names:
+      ts: COUNTRY_TO_TAX_ID_TYPE
+      py: COUNTRY_TO_TAX_ID_TYPE
+      rb: COUNTRY_TO_TAX_ID_TYPE
+      go: COUNTRY_TO_TAX_ID_TYPE
+      rust: COUNTRY_TO_TAX_ID_TYPE
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  SUPPORTED_BUSINESS_COUNTRIES:
+    names:
+      ts: SUPPORTED_BUSINESS_COUNTRIES
+      py: SUPPORTED_BUSINESS_COUNTRIES
+      rb: SUPPORTED_BUSINESS_COUNTRIES
+      go: SUPPORTED_BUSINESS_COUNTRIES
+      rust: SUPPORTED_BUSINESS_COUNTRIES
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  TAX_BEHAVIORS:
+    names:
+      ts: TAX_BEHAVIORS
+      py: TAX_BEHAVIORS
+      rb: TAX_BEHAVIORS
+      go: TAX_BEHAVIORS
+      rust: TAX_BEHAVIORS
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  TAX_EXCLUSIVE_CURRENCIES:
+    names:
+      ts: TAX_EXCLUSIVE_CURRENCIES
+      py: TAX_EXCLUSIVE_CURRENCIES
+      rb: TAX_EXCLUSIVE_CURRENCIES
+      go: TAX_EXCLUSIVE_CURRENCIES
+      rust: TAX_EXCLUSIVE_CURRENCIES
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  TAX_ID_EXAMPLE_BY_COUNTRY:
+    names:
+      ts: TAX_ID_EXAMPLE_BY_COUNTRY
+      py: TAX_ID_EXAMPLE_BY_COUNTRY
+      rb: TAX_ID_EXAMPLE_BY_COUNTRY
+      go: TAX_ID_EXAMPLE_BY_COUNTRY
+      rust: TAX_ID_EXAMPLE_BY_COUNTRY
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  TAX_ID_TYPES:
+    names:
+      ts: TAX_ID_TYPES
+      py: TAX_ID_TYPES
+      rb: TAX_ID_TYPES
+      go: TAX_ID_TYPES
+      rust: TAX_ID_TYPES
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  creditsToDisplayMinorUnits:
+    names:
+      ts: creditsToDisplayMinorUnits
+      py: credits_to_display_minor_units
+      rb: credits_to_display_minor_units
+      go: CreditsToDisplayMinorUnits
+      rust: credits_to_display_minor_units
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  isZeroDecimalCurrency:
+    names:
+      ts: isZeroDecimalCurrency
+      py: is_zero_decimal_currency
+      rb: is_zero_decimal_currency
+      go: IsZeroDecimalCurrency
+      rust: is_zero_decimal_currency
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  minorUnitsPerMajor:
+    names:
+      ts: minorUnitsPerMajor
+      py: minor_units_per_major
+      rb: minor_units_per_major
+      go: MinorUnitsPerMajor
+      rust: minor_units_per_major
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  resolveSellerIdentityDisplay:
+    names:
+      ts: resolveSellerIdentityDisplay
+      py: resolve_seller_identity_display
+      rb: resolve_seller_identity_display
+      go: ResolveSellerIdentityDisplay
+      rust: resolve_seller_identity_display
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  getSellerTaxIdentifierDisplayLabel:
+    names:
+      ts: getSellerTaxIdentifierDisplayLabel
+      py: get_seller_tax_identifier_display_label
+      rb: get_seller_tax_identifier_display_label
+      go: GetSellerTaxIdentifierDisplayLabel
+      rust: get_seller_tax_identifier_display_label
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
+    names:
+      ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      py: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      rb: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+
+facade:
+  createSolvaPay:
+    names:
+      ts: createSolvaPay
+      py: create_solva_pay
+      rb: SolvaPay.create
+      go: solvapay.New
+      rust: "Client::new"
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  createSolvaPayClient:
+    names:
+      ts: createSolvaPayClient
+      py: create_solva_pay_client
+      rb: create_solva_pay_client
+      go: CreateSolvaPayClient
+      rust: create_solva_pay_client
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  payable:
+    names:
+      ts: payable
+      py: payable
+      rb: payable
+      go: Payable
+      rust: payable
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  protect:
+    names:
+      ts: protect
+      py: protect
+      rb: protect
+      go: Protect
+      rust: protect
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  gate:
+    names:
+      ts: payable.gate
+      py: sp.gate
+      rb: sp.gate
+      go: sp.Gate
+      rust: sp.gate
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+
+errors:
+  webhook:
+    codes:
+      - missing_signature
+      - malformed_signature
+      - timestamp_too_old
+      - invalid_signature
+      - invalid_payload
+
+defaults:
+  retry:
+    maxRetries: 2
+    initialDelayMs: 500
+    backoff: fixed
+  webhookToleranceSec: 300
+  limitsCacheTTLMs: 10000
+  idempotencyKeyFormats:
+    payment: "payment-{planRef}-{epochMs}-{random9}"
+    topup: "topup-{epochMs}-{random9}"
+  goContextFirstParam: true
+
+nameOverrides:
+  createSolvaPay:
+    rb: SolvaPay.create
+    go: solvapay.New
+    rust: "Client::new"
+  gate:
+    ts: payable.gate
+    py: sp.gate
+    rb: sp.gate
+    go: sp.Gate
+    rust: sp.gate
+  SolvaPayError:
+    ts: SolvaPayError
+    py: SolvaPayError
+    rb: SolvaPayError
+    go: SolvaPayError
+    rust: SolvaPayError
+  PaywallError:
+    ts: PaywallError
+    py: PaywallError
+    rb: PaywallError
+    go: PaywallError
+    rust: PaywallError
+  BUSINESS_COUNTRY_DISPLAY_NAMES:
+    ts: BUSINESS_COUNTRY_DISPLAY_NAMES
+    py: BUSINESS_COUNTRY_DISPLAY_NAMES
+    rb: BUSINESS_COUNTRY_DISPLAY_NAMES
+    go: BUSINESS_COUNTRY_DISPLAY_NAMES
+    rust: BUSINESS_COUNTRY_DISPLAY_NAMES
+  BUSINESS_COUNTRY_OPTIONS:
+    ts: BUSINESS_COUNTRY_OPTIONS
+    py: BUSINESS_COUNTRY_OPTIONS
+    rb: BUSINESS_COUNTRY_OPTIONS
+    go: BUSINESS_COUNTRY_OPTIONS
+    rust: BUSINESS_COUNTRY_OPTIONS
+  COUNTRY_TO_TAX_ID_TYPE:
+    ts: COUNTRY_TO_TAX_ID_TYPE
+    py: COUNTRY_TO_TAX_ID_TYPE
+    rb: COUNTRY_TO_TAX_ID_TYPE
+    go: COUNTRY_TO_TAX_ID_TYPE
+    rust: COUNTRY_TO_TAX_ID_TYPE
+  SUPPORTED_BUSINESS_COUNTRIES:
+    ts: SUPPORTED_BUSINESS_COUNTRIES
+    py: SUPPORTED_BUSINESS_COUNTRIES
+    rb: SUPPORTED_BUSINESS_COUNTRIES
+    go: SUPPORTED_BUSINESS_COUNTRIES
+    rust: SUPPORTED_BUSINESS_COUNTRIES
+  TAX_BEHAVIORS:
+    ts: TAX_BEHAVIORS
+    py: TAX_BEHAVIORS
+    rb: TAX_BEHAVIORS
+    go: TAX_BEHAVIORS
+    rust: TAX_BEHAVIORS
+  TAX_EXCLUSIVE_CURRENCIES:
+    ts: TAX_EXCLUSIVE_CURRENCIES
+    py: TAX_EXCLUSIVE_CURRENCIES
+    rb: TAX_EXCLUSIVE_CURRENCIES
+    go: TAX_EXCLUSIVE_CURRENCIES
+    rust: TAX_EXCLUSIVE_CURRENCIES
+  TAX_ID_EXAMPLE_BY_COUNTRY:
+    ts: TAX_ID_EXAMPLE_BY_COUNTRY
+    py: TAX_ID_EXAMPLE_BY_COUNTRY
+    rb: TAX_ID_EXAMPLE_BY_COUNTRY
+    go: TAX_ID_EXAMPLE_BY_COUNTRY
+    rust: TAX_ID_EXAMPLE_BY_COUNTRY
+  TAX_ID_TYPES:
+    ts: TAX_ID_TYPES
+    py: TAX_ID_TYPES
+    rb: TAX_ID_TYPES
+    go: TAX_ID_TYPES
+    rust: TAX_ID_TYPES
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
+    ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    py: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    rb: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+
+reservedWords:
+  ts: []
+  py: []
+  rb: []
+  go: []
+  rust: []
