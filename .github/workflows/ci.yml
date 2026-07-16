@@ -67,6 +67,12 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Run contract tests
+        run: pnpm test:contract
+
+      - name: Check OpenAPI snapshot (offline)
+        run: pnpm snapshot:openapi:check
+
   documentation:
     name: Documentation Validation
     runs-on: ubuntu-latest

@@ -14,6 +14,9 @@ coverage/
 generated/
 docs/api/
 
+# Canonical OpenAPI contract artifacts (key order is load-bearing)
+contract/openapi/*.json
+
 # Lock files
 pnpm-lock.yaml
 package-lock.json

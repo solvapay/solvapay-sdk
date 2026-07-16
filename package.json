@@ -58,7 +58,10 @@
     "docs:validate-links": "tsx scripts/validate-doc-links.ts",
     "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build",
     "deps:check": "tsx scripts/check-dependency-health.ts",
-    "loc": "tsx scripts/count-loc.ts"
+    "loc": "tsx scripts/count-loc.ts",
+    "test:contract": "vitest run scripts",
+    "snapshot:openapi": "tsx scripts/snapshot-openapi.ts",
+    "snapshot:openapi:check": "tsx scripts/snapshot-openapi.ts --check"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.10",

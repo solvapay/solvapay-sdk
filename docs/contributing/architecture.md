@@ -57,4 +57,5 @@ loading the right runtime implementation:
 
 - `CONTRIBUTING.md` for setup and pull request workflow
 - `docs/contributing/testing.md` for test strategy
+- `docs/contributing/rust-core-sdk-redesign.md` for the Rust core migration architecture and session-sized translation path
 - package-level `README.md` files for package-specific constraints
