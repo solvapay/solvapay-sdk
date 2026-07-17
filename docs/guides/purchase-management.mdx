@@ -181,7 +181,9 @@ needs to buy more before they can continue. Two things belong on that surface:
 The customer-facing components (`TopupForm`, `AutoRecharge`) and hooks
 (`useTopup`, `useAutoRecharge`) live in `@solvapay/react` — see
 [Credit Top-Ups & Auto-Recharge](/sdks/typescript/guides/react#credit-top-ups--auto-recharge)
-in the React guide. This section covers the server-side helpers that back them.
+in the React guide. This section covers the server-side helpers that back them; the dedicated
+[Auto-recharge guide](/sdks/typescript/guides/auto-recharge) walks through the full stack,
+including the monthly spend cap and the `@solvapay/server` 2.0.0 migration.
 
 ### Configuration helpers
 
@@ -373,6 +375,7 @@ export async function POST(request: NextRequest) {
 
 ## Next steps
 
+- [Auto-recharge](/sdks/typescript/guides/auto-recharge) — the full auto-recharge stack, monthly spend cap semantics, and the 2.0.0 migration
 - [Credit Top-Ups & Auto-Recharge](/sdks/typescript/guides/react#credit-top-ups--auto-recharge) — the React components and hooks (`TopupForm`, `AutoRecharge`, `useTopup`, `useAutoRecharge`) that drive the top-up UI
 - [Webhooks](/webhooks) — handle `purchase.updated`, `purchase.expired`, and `purchase.created` events from lifecycle changes, plus `customer.credit.auto_topup_failed` for off-session declines
 - [Billing](/plans/billing) — understand billing cycles, renewal processing, and purchase states

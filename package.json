@@ -46,7 +46,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "release": "turbo run release",
     "changeset": "changeset",
-    "changeset:version": "changeset version",
+    "changeset:version": "changeset version && pnpm install --lockfile-only",
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status",
     "changeset:snapshot": "changeset version --snapshot preview && changeset publish --tag preview --no-git-tag",
