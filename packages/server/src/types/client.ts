@@ -5,6 +5,16 @@
  */
 
 import type { components, operations } from './generated'
+import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
+
+export type AttachBusinessDetailsParams = {
+  paymentIntentId: string
+  customerRef?: string
+} & BusinessDetailsInput
+
+export type AttachBusinessDetailsResult = {
+  taxBreakdown: TaxBreakdown
+}
 
 export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
@@ -92,6 +102,7 @@ export type ProcessPaymentResult =
       oneTimePurchase: OneTimePurchaseInfo
     }
   | { status: 'succeeded' }
+  | { status: 'processing' }
   | { status: 'timeout'; message?: string }
   | { status: 'failed' }
   | { status: 'cancelled' }
@@ -123,6 +134,7 @@ export type ProcessPaymentResult =
  */
 export type TopupProcessResult =
   | { status: 'succeeded'; creditsAdded?: number }
+  | { status: 'processing' }
   | { status: 'timeout'; message?: string }
   | { status: 'failed' }
   | { status: 'cancelled' }
@@ -151,6 +163,9 @@ export type AutoRechargeConfig = {
   paymentMethodId?: string
   status: AutoRechargeStatus
   failureCount: number
+  maxMonthlySpendMinor?: number
+  monthlySpendMinor: number
+  monthlySpendPeriod?: string
   lastChargeAt?: string
   updatedAt?: string
   /** Backend-computed display values — render verbatim; do not derive from trigger fields. */
@@ -182,7 +197,7 @@ export type AutoRechargeInput = {
   triggerType: 'balance'
   thresholdAmountMajor?: number
   topupAmountMajor?: number
-  maxRecharges?: number
+  maxMonthlySpendMajor?: number
   currency: string
 }
 
@@ -375,7 +390,6 @@ export interface SolvaPayClient {
       reference: string
       name: string
       description?: string
-      status?: string
     }>
   >
 
@@ -487,6 +501,9 @@ export interface SolvaPayClient {
     customerRef: string
     planRef?: string
   }): Promise<ProcessPaymentResult>
+
+  // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
+  attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
 
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {

@@ -201,7 +201,7 @@ export async function POST(request: Request) {
 }
 ```
 
-Response body: `{ status, purchaseRef?, checkoutUrl?, creditBalance?, ... }`. Usage-based plans now activate eagerly at the plan step (no balance gate). See [Purchase lifecycle management](./purchase-management) for all status values.
+Response body: `{ status, purchaseRef?, checkoutUrl?, creditBalance?, ... }`. Usage-based plans are topup-first: a zero-balance customer receives `topup_required` and the plan activates only after a successful top-up. See [Purchase lifecycle management](./purchase-management) for all status values.
 
 #### List Plans
 

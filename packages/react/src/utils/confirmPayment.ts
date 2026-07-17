@@ -8,13 +8,21 @@ import type {
 import type { SolvaPayCopy } from '../i18n/types'
 import { interpolate } from '../i18n/interpolate'
 
+/**
+ * @deprecated `'card-element'` is slated for removal in the next major.
+ * Use `'payment-element'` with `PaymentForm.PaymentElement`.
+ */
 export type ConfirmPaymentMode = 'payment-element' | 'card-element'
 
 export type ConfirmPaymentInput = {
   stripe: Stripe
   elements: StripeElements
   clientSecret: string
-  mode: ConfirmPaymentMode
+  /**
+   * @deprecated `'card-element'` is slated for removal in the next major.
+   * Defaults to `'payment-element'`.
+   */
+  mode?: ConfirmPaymentMode
   returnUrl: string
   /** Billing details from `useCustomer()` (echoed from backend). */
   billingDetails?: { email?: string; name?: string }
@@ -30,6 +38,7 @@ export type ConfirmPaymentInput = {
 
 export type ConfirmPaymentResult =
   | { status: 'succeeded'; paymentIntent: PaymentIntent }
+  | { status: 'pending'; message: string; paymentIntent: PaymentIntent }
   | { status: 'requires_action'; message: string }
   | { status: 'other'; message: string; paymentIntent?: PaymentIntent }
   | { status: 'error'; message: string }
@@ -41,21 +50,16 @@ export type ConfirmPaymentResult =
 export async function confirmPayment(
   input: ConfirmPaymentInput,
 ): Promise<ConfirmPaymentResult> {
-  const { stripe, elements, clientSecret, mode, returnUrl, billingDetails, copy } = input
+  const { stripe, elements, clientSecret, returnUrl, billingDetails, copy } = input
+  const mode = input.mode ?? 'payment-element'
 
   try {
     if (mode === 'payment-element') {
       const paymentElement = elements.getElement('payment') as StripePaymentElement | null
       if (!paymentElement) {
-        return { status: 'error', message: copy.errors.cardElementMissing }
+        return { status: 'error', message: copy.errors.paymentElementMissing }
       }
 
-      // Stripe requires elements.submit() before confirmPayment() for the
-      // Payment Element whenever async work happens between the user click
-      // and confirmPayment (deferred-intent mode, or any flow that resolves
-      // billing details/plan before confirming). Calling it unconditionally
-      // is safe: it validates the form and is a no-op if nothing is pending.
-      // https://stripe.com/docs/payments/accept-a-payment-deferred
       const { error: submitError } = await elements.submit()
       if (submitError) {
         return {
@@ -82,7 +86,6 @@ export async function confirmPayment(
       return mapIntent(paymentIntent, copy)
     }
 
-    // card-element path
     const cardElement = elements.getElement('card') as StripeCardElement | null
     if (!cardElement) {
       return { status: 'error', message: copy.errors.cardElementMissing }
@@ -102,8 +105,7 @@ export async function confirmPayment(
   } catch (err) {
     return {
       status: 'error',
-      message:
-        err instanceof Error ? err.message : copy.errors.paymentUnexpected,
+      message: err instanceof Error ? err.message : copy.errors.paymentUnexpected,
     }
   }
 }
@@ -118,13 +120,20 @@ function mapIntent(
   if (paymentIntent.status === 'succeeded') {
     return { status: 'succeeded', paymentIntent }
   }
+  if (paymentIntent.status === 'processing') {
+    return {
+      status: 'pending',
+      message: copy.errors.paymentPending,
+      paymentIntent,
+    }
+  }
   if (paymentIntent.status === 'requires_action') {
     return { status: 'requires_action', message: copy.errors.paymentRequires3ds }
   }
   return {
     status: 'other',
     message: interpolate(copy.errors.paymentStatusPrefix, {
-      status: paymentIntent.status || 'processing',
+      status: paymentIntent.status,
     }),
     paymentIntent,
   }

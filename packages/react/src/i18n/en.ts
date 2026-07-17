@@ -121,7 +121,7 @@ export const enCopy: SolvaPayCopy = {
   autoRecharge: {
     heading: 'Auto recharge',
     description:
-      'Automatically top up so you never run out — recommended for production. You can turn this off anytime.',
+      'Automatically top up when your balance runs low, so you never run out. You can turn this off anytime.',
     settingsHeading: 'Auto recharge settings',
     setupTriggerLabel: 'Set up auto-recharge',
     modifyTriggerLabel: 'Modify',
@@ -151,10 +151,21 @@ export const enCopy: SolvaPayCopy = {
     thresholdTooLow: 'Balance threshold must be greater than zero.',
     minTopupAmount: 'Top-up amount must be at least {amount}.',
     topupBelowThreshold: 'Top-up amount must be at least your balance threshold ({amount}).',
+    invalidMaxMonthlySpend: 'Maximum monthly spend must be a positive amount.',
+    maxMonthlySpendBelowTopup:
+      'Maximum monthly spend must be at least your top-up amount ({amount}).',
+    maxMonthlySpendLabel: 'Maximum monthly spend (optional)',
+    maxMonthlySpendAriaLabel: 'Maximum monthly spend',
+    maxMonthlySpendPlaceholder: 'No limit',
+    maxMonthlySpendHelper:
+      'Leave blank to allow unlimited auto-reloaded credits per month.',
+    monthlySpendLine: '{spent} / {cap} this month',
+    statusMonthlyCapReached: 'Monthly spend limit reached',
     creditsPerRecharge: '≈ {credits} credits per recharge',
     creditsPerRechargeApprox: '~ {credits} credits per recharge',
     currencyPerRecharge: '≈ {amount} per recharge',
     currencyPerRechargeApprox: '~ {amount} per recharge',
+    taxDisclosure: 'Plus applicable tax.',
     statusFailed: 'Payment failed — update your card to resume',
   },
   activationFlow: {
@@ -256,9 +267,13 @@ export const enCopy: SolvaPayCopy = {
     unknownError: 'Unknown error',
     stripeUnavailable: 'Stripe is not available. Please refresh the page.',
     paymentIntentUnavailable: 'Payment intent not available. Please refresh the page.',
+    paymentElementMissing: 'Payment element not found',
+    /** @deprecated Use `paymentElementMissing`. Kept for Card Element compatibility. */
     cardElementMissing: 'Card element not found',
     paymentUnexpected: 'An unexpected error occurred.',
     paymentProcessingFailed: 'Payment processing failed. Please try again or contact support.',
+    paymentPending:
+      'Your payment is being confirmed. You will be notified once it completes.',
     paymentRequires3ds:
       'Payment requires additional authentication. Please complete the verification.',
     paymentProcessingTimeout: 'Payment processing timed out — webhooks may not be configured',

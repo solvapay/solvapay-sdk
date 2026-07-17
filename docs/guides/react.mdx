@@ -11,6 +11,7 @@ description: "This guide shows you how to integrate SolvaPay React components an
 - [Components](#components)
 - [Hooks](#hooks)
 - [Payment Flow](#payment-flow)
+- [Credit Top-Ups & Auto-Recharge](#credit-top-ups--auto-recharge)
 - [Purchase Management](#purchase-management)
 - [Complete Example](#complete-example)
 
@@ -267,6 +268,108 @@ function UserProfile() {
 }
 ```
 
+### TopupForm
+
+A compound component for one-off credit top-ups. It wraps `useTopup` and
+Stripe Elements, so you compose the parts you need instead of accepting a
+fixed layout:
+
+```tsx
+import { TopupForm } from '@solvapay/react'
+
+function TopUpCredits() {
+  return (
+    <TopupForm.Root
+      amount={1000} // minor units — 1000 = $10.00
+      currency="USD"
+      onSuccess={(paymentIntent, extras) => {
+        // extras?.creditsAdded is the wallet delta, when the backend reports it
+        console.log('Topped up!', extras?.creditsAdded)
+      }}
+      onError={error => console.error('Top-up failed:', error)}
+    >
+      <TopupForm.Loading>Preparing payment…</TopupForm.Loading>
+      <TopupForm.PaymentElement />
+      <TopupForm.Error />
+      <TopupForm.SubmitButton>Add credits</TopupForm.SubmitButton>
+      <TopupForm.LegalFooter />
+    </TopupForm.Root>
+  )
+}
+```
+
+#### Compound parts
+
+- `TopupForm.Root` — provides context and drives the top-up. Accepts the props below.
+- `TopupForm.PaymentElement` — renders the Stripe Payment Element.
+- `TopupForm.SubmitButton` — confirms the payment; disabled until the card input is complete.
+- `TopupForm.Loading` — shown while the payment intent and Stripe are initializing.
+- `TopupForm.Error` — renders the current error, if any.
+- `TopupForm.AmountPicker` — optional in-place amount picker (re-exported from `AmountPicker`).
+- `TopupForm.LegalFooter` — mandate / legal copy footer.
+
+#### Root props
+
+- `amount` (required) — top-up amount in **minor units** (e.g. `1000` = `$10.00`).
+- `currency` — ISO 4217 currency code (default: `USD`).
+- `autoRecharge` — optional `AutoRechargeInput` to enable auto-recharge in the **same** payment (see [Credit Top-Ups & Auto-Recharge](#credit-top-ups--auto-recharge)).
+- `onSuccess(paymentIntent, extras?)` — fires once the customer is fully credited. `extras.creditsAdded` carries the wallet delta when the backend reports it.
+- `onError(error)` — called when the payment fails.
+- `returnUrl` — return URL used for redirect-based payment methods (defaults to the current URL).
+- `className` / `buttonClassName` — styling hooks.
+
+Credits are booked by SolvaPay's webhook handler. When your backend implements
+the `/api/process-topup-payment` route, `TopupForm` waits for that round-trip so
+`onSuccess` only fires once the credit has actually landed. Transports without
+that route fall back to firing on Stripe confirmation.
+
+### AutoRecharge
+
+A drop-in component that lets a customer turn on automatic credit top-ups. It
+renders a summary card with a trigger that opens a modal for configuring a
+balance **threshold**, a **fixed top-up amount**, and an optional **monthly spend
+cap** (under **Advanced**). When enabled, SolvaPay charges the saved card
+off-session and mints credits whenever the balance falls below the threshold — no
+manual checkout.
+
+```tsx
+import { AutoRecharge } from '@solvapay/react'
+
+function AutoRechargeSettings() {
+  return (
+    <AutoRecharge
+      currency="USD"
+      onSaved={() => console.log('Auto-recharge saved')}
+      onDisabled={() => console.log('Auto-recharge disabled')}
+    />
+  )
+}
+```
+
+#### AutoRecharge Props
+
+- `currency` — ISO 4217 currency code (default: `USD`).
+- `defaultThresholdAmountMajor` — pre-fills the threshold field (form default: `5`).
+- `defaultTopupAmountMajor` — pre-fills the top-up field (form default: `10`).
+- `deferCardSetup` — when `true`, saving stages the config **without** creating a Stripe SetupIntent and fires `onPendingConfig` instead. Use this to arm auto-recharge inside a top-up payment (see below).
+- `onPendingConfig(payload)` — receives the `AutoRechargeInput` to forward into `TopupForm` when `deferCardSetup` is set.
+- `onSetupRequired(result)` — called when a separate card-setup step is required (non-deferred flow).
+- `onSaved(result)` / `onDisabled()` — lifecycle callbacks.
+- `className` — styling hook.
+
+The form is opt-in (`enabled: false` by default). Amounts can be entered in
+either display currency or credits; the component handles the Stripe SetupIntent
+and the 3DS redirect return internally. Set an optional `maxMonthlySpendMajor` cap
+(blank = unlimited) in the form. The summary card shows current-period
+spend when a cap is configured, and a **Monthly spend limit reached** status when
+the next recharge would exceed the cap. If a series of off-session charges keeps
+declining, the card shows a text-only "payment failed" status — see the
+[failed-recharge guidance](#credit-top-ups--auto-recharge) for building a card-update prompt.
+
+For full layout control, compose the primitive from `@solvapay/react/primitives`:
+`AutoRecharge.MaxMonthlySpendField`,
+`AutoRecharge.MonthlySpend`, and `AutoRecharge.Status` (cap-reached and failed badges).
+
 ## Hooks
 
 ### usePurchase
@@ -421,6 +524,80 @@ function CustomComponent() {
 }
 ```
 
+### useTopup
+
+Manage a credit top-up flow programmatically. Handles payment-intent creation
+and Stripe initialization — the top-up analogue of `useCheckout`:
+
+```tsx
+import { useTopup } from '@solvapay/react'
+
+function CustomTopup() {
+  const { startTopup, loading, error, stripePromise, clientSecret, reset } = useTopup({
+    amount: 1000, // minor units
+    currency: 'USD',
+  })
+
+  return (
+    <button onClick={() => startTopup()} disabled={loading}>
+      {loading ? 'Preparing…' : 'Add $10.00'}
+    </button>
+  )
+}
+```
+
+#### useTopup Options
+
+- `amount` (required) — top-up amount in **minor units** (e.g. `1000` = `$10.00`).
+- `currency` — ISO 4217 currency code (default: `USD`).
+- `autoRecharge` — optional `AutoRechargeInput` to enable auto-recharge in the same payment.
+
+#### useTopup Return Values
+
+- `loading` — `true` while the payment intent is being created.
+- `error` — the last error, or `null`.
+- `stripePromise` — the resolved Stripe instance for mounting Elements.
+- `clientSecret` — the payment-intent client secret.
+- `startTopup()` — creates the payment intent and initializes Stripe.
+- `reset()` — clears state to start over.
+
+### useAutoRecharge
+
+Read and manage the customer's auto-recharge configuration. Backed by a
+short-lived module cache so multiple components share one request:
+
+```tsx
+import { useAutoRecharge } from '@solvapay/react'
+
+function AutoRechargeStatus() {
+  const { config, loading, save, disable, refresh } = useAutoRecharge()
+
+  if (loading) return <div>Loading…</div>
+  if (!config?.enabled) return <div>Auto-recharge is off</div>
+
+  return (
+    <div>
+      <p>Status: {config.status}</p>
+      {config.status === 'failed' && <p>Recent recharges failed — please update your card.</p>}
+      <button onClick={() => disable()}>Turn off</button>
+    </div>
+  )
+}
+```
+
+#### useAutoRecharge Return Values
+
+- `config` — the current `AutoRechargeConfig`, or `null` if none exists.
+- `loading` / `saving` / `disabling` — in-flight state flags.
+- `error` — the last error, or `null`.
+- `refresh(force?)` — re-fetch the config.
+- `save(input)` — set or update the config. Accepts `SaveAutoRechargeInput` (see the [top-up section](#credit-top-ups--auto-recharge) for the `maxMonthlySpendMajor` cap and `deferSetupIntent`).
+- `disable()` — turn auto-recharge off.
+
+`config.status` is `active`, `disabled`, `pending_setup`, or `failed`. Read
+`config.failureCount` alongside `status === 'failed'` to decide when to prompt
+the customer to update their card.
+
 ## Payment Flow
 
 ### Simple Payment Flow
@@ -486,6 +663,221 @@ function CustomCheckoutPage() {
   )
 }
 ```
+
+## Credit Top-Ups & Auto-Recharge
+
+Credit-based products let customers buy a balance and spend it as they use your
+API. SolvaPay supports both one-off **top-ups** and **auto-recharge**, where the
+balance is refilled automatically once it drops below a threshold. All three
+flows below are powered by `@solvapay/next` route helpers.
+
+### Backend routes
+
+Add these API routes once — the React components and hooks call them through the
+provider. All are one-liners over `@solvapay/next`:
+
+```typescript
+// app/api/create-topup-payment-intent/route.ts
+import { NextRequest } from 'next/server'
+import { createTopupPaymentIntent } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { amount, currency, autoRecharge } = await request.json()
+  return createTopupPaymentIntent(request, { amount, currency, autoRecharge })
+}
+```
+
+```typescript
+// app/api/process-topup-payment/route.ts
+import { NextRequest } from 'next/server'
+import { processTopupPaymentIntent } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const { paymentIntentId } = await request.json()
+  return processTopupPaymentIntent(request, { paymentIntentId })
+}
+```
+
+```typescript
+// app/api/auto-recharge/route.ts
+import { NextRequest } from 'next/server'
+import { disableAutoRecharge, getAutoRecharge, saveAutoRecharge } from '@solvapay/next'
+
+export const GET = (request: NextRequest) => getAutoRecharge(request)
+export const PUT = (request: NextRequest) => saveAutoRecharge(request)
+export const DELETE = (request: NextRequest) => disableAutoRecharge(request)
+```
+
+The `/api/process-topup-payment` route is what lets `TopupForm` confirm that the
+credit actually landed before firing `onSuccess`. The three auto-recharge verbs
+share a single route and a single provider key, `api.autoRecharge` (default
+`/api/auto-recharge`).
+
+### Standalone top-up
+
+Render `TopupForm` with the amount in minor units. Credits are booked by the
+webhook handler, and — because the `/api/process-topup-payment` route is wired —
+`onSuccess` fires only once the credit has landed:
+
+```tsx
+import { TopupForm } from '@solvapay/react'
+
+function TopUpCredits() {
+  return (
+    <TopupForm.Root
+      amount={2000} // $20.00
+      currency="USD"
+      onSuccess={(_paymentIntent, extras) => {
+        console.log('Credits added:', extras?.creditsAdded)
+      }}
+      onError={error => console.error(error)}
+    >
+      <TopupForm.Loading>Preparing payment…</TopupForm.Loading>
+      <TopupForm.PaymentElement />
+      <TopupForm.Error />
+      <TopupForm.SubmitButton>Add credits</TopupForm.SubmitButton>
+    </TopupForm.Root>
+  )
+}
+```
+
+### Enable auto-recharge in the same payment
+
+You can arm auto-recharge as part of the **initial** top-up charge — there's no
+separate card-setup step. Render `<AutoRecharge deferCardSetup>` on the amount
+step, capture the pending config, and pass it into `TopupForm.Root`:
+
+```tsx
+import { useMemo, useState } from 'react'
+import type { AutoRechargeInput } from '@solvapay/server'
+import { AutoRecharge, TopupForm, configToAutoRechargeInput, useAutoRecharge } from '@solvapay/react'
+
+function TopupWithAutoRecharge({ amount, currency = 'USD' }: { amount: number; currency?: string }) {
+  const { config: savedConfig } = useAutoRecharge()
+  const [pending, setPending] = useState<AutoRechargeInput | null>(null)
+
+  // Prefer the just-edited config; otherwise reuse a saved+enabled one.
+  const autoRecharge = useMemo((): AutoRechargeInput | undefined => {
+    if (pending) return pending
+    if (!savedConfig?.enabled) return undefined
+    return configToAutoRechargeInput(savedConfig, { currency }) ?? undefined
+  }, [pending, savedConfig, currency])
+
+  return (
+    <>
+      <AutoRecharge currency={currency} deferCardSetup onPendingConfig={setPending} />
+
+      <TopupForm.Root amount={amount} currency={currency} autoRecharge={autoRecharge}>
+        <TopupForm.Loading>Preparing payment…</TopupForm.Loading>
+        <TopupForm.PaymentElement />
+        <TopupForm.Error />
+        <TopupForm.SubmitButton>Add credits</TopupForm.SubmitButton>
+      </TopupForm.Root>
+    </>
+  )
+}
+```
+
+With `deferCardSetup`, saving the `AutoRecharge` form sends `deferSetupIntent: true`
+(no inline SetupIntent) and fires `onPendingConfig`. The backend creates the
+payment intent with `setup_future_usage: 'off_session'`, saves the card on that
+same charge, and activates the config (`pending_setup` → `active`) when the
+webhook lands — so the customer configures and funds auto-recharge in one step.
+
+### Managing auto-recharge on its own
+
+Outside checkout, drop `<AutoRecharge>` into an account or settings page. It
+reads and writes through the `/api/auto-recharge` route:
+
+```tsx
+import { AutoRecharge } from '@solvapay/react'
+
+function BillingSettings() {
+  return (
+    <section>
+      <h2>Automatic top-ups</h2>
+      <AutoRecharge currency="USD" />
+    </section>
+  )
+}
+```
+
+### Reacting to auto-recharge on usage
+
+When you call `trackUsage` (via `/api/track-usage`), the response's
+`creditDebit.autoRecharge.triggered` flag signals that an off-session charge was
+**initiated** — it does not mean the credits are in that same response. Call
+`balance.reconcileAfterUsageDebit({ expectIncrease: true })` **only** when
+`triggered` is `true`; it polls the balance (~32s grace) and counts back-to-back
+recharges so the badge converges once the credit lands:
+
+```tsx
+import { useBalance } from '@solvapay/react'
+
+function UsageAction() {
+  const { adjustBalance, reconcileAfterUsageDebit, refetch } = useBalance()
+
+  async function runQuery() {
+    const res = await fetch('/api/track-usage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actionType: 'api_call', units: 1, productRef: 'prd_myapi' }),
+    })
+    const data = await res.json()
+
+    if (data.creditDebit?.debited) {
+      adjustBalance(-data.creditDebit.amount)
+      reconcileAfterUsageDebit({ expectIncrease: data.creditDebit.autoRecharge?.triggered === true })
+      await refetch()
+    }
+  }
+
+  return <button onClick={runQuery}>Run query</button>
+}
+```
+
+<Note>
+**Configuration, limits, and pricing.** Auto-recharge uses a balance
+**threshold** plus a **fixed top-up amount**. When enabled, both must be greater
+than zero, the top-up must be at least the threshold, and both must be at most
+`10,000` major units. The top-up amount must also clear Stripe's per-currency
+minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP,
+`30 kr` for SEK/NOK, `2.50 kr` for DKK), and the currency must be one of the
+provider's supported top-up currencies.
+
+An optional `maxMonthlySpendMajor` cap limits how much auto-recharge spend is
+allowed per UTC calendar month. Set it in the `<AutoRecharge>` form under
+**Advanced** (or pass it through `useAutoRecharge().save({ ..., maxMonthlySpendMajor })`
+and the `/api/auto-recharge` route). When the cap is hit mid-month, the config
+stays `active` and charges resume automatically next UTC month. The drop-in
+component shows a spend line (`$45 / $100 this month`) and a **Monthly spend limit
+reached** status when applicable; read `config.monthlySpendMinor` and
+`config.monthlySpendPeriod` if you build a custom UI.
+
+Thresholds and amounts are stored in **display-currency minor units** and
+re-resolved to credits against **live FX** at trigger time (no fixed credit
+threshold is stored). When a config has a `display` block, render its
+`display.formatted` values verbatim rather than re-deriving them from minor
+units.
+</Note>
+
+<Warning>
+**Off-session declines are surfaced explicitly.** If auto-recharge charges keep
+failing, `useAutoRecharge().config.status` flips to `failed` after repeated
+declines (and `failureCount` increments). Declines are **not** returned in the
+`trackUsage` / usage-debit response — they arrive via the
+`customer.credit.auto_topup_failed` webhook (see [Webhooks](./webhooks)). The
+drop-in `<AutoRecharge>` renders a text-only "payment failed" status; to prompt
+a fix, build your own banner off `config.status === 'failed'` and pair it with
+`<UpdatePaymentMethodButton>` so the customer can update their card and resume.
+</Warning>
+
+<Note>
+**Migrating early-adopter route keys.** The separate `api.getAutoRecharge`,
+`api.saveAutoRecharge`, and `api.disableAutoRecharge` provider keys were
+collapsed into a single `api.autoRecharge` key (default `/api/auto-recharge`).
+If you set any of the old keys, rename them to `api.autoRecharge`.
+</Note>
 
 ## Purchase Management
 
@@ -687,6 +1079,7 @@ SolvaPay components are headless and don't include default styles. Style them to
 ## Next Steps
 
 - [Next.js Integration Guide](./nextjs) - Learn Next.js-specific integration
+- [Purchase management](./purchase-management) - Cancel, reactivate, switch plans, and wire up top-ups
 - [Custom Authentication Adapters](./custom-auth) - Build custom auth adapters
 - [Usage Events](./usage-events) - Track purchase and usage activity
 - [API Reference](/sdks/typescript/intro) - Full API documentation

@@ -4,9 +4,10 @@ import React from 'react'
 import { useTopup } from '../hooks/useTopup'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmCardPayment: vi.fn() })),
+  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
 }))
 
 function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
@@ -34,15 +35,7 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }

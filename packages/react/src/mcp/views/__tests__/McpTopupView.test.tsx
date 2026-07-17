@@ -12,21 +12,18 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import React from 'react'
 
-// Stub TopupForm so the state machine runs without Stripe iframes. The Root
-// surfaces the `currency` prop so we can assert the chosen pay currency
-// threads into the PaymentIntent.
 vi.mock('../../../primitives/TopupForm', () => {
   const Root: React.FC<{
     currency?: string
     onSuccess?: () => void
     children?: React.ReactNode
   }> = ({ currency, onSuccess, children }) => (
-    <div data-testid="topup-form-stub" data-currency={currency}>
+    <section data-testid="topup-form-stub" data-currency={currency}>
       <button type="button" data-testid="topup-form-submit" onClick={() => onSuccess?.()}>
         submit topup
       </button>
       {children}
-    </div>
+    </section>
   )
   const Loading: React.FC = () => null
   const PaymentElement: React.FC = () => null
@@ -34,36 +31,49 @@ vi.mock('../../../primitives/TopupForm', () => {
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span data-testid="topup-submit">{children}</span>
   )
-  return { TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton } }
+  const BusinessDetails = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Toggle: () => null,
+    BusinessName: () => null,
+    Country: () => null,
+    TaxId: () => null,
+    Fields: () => null,
+  }
+  const Summary = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Subtotal: () => null,
+    Tax: () => null,
+    Total: () => null,
+    Rows: () => null,
+  }
+  return { TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary } }
 })
 
 vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))
 vi.mock('../../useStripeProbe', () => ({ useStripeProbe: () => 'ready' }))
 
 import { McpTopupView } from '../McpTopupView'
-import { McpBridgeProvider } from '../../bridge'
+import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type { Merchant, SolvaPayConfig, SolvaPayContextValue } from '../../../types'
+import type { SolvaPayTransport } from '../../../transport/types'
 
-function makeTransport(merchant: Merchant | null) {
+function createMockTransport(merchant: Merchant): SolvaPayTransport {
   return {
     checkPurchase: vi.fn().mockResolvedValue({ purchases: [] }),
     createPayment: vi.fn(),
     processPayment: vi.fn(),
     createTopupPayment: vi.fn(),
-    getBalance: vi.fn(),
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
     createCheckoutSession: vi.fn(),
     createCustomerSession: vi.fn(),
     getMerchant: vi.fn().mockResolvedValue(merchant),
-    getProduct: vi.fn(),
     listPlans: vi.fn().mockResolvedValue([]),
     getPaymentMethod: vi.fn().mockResolvedValue({ kind: 'none' }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any
+  }
 }
 
 function buildCtx(config: SolvaPayConfig, displayCurrency = 'USD'): SolvaPayContextValue {
@@ -95,22 +105,23 @@ function buildCtx(config: SolvaPayConfig, displayCurrency = 'USD'): SolvaPayCont
       displayCurrency,
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
+      display: null,
       refetch: vi.fn(),
       adjustBalance: vi.fn(),
+      reconcileAfterUsageDebit: vi.fn(),
     },
     _config: config,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any
+  }
 }
 
-function renderTopup(merchant: Merchant | null, displayCurrency = 'USD') {
-  const transport = makeTransport(merchant)
+function renderTopup(merchant: Merchant, displayCurrency = 'USD') {
+  const transport = createMockTransport(merchant)
   const config: SolvaPayConfig = { transport }
   const ctx = buildCtx(config, displayCurrency)
-  const app = { updateModelContext: vi.fn().mockResolvedValue(undefined) }
+  const app: McpBridgeAppLike = { updateModelContext: vi.fn().mockResolvedValue(undefined) }
   return render(
     <SolvaPayContext.Provider value={ctx}>
-      <McpBridgeProvider app={app as unknown as Parameters<typeof McpBridgeProvider>[0]['app']}>
+      <McpBridgeProvider app={app}>
         <McpTopupView publishableKey="pk_test" returnUrl="https://example.test/r" />
       </McpBridgeProvider>
     </SolvaPayContext.Provider>,
@@ -193,9 +204,7 @@ describe('<McpTopupView> — topup currency picker', () => {
       fireEvent.change(select, { target: { value: 'GBP' } })
     })
     await waitFor(() => expect(select.value).toBe('GBP'))
-    expect(
-      container.querySelector('.solvapay-mcp-amount-currency-symbol')?.textContent,
-    ).toBe('GBP')
+    expect(container.querySelector('.solvapay-mcp-amount-currency-symbol')?.textContent).toBe('GBP')
   })
 
   it('keeps currency symbols in amount pills for single-currency merchants', async () => {
@@ -203,5 +212,18 @@ describe('<McpTopupView> — topup currency picker', () => {
     await screen.findByText('Add credits')
     expect(screen.getByRole('button', { name: '$10' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'USD 10' })).toBeNull()
+  })
+
+  it('preserves the entered amount when returning via Change amount', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    fireEvent.click(screen.getByRole('button', { name: /Change amount/i }))
+    await screen.findByText('Add credits')
+    expect((screen.getByPlaceholderText('0.00') as HTMLInputElement).value).toBe('25')
   })
 })

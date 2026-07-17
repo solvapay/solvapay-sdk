@@ -132,10 +132,19 @@ export interface SolvaPayCopy {
     thresholdTooLow: string
     minTopupAmount: string
     topupBelowThreshold: string
+    invalidMaxMonthlySpend: string
+    maxMonthlySpendBelowTopup: string
+    maxMonthlySpendLabel: string
+    maxMonthlySpendAriaLabel: string
+    maxMonthlySpendPlaceholder: string
+    maxMonthlySpendHelper: string
+    monthlySpendLine: string
+    statusMonthlyCapReached: string
     creditsPerRecharge: string
     creditsPerRechargeApprox: string
     currencyPerRecharge: string
     currencyPerRechargeApprox: string
+    taxDisclosure: string
     statusFailed: string
   }
   activationFlow: {
@@ -289,8 +298,11 @@ export interface SolvaPayCopy {
     unknownError: string
     stripeUnavailable: string
     paymentIntentUnavailable: string
+    paymentElementMissing: string
+    /** @deprecated Use `paymentElementMissing`. Slated for removal in the next major. */
     cardElementMissing: string
     paymentUnexpected: string
+    paymentPending: string
     paymentProcessingFailed: string
     paymentRequires3ds: string
     paymentProcessingTimeout: string

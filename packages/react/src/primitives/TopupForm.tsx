@@ -30,7 +30,8 @@ import {
   useElements,
   PaymentElement as StripePaymentElement,
 } from '@stripe/react-stripe-js'
-import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
+import type { Stripe, StripeElements } from '@stripe/stripe-js'
+import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { AmountPicker as AmountPickerPrimitive } from './AmountPicker'
@@ -41,7 +42,23 @@ import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
+import {
+  type BusinessDetailsInput,
+  type TaxBreakdown,
+} from '@solvapay/core'
 import type { TopupFormProps } from '../types'
+import {
+  readPaymentIntentClientSecret,
+  stripPaymentIntentParams,
+} from './paymentIntentReturn'
+import {
+  useBusinessDetailsAttach,
+  defaultBusinessDetails,
+} from '../hooks/useBusinessDetailsAttach'
+import {
+  createBusinessDetailsParts,
+  createTaxSummaryParts,
+} from '../components/businessCheckoutParts'
 
 type SubmitState = 'idle' | 'processing' | 'disabled'
 type TopupFormState = 'loading' | 'ready' | 'error'
@@ -51,6 +68,7 @@ type TopupFormContextValue = {
   currency?: string
   state: TopupFormState
   clientSecret: string | null
+  processorPaymentId: string | null
   stripe: Stripe | null
   elements: StripeElements | null
   isReady: boolean
@@ -59,6 +77,13 @@ type TopupFormContextValue = {
   canSubmit: boolean
   error: string | null
   returnUrl: string
+  businessDetails: BusinessDetailsInput
+  taxBreakdown: TaxBreakdown | null
+  businessDetailsAttached: boolean
+  businessDetailsAttaching: boolean
+  businessDetailsError: string | null
+  fieldErrors: Partial<Record<keyof BusinessDetailsInput, string>>
+  setBusinessDetails: (patch: Partial<BusinessDetailsInput>) => void
   setPaymentInputComplete: (complete: boolean) => void
   submit: () => Promise<void>
 }
@@ -73,18 +98,20 @@ function useTopupCtx(part: string): TopupFormContextValue {
   return ctx
 }
 
-type RootProps = TopupFormProps & {
-  asChild?: boolean
-  children?: React.ReactNode
-}
+type RootProps = TopupFormProps &
+  Omit<React.ComponentPropsWithoutRef<'section'>, keyof TopupFormProps | 'children'> & {
+    asChild?: boolean
+    children?: React.ReactNode
+  }
 
-const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props, forwardedRef) {
+const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, forwardedRef) {
   const {
     amount,
     currency,
     autoRecharge,
     onSuccess,
     onError,
+    onTaxChange,
     returnUrl,
     submitButtonText: _submitButtonText,
     buttonClassName: _buttonClassName,
@@ -92,7 +119,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     asChild,
     children,
     ...rest
-  } = props as RootProps & Record<string, unknown>
+  } = props
 
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('TopupForm')
@@ -101,7 +128,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
   // `onSuccess` on backend confirmation) lives next to the existing
   // provider-context read. Optional — transports that don't implement
   // it keep the legacy fire-on-confirm behaviour.
-  const { processTopupPayment } = solva
+  const { processTopupPayment, attachBusinessDetails, customerRef } = solva
 
   const copy = useCopy()
   const locale = useLocale()
@@ -109,6 +136,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     loading,
     error: topupError,
     clientSecret,
+    processorPaymentId,
     startTopup,
     stripePromise,
   } = useTopup({
@@ -123,7 +151,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
   useEffect(() => {
     if (!hasInitializedRef.current && hasAmount && !loading && !topupError && !clientSecret) {
       hasInitializedRef.current = true
-      startTopup().catch(() => {
+      startTopup().catch(error => {
+        console.error('[TopupForm] startTopup failed', error)
         hasInitializedRef.current = false
       })
     }
@@ -134,10 +163,10 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret, locale: locale as StripeElementLocale | undefined }
+    return { clientSecret, locale: toStripeElementLocale(locale) }
   }, [clientSecret, locale])
 
-  const Comp = asChild ? Slot : 'div'
+  const Comp = asChild ? Slot : 'section'
 
   const outerError = !hasAmount
     ? copy.errors.configMissingAmount
@@ -157,18 +186,21 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function TopupFormRoot(props,
     amount,
     currency,
     clientSecret,
+    processorPaymentId,
     returnUrl: finalReturnUrl,
     outerError,
     state: dataState,
     onSuccess,
     onError,
+    onTaxChange,
     processTopupPayment,
+    attachBusinessDetails,
+    customerRef,
   }
 
   const shell = (
     <Comp
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ref={forwardedRef as any}
+      ref={forwardedRef as React.Ref<HTMLElement>}
       className={className}
       data-solvapay-topup-form=""
       data-state={dataState}
@@ -193,11 +225,13 @@ type InnerProps = {
   amount: number
   currency?: string
   clientSecret: string | null
+  processorPaymentId: string | null
   returnUrl: string
   outerError: string | null
   state: TopupFormState
   onSuccess?: TopupFormProps['onSuccess']
   onError?: TopupFormProps['onError']
+  onTaxChange?: TopupFormProps['onTaxChange']
   /**
    * Provider-side backend confirmation hook. When present, `submit`
    * awaits it before firing `onSuccess` so the customer is fully
@@ -214,10 +248,21 @@ type InnerProps = {
    */
   processTopupPayment?: (params: { paymentIntentId: string }) => Promise<
     | { status: 'succeeded'; creditsAdded?: number }
+    | { status: 'processing' }
     | { status: 'timeout'; message?: string }
     | { status: 'failed' }
     | { status: 'cancelled' }
   >
+  attachBusinessDetails?: (params: {
+    paymentIntentId: string
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }) => Promise<{ taxBreakdown: TaxBreakdown }>
+  customerRef?: string
   children?: React.ReactNode
 }
 
@@ -225,12 +270,16 @@ const Inner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
+  processorPaymentId,
   returnUrl,
   outerError,
   state,
   onSuccess,
   onError,
+  onTaxChange,
   processTopupPayment,
+  attachBusinessDetails,
+  customerRef,
   children,
 }) => {
   const stripe = useStripe()
@@ -240,9 +289,115 @@ const Inner: React.FC<InnerProps> = ({
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const returnResumeStarted = useRef(false)
+
+  useEffect(() => {
+    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
+    if (!returnClientSecret) return
+    returnResumeStarted.current = true
+
+    let cancelled = false
+    void (async () => {
+      setIsProcessing(true)
+      setError(null)
+
+      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
+      if (cancelled) return
+      stripPaymentIntentParams()
+
+      if (retrieved.error || !retrieved.paymentIntent) {
+        setError(copy.errors.paymentUnexpected)
+        setIsProcessing(false)
+        return
+      }
+
+      let paymentIntent = retrieved.paymentIntent
+      if (paymentIntent.status === 'requires_action') {
+        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+        if (cancelled) return
+        if (actionResult.error || !actionResult.paymentIntent) {
+          setError(copy.errors.paymentRequires3ds)
+          setIsProcessing(false)
+          return
+        }
+        paymentIntent = actionResult.paymentIntent
+      }
+
+      if (paymentIntent.status === 'processing') {
+        setError(copy.errors.paymentPending)
+        setIsProcessing(false)
+        return
+      }
+
+      if (paymentIntent.status !== 'succeeded') {
+        setError(copy.errors.paymentProcessingFailed)
+        setIsProcessing(false)
+        return
+      }
+
+      let creditsAdded: number | undefined
+      if (processTopupPayment) {
+        try {
+          const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
+          if (result.status === 'processing') {
+            setError(copy.errors.paymentPending)
+            setIsProcessing(false)
+            return
+          }
+          if (result.status === 'failed' || result.status === 'cancelled') {
+            setError(copy.errors.paymentUnexpected)
+            setIsProcessing(false)
+            onError?.(new Error(`Topup ${result.status}`))
+            return
+          }
+          if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
+            creditsAdded = result.creditsAdded
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setError(msg)
+          setIsProcessing(false)
+          onError?.(err instanceof Error ? err : new Error(msg))
+          return
+        }
+      }
+
+      if (cancelled) return
+      setIsProcessing(false)
+      await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [stripe, copy, processTopupPayment, onSuccess, onError])
+
+  const {
+    businessDetails,
+    setBusinessDetails,
+    fieldErrors,
+    taxBreakdown,
+    businessDetailsAttached,
+    businessDetailsAttaching,
+    businessDetailsError,
+    requiresBusinessAttach,
+    runAttach,
+  } = useBusinessDetailsAttach({
+    processorPaymentId,
+    attachBusinessDetails,
+    customerRef,
+    onTaxChange,
+  })
 
   const isReady = !!(stripe && elements)
-  const canSubmit = isReady && paymentInputComplete && !isProcessing && !!clientSecret
+  const canSubmit =
+    isReady &&
+    paymentInputComplete &&
+    !isProcessing &&
+    !!clientSecret &&
+    (!requiresBusinessAttach || businessDetailsAttached) &&
+    !businessDetailsAttaching
 
   const submit = useCallback(async () => {
     if (!stripe || !elements || !clientSecret) {
@@ -251,13 +406,20 @@ const Inner: React.FC<InnerProps> = ({
       onError?.(new Error(msg))
       return
     }
+
+    if (requiresBusinessAttach && !businessDetailsAttached) {
+      const attached = await runAttach(businessDetails)
+      if (!attached) {
+        const msg = businessDetailsError ?? 'Complete business details before paying'
+        setError(msg)
+        onError?.(new Error(msg))
+        return
+      }
+    }
+
     setError(null)
     setIsProcessing(true)
 
-    // Stripe requires elements.submit() before confirmPayment() whenever async
-    // work happens between click and confirm. Calling it unconditionally is
-    // safe — it validates the Payment Element and is a no-op otherwise.
-    // https://stripe.com/docs/payments/accept-a-payment-deferred
     const { error: submitError } = await elements.submit()
     if (submitError) {
       const msg = submitError.message || copy.errors.paymentUnexpected
@@ -282,23 +444,15 @@ const Inner: React.FC<InnerProps> = ({
       return
     }
 
-    // Wait for backend confirmation before declaring success. Mirrors
-    // `PaymentForm`'s `processPayment` step: the backend's `/process`
-    // endpoint polls until the PI reaches `succeeded` AND the wallet
-    // observes the credit delta (`processTopupPaymentIntentCore` adds
-    // a post-success balance poll on top of the `/process` PI-status
-    // poll). This eliminates the Stripe-confirm-to-webhook race that
-    // previously left the customer momentarily uncredited at the
-    // moment `onSuccess` fired — the wallet badge would show stale
-    // `0 left` and the next /api/chat send would 402 until the
-    // webhook caught up.
-    //
-    // Transports without `processTopupPayment` skip this step and
-    // keep the legacy fire-on-confirm behaviour.
     let creditsAdded: number | undefined
     if (paymentIntent && processTopupPayment) {
       try {
         const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
+        if (result.status === 'processing') {
+          setError(copy.errors.paymentPending)
+          setIsProcessing(false)
+          return
+        }
         if (result.status === 'failed' || result.status === 'cancelled') {
           setError(copy.errors.paymentUnexpected)
           setIsProcessing(false)
@@ -308,10 +462,6 @@ const Inner: React.FC<InnerProps> = ({
         if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
           creditsAdded = result.creditsAdded
         }
-        // `timeout` is treated as a soft success — Stripe already
-        // confirmed; the credit will land via webhook within a few
-        // seconds. Fall through and let downstream convergence
-        // (`refetchPurchase` in `recordPaygSuccess`) handle it.
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         setError(msg)
@@ -323,12 +473,28 @@ const Inner: React.FC<InnerProps> = ({
 
     setIsProcessing(false)
     if (paymentIntent) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await onSuccess?.(paymentIntent as any, creditsAdded !== undefined ? { creditsAdded } : undefined)
+      await onSuccess?.(
+        paymentIntent,
+        creditsAdded !== undefined ? { creditsAdded } : undefined,
+      )
     }
-  }, [stripe, elements, clientSecret, returnUrl, copy, onSuccess, onError, processTopupPayment])
+  }, [
+    stripe,
+    elements,
+    clientSecret,
+    returnUrl,
+    copy,
+    onSuccess,
+    onError,
+    processTopupPayment,
+    requiresBusinessAttach,
+    businessDetailsAttached,
+    runAttach,
+    businessDetails,
+    businessDetailsError,
+  ])
 
-  const effectiveError = error ?? outerError
+  const effectiveError = error ?? outerError ?? businessDetailsError
 
   const ctx = useMemo<TopupFormContextValue>(
     () => ({
@@ -336,14 +502,22 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
-      stripe: (stripe as Stripe | null) ?? null,
-      elements: (elements as StripeElements | null) ?? null,
+      processorPaymentId,
+      stripe,
+      elements,
       isReady,
       isProcessing,
       paymentInputComplete,
       canSubmit,
       error: effectiveError,
       returnUrl,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       setPaymentInputComplete,
       submit,
     }),
@@ -352,6 +526,7 @@ const Inner: React.FC<InnerProps> = ({
       currency,
       state,
       clientSecret,
+      processorPaymentId,
       stripe,
       elements,
       isReady,
@@ -360,6 +535,13 @@ const Inner: React.FC<InnerProps> = ({
       canSubmit,
       effectiveError,
       returnUrl,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       submit,
     ],
   )
@@ -372,6 +554,7 @@ const OfflineInner: React.FC<InnerProps> = ({
   amount,
   currency,
   clientSecret,
+  processorPaymentId,
   returnUrl,
   outerError,
   state,
@@ -379,12 +562,14 @@ const OfflineInner: React.FC<InnerProps> = ({
 }) => {
   const noopSubmit = useCallback(async () => {}, [])
   const noopSet = useCallback(() => {}, [])
+  const noopBusinessSet = useCallback(() => {}, [])
   const ctx = useMemo<TopupFormContextValue>(
     () => ({
       amount,
       currency,
       state,
       clientSecret,
+      processorPaymentId,
       stripe: null,
       elements: null,
       isReady: false,
@@ -393,10 +578,28 @@ const OfflineInner: React.FC<InnerProps> = ({
       canSubmit: false,
       error: outerError,
       returnUrl,
+      businessDetails: defaultBusinessDetails,
+      taxBreakdown: null,
+      businessDetailsAttached: false,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      fieldErrors: {},
+      setBusinessDetails: noopBusinessSet,
       setPaymentInputComplete: noopSet,
       submit: noopSubmit,
     }),
-    [amount, currency, state, clientSecret, outerError, returnUrl, noopSet, noopSubmit],
+    [
+      amount,
+      currency,
+      state,
+      clientSecret,
+      processorPaymentId,
+      outerError,
+      returnUrl,
+      noopSet,
+      noopSubmit,
+      noopBusinessSet,
+    ],
   )
   return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>
 }
@@ -412,20 +615,20 @@ const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
   if (!stripe || !elements) return null
   if (!isReady) {
     return (
-      <div data-solvapay-topup-form-loading="">
+      <output data-solvapay-topup-form-loading="">
         <Spinner size="sm" />
-      </div>
+      </output>
     )
   }
 
   return (
-    <div data-solvapay-topup-form-payment-element="">
+    <section data-solvapay-topup-form-payment-element="">
       <StripePaymentElement
         options={withPaymentElementDefaults(options)}
         onChange={e => setPaymentInputComplete(e.complete)}
         key={locale || 'default'}
       />
-    </div>
+    </section>
   )
 }
 
@@ -479,8 +682,7 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
             )
           : children
       return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={forwardedRef as any} {...(commonProps as Record<string, unknown>)}>
+        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
           {slotChild}
         </Slot>
       )
@@ -496,31 +698,55 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
   },
 )
 
-type SlotProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
+type LoadingSlotProps = React.HTMLAttributes<HTMLOutputElement> & { asChild?: boolean }
+type ErrorSlotProps = React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
 
-const Loading = forwardRef<HTMLDivElement, SlotProps>(function TopupFormLoading(
+const Loading = forwardRef<HTMLOutputElement, LoadingSlotProps>(function TopupFormLoading(
   { asChild, children, ...rest },
   forwardedRef,
 ) {
   const ctx = useTopupCtx('Loading')
   if (ctx.state !== 'loading') return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot
+        ref={forwardedRef as React.Ref<HTMLElement>}
+        data-solvapay-topup-form-loading=""
+        {...rest}
+      >
+        {children ?? <Spinner size="sm" />}
+      </Slot>
+    )
+  }
   return (
-    <Comp ref={forwardedRef} data-solvapay-topup-form-loading="" {...rest}>
+    <output ref={forwardedRef} data-solvapay-topup-form-loading="" {...rest}>
       {children ?? <Spinner size="sm" />}
-    </Comp>
+    </output>
   )
 })
 
-const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function TopupFormError(
+const ErrorSlot = forwardRef<HTMLParagraphElement, ErrorSlotProps>(function TopupFormError(
   { asChild, children, ...rest },
   forwardedRef,
 ) {
   const ctx = useTopupCtx('Error')
   if (!ctx.error) return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot
+        ref={forwardedRef as React.Ref<HTMLElement>}
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-solvapay-topup-form-error=""
+        {...rest}
+      >
+        {children ?? ctx.error}
+      </Slot>
+    )
+  }
   return (
-    <Comp
+    <p
       ref={forwardedRef}
       role="alert"
       aria-live="assertive"
@@ -529,9 +755,32 @@ const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function TopupFormError(
       {...rest}
     >
       {children ?? ctx.error}
-    </Comp>
+    </p>
   )
 })
+
+function useTopupBusinessCtx(part: string) {
+  const ctx = useTopupCtx(part)
+  return {
+    businessDetails: ctx.businessDetails,
+    setBusinessDetails: ctx.setBusinessDetails,
+    fieldErrors: ctx.fieldErrors,
+  }
+}
+
+function useTopupSummaryCtx(part: string) {
+  const ctx = useTopupCtx(part)
+  return {
+    taxBreakdown: ctx.taxBreakdown,
+    businessDetailsAttaching: ctx.businessDetailsAttaching,
+    baseAmountMinor: ctx.amount,
+    currency: ctx.currency ?? 'usd',
+    isBusiness: ctx.businessDetails.isBusiness,
+  }
+}
+
+const BusinessDetails = createBusinessDetailsParts(useTopupBusinessCtx, 'topup-form')
+const Summary = createTaxSummaryParts(useTopupSummaryCtx, 'topup-form')
 
 export const TopupFormRoot = Root
 export const TopupFormPaymentElement = PaymentElementSlot
@@ -539,11 +788,15 @@ export const TopupFormSubmitButton = SubmitButton
 export const TopupFormLoading = Loading
 export const TopupFormError = ErrorSlot
 export const TopupFormLegalFooter = LegalFooter
+export const TopupFormBusinessDetails = BusinessDetails
+export const TopupFormSummary = Summary
 
 export const TopupForm = {
   Root,
   AmountPicker: AmountPickerPrimitive.Root,
   PaymentElement: PaymentElementSlot,
+  BusinessDetails,
+  Summary,
   SubmitButton,
   Loading,
   Error: ErrorSlot,

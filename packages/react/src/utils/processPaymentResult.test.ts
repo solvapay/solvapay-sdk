@@ -54,6 +54,21 @@ describe('reconcilePayment', () => {
     expect(refetch).not.toHaveBeenCalled()
   })
 
+  it('routes a `processing` result to pending with the standard pending copy', async () => {
+    const processPayment = vi.fn().mockResolvedValue({ status: 'processing' })
+    const refetch = vi.fn()
+    const result = await reconcilePayment({
+      paymentIntentId: 'pi',
+      productRef: 'prd',
+      processPayment,
+      refetchPurchase: refetch,
+      copy: enCopy,
+    })
+    expect(result.status).toBe('pending')
+    expect(result.status === 'pending' && result.error.message).toBe(enCopy.errors.paymentPending)
+    expect(refetch).not.toHaveBeenCalled()
+  })
+
   it('routes a `failed` result to error with the standard processing-failed copy', async () => {
     const processPayment = vi.fn().mockResolvedValue({ status: 'failed' })
     const refetch = vi.fn()

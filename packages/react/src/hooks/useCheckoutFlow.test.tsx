@@ -20,6 +20,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCheckoutFlow } from './useCheckoutFlow'
+import { readPaymentIntentClientSecret } from '../primitives/paymentIntentReturn'
 import { PlanSelector, usePlanSelector } from '../primitives/PlanSelector'
 import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
@@ -34,6 +35,14 @@ import type {
 } from '../types'
 
 const productRef = 'prd_test'
+
+vi.mock('../primitives/paymentIntentReturn', async importOriginal => {
+  const actual = await importOriginal<typeof import('../primitives/paymentIntentReturn')>()
+  return {
+    ...actual,
+    readPaymentIntentClientSecret: vi.fn(actual.readPaymentIntentClientSecret),
+  }
+})
 
 const paygPlan: Plan = {
   reference: 'pln_payg',
@@ -179,6 +188,10 @@ function makeWrapper(opts: WrapperOptions = {}): {
 beforeEach(() => {
   plansCache.clear()
   merchantCache.clear()
+  vi.mocked(readPaymentIntentClientSecret).mockImplementation(search => {
+    const value = new URLSearchParams(search).get('payment_intent_client_secret')
+    return value && value.length > 0 ? value : undefined
+  })
 })
 
 afterEach(() => {
@@ -207,6 +220,29 @@ describe('useCheckoutFlow — initial state', () => {
     const { result } = renderHook(() => useCheckoutFlow({ productRef, initialStep: 'amount' }), {
       wrapper: Wrapper,
     })
+    expect(result.current.step).toBe('amount')
+  })
+})
+
+describe('useCheckoutFlow — Stripe return resume', () => {
+  it('starts on the payment step when payment_intent_client_secret is in the URL', async () => {
+    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce('pi_return_secret')
+
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    expect(result.current.step).toBe('payment')
+  })
+
+  it('keeps the configured initialStep when no Stripe return params are present', () => {
+    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce(undefined)
+
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useCheckoutFlow({ productRef, initialStep: 'amount' }),
+      { wrapper: Wrapper },
+    )
     expect(result.current.step).toBe('amount')
   })
 })
@@ -428,6 +464,41 @@ describe('useCheckoutFlow — PAYG branch', () => {
     })
     expect(onPurchaseSuccess).toHaveBeenCalledTimes(1)
     expect(onPurchaseSuccess).toHaveBeenCalledWith(expect.objectContaining({ branch: 'payg' }))
+  })
+
+  it('re-activates the plan on PAYG success so the purchase materializes after top-up (topup-first)', async () => {
+    // Topup-first: the plan-step activate returns `topup_required` (no
+    // purchase). The active PAYG purchase must be created AFTER the top-up
+    // lands — so `activatePlan` is called a second time on success.
+    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
+    const { Wrapper } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    // Plan-step probe.
+    expect(activate).toHaveBeenCalledTimes(1)
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    expect(result.current.step).toBe('success')
+    // Second activation creates the plan purchase now that credits landed.
+    expect(activate).toHaveBeenCalledTimes(2)
+    expect(activate).toHaveBeenLastCalledWith({ productRef, planRef: 'pln_payg' })
   })
 })
 

@@ -16,6 +16,7 @@ import { productCache } from '../hooks/useProduct'
 import { merchantCache } from '../hooks/useMerchant'
 import { MissingProviderError } from '../utils/errors'
 import type { Plan, PurchaseInfo, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 // ---------- Paid-plan success-branch mocks ----------
 //
@@ -38,9 +39,8 @@ vi.mock('@stripe/react-stripe-js', async () => {
   return {
     Elements: ({ children }: { children: React.ReactNode }) =>
       ReactMod.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-    useStripe: () => ({ confirmPayment: vi.fn(), confirmCardPayment: vi.fn() }),
+    useStripe: () => ({ confirmPayment: vi.fn() }),
     useElements: () => ({ getElement: vi.fn(), submit: vi.fn() }),
-    CardElement: () => ReactMod.createElement('div', { 'data-testid': 'card-element' }),
     PaymentElement: ({
       onChange,
       options,
@@ -56,6 +56,16 @@ vi.mock('@stripe/react-stripe-js', async () => {
         onChange?.({ complete: true })
       }, [onChange])
       return ReactMod.createElement('div', { 'data-testid': 'payment-element' })
+    },
+    CardElement: ({
+      onChange,
+    }: {
+      onChange?: (e: { complete: boolean }) => void
+    }) => {
+      ReactMod.useEffect(() => {
+        onChange?.({ complete: true })
+      }, [onChange])
+      return ReactMod.createElement('section', { 'data-testid': 'card-element' })
     },
   }
 })
@@ -73,6 +83,26 @@ vi.mock('../utils/confirmPayment', () => ({
 
 vi.mock('../utils/processPaymentResult', () => ({
   reconcilePayment: vi.fn().mockResolvedValue({ status: 'success' }),
+}))
+
+const attachHookMock = vi.hoisted(() => ({
+  runAttach: vi.fn().mockResolvedValue(true),
+  setBusinessDetails: vi.fn(),
+}))
+
+vi.mock('../hooks/useBusinessDetailsAttach', () => ({
+  defaultBusinessDetails: { isBusiness: false },
+  useBusinessDetailsAttach: vi.fn(() => ({
+    businessDetails: { isBusiness: false },
+    setBusinessDetails: attachHookMock.setBusinessDetails,
+    fieldErrors: {},
+    taxBreakdown: null,
+    businessDetailsAttached: true,
+    businessDetailsAttaching: false,
+    businessDetailsError: null,
+    requiresBusinessAttach: false,
+    runAttach: attachHookMock.runAttach,
+  })),
 }))
 
 const freePlan: Plan = {
@@ -236,7 +266,14 @@ const PaidHarness: React.FC<{
   onSuccess?: (paymentIntent: unknown) => void
   initialPurchases?: PurchaseInfo[]
   children?: React.ReactNode
-}> = ({ onError, onSuccess, initialPurchases = [], children }) => {
+  paymentSlot?: 'payment-element' | 'card-element' | 'none'
+}> = ({
+  onError,
+  onSuccess,
+  initialPurchases = [],
+  children,
+  paymentSlot = 'payment-element',
+}) => {
   const [purchases, setPurchases] = React.useState<PurchaseInfo[]>(initialPurchases)
 
   const upsertPurchase = React.useMemo(
@@ -288,15 +325,7 @@ const PaidHarness: React.FC<{
       cancelRenewal: vi.fn(),
       reactivateRenewal: vi.fn(),
       activatePlan: vi.fn(),
-      balance: {
-        loading: false,
-        credits: null,
-        displayCurrency: null,
-        creditsPerMinorUnit: null,
-        displayExchangeRate: null,
-        refetch: vi.fn(),
-        adjustBalance: vi.fn(),
-      },
+      balance: mockBalanceStatus(),
     }),
     [purchases, refetchPurchase, upsertPurchase],
   )
@@ -309,7 +338,8 @@ const PaidHarness: React.FC<{
         onError={onError}
         onSuccess={onSuccess}
       >
-        <PaymentForm.PaymentElement />
+        {paymentSlot === 'payment-element' && <PaymentForm.PaymentElement />}
+        {paymentSlot === 'card-element' && <PaymentForm.CardElement />}
         {children}
         <PaymentForm.SubmitButton data-testid="submit" />
         <PaymentForm.Error data-testid="err" />
@@ -517,6 +547,59 @@ describe('PaymentForm post-success purchase merge', () => {
   })
 })
 
+describe('PaymentForm CardElement compatibility', () => {
+  const CardPaidHarness: React.FC = () => <PaidHarness paymentSlot="card-element" />
+
+  beforeEach(() => {
+    plansCache.clear()
+    productCache.clear()
+    merchantCache.clear()
+    plansCache.set('prd_paid', {
+      plans: [paidPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    productCache.set('prd_paid', {
+      product: { reference: 'prd_paid', name: 'Widget API' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+    merchantCache.set('/api/merchant', {
+      merchant: { legalName: 'Acme', displayName: 'Acme' },
+      promise: null,
+      timestamp: Date.now(),
+    })
+  })
+
+  it('routes submit through confirmPayment with card-element mode', async () => {
+    const confirmPaymentMock = (await import('../utils/confirmPayment'))
+      .confirmPayment as ReturnType<typeof vi.fn>
+    confirmPaymentMock.mockClear()
+
+    render(<CardPaidHarness />)
+
+    expect(await screen.findByTestId('card-element')).toBeInTheDocument()
+    expect(screen.queryByTestId('payment-element')).not.toBeInTheDocument()
+
+    const button = await screen.findByTestId('submit')
+    await waitFor(() => {
+      expect(button.getAttribute('data-state')).toBe('idle')
+    })
+
+    await act(async () => {
+      fireEvent.click(button)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(confirmPaymentMock).toHaveBeenCalledWith(
+        expect.objectContaining({ mode: 'card-element' }),
+      )
+    })
+  })
+})
+
 // ---------- PaymentElement default options (Stripe Link disabled) ----------
 //
 // Guards the centralized `withPaymentElementDefaults` wire-up inside
@@ -554,15 +637,7 @@ const OptionsHarness: React.FC<{
       cancelRenewal: vi.fn(),
       reactivateRenewal: vi.fn(),
       activatePlan: vi.fn(),
-      balance: {
-        loading: false,
-        credits: null,
-        displayCurrency: null,
-        creditsPerMinorUnit: null,
-        displayExchangeRate: null,
-        refetch: vi.fn(),
-        adjustBalance: vi.fn(),
-      },
+      balance: mockBalanceStatus(),
     }),
     [],
   )

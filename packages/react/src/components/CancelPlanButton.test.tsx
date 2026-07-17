@@ -5,6 +5,7 @@ import { CancelPlanButton } from './CancelPlanButton'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { PurchaseInfo, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 beforeEach(() => {
   vi.stubGlobal('confirm', vi.fn(() => true))
@@ -34,15 +35,7 @@ function buildCtx(
     cancelRenewal: vi.fn(async () => ({ success: true } as never)),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }

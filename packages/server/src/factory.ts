@@ -510,6 +510,20 @@ export interface SolvaPay {
   }): Promise<import('./types/client').ProcessPaymentResult>
 
   /**
+   * Attach business purchase details to a payment intent
+   * and retrieve the computed tax breakdown.
+   */
+  attachBusinessDetails(params: {
+    paymentIntentId: string
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }): Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+
+  /**
    * Check if customer is within usage limits for a product.
    *
    * This method checks purchase status and usage limits without
@@ -942,6 +956,15 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('processPaymentIntent is not available on this API client')
       }
       return apiClient.processPaymentIntent(params)
+    },
+
+    attachBusinessDetails(params) {
+      if (!apiClient.attachBusinessDetails) {
+        throw new SolvaPayError(
+          'attachBusinessDetails is not available on this API client',
+        )
+      }
+      return apiClient.attachBusinessDetails(params)
     },
 
     checkLimits(params) {

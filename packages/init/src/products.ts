@@ -15,20 +15,15 @@ const parseProductSummary = (value: unknown): ProductSummary | null => {
   }
 
   const record = value as Record<string, unknown>
-  if (
-    typeof record.reference !== 'string' ||
-    typeof record.name !== 'string' ||
-    typeof record.status !== 'string' ||
-    typeof record.createdAt !== 'string'
-  ) {
+  if (typeof record.reference !== 'string' || typeof record.name !== 'string') {
     return null
   }
 
   return {
     reference: record.reference,
     name: record.name,
-    status: record.status,
-    createdAt: record.createdAt,
+    status: typeof record.status === 'string' ? record.status : '',
+    createdAt: typeof record.createdAt === 'string' ? record.createdAt : '',
   }
 }
 

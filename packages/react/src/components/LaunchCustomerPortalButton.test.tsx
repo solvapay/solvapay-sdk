@@ -4,6 +4,7 @@ import React from 'react'
 import { LaunchCustomerPortalButton } from './LaunchCustomerPortalButton'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue, SolvaPayConfig } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function buildCtx(overrides: Partial<SolvaPayContextValue> = {}): SolvaPayContextValue {
   return {
@@ -25,15 +26,7 @@ function buildCtx(overrides: Partial<SolvaPayContextValue> = {}): SolvaPayContex
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }

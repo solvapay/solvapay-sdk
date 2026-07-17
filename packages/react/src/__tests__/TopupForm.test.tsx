@@ -5,19 +5,19 @@ import React from 'react'
 import { TopupForm } from '../TopupForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 // Mock Stripe modules
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-  useStripe: () => ({ confirmCardPayment: vi.fn(), confirmPayment: vi.fn() }),
+  useStripe: () => ({ confirmPayment: vi.fn() }),
   useElements: () => ({ getElement: vi.fn() }),
-  CardElement: () => React.createElement('div', { 'data-testid': 'card-element' }),
   PaymentElement: () => React.createElement('div', { 'data-testid': 'payment-element' }),
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmCardPayment: vi.fn() })),
+  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
 }))
 
 function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
@@ -43,15 +43,7 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }

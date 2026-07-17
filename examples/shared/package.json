@@ -11,9 +11,11 @@
     "./next-stub": "./next-stub.ts",
     "./next-route-dispatcher": "./next-route-dispatcher.ts"
   },
+  "peerDependencies": {
+    "next": ">=13.0.0"
+  },
   "devDependencies": {
     "@solvapay/next": "workspace:*",
-    "@solvapay/server": "workspace:*",
-    "next": "^16.2.4"
+    "@solvapay/server": "workspace:*"
   }
 }

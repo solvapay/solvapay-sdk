@@ -5,6 +5,7 @@ import { ProductBadge, PlanBadge } from './ProductBadge'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { PurchaseInfo, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 const activePurchase: PurchaseInfo = {
   reference: 'pur_1',
@@ -35,15 +36,7 @@ function ctxWith(purchases: PurchaseInfo[]): SolvaPayContextValue {
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
   }
 }
 

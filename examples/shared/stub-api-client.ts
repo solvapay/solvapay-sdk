@@ -545,6 +545,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
       processorPaymentId,
       clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
       publishableKey: 'pk_test_stub_demo_key',
+      amount: 2900,
+      currency: 'USD',
     }
   }
 
@@ -682,7 +684,6 @@ export class StubSolvaPayClient implements SolvaPayClient {
       reference: productRef,
       name: 'Demo Product',
       description: 'A stubbed product for local development and example builds.',
-      status: 'active',
       balance: 0,
       totalTransactions: 0,
       isMcpPay: false,
@@ -944,6 +945,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         updatedAt: now,
         freeUnits: this.freeTierLimit,
         limit: this.freeTierLimit,
+        hidden: false,
       },
       {
         type: 'recurring',
@@ -958,6 +960,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         createdAt: now,
         updatedAt: now,
         limit: 0,
+        hidden: false,
       },
     ]
   }
@@ -986,6 +989,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       status: 'active',
       createdAt: now,
       updatedAt: now,
+      hidden: false,
     }
   }
 
@@ -1010,6 +1014,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       status: 'active',
       createdAt: now,
       updatedAt: now,
+      hidden: false,
     }
   }
 

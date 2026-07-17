@@ -8,7 +8,9 @@ import { SolvaPayProvider } from '../SolvaPayProvider'
 import { enCopy } from '../i18n/en'
 import { interpolate } from '../i18n/interpolate'
 import { formatPrice } from '../utils/format'
+import type { Stripe } from '@stripe/stripe-js'
 import type { AutoRechargeConfig } from '@solvapay/server'
+import { makeProviderInitial } from '../test-helpers/makeProviderInitial'
 
 const config: AutoRechargeConfig = {
   enabled: true,
@@ -16,14 +18,24 @@ const config: AutoRechargeConfig = {
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
   status: 'active',
   failureCount: 0,
+  monthlySpendMinor: 0,
 }
 
-const autoRechargeMocks = vi.hoisted(() => ({
-  config: null as AutoRechargeConfig | null,
+const autoRechargeMocks = vi.hoisted((): {
+  config: AutoRechargeConfig | null
+  loading: boolean
+  saving: boolean
+  disabling: boolean
+  error: Error | null
+  save: ReturnType<typeof vi.fn>
+  disable: ReturnType<typeof vi.fn>
+  refresh: ReturnType<typeof vi.fn>
+} => ({
+  config: null,
   loading: false,
   saving: false,
   disabling: false,
-  error: null as Error | null,
+  error: null,
   save: vi.fn(),
   disable: vi.fn(),
   refresh: vi.fn(),
@@ -75,7 +87,12 @@ vi.mock('@stripe/react-stripe-js', () => ({
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({})),
+  loadStripe: vi.fn(() =>
+    Promise.resolve({
+      confirmSetup: stripeMocks.confirmSetup,
+      retrieveSetupIntent: stripeMocks.retrieveSetupIntent,
+    } satisfies Pick<Stripe, 'confirmSetup' | 'retrieveSetupIntent'>),
+  ),
 }))
 
 function renderAutoRecharge(
@@ -103,7 +120,7 @@ function renderModalAutoRecharge(
   props: Partial<React.ComponentProps<typeof AutoRecharge.Root>> = {},
 ) {
   return render(
-    <SolvaPayProvider config={{ initial: { customerRef: 'cus_test' } }}>
+    <SolvaPayProvider config={{ initial: makeProviderInitial() }}>
       <AutoRecharge.Root currency="USD" {...props}>
         <AutoRecharge.Card>
           <AutoRecharge.CardSummary />
@@ -138,6 +155,7 @@ function enableAutoRecharge(): void {
 }
 
 beforeEach(() => {
+  vi.useRealTimers()
   autoRechargeMocks.config = null
   autoRechargeMocks.loading = false
   autoRechargeMocks.saving = false
@@ -164,7 +182,7 @@ describe('AutoRecharge primitive', () => {
     const toggle = screen.getByLabelText('Enable auto-recharge')
     expect(toggle).toBeInTheDocument()
     expect(toggle).not.toBeChecked()
-    expect(screen.getByText(/recommended for production/i)).toBeInTheDocument()
+    expect(screen.getByText(/when your balance runs low/i)).toBeInTheDocument()
   })
 
   it('shows threshold and amount controls when enabled', () => {
@@ -181,6 +199,12 @@ describe('AutoRecharge primitive', () => {
     expect(
       screen.getByText(/When my balance falls below .* add .*./),
     ).toBeInTheDocument()
+  })
+
+  it('shows plus applicable tax disclosure when auto-recharge is enabled', () => {
+    renderAutoRecharge({ currency: 'SEK' })
+    enableAutoRecharge()
+    expect(screen.getByText(enCopy.autoRecharge.taxDisclosure)).toBeInTheDocument()
   })
 
   it('rejects invalid values inline before save', async () => {
@@ -389,6 +413,77 @@ describe('AutoRecharge primitive', () => {
       </SolvaPayProvider>,
     )
     expect(screen.queryByText('Pending card authorization')).not.toBeInTheDocument()
+  })
+
+  it('shows max monthly spend field when auto-recharge is enabled', () => {
+    renderAutoRecharge()
+    enableAutoRecharge()
+    expect(screen.getByLabelText('Maximum monthly spend')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('No limit')).toBeInTheDocument()
+    expect(
+      screen.getByText('Leave blank to allow unlimited auto-reloaded credits per month.'),
+    ).toBeInTheDocument()
+  })
+
+  it('saves maxMonthlySpendMajor when the cap is set', async () => {
+    autoRechargeMocks.save.mockResolvedValue({ config })
+    renderAutoRecharge()
+    enableAutoRecharge()
+    fireEvent.change(screen.getByLabelText('Maximum monthly spend'), {
+      target: { value: '100' },
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
+      expect.objectContaining({ maxMonthlySpendMajor: 100 }),
+    )
+  })
+
+  it('shows monthly spend limit reached status when cap would be exceeded', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-07-15T12:00:00Z'))
+      autoRechargeMocks.config = {
+        ...config,
+        maxMonthlySpendMinor: 10_000,
+        monthlySpendMinor: 9500,
+        monthlySpendPeriod: '2026-07',
+      }
+      render(
+        <SolvaPayProvider config={{}}>
+          <AutoRecharge.Root currency="USD">
+            <AutoRecharge.Status />
+          </AutoRecharge.Root>
+        </SolvaPayProvider>,
+      )
+      expect(screen.getByText('Monthly spend limit reached')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows monthly spend line when config has a cap', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-07-15T12:00:00Z'))
+      autoRechargeMocks.config = {
+        ...config,
+        maxMonthlySpendMinor: 10_000,
+        monthlySpendMinor: 4500,
+        monthlySpendPeriod: '2026-07',
+      }
+      render(
+        <SolvaPayProvider config={{}}>
+          <AutoRecharge.Root currency="USD">
+            <AutoRecharge.MonthlySpend />
+          </AutoRecharge.Root>
+        </SolvaPayProvider>,
+      )
+      expect(screen.getByText('$45 / $100 this month')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

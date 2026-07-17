@@ -3,12 +3,16 @@
   "compilerOptions": {
     "composite": false,
     "noEmit": true,
-    "rootDir": "..",
+    "rootDir": "../..",
     "baseUrl": "..",
     "paths": {
       "@solvapay/react/primitives": ["src/primitives/index.ts"]
     }
   },
-  "include": ["types-surface.test-d.ts", "../src"],
+  "include": [
+    "types-surface.test-d.ts",
+    "../src",
+    "../../test-utils/src/describeClientAuthAdapterContract.ts"
+  ],
   "references": []
 }

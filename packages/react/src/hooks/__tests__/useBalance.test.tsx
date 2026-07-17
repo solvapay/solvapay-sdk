@@ -4,6 +4,7 @@ import React from 'react'
 import { useBalance } from '../useBalance'
 import { SolvaPayContext } from '../../SolvaPayProvider'
 import type { SolvaPayContextValue, BalanceStatus } from '../../types'
+import { mockBalanceStatus } from '../../test-helpers/mockBalanceStatus'
 
 function createMockContext(
   balanceOverrides?: Partial<BalanceStatus>,
@@ -27,16 +28,10 @@ function createMockContext(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
+    balance: mockBalanceStatus({
       credits: 250000,
-      displayCurrency: 'USD',
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
       ...balanceOverrides,
-    },
+    }),
   }
 }
 

@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { usePurchase } from '../usePurchase'
 import * as useSolvaPayModule from '../useSolvaPay'
 import type { PurchaseStatus, PurchaseInfo, SolvaPayContextValue } from '../../types'
+import { mockBalanceStatus } from '../../test-helpers/mockBalanceStatus'
 
 // Helper function to create a test purchase
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
@@ -45,15 +46,7 @@ const createMockContextValue = (
   reactivateRenewal: vi.fn(),
   activatePlan: vi.fn(),
   customerRef: 'test_customer_ref',
-    balance: {
-    loading: false,
-    credits: null,
-    displayCurrency: null,
-    creditsPerMinorUnit: null,
-    displayExchangeRate: null,
-    refetch: vi.fn(),
-    adjustBalance: vi.fn(),
-  },
+  balance: mockBalanceStatus(),
 })
 
 // Mock useSolvaPay
