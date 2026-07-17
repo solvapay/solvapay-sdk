@@ -8,6 +8,7 @@
  * counter without reinventing the math client-side.
  */
 
+import { resolveCheckLimitsParams } from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { LimitResponseWithPlan } from '../types/client'
 import type { ErrorResult } from './types'
@@ -39,15 +40,16 @@ export async function checkLimitsCore(
 ): Promise<LimitResponseWithPlan | ErrorResult> {
   try {
     const url = new URL(request.url)
-    const productRef = url.searchParams.get('productRef')
-    const meterName = url.searchParams.get('meterName') || 'requests'
+    const resolved = resolveCheckLimitsParams(
+      url.searchParams.get('productRef'),
+      url.searchParams.get('meterName'),
+    )
 
-    if (!productRef) {
-      return {
-        error: 'Missing required parameter: productRef',
-        status: 400,
-      }
+    if ('error' in resolved) {
+      return resolved
     }
+
+    const { productRef, meterName } = resolved
 
     const userResult = await getAuthenticatedUserCore(request)
 

@@ -18,12 +18,18 @@ vi.mock('./error', () => ({
   })),
 }))
 
+vi.mock('./purchase', () => ({
+  checkPurchaseCore: vi.fn(),
+}))
+
 import { createSolvaPay } from '../factory'
 import { getAuthenticatedUserCore } from './auth'
-import { trackUsageCore } from './usage'
+import { checkPurchaseCore } from './purchase'
+import { getUsageCore, trackUsageCore } from './usage'
 
 const mockGetAuth = vi.mocked(getAuthenticatedUserCore)
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
+const mockCheckPurchase = vi.mocked(checkPurchaseCore)
 
 function fakeRequest() {
   return new Request('http://localhost/api/track-usage', {
@@ -31,6 +37,122 @@ function fakeRequest() {
     headers: { 'Content-Type': 'application/json' },
   })
 }
+
+describe('getUsageCore', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('propagates checkPurchaseCore errors verbatim', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      error: 'Unauthorized',
+      status: 401,
+      details: 'No token provided',
+    })
+
+    const result = await getUsageCore(fakeRequest())
+
+    expect(result).toEqual({
+      error: 'Unauthorized',
+      status: 401,
+      details: 'No token provided',
+    })
+  })
+
+  it('returns an empty snapshot when no active purchase exists', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      customerRef: 'cus_ABC',
+      purchases: [{ reference: 'pur_1', status: 'cancelled' }],
+    })
+
+    const result = await getUsageCore(fakeRequest())
+
+    expect(result).toEqual({
+      meterRef: null,
+      total: null,
+      used: 0,
+      remaining: null,
+      percentUsed: null,
+    })
+  })
+
+  it('projects usage from the active purchase planSnapshot', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      customerRef: 'cus_ABC',
+      purchases: [
+        {
+          reference: 'pur_1',
+          status: 'active',
+          planSnapshot: { meterRef: 'mtr_requests', limit: 100 },
+          usage: {
+            used: 25,
+            periodStart: '2026-07-01T00:00:00Z',
+            periodEnd: '2026-08-01T00:00:00Z',
+          },
+        },
+      ],
+    })
+
+    const result = await getUsageCore(fakeRequest())
+
+    expect(result).toEqual({
+      meterRef: 'mtr_requests',
+      total: 100,
+      used: 25,
+      remaining: 75,
+      percentUsed: 25,
+      periodStart: '2026-07-01T00:00:00Z',
+      periodEnd: '2026-08-01T00:00:00Z',
+      purchaseRef: 'pur_1',
+    })
+  })
+
+  it('falls back to meterId when meterRef is absent', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      customerRef: 'cus_ABC',
+      purchases: [
+        {
+          reference: 'pur_1',
+          status: 'active',
+          planSnapshot: { meterId: 'mtr_legacy', limit: 10 },
+          usage: { used: 2 },
+        },
+      ],
+    })
+
+    const result = await getUsageCore(fakeRequest())
+
+    expect(result).toMatchObject({
+      meterRef: 'mtr_legacy',
+      total: 10,
+      used: 2,
+      remaining: 8,
+      percentUsed: 20,
+      purchaseRef: 'pur_1',
+    })
+  })
+
+  it('clamps remaining and percentUsed when usage exceeds the limit', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      customerRef: 'cus_ABC',
+      purchases: [
+        {
+          reference: 'pur_1',
+          status: 'active',
+          planSnapshot: { meterRef: 'mtr_requests', limit: 10 },
+          usage: { used: 50 },
+        },
+      ],
+    })
+
+    const result = await getUsageCore(fakeRequest())
+
+    expect(result).toMatchObject({
+      remaining: 0,
+      percentUsed: 100,
+    })
+  })
+})
 
 describe('trackUsageCore', () => {
   const mockTrackUsage = vi.fn()

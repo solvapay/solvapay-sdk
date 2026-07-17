@@ -31,21 +31,28 @@ import {
   classifyCancelError,
   classifyReactivateError,
   isCachedCustomerRefValid,
+  isErrorResult,
+  mapRouteError,
   normalizeCancelResponse,
   normalizeReactivateResponse,
   projectPaymentIntentResult,
   projectTopupProcessOutcome,
   resolvePurchaseCustomerRef,
   resolveReturnUrl,
+  projectUsageSnapshot,
+  resolveCheckLimitsParams,
   selectActivePurchases,
   validateActivatePlanParams,
   validateAttachBusinessDetailsParams,
   validateBusinessDetails,
   validateCheckoutSessionParams,
   validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
   validateProcessPaymentIntentParams,
   validatePurchaseRef,
   validateTopupPaymentIntentParams,
+  type UsageSnapshotPurchase,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
   type BusinessDetailsInput,
   type SupportedBusinessCountry,
@@ -1545,6 +1552,102 @@ export function createDefaultRegistry(): FixtureRegistry {
         throw new Error('classifyReactivateError args.message must be a string')
       }
       return classifyReactivateError(args.message)
+    },
+  })
+
+  registry.register('projectUsageSnapshot', {
+    id: 'core',
+    invoke: args => {
+      const purchase = args.activePurchase
+      if (
+        purchase !== null &&
+        purchase !== undefined &&
+        (typeof purchase !== 'object' || Array.isArray(purchase))
+      ) {
+        throw new Error(
+          'projectUsageSnapshot args.activePurchase must be an object, null, or omitted',
+        )
+      }
+      return projectUsageSnapshot(purchase as UsageSnapshotPurchase | null | undefined)
+    },
+  })
+
+  registry.register('resolveCheckLimitsParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.productRef) || !isNullableString(args.meterName)) {
+        throw new Error(
+          'resolveCheckLimitsParams args.productRef/meterName must be string, null, or omitted',
+        )
+      }
+      return resolveCheckLimitsParams(args.productRef, args.meterName)
+    },
+  })
+
+  registry.register('validateListPlansParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.productRef)) {
+        throw new Error(
+          'validateListPlansParams args.productRef must be string, null, or omitted',
+        )
+      }
+      return validateListPlansParams(args.productRef)
+    },
+  })
+
+  registry.register('mapRouteError', {
+    id: 'core',
+    invoke: args => {
+      if (
+        args.kind !== 'solvapay' &&
+        args.kind !== 'error' &&
+        args.kind !== 'unknown'
+      ) {
+        throw new Error(
+          "mapRouteError args.kind must be 'solvapay' | 'error' | 'unknown'",
+        )
+      }
+      if (!isNullableString(args.message) || !isNullableString(args.defaultMessage)) {
+        throw new Error(
+          'mapRouteError args.message/defaultMessage must be string, null, or omitted',
+        )
+      }
+      if (typeof args.operationName !== 'string') {
+        throw new Error('mapRouteError args.operationName must be a string')
+      }
+      let status: number | null | undefined
+      if (args.status === undefined || args.status === null) {
+        status = args.status
+      } else if (typeof args.status === 'number') {
+        status = args.status
+      } else {
+        throw new Error('mapRouteError args.status must be a number, null, or omitted')
+      }
+      return mapRouteError({
+        kind: args.kind,
+        message: args.message ?? null,
+        status,
+        operationName: args.operationName,
+        defaultMessage: args.defaultMessage,
+      })
+    },
+  })
+
+  registry.register('isErrorResult', {
+    id: 'core',
+    invoke: args => isErrorResult(args.result),
+  })
+
+  registry.register('validateGetProductParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.productRef)) {
+        throw new Error(
+          'validateGetProductParams args.productRef must be string, null, or omitted',
+        )
+      }
+      return validateGetProductParams(args.productRef)
     },
   })
 

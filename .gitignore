@@ -42,5 +42,7 @@ scripts/.tmp/
 # Shadow-mode live/selftest report output (step 25)
 contract/shadow/output/
 
-# Rust
+# Rust / Cargo build artifacts
 rust/target/
+**/*.rs.bk
+*.pdb

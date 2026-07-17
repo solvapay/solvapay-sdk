@@ -1,17 +1,20 @@
-//! Step 26/27/29 helper-core fixture bindings.
+//! Step 26/27/29/30/31 helper-core fixture bindings.
 
 use serde_json::Value;
 use solvapay_core::{
     attach_business_details_validation_error, build_create_customer_params, classify_cancel_error,
     classify_create_error, classify_customer_ref, classify_lookup_error, classify_reactivate_error,
     coerce_customer_options, extract_backend_customer_ref, is_cached_customer_ref_valid,
-    is_email_conflict, normalize_cancel_response, normalize_reactivate_response,
-    project_payment_intent_result, project_topup_process_outcome, resolve_authenticated_user,
+    is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
+    normalize_reactivate_response, project_payment_intent_result, project_topup_process_outcome,
+    project_usage_snapshot, resolve_authenticated_user, resolve_check_limits_params,
     resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
     validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, AuthResolutionInput, PaymentIntentSource,
+    RouteErrorInput, RouteErrorKind,
 };
 
 use super::webhook::parse_iso8601_utc_to_unix_secs;
@@ -348,6 +351,80 @@ pub fn invoke_classify_reactivate_error(input: &FixtureInput) -> Result<Value, B
         .map_err(|e| BindingError::Harness(e.to_string()))
 }
 
+/// Binding for `projectUsageSnapshot`.
+pub fn invoke_project_usage_snapshot(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_object(input);
+    let purchase = match args.get("activePurchase") {
+        None | Some(Value::Null) => None,
+        Some(v) => Some(v),
+    };
+    serde_json::to_value(project_usage_snapshot(purchase))
+        .map_err(|e| BindingError::Harness(e.to_string()))
+}
+
+/// Binding for `resolveCheckLimitsParams`.
+pub fn invoke_resolve_check_limits_params(input: &FixtureInput) -> Result<Value, BindingError> {
+    let product_ref = optional_string_arg(input, "productRef")?;
+    let meter_name = optional_string_arg(input, "meterName")?;
+    match resolve_check_limits_params(product_ref.as_deref(), meter_name.as_deref()) {
+        Ok(params) => {
+            serde_json::to_value(params).map_err(|e| BindingError::Harness(e.to_string()))
+        }
+        Err(err) => serde_json::to_value(err).map_err(|e| BindingError::Harness(e.to_string())),
+    }
+}
+
+/// Binding for `validateListPlansParams`.
+pub fn invoke_validate_list_plans_params(input: &FixtureInput) -> Result<Value, BindingError> {
+    let product_ref = optional_string_arg(input, "productRef")?;
+    match validate_list_plans_params(product_ref.as_deref()) {
+        None => Ok(Value::Null),
+        Some(err) => serde_json::to_value(err).map_err(|e| BindingError::Harness(e.to_string())),
+    }
+}
+
+/// Binding for `mapRouteError`.
+pub fn invoke_map_route_error(input: &FixtureInput) -> Result<Value, BindingError> {
+    let kind = match require_string_arg(input, "kind")?.as_str() {
+        "solvapay" => RouteErrorKind::SolvaPay,
+        "error" => RouteErrorKind::Error,
+        "unknown" => RouteErrorKind::Unknown,
+        other => {
+            return Err(BindingError::Harness(format!(
+                "args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}"
+            )))
+        }
+    };
+    let message = optional_string_arg(input, "message")?;
+    let default_message = optional_string_arg(input, "defaultMessage")?;
+    let operation_name = require_string_arg(input, "operationName")?;
+    let status = optional_u16_arg(input, "status")?;
+    let result = map_route_error(&RouteErrorInput {
+        kind,
+        message,
+        status,
+        operation_name,
+        default_message,
+    });
+    serde_json::to_value(result).map_err(|e| BindingError::Harness(e.to_string()))
+}
+
+/// Binding for `isErrorResult`.
+pub fn invoke_is_error_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_object(input);
+    let value = args.get("result").cloned().unwrap_or(Value::Null);
+    Ok(Value::Bool(is_error_result(&value)))
+}
+
+/// Binding for `validateGetProductParams`.
+pub fn invoke_validate_get_product_params(input: &FixtureInput) -> Result<Value, BindingError> {
+    let product_ref = optional_string_arg(input, "productRef")?;
+    match validate_get_product_params(product_ref.as_deref()) {
+        None => Ok(Value::Null),
+        Some(err) => serde_json::to_value(err).map_err(|e| BindingError::Harness(e.to_string())),
+    }
+}
+
 /// Reads an optional string arg (`null`/absent → `None`).
 fn optional_string_arg(input: &FixtureInput, key: &str) -> Result<Option<String>, BindingError> {
     match input.args.get(key) {
@@ -379,6 +456,21 @@ fn optional_f64_arg(input: &FixtureInput, key: &str) -> Result<Option<f64>, Bind
             .as_f64()
             .map(Some)
             .ok_or_else(|| BindingError::Harness(format!("args.{key} must be a finite number"))),
+        Some(_) => Err(BindingError::Harness(format!(
+            "args.{key} must be a number or null"
+        ))),
+    }
+}
+
+/// Reads an optional u16 arg (`null`/absent → `None`).
+fn optional_u16_arg(input: &FixtureInput, key: &str) -> Result<Option<u16>, BindingError> {
+    match input.args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|v| u16::try_from(v).ok())
+            .map(Some)
+            .ok_or_else(|| BindingError::Harness(format!("args.{key} must be a u16"))),
         Some(_) => Err(BindingError::Harness(format!(
             "args.{key} must be a number or null"
         ))),

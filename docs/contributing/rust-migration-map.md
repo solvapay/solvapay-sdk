@@ -7,7 +7,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-07-17):** Steps 1–29 **Done** (Phases 0–3 closed; Phase 4 in progress). **Next:** step 30 (helpers: usage / limits / plans).
+**Current progress (2026-07-17):** Steps 1–31 **Done** (Phases 0–4 closed). **Next:** step 32 (paywall decision core).
 
 ## Status legend
 
@@ -51,8 +51,8 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 27 | Helpers: payment / payment-method / checkout | Phase 4 | Done | — | `helper-payment` (22) + `helper-checkout` (8) green in TS harness + Rust `fixture-runner` (`executed=286 passed=286 failed=0`; was 256); RED stubs → `failed=17`; payment/checkout characterization + core unit tests green; payment-method nil decision core (orchestration-only); step-8 gates + §15 note 19 | [Phase 4](#phase-4--route-helper-cores) |
 | 28 | Helpers: auto-recharge / balance-poll | Phase 4 | Done | — | `helper-balance-poll` (14) green in TS harness + Rust `fixture-runner` (`executed=300 passed=300 failed=0`; was 286); RED stubs → unit `failed=3` + fixture `failed=12`; auto-recharge characterization + core unit tests green; auto-recharge nil decision core; step-8 gates + §15 note 20 | [Phase 4](#phase-4--route-helper-cores) |
 | 29 | Helpers: purchase / renewal | Phase 4 | Done | — | `helper-purchase` (10) + `helper-renewal` (24) green in TS harness + Rust `fixture-runner` (`executed=334 passed=334 failed=0`; was 300); RED stubs → unit `failed=23`; purchase/renewal characterization + core unit tests green; step-8 gates + §15 note 21 | [Phase 4](#phase-4--route-helper-cores) |
-| 30 | Helpers: usage / limits / plans | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
-| 31 | Helpers: merchant / product / error | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
+| 30 | Helpers: usage / limits / plans | Phase 4 | Done | — | `helper-usage` (12) + `helper-limits` (5) + `helper-plans` (3) green in TS harness + Rust `fixture-runner` (`executed=354 passed=354 failed=0`; was 334); RED stubs → unit `failed=11` + fixture `failed=15`; usage/limits/plans characterization + core unit tests green; step-8 gates + §15 note 22 | [Phase 4](#phase-4--route-helper-cores) |
+| 31 | Helpers: merchant / product / error | Phase 4 | Done | — | `helper-error` (10) + `helper-product` (3) green in TS harness + Rust `fixture-runner` (`executed=367 passed=367 failed=0`; was 354); RED stubs → unit `failed=8` + fixture `failed=8`; merchant/product/error characterization + core unit tests green; step-8 gates + §15 note 23 | [Phase 4](#phase-4--route-helper-cores) |
 | 32 | Paywall decision core | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
 | 33 | Client payload shapes | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
 | 34 | MCP payload builders | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
@@ -277,12 +277,14 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Decisions to document:** Steps 19–25 decision bullets; CLI invoker instead of binding for Phase 3; new §13 gate for hosted contract-test env. Deviations: none vs redesign intent. Deferred: live CI shadow until hosted env.
 - **Pointers:** redesign §4.1, §10.3–10.4, §11.4, §15 notes 13–17; `scripts/shadow/`, `rust/tools/shadow-invoker/`.
 
-### Phase 4 — Route helper cores — In progress
+### Phase 4 — Route helper cores — Done
 
 - **Step 26 (Helpers: customer / auth / activation):** `solvapay-core::{auth_resolution, customer_sync, activation, helper_error, hmac_util}`; TS pure extracts in `@solvapay/core` (`customer-sync`, `activation`) rewired into `paywall.ensureCustomer` / helpers; golden fixtures under `contract/fixtures/helper-*`; fixture-runner bindings. Auth TS runtime stays on `getAuthenticatedUserCore` (fixtures synthesize `Request` + env patch). RED: wrong-default auth stub → `failed=24`; GREEN: full corpus `executed=256 passed=256 failed=0`. §15 note 18.
 - **Step 27 (Helpers: payment / payment-method / checkout):** `solvapay-core::{payment, checkout}`; TS pure extracts in `@solvapay/core` (`payment`, `checkout`) rewired into server shims; golden fixtures `helper-payment` (22) + `helper-checkout` (8); fixture-runner bindings. Characterization suites added for previously untested `checkout.ts` / `payment-method.ts`. RED: wrong-default stubs → unit `failed=11` + fixture `failed=17`; GREEN: `executed=286 passed=286 failed=0`. §15 note 19.
 - **Step 28 (Helpers: auto-recharge / balance-poll):** `solvapay-core::balance_poll` (tables + `BalancePollPolicy` + `evaluate_balance_observation`); no TS extract — fixtures bind `@solvapay/server` `pollBalanceUntilIncreased` directly (withRetry precedent); golden fixtures `helper-balance-poll` (14); fixture-runner host adapter. Auto-recharge nil decision core; characterization suite extended. RED: wrong empty tables + evaluate `None` → unit `failed=3` + fixture `failed=12`; GREEN: `executed=300 passed=300 failed=0`. §15 note 20.
 - **Step 29 (Helpers: purchase / renewal):** `solvapay-core::{purchase, renewal}`; TS pure extracts in `@solvapay/core` (`purchase`, `renewal`) rewired into server shims; golden fixtures `helper-purchase` (10) + `helper-renewal` (24); fixture-runner bindings. Characterization suite added for previously untested `renewal.ts`. RED: wrong-default stubs → unit `failed=23`; GREEN: `executed=334 passed=334 failed=0`. §15 note 21.
+- **Step 30 (Helpers: usage / limits / plans):** `solvapay-core::{usage, limits, plans}` + shared `serde_util::serialize_whole_f64`; TS pure extracts in `@solvapay/core` (`usage`, `limits`, `plans`) rewired into server shims; golden fixtures `helper-usage` (12) + `helper-limits` (5) + `helper-plans` (3); fixture-runner bindings. Characterization suites added/extended for `limits.ts` / `plans.ts` / `getUsageCore`. RED: wrong-default stubs → unit `failed=11` + fixture `failed=15`; GREEN: `executed=354 passed=354 failed=0`. §15 note 22.
+- **Step 31 (Helpers: merchant / product / error):** `solvapay-core::{route_error, product}`; TS pure extracts in `@solvapay/core` (`error`, `product`) rewired into server shims; golden fixtures `helper-error` (10) + `helper-product` (3); fixture-runner bindings. Merchant nil decision core; characterization suites added/extended for `merchant.ts` / `product.ts` / `error.ts`. RED: wrong-default stubs → unit `failed=8` + fixture `failed=8`; GREEN: `executed=367 passed=367 failed=0`. §15 note 23.
 
 #### Step 26 decisions for future handoffs
 
@@ -319,11 +321,29 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Characterization suite:** redesign assumed existing `*.test.ts` — only `purchase.test.ts` existed; added `renewal.test.ts` (24 cases, fake timers for 500ms settle) before shim refactor (pass unmodified after rewire).
 - **Host stays:** auth, `x-solvapay-customer-ref` header, `ensureCustomer`/`getCustomer`, 500ms settle delay, `instanceof SolvaPayError`, `handleRouteError`, method-unavailable guards.
 
-**Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+#### Step 30 decisions for future handoffs
+
+- **Fixture counts:** `helper-usage` 12 + `helper-limits` 5 + `helper-plans` 3 (= +20 bound cases). Full corpus `executed` 334→354; `failed=0`.
+- **Extract vs nil-core split:** `projectUsageSnapshot` is the real usage core; `trackUsageCore` stays TS-only (auth → ensureCustomer → trackUsage orchestration). Limits/plans extract only query validation; auth/HTTP/config/capability guards stay host.
+- **Frozen `productRef` message:** limits/plans use `'Missing required parameter: productRef'` (no `is required` suffix) — do **not** reuse `validateCheckoutSessionParams`.
+- **percentUsed gotchas:** `Math.round((used/total)*10000)/100` with `Math.min(100, …)` / `Math.max(0, remaining)`; `total === 0` → `percentUsed: null` and `remaining: 0`. Whole-valued numerics must emit JSON integers via shared `serde_util::serialize_whole_f64` (step-23/28 precedent). Inputs are non-negative so `f64::round` agrees with JS half-up; one half-up unit case locked (`1/20000` → `0.01`).
+- **Characterization gap filled:** redesign assumed existing `*.test.ts` — only `usage.test.ts` (trackUsage) existed; added `limits.test.ts` + `plans.test.ts` and extended `usage.test.ts` for `getUsageCore` before shim refactor (pass unmodified after rewire).
+- **Host stays:** auth, `ensureCustomer`, `apiClient.checkLimits` / `listPlans`, config-missing / method-unavailable guards, `plans ?? []` fallback.
+
+#### Step 31 decisions for future handoffs
+
+- **Fixture counts:** `helper-error` 10 + `helper-product` 3 (= +13 bound cases). Full corpus `executed` 354→367; `failed=0`.
+- **Extract vs nil-core split:** `mapRouteError` / `isErrorResult` are the real error cores; `validateGetProductParams` is the only product extract. `merchant.ts` stays TS-only (config → capability guard → client-call orchestration, same class as payment-method / auto-recharge).
+- **Host narrowing:** `handleRouteError` keeps `console.error` + `instanceof SolvaPayError` / `instanceof Error` → `RouteErrorKind`; pure `mapRouteError` maps kind/message/status only.
+- **`details` always present on map paths:** reuse `HelperErrorResult::with_details`; product 400 uses `without_details` (skip-absent parity with activation/plans).
+- **Frozen `productRef` message:** same string as limits/plans (`'Missing required parameter: productRef'`) — separate validator (do not reuse checkout).
+- **Characterization gap filled:** redesign assumed existing `*.test.ts` — only `error.test.ts` (3 cases) existed; extended it and added `merchant.test.ts` + `product.test.ts` before/after shim refactor (pass unmodified after rewire).
+
+**Phase-close handoff:**
+- **What was done:** Decision/normalization cores for all Phase 4 route helpers (steps 26–31) live in `solvapay-core` + `@solvapay/core` pure extracts; TS shims keep Request/auth/HTTP/console; golden fixtures + characterization suites green; full bound corpus `executed=367 failed=0`.
+- **Why:** Phase 4 closes helper cores before Phase 5 paywall/MCP and Phase 6 napi cutover; host shims stay thin until bindings replace them.
+- **Decisions to document:** Steps 26–31 decision bullets; nil-core helpers (payment-method, auto-recharge, merchant, trackUsage) stay TS-only; shared `HelperErrorResult` skip-absent. Deviations: none vs redesign intent. Deferred: napi cutover (step 37) for literal "tests pass against the binding".
+- **Pointers:** redesign §9 steps 26–31, §15 notes 18–23; `contract/fixtures/helper-*`; `solvapay-core::{auth_resolution, customer_sync, activation, payment, checkout, balance_poll, purchase, renewal, usage, limits, plans, route_error, product}`.
 
 ### Phase 5 — Paywall decision engine and MCP contracts — Not started
 

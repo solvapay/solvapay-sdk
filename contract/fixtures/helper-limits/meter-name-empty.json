@@ -1,0 +1,17 @@
+{
+  "suite": "helper-limits",
+  "case": "meter-name-empty",
+  "input": {
+    "fn": "resolveCheckLimitsParams",
+    "args": {
+      "productRef": "prd_1",
+      "meterName": ""
+    }
+  },
+  "expect": {
+    "result": {
+      "productRef": "prd_1",
+      "meterName": "requests"
+    }
+  }
+}

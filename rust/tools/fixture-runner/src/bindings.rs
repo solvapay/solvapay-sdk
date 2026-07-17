@@ -444,6 +444,48 @@ pub fn create_default_registry() -> BindingRegistry {
             invoke: Box::new(helpers::invoke_classify_reactivate_error),
         },
     );
+    registry.register(
+        "projectUsageSnapshot",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_project_usage_snapshot),
+        },
+    );
+    registry.register(
+        "resolveCheckLimitsParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_resolve_check_limits_params),
+        },
+    );
+    registry.register(
+        "validateListPlansParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_list_plans_params),
+        },
+    );
+    registry.register(
+        "mapRouteError",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_map_route_error),
+        },
+    );
+    registry.register(
+        "isErrorResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_is_error_result),
+        },
+    );
+    registry.register(
+        "validateGetProductParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_get_product_params),
+        },
+    );
 
     registry
 }

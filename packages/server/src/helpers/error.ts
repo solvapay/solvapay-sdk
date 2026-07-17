@@ -1,18 +1,20 @@
 /**
  * Error Handling Helper
  *
- * Generic error handling utilities for route helpers
+ * Generic error handling utilities for route helpers.
+ * Decision core lives in `@solvapay/core` (`mapRouteError` / `isErrorResult`);
+ * this shim owns `console.error` and `instanceof` narrowing.
  */
 
-import { SolvaPayError } from '@solvapay/core'
-import type { ErrorResult } from './types'
+import {
+  SolvaPayError,
+  isErrorResult,
+  mapRouteError,
+  type RouteErrorResult,
+} from '@solvapay/core'
 
-/**
- * Check if a result is an error result
- */
-export function isErrorResult(result: unknown): result is ErrorResult {
-  return typeof result === 'object' && result !== null && 'error' in result && 'status' in result
-}
+export type { RouteErrorResult }
+export { isErrorResult }
 
 /**
  * Handle route errors and convert to ErrorResult
@@ -21,7 +23,7 @@ export function handleRouteError(
   error: unknown,
   operationName: string,
   defaultMessage?: string,
-): ErrorResult {
+): RouteErrorResult {
   console.error(`[${operationName}] Error:`, error)
 
   // Handle SolvaPay errors. `SolvaPayError.status` carries the
@@ -30,20 +32,28 @@ export function handleRouteError(
   // other client-side throws have no status — those collapse to 500
   // as before.
   if (error instanceof SolvaPayError) {
-    const errorMessage = error.message
-    return {
-      error: errorMessage,
-      status: error.status ?? 500,
-      details: errorMessage,
-    }
+    return mapRouteError({
+      kind: 'solvapay',
+      message: error.message,
+      status: error.status ?? null,
+      operationName,
+      defaultMessage,
+    })
   }
 
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-  const message = defaultMessage || `${operationName} failed`
-
-  return {
-    error: message,
-    status: 500,
-    details: errorMessage,
+  if (error instanceof Error) {
+    return mapRouteError({
+      kind: 'error',
+      message: error.message,
+      operationName,
+      defaultMessage,
+    })
   }
+
+  return mapRouteError({
+    kind: 'unknown',
+    message: null,
+    operationName,
+    defaultMessage,
+  })
 }

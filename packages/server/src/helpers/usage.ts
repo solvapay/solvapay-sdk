@@ -1,3 +1,4 @@
+import { projectUsageSnapshot } from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { TrackUsageResponse } from '../types'
 import type { ErrorResult } from './types'
@@ -41,40 +42,7 @@ export async function getUsageCore(
   if (isErrorResult(purchaseResult)) return purchaseResult
 
   const activePurchase = (purchaseResult.purchases ?? []).find(p => p.status === 'active')
-  if (!activePurchase) {
-    return {
-      meterRef: null,
-      total: null,
-      used: 0,
-      remaining: null,
-      percentUsed: null,
-    }
-  }
-
-  const snap = activePurchase.planSnapshot as
-    | { meterRef?: string; meterId?: string; limit?: number; freeUnits?: number }
-    | undefined
-  const usage = activePurchase.usage as
-    | { used?: number; periodStart?: string; periodEnd?: string }
-    | undefined
-
-  const meterRef = snap?.meterRef ?? snap?.meterId ?? null
-  const total = typeof snap?.limit === 'number' ? snap.limit : null
-  const used = typeof usage?.used === 'number' ? usage.used : 0
-  const remaining = total !== null ? Math.max(0, total - used) : null
-  const percentUsed =
-    total !== null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null
-
-  return {
-    meterRef,
-    total,
-    used,
-    remaining,
-    percentUsed,
-    ...(usage?.periodStart ? { periodStart: usage.periodStart } : {}),
-    ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
-    purchaseRef: activePurchase.reference,
-  }
+  return projectUsageSnapshot(activePurchase ?? null)
 }
 
 export async function trackUsageCore(

@@ -14,13 +14,19 @@ pub mod customer_sync;
 pub mod error;
 pub mod helper_error;
 mod hmac_util;
+pub mod limits;
 pub mod payment;
 pub mod paywall_gate;
 pub mod paywall_state;
+pub mod plans;
+pub mod product;
 pub mod purchase;
 pub mod renewal;
 pub mod retry;
+pub mod route_error;
 pub mod seller_identity;
+mod serde_util;
+pub mod usage;
 pub mod webhook;
 
 pub use activation::validate_activate_plan_params;
@@ -49,6 +55,7 @@ pub use customer_sync::{
 };
 pub use error::{render_template, SdkError};
 pub use helper_error::HelperErrorResult;
+pub use limits::{resolve_check_limits_params, CheckLimitsParams};
 pub use payment::{
     attach_business_details_validation_error, project_payment_intent_result,
     project_topup_process_outcome, validate_attach_business_details_params,
@@ -61,6 +68,8 @@ pub use paywall_state::{
     build_gate_message, build_nudge_message, classify_paywall_state, GateContent, PaywallBalance,
     PaywallLimits, PaywallPlanSummary, PaywallState,
 };
+pub use plans::validate_list_plans_params;
+pub use product::validate_get_product_params;
 pub use purchase::{
     is_cached_customer_ref_valid, resolve_purchase_customer_ref, select_active_purchases,
 };
@@ -69,9 +78,11 @@ pub use renewal::{
     normalize_reactivate_response, validate_purchase_ref,
 };
 pub use retry::{Backoff, RetryPolicy, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES};
+pub use route_error::{is_error_result, map_route_error, RouteErrorInput, RouteErrorKind};
 pub use seller_identity::{
     get_seller_tax_identifier_display_label, resolve_seller_identity_display,
     seller_tax_identifier_display_label_by_type, SellerIdentityDisplay, SellerIdentityInput,
     SellerIdentityRow, SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
 };
+pub use usage::{project_usage_snapshot, UsageSnapshot};
 pub use webhook::{verify_webhook, WebhookError, WebhookErrorCode};

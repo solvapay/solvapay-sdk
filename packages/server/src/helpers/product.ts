@@ -10,7 +10,7 @@ import type { SdkProductResponse } from '../types/client'
 import type { SolvaPay } from '../factory'
 import { createSolvaPayClient } from '../client'
 import { handleRouteError } from './error'
-import { getSolvaPayConfig } from '@solvapay/core'
+import { getSolvaPayConfig, validateGetProductParams } from '@solvapay/core'
 
 export async function getProductCore(
   request: Request,
@@ -20,13 +20,11 @@ export async function getProductCore(
 ): Promise<SdkProductResponse | ErrorResult> {
   try {
     const url = new URL(request.url)
-    const productRef = url.searchParams.get('productRef')
+    const productRef = url.searchParams.get('productRef') ?? ''
 
-    if (!productRef) {
-      return {
-        error: 'Missing required parameter: productRef',
-        status: 400,
-      }
+    const productRefError = validateGetProductParams(productRef)
+    if (productRefError) {
+      return productRefError
     }
 
     const apiClient = options.solvaPay?.apiClient ?? (() => {

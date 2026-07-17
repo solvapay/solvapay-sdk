@@ -1,0 +1,33 @@
+{
+  "suite": "helper-usage",
+  "case": "full-snapshot",
+  "input": {
+    "fn": "projectUsageSnapshot",
+    "args": {
+      "activePurchase": {
+        "reference": "pur_1",
+        "planSnapshot": {
+          "meterRef": "mtr_requests",
+          "limit": 100
+        },
+        "usage": {
+          "used": 25,
+          "periodStart": "2026-07-01T00:00:00Z",
+          "periodEnd": "2026-08-01T00:00:00Z"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meterRef": "mtr_requests",
+      "total": 100,
+      "used": 25,
+      "remaining": 75,
+      "percentUsed": 25,
+      "periodStart": "2026-07-01T00:00:00Z",
+      "periodEnd": "2026-08-01T00:00:00Z",
+      "purchaseRef": "pur_1"
+    }
+  }
+}
