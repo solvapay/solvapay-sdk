@@ -222,7 +222,7 @@ The handler `ctx` also exposes `ctx.customer` (`balance`, `remaining`, `withinLi
 Plan activation and upgrades are handled by the built-in intent tools that `createSolvaPayMcpServer` registers — you rarely implement them by hand. `activate_plan`, `upgrade`, and `topup` already map to the underlying flows:
 
 - **Free plan** — activates immediately; the customer can start calling paid tools.
-- **Usage-based plan** — activates immediately even at a zero balance; top-up is optional and flows through the `topup` tool.
+- **Usage-based plan** — topup-first: a customer with credits activates immediately, while a zero-balance customer gets `topup_required` and is routed through the `topup` tool. The plan activates as part of the successful top-up.
 - **Recurring / hybrid plan** — returns a hosted `checkoutUrl` when the customer has no balance and no card on file, which the agent surfaces as a checkout link.
 
 Plans are managed on the product in the SolvaPay Console. Customers select a plan during activation and the SDK resolves the correct plan from their purchase automatically.

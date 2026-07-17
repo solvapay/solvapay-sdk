@@ -106,7 +106,7 @@ For Next.js, prefer `createAuth0AuthMiddleware` (or your own adapter) so route h
 - Do **not** put `SOLVAPAY_SECRET_KEY` in a customer CLI or browser.
 - Do **not** send Auth0 (or other IdP) **access tokens** to SolvaPay APIs.
 - Do **not** rely on email alone as `externalRef` — emails can change; subjects and internal ids should not.
-- Do **not** assume SolvaPay will host your customer login — use [customer OAuth](/oauth) only when **your** OAuth clients need SolvaPay as the authorization server (e.g. MCP / third-party apps), which is separate from provider-owned CLI linkage.
+- Do **not** assume SolvaPay will host your customer login — use [customer OAuth](/no-code-mcp/authentication) only when **your** OAuth clients need SolvaPay as the authorization server (e.g. MCP / third-party apps), which is separate from provider-owned CLI linkage.
 
 ## Related guides
 
