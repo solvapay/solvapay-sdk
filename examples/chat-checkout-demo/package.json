@@ -24,7 +24,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-markdown": "9.0.1",
-    "remark-gfm": "4.0.0"
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251124.0",
