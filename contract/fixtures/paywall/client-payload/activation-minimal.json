@@ -1,0 +1,26 @@
+{
+  "suite": "paywall",
+  "case": "activation-minimal",
+  "input": {
+    "fn": "paywallErrorToClientPayload",
+    "args": {
+      "message": "activate",
+      "structuredContent": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/confirm",
+        "message": "activate"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": "Activation required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/confirm",
+      "message": "activate",
+      "kind": "activation_required"
+    }
+  }
+}

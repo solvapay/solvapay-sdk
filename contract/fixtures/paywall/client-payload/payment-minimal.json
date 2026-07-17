@@ -1,0 +1,26 @@
+{
+  "suite": "paywall",
+  "case": "payment-minimal",
+  "input": {
+    "fn": "paywallErrorToClientPayload",
+    "args": {
+      "message": "pay",
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "pay"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": "Payment required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "pay",
+      "kind": "payment_required"
+    }
+  }
+}

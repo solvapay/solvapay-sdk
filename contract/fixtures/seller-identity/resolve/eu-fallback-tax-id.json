@@ -1,0 +1,25 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-eu-fallback-tax-id",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "SE",
+      "vatNumber": null,
+      "taxId": "SE556677889001",
+      "companyNumber": "5561234567"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": {
+        "label": "VAT number",
+        "value": "SE556677889001"
+      },
+      "companyNumber": {
+        "label": "Company number",
+        "value": "5561234567"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "gate-activation-no-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "activation_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "",
+        "message": ""
+      }
+    }
+  },
+  "expect": {
+    "result": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it."
+  }
+}

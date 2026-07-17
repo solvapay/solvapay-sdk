@@ -1,0 +1,4 @@
+# wasm-bindgen-test runner (Node by default). CLI version must match the
+# `wasm-bindgen` crate pin in the workspace Cargo.toml (currently 0.2.126).
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"

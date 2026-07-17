@@ -1,0 +1,15 @@
+{
+  "suite": "paywall",
+  "case": "recurring-at-cap",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "plans": [{ "reference": "pl_pro", "type": "recurring", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "upgrade_required" } }
+}

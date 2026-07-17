@@ -1,0 +1,29 @@
+{
+  "suite": "paywall",
+  "case": "topup-with-recurring-stays-payment",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x",
+        "plans": [
+          { "reference": "pl_pro", "type": "usage-based", "requiresPayment": true },
+          { "reference": "pl_pro", "type": "recurring", "requiresPayment": true }
+        ],
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
+      "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "nl-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "NL",
+      "taxId": "NL123456789A12"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for NL"
+          }
+        ]
+      }
+    }
+  }
+}

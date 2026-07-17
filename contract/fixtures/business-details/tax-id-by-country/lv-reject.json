@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "lv-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "LV",
+      "taxId": "LV1234567891"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for LV"
+          }
+        ]
+      }
+    }
+  }
+}

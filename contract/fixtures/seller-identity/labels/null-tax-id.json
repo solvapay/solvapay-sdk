@@ -1,0 +1,13 @@
+{
+  "suite": "seller-identity",
+  "case": "label-null-tax-id",
+  "input": {
+    "fn": "getSellerTaxIdentifierDisplayLabel",
+    "args": {
+      "country": null
+    }
+  },
+  "expect": {
+    "result": "Tax ID"
+  }
+}

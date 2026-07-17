@@ -1,0 +1,21 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-de-dedupe",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "DE",
+      "vatNumber": "DE123456789",
+      "companyNumber": "DE123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": {
+        "label": "VAT number",
+        "value": "DE123456789"
+      },
+      "companyNumber": null
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "cy-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "CY",
+      "taxId": "CY12345678"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for CY"
+          }
+        ]
+      }
+    }
+  }
+}

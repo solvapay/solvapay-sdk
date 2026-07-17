@@ -1,0 +1,26 @@
+{
+  "suite": "business-details",
+  "case": "non-business-unsupported-customer-country",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "customerCountry": "ZZ"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "customerCountry"
+            ],
+            "message": "Billing country is not supported for tax calculation"
+          }
+        ]
+      }
+    }
+  }
+}

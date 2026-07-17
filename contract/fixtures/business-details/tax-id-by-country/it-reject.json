@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "it-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "IT",
+      "taxId": "IT1234567891"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for IT"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -39,9 +39,22 @@ def production_lines(text: str) -> list[tuple[int, str]]:
         line = lines[i]
         if cfg_test_start.search(line):
             # Skip attribute + following item (mod/fn) including its body.
+            # Allow other attributes (including multi-line #[allow(...)]) between
+            # cfg(test) and the item.
             j = i + 1
-            while j < len(lines) and lines[j].strip() == "":
-                j += 1
+            while j < len(lines):
+                stripped = lines[j].strip()
+                if stripped == "" or stripped.startswith("//"):
+                    j += 1
+                    continue
+                if stripped.startswith("#["):
+                    depth = stripped.count("[") - stripped.count("]")
+                    j += 1
+                    while depth > 0 and j < len(lines):
+                        depth += lines[j].count("[") - lines[j].count("]")
+                        j += 1
+                    continue
+                break
             if j < len(lines) and mod_or_fn.search(lines[j]):
                 # Find opening brace on this or following lines.
                 k = j

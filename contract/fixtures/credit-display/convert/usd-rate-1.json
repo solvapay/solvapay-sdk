@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-usd-rate-1",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": 159600,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 1,
+      "displayCurrency": "USD"
+    }
+  },
+  "expect": {
+    "result": 1596
+  }
+}

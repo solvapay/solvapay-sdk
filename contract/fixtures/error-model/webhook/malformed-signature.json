@@ -1,0 +1,19 @@
+{
+  "suite": "error-model",
+  "case": "webhook-malformed-signature",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Webhook",
+      "code": "malformed_signature"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Malformed webhook signature",
+      "kind": "Webhook",
+      "code": "malformed_signature"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "cz-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "CZ",
+      "taxId": "CZ1234567890"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "CZ",
+        "taxId": "CZ1234567890",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

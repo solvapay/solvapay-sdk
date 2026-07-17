@@ -32,6 +32,9 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^5.2.5
         version: 5.2.5
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:packages/core
       '@solvapay/server':
         specifier: workspace:*
         version: link:packages/server

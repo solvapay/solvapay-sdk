@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "se-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "SE",
+      "taxId": "SE12345678912"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for SE"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -72,6 +72,156 @@ const ErrorCase = z.object({
   code: z.string().optional(),
 })
 
+/** Field / nested type reference used inside overlay definitions. */
+export type OverlayTypeRef =
+  | { type: 'string' }
+  | { type: 'number' }
+  | { type: 'integer' }
+  | { type: 'boolean' }
+  | { type: 'unknown' }
+  | { ref: string }
+  | { array: OverlayTypeRef }
+  | { map: OverlayTypeRef }
+  | { enum: string[] }
+  | { literal: string | number | boolean }
+  | { object: Record<string, OverlayField> }
+
+export type OverlayField = OverlayTypeRef & {
+  required?: boolean
+  nullable?: boolean
+  doc?: string
+}
+
+const OverlayTypeRefSchema: z.ZodType<OverlayTypeRef> = z.lazy(() =>
+  z.union([
+    z.object({ type: z.literal('string') }),
+    z.object({ type: z.literal('number') }),
+    z.object({ type: z.literal('integer') }),
+    z.object({ type: z.literal('boolean') }),
+    z.object({ type: z.literal('unknown') }),
+    z.object({ ref: z.string().min(1) }),
+    z.object({ array: OverlayTypeRefSchema }),
+    z.object({ map: OverlayTypeRefSchema }),
+    z.object({ enum: z.array(z.string().min(1)).nonempty() }),
+    z.object({
+      literal: z.union([z.string(), z.number(), z.boolean()]),
+    }),
+    z.object({ object: z.record(z.string(), OverlayFieldSchema) }),
+  ]),
+)
+
+const OverlayFieldSchema: z.ZodType<OverlayField> = z.lazy(() =>
+  z.intersection(
+    OverlayTypeRefSchema,
+    z.object({
+      required: z.boolean().optional(),
+      nullable: z.boolean().optional(),
+      doc: z.string().optional(),
+    }),
+  ),
+)
+
+const OverlayNames = PartialLangNames
+
+const ExtendDtoOverlay = z.object({
+  kind: z.literal('extendDto'),
+  base: z.string().min(1),
+  doc: z.string().optional(),
+  names: OverlayNames.optional(),
+  /** When true, inherited base fields are treated as optional in the SDK shape. */
+  partial: z.boolean().default(false),
+  fields: z.record(z.string(), OverlayFieldSchema).default({}),
+})
+
+const MapDtoOverlay = z.object({
+  kind: z.literal('mapDto'),
+  base: z.string().min(1).optional(),
+  doc: z.string().optional(),
+  names: OverlayNames.optional(),
+  /** Wire field → SDK field renames (e.g. reference → customerRef). */
+  renames: z.record(z.string(), z.string().min(1)).default({}),
+  fields: z.record(z.string(), OverlayFieldSchema),
+})
+
+const ProjectUnionOverlay = z.object({
+  kind: z.literal('projectUnion'),
+  base: z.string().min(1),
+  doc: z.string().optional(),
+  names: OverlayNames.optional(),
+  /** IR / wire variant names to drop from the base union. */
+  dropVariants: z.array(z.string().min(1)).default([]),
+  /** Extra fields kept on the bare `succeeded` arm after projection. */
+  succeededFields: z.record(z.string(), OverlayFieldSchema).default({}),
+})
+
+const SyntheticOverlay = z
+  .object({
+    kind: z.literal('synthetic'),
+    doc: z.string().optional(),
+    names: OverlayNames.optional(),
+    /** `void` sentinel — emits a unit type. */
+    unit: z.boolean().default(false),
+    /** Catalog-only tag (no type emission). */
+    marker: z.boolean().default(false),
+    /** Re-export an existing IR/wire type under this overlay name. */
+    aliasOf: z.string().min(1).optional(),
+    /** Emit `Vec<Item>` under this overlay name. */
+    arrayOf: z.string().min(1).optional(),
+    /** Closed string enum (alternative to `fields`). */
+    enum: z.array(z.string().min(1)).nonempty().optional(),
+    fields: z.record(z.string(), OverlayFieldSchema).default({}),
+  })
+  .superRefine((value, ctx) => {
+    const modes = [
+      value.unit,
+      value.marker,
+      value.aliasOf !== undefined,
+      value.arrayOf !== undefined,
+      value.enum !== undefined,
+      Object.keys(value.fields).length > 0,
+    ].filter(Boolean).length
+    if (modes !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'synthetic overlay must set exactly one of: unit, marker, aliasOf, arrayOf, enum, or fields',
+      })
+    }
+  })
+
+export const OverlaySchema = z.discriminatedUnion('kind', [
+  ExtendDtoOverlay,
+  MapDtoOverlay,
+  ProjectUnionOverlay,
+  SyntheticOverlay,
+])
+
+export type Overlay = z.infer<typeof OverlaySchema>
+
+/** One positional / options-bag parameter in a catalogued entry point (§5.6). */
+export type ParamDef = OverlayTypeRef & {
+  name: string
+  required?: boolean
+  default?: string | number | boolean
+  doc?: string
+}
+
+const ParamDefSchema: z.ZodType<ParamDef> = z.lazy(() =>
+  z.intersection(
+    OverlayTypeRefSchema,
+    z.object({
+      name: z.string().min(1),
+      required: z.boolean().default(true),
+      default: z.union([z.string(), z.number(), z.boolean()]).optional(),
+      doc: z.string().optional(),
+    }),
+  ),
+)
+
+const TypeParamSchema = z.object({
+  name: z.string().min(1),
+})
+
 const Operation = z.object({
   route: z.object({
     method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
@@ -81,6 +231,8 @@ const Operation = z.object({
   optionalOnClient: z.boolean().default(false),
   request: z.string().min(1).optional(),
   response: z.string().min(1),
+  /** Positional parameter list for signature generation (§5.6 / step 18). */
+  params: z.array(ParamDefSchema),
   overlays: z.array(z.string()).default([]),
   normalization: z.array(z.string()).default([]),
   idempotency: Idempotency,
@@ -94,30 +246,64 @@ const Operation = z.object({
 const NamedEntry = z.object({
   names: LangNames,
   sync: SyncMatrix,
+  /** Parameter list for callables / constructors (step 18). */
+  params: z.array(ParamDefSchema).default([]),
+  /** Generic type parameters (e.g. withRetry&lt;T&gt;). */
+  typeParams: z.array(TypeParamSchema).optional(),
 })
 
 export const SdkContractManifestSchema = z.object({
   operations: z.record(z.string(), Operation),
+  /** SDK-only overlay type catalog (§5.4). Keys are overlay names. */
+  overlays: z.record(z.string(), OverlaySchema).default({}),
   topLevel: z.record(z.string(), NamedEntry),
   coreHelpers: z.record(z.string(), NamedEntry),
   facade: z.record(z.string(), NamedEntry),
-  errors: z.object({
-    webhook: z.object({
-      codes: z
-        .array(z.string().min(1))
-        .refine(
-          codes =>
-            [
-              'missing_signature',
-              'malformed_signature',
-              'timestamp_too_old',
-              'invalid_signature',
-              'invalid_payload',
-            ].every(c => codes.includes(c)),
-          { message: 'webhook.codes must include the five stable webhook codes' },
-        ),
+  errors: z
+    .object({
+      webhook: z.object({
+        codes: z
+          .array(z.string().min(1))
+          .refine(
+            codes =>
+              [
+                'missing_signature',
+                'malformed_signature',
+                'timestamp_too_old',
+                'invalid_signature',
+                'invalid_payload',
+              ].every(c => codes.includes(c)),
+            { message: 'webhook.codes must include the five stable webhook codes' },
+          ),
+        messages: z.object({
+          missing_signature: z.string().min(1),
+          malformed_signature: z.string().min(1),
+          timestamp_too_old: z.string().min(1),
+          invalid_signature: z.string().min(1),
+          invalid_payload: z.string().min(1),
+        }),
+      }),
+      paywall: z.object({
+        messages: z.object({
+          payment_required: z.string().min(1),
+          activation_required: z.string().min(1),
+        }),
+      }),
+      transport: z.object({
+        messageTemplate: z.string().min(1),
+      }),
+    })
+    .superRefine((errors, ctx) => {
+      for (const code of errors.webhook.codes) {
+        if (!(code in errors.webhook.messages)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `webhook.messages missing entry for code ${code}`,
+            path: ['webhook', 'messages', code],
+          })
+        }
+      }
     }),
-  }),
   defaults: z.object({
     retry: z.object({
       maxRetries: z.literal(2),
@@ -147,6 +333,27 @@ export const SdkContractManifestSchema = z.object({
 export type SdkContractManifest = z.infer<typeof SdkContractManifestSchema>
 export type LangNames = z.infer<typeof LangNames>
 export type OperationEntry = z.infer<typeof Operation>
+export type NamedEntry = z.infer<typeof NamedEntry>
+
+/** Top-level ids that are callables (not error classes) and must declare params. */
+export const TOP_LEVEL_CALLABLE_IDS = [
+  'verifyWebhook',
+  'withRetry',
+  'buildPaywallGate',
+  'buildGateMessage',
+  'buildNudgeMessage',
+  'classifyPaywallState',
+  'paywallErrorToClientPayload',
+] as const
+
+/** Facade entry points that must declare params. */
+export const FACADE_CALLABLE_IDS = [
+  'createSolvaPay',
+  'createSolvaPayClient',
+  'payable',
+  'protect',
+  'gate',
+] as const
 
 export interface OpenApiSnapshot {
   paths?: Record<string, Record<string, unknown> | undefined>
@@ -281,17 +488,159 @@ export function assertTopLevelSet(manifest: SdkContractManifest): string[] {
   return issues
 }
 
+function hasParamsArray(value: unknown): value is { params: unknown[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'params' in value &&
+    Array.isArray((value as { params: unknown }).params)
+  )
+}
+
+/**
+ * Every operation and catalogued topLevel/facade callable must declare `params`
+ * (may be an empty array for nullary methods).
+ */
+export function assertParamsCoverage(manifest: SdkContractManifest): string[] {
+  const issues: string[] = []
+  for (const id of Object.keys(manifest.operations)) {
+    const entry = manifest.operations[id]
+    if (!hasParamsArray(entry)) {
+      issues.push(`Params: operations.${id} missing params`)
+    }
+  }
+  for (const id of TOP_LEVEL_CALLABLE_IDS) {
+    const entry = manifest.topLevel[id]
+    if (entry === undefined) {
+      issues.push(`Params: topLevel.${id} missing (expected callable)`)
+      continue
+    }
+    if (!hasParamsArray(entry)) {
+      issues.push(`Params: topLevel.${id} missing params`)
+    }
+  }
+  for (const id of FACADE_CALLABLE_IDS) {
+    const entry = manifest.facade[id]
+    if (entry === undefined) {
+      issues.push(`Params: facade.${id} missing (expected callable)`)
+      continue
+    }
+    if (!hasParamsArray(entry)) {
+      issues.push(`Params: facade.${id} missing params`)
+    }
+  }
+  return issues
+}
+
+/** Collect named type refs from a param type expression (including nested objects). */
+export function collectParamTypeRefs(param: ParamDef): string[] {
+  return collectTypeRefs(param)
+}
+
 function methodKey(method: string): string {
   return method.toLowerCase()
 }
 
+/** Collect named type refs from an overlay type expression. */
+export function collectTypeRefs(ty: OverlayTypeRef): string[] {
+  if ('ref' in ty) {
+    return [ty.ref]
+  }
+  if ('array' in ty) {
+    return collectTypeRefs(ty.array)
+  }
+  if ('map' in ty) {
+    return collectTypeRefs(ty.map)
+  }
+  if ('object' in ty) {
+    return Object.values(ty.object).flatMap(field => collectTypeRefs(field))
+  }
+  return []
+}
+
+/** Collect named type refs from overlay field maps. */
+export function collectFieldRefs(
+  fields: Record<string, OverlayField> | undefined,
+): string[] {
+  if (fields === undefined) {
+    return []
+  }
+  return Object.values(fields).flatMap(field => collectTypeRefs(field))
+}
+
+/**
+ * Names referenced from an overlay definition (base / aliasOf / arrayOf / field refs).
+ * Does not include the overlay's own name.
+ */
+export function collectOverlayDeps(overlay: Overlay): string[] {
+  switch (overlay.kind) {
+    case 'extendDto':
+      return [overlay.base, ...collectFieldRefs(overlay.fields)]
+    case 'mapDto':
+      return [
+        ...(overlay.base !== undefined ? [overlay.base] : []),
+        ...collectFieldRefs(overlay.fields),
+      ]
+    case 'projectUnion':
+      return [overlay.base, ...collectFieldRefs(overlay.succeededFields)]
+    case 'synthetic': {
+      const deps: string[] = []
+      if (overlay.aliasOf !== undefined) {
+        deps.push(overlay.aliasOf)
+      }
+      if (overlay.arrayOf !== undefined) {
+        deps.push(overlay.arrayOf)
+      }
+      deps.push(...collectFieldRefs(overlay.fields))
+      return deps
+    }
+  }
+}
+
+/**
+ * Wire type names synthesized by dto-gen that are not always present as
+ * `components.schemas` entries (inline response oneOfs).
+ */
+export const IR_SYNTHESIZED_TYPE_NAMES = new Set([
+  'ProcessPaymentResult',
+  'PaymentMethodResult',
+])
+
+/**
+ * Cross-check operations against the OpenAPI snapshot and the overlay catalog.
+ *
+ * - Every operation route must exist in the snapshot.
+ * - Every request/response DTO ref must resolve to an OpenAPI schema or a defined overlay.
+ * - Every string in `operation.overlays` must resolve to a defined overlay or OpenAPI schema.
+ * - Every overlay `base` / `aliasOf` / `arrayOf` / field `ref` must resolve similarly
+ *   (`aliasOf` may name an IR-synthesized wire type such as `ProcessPaymentResult`).
+ * - Overlay definitions that are never referenced from operations or other overlays fail.
+ */
 export function crossCheckOpenApi(
   manifest: SdkContractManifest,
   snapshot: OpenApiSnapshot,
+  options: { irTypeNames?: ReadonlySet<string> } = {},
 ): string[] {
   const issues: string[] = []
   const paths = snapshot.paths ?? {}
   const schemas = snapshot.components?.schemas ?? {}
+  const overlays = manifest.overlays
+  const irTypeNames = options.irTypeNames ?? IR_SYNTHESIZED_TYPE_NAMES
+
+  const referencedOverlayNames = new Set<string>()
+
+  const markTypeRef = (owner: string, ref: string): void => {
+    if (ref in overlays) {
+      referencedOverlayNames.add(ref)
+      return
+    }
+    if (ref in schemas || irTypeNames.has(ref)) {
+      return
+    }
+    issues.push(
+      `OpenAPI schema: ${owner} DTO ref "${ref}" not in components.schemas and not a defined overlay`,
+    )
+  }
 
   for (const [id, operation] of Object.entries(manifest.operations)) {
     const pathItem = paths[operation.route.path]
@@ -302,19 +651,83 @@ export function crossCheckOpenApi(
       )
     }
 
-    const overlaySet = new Set(operation.overlays)
     const refs = [operation.request, operation.response].filter(
       (ref): ref is string => typeof ref === 'string',
     )
     for (const ref of refs) {
-      if (overlaySet.has(ref)) {
+      markTypeRef(`operations.${id}`, ref)
+    }
+
+    for (const param of operation.params ?? []) {
+      for (const ref of collectParamTypeRefs(param)) {
+        markTypeRef(`operations.${id}.params.${param.name}`, ref)
+      }
+    }
+
+    for (const overlayRef of operation.overlays) {
+      if (overlayRef in overlays) {
+        referencedOverlayNames.add(overlayRef)
         continue
       }
-      if (!(ref in schemas)) {
-        issues.push(
-          `OpenAPI schema: operations.${id} DTO ref "${ref}" not in components.schemas (and not listed in overlays)`,
-        )
+      if (overlayRef in schemas || irTypeNames.has(overlayRef)) {
+        continue
       }
+      issues.push(
+        `Overlay ref: operations.${id} overlays entry "${overlayRef}" is not a defined overlay or OpenAPI schema`,
+      )
+    }
+  }
+
+  for (const [section, entries] of [
+    ['topLevel', manifest.topLevel],
+    ['facade', manifest.facade],
+    ['coreHelpers', manifest.coreHelpers],
+  ] as const) {
+    for (const [id, entry] of Object.entries(entries)) {
+      for (const param of entry.params ?? []) {
+        for (const ref of collectParamTypeRefs(param)) {
+          markTypeRef(`${section}.${id}.params.${param.name}`, ref)
+        }
+      }
+    }
+  }
+
+  for (const [name, overlay] of Object.entries(overlays)) {
+    for (const dep of collectOverlayDeps(overlay)) {
+      if (dep in overlays) {
+        referencedOverlayNames.add(dep)
+        continue
+      }
+      if (dep in schemas || irTypeNames.has(dep)) {
+        continue
+      }
+      issues.push(
+        `Overlay base: overlays.${name} references "${dep}" which is not a defined overlay or OpenAPI schema`,
+      )
+    }
+  }
+
+  // Mark transitive overlay deps as referenced so supporting types are not flagged.
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const name of [...referencedOverlayNames]) {
+      const overlay = overlays[name]
+      if (overlay === undefined) {
+        continue
+      }
+      for (const dep of collectOverlayDeps(overlay)) {
+        if (dep in overlays && !referencedOverlayNames.has(dep)) {
+          referencedOverlayNames.add(dep)
+          grew = true
+        }
+      }
+    }
+  }
+
+  for (const name of Object.keys(overlays)) {
+    if (!referencedOverlayNames.has(name)) {
+      issues.push(`Overlay unused: overlays.${name} is never referenced by operations or overlays`)
     }
   }
 
@@ -328,5 +741,6 @@ export function validateManifestSemantics(manifest: SdkContractManifest): string
     ...assertNameCoverage(manifest),
     ...assertNameCorrectness(manifest),
     ...assertNoNameCollisions(manifest),
+    ...assertParamsCoverage(manifest),
   ]
 }

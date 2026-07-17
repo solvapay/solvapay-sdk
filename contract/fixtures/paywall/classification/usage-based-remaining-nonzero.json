@@ -1,0 +1,15 @@
+{
+  "suite": "paywall",
+  "case": "usage-based-remaining-nonzero",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 3,
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "upgrade_required" } }
+}

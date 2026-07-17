@@ -8,13 +8,24 @@ use walkdir::WalkDir;
 use crate::error::{RunnerError, RunnerResult};
 use crate::model::{parse_fixture, Fixture};
 
+/// A fixture file on disk paired with its parsed §5.3 content.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DiscoveredFixture {
+    /// Absolute or relative path to the `*.json` file.
     pub path: PathBuf,
+    /// Validated fixture value from [`parse_fixture`].
     pub fixture: Fixture,
 }
 
-/// Walk `root` recursively, parse every `*.json` as a §5.3 fixture.
+/// Walks a fixtures root recursively and parses every `*.json` as a §5.3 fixture.
+///
+/// # Arguments
+///
+/// * `root` - Directory path to walk; must exist and be a directory.
+///
+/// # Returns
+///
+/// Sorted list of [`DiscoveredFixture`] entries, or [`RunnerError::Walk`], [`RunnerError::Io`], or [`RunnerError::InvalidFixture`] on failure.
 pub fn discover_fixtures(root: &Path) -> RunnerResult<Vec<DiscoveredFixture>> {
     if !root.is_dir() {
         return Err(RunnerError::Walk(format!(

@@ -1,0 +1,28 @@
+{
+  "suite": "paywall",
+  "case": "activation-regular",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "activationRequired": true,
+        "confirmationUrl": "https://pay.test/confirm",
+        "checkoutUrl": "https://pay.test/x",
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "activation_required",
+      "product": "prd_demo",
+      "message": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it, or open https://pay.test/confirm in a browser.",
+      "checkoutUrl": "https://pay.test/confirm",
+      "confirmationUrl": "https://pay.test/confirm",
+      "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+    }
+  }
+}

@@ -2,11 +2,13 @@ import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { parse as parseYaml } from 'yaml'
 import { createDefaultRegistry, replayFixture } from './lib/fixture-harness.js'
 import { parseFixture } from './lib/fixture-schema.js'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const FIXTURES_ROOT = path.join(REPO_ROOT, 'contract/fixtures')
+const MANIFEST_PATH = path.join(REPO_ROOT, 'contract/manifest/sdk-contract.yaml')
 
 function discoverFixtureFiles(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true })
@@ -22,32 +24,279 @@ function discoverFixtureFiles(dir: string): string[] {
   return files.sort()
 }
 
+function camelToKebab(value: string): string {
+  return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+}
+
+function isSuccessCase(fileName: string): boolean {
+  return (
+    fileName.startsWith('success') ||
+    fileName.startsWith('by-') ||
+    [
+      'succeeded-recurring',
+      'succeeded-one-time',
+      'succeeded-bare',
+      'processing',
+      'timeout',
+      'failed',
+      'cancelled',
+    ].includes(fileName)
+  )
+}
+
+function isErrorCase(fileName: string): boolean {
+  return fileName.startsWith('error') || fileName === 'no-match' || fileName === 'missing-params'
+}
+
 const fixtureFiles = discoverFixtureFiles(FIXTURES_ROOT)
 
+const NON_CLIENT_FIXTURES = [
+  'business-details/country-options.json',
+  'business-details/derive-tax-id-type/de.json',
+  'business-details/derive-tax-id-type/gb.json',
+  'business-details/derive-tax-id-type/se.json',
+  'business-details/derive-tax-id-type/us.json',
+  'business-details/labels/example-de.json',
+  'business-details/labels/example-gb.json',
+  'business-details/labels/example-gr.json',
+  'business-details/labels/example-se.json',
+  'business-details/labels/example-us.json',
+  'business-details/labels/field-label-de.json',
+  'business-details/labels/field-label-gb.json',
+  'business-details/labels/field-label-gr.json',
+  'business-details/labels/field-label-se.json',
+  'business-details/labels/field-label-us.json',
+  'business-details/labels/helper-text-de.json',
+  'business-details/labels/helper-text-gb.json',
+  'business-details/labels/helper-text-gr.json',
+  'business-details/labels/helper-text-se.json',
+  'business-details/labels/helper-text-us.json',
+  'business-details/tax-behavior/auto-cad-exclusive.json',
+  'business-details/tax-behavior/auto-eur-inclusive.json',
+  'business-details/tax-behavior/auto-lowercase-cad.json',
+  'business-details/tax-behavior/auto-lowercase-usd.json',
+  'business-details/tax-behavior/auto-usd-exclusive.json',
+  'business-details/tax-behavior/explicit-exclusive-eur.json',
+  'business-details/tax-behavior/explicit-inclusive-usd.json',
+  'business-details/tax-id-by-country/at-accept.json',
+  'business-details/tax-id-by-country/at-reject.json',
+  'business-details/tax-id-by-country/be-accept.json',
+  'business-details/tax-id-by-country/be-reject.json',
+  'business-details/tax-id-by-country/bg-accept.json',
+  'business-details/tax-id-by-country/bg-reject.json',
+  'business-details/tax-id-by-country/cy-accept.json',
+  'business-details/tax-id-by-country/cy-reject.json',
+  'business-details/tax-id-by-country/cz-accept.json',
+  'business-details/tax-id-by-country/cz-reject.json',
+  'business-details/tax-id-by-country/de-accept.json',
+  'business-details/tax-id-by-country/de-reject.json',
+  'business-details/tax-id-by-country/dk-accept.json',
+  'business-details/tax-id-by-country/dk-reject.json',
+  'business-details/tax-id-by-country/ee-accept.json',
+  'business-details/tax-id-by-country/ee-reject.json',
+  'business-details/tax-id-by-country/es-accept.json',
+  'business-details/tax-id-by-country/es-reject.json',
+  'business-details/tax-id-by-country/fi-accept.json',
+  'business-details/tax-id-by-country/fi-reject.json',
+  'business-details/tax-id-by-country/fr-accept.json',
+  'business-details/tax-id-by-country/fr-reject.json',
+  'business-details/tax-id-by-country/gb-accept.json',
+  'business-details/tax-id-by-country/gb-reject.json',
+  'business-details/tax-id-by-country/gr-accept.json',
+  'business-details/tax-id-by-country/gr-reject.json',
+  'business-details/tax-id-by-country/hr-accept.json',
+  'business-details/tax-id-by-country/hr-reject.json',
+  'business-details/tax-id-by-country/hu-accept.json',
+  'business-details/tax-id-by-country/hu-reject.json',
+  'business-details/tax-id-by-country/ie-accept.json',
+  'business-details/tax-id-by-country/ie-reject.json',
+  'business-details/tax-id-by-country/it-accept.json',
+  'business-details/tax-id-by-country/it-reject.json',
+  'business-details/tax-id-by-country/lt-accept.json',
+  'business-details/tax-id-by-country/lt-reject.json',
+  'business-details/tax-id-by-country/lu-accept.json',
+  'business-details/tax-id-by-country/lu-reject.json',
+  'business-details/tax-id-by-country/lv-accept.json',
+  'business-details/tax-id-by-country/lv-reject.json',
+  'business-details/tax-id-by-country/mt-accept.json',
+  'business-details/tax-id-by-country/mt-reject.json',
+  'business-details/tax-id-by-country/nl-accept.json',
+  'business-details/tax-id-by-country/nl-reject.json',
+  'business-details/tax-id-by-country/pl-accept.json',
+  'business-details/tax-id-by-country/pl-reject.json',
+  'business-details/tax-id-by-country/pt-accept.json',
+  'business-details/tax-id-by-country/pt-reject.json',
+  'business-details/tax-id-by-country/ro-accept.json',
+  'business-details/tax-id-by-country/ro-reject.json',
+  'business-details/tax-id-by-country/se-accept.json',
+  'business-details/tax-id-by-country/se-reject.json',
+  'business-details/tax-id-by-country/si-accept.json',
+  'business-details/tax-id-by-country/si-reject.json',
+  'business-details/tax-id-by-country/sk-accept.json',
+  'business-details/tax-id-by-country/sk-reject.json',
+  'business-details/tax-id-by-country/us-accept.json',
+  'business-details/tax-id-by-country/us-reject.json',
+  'business-details/validate/business-country-only-omits-optional.json',
+  'business-details/validate/business-invalid-tax-id.json',
+  'business-details/validate/business-missing-country.json',
+  'business-details/validate/business-unsupported-country.json',
+  'business-details/validate/business-whitespace-only-tax-id-omitted.json',
+  'business-details/validate/business-with-tax-id-derives-type.json',
+  'business-details/validate/customer-name-too-big-zod-default-message.json',
+  'business-details/validate/non-business-empty.json',
+  'business-details/validate/non-business-ignores-business-fields.json',
+  'business-details/validate/non-business-unsupported-customer-country.json',
+  'business-details/validate/non-business-with-country-and-name.json',
+  'business-details/validate/non-business-with-customer-country.json',
+  'business-details/validate/non-business-with-customer-name.json',
+  'business-details/validate/normalize-tax-id-and-country.json',
+  'credit-display/convert/cpm-negative-null.json',
+  'credit-display/convert/cpm-zero-null.json',
+  'credit-display/convert/eur-0.92.json',
+  'credit-display/convert/half-up-5250.json',
+  'credit-display/convert/jpy-zero-decimal.json',
+  'credit-display/convert/large-1e8-sek.json',
+  'credit-display/convert/negative-credits.json',
+  'credit-display/convert/rate-zero-as-one.json',
+  'credit-display/convert/sek-159600.json',
+  'credit-display/convert/usd-rate-1.json',
+  'credit-display/convert/zero-credits.json',
+  'credit-display/minor-units/JPY-uppercase.json',
+  'credit-display/minor-units/jpy-1.json',
+  'credit-display/minor-units/sek-100.json',
+  'credit-display/minor-units/usd-100.json',
+  'credit-display/zero-decimal/jpy-true.json',
+  'credit-display/zero-decimal/krw-true.json',
+  'credit-display/zero-decimal/usd-false.json',
+  'error-model/api/check-limits-template.json',
+  'error-model/api/external-ref-case.json',
+  'error-model/paywall/activation-required.json',
+  'error-model/paywall/payment-required.json',
+  'error-model/transport/non-retryable.json',
+  'error-model/transport/retryable.json',
+  'error-model/webhook/invalid-payload.json',
+  'error-model/webhook/invalid-signature.json',
+  'error-model/webhook/malformed-signature.json',
+  'error-model/webhook/missing-signature.json',
+  'error-model/webhook/timestamp-too-old.json',
+  'paywall/classification/activation-trumps-all.json',
+  'paywall/classification/balance-block-proxy-credit-0.json',
+  'paywall/classification/null-limits.json',
+  'paywall/classification/plans-none-match.json',
+  'paywall/classification/recurring-at-cap.json',
+  'paywall/classification/usage-based-nested-balance-0.json',
+  'paywall/classification/usage-based-nonzero-balance.json',
+  'paywall/classification/usage-based-remaining-0-fallback.json',
+  'paywall/classification/usage-based-remaining-nonzero.json',
+  'paywall/classification/usage-based-toplevel-credit-0.json',
+  'paywall/client-payload/activation-full.json',
+  'paywall/client-payload/activation-minimal.json',
+  'paywall/client-payload/payment-full.json',
+  'paywall/client-payload/payment-minimal.json',
+  'paywall/gate/activation-regular.json',
+  'paywall/gate/payg-topup-reclassify.json',
+  'paywall/gate/payment-minimal.json',
+  'paywall/gate/payment-no-url.json',
+  'paywall/gate/payment-with-balance-product.json',
+  'paywall/gate/plan-absent-fallback.json',
+  'paywall/gate/topup-with-recurring-stays-payment.json',
+  'paywall/messages/gate-activation-no-url.json',
+  'paywall/messages/gate-activation-url.json',
+  'paywall/messages/gate-reactivation-omits-url.json',
+  'paywall/messages/gate-topup-no-url.json',
+  'paywall/messages/gate-topup-url.json',
+  'paywall/messages/gate-upgrade-no-url.json',
+  'paywall/messages/gate-upgrade-url.json',
+  'paywall/messages/nudge-activation-no-url.json',
+  'paywall/messages/nudge-activation-url.json',
+  'paywall/messages/nudge-null-limits.json',
+  'paywall/messages/nudge-reactivation-url.json',
+  'paywall/messages/nudge-topup-no-url.json',
+  'paywall/messages/nudge-topup-url.json',
+  'paywall/messages/nudge-upgrade-no-url.json',
+  'paywall/messages/nudge-upgrade-url.json',
+  'retry-schedule/exponential-delays.json',
+  'retry-schedule/fixed-exhausted.json',
+  'retry-schedule/fixed-success-after-one-retry.json',
+  'retry-schedule/immediate-success.json',
+  'retry-schedule/linear-delays.json',
+  'retry-schedule/maxretries-zero-immediate-throw.json',
+  'retry-schedule/non-error-throwable-object.json',
+  'retry-schedule/non-error-throwable-string.json',
+  'retry-schedule/on-retry-ordering.json',
+  'retry-schedule/should-retry-and-on-retry-ordering.json',
+  'retry-schedule/should-retry-not-consulted-on-last-attempt.json',
+  'retry-schedule/should-retry-veto-first-attempt.json',
+  'retry-schedule/should-retry-veto-second-attempt.json',
+  'seller-identity/label-map/by-type.json',
+  'seller-identity/labels/ca-tax-id.json',
+  'seller-identity/labels/de-vat.json',
+  'seller-identity/labels/gb-vat.json',
+  'seller-identity/labels/lowercase-de.json',
+  'seller-identity/labels/null-tax-id.json',
+  'seller-identity/labels/us-ein.json',
+  'seller-identity/resolve/all-null.json',
+  'seller-identity/resolve/ca-tax-id-only.json',
+  'seller-identity/resolve/company-from-tax-id-when-company-missing.json',
+  'seller-identity/resolve/de-dedupe.json',
+  'seller-identity/resolve/eu-fallback-tax-id.json',
+  'seller-identity/resolve/eu-prefers-vat.json',
+  'seller-identity/resolve/gb-vat.json',
+  'seller-identity/resolve/us-company-fallback.json',
+  'seller-identity/resolve/us-ein-dedupe-company.json',
+  'seller-identity/resolve/whitespace-only-absent.json',
+  'webhook-verification/accept-boundary-300s.json',
+  'webhook-verification/accept-boundary-future-299s.json',
+  'webhook-verification/accept-boundary-past-299s.json',
+  'webhook-verification/accept-extra-comma-parts.json',
+  'webhook-verification/accept.json',
+  'webhook-verification/invalid-payload-empty-body.json',
+  'webhook-verification/invalid-payload-not-json.json',
+  'webhook-verification/invalid-signature-length-mismatch.json',
+  'webhook-verification/invalid-signature-non-hex-v1.json',
+  'webhook-verification/invalid-signature-wrong-hmac.json',
+  'webhook-verification/malformed-signature-empty-v1.json',
+  'webhook-verification/malformed-signature-missing-t.json',
+  'webhook-verification/malformed-signature-missing-v1.json',
+  'webhook-verification/malformed-signature-no-parts.json',
+  'webhook-verification/malformed-signature-non-numeric-timestamp.json',
+  'webhook-verification/missing-signature.json',
+  'webhook-verification/timestamp-too-old-future-301s.json',
+  'webhook-verification/timestamp-too-old.json',
+] as const
+
 describe('contract fixtures', () => {
-  it('discovers the Step 4 webhook axis set plus the client sample', () => {
+  it('discovers the non-client fixture set (business-details + webhook + retry + paywall)', () => {
     const relative = fixtureFiles.map(f => path.relative(FIXTURES_ROOT, f))
-    expect(relative).toEqual([
-      'client/create-payment-intent-success.json',
-      'webhook-verification/accept-boundary-300s.json',
-      'webhook-verification/accept-boundary-future-299s.json',
-      'webhook-verification/accept-boundary-past-299s.json',
-      'webhook-verification/accept-extra-comma-parts.json',
-      'webhook-verification/accept.json',
-      'webhook-verification/invalid-payload-empty-body.json',
-      'webhook-verification/invalid-payload-not-json.json',
-      'webhook-verification/invalid-signature-length-mismatch.json',
-      'webhook-verification/invalid-signature-non-hex-v1.json',
-      'webhook-verification/invalid-signature-wrong-hmac.json',
-      'webhook-verification/malformed-signature-empty-v1.json',
-      'webhook-verification/malformed-signature-missing-t.json',
-      'webhook-verification/malformed-signature-missing-v1.json',
-      'webhook-verification/malformed-signature-no-parts.json',
-      'webhook-verification/malformed-signature-non-numeric-timestamp.json',
-      'webhook-verification/missing-signature.json',
-      'webhook-verification/timestamp-too-old-future-301s.json',
-      'webhook-verification/timestamp-too-old.json',
-    ])
+    const nonClient = relative.filter(f => !f.startsWith('client/'))
+    expect(nonClient).toEqual([...NON_CLIENT_FIXTURES])
+  })
+
+  it('covers every manifest client operation with ≥1 success and ≥1 error fixture', () => {
+    const manifest = parseYaml(readFileSync(MANIFEST_PATH, 'utf8')) as {
+      operations: Record<string, { names: { ts: string } }>
+    }
+    const operationIds = Object.keys(manifest.operations)
+    expect(operationIds.length).toBe(36)
+
+    const relative = fixtureFiles.map(f => path.relative(FIXTURES_ROOT, f))
+    const missing: string[] = []
+
+    for (const opId of operationIds) {
+      const methodDir = camelToKebab(manifest.operations[opId]?.names.ts ?? opId)
+      const prefix = `client/${methodDir}/`
+      const files = relative.filter(f => f.startsWith(prefix)).map(f => path.basename(f, '.json'))
+
+      const hasSuccess = files.some(isSuccessCase)
+      const hasError = files.some(isErrorCase)
+      if (!hasSuccess || !hasError) {
+        missing.push(
+          `${opId} (${methodDir}): success=${hasSuccess} error=${hasError} files=[${files.join(', ')}]`,
+        )
+      }
+    }
+
+    expect(missing).toEqual([])
   })
 
   it.each(fixtureFiles.map(file => [path.relative(FIXTURES_ROOT, file), file]))(

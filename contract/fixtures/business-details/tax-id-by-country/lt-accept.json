@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "lt-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "LT",
+      "taxId": "LT123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "LT",
+        "taxId": "LT123456789",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

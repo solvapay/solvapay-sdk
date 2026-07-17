@@ -1,0 +1,13 @@
+{
+  "suite": "credit-display",
+  "case": "zero-decimal-krw-true",
+  "input": {
+    "fn": "isZeroDecimalCurrency",
+    "args": {
+      "currency": "KRW"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

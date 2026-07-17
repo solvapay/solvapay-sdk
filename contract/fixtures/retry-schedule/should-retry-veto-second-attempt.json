@@ -1,0 +1,30 @@
+{
+  "suite": "retry-schedule",
+  "case": "should-retry-veto-second-attempt",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [
+        { "throw": "boom" },
+        { "throw": "boom" },
+        { "throw": "boom" },
+        { "throw": "boom" }
+      ],
+      "options": { "maxRetries": 3 },
+      "shouldRetry": { "vetoAt": [1] }
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [500],
+      "events": [
+        "call:0",
+        "shouldRetry:0=true",
+        "sleep:500",
+        "call:1",
+        "shouldRetry:1=false"
+      ],
+      "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
+    }
+  }
+}

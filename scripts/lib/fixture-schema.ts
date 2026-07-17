@@ -40,6 +40,8 @@ const FixtureExpect = z
 const WireRequest = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
   path: z.string().min(1),
+  /** Asserted when present; captured from `URL.searchParams`. */
+  query: z.record(z.string(), z.string()).optional(),
   headers: z.record(z.string(), z.string()).optional(),
   body: z.unknown().optional(),
 })

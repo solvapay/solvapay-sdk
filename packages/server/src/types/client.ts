@@ -192,6 +192,16 @@ export type CreditDisplayBlock = {
   rateSource: 'parity' | 'db' | 'fallback'
 }
 
+/** GET /v1/sdk/customers/:customerRef/credits — SDK balance projection. */
+export type GetCustomerBalanceResult = {
+  customerRef: string
+  credits: number
+  displayCurrency: string
+  creditsPerMinorUnit: number
+  displayExchangeRate: number
+  display?: CreditDisplayBlock
+}
+
 export type AutoRechargeInput = {
   enabled: boolean
   triggerType: 'balance'
@@ -512,14 +522,7 @@ export interface SolvaPayClient {
   }): Promise<components['schemas']['UserInfoResponse']>
 
   // GET: /v1/sdk/customers/:customerRef/credits
-  getCustomerBalance?(params: { customerRef: string }): Promise<{
-    customerRef: string
-    credits: number
-    displayCurrency: string
-    creditsPerMinorUnit: number
-    displayExchangeRate: number
-    display?: CreditDisplayBlock
-  }>
+  getCustomerBalance?(params: { customerRef: string }): Promise<GetCustomerBalanceResult>
 
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(

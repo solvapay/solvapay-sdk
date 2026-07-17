@@ -1,0 +1,15 @@
+{
+  "suite": "paywall",
+  "case": "balance-block-proxy-credit-0",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_other",
+        "remaining": 5,
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

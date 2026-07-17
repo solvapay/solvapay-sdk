@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-eur-0.92",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": 100000,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 0.92,
+      "displayCurrency": "EUR"
+    }
+  },
+  "expect": {
+    "result": 920
+  }
+}

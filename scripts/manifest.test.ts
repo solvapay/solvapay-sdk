@@ -78,6 +78,7 @@ function buildFixtureManifest(): SdkContractManifest {
 
   return {
     operations,
+    overlays: {},
     topLevel,
     coreHelpers: {
       validateBusinessDetails: {
@@ -113,6 +114,22 @@ function buildFixtureManifest(): SdkContractManifest {
           'invalid_signature',
           'invalid_payload',
         ],
+        messages: {
+          missing_signature: 'Missing webhook signature',
+          malformed_signature: 'Malformed webhook signature',
+          timestamp_too_old: 'Webhook signature timestamp too old',
+          invalid_signature: 'Invalid webhook signature',
+          invalid_payload: 'Invalid webhook payload: body is not valid JSON',
+        },
+      },
+      paywall: {
+        messages: {
+          payment_required: 'Payment required',
+          activation_required: 'Activation required',
+        },
+      },
+      transport: {
+        messageTemplate: '{message}',
       },
     },
     defaults: {

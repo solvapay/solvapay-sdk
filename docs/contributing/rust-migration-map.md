@@ -7,6 +7,8 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
+**Current progress (2026-07-17):** Steps 1–24 **Done** (Phases 0–2 closed; Phase 3 through step 24). **36 of 36** client methods implemented on `SolvaPayClient` (Groups A + B + C). **Next:** step 25 (shadow-mode harness).
+
 ## Status legend
 
 | Status | Meaning |
@@ -25,25 +27,25 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 3 | Fixture harness | Phase 0 | Done | — | Sample fixtures pass end to end via `pnpm test:contract` (`webhook-verification/accept`, `timestamp-too-old`, `client/create-payment-intent-success`) | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 4 | Webhook-signature fixtures | Phase 0 | Done | — | Full §6.1 axis set (17 webhook fixtures) passes via harness against both node and edge `verifyWebhook`; `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 5 | Retry-schedule fixtures | Phase 0 | Done | — | Full §6.2 set (13 retry fixtures) passes via harness against real `withRetry`; `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
-| 6 | Paywall fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
-| 7 | Client request/response fixtures | Phase 0 | Not started | — | — | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
+| 6 | Paywall fixtures | Phase 0 | Done | — | Full §6.3 set under `contract/fixtures/paywall/` (classification / gate / messages / client-payload) passes via harness against real paywall helpers; `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
+| 7 | Client request/response fixtures | Phase 0 | Done | — | All 36 `SolvaPayClient` methods covered under `contract/fixtures/client/<method-kebab>/` (≥1 success + ≥1 error each); `pnpm test:contract` green | [Phase 0](#phase-0--contract-freeze-and-golden-fixtures) |
 | 8 | Scaffold cargo workspace | Phase 1 | Done | — | CI rust job: fmt, clippy deny, no-unwrap gate, native + wasm32 build, no-tokio tree, `cargo test`, empty fixture suite (`parsed=N executed=0 skipped-unbound=N`) | [Phase 1](#phase-1--pure-dependency-free-logic) |
-| 9 | Business details | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
-| 10 | Credit display + seller identity | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
-| 11 | Retry policy engine | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
-| 12 | Webhook verification | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
-| 13 | Paywall state | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
-| 14 | Paywall gate | Phase 1 | Not started | — | — | [Phase 1](#phase-1--pure-dependency-free-logic) |
-| 15 | Rust DTO generator | Phase 2 | Not started | — | — | [Phase 2](#phase-2--generated-dtos-and-error-model) |
-| 16 | SDK-only overlays | Phase 2 | Not started | — | — | [Phase 2](#phase-2--generated-dtos-and-error-model) |
-| 17 | Error model | Phase 2 | Not started | — | — | [Phase 2](#phase-2--generated-dtos-and-error-model) |
-| 18 | TS declarations + parity check | Phase 2 | Not started | — | — | [Phase 2](#phase-2--generated-dtos-and-error-model) |
-| 19 | Native transport | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
-| 20 | WASM Fetch transport | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
-| 21 | Client shell | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
-| 22 | Client methods, group A | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
-| 23 | Client methods, group B | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
-| 24 | Client methods, group C | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
+| 9 | Business details | Phase 1 | Done | — | `contract/fixtures/business-details/` (99 cases) green in TS harness + Rust runner (`executed=99 passed=99 failed=0`); issue-shape gotcha locked; `cargo test --workspace` + step-8 gates green | [Phase 1](#phase-1--pure-dependency-free-logic) |
+| 10 | Credit display + seller identity | Phase 1 | Done | — | `contract/fixtures/credit-display/` (18) + `seller-identity/` (17) green in TS harness + Rust runner (`executed=134 passed=134 failed=0` with business-details); RED observed on stubs; `cargo test --workspace` + step-8 gates green | [Phase 1](#phase-1--pure-dependency-free-logic) |
+| 11 | Retry policy engine | Phase 1 | Done | — | Core unit tests + 13 `retry-schedule` fixtures green via host adapter; full bound corpus `executed=147 passed=147 failed=0`; step-8 gates green | [Phase 1](#phase-1--pure-dependency-free-logic) |
+| 12 | Webhook verification | Phase 1 | Done | — | `solvapay-core::webhook` + Rust runner binding; Step 4 `webhook-verification/` fixtures green (`passed` via `fixture-runner`); frozen messages from generated `error_templates` | [Phase 1](#phase-1--pure-dependency-free-logic) |
+| 13 | Paywall state | Phase 1 | Done | — | `solvapay-core::paywall_state` + runner bindings; classification / gate-message / nudge fixtures green byte-for-byte | [Phase 1](#phase-1--pure-dependency-free-logic) |
+| 14 | Paywall gate | Phase 1 | Done | — | `solvapay-core::paywall_gate` + runner binding; gate fixtures green incl. skip-absent field presence | [Phase 1](#phase-1--pure-dependency-free-logic) |
+| 15 | Rust DTO generator | Phase 2 | Done | — | `dto-gen` lowers OpenAPI snapshot → `solvapay-dto` (`schemas`/`routes`); CI regen-drift + fmt/clippy/no-unwrap; `cargo build -p solvapay-dto` | [Phase 2](#phase-2--generated-dtos-and-error-model) |
+| 16 | SDK-only overlays | Phase 2 | Done | — | `overlays:` catalog in manifest; `dto-gen --manifest` emits `overlays.rs` + `overlays.generated.d.ts`; `pnpm manifest:check`, `cargo build -p solvapay-dto`, `tsc --noEmit`, regen idempotence + CI drift gates green (§15 note 11 / `serde_norway 0.9.42`) | [Phase 2](#phase-2--generated-dtos-and-error-model) |
+| 17 | Error model | Phase 2 | Done | — | `SdkError` in `solvapay-core`; manifest-frozen templates → `error_templates.rs`; `error-model/` fixtures + one §6.4 conversion helper; RED→GREEN on `cargo test -p solvapay-core error`; `pnpm test:contract` + step-8 gates | [Phase 2](#phase-2--generated-dtos-and-error-model) |
+| 18 | TS declarations + parity check | Phase 2 | Done | — | Manifest `params` catalog; `client.generated.d.ts` + API-diff mutual assignability; `pnpm parity:check`; generated `signature-parity.generated.test.ts`; CI drift + `@generated` header gates; RED→GREEN on dto-gen emit + `test:types` | [Phase 2](#phase-2--generated-dtos-and-error-model) |
+| 19 | Native transport | Phase 3 | Done | — | `ReqwestTransport` + wiremock corpus round-trips; §15 note 13 | [Phase 3](#phase-3--http-client-core) |
+| 20 | WASM Fetch transport | Phase 3 | Done | — | `FetchTransport` + `test-wasm-transport.sh` corpus round-trips; §15 note 14 | [Phase 3](#phase-3--http-client-core) |
+| 21 | Client shell | Phase 3 | Done | — | Shell unit + shell-level fixtures on reqwest + Fetch; §15 note 15 | [Phase 3](#phase-3--http-client-core) |
+| 22 | Client methods, group A | Phase 3 | Done | — | 29 Group A fixtures (28 wire + `get-customer-missing-params`) green on reqwest + Fetch; `SolvaPayClient` 10 methods in `client.rs` | [Phase 3](#phase-3--http-client-core) |
+| 23 | Client methods, group B | Phase 3 | Done | — | 19 Group B fixtures green on reqwest + Fetch; all 7 `ProcessPaymentResult` branches; `attachBusinessDetails` raw JSON passthrough | [Phase 3](#phase-3--http-client-core) |
+| 24 | Client methods, group C | Phase 3 | Done | — | 56 Group C fixtures green on reqwest + Fetch; `OPERATION_NAMES` coverage gate (36/36); `execute_raw` for delete 404 + cancel/reactivate | [Phase 3](#phase-3--http-client-core) |
 | 25 | Shadow-mode harness | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
 | 26 | Helpers: customer / auth / activation | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
 | 27 | Helpers: payment / payment-method / checkout | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
@@ -78,7 +80,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 
 ## Per-phase handoff log
 
-### Phase 0 — Contract freeze and golden fixtures — In progress
+### Phase 0 — Contract freeze and golden fixtures — Done
 
 <!-- running per-step bullets accumulate here as each step lands -->
 - Step 1 (OpenAPI snapshot + regen script): Checked in path-filtered source + derived snapshot, shared `scripts/lib/openapi-pipeline.ts`, `scripts/snapshot-openapi.ts` (`--from-url` / `--from-file` / `--check`), `pnpm test:contract`, offline CI gates; `generate-types.ts` imports the shared pipeline — "done when" verified: `pnpm snapshot:openapi:check` zero diff + idempotent; contract tests green
@@ -86,6 +88,8 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - Step 3 (Fixture harness): Zod §5.3 schema + TS runner (`scripts/lib/fixture-schema.ts`, `scripts/lib/fixture-harness.ts`), discovery suite `scripts/contract-fixtures.test.ts`, samples under `contract/fixtures/` — "done when" verified: three sample fixtures pass end to end via `pnpm test:contract`
 - Step 4 (Webhook-signature fixtures): Full §6.1 axis under `contract/fixtures/webhook-verification/` (17 cases); `createDefaultRegistry` registers both `node` and `edge` `verifyWebhook` bindings — "done when" verified: every fixture replays green against both implementations via `pnpm test:contract`
 - Step 5 (Retry-schedule fixtures): Full §6.2 axis under `contract/fixtures/retry-schedule/` (13 cases); harness `withRetry` binding + `installDelayRecorder` — "done when" verified: every fixture replays green against real `withRetry` via `pnpm test:contract`
+- Step 6 (Paywall fixtures): Full §6.3 axis under `contract/fixtures/paywall/` (classification / gate / messages / client-payload); harness bindings for the five pure helpers — "done when" verified: every fixture replays green via `pnpm test:contract`
+- Step 7 (Client request/response fixtures): Full client corpus under `contract/fixtures/client/<method-kebab>/` for all 36 `SolvaPayClient` methods; harness extras for query capture, verbatim bodies, delete null coercion — "done when" verified: ≥1 success + ≥1 error per operation; `pnpm test:contract` green
 
 #### Step 2 decisions for future handoffs
 
@@ -115,11 +119,23 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Delay recorder:** patch `globalThis.setTimeout` to record `ms`, push `sleep:<ms>`, and fire the callback synchronously — asserts computed delays, never wall-clock. Restored in binding `finally` and via harness `GlobalSnapshot`.
 - **Single binding:** `withRetry` is the same export from `./utils` on both node and edge entry points — register once (`id: 'server'`), unlike step 4's dual `verifyWebhook`.
 
-**Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+#### Step 6 decisions for future handoffs
+
+- **Pure helpers only:** fixtures cover `classifyPaywallState`, `buildPaywallGate`, `buildGateMessage`, `buildNudgeMessage`, `paywallErrorToClientPayload` — no wire blocks; `expect.result` only (these never throw).
+- **Skip-absent fields:** conditionally-spread fields (`plans` / `balance` / `productDetails` / `confirmationUrl`) are omitted from `expect.result` when absent — `deepStrictEqual` locks “never emit null for absent fields”.
+- **Layout:** `paywall/<axis>/<case>.json` with axes `classification`, `gate`, `messages`, `client-payload`.
+
+#### Step 7 decisions for future handoffs
+
+- **Per-method directories:** `client/<method-kebab>/<case>.json` — every manifest operation has ≥1 success and ≥1 error case (enforced by `scripts/contract-fixtures.test.ts`).
+- **Shared clock / RNG:** clock `2026-07-01T00:00:00Z` (epoch ms `1782864000000`); `rngSeed: 42` only on auto-generated idempotency-key fixtures (`random9` → `ln13h9a6y`).
+- **Harness extras:** `wire.request.query` capture/assertion, verbatim string response bodies, `deleteProduct`/`deletePlan` coerce `undefined → null`.
+
+**Phase-close handoff:**
+- **What was done:** Frozen OpenAPI snapshot + SDK contract manifest; built the TS golden-fixture harness; authored full corpora for webhook verification, retry schedule, paywall pure helpers, and all 36 client methods under `contract/fixtures/`.
+- **Why:** Phase 1+ Rust (and later language) runners must replay the same JSON against live implementations without inventing behavior.
+- **Decisions to document:** §5.3 fixture format; dual `verifyWebhook` bindings; retry observation shape; paywall skip-absent JSON; client per-method coverage gate. Deviations: none material. Deferred: backend-published OpenAPI artifact for CI drift (open-items index).
+- **Pointers:** redesign §5.3, §6.1–§6.3; `contract/fixtures/README.md`; `pnpm test:contract`.
 
 #### Step 1 decisions for future handoffs
 
@@ -130,10 +146,22 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Open dependency:** automated drift vs backend CI needs a backend-published OpenAPI artifact (flag for backend team). See open-items index.
 - **`contract/` is the Phase 0 contract-freeze root.** Step 2 → `contract/manifest/`; steps 3–7 → `contract/fixtures/`.
 
-### Phase 1 — Pure, dependency-free logic — In progress
+### Phase 1 — Pure, dependency-free logic — Done
 
 <!-- running per-step bullets accumulate here as each step lands -->
 - Step 8 (Scaffold cargo workspace): `rust/` workspace with `solvapay-core` + `fixture-runner`, pinned `rust-toolchain.toml` (1.96.0 + wasm32), Clippy/workspace deny of unwrap/expect/panic, ripgrep `scripts/check-no-unwrap.sh`, CI `rust` job (native + wasm32, no-tokio, empty fixture suite) — "done when" verified locally; see §15 note 6
+- Step 9 (Business details): `solvapay-core::business_details` + `contract/fixtures/business-details/` (99 cases); TS harness `@solvapay/core` bindings; Rust fixture-runner real execution — "done when" verified: `pnpm test:contract` + `cargo run -p fixture-runner -- ../contract/fixtures` → `executed=99 passed=99 failed=0`; redesign §9 gotcha locked (byte-exact `BusinessDetailsValidationIssue` `{ path, message }`)
+- Step 10 (Credit display + seller identity): `solvapay-core::{credit_display,seller_identity}` + fixtures `credit-display/` (18) / `seller-identity/` (17); reuses `derive_tax_id_type` + `is_supported_business_country`; RED: stubs returned wrong defaults (`failed=30` expectation mismatches) before GREEN — "done when" verified: TS harness green + `cargo run -p fixture-runner -- ../contract/fixtures` → `executed=134 passed=134 failed=0`
+- Step 11 (Retry policy engine): `solvapay-core::retry` (`Backoff`, `RetryPolicy::next_delay`) + host adapter `fixture-runner` `withRetry`; RED: core stub returned `Some(1ms)` (assertion failures) then incomplete host loop (`parsed=13 executed=13 passed=4 failed=9`); GREEN: `retry-schedule` → `parsed=13 executed=13 passed=13 failed=0`, full corpus → `executed=147 passed=147 failed=0`; see §15 note 7
+- Step 12 (Webhook verification): `solvapay-core::webhook` (`verify_webhook`, `WebhookError` / `WebhookErrorCode`) + fixture-runner host clock parse; Step 4 corpus green in Rust; messages later sourced from generated `error_templates` (step 17)
+- Step 13 (Paywall state): `solvapay-core::paywall_state` classifier + gate/nudge message builders; paywall classification/message fixtures green byte-for-byte
+- Step 14 (Paywall gate): `solvapay-core::paywall_gate` (`build_paywall_gate`, `PaywallGate`); gate fixtures green incl. skip-absent emission
+
+**Phase-close handoff:**
+- **What was done:** Cargo workspace + all Phase 1 pure logic in `solvapay-core` (business details, credit display, seller identity, retry, webhook, paywall state/gate); fixture-runner bindings replay Phase 0 corpora.
+- **Why:** Host-agnostic decision cores must be proven byte-identical to TS before HTTP/DTO layers depend on them.
+- **Decisions to document:** Step 8–14 bullets above; core deps frozen to serde/hmac/sha2/subtle (+ serde_json for webhook); timer/callback boundaries stay host-side. Deviations: JSON `balance: null` treated as absent in paywall state (pinned). Deferred: none material.
+- **Pointers:** redesign §4.3, §6.1–§6.3; `contract/fixtures/`; §15 notes 6–9.
 
 #### Step 8 decisions for future handoffs
 
@@ -144,25 +172,94 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **No-unwrap enforcement:** `[workspace.lints.clippy]` deny + `rust/scripts/check-no-unwrap.sh` (skips `#[cfg(test)]` / `tests.rs`). Test modules may unwrap under `#[allow(...)]`.
 - **WASM profile:** `[profile.wasm-release]` (`opt-level = "z"`, LTO, `panic = "abort"`, `codegen-units = 1`) ready for later wasm builds — not used by step 8 CI yet.
 
-**Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+#### Step 9 decisions for future handoffs
 
-### Phase 2 — Generated DTOs and error model — Not started
+- **Fixtures authored in this step:** no prior business-details corpus; suite lives at `contract/fixtures/business-details/` and was proven green against `@solvapay/core` before the Rust port.
+- **No `regex` crate:** step 8 froze core deps; the 29 per-country tax-ID patterns are hand-rolled matchers (prefix + digit-count + small char-class checks); the accept/reject matrix proves equivalence.
+- **Runner execution model:** `BindingRegistry` is `fn-name → Vec<Binding>` with `invoke(&FixtureInput) -> Result<Value, …>`; deep `serde_json::Value` equality against `expect.result` (absent ≠ null); non-zero exit when `failed > 0`; summary `parsed=N executed=N passed=N failed=N skipped-unbound=N`.
+- **Issue-shape gotcha (redesign §9):** public contract is `BusinessDetailsValidationIssue = { path, message }` only (Zod’s internal `code` is not exported). Rust must emit the same paths + byte-exact messages so React form errors don’t change — locked by fixtures: `country` / `Country is required`, `country` / `Country is not supported for business purchases`, `customerCountry` / `Billing country is not supported for tax calculation`, `taxId` / `Enter a valid tax ID for {CC}`, `customerName` / Zod `too_big` default `Too big: expected string to have <=100 characters`.
+- **Zero-arg options binding:** `getBusinessCountryOptions` locks `BUSINESS_COUNTRY_OPTIONS` localeCompare ordering.
+
+#### Step 10 decisions for future handoffs
+
+- **Fixtures authored in this step:** no prior credit-display / seller-identity corpus; suites proven green against `@solvapay/core` before the Rust port (Step 9 pattern).
+- **Null-result (credit convert):** `creditsPerMinorUnit <= 0` → JSON `null` (not omit); fixture `expect.result: null`.
+- **Rate `0` → `1`:** parity with JS `displayExchangeRate || 1`; locked by `convert/rate-zero-as-one.json`.
+- **Rounding:** `f64::round` then cast to `i64` matches JS `Math.round` on the fixture set (prefer exact-integer cases; half-up `5250` → `53` locked).
+- **Null-rows (seller identity):** unlike paywall skip-absent, emit `"taxIdentifier": null` / `"companyNumber": null` explicitly when absent.
+- **Reuse:** seller identity calls `derive_tax_id_type` + `is_supported_business_country` (exported helper; no duplicated 29-country list).
+- **Const map binding:** `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE` serializes snake_case keys `eu_vat` / `gb_vat` / `us_ein`.
+
+#### Step 11 decisions for future handoffs
+
+- **Public API:** `Backoff::{Fixed,Linear,Exponential}` (Fixed default), `RetryPolicy { max_retries, initial_delay_ms, backoff }` with contract defaults `(2, 500, Fixed)`, `next_delay(attempt) -> Option<Duration>`; `attempt` zero-based; `max_retries` counts retries after the initial call; exhaustion is `None` (infallible — no `SdkError` yet).
+- **Overflow safety:** linear uses `saturating_mul` / `saturating_add`; exponential uses `1u64.checked_shl(attempt)` then `saturating_mul` (or `u64::MAX` when shift overflows).
+- **Callback/timer boundary:** core computes delays only; fixture-runner (and future language facades) own the host loop — `shouldRetry` then `onRetry` then recorded/real sleep. Non-`Error` coercion (`String(error)` → `boom` / `[object Object]`) stays host-side.
+- **Fixtures unchanged:** all 13 Step 5 `retry-schedule` fixtures reused; no TS `withRetry` runtime change; only corrected stale linear/exponential JSDoc in `packages/server/src/types/options.ts`.
+- **Verification:** `cargo test -p solvapay-core retry`; `cargo run -q -p fixture-runner -- ../contract/fixtures/retry-schedule` → 13/13; full fixtures → 147/147; `pnpm manifest:check` (defaults `2`/`500`/`fixed`); step-8 fmt/clippy/no-unwrap/wasm/no-tokio gates.
+
+### Phase 2 — Generated DTOs and error model — Done
+
+<!-- running per-step bullets accumulate here as each step lands -->
+- Step 15 (Rust DTO generator): `dto-gen` + `solvapay-dto` from OpenAPI snapshot; CI regen-drift green
+- Step 16 (SDK-only overlays): `overlays:` catalog in manifest; `dto-gen --manifest` emits `overlays.rs` + `overlays.generated.d.ts`; regen idempotence + CI drift gates green
+- Step 17 (Error model): `solvapay-core::SdkError` (`Api` / `Paywall` / `Webhook` / `Transport`) + `render_template` / `api_from_template`; manifest `errors.webhook.messages` / `paywall.messages` / `transport.messageTemplate`; dto-gen emits `error_templates.rs`; webhook messages switch to generated constants; `From<WebhookError>`; fixture-runner `sdk_error_to_observation` (one §6.4 layer; webhook binding routes through it); `contract/fixtures/error-model/` (11 cases) + TS `constructSdkError` harness binding — RED→GREEN: `cargo test -p solvapay-core error` construction/serde/mapping tests written first then implemented; "done when" verified: error fixtures green in TS + Rust, `pnpm manifest:check`, step-8 gates, dto-gen regen idempotence
+- Step 18 (TS declarations + parity check): manifest `params` + dto-gen catalog IR; `--ts-client-out` → `client.generated.d.ts`; API-diff (`test:types` mutual assignability); `pnpm parity:check` (§2.5 allowlist); `--ts-parity-out` → `signature-parity.generated.test.ts` (presence/arity/defaults/errors/sync); CI drift covers all three TS artifacts + `@generated` header gate — RED→GREEN on emit_client_ts / emit_parity_suite_ts / parity.ts tests then emitters
+
+#### Step 17 decisions for future handoffs
+
+- **Single surface:** Core returns / folds into `SdkError`; bindings convert once via `sdk_error_to_observation` (or language-native equivalent) — never a second taxonomy. Transport is `SdkError::Transport` only (step 19+).
+- **Templates live in the manifest:** operation `errors.default` / `cases` already frozen; step 17 added webhook/paywall/transport message strings. dto-gen emits `solvapay-dto::error_templates`; `solvapay-core` depends on `solvapay-dto` for webhook message constants.
+- **Fixtures:** `constructSdkError` builds variants for golden checks; TS asserts `name`/`message`/`status` only (`kind`/`code` are Rust-era); Transport uses stable codes `retryable` / `non_retryable`.
+
+**Phase-close handoff:**
+- **What was done:** `dto-gen` → `solvapay-dto` (wire schemas, routes, overlays, error templates); `SdkError` in core; TS `client.generated.d.ts` + parity/signature-parity gates.
+- **Why:** Single generated contract for Rust transport and multi-language facades; no hand-duplicated DTOs or error strings.
+- **Decisions to document:** Step 15–18 bullets; `ProcessPaymentResult` untagged enum; overlay catalog in manifest. Deviations: §13 OpenAPI gates (`includeCheckoutSession`, process-payment discriminator) still open — worked around via overlays/untagged. Deferred: backend republish for those gates.
+- **Pointers:** redesign §2.5, §2.8; `contract/manifest/sdk-contract.yaml`; §15 notes 10–12.
+
+### Phase 3 — HTTP client core — In progress
 
 <!-- running per-step bullets accumulate here as each step lands -->
 
-**Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+- **Step 19 (Native transport):** `solvapay-transport::{Transport, HttpRequest, ReqwestTransport}`; dyn-compatible `BoxFuture` (`Send` native / bare wasm32); wiremock recorded-fixture round-trips. §15 note 13.
+- **Step 20 (WASM Fetch transport):** `FetchTransport` via `js_sys::global().fetch`; Node `wasm-bindgen-test` + `wasm-fixture-server.mjs` per-fixture mounts; `test-wasm-transport.sh`. §15 note 14.
+- **Step 21 (Client shell):** `ClientShell::execute` — auth/`Content-Type`, base-URL normalize, seeded mulberry32/`random9` idempotency, `RetryPolicy` loop + injectable sleeper, template `SdkError::Api` mapping. Shell-level fixtures green on both transports. §15 note 15.
+- **Step 22 (Client methods, group A):** `SolvaPayClient` — 10 methods (`createCustomer` … `getPlatformConfig`); explicit wire bodies + response normalization (`getCustomer` three-shape, `createCustomer` `reference`/`customerRef` mapping); native `client_group_a_fixtures.rs` + wasm `wasm_client_group_a_fixtures.rs` over shared `tests/support/mod.rs`. Inventory: 29 fixtures (28 wire + validation-only `get-customer-missing-params`).
+- **Step 23 (Client methods, group B):** Five payment/checkout methods; `process_payment_intent` → `solvapay_dto::schemas::ProcessPaymentResult` (7 branches); `attach_business_details` → raw `serde_json::Value` passthrough; `wire_bodies` private body structs + `caller_key_or_auto` + `serialize_whole_f64` for top-up amounts; native `client_group_b_fixtures.rs` + wasm `wasm_client_group_b_fixtures.rs`. Inventory: 19 fixtures (all wire).
+- **Step 24 (Client methods, group C):** Remaining 21 methods (usage/limits, products, plans, purchases, payment-method/auto-recharge); 56 fixtures green on reqwest + Fetch; coverage gate `GROUP_A ∪ GROUP_B ∪ GROUP_C == error_templates::OPERATION_NAMES` (36); native `client_group_c_fixtures.rs` + wasm `wasm_client_group_c_fixtures.rs` + ignored `client_group_c_smoke.rs`.
 
-### Phase 3 — HTTP client core — Not started
+#### Step 21 decisions for future handoffs
 
-<!-- running per-step bullets accumulate here as each step lands -->
+- **Shell API:** `ClientShell` over `SharedTransport` (`Arc<dyn Transport + Send + Sync>` native / `Arc<dyn Transport>` wasm32); `ShellRequest { method, path, query, body, idempotency, error_template }`; `Idempotency::{None, CallerKey, Auto { format, vars }}`. Typed methods (steps 22–24) call `execute` with the right template from `error_templates::operations::*`.
+- **Default no-retry:** shell `RetryPolicy { max_retries: 0, … }` — TS `client.ts` does not retry; fixtures record one wire exchange. Wiring is fully tested (`max_retries: 2` → delays `[500, 500]`); facade `withRetry` stays host-side. Enabling retries later is a policy flip, not a loop rewrite.
+- **Seeded RNG / clock hooks:** `with_clock` / `with_rng` / `with_sleeper` injectables; `mulberry32(42)` → `random9` `ln13h9a6y` (TS harness lock). Auto keys: `payment-{planRef}-{epochMs}-{random9}`, `topup-{epochMs}-{random9}`.
+- **Diagrams:** no Mermaid changes (§4.1 already shows the shell).
+
+#### Step 22 decisions for future handoffs
+
+- **Typed client location:** `solvapay-transport::SolvaPayClient` wraps `ClientShell`; methods call `execute_typed` / `execute_json` with manifest `error_templates::operations::*`.
+- **Path encoding parity:** `encode_path_segment` (JS `encodeURIComponent`) for `updateCustomer` / `assignCredits`; direct interpolation for `getCustomer` ref lookup and `getCustomerBalance` (matches TS).
+- **Bodies vs param structs:** serialize explicit private body structs — e.g. `assignCredits` strips `customerRef`/`idempotencyKey` from JSON body; caller key only when non-empty.
+- **Fixture harness:** `tests/support/mod.rs` — `GROUP_A_FNS`, `dispatch_group_a`, `assert_expect` (numeric JSON equality); wiremock (native) / `wasm-fixture-server.mjs` per-case mounts (wasm).
+- **Validation-only fixture:** `get-customer-missing-params` has no `wire`; must fail with pre-transport `SdkError::Api` before transport.
+
+#### Step 23 decisions for future handoffs
+
+- **`ProcessPaymentResult` path:** use `solvapay_dto::schemas::ProcessPaymentResult` (not crate-root re-export); untagged ordering already correct — `succeeded-bare` deserializes as `SucceededRecurring` arm but re-serializes byte-identically under fixture comparison.
+- **`attachBusinessDetails`:** return `serde_json::Value` via `execute_json` — OpenAPI 200 has no response schema; partial `taxBreakdown` would fail strict `TaxBreakdown` decode. Matches TS `res.json()` passthrough. Body omits `customerCountry` / `customerName` / `paymentIntentId`.
+- **Explicit wire bodies:** do not serialize param structs directly — e.g. top-up adds constant `purpose: "credit_topup"`; payment/process bodies omit idempotency/path-only fields. `wire_bodies` module holds `#[derive(Serialize)]` structs.
+- **Idempotency:** `create_payment_intent` / `create_topup_payment_intent` use `caller_key_or_auto` (`payment-{planRef}-{epochMs}-{random9}` / `topup-{epochMs}-{random9}`); others `Idempotency::None`.
+- **Whole-number f64 on wire:** `serialize_whole_f64` emits JSON integers for whole `f64` values (e.g. top-up `amount: 2000` not `2000.0`) — required for wiremock `body_json` parity with Step 7 fixtures.
+- **Inventory:** 19 fixtures — `createPaymentIntent` (4), `createTopupPaymentIntent` (3), `processPaymentIntent` (8 = 7 branches + error), `attachBusinessDetails` (2), `activatePlan` (2).
+
+#### Step 24 decisions for future handoffs
+
+- **`execute_raw`:** `ClientShell::execute_raw` shares auth/idempotency/retry with `execute` but returns `HttpResponse` without status→Api mapping or JSON parse. `execute` is implemented as `execute_raw` + map. Used by `delete_product` / `delete_plan` (404 = success → `()` / fixture `null`) and `cancel_purchase` / `reactivate_purchase` (status-specific CASES + invalid-JSON `{bodyPrefix200}` with `status: None`).
+- **Merge-precedence gotchas (TS parity):** `get_product` = `{ ...data, ...result }` (top wins, keep `data`); `list_products` = `{ ...product, ...data }` (data wins, keep `data`); `list_plans` = `{ ...data, ...plan }` then `price = plan.price ?? data.price` and **delete** `data`. Only `get_product` path-encodes; other product/plan/purchase refs interpolate raw.
+- **Coverage gate:** `dto-gen` emits `error_templates::OPERATION_NAMES` (all 36 manifest op ids); `client_group_c_fixtures::all_thirty_six_operations_are_dispatchable` asserts set equality with `GROUP_A_FNS ∪ GROUP_B_FNS ∪ GROUP_C_FNS` and that every `contract/fixtures/client/` fixture fn is dispatchable. Covered by regen-idempotence + drift CI.
+- **Fixture inventory (56, all wire):** usage/limits 6; products 19; plans 11; purchases 12; payment-method/auto-recharge 8. Return `serde_json::Value` for merge/passthrough shapes; typed `CreateProductResult` / `CloneProductResult` / `()` for deletes.
+- **Bodies:** `serialize_body_ts_numbers` coerces whole `f64` → JSON ints for wiremock; `SaveAutoRechargeBody` + `serialize_whole_f64`; cancel body omitted unless non-empty `reason`.
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …

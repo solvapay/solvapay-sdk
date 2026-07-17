@@ -85,6 +85,20 @@ describe('FixtureSchema', () => {
     expect(FixtureSchema.parse(clientWire)).toEqual(clientWire)
   })
 
+  it('accepts optional wire.request.query', () => {
+    const withQuery = {
+      ...clientWire,
+      wire: {
+        ...clientWire.wire,
+        request: {
+          ...clientWire.wire.request,
+          query: { customerRef: 'cus_fixture' },
+        },
+      },
+    }
+    expect(FixtureSchema.parse(withQuery)).toEqual(withQuery)
+  })
+
   it('rejects fixtures missing suite or case', () => {
     expect(() => FixtureSchema.parse({ ...webhookAccept, suite: undefined })).toThrow()
     expect(() => FixtureSchema.parse({ ...webhookAccept, case: undefined })).toThrow()

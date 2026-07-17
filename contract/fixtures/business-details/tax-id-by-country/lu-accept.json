@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "lu-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "LU",
+      "taxId": "LU12345678"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "LU",
+        "taxId": "LU12345678",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

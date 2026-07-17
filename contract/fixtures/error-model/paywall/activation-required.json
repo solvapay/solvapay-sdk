@@ -1,0 +1,26 @@
+{
+  "suite": "error-model",
+  "case": "paywall-activation-required",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Paywall",
+      "message": "Activation required",
+      "gate": {
+        "kind": "activation_required",
+        "product": "prd_test",
+        "checkoutUrl": "https://checkout.example/activate",
+        "message": "Activate a plan to continue",
+        "confirmationUrl": "https://checkout.example/confirm",
+        "plans": []
+      }
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "PaywallError",
+      "message": "Activation required",
+      "kind": "Paywall"
+    }
+  }
+}

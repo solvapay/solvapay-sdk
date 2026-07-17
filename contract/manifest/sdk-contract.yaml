@@ -27,6 +27,10 @@ operations:
       default:
         messageTemplate: "Check limits failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CheckLimitsRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -54,6 +58,10 @@ operations:
       default:
         messageTemplate: "Track usage failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: TrackUsageRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -81,6 +89,10 @@ operations:
       default:
         messageTemplate: "Track usage bulk failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: TrackUsageBulkRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -109,6 +121,10 @@ operations:
       default:
         messageTemplate: "Create customer failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CreateCustomerRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -128,7 +144,7 @@ operations:
     optionalOnClient: true
     request: UpdateCustomerRequest
     response: UpdateCustomerResult
-    overlays: [UpdateCustomerResult]
+    overlays: [UpdateCustomerResult, UpdateCustomerParams]
     normalization:
       - "map reference||customerRef → { customerRef }"
     idempotency:
@@ -137,6 +153,13 @@ operations:
       default:
         messageTemplate: "Update customer failed ({status}): {body}"
       cases: []
+    params:
+      - name: customerRef
+        type: string
+        required: true
+      - name: params
+        ref: UpdateCustomerParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -170,6 +193,10 @@ operations:
       cases:
         - messageTemplate: One of customerRef, externalRef, or email must be provided
         - messageTemplate: "No customer found with externalRef: {externalRef}"
+    params:
+      - name: params
+        ref: GetCustomerParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -198,6 +225,10 @@ operations:
       default:
         messageTemplate: "Assign credits failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: AssignCreditsRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -224,6 +255,7 @@ operations:
       default:
         messageTemplate: "Get merchant failed ({status}): {body}"
       cases: []
+    params: []
     sync:
       ts: async
       py: [async, blocking]
@@ -250,6 +282,7 @@ operations:
       default:
         messageTemplate: "Get platform config failed ({status}): {body}"
       cases: []
+    params: []
     sync:
       ts: async
       py: [async, blocking]
@@ -277,6 +310,10 @@ operations:
       default:
         messageTemplate: "Get product failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -305,6 +342,7 @@ operations:
       default:
         messageTemplate: "List products failed ({status}): {body}"
       cases: []
+    params: []
     sync:
       ts: async
       py: [async, blocking]
@@ -332,6 +370,10 @@ operations:
       default:
         messageTemplate: "Create product failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CreateProductRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -359,6 +401,10 @@ operations:
       default:
         messageTemplate: "Bootstrap MCP product failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: McpBootstrapDto
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -386,6 +432,13 @@ operations:
       default:
         messageTemplate: "Configure MCP plans failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: params
+        ref: ConfigureMcpPlansDto
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -413,6 +466,13 @@ operations:
       default:
         messageTemplate: "Update product failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: params
+        ref: UpdateProductRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -440,6 +500,10 @@ operations:
       default:
         messageTemplate: "Delete product failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -459,7 +523,7 @@ operations:
     optionalOnClient: true
     request: CloneProductDto
     response: CloneProductResult
-    overlays: [CloneProductResult]
+    overlays: [CloneProductResult, CloneProductOverrides]
     normalization: []
     idempotency:
       kind: none
@@ -467,6 +531,13 @@ operations:
       default:
         messageTemplate: "Clone product failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: overrides
+        ref: CloneProductOverrides
+        required: false
     sync:
       ts: async
       py: [async, blocking]
@@ -484,8 +555,8 @@ operations:
       go: ListPlans
       rust: list_plans
     optionalOnClient: true
-    response: Plan
-    overlays: []
+    response: ListPlansResult
+    overlays: [ListPlansResult]
     normalization:
       - "accept bare array or { plans } wrapper"
       - unwrap nested data field
@@ -496,6 +567,10 @@ operations:
       default:
         messageTemplate: "List plans failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -515,7 +590,7 @@ operations:
     optionalOnClient: true
     request: CreatePlanRequest
     response: Plan
-    overlays: []
+    overlays: [CreatePlanParams]
     normalization: []
     idempotency:
       kind: none
@@ -523,6 +598,10 @@ operations:
       default:
         messageTemplate: "Create plan failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CreatePlanParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -550,6 +629,16 @@ operations:
       default:
         messageTemplate: "Update plan failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: planRef
+        type: string
+        required: true
+      - name: params
+        ref: UpdatePlanRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -577,6 +666,13 @@ operations:
       default:
         messageTemplate: "Delete plan failed ({status}): {body}"
       cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: planRef
+        type: string
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -605,6 +701,10 @@ operations:
       default:
         messageTemplate: "Create payment intent failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CreatePaymentIntentParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -633,6 +733,10 @@ operations:
       default:
         messageTemplate: "Create topup payment intent failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CreateTopupPaymentIntentParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -652,7 +756,7 @@ operations:
     optionalOnClient: true
     request: CancelPurchaseRequest
     response: PurchaseInfo
-    overlays: []
+    overlays: [CancelPurchaseParams]
     normalization:
       - "extract nested { purchase } when present; else top-level object with reference"
       - validate JSON parseability of response body
@@ -669,6 +773,10 @@ operations:
         - messageTemplate: "Invalid JSON response from cancel purchase endpoint: {bodyPrefix200}"
         - messageTemplate: Invalid response structure from cancel purchase endpoint
         - messageTemplate: Invalid purchase data in cancel purchase response
+    params:
+      - name: params
+        ref: CancelPurchaseParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -687,7 +795,7 @@ operations:
       rust: reactivate_purchase
     optionalOnClient: true
     response: PurchaseInfo
-    overlays: []
+    overlays: [ReactivatePurchaseParams]
     normalization:
       - "extract nested { purchase } when present; else top-level object with reference"
       - validate JSON parseability of response body
@@ -704,6 +812,10 @@ operations:
         - messageTemplate: "Invalid JSON response from reactivate purchase endpoint: {bodyPrefix200}"
         - messageTemplate: Invalid response structure from reactivate purchase endpoint
         - messageTemplate: Invalid purchase data in reactivate purchase response
+    params:
+      - name: params
+        ref: ReactivatePurchaseParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -731,6 +843,10 @@ operations:
       default:
         messageTemplate: "Process payment failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: ProcessPaymentIntentParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -758,6 +874,10 @@ operations:
       default:
         messageTemplate: "Attach business details failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: AttachBusinessDetailsParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -777,7 +897,7 @@ operations:
     optionalOnClient: true
     request: UserInfoRequest
     response: UserInfoResponse
-    overlays: []
+    overlays: [GetUserInfoParams]
     normalization: []
     idempotency:
       kind: none
@@ -785,6 +905,10 @@ operations:
       default:
         messageTemplate: "Get user info failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: GetUserInfoParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -803,8 +927,8 @@ operations:
       rust: get_customer_balance
     optionalOnClient: true
     request: GetCustomerBalanceParams
-    response: CustomerBalanceResponse
-    overlays: [GetCustomerBalanceParams, CreditDisplayBlock]
+    response: GetCustomerBalanceResult
+    overlays: [GetCustomerBalanceParams, GetCustomerBalanceResult, CreditDisplayBlock]
     normalization: []
     idempotency:
       kind: none
@@ -812,6 +936,10 @@ operations:
       default:
         messageTemplate: "Get customer balance failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: GetCustomerBalanceParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -839,6 +967,10 @@ operations:
       default:
         messageTemplate: "Create checkout session failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CreateCheckoutSessionRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -866,6 +998,10 @@ operations:
       default:
         messageTemplate: "Create customer session failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: CreateCustomerSessionRequest
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -893,6 +1029,10 @@ operations:
       default:
         messageTemplate: "Activate plan failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: ActivatePlanDto
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -920,6 +1060,10 @@ operations:
       default:
         messageTemplate: "Get payment method failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: GetPaymentMethodParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -947,6 +1091,10 @@ operations:
       default:
         messageTemplate: "Get auto-recharge failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: GetAutoRechargeParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -966,7 +1114,7 @@ operations:
     optionalOnClient: true
     request: SaveAutoRechargeInput
     response: SaveAutoRechargeResponse
-    overlays: [SaveAutoRechargeInput, AutoRechargeConfig]
+    overlays: [SaveAutoRechargeInput, AutoRechargeConfig, SaveAutoRechargeParams]
     normalization: []
     idempotency:
       kind: none
@@ -974,6 +1122,10 @@ operations:
       default:
         messageTemplate: "Save auto-recharge failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: SaveAutoRechargeParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -1001,6 +1153,10 @@ operations:
       default:
         messageTemplate: "Disable auto-recharge failed ({status}): {body}"
       cases: []
+    params:
+      - name: params
+        ref: DisableAutoRechargeParams
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -1008,6 +1164,700 @@ operations:
       go: blocking
       rust: [async, blocking]
 
+overlays:
+  AssignCreditsRequest:
+    kind: extendDto
+    base: GrantCustomerCreditsRequest
+    fields:
+      customerRef:
+        type: string
+        required: true
+      idempotencyKey:
+        type: string
+        required: false
+  AttachBusinessDetailsParams:
+    kind: synthetic
+    fields:
+      paymentIntentId:
+        type: string
+        required: true
+      customerRef:
+        type: string
+        required: false
+      isBusiness:
+        type: boolean
+        required: true
+      businessName:
+        type: string
+        required: false
+      country:
+        type: string
+        required: false
+      customerCountry:
+        type: string
+        required: false
+      customerName:
+        type: string
+        required: false
+      taxId:
+        type: string
+        required: false
+      taxIdType:
+        type: string
+        required: false
+  AttachBusinessDetailsResult:
+    kind: synthetic
+    fields:
+      taxBreakdown:
+        ref: TaxBreakdown
+        required: true
+  AutoMappedTool:
+    kind: synthetic
+    fields:
+      name:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+  AutoRechargeConfig:
+    kind: synthetic
+    fields:
+      enabled:
+        type: boolean
+        required: true
+      trigger:
+        ref: AutoRechargeTrigger
+        required: true
+      topup:
+        ref: AutoRechargeTopup
+        required: true
+      fundingSourceType:
+        enum: [saved_card, tokenized_card]
+        required: false
+      paymentMethodId:
+        type: string
+        required: false
+      status:
+        ref: AutoRechargeStatus
+        required: true
+      failureCount:
+        type: number
+        required: true
+      maxMonthlySpendMinor:
+        type: number
+        required: false
+      monthlySpendMinor:
+        type: number
+        required: true
+      monthlySpendPeriod:
+        type: string
+        required: false
+      lastChargeAt:
+        type: string
+        required: false
+      updatedAt:
+        type: string
+        required: false
+      display:
+        ref: AutoRechargeDisplayBlock
+        required: false
+        doc: "Backend-computed display values — render verbatim; do not derive from trigger fields."
+  AutoRechargeDisplayBlock:
+    kind: synthetic
+    fields:
+      thresholdAmountMajor:
+        type: number
+        required: true
+      topupAmountMajor:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      formatted:
+        ref: AutoRechargeDisplayFormatted
+        required: true
+      exchangeRate:
+        type: number
+        required: true
+      rateSource:
+        enum: [parity, db, fallback]
+        required: true
+  AutoRechargeDisplayFormatted:
+    kind: synthetic
+    fields:
+      threshold:
+        type: string
+        required: true
+      topup:
+        type: string
+        required: true
+  AutoRechargeInput:
+    kind: synthetic
+    fields:
+      enabled:
+        type: boolean
+        required: true
+      triggerType:
+        literal: balance
+        required: true
+      thresholdAmountMajor:
+        type: number
+        required: false
+      topupAmountMajor:
+        type: number
+        required: false
+      maxMonthlySpendMajor:
+        type: number
+        required: false
+      currency:
+        type: string
+        required: true
+  AutoRechargeResponse:
+    kind: synthetic
+    fields:
+      config:
+        ref: AutoRechargeConfig
+        required: true
+        nullable: true
+      display:
+        ref: AutoRechargeDisplayBlock
+        required: false
+  AutoRechargeStatus:
+    kind: synthetic
+    enum: [active, disabled, failed, pending_setup]
+  AutoRechargeTopup:
+    kind: synthetic
+    fields:
+      mode:
+        literal: fixed
+        required: true
+      amountMinor:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+  AutoRechargeTrigger:
+    kind: synthetic
+    fields:
+      type:
+        literal: balance
+        required: true
+      thresholdAmountMinor:
+        type: number
+        required: true
+  CheckLimitsRequest:
+    kind: extendDto
+    base: CheckLimitRequest
+    fields:
+      includeCheckoutSession:
+        type: boolean
+        required: false
+        doc: "When true, the backend mints a checkout session (or customer portal session for activation flows) and returns its URL / id on the response."
+  CloneProductResult:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+  ConfigureMcpPlansResponse:
+    kind: synthetic
+    fields:
+      product:
+        ref: SdkProductResponse
+        required: true
+      mcpServer:
+        ref: McpServerInfo
+        required: true
+      planMap:
+        map:
+          ref: PlanMapEntry
+        required: true
+  CreateCustomerResult:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  CreatePaymentIntentParams:
+    kind: synthetic
+    fields:
+      productRef:
+        type: string
+        required: true
+      planRef:
+        type: string
+        required: true
+      customerRef:
+        type: string
+        required: true
+      currency:
+        type: string
+        required: false
+      idempotencyKey:
+        type: string
+        required: false
+  CreatePaymentIntentResult:
+    kind: synthetic
+    fields:
+      processorPaymentId:
+        type: string
+        required: true
+      clientSecret:
+        type: string
+        required: true
+      publishableKey:
+        type: string
+        required: true
+      accountId:
+        type: string
+        required: false
+      amount:
+        type: number
+        required: true
+      originalAmount:
+        type: number
+        required: false
+      currency:
+        type: string
+        required: false
+      exchangeRate:
+        type: number
+        required: false
+      status:
+        type: string
+        required: false
+  CreateProductResult:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+  CreateTopupPaymentIntentParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+      amount:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+      idempotencyKey:
+        type: string
+        required: false
+      autoRecharge:
+        ref: AutoRechargeInput
+        required: false
+  CreateTopupPaymentIntentResult:
+    kind: synthetic
+    fields:
+      processorPaymentId:
+        type: string
+        required: true
+      clientSecret:
+        type: string
+        required: true
+      publishableKey:
+        type: string
+        required: true
+      accountId:
+        type: string
+        required: false
+  CreditDisplayBlock:
+    kind: synthetic
+    fields:
+      amountMajor:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      formatted:
+        type: string
+        required: true
+      exchangeRate:
+        type: number
+        required: true
+      rateSource:
+        enum: [parity, db, fallback]
+        required: true
+  CustomerResponseMapped:
+    kind: mapDto
+    renames:
+      reference: customerRef
+    fields:
+      customerRef:
+        type: string
+        required: true
+      email:
+        type: string
+        required: false
+      name:
+        type: string
+        required: false
+      externalRef:
+        type: string
+        required: false
+      plan:
+        type: string
+        required: false
+      purchases:
+        array:
+          ref: EnrichedPurchaseInfo
+        required: false
+  DisableAutoRechargeParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  EnrichedPurchaseInfo:
+    kind: extendDto
+    base: PurchaseInfo
+    fields:
+      paidAt:
+        type: string
+        required: false
+      nextBillingDate:
+        type: string
+        required: false
+  GetAutoRechargeParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  GetCustomerBalanceParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  GetCustomerBalanceResult:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+      credits:
+        type: number
+        required: true
+      displayCurrency:
+        type: string
+        required: true
+      creditsPerMinorUnit:
+        type: number
+        required: true
+      displayExchangeRate:
+        type: number
+        required: true
+      display:
+        ref: CreditDisplayBlock
+        required: false
+  GetCustomerParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: false
+      externalRef:
+        type: string
+        required: false
+      email:
+        type: string
+        required: false
+  GetPaymentMethodParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  LimitResponseWithPlan:
+    kind: extendDto
+    base: LimitResponse
+    fields:
+      plan:
+        type: string
+        required: true
+  ListProductItem:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+  ListPlansResult:
+    kind: synthetic
+    arrayOf: Plan
+  ListProductsResult:
+    kind: synthetic
+    arrayOf: ListProductItem
+  McpBootstrapResponse:
+    kind: synthetic
+    fields:
+      product:
+        ref: SdkProductResponse
+        required: true
+      mcpServer:
+        ref: McpServerInfo
+        required: true
+      planMap:
+        map:
+          ref: PlanMapEntry
+        required: true
+      toolsAutoMapped:
+        type: boolean
+        required: false
+      autoMappedTools:
+        array:
+          ref: AutoMappedTool
+        required: false
+  McpServerInfo:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: false
+      subdomain:
+        type: string
+        required: false
+      mcpProxyUrl:
+        type: string
+        required: false
+      url:
+        type: string
+        required: true
+      defaultPlanRef:
+        type: string
+        required: false
+  OneTimePurchaseInfo:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      productRef:
+        type: string
+        required: false
+      amount:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      creditsAdded:
+        type: number
+        required: false
+      completedAt:
+        type: string
+        required: true
+  PaymentMethodInfo:
+    kind: synthetic
+    aliasOf: PaymentMethodResult
+  PlanMapEntry:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: false
+  ProcessPaymentIntentParams:
+    kind: synthetic
+    fields:
+      paymentIntentId:
+        type: string
+        required: true
+      productRef:
+        type: string
+        required: false
+      customerRef:
+        type: string
+        required: true
+      planRef:
+        type: string
+        required: false
+  ProcessPaymentResult:
+    kind: synthetic
+    aliasOf: ProcessPaymentResult
+  SaveAutoRechargeInput:
+    kind: extendDto
+    base: AutoRechargeInput
+    fields:
+      deferSetupIntent:
+        type: boolean
+        required: false
+  TaxBreakdown:
+    kind: synthetic
+    fields:
+      subtotal:
+        type: number
+        required: true
+      taxAmount:
+        type: number
+        required: true
+      taxRate:
+        type: number
+        required: true
+      treatment:
+        enum: [reverse_charge, standard, none, not_collecting]
+        required: true
+      total:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      inclusive:
+        type: boolean
+        required: true
+  TopupProcessResult:
+    kind: projectUnion
+    base: ProcessPaymentResult
+    dropVariants: [SucceededRecurring, SucceededOneTime]
+    succeededFields:
+      creditsAdded:
+        type: number
+        required: false
+  TrackUsageBulkRequest:
+    kind: synthetic
+    fields:
+      events:
+        array:
+          ref: TrackUsageRequest
+        required: true
+  TrackUsageRequest:
+    kind: extendDto
+    base: CreateUsageRequest
+    partial: true
+    fields:
+      customerRef:
+        type: string
+        required: true
+      metadata:
+        map:
+          type: unknown
+        required: false
+  UpdateCustomerParams:
+    kind: synthetic
+    fields:
+      email:
+        type: string
+        required: false
+      name:
+        type: string
+        required: false
+      telephone:
+        type: string
+        required: false
+      metadata:
+        map:
+          type: unknown
+        required: false
+      externalRef:
+        type: string
+        required: false
+  CancelPurchaseParams:
+    kind: synthetic
+    fields:
+      purchaseRef:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: false
+  ReactivatePurchaseParams:
+    kind: synthetic
+    fields:
+      purchaseRef:
+        type: string
+        required: true
+  GetUserInfoParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+      productRef:
+        type: string
+        required: true
+  CloneProductOverrides:
+    kind: synthetic
+    fields:
+      name:
+        type: string
+        required: false
+  CreatePlanParams:
+    kind: extendDto
+    base: CreatePlanRequest
+    fields:
+      productRef:
+        type: string
+        required: true
+  SaveAutoRechargeParams:
+    kind: extendDto
+    base: SaveAutoRechargeInput
+    fields:
+      customerRef:
+        type: string
+        required: true
+  RetryOptions:
+    kind: synthetic
+    fields:
+      maxRetries:
+        type: number
+        required: false
+      initialDelay:
+        type: number
+        required: false
+      backoffStrategy:
+        enum:
+          - fixed
+          - linear
+          - exponential
+        required: false
+      shouldRetry:
+        type: unknown
+        required: false
+      onRetry:
+        type: unknown
+        required: false
+  UpdateCustomerResult:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  includeCheckoutSession:
+    kind: synthetic
+    marker: true
+    doc: "Field extension tag for CheckLimitsRequest"
+  topupProjection:
+    kind: synthetic
+    marker: true
+  void:
+    kind: synthetic
+    unit: true
 topLevel:
   verifyWebhook:
     names:
@@ -1016,6 +1866,19 @@ topLevel:
       rb: verify_webhook
       go: VerifyWebhook
       rust: verify_webhook
+    params:
+      - name: options
+        object:
+          body:
+            type: string
+            required: true
+          signature:
+            type: string
+            required: true
+          secret:
+            type: string
+            required: true
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1029,6 +1892,16 @@ topLevel:
       rb: with_retry
       go: WithRetry
       rust: with_retry
+    params:
+      - name: fn
+        type: unknown
+        required: true
+        doc: () => Promise<T> — callable stand-in
+      - name: options
+        ref: RetryOptions
+        required: false
+    typeParams:
+      - name: T
     sync:
       ts: sync
       py: sync
@@ -1042,6 +1915,10 @@ topLevel:
       rb: build_paywall_gate
       go: BuildPaywallGate
       rust: build_paywall_gate
+    params:
+      - name: input
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1055,6 +1932,10 @@ topLevel:
       rb: build_gate_message
       go: BuildGateMessage
       rust: build_gate_message
+    params:
+      - name: input
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1068,6 +1949,10 @@ topLevel:
       rb: build_nudge_message
       go: BuildNudgeMessage
       rust: build_nudge_message
+    params:
+      - name: input
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1081,6 +1966,10 @@ topLevel:
       rb: classify_paywall_state
       go: ClassifyPaywallState
       rust: classify_paywall_state
+    params:
+      - name: input
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1094,6 +1983,10 @@ topLevel:
       rb: paywall_error_to_client_payload
       go: PaywallErrorToClientPayload
       rust: paywall_error_to_client_payload
+    params:
+      - name: error
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1107,6 +2000,19 @@ topLevel:
       rb: SolvaPayError
       go: SolvaPayError
       rust: SolvaPayError
+    params:
+      - name: message
+        type: string
+        required: true
+      - name: init
+        object:
+          status:
+            type: number
+            required: false
+          code:
+            type: string
+            required: false
+        required: false
     sync:
       ts: sync
       py: sync
@@ -1120,6 +2026,13 @@ topLevel:
       rb: PaywallError
       go: PaywallError
       rust: PaywallError
+    params:
+      - name: message
+        type: string
+        required: true
+      - name: structuredContent
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1135,6 +2048,7 @@ coreHelpers:
       rb: validate_business_details
       go: ValidateBusinessDetails
       rust: validate_business_details
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1148,6 +2062,7 @@ coreHelpers:
       rb: derive_tax_id_type
       go: DeriveTaxIdType
       rust: derive_tax_id_type
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1161,6 +2076,7 @@ coreHelpers:
       rb: resolve_tax_behavior
       go: ResolveTaxBehavior
       rust: resolve_tax_behavior
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1174,6 +2090,7 @@ coreHelpers:
       rb: get_tax_id_example
       go: GetTaxIdExample
       rust: get_tax_id_example
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1187,6 +2104,7 @@ coreHelpers:
       rb: get_tax_id_field_label
       go: GetTaxIdFieldLabel
       rust: get_tax_id_field_label
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1200,6 +2118,7 @@ coreHelpers:
       rb: get_tax_id_helper_text
       go: GetTaxIdHelperText
       rust: get_tax_id_helper_text
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1317,6 +2236,7 @@ coreHelpers:
       rb: credits_to_display_minor_units
       go: CreditsToDisplayMinorUnits
       rust: credits_to_display_minor_units
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1330,6 +2250,7 @@ coreHelpers:
       rb: is_zero_decimal_currency
       go: IsZeroDecimalCurrency
       rust: is_zero_decimal_currency
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1343,6 +2264,7 @@ coreHelpers:
       rb: minor_units_per_major
       go: MinorUnitsPerMajor
       rust: minor_units_per_major
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1356,6 +2278,7 @@ coreHelpers:
       rb: resolve_seller_identity_display
       go: ResolveSellerIdentityDisplay
       rust: resolve_seller_identity_display
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1369,6 +2292,7 @@ coreHelpers:
       rb: get_seller_tax_identifier_display_label
       go: GetSellerTaxIdentifierDisplayLabel
       rust: get_seller_tax_identifier_display_label
+    params: []
     sync:
       ts: sync
       py: sync
@@ -1397,6 +2321,10 @@ facade:
       rb: SolvaPay.create
       go: solvapay.New
       rust: "Client::new"
+    params:
+      - name: config
+        type: unknown
+        required: false
     sync:
       ts: sync
       py: sync
@@ -1410,6 +2338,10 @@ facade:
       rb: create_solva_pay_client
       go: CreateSolvaPayClient
       rust: create_solva_pay_client
+    params:
+      - name: opts
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1423,6 +2355,10 @@ facade:
       rb: payable
       go: Payable
       rust: payable
+    params:
+      - name: options
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1436,6 +2372,10 @@ facade:
       rb: protect
       go: Protect
       rust: protect
+    params:
+      - name: options
+        type: unknown
+        required: true
     sync:
       ts: sync
       py: sync
@@ -1449,6 +2389,10 @@ facade:
       rb: sp.gate
       go: sp.Gate
       rust: sp.gate
+    params:
+      - name: options
+        type: unknown
+        required: true
     sync:
       ts: async
       py: [async, blocking]
@@ -1464,6 +2408,18 @@ errors:
       - timestamp_too_old
       - invalid_signature
       - invalid_payload
+    messages:
+      missing_signature: Missing webhook signature
+      malformed_signature: Malformed webhook signature
+      timestamp_too_old: Webhook signature timestamp too old
+      invalid_signature: Invalid webhook signature
+      invalid_payload: "Invalid webhook payload: body is not valid JSON"
+  paywall:
+    messages:
+      payment_required: Payment required
+      activation_required: Activation required
+  transport:
+    messageTemplate: "{message}"
 
 defaults:
   retry:

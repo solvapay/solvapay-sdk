@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "hr-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "HR",
+      "taxId": "HR12345678912"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "HR",
+        "taxId": "HR12345678912",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-company-from-tax-id-when-company-missing",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "DE",
+      "vatNumber": "DE123456789",
+      "taxId": "TAX999"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": {
+        "label": "VAT number",
+        "value": "DE123456789"
+      },
+      "companyNumber": {
+        "label": "Company number",
+        "value": "TAX999"
+      }
+    }
+  }
+}

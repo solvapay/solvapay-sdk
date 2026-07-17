@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "gate-reactivation-omits-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "reactivation_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": ""
+      }
+    }
+  },
+  "expect": {
+    "result": "Your previous plan is no longer active. Call the `manage_account` tool to reactivate it, or the `upgrade` tool to pick a new plan."
+  }
+}

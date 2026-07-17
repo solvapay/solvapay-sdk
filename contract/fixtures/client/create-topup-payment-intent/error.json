@@ -1,0 +1,42 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createTopupPaymentIntent",
+    "args": {
+      "customerRef": "cus_fixture",
+      "amount": 2000,
+      "currency": "usd",
+      "idempotencyKey": "topup_err"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-topup-payment-intent-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture",
+        "Idempotency-Key": "topup_err"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "purpose": "credit_topup",
+        "amount": 2000,
+        "currency": "usd"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Create topup payment intent failed (400): bad",
+      "status": 400
+    }
+  }
+}

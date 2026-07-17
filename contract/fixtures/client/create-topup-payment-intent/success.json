@@ -1,12 +1,12 @@
 {
+  "case": "create-topup-payment-intent-success",
   "suite": "client",
-  "case": "create-payment-intent-success",
   "input": {
-    "fn": "createPaymentIntent",
+    "fn": "createTopupPaymentIntent",
     "args": {
-      "productRef": "prod_fixture",
-      "planRef": "plan_basic",
-      "customerRef": "cus_fixture"
+      "customerRef": "cus_fixture",
+      "amount": 2000,
+      "currency": "usd"
     },
     "clock": "2026-07-01T00:00:00Z",
     "rngSeed": 42
@@ -18,27 +18,28 @@
       "headers": {
         "Content-Type": "application/json",
         "Authorization": "Bearer sk_test_fixture",
-        "Idempotency-Key": "payment-plan_basic-1782864000000-ln13h9a6y"
+        "Idempotency-Key": "topup-1782864000000-ln13h9a6y"
       },
       "body": {
-        "productRef": "prod_fixture",
-        "planRef": "plan_basic",
-        "customerRef": "cus_fixture"
+        "customerRef": "cus_fixture",
+        "purpose": "credit_topup",
+        "amount": 2000,
+        "currency": "usd"
       }
     },
     "response": {
       "status": 200,
       "body": {
-        "id": "pi_fixture_1",
-        "clientSecret": "pi_fixture_1_secret",
+        "processorPaymentId": "pi_topup_1",
+        "clientSecret": "pi_topup_1_secret",
         "publishableKey": "pk_test_fixture"
       }
     }
   },
   "expect": {
     "result": {
-      "id": "pi_fixture_1",
-      "clientSecret": "pi_fixture_1_secret",
+      "processorPaymentId": "pi_topup_1",
+      "clientSecret": "pi_topup_1_secret",
       "publishableKey": "pk_test_fixture"
     }
   }

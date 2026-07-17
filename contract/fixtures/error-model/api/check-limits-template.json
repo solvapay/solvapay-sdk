@@ -1,0 +1,24 @@
+{
+  "suite": "error-model",
+  "case": "api-check-limits-template",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Api",
+      "template": "Check limits failed ({status}): {body}",
+      "vars": {
+        "status": "402",
+        "body": "payment required"
+      },
+      "status": 402
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Check limits failed (402): payment required",
+      "status": 402,
+      "kind": "Api"
+    }
+  }
+}

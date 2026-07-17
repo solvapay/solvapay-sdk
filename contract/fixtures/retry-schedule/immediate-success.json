@@ -1,0 +1,17 @@
+{
+  "suite": "retry-schedule",
+  "case": "immediate-success",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [{ "resolve": { "ok": true } }]
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [],
+      "events": ["call:0"],
+      "outcome": { "type": "resolved", "value": { "ok": true } }
+    }
+  }
+}

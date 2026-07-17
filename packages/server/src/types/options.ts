@@ -22,8 +22,8 @@ export interface RetryOptions {
   /**
    * Backoff strategy for calculating delay between retries (default: 'fixed')
    * - 'fixed': Same delay between all retries
-   * - 'linear': Delay increases linearly (initialDelay * attempt)
-   * - 'exponential': Delay doubles each attempt (initialDelay * 2^(attempt-1))
+   * - 'linear': Delay increases linearly (initialDelay * (attempt + 1))
+   * - 'exponential': Delay doubles each attempt (initialDelay * 2^attempt)
    */
   backoffStrategy?: 'fixed' | 'linear' | 'exponential'
 

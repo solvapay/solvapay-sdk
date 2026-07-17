@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "us-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "US",
+      "taxId": "12-345678"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for US"
+          }
+        ]
+      }
+    }
+  }
+}

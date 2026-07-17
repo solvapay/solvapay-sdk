@@ -1,0 +1,20 @@
+{
+  "suite": "error-model",
+  "case": "transport-non-retryable",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Transport",
+      "message": "TLS handshake failed",
+      "retryable": false
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "TLS handshake failed",
+      "kind": "Transport",
+      "code": "non_retryable"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "ro-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "RO",
+      "taxId": "RO1"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for RO"
+          }
+        ]
+      }
+    }
+  }
+}

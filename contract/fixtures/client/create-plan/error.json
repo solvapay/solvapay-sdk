@@ -1,0 +1,41 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createPlan",
+    "args": {
+      "productRef": "prd_fixture",
+      "name": "Basic",
+      "price": 1000,
+      "currency": "usd"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-plan-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products/prd_fixture/plans",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "productRef": "prd_fixture",
+        "name": "Basic",
+        "price": 1000,
+        "currency": "usd"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Create plan failed (400): bad",
+      "status": 400
+    }
+  }
+}

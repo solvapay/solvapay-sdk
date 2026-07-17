@@ -368,7 +368,7 @@ rust/
 
 | Crate | Responsibility | Dependency discipline |
 | --- | --- | --- |
-| `solvapay-core` | Validation, retry policy, webhook verification, paywall state/gate/decision, business-details, credit-display, seller-identity, MCP payload builders, error model | `serde`, `hmac`/`sha2`, `subtle` (constant-time). **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen`. This is what keeps the browser WASM small and the core runtime-agnostic. |
+| `solvapay-core` | Validation, retry policy, webhook verification, paywall state/gate/decision, business-details, credit-display, seller-identity, MCP payload builders, error model | `serde`, `serde_json` (webhook body parse / `invalid_payload`), `hmac`/`sha2`, `subtle` (constant-time). **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen`. This is what keeps the browser WASM small and the core runtime-agnostic. |
 | `solvapay-dto` | Generated wire models + SDK overlays | `serde` only; generated — never hand-edited |
 | `solvapay-transport` | `Transport` trait, `reqwest`/rustls impl (native), Fetch impl (wasm32), client shell (auth headers, idempotency, retry wiring), all 36 method implementations | Depends on core + dto; async but runtime-agnostic (§7.4) |
 | `solvapay` | Public crates.io facade: idiomatic re-exports of transport + core, `gate`/`payable` ergonomics, optional `blocking` feature | Depends on transport + core; no new semantic logic — ergonomics only (§4.5, Phase 9) |
@@ -378,9 +378,17 @@ rust/
 The transport trait — deliberately minimal, so both `reqwest` and browser Fetch can satisfy it:
 
 ```rust
-#[maybe_async_send] // Send bound behind cfg: tokio futures are Send, wasm futures are !Send
+// Landed (steps 19–20): cfg'd BoxFuture alias — Send on native, !Send on wasm32.
+// Dyn-compatible for Arc<dyn Transport>; equivalent to the original #[maybe_async_send] sketch.
+// Impls: ReqwestTransport (native), FetchTransport (wasm32 via js_sys::global().fetch).
+#[cfg(not(target_arch = "wasm32"))]
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+#[cfg(target_arch = "wasm32")]
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
+
 pub trait Transport {
-    async fn send(&self, req: HttpRequest) -> Result<HttpResponse, TransportError>;
+    // Returns SdkError (not a parallel TransportError) — step 17 froze the single error surface.
+    fn send(&self, req: HttpRequest) -> BoxFuture<'_, Result<HttpResponse, SdkError>>;
 }
 
 pub struct HttpRequest {
@@ -423,15 +431,37 @@ Every binding converts `SdkError` to its native idiom — TS `SolvaPayError`/`Pa
 The retry policy engine — pure, timers host-side:
 
 ```rust
-pub struct RetryPolicy { pub max_retries: u32 /* default 2 */, pub initial_delay_ms: u64 /* 500 */, pub backoff: Backoff /* Fixed | Linear | Exponential */ }
+pub enum Backoff { Fixed, Linear, Exponential } // Fixed is default
+
+pub struct RetryPolicy {
+    pub max_retries: u32,        // default 2 — retries *after* the initial call
+    pub initial_delay_ms: u64,   // default 500
+    pub backoff: Backoff,        // default Fixed
+}
 
 impl RetryPolicy {
-    /// None => don't retry (exhausted). Some(delay) => host sleeps `delay`, then retries.
+    /// `attempt` is the zero-based failed-call index.
+    /// None => exhausted (`attempt >= max_retries`) — do not call host callbacks.
+    /// Some(delay) => host may consult shouldRetry/onRetry, then sleeps `delay`, then retries.
     pub fn next_delay(&self, attempt: u32) -> Option<Duration>;
 }
 ```
 
-`shouldRetry` / `onRetry` callbacks stay facade-side (they're host closures); the facade consults them between `next_delay` and the actual sleep, exactly matching current `withRetry` observable behavior (fixture set from step 5).
+Delay formulas (saturating integer arithmetic so extreme typed inputs cannot overflow): fixed → `d`, linear → `d*(attempt+1)`, exponential → `d*2^attempt`.
+
+`shouldRetry` / `onRetry` callbacks stay facade-side (host closures). Documented host weaving:
+
+```text
+call operation(attempt)
+if success: return
+if policy.next_delay(attempt) is None: reject last error   // last attempt: no callbacks
+if shouldRetry exists: call it; reject immediately when false
+if onRetry exists: call it
+host sleeps for delay                                      // timer is host-owned
+increment attempt and call again
+```
+
+Ordering locked by Step 5 fixtures: last attempt consults neither callback; `shouldRetry` precedes `onRetry`; `onRetry` precedes host sleep. The Rust core never owns a timer or host closure.
 
 ### 4.5 Binding strategy
 
@@ -542,7 +572,7 @@ These currently live as hand-maintained overlays in [`types/client.ts`](../../pa
 | --- | --- | --- |
 | `CheckLimitsRequest.includeCheckoutSession` | TS intersection overlay; source comment says temporary until OpenAPI republish | Field in OpenAPI, or explicit manifest overlay |
 | `LimitResponseWithPlan` | `LimitResponse` + SDK-added `plan: string` | Documented manifest overlay (the field is SDK-synthesized, not wire) |
-| `ProcessPaymentResult` | 7-branch discriminated union: `succeeded+recurring`, `succeeded+one-time`, bare `succeeded` (webhook race), `processing`, `timeout`, `failed`, `cancelled` | OpenAPI discriminators must round-trip; generator must emit a Rust enum + TS union preserving all branches including the bare-`succeeded` fallback |
+| `ProcessPaymentResult` | 7-branch discriminated union: `succeeded+recurring`, `succeeded+one-time`, bare `succeeded` (webhook race), `processing`, `timeout`, `failed`, `cancelled` | **Resolved for Rust wire DTOs (step 15):** snapshot `oneOf` + untagged serde enum preserves all branches including bare-`succeeded`; TS union regeneration stays Phase 2 later |
 | `TopupProcessResult` | Narrowed projection with optional `creditsAdded` (balance-poll delta) | Manifest projection rule over `ProcessPaymentResult` |
 | `CustomerResponseMapped` | Field mapping (`reference` → `customerRef`) + purchase enrichments (`paidAt`, `nextBillingDate`) | Manifest normalization rules |
 | SDK-only result types | `OneTimePurchaseInfo`, `McpBootstrapResponse`, `AutoRechargeConfig` + display blocks, `CreditDisplayBlock`, etc. | Manifest overlays with generation tests |
@@ -651,7 +681,7 @@ The Rust implementation (step 12) replaces both copies; the Node facade stays sy
 
 ### 6.2 Retry engine
 
-From [`utils.ts`](../../packages/server/src/utils.ts): defaults `maxRetries: 2`, `initialDelay: 500`, `backoffStrategy: 'fixed'`. Delay computation: fixed → `d`, linear → `d*(attempt+1)`, exponential → `d*2^attempt`. Semantics to preserve exactly: the last attempt throws without consulting `shouldRetry`; `shouldRetry(error, attempt)` short-circuits; `onRetry(error, attempt)` fires *after* the retry decision, *before* the sleep. Fixture axes: all three strategies × attempts 0–3, shouldRetry veto paths, non-`Error` throwables (wrapped via `String(error)`).
+From [`utils.ts`](../../packages/server/src/utils.ts): defaults `maxRetries: 2`, `initialDelay: 500`, `backoffStrategy: 'fixed'` (also `contract/manifest/sdk-contract.yaml` `defaults.retry`). Delay computation: fixed → `d`, linear → `d*(attempt+1)`, exponential → `d*2^attempt`. `attempt` is zero-based; `maxRetries` counts retries after the initial call. Semantics to preserve exactly: when `next_delay(attempt)` returns `None` (exhausted), the host rejects without consulting `shouldRetry` or `onRetry`; otherwise `shouldRetry(error, attempt)` may veto; `onRetry(error, attempt)` fires *after* the retry decision, *before* the host-owned sleep. Overflow-safe in Rust via saturating/`checked_shl` arithmetic. Fixture axes (`contract/fixtures/retry-schedule/`, 13 cases): all three strategies × attempts 0–3, shouldRetry veto paths, onRetry ordering, non-`Error` throwables (host wraps via `String(error)` — coercion stays out of `solvapay-core`).
 
 ### 6.3 Paywall state, gate, and payload
 
@@ -883,7 +913,7 @@ flowchart LR
   R1 -->|"Phase 0 fixtures green"| Gate1["Exit gate"]
 ```
 
-8. **Scaffold cargo workspace.** `solvapay-core` crate (deps: serde, hmac/sha2, subtle only), workspace layout from §4.3, CI build (stable Rust, pinned toolchain file), Rust fixture runner reading the Phase 0 JSON format, the `wasm32-unknown-unknown` compile check from §7.4, and the no-unwrap Clippy/deny gate (§4.4).
+8. **Scaffold cargo workspace.** `solvapay-core` crate (deps: serde, serde_json, hmac/sha2, subtle — serde_json added at step 12 for webhook body parse), workspace layout from §4.3, CI build (stable Rust, pinned toolchain file), Rust fixture runner reading the Phase 0 JSON format, the `wasm32-unknown-unknown` compile check from §7.4, and the no-unwrap Clippy/deny gate (§4.4).
    **Done when:** CI builds native + wasm32, runs an empty fixture suite, and fails if production code uses `.unwrap()` / `.expect()`.
 
 9. **Business details.** Translate [`business-details.ts`](../../packages/core/src/business-details.ts) + [`business-details-public.ts`](../../packages/core/src/business-details-public.ts): country tables, tax-ID derivation and examples, `validateBusinessDetails`, tax-behavior resolution.
@@ -920,7 +950,7 @@ flowchart LR
 ```
 
 15. **Rust DTO generator.** Build `tools/dto-gen` emitting `solvapay-dto` from the OpenAPI snapshot (replacing the role of [`types/generated.ts`](../../packages/server/src/types/generated.ts) as source of truth). Must reproduce the pipeline's prune/placeholder behavior and preserve `oneOf` discriminators as Rust enums.
-    *Gotcha:* resolve the `ProcessPaymentResult` discriminator blocker (§5.4) *before* this step's cutover — either the backend republishes discriminators or the manifest overlay supplies them. Track ownership in §14.
+    *Gotcha (resolved):* `ProcessPaymentResult` `status` discriminator is non-unique across three `succeeded` branches — emitter special-cases an untagged enum with specific→bare ordering (§15 note 10). Manifest overlays remain step 16.
     **Done when:** generated crate compiles and round-trips the step 7 fixtures (serialize → deserialize → byte-equal JSON).
 
 16. **SDK-only overlays.** Encode every §5.4 overlay from [`types/client.ts`](../../packages/server/src/types/client.ts) in the manifest and generator: `includeCheckoutSession`, `LimitResponseWithPlan`, `CustomerResponseMapped` mapping rules, `TopupProcessResult` projection, auto-recharge/display blocks, MCP bootstrap shapes.
@@ -963,9 +993,9 @@ flowchart LR
 
 20. **WASM Fetch transport.** Implement the Fetch-backed transport behind the same trait via `wasm-bindgen` / `web-sys`, `!Send` futures.
     *Gotcha:* Workers' Fetch lacks some browser request options; keep the transport surface to what both provide (method/url/headers/body — no streaming request bodies in v1).
-    **Done when:** the same round-trip passes under `wasm32-unknown-unknown` (wasm-pack test or Workers miniflare harness).
+    **Done when:** the same round-trip passes under `wasm32-unknown-unknown` (wasm-pack test or Workers miniflare harness). ✅ Landed — Node `wasm-bindgen-test` harness + `rust/scripts/wasm-fixture-server.mjs` (per-fixture `/__case/<i>` mounts); see §15 note 14.
 
-21. **Client shell.** Auth header injection, base-URL handling (default `https://api.solvapay.com`), request construction, idempotency-key generation (seeded-RNG hook for fixtures; formats from §2.3), retry wiring of `RetryPolicy` over the transport trait, structured-error mapping from non-OK responses using manifest message templates.
+21. **Client shell.** Auth header injection, base-URL handling (default `https://api.solvapay.com`), request construction, idempotency-key generation (seeded-RNG hook for fixtures; formats from §2.3), retry wiring of `RetryPolicy` over the transport trait, structured-error mapping from non-OK responses using manifest message templates. Shell default is **no retries** (`max_retries: 0`) — today's TS `client.ts` does not retry and shell fixtures record one wire exchange; `withRetry` semantics stay facade-side. The loop is fully wired and tested so later steps can enable retries without touching it.
     **Done when:** shell-level fixtures pass on both transports.
 
 22. **Client methods, group A — customers, sessions, auth-adjacent.** `createCustomer`, `updateCustomer`, `getCustomer` (three-shape normalization), `assignCredits`, `getCustomerBalance`, `getUserInfo`, `createCheckoutSession`, `createCustomerSession`, `getMerchant`, `getPlatformConfig`.
@@ -1247,12 +1277,18 @@ sequenceDiagram
   API-->>Tr: 429 / 5xx
   Tr-->>Shell: error (retryable)
   Shell->>Pol: next_delay(attempt=0)?
-  Pol-->>Shell: Some(500ms)
-  Note over Shell,Bind: host-side sleep — binding owns the timer
-  Shell->>Tr: send(request) [same idempotency key]
-  Tr->>API: HTTP
-  API-->>Tr: 200 + body
-  Tr-->>Shell: bytes
+  alt None (exhausted)
+    Pol-->>Shell: None
+    Note over Shell: reject last error — no shouldRetry / onRetry
+  else Some(delay)
+    Pol-->>Shell: Some(500ms)
+    Note over Shell,Bind: facade may call shouldRetry then onRetry (host closures)
+    Note over Shell,Bind: host-side sleep — binding owns the timer; core has none
+    Shell->>Tr: send(request) [same idempotency key]
+    Tr->>API: HTTP
+    API-->>Tr: 200 + body
+    Tr-->>Shell: bytes
+  end
   Shell->>Shell: normalize (§2.3 quirks)
   Shell-->>Bind: Result<T, SdkError>
   Bind-->>App: Promise / awaitable / sync return / exception / error
@@ -1361,8 +1397,8 @@ Intentionally open until the phase that needs them; resolve with research + a PR
 | WASM instance-pool sizing strategy for Go (fixed pool vs demand; max concurrent instances) | Step 49 | One instance is single-threaded; pool size vs memory trade-off |
 | crates.io name reservation for `solvapay` (and whether internal crates are published) | Before step 46 | Check early; reserve the name; decide publish set vs facade-only |
 | Whether the shared tokio runtime in napi-rs is per-addon or per-process | Step 36 | napi-rs default is usually fine; verify under worker_threads |
-| Process-payment OpenAPI discriminator fix — backend republish vs manifest overlay; ownership | Before step 15 cutover | Blocker §5.4; needs a backend-team decision |
-| `includeCheckoutSession` OpenAPI republish | Before step 15 cutover | Same PR as above if backend-side |
+| ~~Process-payment OpenAPI discriminator fix — backend republish vs manifest overlay; ownership~~ | **Resolved (step 15)** | Snapshot has real `oneOf` + `discriminator.propertyName: status` over 7 named branches; non-unique `succeeded` handled in `dto-gen` via `#[serde(untagged)]` with specific→bare ordering (see §15 note 10) |
+| ~~`includeCheckoutSession` OpenAPI republish~~ | **Resolved (step 15)** | `CheckLimitRequest.includeCheckoutSession` is present in `sdk-v1.snapshot.json` |
 | Free-threaded CPython: declare `gil_used = false` from day one, or after an audit? | Step 40 | PyO3 0.28 defaults modules to thread-safe; audit is cheap if core stays lock-light (§15 note 2) |
 | Fuzz corpus seed strategy (webhook payloads, malformed signatures, FFI JSON) | Step 55 | Seed from Phase 0 fixtures + mutation |
 | Whether UniFFI is ever used for a *sixth* language later | Only if a new language can't use a specialized binding | §4.6 |
@@ -1399,6 +1435,26 @@ Re-check the linked sources at the start of any step touching the corresponding 
 **Note 5 — crates.io facade crate (checked 2026-07):** Publishing a thin `solvapay` facade that depends on workspace crates (`solvapay-transport`, `solvapay-core`) is the standard pattern (re-export + ergonomics). Decide early whether internal crates are published (version-locked path for facade) or the facade vendors/re-exports a single publishable surface. docs.rs builds from the published crate; MSRV and feature flags (`blocking`) must be documented. Name collision risk on crates.io is real — reserve `solvapay` before Phase 9. Confirms D15. Sources: [crates.io publishing](https://doc.rust-lang.org/cargo/reference/publishing.html), [docs.rs about](https://docs.rs/about).
 
 **Note 6 — Step 8 cargo workspace scaffold (checked 2026-07-16):** Stable Rust is `1.96.0`; pin via `rust/rust-toolchain.toml` with `channel = "1.96.0"`, components `clippy` + `rustfmt`, and target `wasm32-unknown-unknown` so CI/local rustup install the wasm compile check without a separate step. `[workspace.lints.clippy]` inherits into members via `lints.workspace = true` (stable since 1.74) — deny `unwrap_used`, `expect_used`, `panic`; test modules opt out with `#[allow(...)]` on `#[cfg(test)]` (Cargo.toml lints apply to tests too — no production-only scope). Crate pins from crates.io: `serde 1.0.228`, `serde_json 1.0.150`, `hmac 0.13.0`, `sha2 0.11.0`, `subtle 2.6.1`. No contradiction with §4.3 / §4.4 / §7.2 / §7.4 — proceed as specified. Sources: [Cargo workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html), [Cargo lints](https://doc.rust-lang.org/cargo/reference/lints.html), [rust-toolchain.toml](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file).
+
+**Note 7 — Step 11 retry policy / `std::time::Duration` (checked 2026-07-16):** Current stable Rust is **1.97.0** ([announcement](https://blog.rust-lang.org/2026/07/09/Rust-1.97.0/), [releases](https://doc.rust-lang.org/stable/releases.html)); this workspace intentionally remains on the Step 8 pin **1.96.0**. `Duration::from_millis` and saturating/`checked_shl` integer ops used by `RetryPolicy::next_delay` are available under that pin ([`Duration` docs](https://doc.rust-lang.org/stable/std/time/struct.Duration.html)). No new crate dependency; no architecture change — core stays timer-free; host/fixture-runner owns sleep + `shouldRetry`/`onRetry`. Sources: [Rust 1.97.0 blog](https://blog.rust-lang.org/2026/07/09/Rust-1.97.0/), [std::time::Duration](https://doc.rust-lang.org/stable/std/time/struct.Duration.html).
+
+**Note 8 — Step 12 webhook verification / hmac·sha2·subtle (checked 2026-07-16):** Confirmed against current docs for the Step 8 pins: `hmac 0.13.0`, `sha2 0.11.0`, `subtle 2.6.1`. HMAC-SHA256 uses `Hmac::<Sha256>::new_from_slice(key)` (`KeyInit` + `Mac` from `hmac`), `update`, then `finalize().into_bytes()` for the raw digest bytes (hex-encode locally — no `hex` crate). Constant-time compare of the **hex strings** (length check first, matching Node `timingSafeEqual` on hex UTF-8) via `subtle::ConstantTimeEq::ct_eq` on `&[u8]`, then `bool::from(choice)`. `new_from_slice` returns `Result` but HMAC accepts any key length — map `Err` without `.unwrap()`. `serde_json` becomes a production dependency of `solvapay-core` for §6.1 item 5 (`invalid_payload`); no `chrono` in core (clock stays `i64` unix seconds; ISO parse is host-side in the fixture-runner). No contradiction with §4.3 / §6.1 / §7.2. Sources: [hmac 0.13 docs](https://docs.rs/hmac/0.13.0/hmac/), [sha2](https://docs.rs/sha2/0.11.0/sha2/), [subtle::ConstantTimeEq](https://docs.rs/subtle/2.6.1/subtle/trait.ConstantTimeEq.html).
+
+**Note 9 — Step 13 paywall state (checked 2026-07-16):** Pure logic only — no new crate deps beyond existing `serde` / `serde_json`. Translated `classifyPaywallState`, `buildGateMessage`, `buildNudgeMessage` into `solvapay-core::paywall_state` with tagged `PaywallState` (`kind`, snake_case) including unreachable `reactivation_required`. Minimal `PaywallLimits` / `GateContent` DTOs (full typed DTOs at step 15). Fixture runner: `executed` 165→190 (+25 classification/messages), `skipped-unbound` 140→115; 7 `gate/` + 4 `client-payload/` remain unbound (steps 14 / 32–33). Intentional TS divergence pinned in unit test: serde `Option` treats JSON `balance: null` as absent (TS `!== undefined` would not); backend does not emit explicit null. No contradiction with §6.3 / §4.3. Toolchain-research step is a no-op (no new deps).
+
+**Note 10 — Step 15 dto-gen / `solvapay-dto` (checked 2026-07-16):** Scaffolded `tools/dto-gen` + committed `crates/solvapay-dto` from `contract/openapi/sdk-v1.snapshot.json` only (manifest overlays = step 16). Serde research: a plain `#[serde(tag = "status")]` enum cannot represent `ProcessPaymentResult` because three branches share `status: "succeeded"` and disambiguate via `type` (`recurring` / `one-time` / absent). Emitter uses `#[serde(untagged)]` over the seven named branch structs with specific→bare ordering. Payment-method `kind` oneOf uses the same untagged pattern (structs embed the tag). Wire fields are all `Option` + `skip_serializing_if` so sparse step-7 fixture bodies round-trip; comparison is `serde_json::Value` semantic equality (f64 number normalize; absent ≡ null). Regenerated via `cargo run -p dto-gen -- --snapshot ../contract/openapi/sdk-v1.snapshot.json --out crates/solvapay-dto/src`; CI drift gate diffs the crate. §13 cutover gates for `includeCheckoutSession` + process-payment discriminator marked resolved — both already in the snapshot. Phase 2 §9 diagram unchanged (manifest still feeds dto-gen for step 16+). Sources: [serde container attributes (tag/untagged)](https://serde.rs/container-attrs.html), OpenAPI snapshot `oneOf` at `/v1/sdk/payment-intents/{processorPaymentId}/process`.
+
+**Note 11 — Step 16 SDK overlays / YAML crate (checked 2026-07-16):** Pinned `serde_norway 0.9.42` (maintained hard-fork of `serde_yaml`; `serde_yml` is deprecated/shim-only) as the dto-gen manifest reader so `sdk-contract.yaml` stays the single source of truth. Manifest gains a top-level `overlays:` catalog (`extendDto` | `mapDto` | `projectUnion` | `synthetic`) validated by Zod; `crossCheckOpenApi` requires every operation overlay ref + overlay base/field ref to resolve (OpenAPI schema, overlay, or IR-synthesized `ProcessPaymentResult` / `PaymentMethodResult`). Generator: `--manifest` + `--ts-out`; lowers overlays into IR and emits `solvapay-dto/src/overlays.rs` + `packages/server/src/types/overlays.generated.d.ts` (imports wire types from existing `generated.ts`). Does not redefine wire `ProcessPaymentResult` / `OneTimePurchaseInfo` (identity alias skipped) or `PaymentMethodInfo` beyond a TS operations-response alias. Gates: regen idempotence, committed-output drift (Rust job), `tsc --noEmit` on the `.d.ts` (JS job). Sources: [serde_norway](https://crates.io/crates/serde_norway), [serde_yml deprecation / MIGRATION](https://github.com/sebastienrousseau/serde_yml/blob/master/MIGRATION.md).
+
+**Note 12 — Step 18 TS declarations / parity tooling (checked 2026-07-16):** Vitest 4 type-testing: `*.test-d.ts` files are type tests by default; enable with `vitest --typecheck` or `test.typecheck.enabled`. Assertions use `expectTypeOf` / `assertType` (runtime no-ops); prefer `toEqualTypeOf` for exact mutual equality and `toExtend` for assignability (`toMatchTypeOf` deprecated). Under the hood Vitest runs `tsc --noEmit` and parses diagnostics — aligns with API-diff as mutual assignability rather than text diff. For export enumeration in `parity:check`, prefer **ts-morph** (`Project` + `sourceFile.getExportedDeclarations()`) over raw `typescript` Compiler API: same checker underneath, far less binder/symbol boilerplate for a script that only needs export names. `@microsoft/api-extractor` is overkill here (API report / .d.ts rollup product) — we already have a committed generated `.d.ts` + assignability gate. Repo precedent for compile-only surface checks is `packages/react` `test:types` (`tsc -p __tests__/tsconfig.types.json`); Step 18 adds vitest typecheck for `api-diff.test-d.ts` alongside that pattern. No architecture change vs §5.6 / §2.8. Sources: [Vitest testing types](https://vitest.dev/guide/testing-types), [expectTypeOf](https://vitest.dev/api/expect-typeof), [ts-morph exports](https://ts-morph.com/details/exports).
+
+**Note 13 — Step 19 native transport / reqwest·rustls·wiremock (checked 2026-07-17):** Pinned `reqwest 0.12.28` with `default-features = false` + `rustls-tls` (aliases `rustls-tls-webpki-roots`; no OpenSSL / `default-tls`). crates.io latest is `0.13.4` where rustls is the new default and feature names changed (`rustls` vs `rustls-tls`) — stayed on 0.12.x for the plan's feature naming and wiremock 0.6.5's own reqwest ^0.12 test matrix. Dev-only: `tokio 1.52.4` (`rt`, `macros`), `wiremock 0.6.5`. Mock-server choice: wiremock over httpmock (async-native, matches recorded-fixture round-trips). `maybe_async_send` never landed as a macro in step 8 — step 19 introduces the equivalent cfg'd `BoxFuture` alias (`Send` on native, bare on `wasm32`) so `Transport` stays dyn-compatible for `Arc<dyn Transport>` under the 1.96.0 pin; AFIT + RPITIT is not dyn-safe without boxing. Trait returns `Result<HttpResponse, SdkError>` (not a parallel `TransportError`) — step 17 froze the single error surface; §4.4 sketch updated accordingly. Non-OK HTTP statuses are successful transports (`HttpResponse`); only I/O/build failures become `SdkError::Transport`. Sources: [reqwest 0.12.28](https://docs.rs/reqwest/0.12.28/reqwest/), [wiremock](https://docs.rs/wiremock/0.6.5/wiremock/), [rustls](https://docs.rs/rustls/).
+
+**Note 14 — Step 20 WASM Fetch transport (checked 2026-07-17):** Pinned the wasm-bindgen release train **0.2.126** end-to-end: `wasm-bindgen 0.2.126`, `js-sys`/`web-sys 0.3.103`, `wasm-bindgen-futures 0.4.76`, `wasm-bindgen-test 0.3.76`, and `wasm-bindgen-cli 0.2.126` (CLI must match the crate pin exactly — `rust/.cargo/config.toml` sets `runner = "wasm-bindgen-test-runner"`). Harness choice: **Node-based `wasm-bindgen-test`** (lighter than miniflare; Workers-specific validation stays step 38). `FetchTransport` resolves `fetch` from `js_sys::global()` (not `web_sys::window()`) so the same path works in browsers, Workers, and Node ≥18. Request surface is method/url/headers/body only — body as `Uint8Array`, no streaming (Workers `RequestInit` parity). Error mapping: request-build failures (bad URL/headers) → `SdkError::Transport { retryable: false }`; fetch rejection (network/DNS/refused) → `retryable: true`; non-OK HTTP stays `HttpResponse`. Fixture delivery: `rust/scripts/wasm-fixture-server.mjs` serves `GET /__fixtures` plus per-fixture mounts at `/__case/<index><wire.path>` — required because ~34 wire request shapes are shared across multiple response variants (client normalization cases); a single global matcher first-hits the wrong response. Wrapper: `rust/scripts/test-wasm-transport.sh`. Sources: [wasm-bindgen 0.2.126](https://crates.io/crates/wasm-bindgen/0.2.126), [web-sys fetch example](https://rustwasm.github.io/docs/wasm-bindgen/examples/fetch.html), [wasm-bindgen-test usage](https://rustwasm.github.io/docs/wasm-bindgen/wasm-bindgen-test/usage.html), [Workers limits](https://developers.cloudflare.com/workers/platform/limits/).
+
+**Note 15 — Step 21 client shell / retry sleeper on wasm32 (checked 2026-07-17):** reqwest 0.13.x added `ClientBuilder::retry` but that API is **unavailable on WASM** (and we stay on pinned 0.12.28 anyway) — shell-owned `RetryPolicy` + injectable sleeper remains the right design; do not lean on transport-level retries. For wasm32 sleep without tokio: wrap `setTimeout` in `js_sys::Promise` and await via `wasm_bindgen_futures` / `JsFuture` (or await `Promise` directly on the current js-sys futures path). Shell keeps a host-injected `sleeper: Fn(Duration) -> BoxFuture<()>` so native tests record delays with a no-op/mock sleeper and wasm uses `setTimeout`; core stays timer-free (§4.4). Default shell policy is `max_retries: 0` (TS client parity / one-exchange fixtures). Sources: [reqwest::retry (not on WASM)](https://docs.rs/reqwest/latest/reqwest/retry/index.html), [wasm-bindgen Promises and Futures](https://rustwasm.github.io/wasm-bindgen/reference/js-promises-and-rust-futures.html), [wasm-bindgen-futures 0.4.76](https://crates.io/crates/wasm-bindgen-futures/0.4.76).
+
+**Note 16 — Step 24 Group C client methods (checked 2026-07-17):** No new crate deps / toolchain pins — reused `ClientShell`, wiremock, and Fetch fixture server from steps 19–23. Added `ClientShell::execute_raw` (auth/retry, no status map) for delete-404-as-success and cancel/reactivate CASES/`bodyPrefix200`. `dto-gen` now emits `OPERATION_NAMES` for the 36-method coverage gate. Decision impact: architecture unchanged (§4.1 shell + typed client); Group C completes the 36-method typed surface before step 25 shadow harness. Sources: Phase 0 client fixtures under `contract/fixtures/client/`, TS `packages/server/src/client.ts` merge/404 quirks.
 
 ### Link table
 

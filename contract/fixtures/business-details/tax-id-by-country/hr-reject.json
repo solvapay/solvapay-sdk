@@ -1,0 +1,27 @@
+{
+  "suite": "business-details",
+  "case": "hr-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "HR",
+      "taxId": "HR1234567891"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "taxId"
+            ],
+            "message": "Enter a valid tax ID for HR"
+          }
+        ]
+      }
+    }
+  }
+}

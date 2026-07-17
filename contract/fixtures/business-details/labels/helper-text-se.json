@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "helper-text-se",
+  "input": {
+    "fn": "getTaxIdHelperText",
+    "args": {
+      "country": "SE"
+    }
+  },
+  "expect": {
+    "result": "Enter your full VAT ID including the country code, e.g. SE123456789123"
+  }
+}

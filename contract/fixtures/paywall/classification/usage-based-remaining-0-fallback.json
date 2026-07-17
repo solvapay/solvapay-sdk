@@ -1,0 +1,15 @@
+{
+  "suite": "paywall",
+  "case": "usage-based-remaining-0-fallback",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

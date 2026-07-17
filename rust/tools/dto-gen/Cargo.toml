@@ -1,0 +1,28 @@
+[package]
+name = "dto-gen"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Compiles the OpenAPI SDK snapshot into the solvapay-dto crate"
+publish = false
+
+[[bin]]
+name = "dto-gen"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+thiserror = { workspace = true }
+
+# Tooling crate: public docs still denied; private helpers may omit docs.
+[lints.rust]
+missing_docs = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+missing_docs_in_private_items = "allow"

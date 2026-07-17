@@ -1,0 +1,14 @@
+{
+  "suite": "business-details",
+  "case": "explicit-exclusive-eur",
+  "input": {
+    "fn": "resolveTaxBehavior",
+    "args": {
+      "behavior": "exclusive",
+      "currency": "EUR"
+    }
+  },
+  "expect": {
+    "result": "exclusive"
+  }
+}

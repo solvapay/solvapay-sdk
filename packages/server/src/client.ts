@@ -445,6 +445,27 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return await res.json()
     },
 
+    // PUT: /v1/sdk/products/{productRef}
+    async updateProduct(productRef, params) {
+      const url = `${base}/v1/sdk/products/${productRef}`
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Update product failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
+      }
+
+      return await res.json()
+    },
+
     // DELETE: /v1/sdk/products/{productRef}
     async deleteProduct(productRef) {
       const url = `${base}/v1/sdk/products/${productRef}`
@@ -700,10 +721,9 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       if (!res.ok) {
         const error = await res.text()
         log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(
-          `Attach business details failed (${res.status}): ${error}`,
-          { status: res.status },
-        )
+        throw new SolvaPayError(`Attach business details failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
       }
 
       return await res.json()

@@ -1,0 +1,25 @@
+{
+  "suite": "business-details",
+  "case": "business-missing-country",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": [
+              "country"
+            ],
+            "message": "Country is required"
+          }
+        ]
+      }
+    }
+  }
+}

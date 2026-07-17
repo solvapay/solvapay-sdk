@@ -76,6 +76,19 @@ jobs:
       - name: Check SDK contract manifest (offline)
         run: pnpm manifest:check
 
+      - name: Check TS surface parity (offline)
+        run: pnpm parity:check
+
+      - name: overlays.generated.d.ts tsc gate
+        working-directory: packages/server
+        run: |
+          npx tsc --noEmit --strict --moduleResolution bundler --module esnext --target es2022 \
+            src/types/overlays.generated.d.ts
+
+      - name: client.generated.d.ts + signature-parity typecheck
+        working-directory: packages/server
+        run: pnpm test:types
+
   rust:
     name: Rust
     runs-on: ubuntu-latest
@@ -97,7 +110,7 @@ jobs:
       - name: cargo fmt
         run: cargo fmt --all -- --check
 
-      - name: cargo clippy (unwrap/expect/panic deny)
+      - name: cargo clippy (unwrap/expect/panic/docs deny)
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: no-unwrap ripgrep gate
@@ -109,20 +122,92 @@ jobs:
       - name: cargo test
         run: cargo test --workspace
 
-      - name: cargo build solvapay-core (wasm32)
-        run: cargo build -p solvapay-core --target wasm32-unknown-unknown
-
-      - name: assert tokio absent from solvapay-core graph
+      - name: solvapay-dto regen drift
         run: |
-          tree="$(cargo tree -p solvapay-core --target wasm32-unknown-unknown)"
-          if printf '%s\n' "$tree" | grep -qi 'tokio'; then
-            echo "tokio must not appear in solvapay-core's dependency graph" >&2
-            printf '%s\n' "$tree"
+          cargo run -q -p dto-gen -- \
+            --snapshot ../contract/openapi/sdk-v1.snapshot.json \
+            --manifest ../contract/manifest/sdk-contract.yaml \
+            --out crates/solvapay-dto/src \
+            --ts-out ../packages/server/src/types/overlays.generated.d.ts \
+            --ts-client-out ../packages/server/src/types/client.generated.d.ts \
+            --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts
+          GENERATED_PATHS=(
+            rust/crates/solvapay-dto
+            packages/server/src/types/overlays.generated.d.ts
+            packages/server/src/types/client.generated.d.ts
+            packages/server/src/__generated__/signature-parity.generated.test.ts
+          )
+          if ! git -C .. diff --exit-code -- "${GENERATED_PATHS[@]}"; then
+            echo "solvapay-dto / generated TS artifacts are out of date — run:" >&2
+            echo "  cargo run -p dto-gen -- \\" >&2
+            echo "    --snapshot ../contract/openapi/sdk-v1.snapshot.json \\" >&2
+            echo "    --manifest ../contract/manifest/sdk-contract.yaml \\" >&2
+            echo "    --out crates/solvapay-dto/src \\" >&2
+            echo "    --ts-out ../packages/server/src/types/overlays.generated.d.ts \\" >&2
+            echo "    --ts-client-out ../packages/server/src/types/client.generated.d.ts \\" >&2
+            echo "    --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts" >&2
             exit 1
           fi
-          echo "OK: tokio absent from solvapay-core graph"
 
-      - name: empty fixture suite
+      - name: @generated header gate
+        run: |
+          for f in \
+            ../packages/server/src/types/overlays.generated.d.ts \
+            ../packages/server/src/types/client.generated.d.ts \
+            ../packages/server/src/__generated__/signature-parity.generated.test.ts
+          do
+            if ! grep -q '@generated' "$f"; then
+              echo "missing @generated header: $f" >&2
+              exit 1
+            fi
+          done
+          echo "OK: @generated headers present"
+
+      - name: Setup Node.js (wasm Fetch harness)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache wasm-bindgen-cli
+        id: cache-wasm-bindgen-cli
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen-test-runner
+            ~/.cargo/bin/wasm2es6js
+          key: ${{ runner.os }}-wasm-bindgen-cli-0.2.126
+
+      - name: Install wasm-bindgen-cli
+        if: steps.cache-wasm-bindgen-cli.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version 0.2.126 --locked
+
+      - name: cargo build solvapay-core + solvapay-transport (wasm32)
+        run: |
+          cargo build -p solvapay-core --target wasm32-unknown-unknown
+          # FetchTransport is cfg'd in for wasm32 (step 20); reqwest stays native-only.
+          cargo build -p solvapay-transport --target wasm32-unknown-unknown
+
+      - name: cargo clippy solvapay-transport (wasm32)
+        run: cargo clippy -p solvapay-transport --target wasm32-unknown-unknown --all-targets -- -D warnings
+
+      - name: wasm Fetch transport round-trip
+        run: ./scripts/test-wasm-transport.sh
+
+      - name: assert tokio absent from solvapay-core / solvapay-transport graphs
+        run: |
+          # Normal edges only — tokio is allowed as a native test/dev-dep (wiremock).
+          for pkg in solvapay-core solvapay-transport; do
+            tree="$(cargo tree -p "$pkg" --target wasm32-unknown-unknown --edges normal)"
+            if printf '%s\n' "$tree" | grep -qi 'tokio'; then
+              echo "tokio must not appear in ${pkg}'s normal dependency graph" >&2
+              printf '%s\n' "$tree"
+              exit 1
+            fi
+            echo "OK: tokio absent from ${pkg} normal graph"
+          done
+
+      - name: fixture suite (bound pure-core suites; unbound skipped)
         run: cargo run -q -p fixture-runner -- ../contract/fixtures
 
   documentation:

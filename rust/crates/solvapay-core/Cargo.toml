@@ -9,9 +9,11 @@ publish = false
 
 [dependencies]
 serde = { workspace = true }
+serde_json = { workspace = true }
 hmac = { workspace = true }
 sha2 = { workspace = true }
 subtle = { workspace = true }
+solvapay-dto = { path = "../solvapay-dto" }
 
 [lints]
 workspace = true
