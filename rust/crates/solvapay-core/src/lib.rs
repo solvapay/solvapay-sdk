@@ -15,8 +15,11 @@ pub mod error;
 pub mod helper_error;
 mod hmac_util;
 pub mod limits;
+pub mod mcp;
 pub mod payment;
+pub mod paywall_decision;
 pub mod paywall_gate;
+pub mod paywall_payload;
 pub mod paywall_state;
 pub mod plans;
 pub mod product;
@@ -56,6 +59,15 @@ pub use customer_sync::{
 pub use error::{render_template, SdkError};
 pub use helper_error::HelperErrorResult;
 pub use limits::{resolve_check_limits_params, CheckLimitsParams};
+pub use mcp::{
+    assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
+    build_tool_descriptor_metadata, derive_icons, make_response_result, mcp_tool_names_json,
+    mcp_view_maps, paywall_tool_result, validate_public_base_url,
+    BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, McpContentBlock,
+    McpPaywallToolResult, McpViewMaps, MerchantBranding, PromptDescriptorMetadata,
+    PromptUserMessage, ResponseEnvelope, ToolAnnotations, ToolDescriptorMetadata, ToolIcon,
+    MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
+};
 pub use payment::{
     attach_business_details_validation_error, project_payment_intent_result,
     project_topup_process_outcome, validate_attach_business_details_params,
@@ -63,7 +75,12 @@ pub use payment::{
     validate_topup_payment_intent_params, PaymentIntentProjection, PaymentIntentSource,
     TopupProcessOutcome,
 };
+pub use paywall_decision::{
+    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits, resolve_product_ref,
+    CachedLimitsEvaluation, FreshLimitsEvaluation, PaywallOutcome,
+};
 pub use paywall_gate::{build_paywall_gate, PaywallGate, PaywallGateKind, PaywallGateLimits};
+pub use paywall_payload::{paywall_client_payload, PaywallClientPayload};
 pub use paywall_state::{
     build_gate_message, build_nudge_message, classify_paywall_state, GateContent, PaywallBalance,
     PaywallLimits, PaywallPlanSummary, PaywallState,

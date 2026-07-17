@@ -12,8 +12,12 @@ import {
   classifyCreateError,
   classifyCustomerRef,
   classifyLookupError,
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
   extractBackendCustomerRef,
   isEmailConflict,
+  resolveProductRef,
 } from '@solvapay/core'
 import type {
   LimitResponseWithPlan,
@@ -223,7 +227,7 @@ export class SolvaPayPaywall {
   }
 
   private resolveProduct(metadata: PaywallMetadata): string {
-    return metadata.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
+    return resolveProductRef(metadata.product, process.env.SOLVAPAY_PRODUCT)
   }
 
   private generateRequestId(): string {
@@ -288,18 +292,13 @@ export class SolvaPayPaywall {
       // handler context carries balance/plan even on cache hits.
       lastLimitsCheck = cachedLimits.limits
 
-      if (cachedLimits.remaining > 0) {
-        cachedLimits.remaining--
-        if (cachedLimits.remaining <= 0) {
-          this.limitsCache.delete(limitsCacheKey)
-        }
-        withinLimits = true
-        remaining = cachedLimits.remaining
-      } else {
-        // A zero-remaining entry indicates we already consumed the final unit.
-        // Block one immediate follow-up request from cache, then force re-check next time.
-        withinLimits = false
-        remaining = 0
+      const cachedEval = evaluateCachedLimits(cachedLimits.remaining)
+      withinLimits = cachedEval.withinLimits
+      remaining = cachedEval.remaining
+      if (cachedEval.withinLimits) {
+        cachedLimits.remaining = cachedEval.remaining
+      }
+      if (cachedEval.evict) {
         this.limitsCache.delete(limitsCacheKey)
       }
     } else {
@@ -321,19 +320,17 @@ export class SolvaPayPaywall {
       })
 
       lastLimitsCheck = limitsCheck
-      withinLimits = limitsCheck.withinLimits
-      remaining = limitsCheck.remaining
       checkoutUrl = limitsCheck.checkoutUrl
       resolvedMeterName = limitsCheck.meterName
 
-      const consumedAllowance = withinLimits && remaining > 0
-      if (consumedAllowance) {
-        // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
-        // so cached follow-up requests don't get an extra free call.
-        remaining = Math.max(0, remaining - 1)
-      }
+      // checkLimits reflects pre-request allowance. Consume one unit for
+      // this in-flight request so cached follow-up requests don't get an
+      // extra free call.
+      const freshEval = evaluateFreshLimits(limitsCheck.withinLimits, limitsCheck.remaining)
+      withinLimits = freshEval.withinLimits
+      remaining = freshEval.remaining
 
-      if (consumedAllowance) {
+      if (freshEval.shouldCache) {
         this.limitsCache.set(limitsCacheKey, {
           remaining,
           checkoutUrl,
@@ -344,7 +341,18 @@ export class SolvaPayPaywall {
       }
     }
 
-    if (!withinLimits) {
+    const decision = decidePaywallOutcome({
+      withinLimits,
+      product,
+      limits: lastLimitsCheck ?? null,
+      checkoutUrl,
+      // Core's PaywallDecisionLimits uses unknown pass-throughs; gate assembly
+      // accepts the same runtime shape as LimitResponseWithPlan.
+      buildGate: (productRef, limits) =>
+        buildPaywallGate(productRef, limits as Parameters<typeof buildPaywallGate>[1]),
+    })
+
+    if (decision.outcome === 'gate') {
       const latencyMs = Date.now() - startTime
       // Awaited (not floated) so the call survives runtimes that
       // terminate the request context as soon as the response returns
@@ -363,21 +371,9 @@ export class SolvaPayPaywall {
         latencyMs,
       ).catch(() => undefined)
 
-      // Delegate gate construction to `buildPaywallGate` so adapter
-      // paths and `payable.gate()` produce byte-identical wire shapes.
-      const gate = buildPaywallGate(
-        product,
-        lastLimitsCheck ?? {
-          withinLimits: false,
-          remaining: 0,
-          plan: '',
-          ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
-        },
-      )
-
       return {
         outcome: 'gate',
-        gate,
+        gate: decision.gate,
         limits: lastLimitsCheck ?? null,
         customerRef: backendCustomerRef,
       }

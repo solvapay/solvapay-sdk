@@ -7,7 +7,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-07-17):** Steps 1–31 **Done** (Phases 0–4 closed). **Next:** step 32 (paywall decision core).
+**Current progress (2026-07-17):** Steps 1–35 **Done** (Phases 0–5 closed). **Next:** step 36 (Phase 6 — scaffold napi-rs).
 
 ## Status legend
 
@@ -53,10 +53,10 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 29 | Helpers: purchase / renewal | Phase 4 | Done | — | `helper-purchase` (10) + `helper-renewal` (24) green in TS harness + Rust `fixture-runner` (`executed=334 passed=334 failed=0`; was 300); RED stubs → unit `failed=23`; purchase/renewal characterization + core unit tests green; step-8 gates + §15 note 21 | [Phase 4](#phase-4--route-helper-cores) |
 | 30 | Helpers: usage / limits / plans | Phase 4 | Done | — | `helper-usage` (12) + `helper-limits` (5) + `helper-plans` (3) green in TS harness + Rust `fixture-runner` (`executed=354 passed=354 failed=0`; was 334); RED stubs → unit `failed=11` + fixture `failed=15`; usage/limits/plans characterization + core unit tests green; step-8 gates + §15 note 22 | [Phase 4](#phase-4--route-helper-cores) |
 | 31 | Helpers: merchant / product / error | Phase 4 | Done | — | `helper-error` (10) + `helper-product` (3) green in TS harness + Rust `fixture-runner` (`executed=367 passed=367 failed=0`; was 354); RED stubs → unit `failed=8` + fixture `failed=8`; merchant/product/error characterization + core unit tests green; step-8 gates + §15 note 23 | [Phase 4](#phase-4--route-helper-cores) |
-| 32 | Paywall decision core | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
-| 33 | Client payload shapes | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
-| 34 | MCP payload builders | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
-| 35 | MCP names + descriptors | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
+| 32 | Paywall decision core | Phase 5 | Done | — | `paywall/decision/` (16) green in TS harness + Rust `fixture-runner` (`executed=383 passed=383 failed=0`; was 367); RED stubs → unit `failed=11` + fixture `failed=13`; paywall characterization + core unit tests green; step-8 gates + §15 note 24 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
+| 33 | Client payload shapes | Phase 5 | Done | — | `paywall/client-payload` (9, was 4) green in TS harness + Rust fixture-runner (`executed=392 passed=392 failed=0`; was 383); RED stub → unit `failed=5` + fixture `failed=9`; step-8 gates + §15 note 25 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
+| 34 | MCP payload builders | Phase 5 | Done | — | Dual-binding TS green (`mcp-core` + `server` `paywallToolResult`) + Rust `mcp/*` 19/19 + full corpus `executed=411 passed=411 failed=0` (was 392); step-8 gates + §15 note 26 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
+| 35 | MCP names + descriptors | Phase 5 | Done | — | Descriptor fixtures `mcp/{tool-names,derive-icons,descriptors,prompts}` (20) + prior `mcp/` 19 → 39; TS harness + Rust fixture-runner `executed=431 passed=431 failed=0` (was 411); RED characterization + unit suite first; step-8 gates + §15 note 27 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
 | 36 | Scaffold napi-rs | Phase 6 | Not started | — | — | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 37 | Wire conditional exports | Phase 6 | Not started | — | — | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 38 | Edge/browser WASM cutover | Phase 6 | Not started | — | — | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
@@ -345,15 +345,58 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Decisions to document:** Steps 26–31 decision bullets; nil-core helpers (payment-method, auto-recharge, merchant, trackUsage) stay TS-only; shared `HelperErrorResult` skip-absent. Deviations: none vs redesign intent. Deferred: napi cutover (step 37) for literal "tests pass against the binding".
 - **Pointers:** redesign §9 steps 26–31, §15 notes 18–23; `contract/fixtures/helper-*`; `solvapay-core::{auth_resolution, customer_sync, activation, payment, checkout, balance_poll, purchase, renewal, usage, limits, plans, route_error, product}`.
 
-### Phase 5 — Paywall decision engine and MCP contracts — Not started
+### Phase 5 — Paywall decision engine and MCP contracts — Done
 
-<!-- running per-step bullets accumulate here as each step lands -->
+- **Step 32 (Paywall decision core):** `solvapay-core::paywall_decision` + TS pure extract in `@solvapay/core` (`paywall-decision`) rewired into `SolvaPayPaywall.decide()`; golden fixtures `paywall/decision` (16); fixture-runner bindings. Characterization extended for cache decrement/evict/block-once + gate edges. RED: wrong-default stubs → unit `failed=11` + fixture `failed=13`; GREEN: `executed=383 passed=383 failed=0`. §15 note 24.
+- **Step 33 (Client payload shapes):** `solvapay-core::paywall_payload` (`paywall_client_payload`); golden fixtures `paywall/client-payload` (9, was 4); fixture-runner binding. No TS extract — binds `@solvapay/server` export directly. RED: wrong-default stub → unit `failed=5` + fixture `failed=9`; GREEN: `executed=392 passed=392 failed=0`. §15 note 25.
+- **Step 34 (MCP payload builders):** `solvapay-core::mcp` (`paywall_tool_result` + `make_response_result` / `assert_response_result`); golden fixtures `mcp/` (19); dual-binding TS harness (`mcp-core` + `server` `formatGate`) proves identical payloads; fixture-runner bindings; manifest `errors.mcp.messages.rawHandlerReturn` → `error_templates::mcp`. GREEN: `executed=411 passed=411 failed=0`. §15 note 26.
+- **Step 35 (MCP names + descriptors):** `solvapay-core::mcp::{tool_names,descriptors}` + TS pure extract `@solvapay/mcp-core` `descriptor-metadata` rewired into `buildSolvaPayDescriptors` / `buildSolvaPayPrompts`; golden fixtures `mcp/tool-names` (2) + `derive-icons` (4) + `descriptors` (5) + `prompts` (9) = +20; fixture-runner bindings. Characterization extended before extract. GREEN: `executed=431 passed=431 failed=0`. §15 note 27.
 
-**Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+#### Step 32 decisions for future handoffs
+
+- **Fixture counts:** `paywall/decision` 16 (= +16 bound cases). Full corpus `executed` 367→383; `failed=0`.
+- **What moved vs stayed:** Pure cores — `resolveProductRef`, `evaluateCachedLimits`, `evaluateFreshLimits`, `decidePaywallOutcome` (+ `resolveFallbackGateLimits`). Host stays — `ensureCustomer` / deduplicator, limitsCache Map/TTL/timestamps, `apiClient.checkLimits`, `trackUsage` on gate, `generateRequestId`, `runAllow`/`protect` plumbing.
+- **Gate reuse:** Rust `decide_paywall_outcome` calls in-crate `build_paywall_gate` (step 14). TS injects `buildGate: buildPaywallGate` at the package boundary so `@solvapay/core` does not depend on `@solvapay/server` (gate + paywall-state remain server-side until a later extract).
+- **Cache semantics in core:** Evaluators return flags (`evict` / `shouldCache`) + decremented `remaining`; host mutates the Map. Zero-remaining cache entry blocks exactly one follow-up then evicts.
+- **Fallback limits:** `plan: ''`, `remaining: 0`, skip-absent `checkoutUrl` (`!== undefined` / `Option` presence including empty string).
+- **Integer emission:** Whole-number `remaining` via shared `serde_util::serialize_whole_f64` (steps 23/28/30 precedent).
+- **Characterization gap filled:** Extended `paywall.unit.test.ts` `decide()` coverage for cache hit remaining=1/0, fresh remaining=1, no-checkoutUrl gate, full payment gate (pass unmodified after rewire).
+
+#### Step 33 decisions for future handoffs
+
+- **Fixture counts:** `paywall/client-payload` 9 (was 4; +5 field-presence axes). Full corpus `executed` 383→392; `failed=0`.
+- **No TS extract:** `paywallErrorToClientPayload` stays a standalone `@solvapay/server` export; TS harness + Rust fixture-runner both bind it (withRetry / step-28 precedent). Production TS untouched.
+- **Related shapes out of scope:** generic 500 `{ success: false, error }` bodies in `handleHttpError` / `handleNextError` stay host Response plumbing (step-31 `handleRouteError` class).
+- **Input type:** reuses step-14 `PaywallGate` / `PaywallGateKind` (exact `PaywallStructuredContent` shape).
+- **Payment branch asymmetry:** never emits `plans` / `confirmationUrl` even when present on the input gate.
+- **Presence semantics:** `confirmationUrl: ""` is emitted (`!== undefined`, not `||` truthiness); input JSON `null` on raw Value options ≡ absent (pinned divergence, steps 13/14).
+
+#### Step 34 decisions for future handoffs
+
+- **Fixture counts:** `mcp/` 19 (`paywall-tool-result` 7 + `response-envelope` 7 + `assert-response-envelope` 5). Full corpus `executed` 392→411; `failed=0`.
+- **Dual-binding proof:** `paywallToolResult` registered twice — `id: 'mcp-core'` → `paywallToolResult(PaywallError)` and `id: 'server'` → `McpAdapter.formatGate` — same `expect.result` (step-4 node/edge precedent).
+- **Two additive public exports:** `McpAdapter` from `@solvapay/server`; `makeResponseResult` / `assertResponseResult` from `@solvapay/mcp-core` (adapter-internal helpers — not merchant-facing `@solvapay/mcp` entry). Root `devDependency` `@solvapay/mcp-core: workspace:*`.
+- **No TS extract:** production builders stay in place; fixtures bind existing exports (step-33 / withRetry precedent).
+- **Typed-gate pin:** Rust input is step-14 `PaywallGate` (unknown extra fields out of contract).
+- **`message === gate.message` pin:** every paywall-tool-result fixture keeps narration and `structuredContent.message` identical so both bindings agree (`formatGate` always uses `gate.message`).
+- **Envelope skip-absent:** `options` omitted when `None`; `emittedBlocks` omitted when empty (`[]` → key absent); `options` is raw-`Value` passthrough.
+- **Manifest freeze:** `errors.mcp.messages.rawHandlerReturn` → `solvapay_dto::error_templates::mcp::RAW_HANDLER_RETURN`; dto-gen + Zod schema extended.
+- **Payment vs activation asymmetry does not apply:** unlike step 33, MCP `structuredContent` is the gate verbatim (balance / productDetails / plans / confirmationUrl all ride through).
+
+#### Step 35 decisions for future handoffs
+
+- **Fixture counts:** `mcp/` 39 (= prior 19 + `tool-names` 2 + `derive-icons` 4 + `descriptors` 5 + `prompts` 9). Full corpus `executed` 411→431; `failed=0`.
+- **What moved vs stayed:** Pure cores — `MCP_TOOL_NAMES`, `TOOL_FOR_VIEW`/`VIEW_FOR_TOOL`, `deriveIcons`, tool/prompt descriptor metadata, prompt user-message text, `validatePublicBaseUrl`. Stays TS — handlers, zod `inputSchema`, `readHtml`/fs/`crypto.randomUUID()`, `buildBootstrapPayload`, CSP/`mergeCsp`, narration, resources.
+- **Single-source rewire:** TS extract `descriptor-metadata.ts`; `buildSolvaPayDescriptors` / `buildSolvaPayPrompts` attach schemas + handlers onto metadata by name so registration order / descriptions / annotations stay one table.
+- **Ordering gotcha:** deep equality asserts registration order — intent tools (filtered by `views`) → 8 transport tools → `activate_plan`. Empty `views` drops intent tools only; transport + `activate_plan` still emit.
+- **Skip-absent:** omit `title` / `icons` when absent; annotations serialize only set flags (`openWorldHint` always + per-tool); `deriveIcons` `undefined` → fixture `null`.
+- **No manifest change:** frozen `publicBaseUrl` message stays a local const (not an `errors.mcp` template) — no new HTTP operations.
+
+**Phase-close handoff** (Phase 5 complete — step 35 last):
+- **What was done:** Ported paywall decision cores (32), client 402 payload shapes (33), MCP paywall/envelope builders (34), and MCP tool-name/descriptor/prompt metadata (35) into `solvapay-core` with golden fixtures proving TS↔Rust byte parity.
+- **Why:** Phase 5 closes the last pure decision/contract surface before Phase 6 napi cutover; MCP adapters keep host wiring while core owns names + descriptor metadata.
+- **Decisions to document:** Steps 32–35 decision bullets; dual-binding for `paywallToolResult`; TS extract for decision + descriptors (not for client-payload / envelope); skip-absent / ordering / `isError: false` pins. Deviations: none vs redesign intent. Deferred: napi binding of these cores (step 37).
+- **Pointers:** redesign §9 steps 32–35, §15 notes 24–27; `contract/fixtures/{paywall,mcp}/`; `solvapay-core::{paywall_decision,paywall_payload,mcp}`.
 
 ### Phase 6 — Node binding cutover, then edge/browser WASM — Not started
 

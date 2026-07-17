@@ -1,0 +1,27 @@
+{
+  "suite": "mcp",
+  "case": "prompts-checkout-disabled",
+  "input": {
+    "fn": "buildPromptDescriptorMetadata",
+    "args": {
+      "views": [
+        "account",
+        "topup"
+      ]
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "name": "manage_account",
+        "title": "Manage account",
+        "description": "Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer."
+      },
+      {
+        "name": "topup",
+        "title": "Top up credits",
+        "description": "Add SolvaPay credits to the current customer."
+      }
+    ]
+  }
+}

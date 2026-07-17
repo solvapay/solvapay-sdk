@@ -1,0 +1,31 @@
+{
+  "suite": "paywall",
+  "case": "decide-gate-payment-full",
+  "input": {
+    "fn": "decidePaywallOutcome",
+    "args": {
+      "withinLimits": false,
+      "product": "prd_demo",
+      "limits": {
+        "plan": "pl_basic",
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x",
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "product": { "name": "Demo", "reference": "prd_demo" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "outcome": "gate",
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "productDetails": { "name": "Demo", "reference": "prd_demo" }
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ pub fn lower_errors(ir: &mut Ir, manifest: &Manifest) -> GenResult<()> {
     if let Some(errors) = &manifest.errors {
         templates.webhook_messages = errors.webhook.messages.clone();
         templates.paywall_messages = errors.paywall.messages.clone();
+        templates.mcp_messages = errors.mcp.messages.clone();
         templates.transport_template = errors.transport.message_template.clone();
     }
 

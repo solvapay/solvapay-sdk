@@ -235,4 +235,16 @@ export {
   type ProductHelperError,
 } from './product'
 
+export {
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
+  resolveFallbackGateLimits,
+  resolveProductRef,
+  type CachedLimitsEvaluation,
+  type FreshLimitsEvaluation,
+  type PaywallDecisionLimits,
+  type PaywallOutcome,
+} from './paywall-decision'
+
 export const version = '0.1.0'

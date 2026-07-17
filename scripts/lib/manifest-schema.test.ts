@@ -135,6 +135,12 @@ function minimalManifest(
           activation_required: 'Activation required',
         },
       },
+      mcp: {
+        messages: {
+          rawHandlerReturn:
+            'SolvaPay: registerPayable handler returned a raw value. Handlers must return ctx.respond(data, options?). If you believe you did, this is an internal bug — please file an issue at https://github.com/solvapay/solvapay-sdk/issues.',
+        },
+      },
       transport: {
         messageTemplate: '{message}',
       },

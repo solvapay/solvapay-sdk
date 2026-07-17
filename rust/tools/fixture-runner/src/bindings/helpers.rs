@@ -4,10 +4,11 @@ use serde_json::Value;
 use solvapay_core::{
     attach_business_details_validation_error, build_create_customer_params, classify_cancel_error,
     classify_create_error, classify_customer_ref, classify_lookup_error, classify_reactivate_error,
-    coerce_customer_options, extract_backend_customer_ref, is_cached_customer_ref_valid,
-    is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
-    normalize_reactivate_response, project_payment_intent_result, project_topup_process_outcome,
-    project_usage_snapshot, resolve_authenticated_user, resolve_check_limits_params,
+    coerce_customer_options, decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
+    extract_backend_customer_ref, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
+    map_route_error, normalize_cancel_response, normalize_reactivate_response,
+    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
+    resolve_authenticated_user, resolve_check_limits_params, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
     validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
@@ -422,6 +423,67 @@ pub fn invoke_validate_get_product_params(input: &FixtureInput) -> Result<Value,
     match validate_get_product_params(product_ref.as_deref()) {
         None => Ok(Value::Null),
         Some(err) => serde_json::to_value(err).map_err(|e| BindingError::Harness(e.to_string())),
+    }
+}
+
+/// Binding for `resolveProductRef`.
+pub fn invoke_resolve_product_ref(input: &FixtureInput) -> Result<Value, BindingError> {
+    let metadata_product = optional_string_arg(input, "metadataProduct")?;
+    let env_product = optional_string_arg(input, "envProduct")?;
+    Ok(Value::String(resolve_product_ref(
+        metadata_product.as_deref(),
+        env_product.as_deref(),
+    )))
+}
+
+/// Binding for `evaluateCachedLimits`.
+pub fn invoke_evaluate_cached_limits(input: &FixtureInput) -> Result<Value, BindingError> {
+    let remaining = require_f64_arg(input, "remaining")?;
+    serde_json::to_value(evaluate_cached_limits(remaining))
+        .map_err(|e| BindingError::Harness(e.to_string()))
+}
+
+/// Binding for `evaluateFreshLimits`.
+pub fn invoke_evaluate_fresh_limits(input: &FixtureInput) -> Result<Value, BindingError> {
+    let within_limits = require_bool_arg(input, "withinLimits")?;
+    let remaining = require_f64_arg(input, "remaining")?;
+    serde_json::to_value(evaluate_fresh_limits(within_limits, remaining))
+        .map_err(|e| BindingError::Harness(e.to_string()))
+}
+
+/// Binding for `decidePaywallOutcome`.
+pub fn invoke_decide_paywall_outcome(input: &FixtureInput) -> Result<Value, BindingError> {
+    let within_limits = require_bool_arg(input, "withinLimits")?;
+    let product = require_string_arg(input, "product")?;
+    let checkout_url = optional_string_arg(input, "checkoutUrl")?;
+    let limits = optional_limits_value(input)?;
+    let outcome = decide_paywall_outcome(
+        within_limits,
+        &product,
+        limits.as_ref(),
+        checkout_url.as_deref(),
+    );
+    serde_json::to_value(outcome).map_err(|e| BindingError::Harness(e.to_string()))
+}
+
+/// Optional `args.limits` as raw JSON (`null`/absent → `None`).
+fn optional_limits_value(input: &FixtureInput) -> Result<Option<Value>, BindingError> {
+    match args_object(input).get("limits") {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => Ok(Some(value.clone())),
+    }
+}
+
+/// Reads a required f64 arg.
+fn require_f64_arg(input: &FixtureInput, key: &str) -> Result<f64, BindingError> {
+    match input.args.get(key) {
+        Some(Value::Number(n)) => n
+            .as_f64()
+            .ok_or_else(|| BindingError::Harness(format!("args.{key} must be a finite number"))),
+        Some(_) => Err(BindingError::Harness(format!(
+            "args.{key} must be a number"
+        ))),
+        None => Err(BindingError::Harness(format!("args.{key} is required"))),
     }
 }
 

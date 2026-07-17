@@ -149,6 +149,18 @@ fn emit_error_templates(ir: &Ir) -> String {
     }
     out.push_str("}\n\n");
 
+    out.push_str("/// MCP adapter-internal frozen messages (step 34).\n");
+    out.push_str("pub mod mcp {\n");
+    for (key, message) in &ir.error_templates.mcp_messages {
+        let const_name = to_snake_case(key).to_ascii_uppercase();
+        let _ = writeln!(
+            out,
+            "    /// Frozen message for `{key}`.\n    pub const {const_name}: &str = \"{}\";",
+            rust_str_literal(message)
+        );
+    }
+    out.push_str("}\n\n");
+
     out.push_str("/// Transport failure template (step 21).\n");
     out.push_str("pub mod transport {\n");
     let _ = writeln!(

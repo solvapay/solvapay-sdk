@@ -1,0 +1,28 @@
+{
+  "suite": "paywall",
+  "case": "activation-partial-plans-only",
+  "input": {
+    "fn": "paywallErrorToClientPayload",
+    "args": {
+      "message": "activate",
+      "structuredContent": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/confirm",
+        "message": "activate",
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": "Activation required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/confirm",
+      "message": "activate",
+      "kind": "activation_required",
+      "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+    }
+  }
+}

@@ -39,10 +39,15 @@ import {
   projectTopupProcessOutcome,
   resolvePurchaseCustomerRef,
   resolveReturnUrl,
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
   projectUsageSnapshot,
   resolveCheckLimitsParams,
+  resolveProductRef,
   selectActivePurchases,
   validateActivatePlanParams,
+  type PaywallDecisionLimits,
   validateAttachBusinessDetailsParams,
   validateBusinessDetails,
   validateCheckoutSessionParams,
@@ -59,6 +64,24 @@ import {
   type TaxBehavior,
 } from '@solvapay/core'
 import {
+  assertResponseResult,
+  buildPromptDescriptorMetadata,
+  buildPromptUserMessage,
+  buildToolDescriptorMetadata,
+  deriveIcons,
+  makeResponseResult,
+  MCP_TOOL_NAMES,
+  paywallToolResult,
+  TOOL_FOR_VIEW,
+  validatePublicBaseUrl,
+  VIEW_FOR_TOOL,
+  type ContentBlock,
+  type McpToolName,
+  type ResponseOptions,
+  type SolvaPayMerchantBranding,
+  type SolvaPayMcpViewKind,
+} from '@solvapay/mcp-core'
+import {
   BALANCE_RECONCILE_DELAYS_MS,
   buildGateMessage,
   buildNudgeMessage,
@@ -66,6 +89,7 @@ import {
   classifyPaywallState,
   createSolvaPayClient,
   getAuthenticatedUserCore,
+  McpAdapter,
   PaywallError,
   paywallErrorToClientPayload,
   pollBalanceUntilIncreased,
@@ -419,6 +443,94 @@ function isPaywallErrorToClientPayloadArgs(
   args: Record<string, unknown>,
 ): args is { message: string; structuredContent: PaywallStructuredContent } {
   return typeof args.message === 'string' && isPaywallStructuredContentValue(args.structuredContent)
+}
+
+function isPaywallToolResultArgs(
+  args: Record<string, unknown>,
+): args is { message: string; structuredContent: PaywallStructuredContent } {
+  return typeof args.message === 'string' && isPaywallStructuredContentValue(args.structuredContent)
+}
+
+function isMakeResponseResultArgs(args: Record<string, unknown>): args is {
+  data: unknown
+  options?: ResponseOptions
+  emittedBlocks?: ContentBlock[]
+} {
+  if (!('data' in args)) return false
+  if (args.options !== undefined) {
+    if (typeof args.options !== 'object' || args.options === null || Array.isArray(args.options)) {
+      return false
+    }
+  }
+  if (args.emittedBlocks !== undefined && !Array.isArray(args.emittedBlocks)) {
+    return false
+  }
+  return true
+}
+
+const MCP_VIEW_KINDS = new Set<string>(['checkout', 'account', 'topup'])
+
+function isSolvaPayMcpViewKind(value: unknown): value is SolvaPayMcpViewKind {
+  return typeof value === 'string' && MCP_VIEW_KINDS.has(value)
+}
+
+function isMerchantBranding(value: unknown): value is SolvaPayMerchantBranding {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const o = value as Record<string, unknown>
+  for (const key of ['brandName', 'iconUrl', 'logoUrl'] as const) {
+    if (o[key] !== undefined && typeof o[key] !== 'string') return false
+  }
+  return true
+}
+
+function isBuildToolDescriptorMetadataArgs(args: Record<string, unknown>): args is {
+  resourceUri: string
+  views?: SolvaPayMcpViewKind[]
+  branding?: SolvaPayMerchantBranding
+} {
+  if (typeof args.resourceUri !== 'string') return false
+  if (args.views !== undefined) {
+    if (!Array.isArray(args.views) || !args.views.every(isSolvaPayMcpViewKind)) return false
+  }
+  if (args.branding !== undefined && !isMerchantBranding(args.branding)) return false
+  return true
+}
+
+function isBuildPromptDescriptorMetadataArgs(args: Record<string, unknown>): args is {
+  views?: SolvaPayMcpViewKind[]
+} {
+  if (args.views !== undefined) {
+    if (!Array.isArray(args.views) || !args.views.every(isSolvaPayMcpViewKind)) return false
+  }
+  return true
+}
+
+function isBuildPromptUserMessageArgs(args: Record<string, unknown>): args is {
+  promptName: McpToolName
+  args: Record<string, unknown>
+} {
+  if (typeof args.promptName !== 'string') return false
+  if (typeof args.args !== 'object' || args.args === null || Array.isArray(args.args)) {
+    return false
+  }
+  return true
+}
+
+function isValidatePublicBaseUrlArgs(args: Record<string, unknown>): args is {
+  publicBaseUrl: string
+} {
+  return typeof args.publicBaseUrl === 'string'
+}
+
+function isDeriveIconsArgs(args: Record<string, unknown>): args is {
+  branding?: SolvaPayMerchantBranding
+} {
+  if (args.branding !== undefined && !isMerchantBranding(args.branding)) return false
+  return true
+}
+
+function isAssertResponseResultArgs(args: Record<string, unknown>): args is { value: unknown } {
+  return 'value' in args
 }
 
 function isBusinessDetailsInput(args: Record<string, unknown>): args is BusinessDetailsInput {
@@ -1099,6 +1211,122 @@ export function createDefaultRegistry(): FixtureRegistry {
     },
   })
 
+  // Dual-binding: mcp-core paywallToolResult vs server McpAdapter.formatGate —
+  // identical payloads prove the step-34 "done when" on the TS side.
+  registry.register('paywallToolResult', {
+    id: 'mcp-core',
+    invoke: async args => {
+      if (!isPaywallToolResultArgs(args)) {
+        throw new Error('paywallToolResult args must include message string and structuredContent')
+      }
+      return paywallToolResult(new PaywallError(args.message, args.structuredContent))
+    },
+  })
+
+  registry.register('paywallToolResult', {
+    id: 'server',
+    invoke: args => {
+      if (!isPaywallToolResultArgs(args)) {
+        throw new Error('paywallToolResult args must include message string and structuredContent')
+      }
+      return new McpAdapter().formatGate(args.structuredContent, {})
+    },
+  })
+
+  registry.register('makeResponseResult', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isMakeResponseResultArgs(args)) {
+        throw new Error(
+          'makeResponseResult args must include data; optional options object and emittedBlocks array',
+        )
+      }
+      const emittedBlocks = args.emittedBlocks ?? []
+      return makeResponseResult(args.data, args.options, emittedBlocks)
+    },
+  })
+
+  registry.register('assertResponseResult', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isAssertResponseResultArgs(args)) {
+        throw new Error('assertResponseResult args must include value')
+      }
+      return assertResponseResult(args.value)
+    },
+  })
+
+  registry.register('MCP_TOOL_NAMES', {
+    id: 'mcp-core',
+    invoke: () => ({ ...MCP_TOOL_NAMES }),
+  })
+
+  registry.register('mcpViewMaps', {
+    id: 'mcp-core',
+    invoke: () => ({
+      TOOL_FOR_VIEW: { ...TOOL_FOR_VIEW },
+      VIEW_FOR_TOOL: { ...VIEW_FOR_TOOL },
+    }),
+  })
+
+  registry.register('deriveIcons', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isDeriveIconsArgs(args)) {
+        throw new Error('deriveIcons args.branding must be an object when present')
+      }
+      return deriveIcons(args.branding) ?? null
+    },
+  })
+
+  registry.register('buildToolDescriptorMetadata', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isBuildToolDescriptorMetadataArgs(args)) {
+        throw new Error(
+          'buildToolDescriptorMetadata args must include resourceUri string; optional views/branding',
+        )
+      }
+      return buildToolDescriptorMetadata(args)
+    },
+  })
+
+  registry.register('buildPromptDescriptorMetadata', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isBuildPromptDescriptorMetadataArgs(args)) {
+        throw new Error('buildPromptDescriptorMetadata args.views must be SolvaPayMcpViewKind[]')
+      }
+      return buildPromptDescriptorMetadata(args)
+    },
+  })
+
+  registry.register('buildPromptUserMessage', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isBuildPromptUserMessageArgs(args)) {
+        throw new Error(
+          'buildPromptUserMessage args must include promptName string and args object',
+        )
+      }
+      return buildPromptUserMessage(args.promptName, args.args)
+    },
+  })
+
+  registry.register('validatePublicBaseUrl', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isValidatePublicBaseUrlArgs(args)) {
+        throw new Error('validatePublicBaseUrl args must include publicBaseUrl string')
+      }
+      const message = validatePublicBaseUrl(args.publicBaseUrl)
+      if (message !== null) {
+        throw new Error(message)
+      }
+      return null
+    },
+  })
+
   registry.register('validateBusinessDetails', {
     id: 'core',
     invoke: args => {
@@ -1648,6 +1876,70 @@ export function createDefaultRegistry(): FixtureRegistry {
         )
       }
       return validateGetProductParams(args.productRef)
+    },
+  })
+
+  registry.register('resolveProductRef', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.metadataProduct) || !isNullableString(args.envProduct)) {
+        throw new Error(
+          'resolveProductRef args.metadataProduct/envProduct must be string, null, or omitted',
+        )
+      }
+      return resolveProductRef(args.metadataProduct, args.envProduct)
+    },
+  })
+
+  registry.register('evaluateCachedLimits', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.remaining !== 'number') {
+        throw new Error('evaluateCachedLimits args.remaining must be a number')
+      }
+      return evaluateCachedLimits(args.remaining)
+    },
+  })
+
+  registry.register('evaluateFreshLimits', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.withinLimits !== 'boolean') {
+        throw new Error('evaluateFreshLimits args.withinLimits must be a boolean')
+      }
+      if (typeof args.remaining !== 'number') {
+        throw new Error('evaluateFreshLimits args.remaining must be a number')
+      }
+      return evaluateFreshLimits(args.withinLimits, args.remaining)
+    },
+  })
+
+  registry.register('decidePaywallOutcome', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.withinLimits !== 'boolean') {
+        throw new Error('decidePaywallOutcome args.withinLimits must be a boolean')
+      }
+      if (typeof args.product !== 'string') {
+        throw new Error('decidePaywallOutcome args.product must be a string')
+      }
+      if (
+        args.limits !== null &&
+        args.limits !== undefined &&
+        (typeof args.limits !== 'object' || Array.isArray(args.limits))
+      ) {
+        throw new Error('decidePaywallOutcome args.limits must be an object, null, or omitted')
+      }
+      if (!isOptionalString(args.checkoutUrl)) {
+        throw new Error('decidePaywallOutcome args.checkoutUrl must be a string or omitted')
+      }
+      return decidePaywallOutcome({
+        withinLimits: args.withinLimits,
+        product: args.product,
+        limits: (args.limits ?? null) as PaywallDecisionLimits | null,
+        checkoutUrl: args.checkoutUrl,
+        buildGate: buildPaywallGate,
+      })
     },
   })
 

@@ -1,0 +1,28 @@
+{
+  "suite": "paywall",
+  "case": "activation-partial-balance-only",
+  "input": {
+    "fn": "paywallErrorToClientPayload",
+    "args": {
+      "message": "activate",
+      "structuredContent": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/confirm",
+        "message": "activate",
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": "Activation required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/confirm",
+      "message": "activate",
+      "kind": "activation_required",
+      "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+    }
+  }
+}

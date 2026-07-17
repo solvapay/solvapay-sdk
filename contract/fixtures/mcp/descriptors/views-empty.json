@@ -1,0 +1,170 @@
+{
+  "suite": "mcp",
+  "case": "views-empty",
+  "input": {
+    "fn": "buildToolDescriptorMetadata",
+    "args": {
+      "resourceUri": "ui://test/view.html",
+      "views": []
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "name": "create_checkout_session",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a SolvaPay hosted checkout session and return its URL. The UI opens this URL in a new tab when Stripe Elements is blocked by the host sandbox.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true
+        }
+      },
+      {
+        "name": "create_payment_intent",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a Stripe payment intent for the authenticated customer to purchase a plan. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true
+        }
+      },
+      {
+        "name": "process_payment",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Process a Stripe payment intent after client-side confirmation and create the SolvaPay purchase. Call after confirmPayment resolves to short-circuit webhook latency.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true,
+          "destructiveHint": true
+        }
+      },
+      {
+        "name": "create_customer_session",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true,
+          "readOnlyHint": true,
+          "idempotentHint": true
+        }
+      },
+      {
+        "name": "create_topup_payment_intent",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a Stripe payment intent for a credit top-up. Credits are recorded by the SolvaPay webhook after confirmation.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true
+        }
+      },
+      {
+        "name": "attach_business_details",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Attach business purchase details to a payment intent and retrieve the computed tax breakdown.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true
+        }
+      },
+      {
+        "name": "cancel_renewal",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Cancel the auto-renewal on an active purchase. Backend keeps access until the current period ends.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true,
+          "destructiveHint": true,
+          "idempotentHint": true
+        }
+      },
+      {
+        "name": "reactivate_renewal",
+        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": [
+              "app"
+            ]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true
+        },
+        "annotations": {
+          "openWorldHint": true,
+          "idempotentHint": true
+        }
+      },
+      {
+        "name": "activate_plan",
+        "title": "Activate plan",
+        "description": "Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits). By default renders the UI iframe with a one-line placeholder; pass `mode: 'text'` for a markdown-only summary on CLI / text-only hosts, or `mode: 'auto'` to include both.",
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html"
+          }
+        },
+        "annotations": {
+          "openWorldHint": true
+        }
+      }
+    ]
+  }
+}

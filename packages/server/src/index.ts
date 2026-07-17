@@ -117,6 +117,11 @@ export function verifyWebhook({
   }
 }
 
+// MCP adapter (formatGate / formatResponse) — used by contract fixtures and
+// advanced integrators that need the transport-shaped paywall payload without
+// going through payable().mcp().
+export { McpAdapter } from './adapters'
+
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
 export type { ProtectHandlerContext } from './paywall'

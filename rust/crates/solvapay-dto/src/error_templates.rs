@@ -28,6 +28,12 @@ pub mod paywall {
     pub const PAYMENT_REQUIRED: &str = "Payment required";
 }
 
+/// MCP adapter-internal frozen messages (step 34).
+pub mod mcp {
+    /// Frozen message for `rawHandlerReturn`.
+    pub const RAW_HANDLER_RETURN: &str = "SolvaPay: registerPayable handler returned a raw value. Handlers must return ctx.respond(data, options?). If you believe you did, this is an internal bug — please file an issue at https://github.com/solvapay/solvapay-sdk/issues.";
+}
+
 /// Transport failure template (step 21).
 pub mod transport {
     /// Default transport message template.

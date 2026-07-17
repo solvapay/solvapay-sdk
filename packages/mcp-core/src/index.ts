@@ -115,6 +115,13 @@ export type { IntentTool, NarratorOutput } from './narrate'
 export { paywallToolResult } from './paywallToolResult'
 export type { PaywallToolResultContext } from './paywallToolResult'
 
+// ---- Response envelope helpers (adapter-internal) ----
+//
+// Used by `ctx.respond(...)` / `buildPayableHandler`. Not part of the
+// merchant-facing `@solvapay/mcp` public entry — exported here so the
+// contract harness and adapters can share the same constructors.
+export { assertResponseResult, makeResponseResult } from './response-envelope'
+
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
@@ -134,6 +141,21 @@ export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,
 } from './descriptors'
+export {
+  buildPromptDescriptorMetadata,
+  buildPromptUserMessage,
+  buildToolDescriptorMetadata,
+  INTENT_TOOL_ANNOTATIONS,
+  PUBLIC_BASE_URL_ERROR,
+  solvapayTool,
+  validatePublicBaseUrl,
+} from './descriptor-metadata'
+export type {
+  BuildPromptDescriptorMetadataOptions,
+  BuildToolDescriptorMetadataOptions,
+  PromptDescriptorMetadata,
+  ToolDescriptorMetadata,
+} from './descriptor-metadata'
 
 export {
   SOLVAPAY_BOOTSTRAP_MIME_TYPE,

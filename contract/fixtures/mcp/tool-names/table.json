@@ -1,0 +1,24 @@
+{
+  "suite": "mcp",
+  "case": "tool-names-table",
+  "input": {
+    "fn": "MCP_TOOL_NAMES",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "createPayment": "create_payment_intent",
+      "processPayment": "process_payment",
+      "createTopupPayment": "create_topup_payment_intent",
+      "cancelRenewal": "cancel_renewal",
+      "reactivateRenewal": "reactivate_renewal",
+      "activatePlan": "activate_plan",
+      "createCheckoutSession": "create_checkout_session",
+      "createCustomerSession": "create_customer_session",
+      "attachBusinessDetails": "attach_business_details",
+      "upgrade": "upgrade",
+      "manageAccount": "manage_account",
+      "topup": "topup"
+    }
+  }
+}

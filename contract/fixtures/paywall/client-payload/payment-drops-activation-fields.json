@@ -1,0 +1,32 @@
+{
+  "suite": "paywall",
+  "case": "payment-drops-activation-fields",
+  "input": {
+    "fn": "paywallErrorToClientPayload",
+    "args": {
+      "message": "pay",
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "pay",
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }],
+        "confirmationUrl": "https://pay.test/confirm",
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "productDetails": { "name": "Demo", "reference": "prd_demo" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": "Payment required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "pay",
+      "kind": "payment_required",
+      "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+      "productDetails": { "name": "Demo", "reference": "prd_demo" }
+    }
+  }
+}

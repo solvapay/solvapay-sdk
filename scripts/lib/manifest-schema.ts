@@ -369,6 +369,11 @@ export const SdkContractManifestSchema = z.object({
           activation_required: z.string().min(1),
         }),
       }),
+      mcp: z.object({
+        messages: z.object({
+          rawHandlerReturn: z.string().min(1),
+        }),
+      }),
       transport: z.object({
         messageTemplate: z.string().min(1),
       }),

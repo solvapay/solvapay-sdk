@@ -1,0 +1,28 @@
+{
+  "suite": "mcp",
+  "case": "payment-minimal",
+  "input": {
+    "fn": "paywallToolResult",
+    "args": {
+      "message": "pay",
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "pay"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": false,
+      "content": [{ "type": "text", "text": "pay" }],
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "pay"
+      }
+    }
+  }
+}

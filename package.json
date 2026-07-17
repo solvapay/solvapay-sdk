@@ -70,6 +70,7 @@
   },
   "devDependencies": {
     "@solvapay/core": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@changesets/cli": "^2.27.10",
     "@commitlint/cli": "^20.5.0",

@@ -98,6 +98,9 @@ function stubManifest(): SdkContractManifest {
       paywall: {
         messages: { payment_required: 'p', activation_required: 'a' },
       },
+      mcp: {
+        messages: { rawHandlerReturn: 'raw' },
+      },
       transport: { messageTemplate: '{message}' },
     },
     defaults: {

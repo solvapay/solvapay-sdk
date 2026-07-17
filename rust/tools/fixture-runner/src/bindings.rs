@@ -3,7 +3,10 @@
 mod balance_poll;
 mod error_model;
 mod helpers;
+mod mcp_descriptors;
+mod mcp_payload;
 mod paywall_gate;
+mod paywall_payload;
 mod paywall_state;
 mod retry;
 mod webhook;
@@ -263,6 +266,86 @@ pub fn create_default_registry() -> BindingRegistry {
     );
 
     registry.register(
+        "paywallErrorToClientPayload",
+        Binding {
+            id: "core",
+            invoke: Box::new(paywall_payload::invoke_paywall_error_to_client_payload),
+        },
+    );
+
+    registry.register(
+        "paywallToolResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_payload::invoke_paywall_tool_result),
+        },
+    );
+    registry.register(
+        "makeResponseResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_payload::invoke_make_response_result),
+        },
+    );
+    registry.register(
+        "assertResponseResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_payload::invoke_assert_response_result),
+        },
+    );
+
+    registry.register(
+        "MCP_TOOL_NAMES",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_descriptors::invoke_mcp_tool_names),
+        },
+    );
+    registry.register(
+        "mcpViewMaps",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_descriptors::invoke_mcp_view_maps),
+        },
+    );
+    registry.register(
+        "deriveIcons",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_descriptors::invoke_derive_icons),
+        },
+    );
+    registry.register(
+        "buildToolDescriptorMetadata",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_descriptors::invoke_build_tool_descriptor_metadata),
+        },
+    );
+    registry.register(
+        "buildPromptDescriptorMetadata",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_descriptors::invoke_build_prompt_descriptor_metadata),
+        },
+    );
+    registry.register(
+        "buildPromptUserMessage",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_descriptors::invoke_build_prompt_user_message),
+        },
+    );
+    registry.register(
+        "validatePublicBaseUrl",
+        Binding {
+            id: "core",
+            invoke: Box::new(mcp_descriptors::invoke_validate_public_base_url),
+        },
+    );
+
+    registry.register(
         "resolveAuthenticatedUser",
         Binding {
             id: "core",
@@ -484,6 +567,34 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(helpers::invoke_validate_get_product_params),
+        },
+    );
+    registry.register(
+        "resolveProductRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_resolve_product_ref),
+        },
+    );
+    registry.register(
+        "evaluateCachedLimits",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_evaluate_cached_limits),
+        },
+    );
+    registry.register(
+        "evaluateFreshLimits",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_evaluate_fresh_limits),
+        },
+    );
+    registry.register(
+        "decidePaywallOutcome",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_decide_paywall_outcome),
         },
     );
 

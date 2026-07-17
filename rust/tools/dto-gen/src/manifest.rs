@@ -181,13 +181,16 @@ pub struct ErrorCase {
     pub code: Option<String>,
 }
 
-/// Top-level `errors:` block (webhook / paywall / transport).
+/// Top-level `errors:` block (webhook / paywall / mcp / transport).
 #[derive(Debug, Clone, Deserialize, PartialEq, Default)]
 pub struct ErrorsBlock {
     /// Webhook verification codes + frozen messages.
     pub webhook: WebhookErrors,
     /// Paywall throw messages.
     pub paywall: PaywallErrors,
+    /// MCP adapter-internal frozen messages (step 34).
+    #[serde(default)]
+    pub mcp: McpErrors,
     /// Transport message template placeholder (step 21).
     pub transport: TransportErrors,
 }
@@ -207,6 +210,14 @@ pub struct WebhookErrors {
 #[derive(Debug, Clone, Deserialize, PartialEq, Default)]
 pub struct PaywallErrors {
     /// Kind → frozen throw message (`payment_required` / `activation_required`).
+    #[serde(default)]
+    pub messages: BTreeMap<String, String>,
+}
+
+/// MCP adapter-internal frozen messages (step 34).
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct McpErrors {
+    /// Message key → frozen merchant-actionable string.
     #[serde(default)]
     pub messages: BTreeMap<String, String>,
 }

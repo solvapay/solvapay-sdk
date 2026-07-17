@@ -104,6 +104,8 @@ pub struct IrErrorTemplates {
     pub webhook_messages: BTreeMap<String, String>,
     /// Paywall kind → frozen throw message.
     pub paywall_messages: BTreeMap<String, String>,
+    /// MCP adapter-internal frozen messages (step 34).
+    pub mcp_messages: BTreeMap<String, String>,
     /// Transport message template.
     pub transport_template: String,
     /// Per-operation default + case templates (sorted by operation id).

@@ -35,6 +35,9 @@ importers:
       '@solvapay/core':
         specifier: workspace:*
         version: link:packages/core
+      '@solvapay/mcp-core':
+        specifier: workspace:*
+        version: link:packages/mcp-core
       '@solvapay/server':
         specifier: workspace:*
         version: link:packages/server

@@ -1,0 +1,17 @@
+{
+  "suite": "paywall",
+  "case": "cached-remaining-5",
+  "input": {
+    "fn": "evaluateCachedLimits",
+    "args": {
+      "remaining": 5
+    }
+  },
+  "expect": {
+    "result": {
+      "withinLimits": true,
+      "remaining": 4,
+      "evict": false
+    }
+  }
+}

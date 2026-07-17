@@ -1,0 +1,21 @@
+{
+  "suite": "mcp",
+  "case": "valid-envelope-passthrough",
+  "input": {
+    "fn": "assertResponseResult",
+    "args": {
+      "value": {
+        "__solvapayResponse": true,
+        "data": { "ok": true },
+        "options": { "text": "hi" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "__solvapayResponse": true,
+      "data": { "ok": true },
+      "options": { "text": "hi" }
+    }
+  }
+}
