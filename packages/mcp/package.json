@@ -52,7 +52,7 @@
     "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "@solvapay/mcp-core": "workspace:^",
-    "@solvapay/server": "workspace:^",
+    "@solvapay/server": "^1.4.0 || ^2.0.0",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
