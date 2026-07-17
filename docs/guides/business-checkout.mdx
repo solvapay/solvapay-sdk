@@ -1,0 +1,180 @@
+---
+title: "Business checkout (B2B)"
+description: "Collect company name, country, and tax ID at checkout, calculate tax with Stripe Tax, and show the seller's VAT number on receipts."
+---
+
+Business buyers can purchase plans and credit top-ups with correct tax treatment. The SDK collects
+the buyer's business details (company name, country, tax identifier), attaches them to the payment
+intent, and returns a computed tax breakdown so the customer sees the final amount before
+confirming. Receipts show the tax breakdown and the seller's tax identifier.
+
+The flow has three parts:
+
+1. **Collect** business details in the checkout or top-up form (`PaymentForm.BusinessDetails` /
+   `TopupForm.BusinessDetails`).
+2. **Attach** them to the payment intent (`attachBusinessDetails`), which triggers Stripe Tax and
+   returns a `TaxBreakdown`.
+3. **Confirm** the payment — the forms refresh Stripe Elements after attaching so the tax-updated
+   amount applies before confirmation.
+
+## Wire the backend route
+
+<CodeGroup>
+
+```typescript Next.js helper
+// app/api/attach-business-details/route.ts
+import { NextRequest } from 'next/server'
+import { attachBusinessDetails } from '@solvapay/next'
+
+export async function POST(request: NextRequest) {
+  const body = await request.json()
+  return attachBusinessDetails(request, body)
+}
+```
+
+```typescript Server SDK
+import { attachBusinessDetailsCore } from '@solvapay/server'
+
+const result = await attachBusinessDetailsCore(request, {
+  paymentIntentId: 'pi_...',
+  isBusiness: true,
+  businessName: 'Acme GmbH',
+  country: 'DE',
+  taxId: 'DE123456789',
+})
+
+if (!('error' in result)) {
+  console.log(result.taxBreakdown.total, result.taxBreakdown.treatment)
+}
+```
+
+</CodeGroup>
+
+The default provider route key is `api.attachBusinessDetails` (`/api/attach-business-details`).
+The helper validates the input, calls
+`POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`, and returns
+`{ taxBreakdown }` (or `{ error, status: 400 }` on a validation failure).
+
+## Input fields
+
+| Field | Type | Description |
+|---|---|---|
+| `paymentIntentId` | `string` | The payment intent to attach details to (required) |
+| `isBusiness` | `boolean` | Whether the buyer is purchasing as a business (required) |
+| `businessName` | `string` | Company name |
+| `country` | `string` | Business country — required when `isBusiness` is `true`. EU member states, `GB`, and `US` are supported |
+| `taxId` | `string` | VAT number or EIN, validated per country |
+| `taxIdType` | `'eu_vat' \| 'gb_vat' \| 'us_ein'` | Derived from the country on successful validation |
+| `customerCountry` | `string` | Consumer billing country, used for tax when `isBusiness` is `false` |
+| `customerName` | `string` | Consumer name |
+
+Business details are persisted on the customer, so returning buyers don't re-enter them.
+
+## Tax breakdown
+
+A successful attach returns a `TaxBreakdown`:
+
+```typescript
+{
+  subtotal: number
+  taxAmount: number
+  taxRate: number
+  treatment: 'standard' | 'reverse_charge' | 'none' | 'not_collecting'
+  total: number
+  currency: string
+  inclusive: boolean
+}
+```
+
+`reverse_charge` applies to valid EU cross-border B2B purchases — show the customer that they are
+responsible for reporting VAT. Tax behavior is exclusive for USD/CAD and inclusive for other
+currencies by default.
+
+## React form parts
+
+`PaymentForm.BusinessDetails` (plan checkout) and `TopupForm.BusinessDetails` (credit top-ups)
+expose the same headless compound parts: `Root`, `Toggle`, `BusinessName`, `Country`, `TaxId`, and
+a pre-composed `Fields` (labeled toggle plus the three inputs with country-aware tax ID labels).
+
+```tsx
+import { TopupForm } from '@solvapay/react'
+
+function TopupCheckout() {
+  return (
+    <TopupForm.Root amount={2000} currency="EUR">
+      <TopupForm.BusinessDetails.Root>
+        <label>
+          <TopupForm.BusinessDetails.Toggle />
+          I'm purchasing as a business
+        </label>
+        <TopupForm.BusinessDetails.BusinessName placeholder="Company name" />
+        <TopupForm.BusinessDetails.Country />
+        <TopupForm.BusinessDetails.TaxId />
+      </TopupForm.BusinessDetails.Root>
+
+      <TopupForm.PaymentElement />
+      <TopupForm.Error />
+      <TopupForm.SubmitButton>Pay</TopupForm.SubmitButton>
+    </TopupForm.Root>
+  )
+}
+```
+
+Behavior notes:
+
+- The input fields render `null` while the business toggle is off (`Toggle` and `Fields` always
+  render).
+- Attaching is debounced (300 ms) and happens automatically once a payment intent exists.
+  Confirmation is blocked until the attach round-trip completes, so the confirmed amount always
+  includes the computed tax.
+- All parts accept standard HTML attributes plus `asChild` for rendering into your own elements.
+
+## Validating outside the forms
+
+`validateBusinessDetails` from `@solvapay/core/business-details` runs the same validation the
+helpers use — useful for custom UIs or pre-flight checks:
+
+```typescript
+import { validateBusinessDetails } from '@solvapay/core/business-details'
+
+const result = validateBusinessDetails({
+  isBusiness: true,
+  businessName: 'Acme GmbH',
+  country: 'de',
+  taxId: 'DE123456789',
+})
+
+if (result.success) {
+  // result.data has the normalized details: uppercased country,
+  // normalized tax ID, and the derived taxIdType ('eu_vat' here)
+} else {
+  for (const issue of result.error.issues) {
+    console.warn(issue.path.join('.'), issue.message)
+  }
+}
+```
+
+For businesses, the country is required and must be supported; the tax ID format is validated per
+country. For consumers, an optional `customerCountry` must be a supported country.
+
+## MCP tool
+
+MCP apps get the same capability through the `attach_business_details` tool (defined in
+`@solvapay/mcp-core` and registered by the MCP server factory). It takes `paymentIntentId`,
+`isBusiness`, and the optional `businessName` / `country` / `taxId` / `taxIdType` fields, resolves
+the authenticated customer, and returns the `taxBreakdown`. The embedded checkout views in
+`@solvapay/react/mcp` call it automatically — no extra wiring is needed.
+
+## Seller VAT on receipts
+
+Set your VAT number (or US EIN) in the SolvaPay Console under provider business details before
+selling in regions that require it. Receipts then show the seller tax identifier alongside the
+applied tax rate and treatment. In the SDK, `resolveSellerIdentityDisplay` from `@solvapay/core`
+picks the right identifier for display (VAT number for EU/GB sellers, EIN for US sellers), and the
+MCP checkout views render it via the seller details card.
+
+## Next steps
+
+- [React guide](./react) — checkout and top-up forms in depth
+- [Purchase lifecycle management](./purchase-management) — activation and plan switching
+- [Webhooks](./webhooks) — `payment.succeeded` payloads for fulfillment

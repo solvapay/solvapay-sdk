@@ -1,6 +1,6 @@
 ---
 title: 'Usage events'
-description: 'Record metered customer usage from your application.'
+description: 'Record metered customer usage, debit credits, grant credits, and read balances from your application.'
 ---
 
 ## What are usage events?
@@ -55,15 +55,100 @@ if (result.creditDebit?.debited) {
 - `storage`
 - `custom`
 
+## Record usage in bulk
+
+`trackUsageBulk` submits many events in one request — useful for flushing a buffered queue or
+backfilling. The batch is validated first, then each event is inserted individually:
+
+```typescript
+const result = await solvaPay.trackUsageBulk({
+  events: [
+    { customerRef: 'cus_3C4D5E6F', productRef: 'prd_api', actionType: 'api_call', units: 3 },
+    { customerRef: 'cus_9A8B7C6D', productRef: 'prd_api', actionType: 'api_call', units: 1 },
+  ],
+})
+
+console.log(`Inserted ${result.inserted} events`)
+for (const entry of result.results) {
+  if (entry.creditDebit?.debited) {
+    console.log(`${entry.reference}: debited ${entry.creditDebit.amount} credits`)
+  }
+}
+```
+
+The response is `{ success, inserted, results }`, where each `results` entry carries the event
+`reference` and its per-event `creditDebit` outcome (same shape as the single-event response).
+
+## Credit debit results
+
+When the customer is on a credit-based (usage-based) plan, `trackUsage` debits credits and
+reports what happened in `creditDebit`:
+
+```typescript
+// Debited
+{
+  debited: true,
+  amount: 10,            // credits debited
+  unitsRemaining: 240,   // units the remaining balance still covers
+  autoRecharge?: { triggered: boolean },
+}
+
+// Skipped
+{
+  debited: false,
+  reason: 'duplicate' | 'no_product_ref' | 'customer_not_found'
+        | 'no_active_purchase' | 'plan_not_credit_based',
+}
+```
+
+`autoRecharge.triggered: true` means an off-session recharge was **initiated** because the balance
+crossed the customer's auto-recharge threshold — the credits arrive when that charge succeeds, not
+in this response. See the [Auto-recharge guide](./auto-recharge).
+
+## Grant credits
+
+Assign credits to a customer without collecting payment — sign-up bonuses, goodwill credits, or
+enterprise allotments. Grants are idempotent when you supply an `idempotencyKey`, so retries are
+safe:
+
+```typescript
+const grant = await solvaPay.assignCredits({
+  customerRef: 'cus_3C4D5E6F',
+  credits: 500,
+  reason: 'Sign-up bonus',
+  idempotencyKey: 'signup-bonus-user_123',
+})
+
+console.log(`New balance: ${grant.balance}`)
+```
+
+The response includes `{ success, customerRef, credits, balance, reason }`. Each grant emits a
+`customer.credit.granted` webhook. Credits can also be granted from the customer detail page in
+the SolvaPay Console.
+
+## Read a customer's balance
+
+```typescript
+const balance = await solvaPay.getCustomerBalance({ customerRef: 'cus_3C4D5E6F' })
+
+console.log(balance.credits)          // credit units
+console.log(balance.displayCurrency)  // for presentation
+```
+
+The response also carries `creditsPerMinorUnit` and a display exchange rate for rendering the
+balance in the provider's display currency. Credit balances are USD-normalized internally; the
+display fields are for presentation only.
+
 ## Relationship to meters
 
 Use both when needed:
 
-- `trackUsage()` for customer-level usage and credit debit
+- `trackUsage()` / `trackUsageBulk()` for customer-level usage and credit debit
 - Meter events for named meter ingestion and aggregation
 
 ## Next steps
 
 - [Core concepts](../setup/core-concepts)
+- [Auto-recharge](./auto-recharge) — automatic balance refills when credits run low
 - [Meters overview](/meters/overview)
-- [Webhook handling](./webhooks)
+- [Webhook handling](./webhooks) — `customer.credit.*` and `usage.*` events
