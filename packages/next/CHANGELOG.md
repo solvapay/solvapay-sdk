@@ -1,5 +1,21 @@
 # @solvapay/next
 
+## 1.3.0
+
+### Minor Changes
+
+- ede9365: Add business purchase support for credit top-ups: shared BusinessDetails validation in core, TopupForm.BusinessDetails/Summary primitives, attachTopupBusinessDetails server SDK method, and checkout-demo example wiring.
+
+### Patch Changes
+
+- Updated dependencies [ede9365]
+- Updated dependencies [dc46d8e]
+- Updated dependencies [ee15454]
+- Updated dependencies [6de3d97]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+  - @solvapay/server@2.0.0
+
 ## 1.2.2
 
 ### Patch Changes

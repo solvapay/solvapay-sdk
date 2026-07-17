@@ -1,5 +1,12 @@
 # @solvapay/core
 
+## 1.2.0
+
+### Minor Changes
+
+- ede9365: Add business purchase support for credit top-ups: shared BusinessDetails validation in core, TopupForm.BusinessDetails/Summary primitives, attachTopupBusinessDetails server SDK method, and checkout-demo example wiring.
+- 985acd1: Add `resolveSellerIdentityDisplay` to `@solvapay/core` for country-aware seller tax and company-number rows. `McpSellerDetailsCard` now uses the core resolver with unified display labels (`VAT number`, `EIN`, `Company number`).
+
 ## 1.1.1
 
 ### Patch Changes
