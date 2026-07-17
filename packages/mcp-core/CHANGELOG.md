@@ -1,5 +1,15 @@
 # @solvapay/mcp-core changelog
 
+## 0.2.8
+
+### Patch Changes
+
+- 215d045: Add business purchase / VAT support to plan checkout (`PaymentForm.BusinessDetails`, tax-aware summary, attach-before-confirm) and MCP embedded surfaces via the new `attach_business_details` transport tool.
+- e8490d8: Widen the `@solvapay/server` peer dependency range to `^1.4.0 || ^2.0.0`. Both packages consume only stable `@solvapay/server` exports (paywall helpers, nudge builders, the `SolvaPay` type) and are unaffected by the auto-recharge breaking change in `@solvapay/server@2.0.0`. Declaring the wider range keeps them installable against both `server@1.x` and `server@2.x`, so a `server` major no longer forces a false-major cascade onto `@solvapay/mcp` / `@solvapay/mcp-core` (and onward to `@solvapay/react` / `@solvapay/react-supabase`).
+- Updated dependencies [ede9365]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+
 ## 0.2.7
 
 ### Patch Changes
