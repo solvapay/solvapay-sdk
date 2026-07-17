@@ -11,6 +11,8 @@ description: "This guide shows you how to integrate SolvaPay React components an
 - [Components](#components)
 - [Hooks](#hooks)
 - [Payment Flow](#payment-flow)
+- [Payment Confirmation](#payment-confirmation)
+- [Multi-Currency Plans & Top-Ups](#multi-currency-plans--top-ups)
 - [Credit Top-Ups & Auto-Recharge](#credit-top-ups--auto-recharge)
 - [Purchase Management](#purchase-management)
 - [Complete Example](#complete-example)
@@ -664,6 +666,100 @@ function CustomCheckoutPage() {
 }
 ```
 
+## Payment Confirmation
+
+Payment success is gated on real confirmation from Stripe — a form only reports success once the
+payment intent actually succeeded (and, where the backend route is wired, once SolvaPay has
+processed it). Two pieces make this work: the `confirmPayment` utility and the built-in
+return-path resume.
+
+### Payment Element is the default
+
+`PaymentForm` and `TopupForm` render the Stripe **Payment Element** by default, which supports
+cards plus redirect- and async-based payment methods (SEPA, iDEAL, and others).
+
+<Warning>
+The Card Element surface is **deprecated**: `PaymentForm.CardElement`,
+`ConfirmPaymentMode: 'card-element'`, and `StripePaymentFormWrapper` remain as
+backwards-compatible shims (since `@solvapay/react` 1.5.0) and will be removed in the next major
+version. Migrate to the default Payment Element rendering.
+</Warning>
+
+### confirmPayment
+
+If you build your own submit handler, use `confirmPayment` instead of calling Stripe directly. It
+wraps Elements submission and confirmation, and returns a discriminated result:
+
+```tsx
+import { confirmPayment } from '@solvapay/react'
+
+const result = await confirmPayment({
+  stripe,
+  elements,
+  clientSecret,
+  returnUrl: window.location.href,
+  copy,
+})
+
+switch (result.status) {
+  case 'succeeded':
+    // result.paymentIntent — safe to unlock / redirect
+    break
+  case 'pending':
+    // Async payment method still processing (e.g. SEPA) — show
+    // result.message and wait; do NOT treat as success
+    break
+  case 'requires_action':
+  case 'other':
+  case 'error':
+    // Show result.message
+    break
+}
+```
+
+`pending` maps to Stripe's `processing` state. The built-in forms surface it as a message and keep
+the customer on the form — `onSuccess` never fires from a pending payment.
+
+### Return-path resume
+
+Redirect-based payment methods send the customer away and back. `PaymentForm` and `TopupForm`
+handle the return automatically: on mount they read the `payment_intent_client_secret` query
+parameters Stripe appends to the `returnUrl`, retrieve the intent, strip the parameters from the
+URL, and resume — running `handleNextAction` if 3DS is still required, showing the pending message
+while processing, and firing `onSuccess` once the intent succeeded and the payment was processed.
+You only need to make sure `returnUrl` points at the page that renders the form.
+
+## Multi-Currency Plans & Top-Ups
+
+Plans can carry per-currency pricing through a `pricingOptions` array (`currency`, `price`,
+optional `basePrice` / `setupFee`, one entry marked `default`). Single-currency plans without the
+array behave as before.
+
+### Plan checkout
+
+`PlanSelector` shows a currency switcher when the product's plans span more than one currency, and
+each plan card can render its per-currency price. The selected currency flows through checkout
+automatically — `useCheckout` passes it when creating the payment. For custom UIs, resolve prices
+with the helpers:
+
+```tsx
+import { getPlanPricingOptions, resolvePlanPricingOption } from '@solvapay/react'
+
+const options = getPlanPricingOptions(plan)          // all currency options
+const eur = resolvePlanPricingOption(plan, 'EUR')    // one currency, falls back to default
+```
+
+If a customer selects a currency the plan has no `pricingOptions` entry for, checkout rejects with
+an explicit "currency not supported" error listing the available currencies.
+
+### Top-up currencies
+
+Credit top-ups use a **separate** currency list: the provider's `defaultCurrency` plus any
+additional `supportedTopupCurrencies` configured in the SolvaPay Console. Plan pricing currencies
+are never used for top-ups. `useCheckoutFlow` exposes `topupCurrencies`, `topupCurrency`, and
+`setTopupCurrency` for building a currency picker on the amount step; pass the chosen currency to
+`TopupForm.Root` / `useTopup`.
+
 ## Credit Top-Ups & Auto-Recharge
 
 Credit-based products let customers buy a balance and spend it as they use your
@@ -1080,6 +1176,8 @@ SolvaPay components are headless and don't include default styles. Style them to
 
 - [Next.js Integration Guide](./nextjs) - Learn Next.js-specific integration
 - [Purchase management](./purchase-management) - Cancel, reactivate, switch plans, and wire up top-ups
+- [Auto-recharge](./auto-recharge) - Full auto-recharge stack: routes, server helpers, monthly spend cap
+- [Business checkout (B2B)](./business-checkout) - Collect business details and tax IDs at checkout
 - [Custom Authentication Adapters](./custom-auth) - Build custom auth adapters
 - [Usage Events](./usage-events) - Track purchase and usage activity
 - [API Reference](/sdks/typescript/intro) - Full API documentation

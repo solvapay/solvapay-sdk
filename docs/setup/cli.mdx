@@ -1,12 +1,17 @@
 ---
 title: "CLI setup"
-description: "Set up SolvaPay SDK in your project with a single command."
+description: "Set up SolvaPay SDK in an existing project, or scaffold a new one from a template."
 ---
+
+Two CLIs cover the two starting points:
+
+- **`npx solvapay init`** — add SolvaPay to an **existing** project
+- **`npm create solvapay`** — scaffold a **new** project from a template
 
 ## Prerequisites
 
 - Node.js version 18.17 or higher
-- A project directory where you want to add SolvaPay
+- A project directory where you want to add SolvaPay (for `solvapay init`)
 
 ## Run setup
 
@@ -48,6 +53,32 @@ When you run `npx solvapay init`, the CLI:
 
 Use [Installation](./installation) for exact package commands.
 
+## Scaffold a new project
+
+To start from scratch, use the `create-solvapay` scaffolder instead of `init`:
+
+```bash
+# Paid MCP server (Cloudflare Worker + embedded checkout widget)
+npm create solvapay my-mcp-app -- --type mcp
+
+# Generate MCP tools from an OpenAPI spec
+npm create solvapay my-api-mcp -- --type mcp --openapi ./openapi.yaml
+
+# Next.js + Auth0 starter with SolvaPay customer linkage
+npm create solvapay my-app -- --type next-auth0
+```
+
+### Template types
+
+| `--type` | What you get |
+| --- | --- |
+| `mcp` | A paid MCP server on Cloudflare Workers: `@solvapay/mcp` server factory, OAuth bridge, and an embedded checkout widget built with `@solvapay/react/mcp`. With `--openapi <url\|path>`, tools are generated from your API spec; with `--no-openapi` you get a placeholder paid tool |
+| `next-auth0` | A Next.js App Router starter wired for Auth0: `@auth0/nextjs-auth0` session handling, `createAuth0AuthMiddleware` from `@solvapay/next/middleware`, and the `externalRef` customer linkage set up for you. `--auth auth0` is a shortcut for this type |
+
+Useful flags: `--product <ref>` to pre-select a product, `-y` / `--non-interactive` for CI,
+`--skip-install`, and `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
+skip it). Run `npm create solvapay -- --list-types` to see available templates.
+
 ## Re-run setup safely
 
 You can run `npx solvapay init` again at any time.
@@ -59,9 +90,9 @@ If `SOLVAPAY_SECRET_KEY` already exists, the CLI asks whether to overwrite it:
 
 ## Scope
 
-This command is the recommended setup path for SDK integration.
+These commands are the recommended setup paths for SDK integration.
 
-If you are using Hosted MCP Pay (no-code), you do not need this CLI flow.
+If you are using the no-code MCP integration, you do not need either CLI flow.
 
 ## Next steps
 

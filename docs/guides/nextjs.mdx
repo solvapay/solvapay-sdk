@@ -272,6 +272,69 @@ export async function POST(request: Request) {
 }
 ```
 
+#### Credit Top-Ups
+
+`createTopupPaymentIntent` and `processTopupPaymentIntent` back the `TopupForm` components for
+pay-as-you-go credit purchases:
+
+```typescript
+// app/api/create-topup-payment-intent/route.ts
+import { createTopupPaymentIntent } from '@solvapay/next'
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  return createTopupPaymentIntent(request, body)
+}
+```
+
+```typescript
+// app/api/process-topup-payment-intent/route.ts
+import { processTopupPaymentIntent } from '@solvapay/next'
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  return processTopupPaymentIntent(request, body)
+}
+```
+
+`createTopupPaymentIntent` also accepts an `autoRecharge` payload to arm auto-recharge on the
+same charge. See the [auto-recharge guide](./auto-recharge#stage-auto-recharge-with-the-first-top-up).
+
+#### Auto-Recharge
+
+`getAutoRecharge`, `saveAutoRecharge`, and `disableAutoRecharge` share one route and back the
+`<AutoRecharge>` component:
+
+```typescript
+// app/api/auto-recharge/route.ts
+import { NextRequest } from 'next/server'
+import { disableAutoRecharge, getAutoRecharge, saveAutoRecharge } from '@solvapay/next'
+
+export const GET = (request: NextRequest) => getAutoRecharge(request)
+export const PUT = (request: NextRequest) => saveAutoRecharge(request)
+export const DELETE = (request: NextRequest) => disableAutoRecharge(request)
+```
+
+See the [auto-recharge guide](./auto-recharge) for configuration inputs and the React surface.
+
+#### Business Details
+
+`attachBusinessDetails` attaches a business buyer's company name, country, and tax ID to a
+payment intent and returns the computed tax breakdown:
+
+```typescript
+// app/api/attach-business-details/route.ts
+import { attachBusinessDetails } from '@solvapay/next'
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  return attachBusinessDetails(request, body)
+}
+```
+
+See the [business checkout guide](./business-checkout) for the form parts and tax treatment
+details.
+
 ## Server Components
 
 In Server Components, reach for the `*Core` primitives from `@solvapay/server` instead of the route-wrapper helpers — the wrappers always return `NextResponse`, which isn't useful when you want to read data.
