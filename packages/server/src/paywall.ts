@@ -7,6 +7,14 @@
  * - Class-based and functional programming
  */
 
+import {
+  buildCreateCustomerParams,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
+  extractBackendCustomerRef,
+  isEmailConflict,
+} from '@solvapay/core'
 import type {
   LimitResponseWithPlan,
   PaywallArgs,
@@ -524,15 +532,11 @@ export class SolvaPayPaywall {
       return this.customerRefMapping.get(customerRef)!
     }
 
-    // Skip for anonymous users
-    if (customerRef === 'anonymous') {
-      return customerRef
-    }
-
-    // If customerRef is already a SolvaPay ID (starts with 'cus_'),
-    // return it directly. We cannot "ensure" (create) a customer with a specific ID,
+    const refKind = classifyCustomerRef(customerRef)
+    // Skip for anonymous users / already-backend refs (cus_ prefix).
+    // We cannot "ensure" (create) a customer with a specific backend ID,
     // and using it as an externalRef causes issues.
-    if (customerRef.startsWith('cus_')) {
+    if (refKind === 'anonymous' || refKind === 'backend') {
       return customerRef
     }
 
@@ -570,7 +574,7 @@ export class SolvaPayPaywall {
         } catch (error) {
           // 404 means customer doesn't exist yet - this is expected, continue to creation
           const errorMessage = error instanceof Error ? error.message : String(error)
-          if (!errorMessage.includes('404') && !errorMessage.includes('not found')) {
+          if (classifyLookupError(errorMessage) === 'unexpected') {
             // Unexpected error - log but continue to fallback behavior
             this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`)
           }
@@ -602,29 +606,19 @@ export class SolvaPayPaywall {
         // Prepare customer creation params
         // Use provided email/name, or fallback to auto-generated values
         // Use a timestamp-based email to avoid conflicts with old orphaned records
-        const createParams: {
-          email: string
-          name?: string
-          externalRef?: string
-          metadata: Record<string, unknown>
-        } = {
-          email: options?.email || `${customerRef}-${Date.now()}@auto-created.local`,
-          metadata: {},
-        }
-
-        if (options?.name) {
-          createParams.name = options.name
-        }
-
-        if (externalRef) {
-          createParams.externalRef = externalRef
-        }
+        const createParams = buildCreateCustomerParams(
+          customerRef,
+          externalRef,
+          options?.email,
+          options?.name,
+          Date.now(),
+        )
 
         const result = await this.apiClient.createCustomer(createParams)
 
         // Extract the backend reference from the response
-        const resultObj = result as unknown as Record<string, string>
-        const ref = resultObj.customerRef || resultObj.reference || customerRef
+        const resultObj = result as unknown as Record<string, unknown>
+        const ref = extractBackendCustomerRef(resultObj, customerRef)
 
         // Store the mapping (per-instance cache)
         this.customerRefMapping.set(customerRef, ref)
@@ -632,7 +626,7 @@ export class SolvaPayPaywall {
         return ref
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        if (errorMessage.includes('409') || errorMessage.includes('already exists')) {
+        if (classifyCreateError(errorMessage) === 'conflict') {
           // Try to lookup by externalRef first if available
           if (externalRef) {
             try {
@@ -652,10 +646,7 @@ export class SolvaPayPaywall {
           // If conflict is due to email uniqueness but externalRef lookup failed,
           // retry creation with a generated email while preserving externalRef.
           // This allows resolving stale customers created before externalRef was set.
-          const isEmailConflict =
-            errorMessage.includes('email') || errorMessage.includes('identifier email')
-
-          if (externalRef && isEmailConflict && options?.email) {
+          if (externalRef && isEmailConflict(errorMessage) && options?.email) {
             try {
               const byEmail = await this.apiClient.getCustomer({ email: options.email })
               if (byEmail && byEmail.customerRef) {
@@ -689,24 +680,17 @@ export class SolvaPayPaywall {
             }
 
             try {
-              const retryParams: {
-                email: string
-                name?: string
-                externalRef?: string
-                metadata: Record<string, unknown>
-              } = {
-                email: `${customerRef}-${Date.now()}@auto-created.local`,
+              const retryParams = buildCreateCustomerParams(
+                customerRef,
                 externalRef,
-                metadata: {},
-              }
-
-              if (options?.name) {
-                retryParams.name = options.name
-              }
+                undefined,
+                options?.name,
+                Date.now(),
+              )
 
               const retryResult = await this.apiClient.createCustomer(retryParams)
-              const retryObj = retryResult as unknown as Record<string, string>
-              const retryRef = retryObj.customerRef || retryObj.reference || customerRef
+              const retryObj = retryResult as unknown as Record<string, unknown>
+              const retryRef = extractBackendCustomerRef(retryObj, customerRef)
 
               this.customerRefMapping.set(customerRef, retryRef)
               this.log(
@@ -850,8 +834,8 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return async (req: any, reply: any) => {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const extractArgs =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (options?.extractArgs as (req: any) => PaywallArgs) || defaultExtractArgs
           const getCustomerRef =
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -965,9 +949,9 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     metadata: PaywallMetadata,
     handler: (args: PaywallArgs) => Promise<unknown>,
     options?: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       extractArgs?: (
         request: Request,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         context?: any,
       ) => Promise<Record<string, unknown>> | Record<string, unknown>
       getCustomerRef?: (request: Request) => Promise<string> | string

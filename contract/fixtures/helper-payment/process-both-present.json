@@ -1,0 +1,14 @@
+{
+  "suite": "helper-payment",
+  "case": "process-both-present",
+  "input": {
+    "fn": "validateProcessPaymentIntentParams",
+    "args": {
+      "paymentIntentId": "pi_1",
+      "productRef": "prd_1"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

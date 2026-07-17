@@ -1,3 +1,4 @@
+import { validateActivatePlanParams } from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { ActivatePlanResult } from '../types/client'
 import type { ErrorResult } from './types'
@@ -18,11 +19,9 @@ export async function activatePlanCore(
   } = {},
 ): Promise<ActivatePlanResult | ErrorResult> {
   try {
-    if (!body.productRef || !body.planRef) {
-      return {
-        error: 'Missing required parameters: productRef and planRef are required',
-        status: 400,
-      }
+    const validationError = validateActivatePlanParams(body.productRef, body.planRef)
+    if (validationError) {
+      return validationError
     }
 
     const customerResult = await syncCustomerCore(request, {

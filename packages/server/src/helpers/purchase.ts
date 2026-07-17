@@ -1,3 +1,8 @@
+import {
+  isCachedCustomerRefValid,
+  resolvePurchaseCustomerRef,
+  selectActivePurchases,
+} from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
@@ -57,18 +62,16 @@ export async function checkPurchaseCore(
       try {
         const customer = await solvaPay.getCustomer({ customerRef: cachedCustomerRef })
 
-        if (customer && customer.customerRef) {
-          if (customer.externalRef && customer.externalRef === userId) {
-            const filteredPurchases = (customer.purchases || []).filter(
-              p => p.status === 'active',
-            )
-
-            return {
-              customerRef: customer.customerRef,
-              email: customer.email,
-              name: customer.name,
-              purchases: filteredPurchases,
-            }
+        const cachedRef = customer?.customerRef
+        if (
+          cachedRef &&
+          isCachedCustomerRefValid(customer?.externalRef, userId, cachedRef)
+        ) {
+          return {
+            customerRef: cachedRef,
+            email: customer.email,
+            name: customer.name,
+            purchases: selectActivePurchases(customer.purchases || []),
           }
         }
       } catch {
@@ -84,13 +87,11 @@ export async function checkPurchaseCore(
 
       const customer = await solvaPay.getCustomer({ customerRef })
 
-      const filteredPurchases = (customer.purchases || []).filter(p => p.status === 'active')
-
       return {
-        customerRef: customer.customerRef || userId,
+        customerRef: resolvePurchaseCustomerRef(customer.customerRef, userId),
         email: customer.email,
         name: customer.name,
-        purchases: filteredPurchases,
+        purchases: selectActivePurchases(customer.purchases || []),
       }
     } catch {
       return {

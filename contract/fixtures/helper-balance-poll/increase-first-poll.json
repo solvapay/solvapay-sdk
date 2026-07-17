@@ -1,0 +1,15 @@
+{
+  "suite": "helper-balance-poll",
+  "case": "increase-first-poll",
+  "input": {
+    "fn": "pollBalanceUntilIncreased",
+    "args": {
+      "baseline": 400,
+      "observations": [{ "credits": 10000 }],
+      "delays": "topup"
+    }
+  },
+  "expect": {
+    "result": { "delays": [500], "result": { "creditsAdded": 9600 } }
+  }
+}

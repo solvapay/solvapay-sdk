@@ -1,0 +1,11 @@
+{
+  "suite": "helper-balance-poll",
+  "case": "delays-topup-table",
+  "input": {
+    "fn": "TOPUP_BALANCE_POLL_DELAYS_MS",
+    "args": {}
+  },
+  "expect": {
+    "result": [500, 1000, 2000, 4000]
+  }
+}

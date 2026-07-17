@@ -213,7 +213,7 @@ pub async fn dispatch_group_c(
         "listProducts" => client.list_products().await,
         "createProduct" => {
             let params: CreateProductRequest = parse_args(args)?;
-            serialize_result(client.create_product(params).await?)
+            client.create_product(params).await
         }
         "updateProduct" => {
             let product_ref = require_str(args, "productRef")?;

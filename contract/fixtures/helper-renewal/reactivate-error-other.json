@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-error-other",
+  "input": {
+    "fn": "classifyReactivateError",
+    "args": { "message": "upstream boom" }
+  },
+  "expect": {
+    "result": {
+      "error": "upstream boom",
+      "status": 500,
+      "details": "upstream boom"
+    }
+  }
+}

@@ -17,7 +17,7 @@ use solvapay_dto::{
     CloneProductResult, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCheckoutSessionResponse, CreateCustomerRequest, CreateCustomerResult,
     CreateCustomerSessionRequest, CreateCustomerSessionResponse, CreatePaymentIntentParams,
-    CreatePaymentIntentResult, CreatePlanParams, CreateProductRequest, CreateProductResult,
+    CreatePaymentIntentResult, CreatePlanParams, CreateProductRequest,
     CreateTopupPaymentIntentParams, CreateTopupPaymentIntentResult, CustomerResponseMapped,
     DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams,
     GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
@@ -514,11 +514,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/products` — create a product.
-    pub async fn create_product(
-        &self,
-        params: CreateProductRequest,
-    ) -> Result<CreateProductResult, SdkError> {
-        self.execute_typed(
+    ///
+    /// Returns the full wire body (`SdkProductResponse` shape) as JSON to match
+    /// the TypeScript client's `res.json()` passthrough (not the narrow
+    /// `CreateProductResult` overlay).
+    pub async fn create_product(&self, params: CreateProductRequest) -> Result<Value, SdkError> {
+        self.execute_json(
             Method::Post,
             "/v1/sdk/products".to_owned(),
             BTreeMap::new(),

@@ -1,0 +1,13 @@
+{
+  "suite": "helper-purchase",
+  "case": "cache-valid-match",
+  "input": {
+    "fn": "isCachedCustomerRefValid",
+    "args": {
+      "externalRef": "user_123",
+      "userId": "user_123",
+      "customerRef": "cus_ABC"
+    }
+  },
+  "expect": { "result": true }
+}

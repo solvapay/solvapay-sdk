@@ -1,0 +1,20 @@
+{
+  "suite": "helper-balance-poll",
+  "case": "throw-all-exhausts",
+  "input": {
+    "fn": "pollBalanceUntilIncreased",
+    "args": {
+      "baseline": 400,
+      "observations": [
+        { "throw": "a" },
+        { "throw": "b" },
+        { "throw": "c" },
+        { "throw": "d" }
+      ],
+      "delays": "topup"
+    }
+  },
+  "expect": {
+    "result": { "delays": [500, 1000, 2000, 4000], "result": null }
+  }
+}

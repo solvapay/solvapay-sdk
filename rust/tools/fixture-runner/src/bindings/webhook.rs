@@ -72,7 +72,7 @@ fn webhook_error_to_observation(error: WebhookError) -> BindingError {
 /// # Returns
 ///
 /// Unix seconds on success; `None` when the string shape or calendar fields are invalid.
-fn parse_iso8601_utc_to_unix_secs(clock: &str) -> Option<i64> {
+pub(crate) fn parse_iso8601_utc_to_unix_secs(clock: &str) -> Option<i64> {
     // YYYY-MM-DDTHH:MM:SSZ  → 20 characters
     if clock.len() != 20 || !clock.is_ascii() {
         return None;

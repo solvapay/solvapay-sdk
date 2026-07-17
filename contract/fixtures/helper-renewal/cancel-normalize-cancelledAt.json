@@ -1,0 +1,21 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-normalize-cancelledAt",
+  "input": {
+    "fn": "normalizeCancelResponse",
+    "args": {
+      "response": {
+        "reference": "pur_1",
+        "status": "active",
+        "cancelledAt": "2026-07-01T00:00:00Z"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "pur_1",
+      "status": "active",
+      "cancelledAt": "2026-07-01T00:00:00Z"
+    }
+  }
+}

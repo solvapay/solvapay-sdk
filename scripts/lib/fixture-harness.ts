@@ -9,31 +9,60 @@
 import assert from 'node:assert/strict'
 import {
   BUSINESS_COUNTRY_OPTIONS,
+  buildCreateCustomerParams,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
+  coerceCustomerOptions,
   creditsToDisplayMinorUnits,
   deriveTaxIdType,
+  extractBackendCustomerRef,
   getSellerTaxIdentifierDisplayLabel,
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
+  isEmailConflict,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
   resolveSellerIdentityDisplay,
   resolveTaxBehavior,
   SolvaPayError,
+  attachBusinessDetailsValidationError,
+  classifyCancelError,
+  classifyReactivateError,
+  isCachedCustomerRefValid,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  projectPaymentIntentResult,
+  projectTopupProcessOutcome,
+  resolvePurchaseCustomerRef,
+  resolveReturnUrl,
+  selectActivePurchases,
+  validateActivatePlanParams,
+  validateAttachBusinessDetailsParams,
   validateBusinessDetails,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
+  validateTopupPaymentIntentParams,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
   type BusinessDetailsInput,
   type SupportedBusinessCountry,
   type TaxBehavior,
 } from '@solvapay/core'
 import {
+  BALANCE_RECONCILE_DELAYS_MS,
   buildGateMessage,
   buildNudgeMessage,
   buildPaywallGate,
   classifyPaywallState,
   createSolvaPayClient,
+  getAuthenticatedUserCore,
   PaywallError,
   paywallErrorToClientPayload,
+  pollBalanceUntilIncreased,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
   verifyWebhook,
   withRetry,
   type LimitResponseWithPlan,
@@ -507,6 +536,44 @@ function isWithRetryScenario(args: Record<string, unknown>): args is WithRetrySc
   return true
 }
 
+type BalancePollObservation = { credits: number } | { throw: string }
+
+type BalancePollScenario = {
+  baseline: number
+  observations: BalancePollObservation[]
+  delays?: 'topup' | 'reconcile' | number[]
+}
+
+function isBalancePollObservation(value: unknown): value is BalancePollObservation {
+  if (typeof value !== 'object' || value === null) return false
+  if ('credits' in value && typeof Reflect.get(value, 'credits') === 'number') {
+    return !('throw' in value)
+  }
+  if ('throw' in value && typeof Reflect.get(value, 'throw') === 'string') {
+    return !('credits' in value)
+  }
+  return false
+}
+
+function isBalancePollScenario(args: Record<string, unknown>): args is BalancePollScenario {
+  if (typeof args.baseline !== 'number') return false
+  if (!Array.isArray(args.observations) || !args.observations.every(isBalancePollObservation)) {
+    return false
+  }
+  if (args.delays === undefined) return true
+  if (args.delays === 'topup' || args.delays === 'reconcile') return true
+  return Array.isArray(args.delays) && args.delays.every(n => typeof n === 'number')
+}
+
+function resolveBalancePollDelays(
+  delays: BalancePollScenario['delays'],
+): readonly number[] | undefined {
+  if (delays === undefined) return undefined
+  if (delays === 'topup') return TOPUP_BALANCE_POLL_DELAYS_MS
+  if (delays === 'reconcile') return BALANCE_RECONCILE_DELAYS_MS
+  return delays
+}
+
 function formatCallEvent(attempt: number): string {
   return `call:${attempt}`
 }
@@ -923,6 +990,56 @@ export function createDefaultRegistry(): FixtureRegistry {
     },
   })
 
+  registry.register('pollBalanceUntilIncreased', {
+    id: 'server',
+    invoke: async args => {
+      if (!isBalancePollScenario(args)) {
+        throw new Error(
+          'pollBalanceUntilIncreased args must include baseline number, observations[], optional delays',
+        )
+      }
+
+      let index = 0
+      const getBalance = async () => {
+        const observation = args.observations[index]
+        index += 1
+        if (observation === undefined) {
+          throw new Error('pollBalanceUntilIncreased scenario exhausted observations')
+        }
+        if ('throw' in observation) {
+          throw new Error(observation.throw)
+        }
+        return { credits: observation.credits }
+      }
+
+      const delayTable = resolveBalancePollDelays(args.delays)
+      const recorder = installDelayRecorder(() => {})
+
+      try {
+        const result =
+          delayTable === undefined
+            ? await pollBalanceUntilIncreased(getBalance, args.baseline)
+            : await pollBalanceUntilIncreased(getBalance, args.baseline, delayTable)
+        return {
+          delays: recorder.delays,
+          result: result ?? null,
+        }
+      } finally {
+        recorder.restore()
+      }
+    },
+  })
+
+  registry.register('TOPUP_BALANCE_POLL_DELAYS_MS', {
+    id: 'server',
+    invoke: () => [...TOPUP_BALANCE_POLL_DELAYS_MS],
+  })
+
+  registry.register('BALANCE_RECONCILE_DELAYS_MS', {
+    id: 'server',
+    invoke: () => [...BALANCE_RECONCILE_DELAYS_MS],
+  })
+
   registry.register('classifyPaywallState', {
     id: 'server',
     invoke: args => {
@@ -1101,7 +1218,420 @@ export function createDefaultRegistry(): FixtureRegistry {
     },
   })
 
+  registry.register('resolveAuthenticatedUser', {
+    id: 'core',
+    invoke: args => invokeResolveAuthenticatedUser(args),
+  })
+
+  registry.register('classifyCustomerRef', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.customerRef !== 'string') {
+        throw new Error('classifyCustomerRef args.customerRef must be a string')
+      }
+      return classifyCustomerRef(args.customerRef)
+    },
+  })
+
+  registry.register('coerceCustomerOptions', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.email) || !isNullableString(args.name)) {
+        throw new Error('coerceCustomerOptions args.email/name must be string, null, or omitted')
+      }
+      return coerceCustomerOptions(args.email, args.name)
+    },
+  })
+
+  registry.register('buildCreateCustomerParams', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.customerRef !== 'string') {
+        throw new Error('buildCreateCustomerParams args.customerRef must be a string')
+      }
+      if (
+        !isOptionalString(args.externalRef) ||
+        !isOptionalString(args.email) ||
+        !isOptionalString(args.name)
+      ) {
+        throw new Error(
+          'buildCreateCustomerParams args.externalRef/email/name must be string or omitted',
+        )
+      }
+      return buildCreateCustomerParams(
+        args.customerRef,
+        args.externalRef,
+        args.email,
+        args.name,
+        Date.now(),
+      )
+    },
+  })
+
+  registry.register('extractBackendCustomerRef', {
+    id: 'core',
+    invoke: args => {
+      if (args.response === null || typeof args.response !== 'object' || Array.isArray(args.response)) {
+        throw new Error('extractBackendCustomerRef args.response must be an object')
+      }
+      if (typeof args.fallback !== 'string') {
+        throw new Error('extractBackendCustomerRef args.fallback must be a string')
+      }
+      return extractBackendCustomerRef(args.response as Record<string, unknown>, args.fallback)
+    },
+  })
+
+  registry.register('classifyLookupError', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.message !== 'string') {
+        throw new Error('classifyLookupError args.message must be a string')
+      }
+      return classifyLookupError(args.message)
+    },
+  })
+
+  registry.register('classifyCreateError', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.message !== 'string') {
+        throw new Error('classifyCreateError args.message must be a string')
+      }
+      return classifyCreateError(args.message)
+    },
+  })
+
+  registry.register('isEmailConflict', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.message !== 'string') {
+        throw new Error('isEmailConflict args.message must be a string')
+      }
+      return isEmailConflict(args.message)
+    },
+  })
+
+  registry.register('validateActivatePlanParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.productRef) || !isNullableString(args.planRef)) {
+        throw new Error(
+          'validateActivatePlanParams args.productRef/planRef must be string, null, or omitted',
+        )
+      }
+      return validateActivatePlanParams(args.productRef, args.planRef)
+    },
+  })
+
+  registry.register('validateCreatePaymentIntentParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.planRef) || !isNullableString(args.productRef)) {
+        throw new Error(
+          'validateCreatePaymentIntentParams args.planRef/productRef must be string, null, or omitted',
+        )
+      }
+      return validateCreatePaymentIntentParams(args.planRef, args.productRef)
+    },
+  })
+
+  registry.register('validateTopupPaymentIntentParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableNumber(args.amount)) {
+        throw new Error(
+          'validateTopupPaymentIntentParams args.amount must be a number, null, or omitted',
+        )
+      }
+      if (!isNullableString(args.currency)) {
+        throw new Error(
+          'validateTopupPaymentIntentParams args.currency must be string, null, or omitted',
+        )
+      }
+      return validateTopupPaymentIntentParams(args.amount, args.currency)
+    },
+  })
+
+  registry.register('validateProcessPaymentIntentParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.paymentIntentId) || !isNullableString(args.productRef)) {
+        throw new Error(
+          'validateProcessPaymentIntentParams args.paymentIntentId/productRef must be string, null, or omitted',
+        )
+      }
+      return validateProcessPaymentIntentParams(args.paymentIntentId, args.productRef)
+    },
+  })
+
+  registry.register('validateAttachBusinessDetailsParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.paymentIntentId)) {
+        throw new Error(
+          'validateAttachBusinessDetailsParams args.paymentIntentId must be string, null, or omitted',
+        )
+      }
+      return validateAttachBusinessDetailsParams(args.paymentIntentId)
+    },
+  })
+
+  registry.register('attachBusinessDetailsValidationError', {
+    id: 'core',
+    invoke: args => {
+      if (!isOptionalString(args.firstIssueMessage)) {
+        throw new Error(
+          'attachBusinessDetailsValidationError args.firstIssueMessage must be string or omitted',
+        )
+      }
+      return attachBusinessDetailsValidationError(args.firstIssueMessage)
+    },
+  })
+
+  registry.register('projectPaymentIntentResult', {
+    id: 'core',
+    invoke: args => {
+      if (
+        typeof args.processorPaymentId !== 'string' ||
+        typeof args.clientSecret !== 'string' ||
+        typeof args.publishableKey !== 'string' ||
+        typeof args.customerRef !== 'string'
+      ) {
+        throw new Error(
+          'projectPaymentIntentResult requires string processorPaymentId/clientSecret/publishableKey/customerRef',
+        )
+      }
+      if (!isOptionalString(args.accountId)) {
+        throw new Error('projectPaymentIntentResult args.accountId must be string or omitted')
+      }
+      return projectPaymentIntentResult(
+        {
+          processorPaymentId: args.processorPaymentId,
+          clientSecret: args.clientSecret,
+          publishableKey: args.publishableKey,
+          accountId: args.accountId,
+        },
+        args.customerRef,
+      )
+    },
+  })
+
+  registry.register('projectTopupProcessOutcome', {
+    id: 'core',
+    invoke: args => {
+      if (!isOptionalString(args.status) && args.status !== null) {
+        throw new Error(
+          'projectTopupProcessOutcome args.status must be string, null, or omitted',
+        )
+      }
+      if (!isOptionalString(args.message) && args.message !== null) {
+        throw new Error(
+          'projectTopupProcessOutcome args.message must be string, null, or omitted',
+        )
+      }
+      const status =
+        args.status === null || args.status === undefined ? undefined : args.status
+      const message =
+        args.message === null || args.message === undefined ? undefined : args.message
+      return projectTopupProcessOutcome(status, message)
+    },
+  })
+
+  registry.register('validateCheckoutSessionParams', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.productRef)) {
+        throw new Error(
+          'validateCheckoutSessionParams args.productRef must be string, null, or omitted',
+        )
+      }
+      return validateCheckoutSessionParams(args.productRef)
+    },
+  })
+
+  registry.register('resolveReturnUrl', {
+    id: 'core',
+    invoke: args => {
+      if (
+        !isNullableString(args.bodyReturnUrl) ||
+        !isNullableString(args.optionsReturnUrl) ||
+        !isNullableString(args.origin)
+      ) {
+        throw new Error(
+          'resolveReturnUrl args.bodyReturnUrl/optionsReturnUrl/origin must be string, null, or omitted',
+        )
+      }
+      // JSON fixtures cannot represent `undefined`; coerce for expect.result null parity.
+      return resolveReturnUrl(args.bodyReturnUrl, args.optionsReturnUrl, args.origin) ?? null
+    },
+  })
+
+  registry.register('selectActivePurchases', {
+    id: 'core',
+    invoke: args => {
+      if (!Array.isArray(args.purchases)) {
+        throw new Error('selectActivePurchases args.purchases must be an array')
+      }
+      return selectActivePurchases(args.purchases as Array<{ status?: string }>)
+    },
+  })
+
+  registry.register('isCachedCustomerRefValid', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.externalRef) || !isNullableString(args.customerRef)) {
+        throw new Error(
+          'isCachedCustomerRefValid args.externalRef/customerRef must be string, null, or omitted',
+        )
+      }
+      if (typeof args.userId !== 'string') {
+        throw new Error('isCachedCustomerRefValid args.userId must be a string')
+      }
+      return isCachedCustomerRefValid(args.externalRef, args.userId, args.customerRef)
+    },
+  })
+
+  registry.register('resolvePurchaseCustomerRef', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.customerRef)) {
+        throw new Error(
+          'resolvePurchaseCustomerRef args.customerRef must be string, null, or omitted',
+        )
+      }
+      if (typeof args.userId !== 'string') {
+        throw new Error('resolvePurchaseCustomerRef args.userId must be a string')
+      }
+      return resolvePurchaseCustomerRef(args.customerRef, args.userId)
+    },
+  })
+
+  registry.register('validatePurchaseRef', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.purchaseRef)) {
+        throw new Error(
+          'validatePurchaseRef args.purchaseRef must be string, null, or omitted',
+        )
+      }
+      return validatePurchaseRef(args.purchaseRef)
+    },
+  })
+
+  registry.register('normalizeCancelResponse', {
+    id: 'core',
+    invoke: args => normalizeCancelResponse(args.response),
+  })
+
+  registry.register('normalizeReactivateResponse', {
+    id: 'core',
+    invoke: args => normalizeReactivateResponse(args.response),
+  })
+
+  registry.register('classifyCancelError', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.message !== 'string') {
+        throw new Error('classifyCancelError args.message must be a string')
+      }
+      return classifyCancelError(args.message)
+    },
+  })
+
+  registry.register('classifyReactivateError', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.message !== 'string') {
+        throw new Error('classifyReactivateError args.message must be a string')
+      }
+      return classifyReactivateError(args.message)
+    },
+  })
+
   return registry
+}
+
+function isNullableString(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || typeof value === 'string'
+}
+
+function isNullableNumber(value: unknown): value is number | null | undefined {
+  return value === undefined || value === null || typeof value === 'number'
+}
+
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === 'string'
+}
+
+async function invokeResolveAuthenticatedUser(
+  args: Record<string, unknown>,
+): Promise<unknown> {
+  const headerUserId =
+    args.headerUserId === undefined || args.headerUserId === null
+      ? undefined
+      : typeof args.headerUserId === 'string'
+        ? args.headerUserId
+        : undefined
+  if (args.headerUserId !== undefined && args.headerUserId !== null && typeof args.headerUserId !== 'string') {
+    throw new Error('resolveAuthenticatedUser args.headerUserId must be string, null, or omitted')
+  }
+  if (
+    args.authorizationHeader !== undefined &&
+    args.authorizationHeader !== null &&
+    typeof args.authorizationHeader !== 'string'
+  ) {
+    throw new Error(
+      'resolveAuthenticatedUser args.authorizationHeader must be string, null, or omitted',
+    )
+  }
+  if (args.jwtSecret !== undefined && args.jwtSecret !== null && typeof args.jwtSecret !== 'string') {
+    throw new Error('resolveAuthenticatedUser args.jwtSecret must be string, null, or omitted')
+  }
+  if (typeof args.strictMode !== 'boolean') {
+    throw new Error('resolveAuthenticatedUser args.strictMode must be a boolean')
+  }
+  if (typeof args.includeEmail !== 'boolean' || typeof args.includeName !== 'boolean') {
+    throw new Error('resolveAuthenticatedUser args.includeEmail/includeName must be booleans')
+  }
+
+  const authorizationHeader =
+    typeof args.authorizationHeader === 'string' ? args.authorizationHeader : undefined
+  const jwtSecret = typeof args.jwtSecret === 'string' ? args.jwtSecret : undefined
+
+  const headers = new Headers()
+  // Empty string is falsy in getAuthenticatedUserCore (`if (headerUserId)`).
+  if (headerUserId !== undefined && headerUserId.length > 0) {
+    headers.set('x-user-id', headerUserId)
+  }
+  if (authorizationHeader !== undefined) {
+    headers.set('authorization', authorizationHeader)
+  }
+
+  const envKeys = ['SOLVAPAY_AUTH_STRICT', 'SOLVAPAY_JWT_SECRET', 'SUPABASE_JWT_SECRET'] as const
+  const previous = new Map<string, string | undefined>()
+  for (const key of envKeys) {
+    previous.set(key, process.env[key])
+    delete process.env[key]
+  }
+
+  try {
+    if (args.strictMode) {
+      process.env.SOLVAPAY_AUTH_STRICT = 'true'
+    }
+    if (jwtSecret !== undefined) {
+      process.env.SOLVAPAY_JWT_SECRET = jwtSecret
+    }
+    return await getAuthenticatedUserCore(new Request('https://fixture.local/auth', { headers }), {
+      includeEmail: args.includeEmail,
+      includeName: args.includeName,
+    })
+  } finally {
+    for (const key of envKeys) {
+      const value = previous.get(key)
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
 }
 
 export async function replayFixture(fixture: Fixture, options: ReplayOptions): Promise<void> {

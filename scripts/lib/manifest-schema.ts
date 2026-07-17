@@ -222,6 +222,82 @@ const TypeParamSchema = z.object({
   name: z.string().min(1),
 })
 
+/**
+ * Per-operation shadow-mode volatile paths (step 25).
+ * JSON Pointers (RFC 6901) whose values are replaced before TS/Rust compare.
+ */
+const OperationShadow = z
+  .object({
+    volatile: z.array(z.string()).default([]),
+  })
+  .default({ volatile: [] })
+
+/**
+ * Global shadow-mode volatile-field rules (step 25).
+ * Applied recursively in addition to per-operation `shadow.volatile` pointers.
+ */
+const GlobalShadow = z
+  .object({
+    /** Object keys whose values are always treated as volatile. */
+    globalVolatileKeys: z.array(z.string()).default([
+      'createdAt',
+      'updatedAt',
+      'id',
+      'reference',
+      'idempotencyKey',
+      'clientSecret',
+      'sessionId',
+      'email',
+      'name',
+    ]),
+    /** Keys ending with these suffixes (e.g. `customerRef`) are volatile. */
+    volatileKeySuffixes: z.array(z.string()).default(['Ref']),
+    /**
+     * String prefixes that mark SolvaPay resource refs (`prd_…`, `cus_…`).
+     * Matching tokens in strings/URLs are normalized.
+     */
+    refPrefixes: z.array(z.string()).default([
+      'prd_',
+      'pln_',
+      'cus_',
+      'cusess_',
+      'pur_',
+      'pi_',
+      'ses_',
+      'usg_',
+      'cs_',
+      'top_',
+      'mcp_',
+    ]),
+  })
+  .default({
+    globalVolatileKeys: [
+      'createdAt',
+      'updatedAt',
+      'id',
+      'reference',
+      'idempotencyKey',
+      'clientSecret',
+      'sessionId',
+      'email',
+      'name',
+    ],
+    volatileKeySuffixes: ['Ref'],
+    refPrefixes: [
+      'prd_',
+      'pln_',
+      'cus_',
+      'cusess_',
+      'pur_',
+      'pi_',
+      'ses_',
+      'usg_',
+      'cs_',
+      'top_',
+      'mcp_',
+    ],
+  })
+
 const Operation = z.object({
   route: z.object({
     method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
@@ -235,6 +311,8 @@ const Operation = z.object({
   params: z.array(ParamDefSchema),
   overlays: z.array(z.string()).default([]),
   normalization: z.array(z.string()).default([]),
+  /** Shadow-mode volatile JSON Pointers for this operation (step 25). */
+  shadow: OperationShadow,
   idempotency: Idempotency,
   errors: z.object({
     default: z.object({ messageTemplate: z.string().min(1) }),
@@ -259,6 +337,8 @@ export const SdkContractManifestSchema = z.object({
   topLevel: z.record(z.string(), NamedEntry),
   coreHelpers: z.record(z.string(), NamedEntry),
   facade: z.record(z.string(), NamedEntry),
+  /** Global shadow-mode volatile rules (step 25). */
+  shadow: GlobalShadow,
   errors: z
     .object({
       webhook: z.object({

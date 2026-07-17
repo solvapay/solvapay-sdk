@@ -1104,6 +1104,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "shadow-invoker"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "solvapay-core",
+ "solvapay-dto",
+ "solvapay-transport",
+ "tokio",
+ "wiremock",
+]
+
+[[package]]
 name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

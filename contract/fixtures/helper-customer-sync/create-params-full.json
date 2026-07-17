@@ -1,0 +1,22 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "create-params-full",
+  "input": {
+    "fn": "buildCreateCustomerParams",
+    "args": {
+      "customerRef": "user-1",
+      "externalRef": "ext-1",
+      "email": "a@b.com",
+      "name": "Ada"
+    },
+    "clock": "2023-11-14T22:13:20Z"
+  },
+  "expect": {
+    "result": {
+      "email": "a@b.com",
+      "name": "Ada",
+      "externalRef": "ext-1",
+      "metadata": {}
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-outcome-succeeded",
+  "input": {
+    "fn": "projectTopupProcessOutcome",
+    "args": {
+      "status": "succeeded"
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "succeeded"
+    }
+  }
+}

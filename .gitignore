@@ -39,5 +39,8 @@ research-tmp/
 # Contract / snapshot CLI test scratch
 scripts/.tmp/
 
+# Shadow-mode live/selftest report output (step 25)
+contract/shadow/output/
+
 # Rust
 rust/target/

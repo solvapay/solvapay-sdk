@@ -1,6 +1,8 @@
 //! Default `solvapay-core` bindings for the golden-fixture corpus.
 
+mod balance_poll;
 mod error_model;
+mod helpers;
 mod paywall_gate;
 mod paywall_state;
 mod retry;
@@ -189,6 +191,30 @@ pub fn create_default_registry() -> BindingRegistry {
     );
 
     registry.register(
+        "pollBalanceUntilIncreased",
+        Binding {
+            id: "core",
+            invoke: Box::new(balance_poll::invoke_poll_balance_until_increased),
+        },
+    );
+
+    registry.register(
+        "TOPUP_BALANCE_POLL_DELAYS_MS",
+        Binding {
+            id: "core",
+            invoke: Box::new(balance_poll::invoke_topup_delays),
+        },
+    );
+
+    registry.register(
+        "BALANCE_RECONCILE_DELAYS_MS",
+        Binding {
+            id: "core",
+            invoke: Box::new(balance_poll::invoke_reconcile_delays),
+        },
+    );
+
+    registry.register(
         "verifyWebhook",
         Binding {
             id: "core",
@@ -233,6 +259,189 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(paywall_gate::invoke_build_paywall_gate),
+        },
+    );
+
+    registry.register(
+        "resolveAuthenticatedUser",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_resolve_authenticated_user),
+        },
+    );
+    registry.register(
+        "classifyCustomerRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_classify_customer_ref),
+        },
+    );
+    registry.register(
+        "coerceCustomerOptions",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_coerce_customer_options),
+        },
+    );
+    registry.register(
+        "buildCreateCustomerParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_build_create_customer_params),
+        },
+    );
+    registry.register(
+        "extractBackendCustomerRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_extract_backend_customer_ref),
+        },
+    );
+    registry.register(
+        "classifyLookupError",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_classify_lookup_error),
+        },
+    );
+    registry.register(
+        "classifyCreateError",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_classify_create_error),
+        },
+    );
+    registry.register(
+        "isEmailConflict",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_is_email_conflict),
+        },
+    );
+    registry.register(
+        "validateActivatePlanParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_activate_plan_params),
+        },
+    );
+    registry.register(
+        "validateCreatePaymentIntentParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_create_payment_intent_params),
+        },
+    );
+    registry.register(
+        "validateTopupPaymentIntentParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_topup_payment_intent_params),
+        },
+    );
+    registry.register(
+        "validateProcessPaymentIntentParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_process_payment_intent_params),
+        },
+    );
+    registry.register(
+        "validateAttachBusinessDetailsParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_attach_business_details_params),
+        },
+    );
+    registry.register(
+        "attachBusinessDetailsValidationError",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_attach_business_details_validation_error),
+        },
+    );
+    registry.register(
+        "projectPaymentIntentResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_project_payment_intent_result),
+        },
+    );
+    registry.register(
+        "projectTopupProcessOutcome",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_project_topup_process_outcome),
+        },
+    );
+    registry.register(
+        "validateCheckoutSessionParams",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_checkout_session_params),
+        },
+    );
+    registry.register(
+        "resolveReturnUrl",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_resolve_return_url),
+        },
+    );
+    registry.register(
+        "selectActivePurchases",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_select_active_purchases),
+        },
+    );
+    registry.register(
+        "isCachedCustomerRefValid",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_is_cached_customer_ref_valid),
+        },
+    );
+    registry.register(
+        "resolvePurchaseCustomerRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_resolve_purchase_customer_ref),
+        },
+    );
+    registry.register(
+        "validatePurchaseRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_validate_purchase_ref),
+        },
+    );
+    registry.register(
+        "normalizeCancelResponse",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_normalize_cancel_response),
+        },
+    );
+    registry.register(
+        "normalizeReactivateResponse",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_normalize_reactivate_response),
+        },
+    );
+    registry.register(
+        "classifyCancelError",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_classify_cancel_error),
+        },
+    );
+    registry.register(
+        "classifyReactivateError",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_classify_reactivate_error),
         },
     );
 

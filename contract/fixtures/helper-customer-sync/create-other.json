@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "create-other",
+  "input": {
+    "fn": "classifyCreateError",
+    "args": {
+      "message": "server error"
+    }
+  },
+  "expect": {
+    "result": "other"
+  }
+}

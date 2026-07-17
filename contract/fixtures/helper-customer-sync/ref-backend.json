@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "ref-backend",
+  "input": {
+    "fn": "classifyCustomerRef",
+    "args": {
+      "customerRef": "cus_abc123"
+    }
+  },
+  "expect": {
+    "result": "backend"
+  }
+}

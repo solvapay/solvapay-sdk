@@ -1,0 +1,15 @@
+{
+  "suite": "helper-checkout",
+  "case": "return-url-body-wins",
+  "input": {
+    "fn": "resolveReturnUrl",
+    "args": {
+      "bodyReturnUrl": "https://body.example/return",
+      "optionsReturnUrl": "https://options.example/return",
+      "origin": "https://origin"
+    }
+  },
+  "expect": {
+    "result": "https://body.example/return"
+  }
+}

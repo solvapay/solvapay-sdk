@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "ref-anonymous",
+  "input": {
+    "fn": "classifyCustomerRef",
+    "args": {
+      "customerRef": "anonymous"
+    }
+  },
+  "expect": {
+    "result": "anonymous"
+  }
+}

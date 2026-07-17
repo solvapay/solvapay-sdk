@@ -60,8 +60,10 @@ function buildFixtureManifest(): SdkContractManifest {
       optionalOnClient: false,
       request: i === 0 ? 'CheckLimitRequest' : undefined,
       response: i === 0 ? 'LimitResponse' : 'SdkMerchantResponseDto',
+      params: [],
       overlays: [],
       normalization: [],
+      shadow: { volatile: [] },
       idempotency: { kind: 'none' },
       errors: {
         default: { messageTemplate: `${id} failed ({status}): {body}` },
@@ -79,6 +81,11 @@ function buildFixtureManifest(): SdkContractManifest {
   return {
     operations,
     overlays: {},
+    shadow: {
+      globalVolatileKeys: ['createdAt', 'updatedAt', 'id', 'reference'],
+      volatileKeySuffixes: ['Ref'],
+      refPrefixes: ['prd_', 'cus_'],
+    },
     topLevel,
     coreHelpers: {
       validateBusinessDetails: {

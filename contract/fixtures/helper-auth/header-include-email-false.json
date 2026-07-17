@@ -1,0 +1,22 @@
+{
+  "suite": "helper-auth",
+  "case": "header-include-email-false",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "headerUserId": "middleware-user",
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJpZ25vcmVkIiwiZW1haWwiOiJlbnJpY2hAZXhhbXBsZS5jb20iLCJuYW1lIjoiRW5yaWNoIE5hbWUifQ.rKGW79bzKu2GaXrG7WPfdQYZ-1GQE0p6vIx4q9wFzXk",
+      "jwtSecret": "fixture-secret-at-least-32-chars-long!!",
+      "includeEmail": false,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "middleware-user",
+      "email": null,
+      "name": "Enrich Name"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-normalize-ok",
+  "input": {
+    "fn": "normalizeReactivateResponse",
+    "args": {
+      "response": { "reference": "pur_1", "status": "active" }
+    }
+  },
+  "expect": {
+    "result": { "reference": "pur_1", "status": "active" }
+  }
+}

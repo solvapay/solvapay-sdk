@@ -152,4 +152,60 @@ export {
   type SellerIdentityRow,
 } from './seller-identity'
 
+export {
+  buildCreateCustomerParams,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
+  coerceCustomerOptions,
+  extractBackendCustomerRef,
+  isEmailConflict,
+  type CoercedCustomerOptions,
+  type CreateCustomerParams,
+  type CreateErrorKind,
+  type CustomerRefKind,
+  type LookupErrorKind,
+} from './customer-sync'
+
+export {
+  validateActivatePlanParams,
+  type ActivatePlanValidationError,
+} from './activation'
+
+export {
+  attachBusinessDetailsValidationError,
+  projectPaymentIntentResult,
+  projectTopupProcessOutcome,
+  validateAttachBusinessDetailsParams,
+  validateCreatePaymentIntentParams,
+  validateProcessPaymentIntentParams,
+  validateTopupPaymentIntentParams,
+  type PaymentHelperError,
+  type PaymentIntentProjection,
+  type PaymentIntentSource,
+  type TopupProcessOutcome,
+} from './payment'
+
+export {
+  resolveReturnUrl,
+  validateCheckoutSessionParams,
+  type CheckoutHelperError,
+} from './checkout'
+
+export {
+  isCachedCustomerRefValid,
+  resolvePurchaseCustomerRef,
+  selectActivePurchases,
+} from './purchase'
+
+export {
+  classifyCancelError,
+  classifyReactivateError,
+  isRenewalError,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  validatePurchaseRef,
+  type RenewalHelperError,
+} from './renewal'
+
 export const version = '0.1.0'

@@ -7,7 +7,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-07-17):** Steps 1–24 **Done** (Phases 0–2 closed; Phase 3 through step 24). **36 of 36** client methods implemented on `SolvaPayClient` (Groups A + B + C). **Next:** step 25 (shadow-mode harness).
+**Current progress (2026-07-17):** Steps 1–29 **Done** (Phases 0–3 closed; Phase 4 in progress). **Next:** step 30 (helpers: usage / limits / plans).
 
 ## Status legend
 
@@ -46,11 +46,11 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 22 | Client methods, group A | Phase 3 | Done | — | 29 Group A fixtures (28 wire + `get-customer-missing-params`) green on reqwest + Fetch; `SolvaPayClient` 10 methods in `client.rs` | [Phase 3](#phase-3--http-client-core) |
 | 23 | Client methods, group B | Phase 3 | Done | — | 19 Group B fixtures green on reqwest + Fetch; all 7 `ProcessPaymentResult` branches; `attachBusinessDetails` raw JSON passthrough | [Phase 3](#phase-3--http-client-core) |
 | 24 | Client methods, group C | Phase 3 | Done | — | 56 Group C fixtures green on reqwest + Fetch; `OPERATION_NAMES` coverage gate (36/36); `execute_raw` for delete 404 + cancel/reactivate | [Phase 3](#phase-3--http-client-core) |
-| 25 | Shadow-mode harness | Phase 3 | Not started | — | — | [Phase 3](#phase-3--http-client-core) |
-| 26 | Helpers: customer / auth / activation | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
-| 27 | Helpers: payment / payment-method / checkout | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
-| 28 | Helpers: auto-recharge / balance-poll | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
-| 29 | Helpers: purchase / renewal | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
+| 25 | Shadow-mode harness | Phase 3 | Done | — | Offline `pnpm shadow:selftest` green (IDENTICAL + intentional divergence wire dump); `pnpm manifest:check`; shadow-invoker 36-fn coverage + wiremock; live `pnpm shadow:run` via `SOLVAPAY_SHADOW_*` (manual / workflow_dispatch) | [Phase 3](#phase-3--http-client-core) |
+| 26 | Helpers: customer / auth / activation | Phase 4 | Done | — | `helper-auth` (24) + `helper-customer-sync` (20) + `helper-activation` (4) green in TS harness + Rust `fixture-runner` (`executed=256 passed=256 failed=0`); RED stub auth → `failed=24`; `auth-core` / `ensure-customer` vitest green; step-8 gates + §15 note 18 | [Phase 4](#phase-4--route-helper-cores) |
+| 27 | Helpers: payment / payment-method / checkout | Phase 4 | Done | — | `helper-payment` (22) + `helper-checkout` (8) green in TS harness + Rust `fixture-runner` (`executed=286 passed=286 failed=0`; was 256); RED stubs → `failed=17`; payment/checkout characterization + core unit tests green; payment-method nil decision core (orchestration-only); step-8 gates + §15 note 19 | [Phase 4](#phase-4--route-helper-cores) |
+| 28 | Helpers: auto-recharge / balance-poll | Phase 4 | Done | — | `helper-balance-poll` (14) green in TS harness + Rust `fixture-runner` (`executed=300 passed=300 failed=0`; was 286); RED stubs → unit `failed=3` + fixture `failed=12`; auto-recharge characterization + core unit tests green; auto-recharge nil decision core; step-8 gates + §15 note 20 | [Phase 4](#phase-4--route-helper-cores) |
+| 29 | Helpers: purchase / renewal | Phase 4 | Done | — | `helper-purchase` (10) + `helper-renewal` (24) green in TS harness + Rust `fixture-runner` (`executed=334 passed=334 failed=0`; was 300); RED stubs → unit `failed=23`; purchase/renewal characterization + core unit tests green; step-8 gates + §15 note 21 | [Phase 4](#phase-4--route-helper-cores) |
 | 30 | Helpers: usage / limits / plans | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
 | 31 | Helpers: merchant / product / error | Phase 4 | Not started | — | — | [Phase 4](#phase-4--route-helper-cores) |
 | 32 | Paywall decision core | Phase 5 | Not started | — | — | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
@@ -218,7 +218,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Decisions to document:** Step 15–18 bullets; `ProcessPaymentResult` untagged enum; overlay catalog in manifest. Deviations: §13 OpenAPI gates (`includeCheckoutSession`, process-payment discriminator) still open — worked around via overlays/untagged. Deferred: backend republish for those gates.
 - **Pointers:** redesign §2.5, §2.8; `contract/manifest/sdk-contract.yaml`; §15 notes 10–12.
 
-### Phase 3 — HTTP client core — In progress
+### Phase 3 — HTTP client core — Done
 
 <!-- running per-step bullets accumulate here as each step lands -->
 
@@ -228,6 +228,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Step 22 (Client methods, group A):** `SolvaPayClient` — 10 methods (`createCustomer` … `getPlatformConfig`); explicit wire bodies + response normalization (`getCustomer` three-shape, `createCustomer` `reference`/`customerRef` mapping); native `client_group_a_fixtures.rs` + wasm `wasm_client_group_a_fixtures.rs` over shared `tests/support/mod.rs`. Inventory: 29 fixtures (28 wire + validation-only `get-customer-missing-params`).
 - **Step 23 (Client methods, group B):** Five payment/checkout methods; `process_payment_intent` → `solvapay_dto::schemas::ProcessPaymentResult` (7 branches); `attach_business_details` → raw `serde_json::Value` passthrough; `wire_bodies` private body structs + `caller_key_or_auto` + `serialize_whole_f64` for top-up amounts; native `client_group_b_fixtures.rs` + wasm `wasm_client_group_b_fixtures.rs`. Inventory: 19 fixtures (all wire).
 - **Step 24 (Client methods, group C):** Remaining 21 methods (usage/limits, products, plans, purchases, payment-method/auto-recharge); 56 fixtures green on reqwest + Fetch; coverage gate `GROUP_A ∪ GROUP_B ∪ GROUP_C == error_templates::OPERATION_NAMES` (36); native `client_group_c_fixtures.rs` + wasm `wasm_client_group_c_fixtures.rs` + ignored `client_group_c_smoke.rs`.
+- **Step 25 (Shadow-mode harness):** TS orchestrator + Rust `shadow-invoker` CLI run side-by-side; manifest `shadow:` volatile rules; offline stub self-test + live `pnpm shadow:run` — "done when" verified: `pnpm shadow:selftest` all green (suite IDENTICAL, intentional listPlans divergence dumps both wire exchanges).
 
 #### Step 21 decisions for future handoffs
 
@@ -261,15 +262,62 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Fixture inventory (56, all wire):** usage/limits 6; products 19; plans 11; purchases 12; payment-method/auto-recharge 8. Return `serde_json::Value` for merge/passthrough shapes; typed `CreateProductResult` / `CloneProductResult` / `()` for deletes.
 - **Bodies:** `serialize_body_ts_numbers` coerces whole `f64` → JSON ints for wiremock; `SaveAutoRechargeBody` + `serialize_whole_f64`; cancel body omitted unless non-empty `reason`.
 
-**Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+#### Step 25 decisions for future handoffs
 
-### Phase 4 — Route helper cores — Not started
+- **Harness location:** TS orchestrator under `scripts/shadow/`; scenarios in `contract/shadow/scenarios.ts`; Rust side is CLI `rust/tools/shadow-invoker` (not a Node binding — napi is step 36). §11.4 diagram updated accordingly.
+- **Manifest `shadow:`:** Top-level `shadow.globalVolatileKeys` / `volatileKeySuffixes` / `refPrefixes` plus per-op `shadow.volatile` JSON Pointers; Zod-validated by `pnpm manifest:check`. Normalizer **deletes** volatile keys (so typed Rust omit ↔ TS passthrough stay comparable) and replaces ref tokens inside URLs with `<volatile>`.
+- **Env vars:** `SOLVAPAY_SHADOW_BASE_URL` + `SOLVAPAY_SHADOW_API_KEY` for live; optional `SOLVAPAY_SHADOW_ENABLE_STRIPE=true` / `SHADOW_INVOKER_BIN`. Scripts: `pnpm shadow:run`, `pnpm shadow:selftest`.
+- **Stripe / purchase skips:** Scenarios with `requires: stripe` or `requires: activePurchase` are SKIPPED unless explicitly enabled — keeps “identical across the suite” honest.
+- **CI:** Offline self-test in the Rust CI job; live shadow is manual-dispatch (`.github/workflows/shadow.yml`) until a hosted contract env exists (open handoff).
+- **Divergence reports:** `contract/shadow/output/shadow-report.json` includes both normalized results and full wire exchanges.
 
-<!-- running per-step bullets accumulate here as each step lands -->
+**Phase-close handoff:**
+- **What was done:** Native + WASM transports; client shell; all 36 typed `SolvaPayClient` methods (Groups A–C); shadow-mode harness proving TS↔Rust identity on normalized live/stub responses.
+- **Why:** Phase 3 closes the HTTP client core before Phase 4 helper cores and Phase 6 napi cutover; shadow mode is the live-backend identity gate.
+- **Decisions to document:** Steps 19–25 decision bullets; CLI invoker instead of binding for Phase 3; new §13 gate for hosted contract-test env. Deviations: none vs redesign intent. Deferred: live CI shadow until hosted env.
+- **Pointers:** redesign §4.1, §10.3–10.4, §11.4, §15 notes 13–17; `scripts/shadow/`, `rust/tools/shadow-invoker/`.
+
+### Phase 4 — Route helper cores — In progress
+
+- **Step 26 (Helpers: customer / auth / activation):** `solvapay-core::{auth_resolution, customer_sync, activation, helper_error, hmac_util}`; TS pure extracts in `@solvapay/core` (`customer-sync`, `activation`) rewired into `paywall.ensureCustomer` / helpers; golden fixtures under `contract/fixtures/helper-*`; fixture-runner bindings. Auth TS runtime stays on `getAuthenticatedUserCore` (fixtures synthesize `Request` + env patch). RED: wrong-default auth stub → `failed=24`; GREEN: full corpus `executed=256 passed=256 failed=0`. §15 note 18.
+- **Step 27 (Helpers: payment / payment-method / checkout):** `solvapay-core::{payment, checkout}`; TS pure extracts in `@solvapay/core` (`payment`, `checkout`) rewired into server shims; golden fixtures `helper-payment` (22) + `helper-checkout` (8); fixture-runner bindings. Characterization suites added for previously untested `checkout.ts` / `payment-method.ts`. RED: wrong-default stubs → unit `failed=11` + fixture `failed=17`; GREEN: `executed=286 passed=286 failed=0`. §15 note 19.
+- **Step 28 (Helpers: auto-recharge / balance-poll):** `solvapay-core::balance_poll` (tables + `BalancePollPolicy` + `evaluate_balance_observation`); no TS extract — fixtures bind `@solvapay/server` `pollBalanceUntilIncreased` directly (withRetry precedent); golden fixtures `helper-balance-poll` (14); fixture-runner host adapter. Auto-recharge nil decision core; characterization suite extended. RED: wrong empty tables + evaluate `None` → unit `failed=3` + fixture `failed=12`; GREEN: `executed=300 passed=300 failed=0`. §15 note 20.
+- **Step 29 (Helpers: purchase / renewal):** `solvapay-core::{purchase, renewal}`; TS pure extracts in `@solvapay/core` (`purchase`, `renewal`) rewired into server shims; golden fixtures `helper-purchase` (10) + `helper-renewal` (24); fixture-runner bindings. Characterization suite added for previously untested `renewal.ts`. RED: wrong-default stubs → unit `failed=23`; GREEN: `executed=334 passed=334 failed=0`. §15 note 21.
+
+#### Step 26 decisions for future handoffs
+
+- **Conformance strategy (deviation):** Phase 1 / step 25 precedent — golden fixtures proven TS-green first, then Rust `fixture-runner`. Literal "existing helper tests pass against the binding" defers to step 37 (napi cutover); `auth-core.unit.test.ts` (15) remains the closest runtime regression gate today.
+- **`ensureCustomer` scope:** decision pieces only (`classifyCustomerRef`, options coercion, create-params, backend-ref extract, lookup/create/email-conflict classification). Caches, shared deduplicator, and HTTP stay TS (§8).
+- **jose clock gotcha:** `jwtVerify` uses wall clock (`new Date()`); harness `Date.now` patching does not intercept it — `exp`/`nbf` fixtures use far-past/far-future dates; exact boundary semantics locked by Rust unit tests with explicit `now_unix_secs`.
+- **Hand-rolled base64url + HS256:** no new core crate (step 8 freeze); JWT verify reuses shared `hmac_util` with webhook. `alg` must be HS256; `exp`/`nbf` with zero tolerance (jose default `clockTolerance`).
+- **Serde shapes:** auth `email`/`name` serialize as explicit `null` when absent; helper `details` is skip-absent (activation 400 has no `details` field).
+
+#### Step 27 decisions for future handoffs
+
+- **Fixture counts:** `helper-payment` 22 + `helper-checkout` 8 (= +30 bound cases). Full corpus `executed` 256→286; `failed=0`.
+- **Nil payment-method core:** `payment-method.ts` is pure orchestration (sync → capability guard → client call) — no extractable decision core; covered by new `payment-method.test.ts` characterization suite only.
+- **Poll decision stays host:** `projectTopupProcessOutcome` covers status narrowing only; `preCredits === null` soft-succeed and `pollBalanceUntilIncreased` / `TOPUP_BALANCE_POLL_DELAYS_MS` remain in the TS shim (step 28 owns delay tables).
+- **Characterization suites:** redesign assumed existing `*.test.ts` as conformance gate — only `payment.test.ts` existed; added `checkout.test.ts` + `payment-method.test.ts` before shim refactor (pass unmodified after rewire).
+- **Skip-absent choices:** `accountId` on PI projection and timeout `message` on topup outcome omit when absent (JSON drop parity). `resolveReturnUrl` returns `undefined`/`None`; fixture harness coerces to `null` for JSON expect parity.
+- **Shared `paymentIntentId` validator:** `validateAttachBusinessDetailsParams` is reused by `processTopupPaymentIntentCore` (identical frozen message) — naming follows attach; no separate topup-id validator.
+
+#### Step 28 decisions for future handoffs
+
+- **No TS extraction:** `pollBalanceUntilIncreased` and the delay tables are already standalone `@solvapay/server` exports — fixtures bind them directly (step-5/11 `withRetry` precedent). No `@solvapay/core` re-export shuffle; `@solvapay/react` imports untouched.
+- **Nil auto-recharge core:** `get/save/disableAutoRechargeCore` are sync → capability guard → client-call orchestration (same shape as payment-method). Covered by extended `auto-recharge.test.ts` characterization only; boy-scout `return await` so client rejections hit `handleRouteError`.
+- **Scenario-in-args fixture shape:** `baseline` + `observations[]` (`{ credits }` / `{ throw }`) + optional `delays` (`"topup"` / `"reconcile"` / `[ms...]` / omitted → reconcile). Observation records consumed delays + terminal `{ creditsAdded }` or `null` — delays recorded, never slept.
+- **Poll semantics frozen:** strict `post.credits > baseline` (equal/decrease → continue); thrown `getBalance` errors swallowed; table exhaustion → `null`; one sleep **before every** poll including the first; default table is `BALANCE_RECONCILE_DELAYS_MS`.
+- **Integer-emission gotcha:** `creditsAdded` whole numbers must serialize as JSON integers (`9600` not `9600.0`) for `serde_json::Value` deep-equality with TS fixtures (step-23 `serialize_whole_f64` precedent).
+- **Fixture count:** `helper-balance-poll` 14 (= +14 bound cases). Full corpus `executed` 286→300; `failed=0`.
+
+#### Step 29 decisions for future handoffs
+
+- **Fixture counts:** `helper-purchase` 10 + `helper-renewal` 24 (= +34 bound cases). Full corpus `executed` 300→334; `failed=0`.
+- **Shared `is_truthy`:** JS truthiness for JSON values (null/false/0/""/NaN falsy; objects/arrays truthy) lives in `purchase.rs` and is reused by renewal normalize for `reference` / `cancelledAt`.
+- **Normalize returns `Result<Value, HelperErrorResult>`:** success is the unwrapped purchase object; errors include `details` on classify paths (unlike checkout/payment validators which omit `details`).
+- **Dynamic cancel message:** missing `status` formats as `"undefined"` (JS template parity); `null` as `"null"`.
+- **Characterization suite:** redesign assumed existing `*.test.ts` — only `purchase.test.ts` existed; added `renewal.test.ts` (24 cases, fake timers for 500ms settle) before shim refactor (pass unmodified after rewire).
+- **Host stays:** auth, `x-solvapay-customer-ref` header, `ensureCustomer`/`getCustomer`, 500ms settle delay, `instanceof SolvaPayError`, `handleRouteError`, method-unavailable guards.
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …
@@ -368,6 +416,7 @@ Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovere
 | Fuzz corpus seed strategy | Step 55 | Open | SDK |
 | Whether UniFFI is ever used for a *sixth* language later | Only if needed | Open | SDK |
 | Backend CI-published OpenAPI artifact for automated snapshot drift | Post–Step 1 / ongoing | Open | Backend |
+| Hosted contract-test environment for CI shadow live runs | Post–step 25 | Open | Backend + SDK |
 
 ## Reusable handoff-entry template
 

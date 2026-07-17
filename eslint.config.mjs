@@ -31,6 +31,7 @@ export default tseslint.config(
       '*.config.js',
       '*.config.ts',
       'generated',
+      '**/*.generated.d.ts',
     ],
   },
 );

@@ -5,6 +5,7 @@
  * Works with standard Web API Request (works everywhere).
  */
 
+import { resolveReturnUrl, validateCheckoutSessionParams } from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
@@ -40,11 +41,9 @@ export async function createCheckoutSessionCore(
   | ErrorResult
 > {
   try {
-    if (!body.productRef) {
-      return {
-        error: 'Missing required parameter: productRef is required',
-        status: 400,
-      }
+    const validationError = validateCheckoutSessionParams(body.productRef)
+    if (validationError) {
+      return validationError
     }
 
     const customerResult = await syncCustomerCore(request, {
@@ -59,15 +58,14 @@ export async function createCheckoutSessionCore(
 
     const customerRef = customerResult
 
-    let returnUrl = body.returnUrl || options.returnUrl
-    if (!returnUrl) {
-      try {
-        const url = new URL(request.url)
-        returnUrl = url.origin
-      } catch {
-        // If URL parsing fails, continue without returnUrl
-      }
+    let origin: string | null = null
+    try {
+      origin = new URL(request.url).origin
+    } catch {
+      // If URL parsing fails, continue without origin fallback
     }
+
+    const returnUrl = resolveReturnUrl(body.returnUrl, options.returnUrl, origin)
 
     const solvaPay = options.solvaPay || createSolvaPay()
 

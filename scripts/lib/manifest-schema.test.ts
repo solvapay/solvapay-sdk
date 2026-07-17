@@ -46,6 +46,7 @@ function op(
     params: [{ name: 'params', ref: 'CheckLimitRequest', required: true }],
     overlays: [],
     normalization: [],
+    shadow: { volatile: [] },
     idempotency: { kind: 'none' },
     errors: {
       default: { messageTemplate: 'Check limits failed ({status}): {body}' },
@@ -77,6 +78,11 @@ function minimalManifest(
   const base: SdkContractManifest = {
     operations,
     overlays: {},
+    shadow: {
+      globalVolatileKeys: ['createdAt', 'updatedAt', 'id', 'reference'],
+      volatileKeySuffixes: ['Ref'],
+      refPrefixes: ['prd_', 'cus_'],
+    },
     topLevel,
     coreHelpers: {
       validateBusinessDetails: { names: deriveNames('validateBusinessDetails'), sync: PURE_SYNC },

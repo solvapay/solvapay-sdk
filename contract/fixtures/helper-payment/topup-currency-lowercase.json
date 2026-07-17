@@ -1,0 +1,17 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-currency-lowercase",
+  "input": {
+    "fn": "validateTopupPaymentIntentParams",
+    "args": {
+      "amount": 1000,
+      "currency": "usd"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Invalid currency \"usd\": must be an uppercase ISO 4217 code (e.g. \"USD\", \"EUR\")",
+      "status": 400
+    }
+  }
+}

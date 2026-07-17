@@ -3,11 +3,10 @@
 //! Pure: clock is an explicit `now_unix_secs` parameter (no timers). HMAC-SHA256
 //! over `"{timestamp}.{body}"`, hex-string constant-time compare via `subtle`.
 
-use hmac::{Hmac, KeyInit, Mac};
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 use solvapay_dto::error_templates::webhook as webhook_messages;
-use subtle::ConstantTimeEq;
+
+use crate::hmac_util::{bytes_to_hex_lower, constant_time_hex_eq, hmac_sha256};
 
 /// Stable webhook verification error codes (snake_case on the wire).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -266,52 +265,10 @@ fn parse_int_base10(input: &str) -> Option<i64> {
 /// Returns [`WebhookErrorCode::InvalidSignature`] if HMAC key init fails (should not
 /// happen for HMAC-SHA256, which accepts any key length — mapped without panic).
 fn compute_hmac_hex(secret: &str, timestamp: i64, body: &str) -> Result<String, WebhookError> {
-    type HmacSha256 = Hmac<Sha256>;
-
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-        .map_err(|_| WebhookError::new(WebhookErrorCode::InvalidSignature))?;
     let signed = format!("{timestamp}.{body}");
-    mac.update(signed.as_bytes());
-    Ok(bytes_to_hex_lower(&mac.finalize().into_bytes()))
-}
-
-/// Encodes bytes as lowercase hexadecimal (no `hex` crate).
-///
-/// # Arguments
-///
-/// * `bytes` - Digest or other binary input.
-///
-/// # Returns
-///
-/// Lowercase hex string with two characters per input byte.
-fn bytes_to_hex_lower(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len().saturating_mul(2));
-    for &byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    out
-}
-
-/// Constant-time equality of two hex strings after a length check (§6.1 step 4).
-///
-/// Matches Node: compare hex UTF-8 bytes with `timingSafeEqual` — never hex-decode,
-/// so non-hex `v1` values fail as `invalid_signature`, not malformed.
-///
-/// # Arguments
-///
-/// * `expected` - Lowercase hex HMAC computed locally.
-/// * `received` - `v1=` value from the signature header.
-///
-/// # Returns
-///
-/// `true` when lengths match and bytes are equal under [`ConstantTimeEq`].
-fn constant_time_hex_eq(expected: &str, received: &str) -> bool {
-    if expected.len() != received.len() {
-        return false;
-    }
-    bool::from(expected.as_bytes().ct_eq(received.as_bytes()))
+    let digest = hmac_sha256(secret.as_bytes(), signed.as_bytes())
+        .ok_or_else(|| WebhookError::new(WebhookErrorCode::InvalidSignature))?;
+    Ok(bytes_to_hex_lower(&digest))
 }
 
 #[cfg(test)]

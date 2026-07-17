@@ -6,6 +6,7 @@ members = [
   "crates/solvapay-transport",
   "tools/dto-gen",
   "tools/fixture-runner",
+  "tools/shadow-invoker",
 ]
 
 [workspace.package]

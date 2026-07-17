@@ -348,6 +348,11 @@ rust/
 │  │  ├─ src/seller_identity.rs
 │  │  ├─ src/retry.rs         # policy computation, not timers
 │  │  ├─ src/webhook.rs       # parse + HMAC + constant-time compare
+│  │  ├─ src/hmac_util.rs     # shared HMAC-SHA256 / ct-eq (webhook + auth)
+│  │  ├─ src/auth_resolution.rs  # authenticated-user decision core (step 26)
+│  │  ├─ src/customer_sync.rs    # ensureCustomer decision pieces (step 26)
+│  │  ├─ src/activation.rs       # activate-plan param validation (step 26)
+│  │  ├─ src/helper_error.rs     # shared ErrorResult shape
 │  │  ├─ src/paywall/         # state.rs, gate.rs, decision.rs, payload.rs
 │  │  ├─ src/mcp/             # tool_names.rs, descriptors.rs, envelope.rs
 │  │  └─ src/error.rs         # structured cross-language error model
@@ -368,7 +373,7 @@ rust/
 
 | Crate | Responsibility | Dependency discipline |
 | --- | --- | --- |
-| `solvapay-core` | Validation, retry policy, webhook verification, paywall state/gate/decision, business-details, credit-display, seller-identity, MCP payload builders, error model | `serde`, `serde_json` (webhook body parse / `invalid_payload`), `hmac`/`sha2`, `subtle` (constant-time). **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen`. This is what keeps the browser WASM small and the core runtime-agnostic. |
+| `solvapay-core` | Validation, retry policy, webhook verification, auth/customer/activation helper decision cores, paywall state/gate/decision, business-details, credit-display, seller-identity, MCP payload builders, error model | `serde`, `serde_json` (webhook body parse / `invalid_payload` / JWT payload), `hmac`/`sha2`, `subtle` (constant-time). **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen`. This is what keeps the browser WASM small and the core runtime-agnostic. |
 | `solvapay-dto` | Generated wire models + SDK overlays | `serde` only; generated — never hand-edited |
 | `solvapay-transport` | `Transport` trait, `reqwest`/rustls impl (native), Fetch impl (wasm32), client shell (auth headers, idempotency, retry wiring), all 36 method implementations | Depends on core + dto; async but runtime-agnostic (§7.4) |
 | `solvapay` | Public crates.io facade: idiomatic re-exports of transport + core, `gate`/`payable` ergonomics, optional `blocking` feature | Depends on transport + core; no new semantic logic — ergonomics only (§4.5, Phase 9) |
@@ -1027,15 +1032,19 @@ flowchart LR
 
 26. [`customer.ts`](../../packages/server/src/helpers/customer.ts), [`auth.ts`](../../packages/server/src/helpers/auth.ts), [`activation.ts`](../../packages/server/src/helpers/activation.ts) — customer sync/ensure logic, authenticated-user resolution core, activation flow.
     **Done when:** existing helper tests pass against the binding.
+    **Step 26 note:** conformance landed via golden fixtures (`helper-auth` / `helper-customer-sync` / `helper-activation`) + Rust `fixture-runner` (Phase 1 precedent); literal binding conformance deferred to step 37. Decision-only `ensureCustomer` scope; caches/HTTP stay TS. See migration-map Step 26 decisions + §15 note 18.
 
 27. [`payment.ts`](../../packages/server/src/helpers/payment.ts) (541 LOC — the largest helper; budget the whole session for it), [`payment-method.ts`](../../packages/server/src/helpers/payment-method.ts), [`checkout.ts`](../../packages/server/src/helpers/checkout.ts).
     **Done when:** existing helper tests pass against the binding.
+    **Step 27 note:** decision/normalization cores only (`validate*`, `projectPaymentIntentResult`, `projectTopupProcessOutcome`, `resolveReturnUrl`); `payment-method.ts` has nil decision core (orchestration-only). Conformance via `helper-payment` / `helper-checkout` fixtures + characterization suites; balance poll stays host (step 28). See migration-map Step 27 decisions + §15 note 19.
 
 28. [`auto-recharge.ts`](../../packages/server/src/helpers/auto-recharge.ts), [`balance-poll.ts`](../../packages/server/src/helpers/balance-poll.ts) — `BALANCE_RECONCILE_DELAYS_MS` / `TOPUP_BALANCE_POLL_DELAYS_MS` become policy data in Rust; the poll loop's timers stay host-side (same pattern as retries).
     **Done when:** existing helper tests pass against the binding.
+    **Step 28 note:** nil auto-recharge decision core (orchestration-only, like payment-method); balance-poll tables + `evaluate_balance_observation` in `solvapay-core::balance_poll`; host-side poll loop / timers (step-11 precedent). Conformance via `helper-balance-poll` fixtures + characterization suites; no TS extract (withRetry precedent). See migration-map Step 28 decisions + §15 note 20.
 
 29. [`purchase.ts`](../../packages/server/src/helpers/purchase.ts), [`renewal.ts`](../../packages/server/src/helpers/renewal.ts).
     **Done when:** existing helper tests pass against the binding.
+    **Step 29 note:** decision/normalization cores only (`selectActivePurchases`, cache-ref predicate, `validatePurchaseRef`, cancel/reactivate normalize + classify); settle delay / auth / HTTP stay host. Conformance via `helper-purchase` / `helper-renewal` fixtures + characterization suites; shared `is_truthy` for JS field presence. See migration-map Step 29 decisions + §15 note 21.
 
 30. [`usage.ts`](../../packages/server/src/helpers/usage.ts), [`limits.ts`](../../packages/server/src/helpers/limits.ts), [`plans.ts`](../../packages/server/src/helpers/plans.ts).
     **Done when:** existing helper tests pass against the binding.
@@ -1236,7 +1245,7 @@ flowchart LR
 | Shared fixture conformance | All bindings + all five surfaces replay the golden set | Step 8 onward |
 | No-unwrap / no-expect deny | Production Rust may not panic via `.unwrap()` / `.expect()` (§4.4) | Step 8 |
 | wasm32 no-tokio compile check | Runtime-agnostic core stays agnostic | Step 8 |
-| Shadow mode | Live-backend identity TS vs Rust | Step 25 |
+| Shadow mode | Live-backend identity TS vs Rust (`pnpm shadow:run`; offline `pnpm shadow:selftest` in CI). Live CI gate is manual-dispatch until a hosted contract-test environment exists | Step 25 |
 | Clean-install smoke tests | Platform matrix, incl. WASI fallback | Step 39 |
 | Platform build matrices | napi-rs / wheels / gems / WASM / go module / crates.io | Steps 36, 40, 43, 46, 49 |
 | Pre-publish artifact gate | Every expected `.node`/`.wasm`/wheel/gem present (napi CLI won't hard-fail for us) | Step 36 |
@@ -1341,11 +1350,13 @@ sequenceDiagram
 
 ### 11.4 Shadow-mode comparison (step 25)
 
+> **Phase 3 note:** Until the napi binding exists (step 36), the Rust side is invoked via a CLI subprocess (`rust/tools/shadow-invoker`) rather than “via binding”. The sequence is otherwise unchanged.
+
 ```mermaid
 sequenceDiagram
   participant Har as Shadow harness
   participant TS as TS SolvaPayClient
-  participant RS as Rust client (via binding)
+  participant RS as Rust client (via CLI invoker)
   participant API as Backend (contract env)
 
   Har->>TS: method(fixture args)
@@ -1402,6 +1413,7 @@ Intentionally open until the phase that needs them; resolve with research + a PR
 | Free-threaded CPython: declare `gil_used = false` from day one, or after an audit? | Step 40 | PyO3 0.28 defaults modules to thread-safe; audit is cheap if core stays lock-light (§15 note 2) |
 | Fuzz corpus seed strategy (webhook payloads, malformed signatures, FFI JSON) | Step 55 | Seed from Phase 0 fixtures + mutation |
 | Whether UniFFI is ever used for a *sixth* language later | Only if a new language can't use a specialized binding | §4.6 |
+| Hosted contract-test environment for CI shadow live runs | Post–step 25 | Offline `pnpm shadow:selftest` is in CI; live `pnpm shadow:run` is manual-dispatch (`.github/workflows/shadow.yml`) until a shared sandbox/contract env + secrets exist |
 
 ---
 
@@ -1455,6 +1467,16 @@ Re-check the linked sources at the start of any step touching the corresponding 
 **Note 15 — Step 21 client shell / retry sleeper on wasm32 (checked 2026-07-17):** reqwest 0.13.x added `ClientBuilder::retry` but that API is **unavailable on WASM** (and we stay on pinned 0.12.28 anyway) — shell-owned `RetryPolicy` + injectable sleeper remains the right design; do not lean on transport-level retries. For wasm32 sleep without tokio: wrap `setTimeout` in `js_sys::Promise` and await via `wasm_bindgen_futures` / `JsFuture` (or await `Promise` directly on the current js-sys futures path). Shell keeps a host-injected `sleeper: Fn(Duration) -> BoxFuture<()>` so native tests record delays with a no-op/mock sleeper and wasm uses `setTimeout`; core stays timer-free (§4.4). Default shell policy is `max_retries: 0` (TS client parity / one-exchange fixtures). Sources: [reqwest::retry (not on WASM)](https://docs.rs/reqwest/latest/reqwest/retry/index.html), [wasm-bindgen Promises and Futures](https://rustwasm.github.io/wasm-bindgen/reference/js-promises-and-rust-futures.html), [wasm-bindgen-futures 0.4.76](https://crates.io/crates/wasm-bindgen-futures/0.4.76).
 
 **Note 16 — Step 24 Group C client methods (checked 2026-07-17):** No new crate deps / toolchain pins — reused `ClientShell`, wiremock, and Fetch fixture server from steps 19–23. Added `ClientShell::execute_raw` (auth/retry, no status map) for delete-404-as-success and cancel/reactivate CASES/`bodyPrefix200`. `dto-gen` now emits `OPERATION_NAMES` for the 36-method coverage gate. Decision impact: architecture unchanged (§4.1 shell + typed client); Group C completes the 36-method typed surface before step 25 shadow harness. Sources: Phase 0 client fixtures under `contract/fixtures/client/`, TS `packages/server/src/client.ts` merge/404 quirks.
+
+**Note 17 — Step 25 shadow-mode harness / child_process·vitest·wiremock (checked 2026-07-17):** Node `child_process`: prefer `spawn` over `exec` for the Rust invoker — `exec` buffers stdout up to `maxBuffer` (default 1 MiB) and kills the child on overflow; `spawn` streams chunks. Accumulate stdout until `close`, then `JSON.parse` once (request/response is one JSON object per invocation, not a long-lived NDJSON stream). Ensure the child flushes before exit (write full response then drop stdout handle / process end) so pipe buffering does not truncate. Vitest: workers inherit `process.env` by default — `SOLVAPAY_SHADOW_*` set in the parent shell reach tests and spawned `cargo run` children without a special pass-through config; use `test.env` / `poolOptions.forks.execArgv` only if a `.env` file must be injected. Wiremock remains pinned at workspace `0.6.5` (step 19); shadow-invoker integration tests reuse it for representative Group A/B/C + error + delete-404 cases. Decision impact: §11.4 “via binding” becomes “via CLI invoker” for Phase 3; live shadow CI stays manual-dispatch until a hosted contract env exists (§10.3 / §13). Sources: [Node child_process](https://nodejs.org/api/child_process.html), [Vitest environment](https://vitest.dev/guide/environment), [wiremock 0.6.5](https://docs.rs/wiremock/0.6.5/wiremock/).
+
+**Note 18 — Step 26 helper cores / jose HS256 (checked 2026-07-17):** Confirmed against current [jose `jwtVerify`](https://github.com/panva/jose/blob/HEAD/docs/jwt/verify/functions/jwtVerify.md) / [`JWTVerifyOptions`](https://github.com/panva/jose/blob/main/docs/jwt/verify/interfaces/JWTVerifyOptions.md): TS `verifyHs256` calls `jwtVerify(token, key, { algorithms: ['HS256'] })` with no `clockTolerance` → default **0**. jose validates `exp` and `nbf` against wall clock (`new Date()`); `exp` rejects when `exp <= now`, `nbf` rejects when `nbf > now`. Individual claim checks cannot be disabled without switching to `compactVerify`. Decision impact: Rust `auth_resolution` hand-rolls HS256 (step 8 dep freeze — no `jsonwebtoken` crate) with explicit `now_unix_secs`; fixtures use far-past/far-future dates because harness `Date.now` patching does not intercept jose's clock; boundary semantics locked in Rust unit tests. Shared `hmac_util` extracted for webhook + JWT. No new core deps. Sources: [jose JWTVerifyOptions](https://github.com/panva/jose/blob/main/docs/jwt/verify/interfaces/JWTVerifyOptions.md), [Discussion #494](https://github.com/panva/jose/discussions/494).
+
+**Note 19 — Step 27 payment / checkout helper cores (checked 2026-07-17):** No new crate deps / toolchain pins — reused `HelperErrorResult`, serde skip-absent, and fixture-runner helper bindings from step 26. Pure cores: create/topup/process/attach validators, PI projection, topup outcome narrowing, checkout productRef + returnUrl precedence. JS-truthiness for amounts (`!amount || amount <= 0`, including NaN) and empty-string refs mirrored in Rust `Option` + nonempty checks; currency case uses `to_ascii_uppercase` for the byte-exact invalid-currency message. Decision impact: `payment-method.ts` stays TS-only (nil decision core); balance-poll timers deferred to step 28; characterization suites fill the redesign's missing-test gap for checkout / payment-method. RED stubs → fixture `failed=17`; GREEN `executed=286 passed=286 failed=0`. Sources: existing step-26 helper pattern; no upstream research beyond confirming no new deps needed under the step-8 freeze.
+
+**Note 20 — Step 28 auto-recharge / balance-poll (checked 2026-07-17):** No new crate deps / toolchain pins under the step-8 freeze — pure `solvapay-core::balance_poll` + existing fixture-runner host adapter (step-11 `withRetry` delay-recorder precedent). Tables `TOPUP_BALANCE_POLL_DELAYS_MS` / `BALANCE_RECONCILE_DELAYS_MS` and `evaluate_balance_observation` (strict `>`) live in Rust; timers + `getBalance` stay host-side. No TS extract of `pollBalanceUntilIncreased` (already a standalone `@solvapay/server` export — fixtures bind it directly, same as `withRetry`). `auto-recharge.ts` is a nil decision core (sync → capability guard → client call); characterization suite hardened (error propagation, capability guards, option pass-through); boy-scout `return await` so `handleRouteError` actually catches client rejections. Serde gotcha: whole-number `creditsAdded` must emit JSON integers (`9600` not `9600.0`) for fixture deep-equality. RED: unit `failed=3` + fixture `failed=12` (wrong empty tables + evaluate always `None`); GREEN: `helper-balance-poll` 14/14 + full corpus `executed=300 passed=300 failed=0`. Sources: step-11 host-loop / delay-recorder; step-23 `serialize_whole_f64` integer-emission precedent; no upstream research beyond confirming no new deps.
+
+**Note 21 — Step 29 purchase / renewal helper cores (checked 2026-07-17):** No new crate deps / toolchain pins — reused `HelperErrorResult` (with `details` present on classify paths), serde skip-absent, and fixture-runner helper bindings from steps 26–27. Pure cores: `select_active_purchases`, `is_cached_customer_ref_valid`, `resolve_purchase_customer_ref`, `validate_purchase_ref`, cancel/reactivate normalize (nested `.purchase` unwrap) + SolvaPayError message classify. Shared `is_truthy` mirrors JS field presence for `reference` / `cancelledAt`; dynamic cancel-not-cancelled message formats missing status as `"undefined"`. Decision impact: auth, settle `setTimeout(500)`, `instanceof SolvaPayError`, and `handleRouteError` stay TS; characterization suite fills the redesign's missing-test gap for `renewal.ts`. RED stubs → unit `failed=23`; GREEN `executed=334 passed=334 failed=0`. Sources: existing step-26/27 helper pattern; no upstream research beyond confirming no new deps needed under the step-8 freeze.
 
 ### Link table
 

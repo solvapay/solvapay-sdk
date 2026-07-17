@@ -1,0 +1,13 @@
+{
+  "suite": "helper-payment",
+  "case": "attach-pi-present",
+  "input": {
+    "fn": "validateAttachBusinessDetailsParams",
+    "args": {
+      "paymentIntentId": "pi_1"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

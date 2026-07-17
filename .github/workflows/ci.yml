@@ -122,6 +122,26 @@ jobs:
       - name: cargo test
         run: cargo test --workspace
 
+      - name: Setup pnpm (shadow selftest)
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Setup Node.js (shadow selftest)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JS deps + build packages (shadow selftest)
+        working-directory: .
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build:packages
+
+      - name: Shadow selftest (offline stub TS↔Rust)
+        working-directory: .
+        run: pnpm shadow:selftest
+
       - name: solvapay-dto regen drift
         run: |
           cargo run -q -p dto-gen -- \

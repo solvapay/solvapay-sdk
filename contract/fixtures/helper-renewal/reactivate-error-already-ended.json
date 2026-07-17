@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-error-already-ended",
+  "input": {
+    "fn": "classifyReactivateError",
+    "args": { "message": "already ended" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase cannot be reactivated",
+      "status": 400,
+      "details": "already ended"
+    }
+  }
+}
