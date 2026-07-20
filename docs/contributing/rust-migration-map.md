@@ -7,7 +7,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-07-17):** Steps 1–35 **Done** (Phases 0–5 closed). **Next:** step 36 (Phase 6 — scaffold napi-rs).
+**Current progress (2026-07-20):** Steps 1–36 **Done** (Phases 0–5 closed; Phase 6 step 36 scaffold landed). **Next:** step 37 (wire conditional exports).
 
 ## Status legend
 
@@ -57,7 +57,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 33 | Client payload shapes | Phase 5 | Done | — | `paywall/client-payload` (9, was 4) green in TS harness + Rust fixture-runner (`executed=392 passed=392 failed=0`; was 383); RED stub → unit `failed=5` + fixture `failed=9`; step-8 gates + §15 note 25 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
 | 34 | MCP payload builders | Phase 5 | Done | — | Dual-binding TS green (`mcp-core` + `server` `paywallToolResult`) + Rust `mcp/*` 19/19 + full corpus `executed=411 passed=411 failed=0` (was 392); step-8 gates + §15 note 26 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
 | 35 | MCP names + descriptors | Phase 5 | Done | — | Descriptor fixtures `mcp/{tool-names,derive-icons,descriptors,prompts}` (20) + prior `mcp/` 19 → 39; TS harness + Rust fixture-runner `executed=431 passed=431 failed=0` (was 411); RED characterization + unit suite first; step-8 gates + §15 note 27 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
-| 36 | Scaffold napi-rs | Phase 6 | Not started | — | — | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
+| 36 | Scaffold napi-rs | Phase 6 | Done | — | `cargo test -p solvapay-node` + `node --test` smoke + `NAPI_RS_FORCE_WASI=error` + `check-artifacts.mjs` hard-fail; CI `node-binding` matrix (§7.7) + WASI + artifact gate | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 37 | Wire conditional exports | Phase 6 | Not started | — | — | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 38 | Edge/browser WASM cutover | Phase 6 | Not started | — | — | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 39 | Clean-install smoke tests | Phase 6 | Not started | — | — | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
@@ -398,9 +398,19 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Decisions to document:** Steps 32–35 decision bullets; dual-binding for `paywallToolResult`; TS extract for decision + descriptors (not for client-payload / envelope); skip-absent / ordering / `isError: false` pins. Deviations: none vs redesign intent. Deferred: napi binding of these cores (step 37).
 - **Pointers:** redesign §9 steps 32–35, §15 notes 24–27; `contract/fixtures/{paywall,mcp}/`; `solvapay-core::{paywall_decision,paywall_payload,mcp}`.
 
-### Phase 6 — Node binding cutover, then edge/browser WASM — Not started
+### Phase 6 — Node binding cutover, then edge/browser WASM — In progress
 
 <!-- running per-step bullets accumulate here as each step lands -->
+- Step 36 (Scaffold napi-rs): `rust/bindings/node` (`solvapay-node` cdylib) with `napiVersion` + `verifyWebhook` smoke over `solvapay-core`; per-target `npm/<triple>/` optionalDependency layout (`@solvapay/server-native`); WASI `wasm32-wasip1-threads` fallback; `scripts/check-artifacts.mjs` hard gate; CI `node-binding` / `node-binding-wasi` / `node-binding-artifacts` — "done when" verified: native require-smoke + `NAPI_RS_FORCE_WASI=error` + artifact gate fail-on-missing; §15 note 28
+
+#### Step 36 decisions for future handoffs
+
+- **Provisional package name:** `@solvapay/server-native` (binaryName `server-native`); per-target packages `@solvapay/server-native-<platform>` + `@solvapay/server-native-wasm32-wasi` (`cpu: ["wasm32"]`). Until first publish, `optionalDependencies` use `file:./npm/<triple>` so `npm ci` stays in sync without a registry. Do **not** use `npm ci --omit=optional` for local WASI builds — it also omits `@napi-rs/wasm-tools-*` platform binaries and `napi build --target wasm32-wasip1-threads` then fails with `Failed to copy artifact`. Final wiring into `@solvapay/server` is step 37.
+- **Tokio runtime:** napi-rs built-in shared runtime via `napi` feature `tokio_rt` — **per-addon** (not per-process). Safe under Node `worker_threads` (each addon instance owns its runtime). Sync smoke does not exercise it; step 37 async methods will.
+- **`NAPI_RS_FORCE_WASI`:** CLI ≥3.7 treats only `true` / `error` as force; `1` / `0` / `false` do **not** force WASI. CI and local WASI smoke use `NAPI_RS_FORCE_WASI=error`.
+- **Error conversion:** single layer in `error.rs` — `WebhookError` → `BindingError` → `Error<&'static str>` so JS `Error.code` is the snake_case webhook code (`napi_create_error` maps status → code). FFI edges wrapped in `catch_unwind` (§7.6).
+- **Artifact gate:** napi CLI warns-and-continues on missing prebuilds; `scripts/check-artifacts.mjs` hard-fails if any §7.7 `npm/<triple>/` dir lacks its `.node`/`.wasm`.
+- **MSRV:** napi 3.10.x MSRV is 1.88; workspace stays on pinned `1.96.0` (no bump).
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …
@@ -465,14 +475,14 @@ Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovere
 | Gate | Resolve by | Status | Owner |
 | --- | --- | --- | --- |
 | Exact WASM size / cold-start numeric budgets | Step 38 baseline | Open | SDK |
-| Final npm optional-dependency layout + package names for prebuilds | Steps 36–37 | Open | SDK |
+| Final npm optional-dependency layout + package names for prebuilds | Steps 36–37 | **Provisional (step 36):** `@solvapay/server-native` + per-target `@solvapay/server-native-<platform>` + `-wasm32-wasi`; step 37 wires into `@solvapay/server` | SDK |
 | Python package name on PyPI (`solvapay` vs scoped) and minimum CPython (abi3 floor) | Steps 40–42 | Open | SDK |
 | Ruby gem name + versioning scheme; source-gem toolchain floor | Steps 43–45 | Open | SDK |
 | Go module path naming (`github.com/solvapay/solvapay-go` vs vanity import) | Steps 49–51 | Open | SDK |
 | Whether the Go WASM artifact is committed in-repo or attached to release tags | Before step 49 cutover | Open | SDK |
 | WASM instance-pool sizing strategy for Go | Step 49 | Open | SDK |
 | crates.io name reservation for `solvapay` (and whether internal crates are published) | Before step 46 | Open | SDK |
-| Whether the shared tokio runtime in napi-rs is per-addon or per-process | Step 36 | Open | SDK |
+| Whether the shared tokio runtime in napi-rs is per-addon or per-process | Step 36 | **Resolved (step 36):** per-addon via napi `tokio_rt` (see Step 36 decisions / §15 note 28) | SDK |
 | Process-payment OpenAPI discriminator fix — backend republish vs manifest overlay | Before step 15 cutover | Open | Backend + SDK |
 | `includeCheckoutSession` OpenAPI republish | Before step 15 cutover | Open | Backend + SDK |
 | Free-threaded CPython: `gil_used = false` from day one, or after an audit? | Step 40 | Open | SDK |

@@ -4,6 +4,7 @@ members = [
   "crates/solvapay-core",
   "crates/solvapay-dto",
   "crates/solvapay-transport",
+  "bindings/node",
   "tools/dto-gen",
   "tools/fixture-runner",
   "tools/shadow-invoker",

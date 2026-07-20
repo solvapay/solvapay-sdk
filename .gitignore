@@ -46,3 +46,10 @@ contract/shadow/output/
 rust/target/
 **/*.rs.bk
 *.pdb
+
+# napi-rs Node binding (step 36) — native/WASI binaries (loaders are committed)
+rust/bindings/node/*.node
+rust/bindings/node/*.wasm
+rust/bindings/node/node_modules/
+rust/bindings/node/npm/**/*.node
+rust/bindings/node/npm/**/*.wasm

@@ -230,6 +230,190 @@ jobs:
       - name: fixture suite (bound pure-core suites; unbound skipped)
         run: cargo run -q -p fixture-runner -- ../contract/fixtures
 
+  # Step 36 — napi-rs Node binding platform matrix (§7.7) + artifact gate.
+  node-binding:
+    name: node-binding (${{ matrix.settings.target }})
+    runs-on: ${{ matrix.settings.host }}
+    defaults:
+      run:
+        working-directory: rust/bindings/node
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: npx napi build --platform --release --target x86_64-unknown-linux-gnu --use-napi-cross
+            smoke: true
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: npx napi build --platform --release --target aarch64-unknown-linux-gnu --use-napi-cross
+            smoke: false
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: npx napi build --platform --release --target x86_64-unknown-linux-musl --cross-compile
+            smoke: false
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build: npx napi build --platform --release --target aarch64-unknown-linux-musl --cross-compile
+            smoke: false
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: npx napi build --platform --release --target aarch64-apple-darwin
+            smoke: true
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build: npx napi build --platform --release --target x86_64-apple-darwin
+            smoke: false
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: npx napi build --platform --release --target x86_64-pc-windows-msvc
+            smoke: true
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
+            build: npx napi build --platform --release --target aarch64-pc-windows-msvc
+            smoke: false
+        node:
+          - '22'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install Rust toolchain
+        working-directory: rust
+        run: rustup show && rustup target add ${{ matrix.settings.target }}
+
+      - name: Setup zig (musl cross)
+        if: contains(matrix.settings.target, 'musl')
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
+      - name: Install npm deps
+        # optionalDependencies are file:./npm/<triple> until first publish.
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        run: npx napi create-npm-dirs
+
+      - name: Build binding
+        run: ${{ matrix.settings.build }}
+        shell: bash
+
+      - name: Smoke test (native host)
+        if: matrix.settings.smoke
+        run: node --test __test__/binding.spec.mjs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: |
+            rust/bindings/node/server-native.*.node
+            rust/bindings/node/server-native.*.wasm
+            rust/bindings/node/server-native.wasi.cjs
+            rust/bindings/node/server-native.wasi-browser.js
+            rust/bindings/node/wasi-worker*.mjs
+            rust/bindings/node/index.js
+            rust/bindings/node/index.d.ts
+            rust/bindings/node/browser.js
+          if-no-files-found: error
+
+  node-binding-wasi:
+    name: node-binding (wasm32-wasip1-threads + FORCE_WASI)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/bindings/node
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Rust toolchain + WASI target
+        working-directory: rust
+        run: rustup show && rustup target add wasm32-wasip1-threads
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        run: npx napi create-npm-dirs
+
+      - name: Build WASI fallback
+        run: npx napi build --platform --release --target wasm32-wasip1-threads
+
+      - name: Smoke test (NAPI_RS_FORCE_WASI=error)
+        # CLI ≥3.7: only `true` / `error` force WASI (`1` is ignored).
+        run: NAPI_RS_FORCE_WASI=error node --test __test__/binding.spec.mjs
+
+      - name: Upload WASI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-wasm32-wasip1-threads
+          path: |
+            rust/bindings/node/server-native.*.wasm
+            rust/bindings/node/server-native.wasi.cjs
+            rust/bindings/node/server-native.wasi-browser.js
+            rust/bindings/node/wasi-worker*.mjs
+          if-no-files-found: error
+
+  node-binding-artifacts:
+    name: node-binding artifact gate
+    runs-on: ubuntu-latest
+    needs:
+      - node-binding
+      - node-binding-wasi
+    defaults:
+      run:
+        working-directory: rust/bindings/node
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        run: npx napi create-npm-dirs
+
+      - name: Download all binding artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rust/bindings/node/ci-artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Place artifacts into npm/ via napi artifacts
+        run: |
+          # Flatten downloaded files next to package.json so `napi artifacts` can find them.
+          find ci-artifacts -type f \( -name '*.node' -o -name '*.wasm' -o -name '*.wasi.cjs' -o -name 'wasi-worker*' -o -name '*.wasi-browser.js' \) -exec cp -f {} . \;
+          ls -la *.node *.wasm 2>/dev/null || true
+          npx napi artifacts
+
+      - name: Pre-publish artifact gate (hard-fail)
+        run: node scripts/check-artifacts.mjs
+
   documentation:
     name: Documentation Validation
     runs-on: ubuntu-latest
